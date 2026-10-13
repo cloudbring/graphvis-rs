@@ -1,6 +1,7 @@
 //! Output renderers for `graphvis-rs` (`svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`).
 
 use gv_core::{Graph, GraphvizError, Result};
+use gv_parser::write_canon;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -41,8 +42,8 @@ pub fn render_graph(graph: &Graph, format: OutputFormat) -> Result<String> {
                 message: e.to_string(),
             })
         }
-        OutputFormat::Dot | OutputFormat::Xdot | OutputFormat::Canon | OutputFormat::Plain => {
-            Ok(format!("digraph {} {{\n}}\n", graph.name))
+        OutputFormat::Canon | OutputFormat::Dot | OutputFormat::Xdot | OutputFormat::Plain => {
+            Ok(write_canon(graph))
         }
     }
 }
