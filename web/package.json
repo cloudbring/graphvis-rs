@@ -1,0 +1,44 @@
+{
+  "name": "@graphvis-rs/wasm",
+  "version": "0.1.0",
+  "description": "Pure Rust + WebAssembly port of Graphviz 16.1.0 running directly in the browser, Node.js, Deno, Bun, and Cloudflare Workers",
+  "type": "module",
+  "main": "./pkg/gv_wasm.js",
+  "types": "./pkg/gv_wasm.d.ts",
+  "files": [
+    "pkg/gv_wasm.js",
+    "pkg/gv_wasm.d.ts",
+    "pkg/gv_wasm_bg.wasm",
+    "pkg/gv_wasm_bg.wasm.d.ts",
+    "index.html"
+  ],
+  "exports": {
+    ".": {
+      "types": "./pkg/gv_wasm.d.ts",
+      "default": "./pkg/gv_wasm.js"
+    }
+  },
+  "scripts": {
+    "build:wasm": "cargo build --release --target wasm32-unknown-unknown -p gv-wasm && wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/release/gv_wasm.wasm && wasm-opt -O3 web/pkg/gv_wasm_bg.wasm -o web/pkg/gv_wasm_bg.wasm",
+    "serve": "python3 -m http.server 8765"
+  },
+  "keywords": [
+    "graphviz",
+    "dot",
+    "wasm",
+    "webassembly",
+    "rust",
+    "svg",
+    "diagram",
+    "neato",
+    "fdp",
+    "sfdp",
+    "circo",
+    "twopi"
+  ],
+  "license": "EPL-2.0 OR MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudbring/graphvis-rs.git"
+  }
+}

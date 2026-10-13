@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graphvis-rs • Pure Rust + WASM Graphviz 16.1.0 Playground</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .badge {
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.18);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    select, button {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    button.primary:hover {
+      background: var(--accent-hover);
+    }
+    main {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      flex: 1;
+      min-height: 0;
+    }
+    .editor-pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .pane-header {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    textarea {
+      flex: 1;
+      width: 100%;
+      background: #0b1120;
+      color: #e2e8f0;
+      border: none;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+    }
+    .preview-pane {
+      display: flex;
+      flex-direction: column;
+      background: #0b1120;
+      overflow: hidden;
+    }
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      padding: 8px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 12px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .stat-val {
+      color: var(--success);
+      font-weight: 600;
+    }
+    #output-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: auto;
+      background: #f8fafc;
+    }
+    #output-container svg {
+      max-width: 100%;
+      max-height: 76vh;
+      height: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+      border-radius: 6px;
+    }
+    #raw-output {
+      display: none;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 16px;
+      background: #0b1120;
+      color: #e2e8f0;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>graphvis-rs</span>
+      <span class="badge" id="wasm-version">Loading WASM...</span>
+    </div>
+    <div class="controls">
+      <label style="font-size:12px;color:var(--muted)">Preset:
+        <select id="preset-select">
+          <option value="fsm">Finite State Machine (fsm.gv)</option>
+          <option value="clusters">Microservice Clusters (clust)</option>
+          <option value="record">Record & Ports (record.gv)</option>
+          <option value="html">HTML Table Node (html.gv)</option>
+          <option value="heawood">Heawood Graph (Heawood.gv)</option>
+        </select>
+      </label>
+      <label style="font-size:12px;color:var(--muted)">Engine:
+        <select id="engine-select">
+          <option value="dot" selected>dot (Hierarchical)</option>
+          <option value="neato">neato (Kamada-Kawai Stress)</option>
+          <option value="fdp">fdp (Force-Directed)</option>
+          <option value="sfdp">sfdp (Multilevel Force)</option>
+          <option value="twopi">twopi (Radial)</option>
+          <option value="circo">circo (Circular)</option>
+          <option value="osage">osage (Clustered Array)</option>
+          <option value="patchwork">patchwork (Squarified Treemap)</option>
+        </select>
+      </label>
+      <label style="font-size:12px;color:var(--muted)">Format:
+        <select id="format-select">
+          <option value="svg" selected>SVG (Interactive Vector)</option>
+          <option value="json">JSON (Graphviz Schema + xdot)</option>
+          <option value="json0">JSON0 (Positions Only)</option>
+          <option value="xdot">XDOT (Extended DOT 1.7)</option>
+          <option value="dot">DOT (Positioned)</option>
+          <option value="canon">Canon (Normalized DOT)</option>
+          <option value="plain">Plain (Coordinates)</option>
+        </select>
+      </label>
+      <button id="bench-btn" class="primary">Run In-Browser WASM Benchmark</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="editor-pane">
+      <div class="pane-header">
+        <span>DOT Source Input</span>
+        <span id="status-indicator" style="color:var(--success)">Ready</span>
+      </div>
+      <textarea id="dot-input" spellcheck="false"></textarea>
+    </section>
+
+    <section class="preview-pane">
+      <div class="stats-bar">
+        <span>Render Latency: <span class="stat-val" id="stat-latency">-</span></span>
+        <span>Nodes: <span class="stat-val" id="stat-nodes">-</span></span>
+        <span>Edges: <span class="stat-val" id="stat-edges">-</span></span>
+        <span>Clusters: <span class="stat-val" id="stat-clusters">-</span></span>
+        <span>Bounding Box: <span class="stat-val" id="stat-bb">-</span></span>
+        <span>Benchmark: <span class="stat-val" id="stat-bench">Not run</span></span>
+      </div>
+      <div id="output-container"></div>
+      <pre id="raw-output"></pre>
+    </section>
+  </main>
+
+  <script type="module">
+    import init, { render, inspectGraph, version } from './pkg/gv_wasm.js';
+
+    const PRESETS = {
+      fsm: `digraph finite_state_machine {
+  rankdir=LR;
+  node [shape = doublecircle]; LR_0 LR_3 LR_4 LR_8;
+  node [shape = circle];
+  LR_0 -> LR_2 [ label = "SS(B)" ];
+  LR_0 -> LR_1 [ label = "SS(S)" ];
+  LR_1 -> LR_3 [ label = "S($end)" ];
+  LR_2 -> LR_6 [ label = "SS(b)" ];
+  LR_2 -> LR_5 [ label = "SS(a)" ];
+  LR_2 -> LR_4 [ label = "S(A)" ];
+  LR_5 -> LR_7 [ label = "S(b)" ];
+  LR_5 -> LR_5 [ label = "S(a)" ];
+  LR_6 -> LR_6 [ label = "S(b)" ];
+  LR_6 -> LR_5 [ label = "S(a)" ];
+  LR_7 -> LR_8 [ label = "S(b)" ];
+  LR_7 -> LR_5 [ label = "S(a)" ];
+  LR_8 -> LR_6 [ label = "S(b)" ];
+  LR_8 -> LR_5 [ label = "S(a)" ];
+}`,
+      clusters: `digraph Microservices {
+  subgraph cluster_0 {
+    style=filled;
+    color=lightgrey;
+    node [style=filled,color=white];
+    a0 -> a1 -> a2 -> a3;
+    label = "Ingress & Auth";
+  }
+  subgraph cluster_1 {
+    node [style=filled];
+    b0 -> b1 -> b2 -> b3;
+    label = "Worker Pool";
+    color=blue;
+  }
+  start -> a0;
+  start -> b0;
+  a1 -> b3;
+  b2 -> a3;
+  a3 -> a0;
+  a3 -> end;
+  b3 -> end;
+  start [shape=Mdiamond];
+  end [shape=Msquare];
+}`,
+      record: `digraph structs {
+  node [shape=record];
+  struct1 [label="<f0> left|<f1> mid\\ dle|<f2> right"];
+  struct2 [label="<f0> one|<f1> two"];
+  struct3 [label="hello\\nworld |{ b |{c|<here> d|e}| f}| g | h"];
+  struct1:f1 -> struct2:f0;
+  struct1:f2 -> struct3:here;
+}`,
+      html: `digraph HtmlTable {
+  abc [shape=none, margin=0, label=<
+    <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+      <TR><TD ROWSPAN="3"><FONT COLOR="red">hello</FONT><BR/>world</TD>
+          <TD COLSPAN="3">b</TD>
+          <TD ROWSPAN="3" BGCOLOR="lightgrey">g</TD>
+          <TD ROWSPAN="3">h</TD>
+      </TR>
+      <TR><TD>c</TD><TD PORT="here">d</TD><TD>e</TD></TR>
+      <TR><TD COLSPAN="3">f</TD></TR>
+    </TABLE>>];
+  xyz [shape=diamond, style=filled, fillcolor=gold, label="Target"];
+  abc:here -> xyz [label="HTML Port"];
+}`,
+      heawood: `graph Heawood {
+  node [shape=circle, style=filled, fillcolor=lightblue];
+  0 -- 1 -- 2 -- 3 -- 4 -- 5 -- 6 -- 7 -- 8 -- 9 -- 10 -- 11 -- 12 -- 13 -- 0;
+  0 -- 5; 1 -- 10; 2 -- 7; 3 -- 12; 4 -- 9; 6 -- 11; 8 -- 13;
+}`
+    };
+
+    const dotInput = document.getElementById('dot-input');
+    const presetSelect = document.getElementById('preset-select');
+    const engineSelect = document.getElementById('engine-select');
+    const formatSelect = document.getElementById('format-select');
+    const outputContainer = document.getElementById('output-container');
+    const rawOutput = document.getElementById('raw-output');
+    const statusIndicator = document.getElementById('status-indicator');
+
+    function updateRender() {
+      const src = dotInput.value;
+      const eng = engineSelect.value;
+      const fmt = formatSelect.value;
+      try {
+        const t0 = performance.now();
+        const out = render(src, eng, fmt);
+        const dt = performance.now() - t0;
+        const stats = JSON.parse(inspectGraph(src, eng));
+
+        document.getElementById('stat-latency').textContent = `${dt.toFixed(2)} ms (${(dt * 1000).toFixed(0)} µs)`;
+        document.getElementById('stat-nodes').textContent = stats.nodes;
+        document.getElementById('stat-edges').textContent = stats.edges;
+        document.getElementById('stat-clusters').textContent = stats.subgraphs;
+        document.getElementById('stat-bb').textContent = `${stats.width_pt.toFixed(0)}×${stats.height_pt.toFixed(0)} pt`;
+        statusIndicator.textContent = 'OK';
+        statusIndicator.style.color = '#10b981';
+
+        if (fmt === 'svg') {
+          outputContainer.style.display = 'flex';
+          rawOutput.style.display = 'none';
+          outputContainer.innerHTML = out;
+        } else {
+          outputContainer.style.display = 'none';
+          rawOutput.style.display = 'block';
+          rawOutput.textContent = out;
+        }
+      } catch (err) {
+        statusIndicator.textContent = String(err);
+        statusIndicator.style.color = '#ef4444';
+      }
+    }
+
+    function runBrowserBenchmark() {
+      const results = {};
+      const engines = ['dot', 'neato', 'fdp', 'sfdp', 'twopi', 'circo', 'osage', 'patchwork'];
+      const iters = 50;
+      for (const eng of engines) {
+        const src = eng === 'neato' || eng === 'circo' ? PRESETS.heawood : PRESETS.fsm;
+        // warmup
+        render(src, eng, 'svg');
+        const t0 = performance.now();
+        for (let i = 0; i < iters; i++) {
+          render(src, eng, 'svg');
+        }
+        const avgUs = ((performance.now() - t0) * 1000) / iters;
+        results[eng] = Number(avgUs.toFixed(1));
+      }
+      window.__WASM_BENCH_RESULTS__ = results;
+      document.getElementById('stat-bench').textContent =
+        `dot=${results.dot}µs | neato=${results.neato}µs | fdp=${results.fdp}µs | circo=${results.circo}µs | twopi=${results.twopi}µs`;
+      console.log('WASM_BENCHMARK_JSON:', JSON.stringify(results));
+      return results;
+    }
+
+    window.runBrowserBenchmark = runBrowserBenchmark;
+
+    async function boot() {
+      await init();
+      document.getElementById('wasm-version').textContent = version();
+      dotInput.value = PRESETS.fsm;
+      updateRender();
+      runBrowserBenchmark();
+    }
+
+    presetSelect.addEventListener('change', () => {
+      dotInput.value = PRESETS[presetSelect.value];
+      if (presetSelect.value === 'heawood') {
+        engineSelect.value = 'circo';
+      } else {
+        engineSelect.value = 'dot';
+      }
+      updateRender();
+    });
+    engineSelect.addEventListener('change', updateRender);
+    formatSelect.addEventListener('change', updateRender);
+    dotInput.addEventListener('input', updateRender);
+    document.getElementById('bench-btn').addEventListener('click', runBrowserBenchmark);
+
+    boot();
+  </script>
+</body>
+</html>
