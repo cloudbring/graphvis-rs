@@ -10,8 +10,13 @@ description = "Drop-in dot-compatible CLI and differential benchmark runner for 
 name = "dot-rs"
 path = "src/main.rs"
 
+[[bin]]
+name = "bench_phase1"
+path = "src/bin/bench_phase1.rs"
+
 [dependencies]
 gv-core.workspace = true
+gv-parser.workspace = true
 gv-engine.workspace = true
 serde.workspace = true
 serde_json.workspace = true
