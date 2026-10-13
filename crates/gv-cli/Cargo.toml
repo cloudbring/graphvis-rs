@@ -1,0 +1,20 @@
+[package]
+name = "gv-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Drop-in dot-compatible CLI and differential benchmark runner for graphvis-rs"
+
+[[bin]]
+name = "dot-rs"
+path = "src/main.rs"
+
+[dependencies]
+gv-core.workspace = true
+gv-engine.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

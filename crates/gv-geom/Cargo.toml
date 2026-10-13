@@ -1,0 +1,13 @@
+[package]
+name = "gv-geom"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Geometry, visibility graphs, Bezier spline routing, R-tree label placement, and polyomino packing"
+
+[dependencies]
+gv-core.workspace = true
+
+[lints]
+workspace = true
