@@ -1,0 +1,23 @@
+# Shared build and caching configuration for graphvis-rs
+# Uses sccache for cross-worktree, cross-branch incremental compilation caching
+# and caps build parallelism so local system resources remain responsive.
+
+[build]
+rustc-wrapper = "/opt/homebrew/bin/sccache"
+jobs = 6
+
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "opt-level=3"]
+
+[profile.dev]
+opt-level = 1
+debug = 1
+
+[profile.test]
+opt-level = 1
+debug = 1
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

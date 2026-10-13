@@ -1,0 +1,38 @@
+name: Publish & Release (Crates.io, NPM, JSR, WASI, GitHub Releases)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: "true"
+
+jobs:
+  build-wasm-and-npm:
+    name: Build Browser WASM Package (@graphvis-rs/wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown,wasm32-wasip2
+      - uses: Mozilla-Actions/sccache-action@v0.0.7
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-pack & binaryen
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          sudo apt-get update && sudo apt-get install -y binaryen
+      - name: Build Web, Bundler, and NodeJS WASM targets
+        run: |
+          wasm-pack build crates/gv-wasm --target web --out-dir ../../dist/pkg-web --scope graphvis-rs
+          wasm-pack build crates/gv-wasm --target bundler --out-dir ../../dist/pkg-bundler --scope graphvis-rs
+          wasm-pack build crates/gv-wasm --target nodejs --out-dir ../../dist/pkg-node --scope graphvis-rs
+      - name: Upload WASM Distribution Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphvis-rs-wasm-packages
+          path: dist/

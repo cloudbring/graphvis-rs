@@ -1,0 +1,20 @@
+[package]
+name = "gv-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "High-level Graphviz context, pipeline orchestrator, and differential testing API"
+
+[dependencies]
+gv-core.workspace = true
+gv-parser.workspace = true
+gv-geom.workspace = true
+gv-layout.workspace = true
+gv-render.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

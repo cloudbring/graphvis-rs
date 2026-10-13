@@ -1,0 +1,8 @@
+/target/
+/dist/
+/pkg/
+node_modules/
+*.wasm.map
+.DS_Store
+.cargo-lock
+.sccache/
