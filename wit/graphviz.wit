@@ -1,0 +1,15 @@
+package graphviz:engine@0.1.0;
+
+interface renderer {
+    /// Render a DOT graph string using the specified layout engine
+    /// (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`)
+    /// and output format (`svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`).
+    render: func(dot-source: string, engine: string, format: string) -> result<string, string>;
+
+    /// Return the version string of `graphvis-rs`.
+    version: func() -> string;
+}
+
+world graphviz {
+    export renderer;
+}
