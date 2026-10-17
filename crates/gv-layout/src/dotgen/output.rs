@@ -19,6 +19,9 @@ pub struct Output {
     /// Extra edge label attributes (`head_lp`, `tail_lp`, `xlp`).
     edge_attrs: Vec<Vec<(&'static str, String)>>,
     node_xlp: Vec<Option<String>>,
+    /// `lp` of the root graph and of clusters (by subgraph index).
+    graph_lp: Option<String>,
+    cluster_lp: Vec<(usize, String)>,
 }
 
 impl Output {
@@ -35,6 +38,8 @@ impl Output {
             edges: Vec::new(),
             edge_attrs: Vec::new(),
             node_xlp: Vec::new(),
+            graph_lp: None,
+            cluster_lp: Vec::new(),
         }
     }
 
@@ -91,6 +96,23 @@ impl Output {
             edges.push(Some((spline, lp_of(ed.label))));
         }
         let node_xlp = (0..n).map(|i| lp_of(d.nodes[i].xlabel).map(fmt)).collect();
+        let graph_lp = lp_of(d.graphs[0].label).map(fmt);
+        let mut cluster_lp = Vec::new();
+        fn rec_lp(d: &Dot<'_>, g: G, out: &mut Vec<(usize, Point)>) {
+            for &c in &d.graphs[g].clust {
+                if let (Some(si), Some(l)) = (d.graphs[c].sub_index, d.graphs[c].label)
+                    && d.labels[l].set
+                {
+                    out.push((si, d.labels[l].pos));
+                }
+                rec_lp(d, c, out);
+            }
+        }
+        let mut cl = Vec::new();
+        rec_lp(d, 0, &mut cl);
+        for (si, p) in cl {
+            cluster_lp.push((si, fmt(p)));
+        }
         Output {
             node_pos,
             node_rank,
@@ -100,6 +122,8 @@ impl Output {
             edges,
             edge_attrs,
             node_xlp,
+            graph_lp,
+            cluster_lp,
         }
     }
 
@@ -138,6 +162,12 @@ impl Output {
             for (k, v) in extra {
                 graph.edges[i].attrs.insert(k.to_string(), v);
             }
+        }
+        if let Some(lp) = self.graph_lp {
+            graph.graph_attrs.insert("lp".to_string(), lp);
+        }
+        for (si, lp) in self.cluster_lp {
+            graph.subgraphs[si].graph_attrs.insert("lp".to_string(), lp);
         }
         for (i, xlp) in self.node_xlp.into_iter().enumerate() {
             if let Some(v) = xlp {

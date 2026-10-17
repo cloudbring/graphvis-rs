@@ -58,6 +58,12 @@ fn trim_trailing_zeros(s: &str) -> String {
     }
 }
 
+/// A label position the layout stored in `lp` (`x,y`).
+fn layout_lp(attrs: &gv_core::AttrMap) -> Option<Point> {
+    let (x, y) = attrs.get("lp")?.split_once(',')?;
+    Some(Point::new(x.trim().parse().ok()?, y.trim().parse().ok()?))
+}
+
 /// Formats an edge spline into Graphviz `pos` attribute syntax (`"e,ex,ey x0,y0 x1,y1 ..."`).
 pub(crate) fn format_edge_pos(_graph: &Graph, edge: &EdgeData) -> String {
     // An edge without a spline has no `pos`, as in C (e.g. the non-leader
@@ -163,10 +169,11 @@ pub(crate) fn build_positioned_graph(graph: &Graph, xdot: bool) -> Graph {
             ..Default::default()
         };
         let layout = measure_multiline_label_with_context(&g_label, &ctx, &font_name, font_size);
-        let lp = Point::new(
+        // Layouts that place the root label (dot's `place_root_label`) leave it in `lp`.
+        let lp = layout_lp(&g.graph_attrs).unwrap_or(Point::new(
             (bb.ll.x + bb.ur.x) / 2.0,
             bb.ll.y + layout.height / 2.0 + 4.0,
-        );
+        ));
         g.graph_attrs.insert(
             "lp".to_string(),
             format!("{},{}", fmt_g5(lp.x), fmt_g5(lp.y)),
@@ -191,7 +198,8 @@ pub(crate) fn build_positioned_graph(graph: &Graph, xdot: bool) -> Graph {
     for idx in 0..g.subgraphs.len() {
         // Layouts only keep clusters with nodes (`collapse_cluster` skips
         // empty ones), so those get no `bb`.
-        let is_clust = (g.subgraphs[idx].is_cluster || g.subgraphs[idx].name.starts_with("cluster"))
+        let is_clust = (g.subgraphs[idx].is_cluster
+            || g.subgraphs[idx].name.starts_with("cluster"))
             && !g.subgraphs[idx].nodes.is_empty();
         if !is_clust {
             continue;
@@ -245,10 +253,10 @@ pub(crate) fn build_positioned_graph(graph: &Graph, xdot: bool) -> Graph {
             };
             let layout =
                 measure_multiline_label_with_context(&c_label, &ctx, &font_name, font_size);
-            let lp = Point::new(
+            let lp = layout_lp(&subg.graph_attrs).unwrap_or(Point::new(
                 (cbb.ll.x + cbb.ur.x) / 2.0,
                 cbb.ur.y - layout.height / 2.0 - 4.0,
-            );
+            ));
             subg.graph_attrs.insert(
                 "lp".to_string(),
                 format!("{},{}", fmt_g5(lp.x), fmt_g5(lp.y)),
