@@ -1,0 +1,36 @@
+graph tree {
+layout=twopi;
+
+ranksep="1:2";
+node [shape=circle, width=0.3, fixedsize=true, label=""];
+t0 -- t1;
+t0 -- t2;
+t1 -- t3;
+t1 -- t4;
+t2 -- t5;
+t2 -- t6;
+t3 -- t7;
+t3 -- t8;
+t4 -- t9;
+t4 -- t10;
+t5 -- t11;
+t5 -- t12;
+t6 -- t13;
+t6 -- t14;
+t7 -- t15;
+t7 -- t16;
+t8 -- t17;
+t8 -- t18;
+t9 -- t19;
+t9 -- t20;
+t10 -- t21;
+t10 -- t22;
+t11 -- t23;
+t11 -- t24;
+t12 -- t25;
+t12 -- t26;
+t13 -- t27;
+t13 -- t28;
+t14 -- t29;
+t14 -- t30;
+}

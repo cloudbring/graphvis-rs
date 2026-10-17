@@ -30,6 +30,7 @@ pub mod neatoinit;
 pub mod neatosplines;
 pub mod overlap;
 pub mod quad_prog_vpsc;
+pub mod robust;
 pub mod routing;
 pub mod scadjust;
 pub mod sgd;

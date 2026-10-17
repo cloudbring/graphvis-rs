@@ -1,0 +1,26 @@
+digraph G {
+	graph [bb="0,0,54,252",
+		layout=twopi
+	];
+	node [label="\N"];
+	ab	[height=0.5,
+		pos="27,90",
+		width=0.75];
+	cd	[height=0.5,
+		pos="27,162",
+		width=0.75];
+	ab -> cd	[pos="e,27,143.59 27,108.17 27,115.45 27,124.02 27,132.17"];
+	CD	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	ab -> CD	[pos="e,27,36.169 27,90 27,90 27,67.5 27,47.655",
+		tailclip=false];
+	AB	[height=0.5,
+		pos="27,234",
+		width=0.75];
+	AB -> cd	[headclip=false,
+		pos="e,27,162 27,234 27,234 27,193.5 27,173.25",
+		tailclip=false];
+	AB -> CD	[headclip=false,
+		pos="e,27,18 27,215.58 27,172.12 27,64.201 27,29.172"];
+}

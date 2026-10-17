@@ -1,0 +1,7 @@
+digraph G {
+layout=circo;
+
+graph [charset=latin1]
+node [fontsize=10]
+a [label = "���������������������������"];
+}

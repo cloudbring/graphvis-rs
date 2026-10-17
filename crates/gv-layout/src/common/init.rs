@@ -355,6 +355,26 @@ impl<'a> LGraph<'a> {
         for c in &self.clusters {
             graph.subgraphs[c.subgraph].bb = c.bb;
         }
+        // Placed graph and cluster labels go to the renderer through the private
+        // key the no-layout engine uses; it would otherwise re-place them with
+        // dot's rules (which flip for rankdir).
+        // Only dot runs mark_lowclusters, which moves edges into clusters for -Tdot.
+        graph
+            .graph_attrs
+            .insert("\u{1}nolowclust".to_string(), String::new());
+        let exact = |p: Point| format!("{:?},{:?}", p.x, p.y);
+        if let Some(l) = self.label.as_ref().filter(|l| l.set) {
+            graph
+                .graph_attrs
+                .insert(crate::nop::LABEL_POS_KEY.to_string(), exact(l.pos));
+        }
+        for c in &self.clusters {
+            if let Some(l) = c.label.as_ref().filter(|l| l.set) {
+                graph.subgraphs[c.subgraph]
+                    .graph_attrs
+                    .insert(crate::nop::LABEL_POS_KEY.to_string(), exact(l.pos));
+            }
+        }
     }
 }
 

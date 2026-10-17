@@ -1,0 +1,42 @@
+digraph structs {
+	graph [bb="0,0,142.09,206.2",
+		layout=twopi
+	];
+	node [label="\N",
+		shape=plaintext
+	];
+	struct1	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD>left</TD><TD PORT="f1">mid dle</TD><TD PORT="f2">right</TD></TR>
+</TABLE>>,
+		pos="71.045,116.2",
+		width=1.6872];
+	struct2	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD PORT="f0">one</TD><TD>two</TD></TR>
+</TABLE>>,
+		pos="71.045,188.2",
+		width=0.9613];
+	struct1:f1 -> struct2:f0	[pos="e,57.545,176.8 67.152,127.6 67.152,127.6 62.507,151.39 59.677,165.88"];
+	struct3	[height=1.2278,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+  <TR> 
+    <TD ROWSPAN="3">hello<BR/>world</TD>
+    <TD COLSPAN="3">b</TD>
+    <TD ROWSPAN="3">g</TD>
+    <TD ROWSPAN="3">h</TD>
+  </TR>
+  <TR>
+    <TD>c</TD><TD PORT="here">d</TD><TD>e</TD>
+  </TR>
+  <TR>
+    <TD COLSPAN="3">f</TD>
+  </TR>
+</TABLE>>,
+		pos="71.045,44.2",
+		width=1.9735];
+	struct1:f2 -> struct3:here	[pos="e,82.36,57.349 107.56,104.8 107.56,104.8 96.772,84.482 87.686,67.375"];
+}

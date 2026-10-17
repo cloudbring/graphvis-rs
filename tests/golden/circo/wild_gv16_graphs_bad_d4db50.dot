@@ -1,0 +1,31 @@
+graph G {
+	graph [bb="0,0,429.07,192",
+		layout=circo
+	];
+	node [label="\N"];
+	Marden	[height=0.5,
+		pos="262,174",
+		width=1.1408];
+	hg	[height=0.5,
+		pos="402.07,174",
+		width=0.75];
+	Marden -- hg	[pos="303.27,174 326.35,174 354.47,174 374.8,174"];
+	Cannon	[height=0.5,
+		pos="210,18",
+		width=1.141];
+	ggt	[height=0.5,
+		pos="350.08,18",
+		width=0.75];
+	Cannon -- ggt	[pos="251.27,18 274.35,18 302.48,18 322.81,18"];
+	Epstein	[height=0.5,
+		pos="166,96",
+		width=1.1112];
+	kg	[height=0.5,
+		pos="305.01,96",
+		width=0.75];
+	Epstein -- kg	[pos="206.21,96 229.14,96 257.28,96 277.65,96"];
+	ldt	[height=0.5,
+		pos="27,96",
+		width=0.75];
+	Epstein -- ldt	[pos="125.8,96 102.87,96 74.725,96 54.351,96"];
+}

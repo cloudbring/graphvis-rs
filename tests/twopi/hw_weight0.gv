@@ -1,0 +1,10 @@
+graph blocks {
+layout=twopi;
+
+a -- c [weight=0]; e -- f [weight=0];
+a -- b -- c -- d -- a; a -- c;
+d -- e -- f -- g -- e;
+g -- h; h -- i; h -- j;
+c -- k -- l -- m -- k;
+b -- n;
+}

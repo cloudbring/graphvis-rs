@@ -1,0 +1,33 @@
+graph {
+	graph [bb="0,0,227.14,204.8",
+		bgcolor=lightblue,
+		label=Home,
+		layout=circo,
+		lheight=0.23,
+		lp="113.57,12.4",
+		lwidth=0.48
+	];
+	node [label="\N"];
+	subgraph cluster_ground_floor {
+		graph [bgcolor=lightgreen,
+			label="Ground Floor"
+		];
+		Lounge	[height=0.5,
+			pos="40.535,186.8",
+			width=1.126];
+		Kitchen	[height=0.5,
+			pos="185.54,42.8",
+			width=1.1557];
+	}
+	subgraph cluster_top_floor {
+		graph [bgcolor=lightyellow,
+			label="Top Floor"
+		];
+		Bedroom	[height=0.5,
+			pos="158.54,170.8",
+			width=1.3049];
+		Bathroom	[height=0.5,
+			pos="57.535,98.8",
+			width=1.3794];
+	}
+}

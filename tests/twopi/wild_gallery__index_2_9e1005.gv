@@ -1,0 +1,5 @@
+graph {
+layout=twopi;
+
+  B -- A [taillabel = "tail"]
+}
