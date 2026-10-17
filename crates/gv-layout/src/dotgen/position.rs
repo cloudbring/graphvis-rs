@@ -381,7 +381,10 @@ impl Dot<'_> {
                 let lo = self.rv(low, hm, 0).map_or(0, |v| self.nodes[v].order);
                 let ho = self.rv(high, hm, 0).map_or(0, |v| self.nodes[v].order);
                 let (left, right) = if lo < ho { (low, high) } else { (high, low) };
-                let (lr, rl) = (self.graphs[left].rn.unwrap(), self.graphs[right].ln.unwrap());
+                let (lr, rl) = (
+                    self.graphs[left].rn.unwrap(),
+                    self.graphs[right].ln.unwrap(),
+                );
                 self.make_aux_edge(lr, rl, margin as f64, 0);
             }
             self.separate_subclust(cl[i]);
@@ -665,7 +668,9 @@ impl Dot<'_> {
                 if rnkn == 0 {
                     continue;
                 }
-                let Some(mut v) = self.rv(g, r, 0) else { continue };
+                let Some(mut v) = self.rv(g, r, 0) else {
+                    continue;
+                };
                 let mut c = 1;
                 while self.nodes[v].node_type != NORMAL && c < rnkn {
                     v = self.rv(g, r, c).unwrap();
@@ -699,8 +704,14 @@ impl Dot<'_> {
         }
         let maxr = self.graphs[g].maxrank;
         let minr = self.graphs[g].minrank;
-        ll.y = self.rv(root, maxr, 0).map_or(0.0, |v| self.nodes[v].coord.y) - self.graphs[g].ht1;
-        ur.y = self.rv(root, minr, 0).map_or(0.0, |v| self.nodes[v].coord.y) + self.graphs[g].ht2;
+        ll.y = self
+            .rv(root, maxr, 0)
+            .map_or(0.0, |v| self.nodes[v].coord.y)
+            - self.graphs[g].ht1;
+        ur.y = self
+            .rv(root, minr, 0)
+            .map_or(0.0, |v| self.nodes[v].coord.y)
+            + self.graphs[g].ht2;
         self.graphs[g].bb = BoxF { ll, ur };
     }
 

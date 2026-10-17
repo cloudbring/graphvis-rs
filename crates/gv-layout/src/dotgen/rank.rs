@@ -318,7 +318,11 @@ impl Dot<'_> {
         }
         for c in 0..self.graphs[g].comp.len() {
             self.graphs[g].nlist = self.graphs[g].comp[c];
-            let bal = if self.graphs[g].clust.is_empty() { 1 } else { 0 };
+            let bal = if self.graphs[g].clust.is_empty() {
+                1
+            } else {
+                0
+            };
             self.ns_rank(g, bal, maxiter);
         }
     }

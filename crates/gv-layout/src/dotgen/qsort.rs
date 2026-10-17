@@ -161,7 +161,7 @@ fn qsort_inner<T: Copy>(
         if d1 > 0 {
             vecswap(arr, a, pb - d1, d1);
         }
-        let pdu = pd as isize;
+        let pdu = pd;
         let d1b = ((pdu - pc) as usize).min((pn as isize - pdu - 1) as usize);
         if d1b > 0 {
             vecswap(arr, pb, pn - d1b, d1b);
@@ -269,7 +269,10 @@ mod tests {
         let mut lines = data.lines();
         let mut cases = 0;
         while let (Some(keys), Some(ids)) = (lines.next(), lines.next()) {
-            let keys: Vec<i32> = keys.split_whitespace().map(|s| s.parse().unwrap()).collect();
+            let keys: Vec<i32> = keys
+                .split_whitespace()
+                .map(|s| s.parse().unwrap())
+                .collect();
             let want: Vec<usize> = ids.split_whitespace().map(|s| s.parse().unwrap()).collect();
             let mut items: Vec<(i32, usize)> = keys.iter().copied().zip(0..).collect();
             qsort(&mut items, &mut |a, b| a.0.cmp(&b.0));

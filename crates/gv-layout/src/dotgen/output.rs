@@ -118,6 +118,7 @@ impl Dot<'_> {
             _ => "TB",
         };
         self.reset_rw();
+        let directed = self.input.kind == gv_core::GraphKind::Directed;
         let ne = self.input.edges.len();
         self.spl = vec![None; ne];
         // Real nodes in provisional drawing space (rotated, not yet shifted).
@@ -171,8 +172,12 @@ impl Dot<'_> {
                 .map(|(_, b)| *b)
                 .collect();
             let (mut spline, mut lpos) =
-                gv_geom::route_edge_spline(&nd[t], &nd[h], ie, &obstacles, rankdir_s);
-            let chain = if t != h { self.edge_chain(ei) } else { Vec::new() };
+                gv_geom::route_edge_spline(&nd[t], &nd[h], ie, &obstacles, rankdir_s, directed);
+            let chain = if t != h {
+                self.edge_chain(ei)
+            } else {
+                Vec::new()
+            };
             if t == h && loop_idx[ei] > 0 {
                 let extra = loop_idx[ei] as f64 * 14.0;
                 for seg in &mut spline.segments {
@@ -237,7 +242,10 @@ impl Dot<'_> {
             // Edge label position.
             if let Some(l) = self.edges[ei].label {
                 let flip = self.graphs[0].flip();
-                let vn = chain.iter().copied().find(|&v| self.nodes[v].label == Some(l));
+                let vn = chain
+                    .iter()
+                    .copied()
+                    .find(|&v| self.nodes[v].label == Some(l));
                 let fl = (self.n_real_nodes..self.nodes.len())
                     .find(|&v| self.nodes[v].alg == Some(ei) && self.nodes[v].label == Some(l));
                 if let Some(v) = vn {
@@ -312,8 +320,14 @@ fn catmull_rom(w: &[Point], sa: Option<Point>, ea: Option<Point>) -> Spline {
         let p1 = w[i];
         let p2 = w[i + 1];
         let p3 = if i + 2 < n { w[i + 2] } else { w[n - 1] };
-        pts.push(Point::new(p1.x + (p2.x - p0.x) / 6.0, p1.y + (p2.y - p0.y) / 6.0));
-        pts.push(Point::new(p2.x - (p3.x - p1.x) / 6.0, p2.y - (p3.y - p1.y) / 6.0));
+        pts.push(Point::new(
+            p1.x + (p2.x - p0.x) / 6.0,
+            p1.y + (p2.y - p0.y) / 6.0,
+        ));
+        pts.push(Point::new(
+            p2.x - (p3.x - p1.x) / 6.0,
+            p2.y - (p3.y - p1.y) / 6.0,
+        ));
         pts.push(p2);
     }
     Spline {
@@ -362,7 +376,9 @@ impl Output {
         let n = d.input.nodes.len();
         Output {
             node_pos: vec![Some(Point::new(0.0, 0.0)); n],
-            node_rank: (0..n).map(|i| (d.nodes[i].rank, d.nodes[i].order)).collect(),
+            node_rank: (0..n)
+                .map(|i| (d.nodes[i].rank, d.nodes[i].order))
+                .collect(),
             phase_attrs: Some(maxphase),
             bb: BoundingBox::new(0.0, 0.0, 0.0, 0.0),
             cluster_bb: Vec::new(),
@@ -373,7 +389,9 @@ impl Output {
     pub fn collect(d: &Dot<'_>) -> Output {
         let n = d.input.nodes.len();
         let node_pos = (0..n).map(|i| Some(d.nodes[i].coord)).collect();
-        let node_rank = (0..n).map(|i| (d.nodes[i].rank, d.nodes[i].order)).collect();
+        let node_rank = (0..n)
+            .map(|i| (d.nodes[i].rank, d.nodes[i].order))
+            .collect();
         let b = d.graphs[0].bb;
         let bb = BoundingBox::new(b.ll.x, b.ll.y, b.ur.x, b.ur.y);
         let mut cluster_bb = Vec::new();
@@ -427,10 +445,14 @@ impl Output {
             let (r, o) = self.node_rank[i];
             graph.nodes[i].rank = r;
             graph.nodes[i].order = o.max(0) as usize;
-            if self.phase_attrs.is_some() {
-                graph.nodes[i].attrs.insert("rank".to_string(), r.to_string());
-                if self.phase_attrs.unwrap() >= 2 {
-                    graph.nodes[i].attrs.insert("order".to_string(), o.to_string());
+            if let Some(ph) = self.phase_attrs {
+                graph.nodes[i]
+                    .attrs
+                    .insert("rank".to_string(), r.to_string());
+                if ph >= 2 {
+                    graph.nodes[i]
+                        .attrs
+                        .insert("order".to_string(), o.to_string());
                 }
             }
         }

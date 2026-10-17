@@ -465,7 +465,8 @@ impl Dot<'_> {
                     break;
                 } else {
                     let hs = self.st_set_find(ctx, h);
-                    if hs != todo[top].ts && (best.is_none() || self.slack(e) < self.slack(best.unwrap()))
+                    if hs != todo[top].ts
+                        && (best.is_none() || self.slack(e) < self.slack(best.unwrap()))
                     {
                         best = Some(e);
                     }
@@ -496,7 +497,8 @@ impl Dot<'_> {
                     break;
                 } else {
                     let tsf = self.st_set_find(ctx, t);
-                    if tsf != todo[top].ts && (best.is_none() || self.slack(e) < self.slack(best.unwrap()))
+                    if tsf != todo[top].ts
+                        && (best.is_none() || self.slack(e) < self.slack(best.unwrap()))
                     {
                         best = Some(e);
                     }
@@ -519,8 +521,7 @@ impl Dot<'_> {
             if left < size && ctx.subtrees[heap[left]].size < ctx.subtrees[heap[smallest]].size {
                 smallest = left;
             }
-            if right < size && ctx.subtrees[heap[right]].size < ctx.subtrees[heap[smallest]].size
-            {
+            if right < size && ctx.subtrees[heap[right]].size < ctx.subtrees[heap[smallest]].size {
                 smallest = right;
             }
             if smallest != i {

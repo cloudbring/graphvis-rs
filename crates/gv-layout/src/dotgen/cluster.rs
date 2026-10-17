@@ -112,8 +112,7 @@ impl Dot<'_> {
                     self.edges[orig].to_virt = Some(ve);
                     self.edges[ve].edge_type = ty;
                     self.edges[ve].count = short(self.edges[ve].count + 1);
-                    if self.nodes[from].node_type == NORMAL && self.nodes[to].node_type == NORMAL
-                    {
+                    if self.nodes[from].node_type == NORMAL && self.nodes[to].node_type == NORMAL {
                         self.other_edge(orig);
                     }
                 } else {

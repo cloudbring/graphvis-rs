@@ -16,7 +16,11 @@ impl Dot<'_> {
             None => 0,
         };
         let offset = self.edges[e].minlen + t_rank - h_rank;
-        let (t_len, h_len) = if offset > 0 { (0, offset) } else { (-offset, 0) };
+        let (t_len, h_len) = if offset > 0 {
+            (0, offset)
+        } else {
+            (-offset, 0)
+        };
         let v = self.virtual_node(g);
         self.nodes[v].node_type = SLACKNODE;
         let t0 = self.uf_find(t);

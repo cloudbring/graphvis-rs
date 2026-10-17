@@ -1,6 +1,7 @@
 //! Graphviz layout engines in pure Rust (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`).
 
 pub mod dot;
+pub mod dotgen;
 pub mod force_circular;
 
 use gv_core::{Graph, GraphvizError, Result};
@@ -44,7 +45,13 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
     };
 
     match effective_engine {
-        LayoutEngine::Dot => dot::layout_dot(graph),
+        LayoutEngine::Dot => {
+            if std::env::var_os("GV_DOTGEN").is_some() {
+                dotgen::layout_dot(graph)
+            } else {
+                dot::layout_dot(graph)
+            }
+        }
         LayoutEngine::Neato => force_circular::layout_neato(graph),
         LayoutEngine::Fdp => force_circular::layout_fdp(graph, false),
         LayoutEngine::Sfdp => force_circular::layout_fdp(graph, true),

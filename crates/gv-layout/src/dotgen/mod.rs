@@ -5,6 +5,9 @@
 //! phase-2/3 handoff notes. Each submodule mirrors one C file; functions keep
 //! their C names (snake_case) so the two can be read side by side.
 
+// Loops and late initialisations mirror the C control flow on purpose.
+#![allow(clippy::explicit_counter_loop, clippy::needless_late_init)]
+
 pub mod acyclic;
 pub mod cg;
 pub mod class1;
@@ -101,10 +104,7 @@ impl<'a> Dot<'a> {
     /// `GD_rank(g)[r].n`, 0 when the rank slot does not exist.
     #[inline]
     pub fn rank_n(&self, g: G, r: i32) -> i32 {
-        self.graphs[g]
-            .rank
-            .get((r + 1) as usize)
-            .map_or(0, |x| x.n)
+        self.graphs[g].rank.get((r + 1) as usize).map_or(0, |x| x.n)
     }
 
     /// `GD_rank(g)[r].v[i]`
@@ -166,20 +166,7 @@ impl<'a> Dot<'a> {
 
 /// Lays out `graph` with the dotgen port.
 pub fn layout_dot(graph: &mut Graph) -> Result<()> {
-    let rankdir = graph
-        .graph_attrs
-        .get("rankdir")
-        .map(String::as_str)
-        .unwrap_or("TB")
-        .to_string();
-    let rankdir = match rankdir.as_str() {
-        "LR" | "BT" | "RL" => rankdir,
-        _ => "TB".to_string(),
-    };
-    let name = graph.name.clone();
-    for node in &mut graph.nodes {
-        gv_geom::compute_node_dimensions_with_rankdir(node, &name, &rankdir);
-    }
+    gv_geom::size_graph_nodes(graph);
     if graph.nodes.is_empty() {
         graph.bb = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
         return Ok(());
@@ -189,10 +176,14 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         d.graph_init();
         let maxphase = utils::late_int(d.agget(0, "phase"), -1, 1);
         d.dot_layout()
-            .map_err(gv_core::GraphvizError::LayoutError)?;
+            .map_err(|message| gv_core::GraphvizError::LayoutError {
+                stage: "dot",
+                message,
+            })?;
         if (1..=3).contains(&maxphase) {
             output::Output::phase(&d, maxphase)
         } else {
+            d.phase1_splines();
             d.dotneato_postprocess();
             output::Output::collect(&d)
         }

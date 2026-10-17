@@ -138,10 +138,10 @@ impl Dot<'_> {
                     self.nodes[n].state = 0;
                 }
             }
-            if let Some(l) = lg {
-                if self.agnnodes(l) > 1 {
-                    self.fix_label_order(l, r);
-                }
+            if let Some(l) = lg
+                && self.agnnodes(l) > 1
+            {
+                self.fix_label_order(l, r);
             }
         }
     }
@@ -208,13 +208,18 @@ impl Dot<'_> {
         } else {
             self.nodes[n].in_.clone()
         };
-        let mut sortlist: Vec<E> = list.into_iter().filter(|&e| !self.betweenclust(e)).collect();
+        let mut sortlist: Vec<E> = list
+            .into_iter()
+            .filter(|&e| !self.betweenclust(e))
+            .collect();
         if sortlist.len() <= 1 {
             return;
         }
         {
             let edges = &self.edges;
-            qsort(&mut sortlist, &mut |a: &E, b: &E| edges[*a].seq.cmp(&edges[*b].seq));
+            qsort(&mut sortlist, &mut |a: &E, b: &E| {
+                edges[*a].seq.cmp(&edges[*b].seq)
+            });
         }
         for k in 1..sortlist.len() {
             let (e, f) = (sortlist[k - 1], sortlist[k]);
@@ -326,7 +331,11 @@ impl Dot<'_> {
         let Some(m) = &self.rk(g, self.nodes[v].rank).flat else {
             return false;
         };
-        let (a, b) = if self.graphs[g].flip() { (w, v) } else { (v, w) };
+        let (a, b) = if self.graphs[g].flip() {
+            (w, v)
+        } else {
+            (v, w)
+        };
         m.get(self.nodes[a].low as usize, self.nodes[b].low as usize)
     }
 
@@ -337,8 +346,7 @@ impl Dot<'_> {
             let inv = self.nodes[self.edges[e2].tail].order;
             for &e1 in &self.nodes[v].in_ {
                 let t = self.nodes[self.edges[e1].tail].order - inv;
-                if t > 0
-                    || (t == 0 && self.edges[e1].tail_port.p.x > self.edges[e2].tail_port.p.x)
+                if t > 0 || (t == 0 && self.edges[e1].tail_port.p.x > self.edges[e2].tail_port.p.x)
                 {
                     cross += self.edges[e1].xpenalty as i64 * cnt;
                 }
@@ -354,8 +362,7 @@ impl Dot<'_> {
             let inv = self.nodes[self.edges[e2].head].order;
             for &e1 in &self.nodes[v].out {
                 let t = self.nodes[self.edges[e1].head].order - inv;
-                if t > 0
-                    || (t == 0 && self.edges[e1].head_port.p.x > self.edges[e2].head_port.p.x)
+                if t > 0 || (t == 0 && self.edges[e1].head_port.p.x > self.edges[e2].head_port.p.x)
                 {
                     cross = cross.wrapping_add(self.edges[e1].xpenalty.wrapping_mul(cnt));
                 }
@@ -515,10 +522,15 @@ impl Dot<'_> {
             self.rk_mut(0, r).valid = false;
             let cnt = self.rank_n(g, r) as usize;
             let (b, o) = (self.rk(g, r).vbuf, self.rk(g, r).voff);
-            let mut slice: Vec<N> = self.bufs[b][o..o + cnt].iter().map(|x| x.unwrap()).collect();
+            let mut slice: Vec<N> = self.bufs[b][o..o + cnt]
+                .iter()
+                .map(|x| x.unwrap())
+                .collect();
             {
                 let nodes = &self.nodes;
-                qsort(&mut slice, &mut |a: &N, b: &N| nodes[*a].order.cmp(&nodes[*b].order));
+                qsort(&mut slice, &mut |a: &N, b: &N| {
+                    nodes[*a].order.cmp(&nodes[*b].order)
+                });
             }
             for (i, n) in slice.into_iter().enumerate() {
                 self.bufs[b][o + i] = Some(n);
@@ -1309,14 +1321,18 @@ impl Dot<'_> {
                 for &e in &self.nodes[v].out {
                     if self.edges[e].xpenalty > 0 {
                         let h = self.edges[e].head;
-                        list.push(MC_SCALE * self.nodes[h].order + self.edges[e].head_port.order as i32);
+                        list.push(
+                            MC_SCALE * self.nodes[h].order + self.edges[e].head_port.order as i32,
+                        );
                     }
                 }
             } else {
                 for &e in &self.nodes[v].in_ {
                     if self.edges[e].xpenalty > 0 {
                         let t = self.edges[e].tail;
-                        list.push(MC_SCALE * self.nodes[t].order + self.edges[e].tail_port.order as i32);
+                        list.push(
+                            MC_SCALE * self.nodes[t].order + self.edges[e].tail_port.order as i32,
+                        );
                     }
                 }
             }
@@ -1365,7 +1381,8 @@ impl Dot<'_> {
     }
 
     pub fn virtual_weight(&mut self, e: E) {
-        let t = TABLE[self.endpoint_class(self.edges[e].tail)][self.endpoint_class(self.edges[e].head)];
+        let t =
+            TABLE[self.endpoint_class(self.edges[e].tail)][self.endpoint_class(self.edges[e].head)];
         self.edges[e].weight *= t;
     }
 

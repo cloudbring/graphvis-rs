@@ -133,10 +133,7 @@ impl Dot<'_> {
         match (e, f) {
             (Some(e), Some(f)) => {
                 let (a, b) = (&self.edges[e], &self.edges[f]);
-                a.tail == b.tail
-                    && a.head == b.head
-                    && (a.label == b.label)
-                    && self.ports_eq(e, f)
+                a.tail == b.tail && a.head == b.head && (a.label == b.label) && self.ports_eq(e, f)
             }
             _ => false,
         }

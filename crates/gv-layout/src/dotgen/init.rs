@@ -7,12 +7,10 @@
 use super::Dot;
 use super::types::*;
 use super::utils::*;
-use gv_core::font::{DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext};
 use gv_core::{Graph, GraphKind, Point};
-use gv_geom::{ShapeKind, is_html_label, parse_html_table, record_layout};
+use gv_geom::{ShapeKind, is_html_label};
 use std::f64::consts::PI;
 
-const MIN_FONTSIZE: f64 = 1.0;
 const GAP: f64 = 4.0;
 
 /// `PAD(d)`: `d.x += 4*GAP; d.y += 2*GAP`.
@@ -182,43 +180,6 @@ impl<'a> Dot<'a> {
         d
     }
 
-    /// Measures a label the way `make_label` sizes `textlabel_t.dimen`.
-    pub fn make_label(
-        &mut self,
-        text: &str,
-        fontname: &str,
-        fontsize: f64,
-        ctx: &LabelSubstContext<'_>,
-    ) -> L {
-        let html = is_html_label(text, ShapeKind::Plain) && !text.is_empty();
-        let dimen = if html {
-            if let Some(tbl) = parse_html_table(text, ctx.node_name, ctx.graph_name, fontname, fontsize)
-            {
-                Point::new(tbl.bbox.width(), tbl.bbox.height())
-            } else {
-                let lay = gv_core::font::measure_multiline_label_with_context(
-                    text, ctx, fontname, fontsize,
-                );
-                Point::new(lay.width, lay.height)
-            }
-        } else {
-            let lay =
-                gv_core::font::measure_multiline_label_with_context(text, ctx, fontname, fontsize);
-            Point::new(lay.width, lay.height)
-        };
-        let l = self.labels.len();
-        self.labels.push(TextLabel {
-            text: text.to_string(),
-            fontname: fontname.to_string(),
-            fontsize,
-            dimen,
-            space: dimen,
-            html,
-            ..TextLabel::default()
-        });
-        l
-    }
-
     /// `graph_init` (the parts dot uses).
     pub fn graph_init(&mut self) {
         let g = 0;
@@ -283,67 +244,41 @@ impl<'a> Dot<'a> {
 
     /// `do_graph_label`
     pub fn do_graph_label(&mut self, sg: G) {
-        let Some(text) = self.agget(sg, "label").map(str::to_string) else {
+        let flip = self.graphs[0].flip();
+        let name = self.graphs[sg].name.clone();
+        let Some(gl) = gv_geom::graph_label_geometry(
+            &name,
+            &self.graphs[sg].attrs,
+            sg == 0,
+            flip,
+            self.env_latin1(),
+        ) else {
             return;
         };
-        if text.is_empty() {
-            return;
-        }
         self.graphs[0].has_labels |= GRAPH_LABEL;
-        let fontsize = late_double(self.agget(sg, "fontsize"), DEFAULT_FONT_SIZE, MIN_FONTSIZE);
-        let fontname = self
-            .agget(sg, "fontname")
-            .filter(|s| !s.is_empty())
-            .unwrap_or(DEFAULT_FONT_NAME)
-            .to_string();
-        let gname = self.graphs[sg].name.clone();
-        let ctx = LabelSubstContext {
-            graph_name: &gname,
-            label_text: &text,
-            is_directed: self.input.kind == GraphKind::Directed,
-            ..Default::default()
-        };
-        let l = self.make_label(&text, &fontname, fontsize, &ctx);
+        let l = self.push_label(&gl.label);
         self.graphs[sg].label = Some(l);
-        let pos = self.agget(sg, "labelloc").map(str::to_string);
-        let mut pos_flag = if sg != 0 {
-            if pos.as_deref().is_some_and(|p| p.starts_with('b')) {
-                LABEL_AT_BOTTOM
-            } else {
-                LABEL_AT_TOP
-            }
-        } else if pos.as_deref().is_some_and(|p| p.starts_with('t')) {
-            LABEL_AT_TOP
-        } else {
-            LABEL_AT_BOTTOM
-        };
-        if let Some(just) = self.agget(sg, "labeljust") {
-            if just.starts_with('l') {
-                pos_flag |= LABEL_AT_LEFT;
-            } else if just.starts_with('r') {
-                pos_flag |= LABEL_AT_RIGHT;
-            }
+        self.graphs[sg].label_pos = gl.pos_flag;
+        if let Some((side, d)) = gl.border {
+            self.graphs[sg].border[side as usize] = d;
         }
-        self.graphs[sg].label_pos = pos_flag;
-        if sg == 0 {
-            return;
-        }
-        let dimen = pad(self.labels[l].dimen);
-        if !self.graphs[0].flip() {
-            let ix = if pos_flag & LABEL_AT_TOP != 0 {
-                TOP_IX
-            } else {
-                BOTTOM_IX
-            };
-            self.graphs[sg].border[ix] = dimen;
-        } else {
-            let ix = if pos_flag & LABEL_AT_TOP != 0 {
-                RIGHT_IX
-            } else {
-                LEFT_IX
-            };
-            self.graphs[sg].border[ix] = Point::new(dimen.y, dimen.x);
-        }
+    }
+
+    fn env_latin1(&self) -> bool {
+        gv_geom::NodeSizeEnv::from_graph(self.input).charset_latin1
+    }
+
+    fn push_label(&mut self, lg: &gv_geom::LabelGeometry) -> L {
+        let l = self.labels.len();
+        self.labels.push(TextLabel {
+            fontname: lg.font_name.clone(),
+            fontsize: lg.font_size,
+            dimen: lg.dimen,
+            space: lg.space,
+            html: lg.html,
+            ..TextLabel::default()
+        });
+        l
     }
 
     /// `dot_init_subg(g, g)`: every subgraph gets an Agraphinfo_t record.
@@ -369,28 +304,18 @@ impl<'a> Dot<'a> {
     fn dot_init_node(&mut self, n: N, flip: bool) {
         let r = self.nodes[n].real.unwrap();
         let nd = &self.input.nodes[r];
-        let (w, h) = (nd.width, nd.height);
-        let shape = ShapeKind::from_node(nd);
+        let env = gv_geom::NodeSizeEnv::from_graph(self.input);
+        let geom = gv_geom::node_geometry(nd, &env);
+        let (lw, rw, ht) = geom.nodesize(flip);
         let info = &mut self.nodes[n];
-        info.width = w;
-        info.height = h;
-        info.is_record = shape.is_record();
-        // gv_nodesize(n, GD_flip(g))
-        if flip {
-            let wp = h * 72.0;
-            info.lw = wp / 2.0;
-            info.rw = wp / 2.0;
-            info.ht = w * 72.0;
-        } else {
-            let wp = w * 72.0;
-            info.lw = wp / 2.0;
-            info.rw = wp / 2.0;
-            info.ht = h * 72.0;
-        }
+        info.width = geom.width;
+        info.height = geom.height;
+        info.is_record = geom.record.is_some();
+        info.lw = lw;
+        info.rw = rw;
+        info.ht = ht;
         info.uf_size = 1;
-        if let Some(x) = self.node_attr(n, "xlabel")
-            && !x.is_empty()
-        {
+        if geom.xlabel.is_some() {
             self.graphs[0].has_labels |= NODE_XLABEL;
         }
     }
@@ -420,55 +345,39 @@ impl<'a> Dot<'a> {
 
     fn common_init_edge(&mut self, e: E) {
         let r = self.edges[e].real.unwrap();
-        let ie = &self.input.edges[r];
         let (t, h) = (self.edges[e].tail, self.edges[e].head);
-        let tname = self.nodes[t].name.clone();
-        let hname = self.nodes[h].name.clone();
-        let gname = self.input.name.clone();
+        let env = gv_geom::NodeSizeEnv::from_graph(self.input);
         let directed = self.input.kind == GraphKind::Directed;
-        let fontsize = late_double(
-            ie.attrs.get("fontsize").map(String::as_str),
-            DEFAULT_FONT_SIZE,
-            MIN_FONTSIZE,
+        let ie = &self.input.edges[r];
+        let geo = gv_geom::edge_label_geometry(
+            &ie.attrs,
+            &self.nodes[t].name,
+            &self.nodes[h].name,
+            directed,
+            &env,
         );
-        let fontname = ie
-            .attrs
-            .get("fontname")
-            .filter(|s| !s.is_empty())
-            .cloned()
-            .unwrap_or_else(|| DEFAULT_FONT_NAME.to_string());
-        let tport = ie.tail_port.name.clone();
-        let hport = ie.head_port.name.clone();
-        if let Some(text) = ie.attrs.get("label").cloned()
-            && !text.is_empty()
-        {
-            let ctx = LabelSubstContext {
-                graph_name: &gname,
-                tail_name: &tname,
-                head_name: &hname,
-                is_edge: true,
-                is_directed: directed,
-                tail_port: tport.as_deref(),
-                head_port: hport.as_deref(),
-                label_text: &text,
-                ..Default::default()
-            };
-            let l = self.make_label(&text, &fontname, fontsize, &ctx);
+        if let Some(lg) = &geo.label {
+            let l = self.push_label(lg);
             self.edges[e].label = Some(l);
             self.graphs[0].has_labels |= EDGE_LABEL;
-            self.edges[e].label_ontop =
-                mapbool(Some(self.edge_attr(e, "labelfloat").unwrap_or("false")));
+            self.edges[e].label_ontop = geo.label_float;
         }
-        let ie = &self.input.edges[r];
-        if ie.attrs.get("xlabel").is_some_and(|s| !s.is_empty()) {
+        if let Some(lg) = &geo.xlabel {
+            let l = self.push_label(lg);
+            self.edges[e].xlabel = Some(l);
             self.graphs[0].has_labels |= EDGE_XLABEL;
         }
-        if ie.attrs.get("headlabel").is_some_and(|s| !s.is_empty()) {
+        if let Some(lg) = &geo.head_label {
+            let l = self.push_label(lg);
+            self.edges[e].head_label = Some(l);
             self.graphs[0].has_labels |= HEAD_LABEL;
         }
-        if ie.attrs.get("taillabel").is_some_and(|s| !s.is_empty()) {
+        if let Some(lg) = &geo.tail_label {
+            let l = self.push_label(lg);
+            self.edges[e].tail_label = Some(l);
             self.graphs[0].has_labels |= TAIL_LABEL;
         }
+        let ie = &self.input.edges[r];
         let tp = ie.tail_port.clone();
         let hp = ie.head_port.clone();
         let tail_str = port_string(&tp);
@@ -525,8 +434,10 @@ impl<'a> Dot<'a> {
             _ => "TB",
         };
         let mut rv = Port::default();
+        let _ = rankdir_s;
         if shape.is_record() && !html {
-            if let Some(rec) = record_layout(nd, &self.input.name, rankdir_s) {
+            let env = gv_geom::NodeSizeEnv::from_graph(self.input);
+            if let Some(rec) = gv_geom::node_geometry(nd, &env).record {
                 let whole = BoxF {
                     ll: rec.bbox.ll,
                     ur: rec.bbox.ur,
@@ -548,7 +459,10 @@ impl<'a> Dot<'a> {
             && let Some(tbl) = gv_geom::html_table_layout(nd, &self.input.name)
             && let Some(pb) = tbl.find_port_box(portname)
         {
-            let b = BoxF { ll: pb.ll, ur: pb.ur };
+            let b = BoxF {
+                ll: pb.ll,
+                ur: pb.ur,
+            };
             let whole = BoxF {
                 ll: tbl.bbox.ll,
                 ur: tbl.bbox.ur,
