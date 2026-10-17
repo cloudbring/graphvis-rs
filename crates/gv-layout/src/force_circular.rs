@@ -1077,7 +1077,7 @@ fn layout_patchwork_children(graph: &mut Graph, children: &mut [PatchworkNode], 
             PatchworkKind::Subgraph(sid) => {
                 graph.subgraphs[sid.0 as usize].bb = crect;
                 let inset =
-                    parse_attr_f64(&graph.subgraphs[sid.0 as usize].graph_attrs, "inset", 2.0)
+                    parse_attr_f64(&graph.subgraphs[sid.0 as usize].graph_attrs, "inset", 0.0)
                         .max(0.0);
                 let inner = BoundingBox::new(
                     (crect.ll.x + inset).min(crect.ur.x),
@@ -1133,24 +1133,11 @@ fn squarify_treemap(areas: &[f64], rect: BoundingBox) -> Vec<BoundingBox> {
             }
         }
 
-        // Lay out `idx..strip_end` along the shorter side of `cur_rect`.
-        if w >= h {
-            // Vertical strip of width `strip_w = strip_sum / h` on the left of `cur_rect`.
-            let strip_w = (strip_sum / h).min(w);
-            let mut y = cur_rect.ll.y;
-            for (i, &item_area) in scaled.iter().enumerate().take(strip_end).skip(idx) {
-                let item_h = if i + 1 == strip_end {
-                    (cur_rect.ur.y - y).max(0.0)
-                } else {
-                    (item_area / strip_w.max(1e-6)).min(cur_rect.ur.y - y)
-                };
-                out[i] = BoundingBox::new(cur_rect.ll.x, y, cur_rect.ll.x + strip_w, y + item_h);
-                y += item_h;
-            }
-            cur_rect.ll.x += strip_w;
-        } else {
-            // Horizontal strip of height `strip_h = strip_sum / w` at the bottom of `cur_rect`.
+        // Lay out `idx..strip_end` matching `tree_map.c:55-82`.
+        if w <= h {
+            // Tall/square rect (`fillrec.size[0] <= fillrec.size[1]`): horizontal strip at top, left to right.
             let strip_h = (strip_sum / w).min(h);
+            let y_bottom = (cur_rect.ur.y - strip_h).max(cur_rect.ll.y);
             let mut x = cur_rect.ll.x;
             for (i, &item_area) in scaled.iter().enumerate().take(strip_end).skip(idx) {
                 let item_w = if i + 1 == strip_end {
@@ -1158,10 +1145,29 @@ fn squarify_treemap(areas: &[f64], rect: BoundingBox) -> Vec<BoundingBox> {
                 } else {
                     (item_area / strip_h.max(1e-6)).min(cur_rect.ur.x - x)
                 };
-                out[i] = BoundingBox::new(x, cur_rect.ll.y, x + item_w, cur_rect.ll.y + strip_h);
+                out[i] = BoundingBox::new(x, y_bottom, x + item_w, cur_rect.ur.y);
                 x += item_w;
             }
-            cur_rect.ll.y += strip_h;
+            cur_rect.ur.y = y_bottom;
+        } else {
+            // Wide rect (`fillrec.size[0] > fillrec.size[1]`): vertical strip at left, top to bottom.
+            let strip_w = (strip_sum / h).min(w);
+            let mut y_top = cur_rect.ur.y;
+            for (i, &item_area) in scaled.iter().enumerate().take(strip_end).skip(idx) {
+                let item_h = if i + 1 == strip_end {
+                    (y_top - cur_rect.ll.y).max(0.0)
+                } else {
+                    (item_area / strip_w.max(1e-6)).min(y_top - cur_rect.ll.y)
+                };
+                out[i] = BoundingBox::new(
+                    cur_rect.ll.x,
+                    y_top - item_h,
+                    cur_rect.ll.x + strip_w,
+                    y_top,
+                );
+                y_top -= item_h;
+            }
+            cur_rect.ll.x += strip_w;
         }
 
         idx = strip_end;

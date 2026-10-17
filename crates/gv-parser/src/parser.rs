@@ -212,7 +212,13 @@ impl Parser {
             self.advance();
         }
 
-        if self.peek().kind != TokenKind::Eof {
+        // Allow multi-graph DOT streams (`digraph G { ... } digraph H { ... }`), where C Graphviz
+        // parses and renders the first graph in single-graph invocation mode, while rejecting
+        // stray non-graph tokens after the closing brace.
+        if !matches!(
+            self.peek().kind,
+            TokenKind::Eof | TokenKind::Strict | TokenKind::Graph | TokenKind::Digraph
+        ) {
             let extra = self.peek();
             return Err(GraphvizError::SyntaxError {
                 line: extra.line,
@@ -467,10 +473,26 @@ impl Parser {
     }
 
     fn open_subgraph(&mut self, name: String) -> SubgraphId {
+        let current_parent = self.scope_stack.last().copied();
         if !name.is_empty()
-            && let Some(existing) = self.graph.subgraphs.iter().find(|s| s.name == name)
+            && let Some(existing_id) = self.graph.subgraphs.iter().find_map(|s| {
+                if s.name != name {
+                    return None;
+                }
+                let has_same_parent = match current_parent {
+                    Some(pid) => self.graph.subgraphs[pid.0 as usize]
+                        .subgraphs
+                        .contains(&s.id),
+                    None => !self
+                        .graph
+                        .subgraphs
+                        .iter()
+                        .any(|p| p.subgraphs.contains(&s.id)),
+                };
+                has_same_parent.then_some(s.id)
+            })
         {
-            return existing.id;
+            return existing_id;
         }
 
         let id = SubgraphId(self.graph.subgraphs.len() as u32);

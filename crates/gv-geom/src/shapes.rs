@@ -542,6 +542,20 @@ pub fn is_html_label(label: &str, shape: ShapeKind) -> bool {
     }
 }
 
+pub fn parse_f64_strip_units(raw: &str) -> Option<f64> {
+    let t = raw.trim();
+    let stripped = t
+        .strip_suffix("pt")
+        .or_else(|| t.strip_suffix("PT"))
+        .or_else(|| t.strip_suffix("px"))
+        .or_else(|| t.strip_suffix("PX"))
+        .or_else(|| t.strip_suffix("in"))
+        .or_else(|| t.strip_suffix("IN"))
+        .unwrap_or(t)
+        .trim();
+    stripped.parse::<f64>().ok().filter(|v| v.is_finite())
+}
+
 /// Computes `node.width` and `node.height` (in inches) from the node's label, font, margin,
 /// shape, `fixedsize`, `regular`, and `peripheries` attributes, matching `lib/common/shapes.c`.
 pub fn compute_node_dimensions(node: &mut NodeData, graph_name: &str) {
@@ -562,11 +576,11 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
         let w_attr = node
             .attrs
             .get("width")
-            .and_then(|s| s.trim().parse::<f64>().ok());
+            .and_then(|s| parse_f64_strip_units(s));
         let h_attr = node
             .attrs
             .get("height")
-            .and_then(|s| s.trim().parse::<f64>().ok());
+            .and_then(|s| parse_f64_strip_units(s));
         let base_in = match (w_attr, h_attr) {
             (Some(w), Some(h)) => w.min(h),
             (Some(w), None) => w,
@@ -587,7 +601,11 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
         if peripheries > 1 {
             sz_pts += 2.0 * ((peripheries - 1) as f64) * PERIPHERY_GAP_PTS;
         }
-        let final_in = (sz_pts / POINTS_PER_INCH).max(MIN_POINT_SIZE);
+        let final_in = if sz_pts > 0.0 {
+            (sz_pts / POINTS_PER_INCH).max(MIN_POINT_SIZE)
+        } else {
+            0.0
+        };
         node.width = final_in;
         node.height = final_in;
         return;
@@ -604,21 +622,31 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
     let font_size = node
         .attrs
         .get("fontsize")
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(|s| parse_f64_strip_units(s))
         .unwrap_or(DEFAULT_FONT_SIZE)
         .max(1.0);
     let (margin_x, margin_y) = parse_node_margin(node.attrs.get("margin").map(String::as_str));
 
+    let min_allowed_w = if shape == ShapeKind::Plain {
+        0.0
+    } else {
+        MIN_NODE_WIDTH
+    };
+    let min_allowed_h = if shape == ShapeKind::Plain {
+        0.0
+    } else {
+        MIN_NODE_HEIGHT
+    };
     let explicit_w = node
         .attrs
         .get("width")
-        .and_then(|s| s.trim().parse::<f64>().ok())
-        .map(|w| w.max(MIN_NODE_WIDTH));
+        .and_then(|s| parse_f64_strip_units(s))
+        .map(|w| w.max(min_allowed_w));
     let explicit_h = node
         .attrs
         .get("height")
-        .and_then(|s| s.trim().parse::<f64>().ok())
-        .map(|h| h.max(MIN_NODE_HEIGHT));
+        .and_then(|s| parse_f64_strip_units(s))
+        .map(|h| h.max(min_allowed_h));
 
     let default_w = if node.width > 0.0 {
         node.width
@@ -711,7 +739,7 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
     if let Some(q) = node
         .attrs
         .get("quantum")
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(|s| parse_f64_strip_units(s))
         && q > 0.0
     {
         let q_pts = q * POINTS_PER_INCH;
@@ -724,7 +752,7 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
         + node
             .attrs
             .get("orientation")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
     let mut skew = shape.default_skew();
     let mut distortion = shape.default_distortion();
@@ -737,12 +765,12 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
         skew = node
             .attrs
             .get("skew")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
         distortion = node
             .attrs
             .get("distortion")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
     }
     if sides <= 2 && (distortion.abs() > 1e-9 || skew.abs() > 1e-9) {
@@ -850,12 +878,12 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
     }
 
     node.width = (bb.x / POINTS_PER_INCH).max(if shape == ShapeKind::Plain {
-        0.001
+        0.0
     } else {
         MIN_NODE_WIDTH
     });
     node.height = (bb.y / POINTS_PER_INCH).max(if shape == ShapeKind::Plain {
-        0.001
+        0.0
     } else {
         MIN_NODE_HEIGHT
     });
@@ -978,7 +1006,7 @@ pub fn shape_polygon_vertices(node: &NodeData) -> Vec<Point> {
         + node
             .attrs
             .get("orientation")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
     let mut skew = shape.default_skew();
     let mut distortion = shape.default_distortion();
@@ -991,12 +1019,12 @@ pub fn shape_polygon_vertices(node: &NodeData) -> Vec<Point> {
         skew = node
             .attrs
             .get("skew")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
         distortion = node
             .attrs
             .get("distortion")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
     }
     if sides <= 2 && (distortion.abs() > 1e-9 || skew.abs() > 1e-9) {
@@ -1049,7 +1077,7 @@ pub fn record_layout(node: &NodeData, graph_name: &str, rankdir: &str) -> Option
     let font_size = node
         .attrs
         .get("fontsize")
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(|s| parse_f64_strip_units(s))
         .unwrap_or(DEFAULT_FONT_SIZE)
         .max(1.0);
     let (margin_x, margin_y) = parse_node_margin(node.attrs.get("margin").map(String::as_str));
@@ -1395,7 +1423,7 @@ pub fn html_table_layout(node: &NodeData, graph_name: &str) -> Option<HtmlTable>
     let font_size = node
         .attrs
         .get("fontsize")
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(|s| parse_f64_strip_units(s))
         .unwrap_or(DEFAULT_FONT_SIZE)
         .max(1.0);
     parse_html_table(raw_label, &node.name, graph_name, font_name, font_size)
@@ -2120,13 +2148,7 @@ fn measure_html_rich_text(
 }
 
 fn collapse_html_whitespace(s: &str) -> String {
-    let decoded = s
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&nbsp;", " ");
+    let decoded = gv_core::font::decode_html_entities(s);
     let mut out = String::with_capacity(decoded.len());
     let mut prev_space = false;
     for ch in decoded.chars() {
@@ -2327,13 +2349,13 @@ fn clip_center_ray_to_shape(
         + node
             .attrs
             .get("distortion")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
     let skew = shape.default_skew()
         + node
             .attrs
             .get("skew")
-            .and_then(|s| s.trim().parse::<f64>().ok())
+            .and_then(|s| parse_f64_strip_units(s))
             .unwrap_or(0.0);
 
     // Elliptical / circular shapes without distortion/skew: exact analytical ellipse intersection.
