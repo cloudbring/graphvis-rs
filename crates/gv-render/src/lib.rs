@@ -2,14 +2,28 @@
 
 #![forbid(unsafe_code)]
 
-pub mod dot_out;
 pub mod emit;
 pub mod json;
-pub mod svg;
 mod svg_engine;
 mod xdot_engine;
 
-pub use dot_out::{render_dot_positioned, render_plain};
+/// Renders `-Tdot` (`xdot == false`) or `-Txdot`.
+pub fn render_dot_positioned(graph: &Graph, xdot: bool) -> String {
+    render_graph(
+        graph,
+        if xdot {
+            OutputFormat::Xdot
+        } else {
+            OutputFormat::Dot
+        },
+    )
+    .unwrap_or_default()
+}
+
+/// Renders `-Tplain`.
+pub fn render_plain(graph: &Graph) -> String {
+    render_graph(graph, OutputFormat::Plain).unwrap_or_default()
+}
 
 /// Renders `-Tjson` (`json0 == false`) or `-Tjson0`.
 pub fn render_json(graph: &Graph, json0: bool) -> Result<String> {

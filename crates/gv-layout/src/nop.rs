@@ -218,19 +218,17 @@ fn user_spline(pos: &str, tail_arrow: bool, head_arrow: bool) -> Option<Spline> 
 }
 
 /// Size of a label in points (`make_label`).
-fn label_dimen(text: &str, fontname: &str, fontsize: f64, ctx: &LabelSubstContext<'_>) -> Point {
+fn label_dimen(
+    text: &str,
+    html: bool,
+    fontname: &str,
+    fontsize: f64,
+    ctx: &LabelSubstContext<'_>,
+) -> Point {
     if text.is_empty() {
         return Point::default();
     }
-    gv_geom::node_size::make_label(
-        text,
-        gv_geom::node_size::is_html_value(text),
-        ctx,
-        fontname,
-        fontsize,
-        false,
-    )
-    .dimen
+    gv_geom::node_size::make_label(text, html, ctx, fontname, fontsize, false).dimen
 }
 
 fn attr_f64(attrs: &AttrMap, key: &str, default: f64, min: f64) -> f64 {
@@ -285,7 +283,12 @@ fn add_label_bb(bb: &mut BoundingBox, l: &Lbl) {
 }
 
 /// Label of a graph or cluster (`do_graph_label`), with its `GD_label_pos` and border.
-fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> Option<(Lbl, u8, Point)> {
+fn graph_label(
+    attrs: &AttrMap,
+    name: &str,
+    is_root: bool,
+    html: &std::collections::BTreeSet<String>,
+) -> Option<(Lbl, u8, Point)> {
     let text = attrs.get("label").filter(|s| !s.is_empty())?;
     let fontsize = attr_f64(attrs, "fontsize", DEFAULT_FONT_SIZE, 1.0);
     let fontname = attr_str(attrs, "fontname", DEFAULT_FONT_NAME);
@@ -293,7 +296,7 @@ fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> Option<(Lbl, u8, P
         graph_name: name,
         ..Default::default()
     };
-    let dimen = label_dimen(text, fontname, fontsize, &ctx);
+    let dimen = label_dimen(text, html.contains(text), fontname, fontsize, &ctx);
     let loc = attrs.get("labelloc").map(String::as_str).unwrap_or("");
     let mut pos_flag = 0u8;
     if is_root {
@@ -370,7 +373,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
                 ..Default::default()
             };
             let mut l = Lbl {
-                dimen: label_dimen(t, fname, fs, &ctx),
+                dimen: label_dimen(t, graph.html_strings.contains(t), fname, fs, &ctx),
                 pos: Point::default(),
                 set: false,
             };
@@ -384,7 +387,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
     }
 
     // nop_init_graphs: root label and the cluster tree.
-    let mut root_label = graph_label(&graph.graph_attrs, &graph.name, true);
+    let mut root_label = graph_label(&graph.graph_attrs, &graph.name, true, &graph.html_strings);
     if let Some((l, _, _)) = root_label.as_mut()
         && let Some((p, _)) = graph.graph_attrs.get("lp").and_then(|s| scan_point(s))
     {
@@ -417,7 +420,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             if bb.ll.y > bb.ur.y {
                 std::mem::swap(&mut bb.ll.y, &mut bb.ur.y);
             }
-            let mut label = graph_label(&sub.graph_attrs, &sub.name, false);
+            let mut label = graph_label(&sub.graph_attrs, &sub.name, false, &graph.html_strings);
             if let Some((l, _, _)) = label.as_mut()
                 && let Some((p, _)) = sub.graph_attrs.get("lp").and_then(|s| scan_point(s))
             {
@@ -483,7 +486,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
         let mk = |text_key: &str, pos_key: &str, fname: &str, fs: f64| {
             let t = e.attrs.get(text_key).filter(|s| !s.is_empty())?;
             let mut l = Lbl {
-                dimen: label_dimen(t, fname, fs, &ctx),
+                dimen: label_dimen(t, graph.html_strings.contains(t), fname, fs, &ctx),
                 pos: Point::default(),
                 set: false,
             };

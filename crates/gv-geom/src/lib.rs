@@ -10,8 +10,8 @@ pub mod splines;
 
 pub use node_size::{
     EdgeLabelGeometry, GraphLabelGeometry, LabelGeometry, NodeGeometry, NodeSizeEnv,
-    PolygonGeometry, edge_label_geometry, graph_label_geometry, make_label, node_geometry,
-    size_graph_nodes,
+    PolygonGeometry, edge_label_geometry, graph_label_geometry, graph_label_geometry_in,
+    make_label, node_geometry, size_graph_nodes,
 };
 pub use shapes::{
     DEF_POINT_SIZE, DEFAULT_MARGIN_X, DEFAULT_MARGIN_Y, DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH,

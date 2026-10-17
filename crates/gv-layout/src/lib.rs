@@ -1,6 +1,7 @@
 //! Graphviz layout engines in pure Rust (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`).
 
 pub mod dot;
+pub mod dotgen;
 pub mod force_circular;
 pub mod nop;
 
@@ -66,7 +67,14 @@ pub fn layout_graph_with_options(
     };
 
     match effective_engine {
-        LayoutEngine::Dot => dot::layout_dot(graph),
+        LayoutEngine::Dot => {
+            // `GV_DOT_LEGACY=1` selects the previous approximate engine for comparison.
+            if std::env::var_os("GV_DOT_LEGACY").is_some() {
+                dot::layout_dot(graph)
+            } else {
+                dotgen::layout_dot(graph)
+            }
+        }
         LayoutEngine::Neato if options.nop > 0 => nop::layout_nop(graph, options.nop),
         LayoutEngine::Nop1 => nop::layout_nop(graph, 1),
         LayoutEngine::Nop2 => nop::layout_nop(graph, 2),

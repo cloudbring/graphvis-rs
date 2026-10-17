@@ -11,6 +11,8 @@
 //! `ND_ht`).
 
 use crate::html_label::HtmlLabel;
+use std::collections::BTreeSet;
+
 use crate::shapes::{RecordField, ShapeKind, html_label_layout, is_html_label};
 use gv_core::font::{
     DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext, MIN_FONT_SIZE, TextLabelLayout,
@@ -338,6 +340,9 @@ pub struct NodeSizeEnv<'a> {
     pub quantum: f64,
     /// Graph `charset` is Latin-1 (`GD_charset(g) == CHAR_LATIN1`).
     pub charset_latin1: bool,
+    /// Values written as `<...>` HTML strings in the source (`aghtmlstr`). When `None`,
+    /// HTML-ness is guessed from the text.
+    pub html_strings: Option<&'a BTreeSet<String>>,
 }
 
 impl<'a> NodeSizeEnv<'a> {
@@ -348,6 +353,15 @@ impl<'a> NodeSizeEnv<'a> {
             realflip: false,
             quantum: 0.0,
             charset_latin1: false,
+            html_strings: None,
+        }
+    }
+
+    /// `aghtmlstr(s)`: whether an attribute value was an HTML string in the source.
+    pub fn is_html(&self, s: &str) -> bool {
+        match self.html_strings {
+            Some(set) => set.contains(s),
+            None => is_html_value(s),
         }
     }
 
@@ -362,7 +376,10 @@ impl<'a> NodeSizeEnv<'a> {
     /// Reads `rankdir`, `quantum` and `charset` from the root graph attributes
     /// (`graph_init` / `init_ugraph` in `lib/common/input.c`).
     pub fn from_graph(graph: &'a Graph) -> Self {
-        Self::from_graph_attrs(&graph.name, &graph.graph_attrs)
+        Self {
+            html_strings: Some(&graph.html_strings),
+            ..Self::from_graph_attrs(&graph.name, &graph.graph_attrs)
+        }
     }
 
     /// Like [`Self::from_graph`] but from a name and an attribute map.
@@ -372,6 +389,7 @@ impl<'a> NodeSizeEnv<'a> {
             realflip: rankdir_is_flipped(attrs.get("rankdir").map_or("", String::as_str)),
             quantum: late_double(attrs, "quantum", 0.0, 0.0),
             charset_latin1: charset_is_latin1(attrs.get("charset").map(String::as_str)),
+            html_strings: None,
         }
     }
 }
@@ -541,7 +559,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             dimen: Point::default(),
             space: Point::default(),
             valign: 'c',
-            html: is_html_label(label_str, shape),
+            html: env.is_html(label_str) && is_html_label(label_str, shape),
             html_label: None,
             text: None,
             font_name: font_name.to_string(),
@@ -550,7 +568,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     } else {
         make_label(
             label_str,
-            is_html_value(label_str),
+            env.is_html(label_str),
             &obj,
             font_name,
             font_size,
@@ -560,7 +578,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     let xlabel = attrs.get("xlabel").filter(|s| !s.is_empty()).map(|s| {
         make_label(
             s,
-            is_html_value(s),
+            env.is_html(s),
             &obj,
             font_name,
             font_size,
@@ -626,6 +644,22 @@ pub fn graph_label_geometry(
     flip: bool,
     charset_latin1: bool,
 ) -> Option<GraphLabelGeometry> {
+    let env = NodeSizeEnv {
+        charset_latin1,
+        ..NodeSizeEnv::new(name)
+    };
+    graph_label_geometry_in(name, attrs, is_root, flip, &env)
+}
+
+/// [`graph_label_geometry`] with HTML strings and charset taken from `env`.
+pub fn graph_label_geometry_in(
+    name: &str,
+    attrs: &AttrMap,
+    is_root: bool,
+    flip: bool,
+    env: &NodeSizeEnv<'_>,
+) -> Option<GraphLabelGeometry> {
+    let charset_latin1 = env.charset_latin1;
     let s = attrs.get("label").filter(|s| !s.is_empty())?;
     let obj = LabelSubstContext {
         graph_name: name,
@@ -633,7 +667,7 @@ pub fn graph_label_geometry(
     };
     let label = make_label(
         s,
-        is_html_value(s),
+        env.is_html(s),
         &obj,
         late_nnstring(attrs, "fontname", DEFAULT_FONT_NAME),
         late_double(attrs, "fontsize", DEFAULT_FONT_SIZE, MIN_FONT_SIZE),
@@ -727,7 +761,7 @@ pub fn edge_label_geometry(
         attrs
             .get(key)
             .filter(|s| !s.is_empty())
-            .map(|s| make_label(s, is_html_value(s), obj, name, size, env.charset_latin1))
+            .map(|s| make_label(s, env.is_html(s), obj, name, size, env.charset_latin1))
     };
     let label = mk("label", &obj, fontname, fontsize);
     // Later labels see `\L` = the main label's `lp->text`.
@@ -763,7 +797,11 @@ pub fn edge_label_geometry(
 pub fn size_graph_nodes(graph: &mut Graph) {
     let env_attrs = graph.graph_attrs.clone();
     let name = graph.name.clone();
-    let env = NodeSizeEnv::from_graph_attrs(&name, &env_attrs);
+    let html = graph.html_strings.clone();
+    let env = NodeSizeEnv {
+        html_strings: Some(&html),
+        ..NodeSizeEnv::from_graph_attrs(&name, &env_attrs)
+    };
     for node in &mut graph.nodes {
         let geom = node_geometry(node, &env);
         node.width = geom.width;
@@ -1748,5 +1786,29 @@ mod tests {
         assert_eq!(late_double(&a, "w", 7.0, 0.0), 7.0);
         a.insert("w".into(), "-3".into());
         assert_eq!(late_double(&a, "w", 7.0, 0.01), 0.01);
+    }
+
+    #[test]
+    fn quoted_angle_label_is_text_not_html() {
+        // `label="<x>"` is plain text in C (aghtmlstr is false); `label=<x>` is HTML.
+        let n = node(&[("label", "<x>")]);
+        let none = BTreeSet::new();
+        let quoted = NodeSizeEnv {
+            html_strings: Some(&none),
+            ..NodeSizeEnv::new("G")
+        };
+        let html_set: BTreeSet<String> = ["<x>".to_string()].into();
+        let html = NodeSizeEnv {
+            html_strings: Some(&html_set),
+            ..NodeSizeEnv::new("G")
+        };
+        let q = node_geometry(&n, &quoted);
+        let h = node_geometry(&n, &html);
+        assert!(!q.label.html);
+        assert!(h.label.html);
+        assert!(
+            q.label.dimen.x > h.label.dimen.x,
+            "the text form also measures '<' and '>'"
+        );
     }
 }
