@@ -40,7 +40,7 @@ pub fn make_self_arcs(g: &mut LGraph<'_>, e: usize, stepx: f64) {
 }
 
 /// `makeStraightEdge(g, e, et, sinfo)`: collect `e`'s equivalence class.
-pub fn make_straight_edge(g: &mut LGraph<'_>, e: usize, et: EdgeType) {
+pub fn make_straight_edge(g: &mut LGraph<'_>, sub: &Sub, e: usize, et: EdgeType) {
     let mut list = vec![e];
     let mut e0 = e;
     while let Some(n) = g.edges[e0].to_virt {
@@ -50,11 +50,11 @@ pub fn make_straight_edge(g: &mut LGraph<'_>, e: usize, et: EdgeType) {
         list.push(n);
         e0 = n;
     }
-    make_straight_edges(g, &list, et);
+    make_straight_edges(g, sub, &list, et);
 }
 
 /// `makeStraightEdges(g, edge_list, e_cnt, et, sinfo)`.
-pub fn make_straight_edges(g: &mut LGraph<'_>, edge_list: &[usize], et: EdgeType) {
+pub fn make_straight_edges(g: &mut LGraph<'_>, sub: &Sub, edge_list: &[usize], et: EdgeType) {
     let e = edge_list[0];
     let n = g.edges[e].tail;
     let head = g.edges[e].head;
@@ -64,8 +64,8 @@ pub fn make_straight_edges(g: &mut LGraph<'_>, edge_list: &[usize], et: EdgeType
     let e_cnt = edge_list.len();
     if e_cnt == 1 || g.concentrate {
         if et == EdgeType::Curved {
-            // bend() towards the cycle centroid is not ported; curved edges
-            // are drawn straight.
+            let c = get_cycle_centroid(g, sub, e);
+            bend(&mut dumb, c);
         }
         clip_and_install(g, e, head, &dumb);
         add_edge_labels(g, e);
@@ -181,9 +181,9 @@ fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edgetype:
                 let step = g.nodesep as f64;
                 make_self_arcs(g, e, step);
             } else if let Some(r) = &router {
-                r.route_edge(g, e, edgetype);
+                r.route_edge(g, sub, e, edgetype);
             } else {
-                make_straight_edge(g, e, edgetype);
+                make_straight_edge(g, sub, e, edgetype);
             }
         }
     }
@@ -408,4 +408,85 @@ pub fn neato_set_aspect(g: &mut LGraph<'_>, sub: &Sub, is_root: bool) -> bool {
         g.nodes[n].coord = Point::new(72.0 * p[0], 72.0 * p[1]);
     }
     moved
+}
+
+/// `bend(spl, centroid)`: pull both control points away from the centroid.
+fn bend(spl: &mut [Point; 4], centroid: Point) {
+    let midpt = crate::common::geom::mid(spl[0], spl[3]);
+    let dist = crate::common::geom::dist(spl[3], spl[0]);
+    let r = dist / 5.0;
+    let vx = centroid.x - midpt.x;
+    let vy = centroid.y - midpt.y;
+    let mag_v = vx.hypot(vy);
+    if mag_v == 0.0 {
+        return;
+    }
+    let a = Point::new(midpt.x - vx / mag_v * r, midpt.y - vy / mag_v * r);
+    spl[1] = a;
+    spl[2] = a;
+}
+
+/// `find_all_cycles` / `get_cycle_centroid` from `routespl.c`.
+fn get_cycle_centroid(g: &LGraph<'_>, sub: &Sub, edge: usize) -> Point {
+    fn dfs(
+        g: &LGraph<'_>,
+        sub: &Sub,
+        search: usize,
+        visited: &mut Vec<usize>,
+        end: usize,
+        cycles: &mut Vec<Vec<usize>>,
+    ) {
+        if visited.contains(&search) {
+            if search == end {
+                let unique = !cycles
+                    .iter()
+                    .any(|c| c.len() == visited.len() && c.iter().all(|x| visited.contains(x)));
+                if unique {
+                    cycles.push(visited.clone());
+                }
+            }
+        } else {
+            visited.push(search);
+            let outs: Vec<usize> = g.outs(sub, search).collect();
+            for e in outs {
+                dfs(g, sub, g.edges[e].head, visited, end, cycles);
+            }
+            visited.pop();
+        }
+    }
+    let mut cycles = Vec::new();
+    for &n in &sub.nodes {
+        let mut visited = Vec::new();
+        dfs(g, sub, n, &mut visited, n, &mut cycles);
+    }
+    let (start, end) = (g.edges[edge].tail, g.edges[edge].head);
+    let contains = |c: &Vec<usize>| {
+        let l = c.len();
+        (0..l).any(|i| c[if i == 0 { l - 1 } else { i - 1 }] == start && c[i] == end)
+    };
+    let mut shortest: Option<&Vec<usize>> = None;
+    for c in &cycles {
+        if c.len() < 3 {
+            continue;
+        }
+        if (shortest.is_none() || shortest.unwrap().len() > c.len()) && contains(c) {
+            shortest = Some(c);
+        }
+    }
+    let Some(cycle) = shortest else {
+        let bb = if sub.nodes.len() == g.nodes.len() {
+            g.bb
+        } else {
+            sub.bb
+        };
+        return Point::new((bb.ll.x + bb.ur.x) / 2.0, (bb.ll.y + bb.ur.y) / 2.0);
+    };
+    let mut sum = Point::new(0.0, 0.0);
+    let mut cnt = 0.0;
+    for &n in cycle {
+        sum.x += g.nodes[n].coord.x;
+        sum.y += g.nodes[n].coord.y;
+        cnt += 1.0;
+    }
+    Point::new(sum.x / cnt, sum.y / cnt)
 }

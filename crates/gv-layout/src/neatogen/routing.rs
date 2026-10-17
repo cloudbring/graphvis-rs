@@ -220,10 +220,10 @@ impl Router {
     }
 
     /// Spline-drawing pass for one non-loop representative edge.
-    pub fn route_edge(&self, g: &mut LGraph<'_>, e: usize, et: EdgeType) {
+    pub fn route_edge(&self, g: &mut LGraph<'_>, sub: &Sub, e: usize, et: EdgeType) {
         let boundary_port = g.edges[e].tail_port.side != 0 || g.edges[e].head_port.side != 0;
         if (g.edges[e].count > 1 || boundary_port) && g.edges[e].path.len() == 2 && !boundary_port {
-            super::neatosplines::make_straight_edge(g, e, et);
+            super::neatosplines::make_straight_edge(g, sub, e, et);
             return;
         }
         let cnt = if g.concentrate { 1 } else { g.edges[e].count };
