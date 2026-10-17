@@ -1,0 +1,5 @@
+graph {
+    layout="fdp"
+    start=1
+    A -- B; B -- C; C -- D; D -- A
+}

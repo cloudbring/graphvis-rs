@@ -1,0 +1,5 @@
+graph G {
+  layout="neato"
+  edge [len=3]
+  a -- { b c d }
+}

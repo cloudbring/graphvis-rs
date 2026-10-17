@@ -1,0 +1,5 @@
+digraph {
+  "d" # default
+  "1in" [width=1]
+  "2in" [width=2]
+}

@@ -1,0 +1,5 @@
+digraph {
+  root -> a
+  root -> b [weight=2]
+  root -> c [weight=3]
+}

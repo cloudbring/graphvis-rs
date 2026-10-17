@@ -1,0 +1,4 @@
+graph {
+  SkewLeft  [shape=polygon sides=4 skew=-.5]
+  SkewRight [shape=polygon sides=4 skew=.5]
+}

@@ -1,0 +1,17 @@
+digraph RoundedEdges {
+  splines = ortho;
+  nodesep = 1.0;
+  ranksep = 1.0;
+
+  // Default: square corners
+  A -> X [xlabel="radius=0 (default)"];
+
+  // Small rounded corners
+  B -> X [radius=8, xlabel="radius=8", color=blue];
+
+  // Medium rounded corners
+  C -> X [radius=12, xlabel="radius=12", color=green];
+
+  // Large rounded corners
+  D -> X [radius=20, xlabel="radius=20", color=red];
+}

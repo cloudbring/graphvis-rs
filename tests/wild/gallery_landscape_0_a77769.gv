@@ -1,0 +1,4 @@
+digraph {
+  landscape=true
+  a -> b
+}

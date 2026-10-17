@@ -1,0 +1,6 @@
+digraph {
+  A->B [dir=forward]
+  C->D [dir=back]
+  E->F [dir=both]
+  G->H [dir=none]
+}
