@@ -13,3 +13,4 @@ pub mod multilevel;
 pub mod post_process;
 pub mod sfdpinit;
 pub mod spring_electrical;
+pub mod stress_model;
