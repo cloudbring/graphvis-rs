@@ -810,26 +810,27 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
     }
 
     // Edges without a usable spline (all of them under -n1, or after a rescale) are routed
-    // as straight lines between the node centres.
+    // by neato's spline_edges0 (`spline_edges_` with `useEdges = Nop > 1`).
     let reroute_all = !no_edges && did_shift;
     if !all_edges || reroute_all || nop < 2 {
-        for ei in 0..graph.edges.len() {
-            if !reroute_all && nop >= 2 && !graph.edges[ei].spline.segments.is_empty() {
+        let keep: Vec<bool> = (0..graph.edges.len())
+            .map(|ei| !reroute_all && nop >= 2 && !graph.edges[ei].spline.segments.is_empty())
+            .collect();
+        let routed = route_missing_edges(graph, &keep);
+        for (ei, (spline, labels)) in routed.into_iter().enumerate() {
+            if keep[ei] {
                 continue;
             }
-            let e = &graph.edges[ei];
-            let (t, h) = (
-                graph.nodes[e.tail.0 as usize].pos,
-                graph.nodes[e.head.0 as usize].pos,
-            );
-            graph.edges[ei].spline = gv_geom::straight_spline(t, h);
+            graph.edges[ei].spline = spline;
             let el = &mut edge_labels[ei];
-            for l in [&mut el.label, &mut el.xlabel, &mut el.head, &mut el.tail]
+            for (slot, pos) in [&mut el.label, &mut el.xlabel, &mut el.head, &mut el.tail]
                 .into_iter()
-                .flatten()
+                .zip(labels)
             {
-                if !l.set {
-                    l.pos = Point::new((t.x + h.x) / 2.0, (t.y + h.y) / 2.0);
+                if let (Some(l), Some(p)) = (slot.as_mut(), pos)
+                    && !l.set
+                {
+                    l.pos = p;
                     l.set = true;
                 }
             }
@@ -991,4 +992,138 @@ mod tests {
         g.add_edge(a, b, attrs);
         g
     }
+}
+
+type RoutedEdge = (Spline, [Option<Point>; 4]);
+
+/// `spline_edges_` for the edges not in `keep`: straight lines (or the `splines` routing)
+/// clipped to the node shapes, through the neato spline infrastructure.
+fn route_missing_edges(graph: &Graph, keep: &[bool]) -> Vec<RoutedEdge> {
+    use crate::common::types::{Bezier, EdgeType};
+    use crate::neatogen::neatosplines::{make_self_arcs, make_straight_edge};
+    let mut lg = crate::common::types::LGraph::new(graph, 2, EdgeType::Line);
+    for (i, n) in graph.nodes.iter().enumerate() {
+        lg.nodes[i].coord = n.pos;
+        lg.nodes[i].pos = vec![n.pos.x / POINTS_PER_INCH, n.pos.y / POINTS_PER_INCH];
+    }
+    for (ei, e) in graph.edges.iter().enumerate() {
+        lg.edges[ei].spl = keep[ei].then(|| {
+            e.spline
+                .segments
+                .iter()
+                .map(|s| Bezier {
+                    list: s.points.clone(),
+                    sflag: u32::from(s.start_arrow.is_some()),
+                    eflag: u32::from(s.end_arrow.is_some()),
+                    sp: s.start_arrow.unwrap_or_default(),
+                    ep: s.end_arrow.unwrap_or_default(),
+                })
+                .collect()
+        });
+        lg.edges[ei].count = 0;
+        lg.edges[ei].to_virt = None;
+    }
+    let sub = lg.root_sub();
+    for n in 0..lg.nodes.len() {
+        let outs: Vec<usize> = lg.outs(&sub, n).collect();
+        for e in outs {
+            crate::common::ports::resolve_ports(&mut lg, e);
+        }
+    }
+    // equivEdge classes among the edges to route; kept edges are their own class.
+    let bits = |p: Point| [p.x.to_bits(), p.y.to_bits()];
+    let mut map: std::collections::HashMap<(usize, [u64; 2], usize, [u64; 2]), usize> =
+        std::collections::HashMap::new();
+    for n in 0..lg.nodes.len() {
+        let outs: Vec<usize> = lg.outs(&sub, n).collect();
+        for e in outs {
+            if keep[e] {
+                lg.edges[e].count += 1;
+                continue;
+            }
+            let ed = &lg.edges[e];
+            let (t, h, tp, hp) = (ed.tail, ed.head, ed.tail_port.p, ed.head_port.p);
+            let key = if t < h {
+                (t, bits(tp), h, bits(hp))
+            } else if t > h {
+                (h, bits(hp), t, bits(tp))
+            } else {
+                let (p1, p2) = if (tp.x, tp.y) <= (hp.x, hp.y) {
+                    (tp, hp)
+                } else {
+                    (hp, tp)
+                };
+                (t, bits(p1), t, bits(p2))
+            };
+            match map.get(&key) {
+                Some(&leader) => {
+                    lg.edges[leader].count += 1;
+                    lg.edges[e].to_virt = lg.edges[leader].to_virt;
+                    lg.edges[leader].to_virt = Some(e);
+                }
+                None => {
+                    lg.edges[e].count = 1;
+                    map.insert(key, e);
+                }
+            }
+        }
+    }
+    let et = lg.edge_type;
+    let router = if et >= EdgeType::Pline {
+        let margin = crate::neatogen::adjust::esep_factor(&lg);
+        crate::neatogen::routing::Router::new(&mut lg, &sub, &margin, et)
+    } else {
+        None
+    };
+    if let Some(r) = &router {
+        r.path_pass(&mut lg, &sub);
+    }
+    for n in 0..lg.nodes.len() {
+        let outs: Vec<usize> = lg.outs(&sub, n).collect();
+        for e in outs {
+            if keep[e] || lg.edges[e].count == 0 {
+                continue;
+            }
+            if lg.edges[e].head == n {
+                let step = lg.nodesep as f64;
+                make_self_arcs(&mut lg, e, step);
+            } else if let Some(r) = &router {
+                r.route_edge(&mut lg, &sub, e, et);
+            } else {
+                make_straight_edge(&mut lg, &sub, e, et);
+            }
+        }
+    }
+    lg.edges
+        .iter()
+        .map(|e| {
+            let spline = Spline {
+                segments: e
+                    .spl
+                    .as_ref()
+                    .map(|v| {
+                        v.iter()
+                            .map(|b| BezierSegment {
+                                points: b.list.clone(),
+                                start_arrow: (b.sflag != 0).then_some(b.sp),
+                                end_arrow: (b.eflag != 0).then_some(b.ep),
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            };
+            let pos = |l: &Option<crate::common::types::TextLabel>| {
+                l.as_ref().filter(|l| l.set).map(|l| l.pos)
+            };
+            (
+                spline,
+                [
+                    pos(&e.label),
+                    pos(&e.xlabel),
+                    pos(&e.head_label),
+                    pos(&e.tail_label),
+                ],
+            )
+        })
+        .collect()
 }
