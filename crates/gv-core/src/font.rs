@@ -99,6 +99,9 @@ pub struct LabelSubstContext<'a> {
     pub tail_port: Option<&'a str>,
     pub head_port: Option<&'a str>,
     pub label_text: &'a str,
+    /// `getPenColor(obj)` (`pencolor`, else `color`), which an HTML label's outermost
+    /// table without a `COLOR` takes (`make_html_label`).
+    pub pen_color: Option<&'a str>,
 }
 
 impl<'a> LabelSubstContext<'a> {
@@ -115,6 +118,7 @@ impl<'a> LabelSubstContext<'a> {
             tail_port: None,
             head_port: None,
             label_text: "",
+            pen_color: None,
         }
     }
 }
@@ -580,12 +584,9 @@ pub fn make_text_label(
     font_size: f64,
     charset_latin1: bool,
 ) -> TextLabelLayout {
-    // While a label is being made, the object has no label yet, so `\L` stays literal.
-    let ctx = LabelSubstContext {
-        label_text: "",
-        ..ctx.clone()
-    };
-    let substituted = strdup_and_subst_obj0(label, &ctx, false);
+    // `\L` is the object's main label (`ND_label(n)->text`, ...): callers pass an empty
+    // `label_text` while that label itself is being made, which leaves `\L` literal.
+    let substituted = strdup_and_subst_obj0(label, ctx, false);
     let converted = if charset_latin1 {
         latin1_to_utf8(&substituted)
     } else {
@@ -721,6 +722,7 @@ mod tests {
             tail_port: None,
             head_port: None,
             label_text: "",
+            pen_color: None,
         };
         let layout = measure_multiline_label_with_context(
             "\\G: \\T -> \\H (\\E)",

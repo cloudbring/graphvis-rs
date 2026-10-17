@@ -472,6 +472,34 @@ impl NodeGeometry {
     }
 }
 
+/// `getPenColor` (htmltable.c): the object's `pencolor`, else its `color`.
+fn get_pen_color(attrs: &AttrMap) -> Option<&str> {
+    ["pencolor", "color"]
+        .into_iter()
+        .filter_map(|k| attrs.get(k))
+        .map(String::as_str)
+        .find(|s| !s.is_empty())
+}
+
+/// `lp->text` of a made label, which a later label's `\L` expands to (`make_label`):
+/// the raw string for a record, the substituted text for plain text, the HTML source
+/// for HTML text and `<TABLE>` for a table (`make_html_label`).
+fn label_l_text(l: &LabelGeometry, raw: &str, is_record: bool) -> String {
+    if is_record {
+        return raw.to_string();
+    }
+    if let Some(t) = &l.text {
+        return t.source.clone();
+    }
+    if l.html {
+        if matches!(l.html_label.as_deref(), Some(HtmlLabel::Table(_))) {
+            return "<TABLE>".to_string();
+        }
+        return html_inner_text(raw).to_string();
+    }
+    String::new()
+}
+
 fn html_inner_text(raw: &str) -> &str {
     if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
         &raw[1..raw.len() - 1]
@@ -556,6 +584,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     let obj = LabelSubstContext::for_node(&node.name);
     let obj = LabelSubstContext {
         graph_name: env.graph_name,
+        pen_color: get_pen_color(attrs),
         ..obj
     };
 
@@ -582,11 +611,17 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             env.charset_latin1,
         )
     };
+    // common_init_node makes ND_label first, so the xlabel's `\L` is its text.
+    let ltext = label_l_text(&label, label_str, init == ShapeInit::Record);
+    let xobj = LabelSubstContext {
+        label_text: &ltext,
+        ..obj.clone()
+    };
     let xlabel = attrs.get("xlabel").filter(|s| !s.is_empty()).map(|s| {
         make_label(
             s,
             env.is_html(s),
-            &obj,
+            &xobj,
             font_name,
             font_size,
             env.charset_latin1,
@@ -609,7 +644,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             poly_init(node, shape, desc.unwrap_or(pd(false, 1, 4)), env, &mut geom);
         }
         ShapeInit::Point => point_init(node, desc.map_or(1, |d| d.peripheries), &mut geom),
-        ShapeInit::Record => record_init(node, label_str, &obj, env, &mut geom),
+        ShapeInit::Record => record_init(node, label_str, &xobj, env, &mut geom),
     }
     geom
 }
@@ -670,6 +705,7 @@ pub fn graph_label_geometry_in(
     let s = attrs.get("label").filter(|s| !s.is_empty())?;
     let obj = LabelSubstContext {
         graph_name: name,
+        pen_color: get_pen_color(attrs),
         ..LabelSubstContext::default()
     };
     let label = make_label(
@@ -762,6 +798,7 @@ pub fn edge_label_geometry(
         head_name,
         is_edge: true,
         is_directed: directed,
+        pen_color: get_pen_color(attrs),
         ..LabelSubstContext::default()
     };
     let mk = |key: &str, obj: &LabelSubstContext<'_>, name: &str, size: f64| {
@@ -773,18 +810,7 @@ pub fn edge_label_geometry(
     let label = mk("label", &obj, fontname, fontsize);
     // Later labels see `\L` = the main label's `lp->text`.
     let ltext = match (&label, attrs.get("label")) {
-        (Some(l), _) if l.text.is_some() => l
-            .text
-            .as_ref()
-            .map(|t| t.source.clone())
-            .unwrap_or_default(),
-        (Some(l), Some(raw)) if l.html => {
-            if matches!(l.html_label.as_deref(), Some(HtmlLabel::Table(_))) {
-                "<TABLE>".to_string()
-            } else {
-                html_inner_text(raw).to_string()
-            }
-        }
+        (Some(l), Some(raw)) => label_l_text(l, raw, false),
         _ => String::new(),
     };
     obj.label_text = &ltext;

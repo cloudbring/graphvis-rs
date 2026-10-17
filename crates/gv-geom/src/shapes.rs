@@ -331,5 +331,12 @@ pub(crate) fn html_label_layout(
     font_name: &str,
     font_size: f64,
 ) -> HtmlLabelLayout {
-    make_html_label(html_inner(raw_label), obj, font_name, font_size, None, None)
+    make_html_label(
+        html_inner(raw_label),
+        obj,
+        font_name,
+        font_size,
+        None,
+        obj.pen_color,
+    )
 }
