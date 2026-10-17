@@ -9,6 +9,7 @@ use crate::emit::job::{
 use crate::emit::model::TextSpan;
 use crate::emit::num::{trim_zeros, xdot_num};
 use gv_core::Point;
+use gv_core::math;
 use std::fmt::Write;
 
 /// Index of the buffer an emit state writes to (`xbufs[]`).
@@ -78,7 +79,7 @@ impl XdotEngine {
 
     fn str_(&mut self, j: &Job, pfx: &str, s: &str) {
         let b = self.buf(j);
-        let _ = write!(b, "{pfx}{} -{s} ", s.len());
+        let _ = write!(b, "{pfx}{} -{s} ", gv_core::charset::encode(s).len());
     }
 
     fn color_str(rgba: [u8; 4]) -> String {
@@ -162,8 +163,8 @@ impl XdotEngine {
                 g[0]
             } else {
                 Point::new(
-                    g[0].x + r2 / 4.0 * angle.cos(),
-                    g[0].y + r2 / 4.0 * angle.sin(),
+                    g[0].x + r2 / 4.0 * math::cos(angle),
+                    g[0].y + r2 / 4.0 * math::sin(angle),
                 )
             };
             let r1 = r2 / 4.0;
@@ -180,7 +181,7 @@ impl XdotEngine {
             xb.push_str(&trim_zeros(format!("{v:.3}")));
             xb.push(' ');
             let cs = Self::color_str(c);
-            let _ = write!(xb, "{} -{cs} ", cs.len());
+            let _ = write!(xb, "{} -{cs} ", gv_core::charset::encode(&cs).len());
         };
         if o.gradient_frac > 0.0 {
             stop(&mut xb, o.gradient_frac, o.fillcolor.rgba());

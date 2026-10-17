@@ -11,7 +11,8 @@ use super::job::{
     GVRENDER_DOES_TOOLTIPS, GVRENDER_NO_WHITE_BG, ObjKind, RGRADIENT,
 };
 use super::model::{Bz, TextLabel};
-use gv_core::font::{LabelSubstContext, html_entity_utf8, strdup_and_subst_obj};
+use gv_core::font::{LabelSubstContext, convert_label_text, strdup_and_subst_obj};
+use gv_core::math;
 use gv_core::{BoundingBox, Point};
 
 pub(crate) const DEFAULT_COLOR: &str = "black";
@@ -120,7 +121,7 @@ fn expand(bb: &mut BoundingBox, p: Point) {
 /// `arrow_bb`.
 fn arrow_bb(p: Point, u: Point, arrowsize: f64) -> BoundingBox {
     let mut u = Point::new(u.x - p.x, u.y - p.y);
-    let s = 10.0 * arrowsize / (u.x.hypot(u.y) + 0.0001);
+    let s = 10.0 * arrowsize / (math::hypot(u.x, u.y) + 0.0001);
     u.x += if u.x >= 0.0 { 0.0001 } else { -0.0001 };
     u.y += if u.y >= 0.0 { 0.0001 } else { -0.0001 };
     u.x *= s;
@@ -290,7 +291,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
     }
 
     fn preprocess_tooltip(&self, s: &str) -> String {
-        interpret_crnl(&html_entity_utf8(s))
+        interpret_crnl(&convert_label_text(s, gv_core::charset::current()))
     }
 
     /// `initObjMapData`.
@@ -1036,7 +1037,12 @@ impl<'a, E: Engine> Emitter<'a, E> {
             o.headtarget = a.nonempty("headtarget").map(sub).or(dflt);
         }
         if flags & GVRENDER_DOES_TOOLTIPS != 0 {
-            let tt = |s: &str| sub(&interpret_crnl(&html_entity_utf8(s)));
+            let tt = |s: &str| {
+                sub(&interpret_crnl(&convert_label_text(
+                    s,
+                    gv_core::charset::current(),
+                )))
+            };
             if let Some(s) = pick("tooltip", "edgetooltip") {
                 o.tooltip = Some(tt(s));
                 o.explicit_tooltip = true;
@@ -1520,8 +1526,8 @@ fn find_ortho_corners(pts: &[Point], radius: f64) -> Vec<Corner> {
     for i in 0..n {
         let prev = (0..i)
             .rev()
-            .find(|&j| (pts[j].x - pts[i].x).hypot(pts[j].y - pts[i].y) > DT);
-        let next = (i + 1..n).find(|&j| (pts[j].x - pts[i].x).hypot(pts[j].y - pts[i].y) > DT);
+            .find(|&j| math::hypot(pts[j].x - pts[i].x, pts[j].y - pts[i].y) > DT);
+        let next = (i + 1..n).find(|&j| math::hypot(pts[j].x - pts[i].x, pts[j].y - pts[i].y) > DT);
         let (Some(pi), Some(ni)) = (prev, next) else {
             continue;
         };
@@ -1537,12 +1543,12 @@ fn find_ortho_corners(pts: &[Point], radius: f64) -> Vec<Corner> {
         }
         if corners
             .iter()
-            .any(|c| (curr.x - pts[c.idx].x).hypot(curr.y - pts[c.idx].y) < DT)
+            .any(|c| math::hypot(curr.x - pts[c.idx].x, curr.y - pts[c.idx].y) < DT)
         {
             continue;
         }
-        let l1 = dx1.hypot(dy1);
-        let l2 = dx2.hypot(dy2);
+        let l1 = math::hypot(dx1, dy1);
+        let l2 = math::hypot(dx2, dy2);
         dx1 /= l1;
         dy1 /= l1;
         dx2 /= l2;
@@ -1590,7 +1596,7 @@ impl<E: Engine> Emitter<'_, E> {
         let at_corner = |p: Point| {
             corners
                 .iter()
-                .any(|c| (p.x - pts[c.idx].x).hypot(p.y - pts[c.idx].y) < 0.01)
+                .any(|c| math::hypot(p.x - pts[c.idx].x, p.y - pts[c.idx].y) < 0.01)
         };
         let mut start_idx = 0;
         let mut start_pt = pts[0];

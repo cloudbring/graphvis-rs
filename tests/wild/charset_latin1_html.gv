@@ -1,0 +1,6 @@
+digraph G {
+ graph [charset=latin1, label="Graph été"]
+ "néud" [label=<<TABLE><TR><TD>Café &eacute; &#233;</TD><TD TITLE="tïtle">x</TD></TR></TABLE>>]
+ b [label="café &eacute; Ã© &#8364;" tooltip="tip é" URL="http://x/é"]
+ "néud" -> b [label="édge" xlabel="xé"]
+}

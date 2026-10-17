@@ -133,7 +133,7 @@ fn pairs_main(args: Vec<String>) -> ExitCode {
     let mut files = BTreeMap::new();
     for stem in stems {
         // Latin-1 graphs produce non-UTF-8 output on both sides.
-        let read = |p: PathBuf| std::fs::read(p).map(|b| String::from_utf8_lossy(&b).into_owned());
+        let read = |p: PathBuf| std::fs::read(p).map(gv_core::charset::decode);
         let c = read(cdir.join(format!("{stem}.dot"))).unwrap_or_default();
         let p = read(pdir.join(format!("{stem}.dot")));
         let report = match (gv_diff::extract(&c), p.map(|p| gv_diff::extract(&p))) {
@@ -179,10 +179,8 @@ fn run_all(files: &[PathBuf], golden: &Path) -> BTreeMap<String, FileReport> {
                     let Some(path) = files.get(i) else { break };
                     let stem = path.file_stem().unwrap().to_string_lossy().to_string();
                     let gpath = golden.join(format!("{stem}.dot"));
-                    let report = match (
-                        std::fs::read_to_string(path),
-                        std::fs::read_to_string(&gpath),
-                    ) {
+                    let read = |p: &Path| std::fs::read(p).map(gv_core::charset::decode);
+                    let report = match (read(path), read(&gpath)) {
                         (Ok(src), Ok(gold)) => compare_file(&src, &gold),
                         _ => FileReport {
                             error: Some(format!("missing golden {}", gpath.display())),

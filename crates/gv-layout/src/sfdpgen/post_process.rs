@@ -4,6 +4,7 @@
 use super::spring_electrical::SpringElectricalControl;
 use crate::cutil::CRand;
 use crate::sparse::{SparseMatrix, distance, drand, vector_product};
+use gv_core::math;
 
 /// `StressMajorizationSmoother_struct` (normal scheme, no edge-label data).
 pub struct StressMajorizationSmoother {
@@ -426,7 +427,7 @@ pub fn stress_majorization_smoother2_new(
                 let dist = match ideal_dist_scheme {
                     IDEAL_GRAPH_DIST => 1.0,
                     IDEAL_AVG_DIST => (avg_dist[i] + avg_dist[k]) * 0.5,
-                    _ => distance_cropped(x, dim, i, k).powf(0.4),
+                    _ => math::powf(distance_cropped(x, dim, i, k), 0.4),
                 };
                 let wv = -1.0 / (dist * dist);
                 w.push(wv);
@@ -451,7 +452,7 @@ pub fn stress_majorization_smoother2_new(
                         IDEAL_AVG_DIST => {
                             (2.0f64.mul_add(avg_dist[k], avg_dist[i]) + avg_dist[kl]) * 0.5
                         }
-                        _ => distance_cropped(x, dim, i, kl).powf(0.4),
+                        _ => math::powf(distance_cropped(x, dim, i, kl), 0.4),
                     };
                     jw.push(kl as i32);
                     let wv = -1.0 / (dist * dist);
@@ -597,7 +598,7 @@ pub fn triangle_smoother_new(
                 jdiag = Some(j);
                 continue;
             }
-            let dist = distance_cropped(x, dim, i, k).powf(0.6);
+            let dist = math::powf(distance_cropped(x, dim, i, k), 0.6);
             w[j] = 1.0 / (dist * dist);
             diag_w += w[j];
             d[j] = w[j] * dist;

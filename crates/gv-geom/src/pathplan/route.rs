@@ -3,6 +3,7 @@
 
 use super::solvers::solve3;
 use super::{Pedge, Ppoint};
+use gv_core::math;
 
 const EPSILON1: f64 = 1e-3;
 const EPSILON2: f64 = 1e-6;
@@ -20,7 +21,7 @@ fn sub(p1: Ppoint, p2: Ppoint) -> Ppoint {
     Ppoint::new(p1.x - p2.x, p1.y - p2.y)
 }
 fn dist(p1: Ppoint, p2: Ppoint) -> f64 {
-    (p2.x - p1.x).hypot(p2.y - p1.y)
+    math::hypot(p2.x - p1.x, p2.y - p1.y)
 }
 fn scale(p: Ppoint, c: f64) -> Ppoint {
     Ppoint::new(p.x * c, p.y * c)
@@ -178,7 +179,7 @@ fn mkspline(
 fn dist_n(p: &[Ppoint]) -> f64 {
     let mut rv = 0.0;
     for i in 1..p.len() {
-        rv += (p[i].x - p[i - 1].x).hypot(p[i].y - p[i - 1].y);
+        rv += math::hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y);
     }
     rv
 }

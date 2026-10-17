@@ -10,6 +10,7 @@ use super::splines::{
     update_bb_label,
 };
 use super::types::{EdgeType, LGraph};
+use gv_core::math;
 use gv_core::{BoundingBox, Point};
 
 // ---------------------------------------------------------------- R-tree
@@ -694,7 +695,7 @@ fn hilbert(x0: i32, y0: i32, n: u32) -> u32 {
 
 /// `placeLabels(objs, n_objs, params)`.
 fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bool) {
-    let order = ((bb.ur.x.max(bb.ur.y)).round().log2().floor() as i64 + 1) as u32;
+    let order = (math::log2((bb.ur.x.max(bb.ur.y)).round()).floor() as i64 + 1) as u32;
     let mut keyed: Vec<(u32, usize, Rect)> = Vec::with_capacity(objs.len());
     for (i, o) in objs.iter().enumerate() {
         let p = o.lbl.map(|l| lbls[l].sz).unwrap_or_default();

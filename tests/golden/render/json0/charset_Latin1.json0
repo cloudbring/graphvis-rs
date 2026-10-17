@@ -1,0 +1,19 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,181.61,36",
+  "charset": "latin1",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "fontsize": "10",
+      "height": "0.5",
+      "label": "áâãäåæçèéêëìíîïðñòóôõöøùúûü",
+      "pos": "90.803,18",
+      "width": "2.5223"
+    }
+  ]
+}

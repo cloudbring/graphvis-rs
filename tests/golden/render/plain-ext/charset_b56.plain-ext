@@ -1,0 +1,33 @@
+graph 1 5.4058 8.9639
+node Torwaechter 1.9947 2.6528 1.1946 0.5 L solid plaintext black black
+node Torwaechterhaeuschen 4.2786 2.9444 2.2543 0.5 Torwaechterhaeuschen solid plaintext black black
+node Torschluessel 1.9947 1.75 1.3135 0.5 L solid plaintext black black
+node Schluesseloel 4.2786 2.1944 1.3138 0.5 L solid plaintext black black
+node Schluesseltraeger 4.2786 1.4444 1.584 0.5 L solid plaintext black black
+node Schluesselbund 4.2786 0.69444 1.5951 0.5 Schluesselbund solid plaintext black black
+node Tor 0.41902 1.3056 0.75 0.5 Tor solid plaintext black black
+node Schlosstor 1.9947 1 1.13 0.5 Schlosstor solid plaintext black black
+node Torfenster 1.9947 0.25 1.1083 0.5 Torfenster solid plaintext black black
+node Prefix 0.41902 4.6667 0.75 0.57778 "ge\nPr√§fix" solid plaintext black black
+node Wort 1.9947 3.6944 0.75 0.5 Wort solid plaintext black black
+node Stem 0.41902 3.8333 0.83803 0.57778 "legen\nStamm" solid plaintext black black
+node Suffix 0.41902 3 0.75 0.57778 "heit\nSuffix" solid plaintext black black
+node Dieb 0.41902 2.2083 0.75 0.5 Dieb solid plaintext black black
+node creation 0.41902 8.0833 0.83803 1.7611 "<f0>ge\nPr‰fix|<f1>legen\nStamm|<f2>heit\nSuffix" invis record black black
+node Fragewort 1.9947 7.0833 1.0975 0.5 Fragewort solid plaintext black black
+node creation1 0.41902 6.0833 0.83803 1.7611 "<f0>ge\nPr‰fix|<f1>Dieb\nStamm|<f2>heit\nSuffix" invis record black black
+edge Torwaechter Torwaechterhaeuschen 4 2.5897 2.7279 2.7172 2.7443 2.8571 2.7625 2.9999 2.781 solid black
+edge Torschluessel Schluesseloel 4 2.6492 1.8761 2.904 1.9264 3.1999 1.9847 3.4683 2.0375 solid black
+edge Torschluessel Schluesseltraeger 4 2.6492 1.6632 2.8619 1.6344 3.1033 1.6018 3.3335 1.5706 solid black
+edge Torschluessel Schluesselbund 10 2.4382 1.5011 2.5096 1.4593 2.5828 1.4161 2.6515 1.375 2.8751 1.2415 2.9156 1.1796 3.1515 1.0694 3.2108 1.0418 3.2726 1.0152 3.3356 0.98978 solid black
+edge Tor Torwaechter 7 0.69918 1.5528 0.8779 1.7172 1.1197 1.9368 1.338 2.125 1.4067 2.1842 1.4803 2.2461 1.5524 2.3058 solid black
+edge Tor Torschluessel 4 0.79193 1.4086 0.91131 1.4429 1.0494 1.4825 1.1883 1.5224 solid black
+edge Tor Schlosstor 4 0.79193 1.2347 0.93827 1.2058 1.1127 1.1714 1.2823 1.1379 solid black
+edge Tor Torfenster 7 0.74471 1.0569 0.91626 0.92379 1.135 0.7599 1.338 0.625 1.3602 0.61025 1.383 0.59544 1.4061 0.58069 solid black
+edge Prefix Wort 4 0.79193 4.4411 0.99903 4.3111 1.2624 4.1457 1.4886 4.0036 invis black
+edge Stem Wort 4 0.83558 3.7972 1.0278 3.78 1.2602 3.7592 1.4651 3.7407 solid black
+edge Suffix Wort 4 0.79193 3.1611 0.99708 3.2531 1.2574 3.3699 1.4822 3.4707 invis black
+edge Dieb Wort 7 0.70397 2.4575 0.74893 2.4993 0.79492 2.5425 0.83803 2.5833 1.1013 2.8331 1.3947 3.1186 1.6183 3.3376 solid black
+edge creation:f1 Fragewort 4 0.83803 8.0833 1.23 8.0833 1.5521 7.7461 1.7533 7.4632 solid black
+edge creation1:f1 Fragewort 4 0.83803 6.0833 1.23 6.0833 1.5521 6.4206 1.7533 6.7035 solid black
+stop

@@ -1,0 +1,16 @@
+digraph G {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 36 181.61 36 181.61 0 ",
+		bb="0,0,181.61,36",
+		charset=latin1,
+		xdotversion=1.7
+	];
+	node [fontsize=10,
+		label="\N"
+	];
+	a	[_draw_="c 7 -#000000 e 90.8 18 90.8 18 ",
+		_ldraw_="F 10 11 -Times-Roman c 7 -#000000 T 90.8 15 0 135 54 -Γ΅ΓΆΓ£Γ¤Γ¥Γ¦Γ§Γ¨Γ©ΓªΓ«Γ¬Γ­Γ®Γ―Γ°Γ±Γ²Γ³Γ΄ΓµΓ¶ΓΈΓΉΓΊΓ»ΓΌ ",
+		height=0.5,
+		label=αβγδεζηθικλμνξοπρςστυφψωϊϋό,
+		pos="90.803,18",
+		width=2.5223];
+}

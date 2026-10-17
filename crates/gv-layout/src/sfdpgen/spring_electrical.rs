@@ -16,6 +16,7 @@ use crate::sparse::quad_tree::{QuadTree, Supernodes};
 use crate::sparse::{
     MINDIST, SparseMatrix, distance, distance_cropped, drand, from_coordinate_arrays,
 };
+use gv_core::math;
 
 /// `ERROR_NOT_SQUARE_MATRIX`.
 pub const ERROR_NOT_SQUARE_MATRIX: i32 = -100;
@@ -205,8 +206,8 @@ fn node_degree(a: &SparseMatrix, i: usize) -> i32 {
 
 /// `set_leaves(x, dim, dist, ang, i, j)`.
 fn set_leaves(x: &mut [f64], dim: usize, dist: f64, ang: f64, i: usize, j: usize) {
-    x[dim * j] = ang.cos().mul_add(dist, x[dim * i]);
-    x[dim * j + 1] = ang.sin().mul_add(dist, x[dim * i + 1]);
+    x[dim * j] = math::cos(ang).mul_add(dist, x[dim * i]);
+    x[dim * j + 1] = math::sin(ang).mul_add(dist, x[dim * i + 1]);
 }
 
 /// `beautify_leaves(dim, A, x)`: spread the leaves of each node evenly around it.
@@ -278,8 +279,8 @@ fn embedding_setup(
         p = -1.0;
         ctrl.p = p;
     }
-    let kp = k.powf(1.0 - p);
-    let crk = C.powf((2.0 - p) / 3.0) / k;
+    let kp = math::powf(k, 1.0 - p);
+    let crk = math::powf(C, (2.0 - p) / 3.0) / k;
     (a, kp, crk)
 }
 
@@ -421,7 +422,7 @@ fn spring_electrical_embedding_slow(
                 }
                 let dist = distance_cropped(x, dim, i, j);
                 for k in 0..dim {
-                    f[k] += kp * (x[i * dim + k] - x[j * dim + k]) / dist.powf(1.0 - p);
+                    f[k] += kp * (x[i * dim + k] - x[j * dim + k]) / math::powf(dist, 1.0 - p);
                 }
             }
             for k in 0..dim {
@@ -462,8 +463,8 @@ fn repulsive_supernodes(
     for j in 0..sn.len() {
         let dist = sn.distances[j].max(MINDIST);
         for k in 0..dim {
-            f[k] +=
-                sn.wgts[j] * kp * (x[i * dim + k] - sn.center[j * dim + k]) / dist.powf(1.0 - p);
+            f[k] += sn.wgts[j] * kp * (x[i * dim + k] - sn.center[j * dim + k])
+                / math::powf(dist, 1.0 - p);
         }
     }
 }
@@ -476,7 +477,7 @@ fn repulsive_all(n: usize, dim: usize, x: &[f64], i: usize, kp: f64, p: f64, f: 
         }
         let dist = distance_cropped(x, dim, i, j);
         for k in 0..dim {
-            f[k] += kp * (x[i * dim + k] - x[j * dim + k]) / dist.powf(1.0 - p);
+            f[k] += kp * (x[i * dim + k] - x[j * dim + k]) / math::powf(dist, 1.0 - p);
         }
     }
 }
@@ -774,7 +775,7 @@ fn rotate(n: usize, dim: usize, x: &mut [f64], angle: f64) {
             x[dim * i + k] -= center[k];
         }
     }
-    let axis = [(-angle * radian).cos(), (-angle * radian).sin()];
+    let axis = [math::cos(-angle * radian), math::sin(-angle * radian)];
     for i in 0..n {
         let x0 = x[dim * i].mul_add(axis[0], x[dim * i + 1] * axis[1]);
         let x1 = (-x[dim * i]).mul_add(axis[1], x[dim * i + 1] * axis[0]);

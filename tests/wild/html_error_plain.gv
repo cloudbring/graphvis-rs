@@ -1,0 +1,4 @@
+digraph G {
+ a [label=<<B>x</I>>]
+ b -> c [label=<<FOO>y</FOO>>]
+}

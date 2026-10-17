@@ -8,6 +8,7 @@
 
 use crate::common::types::{LGraph, Sub};
 use crate::common::utils::{map_bool, mapbool, parse_f64_rest};
+use gv_core::math;
 
 pub const DFLT_MARGIN: f64 = 4.0;
 pub const SEPFACT: f64 = 0.8;
@@ -253,10 +254,13 @@ pub fn normalize(g: &mut LGraph<'_>, sub: &Sub) -> bool {
     }
     let Some(e) = e else { return ret };
     let (t, h) = (g.edges[e].tail, g.edges[e].head);
-    phi -= (g.nodes[h].pos[1] - g.nodes[t].pos[1]).atan2(g.nodes[h].pos[0] - g.nodes[t].pos[0]);
+    phi -= math::atan2(
+        g.nodes[h].pos[1] - g.nodes[t].pos[1],
+        g.nodes[h].pos[0] - g.nodes[t].pos[0],
+    );
     if phi != 0.0 {
         let orig = (g.nodes[t].pos[0], g.nodes[t].pos[1]);
-        let (cosv, sinv) = (phi.cos(), phi.sin());
+        let (cosv, sinv) = (math::cos(phi), math::sin(phi));
         for &v in &sub.nodes {
             let px = g.nodes[v].pos[0] - orig.0;
             let py = g.nodes[v].pos[1] - orig.1;

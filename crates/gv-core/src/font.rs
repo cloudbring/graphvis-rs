@@ -2,6 +2,7 @@
 //! (`lib/common/textspan_lut.c`, `lib/common/textspan.c`, `lib/common/ps_font_equiv.h`,
 //! and `lib/common/labels.c`).
 
+use crate::charset::{self, Charset};
 use serde::{Deserialize, Serialize};
 
 /// Default font family name in Graphviz (`Times-Roman`).
@@ -230,15 +231,18 @@ fn get_metrics_for_font_variant(
 
 /// `estimate_character_width_canonical` from `lib/common/textspan_lut.c`: width of one byte in
 /// `(units_per_em * 1)` points. Bytes `>= 128` (every byte of a UTF-8 multi-byte sequence) use
-/// the width of `' '`; unknown ASCII widths (`-1`) count as `0`.
+/// the width of `' '`; unknown ASCII widths (`-1`) count as `0`; each case warns once per process.
 #[inline]
 fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) -> u16 {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static NON_ASCII_WARNED: AtomicBool = AtomicBool::new(false);
+    static NO_WIDTH_WARNED: AtomicBool = AtomicBool::new(false);
     let character = if byte >= 128 {
-        // once per process (stderr spam prevention)
-        if crate::diag::emit_once("\0non-ascii") {
-            crate::diag::agwarningf(&format!(
-                "Warning: no value for width of non-ASCII character {byte}. Falling back to width of space character\n"
-            ));
+        if !NON_ASCII_WARNED.swap(true, Ordering::Relaxed) {
+            eprintln!(
+                "Warning: Warning: no value for width of non-ASCII character {byte}. Falling \
+                 back to width of space character"
+            );
         }
         b' '
     } else {
@@ -246,10 +250,11 @@ fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) ->
     };
     let width = variant_metrics[usize::from(character)];
     if width == -1 {
-        if crate::diag::emit_once("\0ascii") {
-            crate::diag::agwarningf(&format!(
-                "Warning: no value for width of ASCII character {character}. Falling back to 0\n"
-            ));
+        if !NO_WIDTH_WARNED.swap(true, Ordering::Relaxed) {
+            eprintln!(
+                "Warning: Warning: no value for width of ASCII character {character}. Falling \
+                 back to 0"
+            );
         }
         0
     } else {
@@ -266,9 +271,9 @@ fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) ->
 pub fn estimate_text_width_1pt(font_name: &str, text: &str, bold: bool, italic: bool) -> f64 {
     let family_metrics = get_metrics_for_font_family(font_name);
     let variant_metrics = get_metrics_for_font_variant(family_metrics, bold, italic);
-    let text_width_canonical: u32 = text
-        .bytes()
-        .map(|b| u32::from(estimate_character_width_canonical(variant_metrics, b)))
+    let text_width_canonical: u32 = charset::encode(text)
+        .iter()
+        .map(|&b| u32::from(estimate_character_width_canonical(variant_metrics, b)))
         .sum();
     f64::from(text_width_canonical) / family_metrics.units_per_em
 }
@@ -356,35 +361,94 @@ fn push_entity_bytes(out: &mut Vec<u8>, v: u32) {
 }
 
 /// `htmlEntityUTF8` from `lib/common/utils.c`: replaces HTML entities (`&amp;`, `&#123;`,
-/// `&#x7B;`) by their UTF-8 encoding. Input is already valid UTF-8 in Rust, so C's
-/// invalid-UTF-8-as-Latin-1 recovery never triggers.
+/// `&#x7B;`) by their UTF-8 encoding. Works on the input's bytes (see [`crate::charset`]):
+/// a lead byte without its continuation bytes, or a byte `>= 0xF8`, is converted as if it
+/// were Latin-1, with C's once-per-graph warning.
 pub fn html_entity_utf8(text: &str) -> String {
-    if !text.contains('&') {
+    if !text.contains('&') && !charset::has_raw(text) {
         return text.to_string();
     }
-    let s = text.as_bytes();
+    let s = charset::encode(text);
+    let s: &[u8] = &s;
+    let at = |i: usize| s.get(i).copied().unwrap_or(0);
     let mut out = Vec::with_capacity(s.len());
     let mut i = 0;
     while i < s.len() {
-        let c = s[i];
+        let mut c = s[i];
         i += 1;
-        if c == b'&' {
+        let uc: i32 = if c < 0xC0 {
+            0
+        } else if c < 0xE0 {
+            1
+        } else if c < 0xF0 {
+            2
+        } else if c < 0xF8 {
+            3
+        } else {
+            charset::warn_invalid_utf8(|g| {
+                format!(
+                    "Warning: UTF8 codes > 4 bytes are not currently supported (graph {g}) - \
+                     treated as Latin-1. Perhaps \"-Gcharset=latin1\" is needed?\n"
+                )
+            });
+            c = cvt_and_append(c, &mut out);
+            -1
+        };
+        if uc == 0 && c == b'&' {
             let (v, used) = html_entity(&s[i..]);
             i += used;
             if v != 0 {
-                push_entity_bytes(&mut out, v);
-                continue;
+                if v < 0x7F {
+                    c = v as u8;
+                } else if v < 0x07FF {
+                    out.push(((v >> 6) | 0xC0) as u8);
+                    c = ((v & 0x3F) | 0x80) as u8;
+                } else {
+                    out.push(((v >> 12) | 0xE0) as u8);
+                    out.push((((v >> 6) & 0x3F) | 0x80) as u8);
+                    c = ((v & 0x3F) | 0x80) as u8;
+                }
+            }
+        } else {
+            for _ in 0..uc.max(0) {
+                if at(i) & 0xC0 == 0x80 {
+                    out.push(c);
+                    c = at(i);
+                    i += 1;
+                } else {
+                    charset::warn_invalid_utf8(|g| {
+                        format!(
+                            "Warning: Invalid {}-byte UTF8 found in input of graph {g} - \
+                             treated as Latin-1. Perhaps \"-Gcharset=latin1\" is needed?\n",
+                            uc + 1
+                        )
+                    });
+                    c = cvt_and_append(c, &mut out);
+                    break;
+                }
             }
         }
         out.push(c);
     }
-    String::from_utf8(out).unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned())
+    charset::decode(out)
+}
+
+/// `cvtAndAppend`: appends all but the last byte of the Latin-1-to-UTF-8 conversion of `c`
+/// and returns the last one.
+fn cvt_and_append(c: u8, out: &mut Vec<u8>) -> u8 {
+    let mut conv = Vec::with_capacity(3);
+    push_entity_bytes(&mut conv, u32::from(c));
+    let last = conv.pop().unwrap_or(c);
+    out.extend_from_slice(&conv);
+    last
 }
 
 /// `latin1ToUTF8` from `lib/common/utils.c` (used when `charset=latin1`): translates HTML
-/// entities and re-encodes every byte `>= 0x7F` as if it were a Latin-1 code point.
+/// entities and re-encodes every byte `>= 0x7F` of the input (see [`crate::charset`]) as
+/// if it were a Latin-1 code point.
 pub fn latin1_to_utf8(text: &str) -> String {
-    let s = text.as_bytes();
+    let s = charset::encode(text);
+    let s: &[u8] = &s;
     let mut out = Vec::with_capacity(s.len());
     let mut i = 0;
     while i < s.len() {
@@ -397,7 +461,16 @@ pub fn latin1_to_utf8(text: &str) -> String {
         }
         push_entity_bytes(&mut out, v);
     }
-    String::from_utf8(out).unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned())
+    charset::decode(out)
+}
+
+/// The label text conversion of `make_label` for a graph of charset `cs`
+/// (`latin1ToUTF8` for Latin-1, `htmlEntityUTF8` otherwise).
+pub fn convert_label_text(text: &str, cs: Charset) -> String {
+    match cs {
+        Charset::Latin1 => latin1_to_utf8(text),
+        Charset::Utf8 | Charset::Big5 => html_entity_utf8(text),
+    }
 }
 
 /// Decodes HTML character entity references, matching `htmlEntityUTF8` in
@@ -555,6 +628,17 @@ fn storeline(layout: &mut TextLabelLayout, line: String, terminator: TextJustify
 /// entity-substituted) into lines on `\n`, `\l`, `\r` and literal newlines, reducing every
 /// other `\c` to `c`. `width`/`height` are C's `lp->dimen`.
 pub fn make_simple_label(text: &str, font_name: &str, font_size: f64) -> TextLabelLayout {
+    make_simple_label_cs(text, font_name, font_size, Charset::Utf8)
+}
+
+/// [`make_simple_label`] for a graph of charset `cs`. C scans bytes; with `charset=big5` a
+/// byte in `0xA1..=0xFE` takes the next byte with it, so that byte is never an escape.
+pub fn make_simple_label_cs(
+    text: &str,
+    font_name: &str,
+    font_size: f64,
+    cs: Charset,
+) -> TextLabelLayout {
     let mut layout = TextLabelLayout {
         font_name: font_name.to_string(),
         font_size,
@@ -563,40 +647,56 @@ pub fn make_simple_label(text: &str, font_name: &str, font_size: f64) -> TextLab
     if text.is_empty() {
         return layout;
     }
-    let mut line = String::new();
+    let bytes = charset::encode(text);
+    let s: &[u8] = &bytes;
+    let big5 = cs == Charset::Big5;
+    let mut line: Vec<u8> = Vec::new();
     // C appends the NUL after a trailing backslash, which makes the buffer non-empty without
     // adding visible text.
     let mut pending_nul = false;
-    let mut chars = text.chars();
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            match chars.clone().next() {
-                Some(j @ ('n' | 'l' | 'r')) => {
-                    chars.next();
+    let take = |line: &mut Vec<u8>| charset::decode(std::mem::take(line));
+    let mut i = 0;
+    while i < s.len() {
+        let c = s[i];
+        i += 1;
+        if big5 && (0xA1..=0xFE).contains(&c) {
+            line.push(c);
+            match s.get(i) {
+                Some(&n) => {
+                    line.push(n);
+                    i += 1;
+                }
+                // NB. C protects against an unexpected end here.
+                None => break,
+            }
+        } else if c == b'\\' {
+            match s.get(i) {
+                Some(&j @ (b'n' | b'l' | b'r')) => {
+                    i += 1;
                     storeline(
                         &mut layout,
-                        std::mem::take(&mut line),
-                        TextJustify::from_char(j),
+                        take(&mut line),
+                        TextJustify::from_char(char::from(j)),
                     );
                     pending_nul = false;
                 }
-                Some(other) => {
-                    chars.next();
+                Some(&other) => {
+                    i += 1;
                     if !pending_nul {
                         line.push(other);
                     }
                 }
                 None => pending_nul = true,
             }
-        } else if c == '\n' {
-            storeline(&mut layout, std::mem::take(&mut line), TextJustify::Center);
+        } else if c == b'\n' {
+            storeline(&mut layout, take(&mut line), TextJustify::Center);
             pending_nul = false;
         } else if !pending_nul {
             line.push(c);
         }
     }
     if !line.is_empty() || pending_nul {
-        storeline(&mut layout, line, TextJustify::Center);
+        storeline(&mut layout, take(&mut line), TextJustify::Center);
     }
     layout
 }
@@ -609,17 +709,13 @@ pub fn make_text_label(
     ctx: &LabelSubstContext<'_>,
     font_name: &str,
     font_size: f64,
-    charset_latin1: bool,
+    cs: Charset,
 ) -> TextLabelLayout {
     // `\L` is the object's main label (`ND_label(n)->text`, ...): callers pass an empty
     // `label_text` while that label itself is being made, which leaves `\L` literal.
     let substituted = strdup_and_subst_obj0(label, ctx, false);
-    let converted = if charset_latin1 {
-        latin1_to_utf8(&substituted)
-    } else {
-        html_entity_utf8(&substituted)
-    };
-    let mut layout = make_simple_label(&converted, font_name, font_size);
+    let converted = convert_label_text(&substituted, cs);
+    let mut layout = make_simple_label_cs(&converted, font_name, font_size, cs);
     layout.source = converted;
     layout
 }
@@ -628,19 +724,7 @@ pub fn make_text_label(
 /// `lib/common/input.c`: `latin-1`, `latin1`, `l1`, `ISO-8859-1`, `ISO_8859-1`, `ISO8859-1`,
 /// `ISO-IR-100`, case-insensitively).
 pub fn charset_is_latin1(charset: Option<&str>) -> bool {
-    charset.is_some_and(|c| {
-        [
-            "latin-1",
-            "latin1",
-            "l1",
-            "ISO-8859-1",
-            "ISO_8859-1",
-            "ISO8859-1",
-            "ISO-IR-100",
-        ]
-        .iter()
-        .any(|n| n.eq_ignore_ascii_case(c))
-    })
+    Charset::from_attr(charset) == Charset::Latin1
 }
 
 /// Measures a multiline Graphviz label for a node named `node_name`.
@@ -654,14 +738,15 @@ pub fn measure_multiline_label(
     measure_multiline_label_with_context(label, &ctx, font_name, font_size)
 }
 
-/// Measures a multiline plain-text Graphviz label (UTF-8 charset); see [`make_text_label`].
+/// Measures a multiline plain-text Graphviz label in the charset of the graph being laid
+/// out ([`charset::current`]); see [`make_text_label`].
 pub fn measure_multiline_label_with_context(
     label: &str,
     ctx: &LabelSubstContext<'_>,
     font_name: &str,
     font_size: f64,
 ) -> TextLabelLayout {
-    make_text_label(label, ctx, font_name, font_size, false)
+    make_text_label(label, ctx, font_name, font_size, charset::current())
 }
 
 #[cfg(test)]
@@ -786,9 +871,40 @@ mod tests {
     }
 
     #[test]
+    fn charset_conversions_run_on_input_bytes() {
+        let raw = |b: &[u8]| charset::decode(b.to_vec());
+        // Latin-1 bytes are converted once; UTF-8 bytes under charset=latin1 twice, as in C.
+        assert_eq!(
+            latin1_to_utf8(&raw(b"caf\xe9 &eacute;")),
+            "caf\u{e9} \u{e9}"
+        );
+        assert_eq!(latin1_to_utf8("\u{e9}"), "\u{c3}\u{a9}");
+        // htmlEntityUTF8 treats a lead byte without continuation bytes as Latin-1.
+        assert_eq!(html_entity_utf8(&raw(b"caf\xe9 x")), "caf\u{e9} x");
+        assert_eq!(html_entity_utf8(&raw(b"\xff")), "\u{ff}");
+        // A 3-byte lead with one continuation byte keeps both, then converts the next one:
+        // the result is not valid UTF-8, like C's.
+        let out = html_entity_utf8(&raw(b"\xe4\xbcz"));
+        assert_eq!(&*charset::encode(&out), b"\xe4\xc2\xbcz");
+        // Width is measured per input byte: one raw byte is one space wide.
+        let w = |t: &str| estimate_text_width_1pt("Times-Roman", t, false, false);
+        assert_eq!(w(&raw(b"\xa4")), w(" "));
+    }
+
+    #[test]
+    fn big5_pairs_bytes_in_make_simple_label() {
+        // E4 B8 AD: E4 takes B8, AD takes the backslash, so "\n" is not a line break.
+        let l = make_simple_label_cs("\u{4e2d}\\nX\\lY", "Times-Roman", 14.0, Charset::Big5);
+        assert_eq!(l.lines.len(), 2);
+        assert_eq!(l.lines[0].text, "\u{4e2d}\\nX");
+        let u = make_simple_label_cs("\u{4e2d}\\nX\\lY", "Times-Roman", 14.0, Charset::Utf8);
+        assert_eq!(u.lines.len(), 3);
+    }
+
+    #[test]
     fn subst_leaves_inapplicable_escapes() {
         let ctx = LabelSubstContext::for_node("n");
-        let l = make_text_label("\\N \\T \\L", &ctx, "Times-Roman", 14.0, false);
+        let l = make_text_label("\\N \\T \\L", &ctx, "Times-Roman", 14.0, Charset::Utf8);
         assert_eq!(l.lines[0].text, "n T L");
     }
 }

@@ -330,6 +330,7 @@ pub(crate) fn html_label_layout(
     obj: &LabelSubstContext<'_>,
     font_name: &str,
     font_size: f64,
+    cs: gv_core::charset::Charset,
 ) -> HtmlLabelLayout {
     make_html_label(
         html_inner(raw_label),
@@ -338,5 +339,6 @@ pub(crate) fn html_label_layout(
         font_size,
         None,
         obj.pen_color,
+        cs,
     )
 }

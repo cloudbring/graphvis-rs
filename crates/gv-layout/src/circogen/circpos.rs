@@ -4,6 +4,7 @@ use super::block::COALESCED_F;
 use super::blockpath::layout_block;
 use super::circular::{Circ, PARENT_F};
 use super::graph::CGraph;
+use gv_core::math;
 use std::f64::consts::PI;
 
 /// `getRotation(sn, x, y, theta)`: how far to rotate block `sn`, centred at
@@ -25,7 +26,7 @@ fn get_rotation(c: &Circ, sn: usize, x: f64, y: f64, mut theta: f64) -> f64 {
     let neighbor = b.child.expect("child block has an attaching node");
     let new_x = c.pos[neighbor][0] + x;
     let new_y = c.pos[neighbor][1] + y;
-    let mut mindist2 = new_x.hypot(new_y);
+    let mut mindist2 = math::hypot(new_x, new_y);
     let mut closest_node = neighbor;
     for n in b.sub_graph.nodes() {
         if n == neighbor {
@@ -33,7 +34,7 @@ fn get_rotation(c: &Circ, sn: usize, x: f64, y: f64, mut theta: f64) -> f64 {
         }
         let new_x = c.pos[n][0] + x;
         let new_y = c.pos[n][1] + y;
-        let len2 = new_x.hypot(new_y);
+        let len2 = math::hypot(new_x, new_y);
         if len2 < mindist2 {
             mindist2 = len2;
             closest_node = n;
@@ -45,14 +46,14 @@ fn get_rotation(c: &Circ, sn: usize, x: f64, y: f64, mut theta: f64) -> f64 {
         let r = b.radius - rho;
         let n_x = c.pos[neighbor][0];
         if b.flags & COALESCED_F != 0 && -r < n_x {
-            let big_r = x.hypot(y);
+            let big_r = math::hypot(x, y);
             let n_y = c.pos[neighbor][1];
-            let phi = n_y.atan2(n_x + r);
-            let l = r - rho / phi.cos();
-            theta += PI / 2.0 - phi - (l / big_r * phi.cos()).asin();
+            let phi = math::atan2(n_y, n_x + r);
+            let l = r - rho / math::cos(phi);
+            theta += PI / 2.0 - phi - math::asin(l / big_r * math::cos(phi));
         } else {
             // Origin still at center of this block
-            let phi = c.pos[neighbor][1].atan2(c.pos[neighbor][0]);
+            let phi = math::atan2(c.pos[neighbor][1], c.pos[neighbor][0]);
             theta += PI - phi - c.nd[neighbor].psi;
             if theta > 2.0 * PI {
                 theta -= 2.0 * PI;
@@ -70,8 +71,8 @@ fn apply_delta(c: &mut Circ, sn: usize, x: f64, y: f64, rotate: f64) {
     for n in c.blocks[sn].sub_graph.nodes() {
         let tmp_x = c.pos[n][0];
         let tmp_y = c.pos[n][1];
-        let cos_r = rotate.cos();
-        let sin_r = rotate.sin();
+        let cos_r = math::cos(rotate);
+        let sin_r = math::sin(rotate);
         // clang contracts `a*b - c*d` / `a*b + c*d` into one fused multiply-add.
         let big_x = tmp_x.mul_add(cos_r, -(tmp_y * sin_r));
         let big_y = tmp_x.mul_add(sin_r, tmp_y * cos_r);
@@ -197,8 +198,8 @@ fn position_children(
             child_angle += incident_angle + mindist_angle / 2.0;
         }
 
-        let delta_x = child_radius * child_angle.cos();
-        let delta_y = child_radius * child_angle.sin();
+        let delta_x = child_radius * math::cos(child_angle);
+        let delta_y = child_radius * math::sin(child_angle);
 
         // first apply the delta to the immediate child and see if we need
         // to rotate it for better edge link

@@ -69,6 +69,10 @@ pub fn layout_graph_with_options(
     engine: LayoutEngine,
     options: LayoutOptions,
 ) -> Result<()> {
+    gv_core::charset::begin_layout(
+        &graph.name,
+        graph.graph_attrs.get("charset").map(String::as_str),
+    );
     let effective_engine = if engine == LayoutEngine::Dot
         && let Some(attr_layout) = graph.graph_attrs.get("layout")
         && let Ok(parsed) = LayoutEngine::parse(attr_layout)

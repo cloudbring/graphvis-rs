@@ -12,6 +12,7 @@ use crate::common::postproc::gv_postprocess;
 use crate::common::types::*;
 use crate::common::utils::{atoi, compute_bb, late_int, mapbool, parse_f64_rest};
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, pack_graphs, pccomps};
+use gv_core::math;
 use gv_core::{Graph, Point, Result};
 
 /// `CL_OFFSET`: default margin around packed components, in points.
@@ -139,8 +140,8 @@ fn init_regular(g: &mut LGraph<'_>, sub: &Sub, ng: usize) {
     let mut a = 0.0f64;
     let da = 2.0 * std::f64::consts::PI / ng as f64;
     for &n in &sub.nodes {
-        g.nodes[n].pos[0] = ng as f64 * a.cos();
-        g.nodes[n].pos[1] = ng as f64 * a.sin();
+        g.nodes[n].pos[0] = ng as f64 * math::cos(a);
+        g.nodes[n].pos[1] = ng as f64 * math::sin(a);
         g.nodes[n].pinned = P_SET;
         a += da;
         if g.ndim > 2 {

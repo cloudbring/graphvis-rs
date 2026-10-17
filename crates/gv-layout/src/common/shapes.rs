@@ -10,6 +10,7 @@
 //! this module rebuilds C's vertex arrays from the final size, which agrees with
 //! `poly_init` up to rounding because the vertices scale linearly with the size.
 
+use gv_core::math;
 use gv_core::{NodeData, Point};
 
 /// Whitespace in points between peripheries (`GAP` in `const.h`).
@@ -232,23 +233,23 @@ const ALPHA4: f64 = 2.0 * ALPHA2;
 /// `star_vertices`: fills 10 vertices for `sz`, returning the aspect-adjusted size.
 fn star_vertices(sz0: Point) -> (Vec<Point>, Point) {
     let mut sz = sz0;
-    let aspect = (1.0 + ALPHA3.sin()) / (2.0 * ALPHA.cos());
+    let aspect = (1.0 + math::sin(ALPHA3)) / (2.0 * math::cos(ALPHA));
     let a = sz.y / sz.x;
     if a > aspect {
         sz.x = sz.y / aspect;
     } else if a < aspect {
         sz.y = sz.x * aspect;
     }
-    let r = sz.x / (2.0 * ALPHA.cos());
-    let r0 = r * ALPHA.cos() * ALPHA4.cos() / (ALPHA4.sin() * ALPHA2.cos());
-    let offset = (r * (1.0 - ALPHA3.sin())) / 2.0;
+    let r = sz.x / (2.0 * math::cos(ALPHA));
+    let r0 = r * math::cos(ALPHA) * math::cos(ALPHA4) / (math::sin(ALPHA4) * math::cos(ALPHA2));
+    let offset = (r * (1.0 - math::sin(ALPHA3))) / 2.0;
     let mut theta = ALPHA;
     let mut v = vec![Point::default(); 10];
     let mut i = 0;
     while i < 10 {
-        v[i] = Point::new(r * theta.cos(), r * theta.sin() - offset);
+        v[i] = Point::new(r * math::cos(theta), r * math::sin(theta) - offset);
         theta += ALPHA2;
-        v[i + 1] = Point::new(r0 * theta.cos(), r0 * theta.sin() - offset);
+        v[i + 1] = Point::new(r0 * math::cos(theta), r0 * math::sin(theta) - offset);
         theta += ALPHA2;
         i += 2;
     }
@@ -286,27 +287,27 @@ fn cylinder_vertices(bb: Point) -> Vec<Point> {
 fn regular_unit_vertices(sides: usize, orientation: f64, distortion: f64, skew: f64) -> Vec<Point> {
     use std::f64::consts::{PI, SQRT_2};
     let sectorangle = 2.0 * PI / sides as f64;
-    let sidelength = (sectorangle / 2.0).sin();
-    let skewdist = (distortion.abs() + skew.abs()).hypot(1.0);
-    let gdistortion = distortion * SQRT_2 / (sectorangle / 2.0).cos();
+    let sidelength = math::sin(sectorangle / 2.0);
+    let skewdist = math::hypot(distortion.abs() + skew.abs(), 1.0);
+    let gdistortion = distortion * SQRT_2 / math::cos(sectorangle / 2.0);
     let gskew = skew / 2.0;
     let mut angle = (sectorangle - PI) / 2.0;
-    let (mut sinx, mut cosx) = (angle.sin(), angle.cos());
+    let (mut sinx, mut cosx) = (math::sin(angle), math::cos(angle));
     let mut r = Point::new(0.5 * cosx, 0.5 * sinx);
     angle += (PI - sectorangle) / 2.0;
     let is_box = sides == 4 && (orientation % 90.0).abs() < 0.5 && distortion == 0.0 && skew == 0.0;
     let mut v = vec![Point::default(); sides];
     for i in 0..sides {
         angle += sectorangle;
-        sinx = angle.sin();
-        cosx = angle.cos();
+        sinx = math::sin(angle);
+        cosx = math::cos(angle);
         r.x += sidelength * cosx;
         r.y += sidelength * sinx;
         let mut p = Point::new(r.x * (skewdist + r.y * gdistortion) + r.y * gskew, r.y);
         // RADIANS(orientation) + atan2(P.y, P.x), fused
-        let alpha = (orientation / 180.0).mul_add(PI, p.y.atan2(p.x));
-        let (s, c) = (alpha.sin(), alpha.cos());
-        let h = p.x.hypot(p.y);
+        let alpha = (orientation / 180.0).mul_add(PI, math::atan2(p.y, p.x));
+        let (s, c) = (math::sin(alpha), math::cos(alpha));
+        let h = math::hypot(p.x, p.y);
         p.x = h * c;
         p.y = h * s;
         v[i] = p;
@@ -349,7 +350,7 @@ fn add_peripheries(
             break;
         }
     }
-    let mut beta = (rr.y - q.y).atan2(rr.x - q.x);
+    let mut beta = math::atan2(rr.y - q.y, rr.x - q.x);
     let mut qprev = q;
     for i in 0..sides {
         let mut q = v[i];
@@ -362,11 +363,11 @@ fn add_peripheries(
                 }
             }
             let alpha = beta;
-            beta = (r.y - q.y).atan2(r.x - q.x);
+            beta = math::atan2(r.y - q.y, r.x - q.x);
             let gamma = (alpha + std::f64::consts::PI - beta) / 2.0;
-            let temp = GAP / gamma.sin();
-            sinx = (alpha - gamma).sin() * temp;
-            cosx = (alpha - gamma).cos() * temp;
+            let temp = GAP / math::sin(gamma);
+            sinx = math::sin(alpha - gamma) * temp;
+            cosx = math::cos(alpha - gamma) * temp;
         }
         qprev = q;
         for j in 1..peripheries {
@@ -641,7 +642,7 @@ impl NodeShape {
                 if pr.x.abs() > radius || pr.y.abs() > radius {
                     return false;
                 }
-                pr.x.hypot(pr.y) <= radius
+                math::hypot(pr.x, pr.y) <= radius
             }
             InsideFn::Record => {
                 let mut b = ctx
@@ -725,7 +726,7 @@ impl NodeShape {
             return false;
         }
         if sides <= 2 {
-            return (p.x / box_urx).hypot(p.y / box_ury) < 1.0;
+            return math::hypot(p.x / box_urx, p.y / box_ury) < 1.0;
         }
         let outp = self.outp();
         let o = Point::new(0.0, 0.0);

@@ -6,6 +6,7 @@
 //! insertion order that is walked backwards.
 
 use super::{MACHINEACC, distance_cropped};
+use gv_core::math;
 
 /// `node_data_struct`.
 #[derive(Debug, Clone)]
@@ -290,7 +291,7 @@ impl QuadTree {
                 let f = if p == -1.0 {
                     w1 * w2 * kp * d / (dist * dist)
                 } else {
-                    w1 * w2 * kp * d / dist.powf(1.0 - p)
+                    w1 * w2 * kp * d / math::powf(dist, 1.0 - p)
                 };
                 self.cells[q1].force[k] += f;
                 self.cells[q2].force[k] -= f;
@@ -322,7 +323,7 @@ impl QuadTree {
                         let f = if p == -1.0 {
                             wgt1 * wgt2 * kp * d / (dist * dist)
                         } else {
-                            wgt1 * wgt2 * kp * d / dist.powf(1.0 - p)
+                            wgt1 * wgt2 * kp * d / math::powf(dist, 1.0 - p)
                         };
                         force[i1 * dim + k] += f;
                         force[i2 * dim + k] -= f;

@@ -8,6 +8,7 @@ use crate::emit::job::{
 use crate::emit::model::TextSpan;
 use crate::emit::num::{fmt_f6, fmt_g, gvdouble};
 use gv_core::Point;
+use gv_core::math;
 use gv_geom::html_label::{HTML_BF, HTML_IF, HTML_OL, HTML_S, HTML_SUB, HTML_SUP, HTML_UL};
 
 /// Flags for `gv_xml_escape`.
@@ -408,8 +409,8 @@ impl SvgEngine {
         } else {
             let angle = o.gradient_angle as f64 * std::f64::consts::PI / 180.0;
             (
-                (50.0 * (1.0 + angle.cos())).round(),
-                (50.0 * (1.0 - angle.sin())).round(),
+                (50.0 * (1.0 + math::cos(angle))).round(),
+                (50.0 * (1.0 - math::sin(angle))).round(),
             )
         };
         self.put("<defs>\n<radialGradient id=\"");

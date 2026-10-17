@@ -1,0 +1,33 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,173.33,108",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "néud",
+      "height": "0.5",
+      "label": "café here",
+      "pos": "86.666,90",
+      "width": "1.2968"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "height": "0.5",
+      "label": "ok Ã© and ä¼z and øx",
+      "pos": "86.666,18",
+      "width": "2.4074"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,86.666,36.104 86.666,71.697 86.666,64.407 86.666,55.726 86.666,47.536"
+    }
+  ]
+}

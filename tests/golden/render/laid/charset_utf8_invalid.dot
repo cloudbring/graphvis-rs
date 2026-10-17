@@ -1,0 +1,13 @@
+digraph G {
+	graph [bb="0,0,173.33,108"];
+	node [label="\N"];
+	néud	[height=0.5,
+		label="café here",
+		pos="86.665,90",
+		width=1.2968];
+	b	[height=0.5,
+		label="ok Ã© and ä¼z and øx",
+		pos="86.665,18",
+		width=2.4074];
+	néud -> b	[pos="e,86.665,36.104 86.665,71.697 86.665,64.407 86.665,55.726 86.665,47.536"];
+}

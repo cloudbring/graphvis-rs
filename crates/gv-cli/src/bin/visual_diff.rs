@@ -10,6 +10,7 @@
 //!      (`1 - MAE/255`), 8x8 block SSIM, soft blurred ink Dice (`sigma = 3px`), and composite score.
 //! 3. Optionally exports side-by-side PNG renders, diff heatmaps, and a structured JSON report.
 
+use gv_core::math;
 use gv_engine::render_dot;
 use serde::Serialize;
 use serde_json::Value;
@@ -708,7 +709,7 @@ fn evaluate_fixture(
     };
 
     // 4. Node position RMSE & similarity
-    let c_diag = c_layout.bb_w.hypot(c_layout.bb_h).max(1.0);
+    let c_diag = math::hypot(c_layout.bb_w, c_layout.bb_h).max(1.0);
     let raw_pos_rmse_pt = if shared_count > 0 {
         (sq_dist_raw / (shared_count as f64)).sqrt()
     } else {

@@ -4,6 +4,7 @@
 
 use super::splines::bezier_clip;
 use super::utils::late_double;
+use gv_core::math;
 use gv_core::{AttrMap, Point};
 
 const ARROW_LENGTH: f64 = 10.0;
@@ -143,13 +144,13 @@ fn miter_shape(base_left: Point, p: Point, base_right: Point, penwidth: f64) -> 
     }
     let dxa = p.x - base_left.x;
     let dya = p.y - base_left.y;
-    let hypota = dxa.hypot(dya);
+    let hypota = math::hypot(dxa, dya);
     let cos_alpha = dxa / hypota;
     let sin_alpha = dya / hypota;
     let alpha = if dya > 0.0 {
-        cos_alpha.acos()
+        math::acos(cos_alpha)
     } else {
-        -cos_alpha.acos()
+        -math::acos(cos_alpha)
     };
     let p1 = Point::new(
         p.x - penwidth / 2.0 * sin_alpha,
@@ -157,12 +158,12 @@ fn miter_shape(base_left: Point, p: Point, base_right: Point, penwidth: f64) -> 
     );
     let dxb = base_right.x - p.x;
     let dyb = base_right.y - p.y;
-    let hypotb = dxb.hypot(dyb);
+    let hypotb = math::hypot(dxb, dyb);
     let cos_beta = dxb / hypotb;
     let beta = if dyb > 0.0 {
-        cos_beta.acos()
+        math::acos(cos_beta)
     } else {
-        -cos_beta.acos()
+        -math::acos(cos_beta)
     };
     let beta_rev = beta - PI;
     let theta = beta_rev - alpha
@@ -171,7 +172,7 @@ fn miter_shape(base_left: Point, p: Point, base_right: Point, penwidth: f64) -> 
         } else {
             0.0
         };
-    let normalized_miter_length = 1.0 / (theta / 2.0).sin();
+    let normalized_miter_length = 1.0 / math::sin(theta / 2.0);
     let sin_beta = dyb / hypotb;
     let p2 = Point::new(
         p.x + penwidth / 2.0 * -sin_beta,
@@ -181,7 +182,7 @@ fn miter_shape(base_left: Point, p: Point, base_right: Point, penwidth: f64) -> 
         let pb = Point::new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0);
         return Tri { p: [pb, p1, p2] };
     }
-    let l = penwidth / 2.0 / (theta / 2.0).tan();
+    let l = penwidth / 2.0 / math::tan(theta / 2.0);
     let p3 = Point::new(p1.x + l * cos_alpha, p1.y + l * sin_alpha);
     Tri { p: [p3, p1, p2] }
 }
@@ -200,10 +201,14 @@ fn side_delta(
     let q = t.p[idx];
     let dx = q.x - p.x;
     let dy = q.y - p.y;
-    let h = dx.hypot(dy);
+    let h = math::hypot(dx, dy);
     let ca = dx / h;
-    let alpha = if dy > 0.0 { ca.acos() } else { -ca.acos() };
-    let len = h * (alpha - phi).cos();
+    let alpha = if dy > 0.0 {
+        math::acos(ca)
+    } else {
+        -math::acos(ca)
+    };
+    let len = h * math::cos(alpha - phi);
     Point::new(len * cos_phi, len * sin_phi)
 }
 
@@ -235,12 +240,12 @@ fn arrow_type_normal0(
     let mut delta_tip = origin;
     let mut delta_base = origin;
     if u.x != 0.0 || u.y != 0.0 {
-        let cos_phi = pp.x / pp.x.hypot(pp.y);
-        let sin_phi = pp.y / pp.x.hypot(pp.y);
+        let cos_phi = pp.x / math::hypot(pp.x, pp.y);
+        let sin_phi = pp.y / math::hypot(pp.x, pp.y);
         let phi = if pp.y > 0.0 {
-            cos_phi.acos()
+            math::acos(cos_phi)
         } else {
-            -cos_phi.acos()
+            -math::acos(cos_phi)
         };
         if flag & ARR_MOD_LEFT != 0 {
             delta_tip = side_delta(
@@ -319,12 +324,12 @@ fn arrow_type_crow0(
     let mut delta_tip = origin;
     let mut delta_base = origin;
     if u.x != 0.0 || u.y != 0.0 {
-        let cos_phi = pp.x / pp.x.hypot(pp.y);
-        let sin_phi = pp.y / pp.x.hypot(pp.y);
+        let cos_phi = pp.x / math::hypot(pp.x, pp.y);
+        let sin_phi = pp.y / math::hypot(pp.x, pp.y);
         let phi = if pp.y > 0.0 {
-            cos_phi.acos()
+            math::acos(cos_phi)
         } else {
-            -cos_phi.acos()
+            -math::acos(cos_phi)
         };
         let left = flag & ARR_MOD_LEFT != 0;
         let right = flag & ARR_MOD_RIGHT != 0;
