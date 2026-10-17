@@ -49,6 +49,9 @@ pub struct NodeShape {
     pub penwidth: f64,
     /// True for shapes with no `insidefn` (user shapes); edges are not clipped.
     pub no_clip: bool,
+    /// `option.fixedshape` (`fixedsize=shape`): the inside test uses the
+    /// polygon's own bounding box (`polyBB`) instead of the node size.
+    pub fixedshape: bool,
 }
 
 /// Static shape description (`polygon_t` initialisers and the `Shapes[]` table).
@@ -422,6 +425,10 @@ impl NodeShape {
             outline_height: height,
             penwidth,
             no_clip: false,
+            fixedshape: node
+                .attrs
+                .get("fixedsize")
+                .is_some_and(|v| v.eq_ignore_ascii_case("shape")),
         };
         match desc.inside {
             InsideFn::Record | InsideFn::Epsf => {
@@ -674,14 +681,35 @@ impl NodeShape {
         }
     }
 
+    /// `polyBB(poly)`: bounding box of the outermost periphery's vertices.
+    fn poly_bb(&self) -> gv_core::BoundingBox {
+        let peris = self.peripheries.max(1);
+        let verts = &self.vertices[(peris - 1) * self.sides..];
+        let mut bb = gv_core::BoundingBox {
+            ll: verts[0],
+            ur: verts[0],
+        };
+        for v in &verts[1..self.sides] {
+            bb.ll.x = bb.ll.x.min(v.x);
+            bb.ll.y = bb.ll.y.min(v.y);
+            bb.ur.x = bb.ur.x.max(v.x);
+            bb.ur.y = bb.ur.y.max(v.y);
+        }
+        bb
+    }
+
     fn poly_inside(&self, ctx: &mut InsideCtx, p: Point) -> bool {
         if let Some(b) = ctx.bp {
             return inside_box(p, &b);
         }
         let sides = self.sides;
         // xsize = lw + rw = width and ysize = ht = height, so scale is 1.
-        let box_urx = self.outline_width / 2.0;
-        let box_ury = self.outline_height / 2.0;
+        let (box_urx, box_ury) = if self.fixedshape {
+            let bb = self.poly_bb();
+            ((bb.ur.x - bb.ll.x) / 2.0, (bb.ur.y - bb.ll.y) / 2.0)
+        } else {
+            (self.outline_width / 2.0, self.outline_height / 2.0)
+        };
         if p.x.abs() > box_urx || p.y.abs() > box_ury {
             return false;
         }

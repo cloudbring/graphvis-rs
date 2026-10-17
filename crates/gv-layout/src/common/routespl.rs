@@ -137,15 +137,15 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
         }
         eprintln!("{s}");
         eprintln!(
-            "RS ends {},{} {} {} -> {},{} {} {}",
+            "RS ends {:.6},{:.6} {:.6} {} -> {:.6},{:.6} {:.6} {}",
             pp.start.p.x,
             pp.start.p.y,
             pp.start.theta,
-            pp.start.constrained,
+            i32::from(pp.start.constrained),
             pp.end.p.x,
             pp.end.p.y,
             pp.end.theta,
-            pp.end.constrained
+            i32::from(pp.end.constrained)
         );
     }
     let boxes = &mut pp.boxes;
@@ -263,12 +263,12 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
     if gvdump() {
         let mut s = format!("RS poly {}:", polypoints.len());
         for p in &polypoints {
-            s.push_str(&format!(" {},{}", p.x, p.y));
+            s.push_str(&format!(" {:.6},{:.6}", p.x, p.y));
         }
         eprintln!("{s}");
         let mut s = format!("RS sp {}:", pl.len());
         for p in &pl {
-            s.push_str(&format!(" {},{}", p.x, p.y));
+            s.push_str(&format!(" {:.6},{:.6}", p.x, p.y));
         }
         eprintln!("{s}");
     }
@@ -337,7 +337,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
     if gvdump() {
         let mut s = format!("RS out {}:", ps.len());
         for p in &ps {
-            s.push_str(&format!(" {},{}", p.x, p.y));
+            s.push_str(&format!(" {:.6},{:.6}", p.x, p.y));
         }
         eprintln!("{s}");
     }

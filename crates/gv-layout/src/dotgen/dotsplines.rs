@@ -807,14 +807,209 @@ impl Dot<'_> {
         self.make_flat_adj_edges_aux(edges, tn, hn, et)
     }
 
-    /// The recursive-dot part of `make_flat_adj_edges` (edges with ports).
+    /// The recursive-dot part of `make_flat_adj_edges` (edges with ports):
+    /// lay out the two nodes and their edges as a separate graph with the
+    /// rank direction turned (`cloneGraph`, `cloneNode`, `cloneEdge`), then
+    /// copy the splines back (`transformf`).
     fn make_flat_adj_edges_aux(
         &mut self,
-        _edges: &[E],
-        _tn: N,
-        _hn: N,
-        _et: EdgeType,
+        edges: &[E],
+        tn0: N,
+        hn0: N,
+        et: EdgeType,
     ) -> Result<(), String> {
+        let flip = self.graphs[0].flip();
+        let input = self.input;
+        // cloneGraph: node/edge attribute declarations, rankdir turned.
+        let mut aux = gv_core::Graph::new("auxg", input.kind, false);
+        aux.graph_attrs.insert("rank".to_string(), String::new());
+        aux.node_defaults = input.node_defaults.clone();
+        aux.edge_defaults = input.edge_defaults.clone();
+        aux.html_strings = input.html_strings.clone();
+        // setState: these symbols are NULL while the clone is laid out.
+        for k in [
+            "xlabel",
+            "group",
+            "style",
+            "nojustify",
+            "showboxes",
+            "fontcolor",
+        ] {
+            aux.node_defaults.remove(k);
+        }
+        for k in [
+            "constraint",
+            "minlen",
+            "headlabel",
+            "taillabel",
+            "xlabel",
+            "fontcolor",
+            "labelfontcolor",
+        ] {
+            aux.edge_defaults.remove(k);
+        }
+        let rightx = self.nodes[hn0].coord.x;
+        let leftx = self.nodes[tn0].coord.x;
+        let (tn, hn) = if flip { (hn0, tn0) } else { (tn0, hn0) };
+        let clone_node = |aux: &mut gv_core::Graph, n: N| {
+            let src = &input.nodes[self.nodes[n].real.unwrap()];
+            let id = aux.ensure_node(&src.name);
+            let nd = &mut aux.nodes[id.0 as usize];
+            nd.attrs = src.attrs.clone();
+            for k in [
+                "xlabel",
+                "group",
+                "style",
+                "nojustify",
+                "showboxes",
+                "fontcolor",
+            ] {
+                nd.attrs.remove(k);
+            }
+            id
+        };
+        let auxt = clone_node(&mut aux, tn);
+        let auxh = clone_node(&mut aux, hn);
+        aux.subgraphs.push(gv_core::SubgraphData {
+            id: gv_core::SubgraphId(0),
+            name: "xxx".to_string(),
+            is_cluster: false,
+            graph_attrs: [("rank".to_string(), "source".to_string())]
+                .into_iter()
+                .collect(),
+            node_defaults: Default::default(),
+            edge_defaults: Default::default(),
+            nodes: vec![auxt],
+            edges: Vec::new(),
+            subgraphs: Vec::new(),
+            bb: Default::default(),
+        });
+        // (main edge, aux edge) pairs and the "heavy" edge.
+        let mut pairs: Vec<(E, usize)> = Vec::new();
+        let mut hvye: Option<usize> = None;
+        let mut hvye_alg = false;
+        for &e0 in edges {
+            let mut e = e0;
+            while self.edges[e].edge_type != NORMAL {
+                e = self.edges[e].to_orig.unwrap();
+            }
+            let src = &input.edges[self.edges[e].real.unwrap()];
+            let (t, h) = if self.edges[e].tail == tn {
+                (auxt, auxh)
+            } else {
+                (auxh, auxt)
+            };
+            let mut attrs = src.attrs.clone();
+            for k in [
+                "constraint",
+                "minlen",
+                "headlabel",
+                "taillabel",
+                "xlabel",
+                "fontcolor",
+                "labelfontcolor",
+            ] {
+                attrs.remove(k);
+            }
+            let id = aux.add_edge(t, h, Default::default());
+            let ae = &mut aux.edges[id.0 as usize];
+            ae.attrs = attrs;
+            ae.tail_port = src.tail_port.clone();
+            ae.head_port = src.head_port.clone();
+            let auxe = id.0 as usize;
+            self.edges[e].alg = Some(auxe);
+            pairs.push((e, auxe));
+            if hvye.is_none()
+                && !self.edges[e].tail_port.defined
+                && !self.edges[e].head_port.defined
+            {
+                hvye = Some(auxe);
+                hvye_alg = true;
+            }
+        }
+        let hvye = match hvye {
+            Some(h) => h,
+            None => aux.add_edge(auxt, auxh, Default::default()).0 as usize,
+        };
+        aux.edges[hvye]
+            .attrs
+            .insert("weight".to_string(), "10000".to_string());
+        gv_geom::size_graph_nodes(&mut aux);
+
+        let mut d = Dot::new(&aux);
+        d.graphs[0].rankdir = if flip { RANKDIR_TB } else { RANKDIR_LR };
+        d.graphs[0].nodesep = self.graphs[0].nodesep;
+        d.graphs[0].ranksep = self.graphs[0].ranksep;
+        d.cl_type = self.cl_type;
+        d.concentrate = self.concentrate;
+        d.et = et;
+        d.dot_init_subg();
+        d.dot_init_node_edge();
+        d.dot_rank();
+        d.dot_mincross()?;
+        d.dot_position()?;
+        // reposition
+        let (auxt, auxh) = (auxt.0 as usize, auxh.0 as usize);
+        let midx = (self.nodes[tn].coord.x - self.nodes[tn].rw
+            + self.nodes[hn].coord.x
+            + self.nodes[hn].lw)
+            / 2.0;
+        let midy = (d.nodes[auxt].coord.x + d.nodes[auxh].coord.x) / 2.0;
+        let mut n = d.graphs[0].nlist;
+        while let Some(v) = n {
+            if v == auxt {
+                d.nodes[v].coord = Point::new(midy, rightx);
+            } else if v == auxh {
+                d.nodes[v].coord = Point::new(midy, leftx);
+            } else {
+                d.nodes[v].coord.y = midx;
+            }
+            n = d.nodes[v].next;
+        }
+        d.dot_sameports();
+        d.dot_splines_(false)?;
+        d.dotneato_postprocess();
+
+        // copy splines
+        let ct = self.nodes[tn].coord;
+        let at = d.nodes[auxt].coord;
+        let del = if flip {
+            Point::new(ct.x - at.y, ct.y + at.x)
+        } else {
+            Point::new(ct.x - at.x, ct.y - at.y)
+        };
+        let transformf = |p: Point| {
+            let q = if flip { Point::new(p.y, -p.x) } else { p };
+            add(q, del)
+        };
+        for (e, auxe) in pairs {
+            if auxe == hvye && !hvye_alg {
+                continue;
+            }
+            let Some(auxbz) = d.edges[auxe].spl.as_ref().and_then(|s| s.first()) else {
+                continue;
+            };
+            let mut bz = Bezier {
+                sflag: auxbz.sflag,
+                sp: transformf(auxbz.sp),
+                eflag: auxbz.eflag,
+                ep: transformf(auxbz.ep),
+                list: auxbz.list.iter().map(|&p| transformf(p)).collect(),
+            };
+            let mut j = 0;
+            while j + 3 < bz.list.len() {
+                let cp = [bz.list[j], bz.list[j + 1], bz.list[j + 2], bz.list[j + 3]];
+                crate::common::splines::update_bb_bz(&mut self.graphs[0].bb, &cp);
+                j += 3;
+            }
+            bz.list.shrink_to_fit();
+            crate::common::splines::new_spline(self, e, bz);
+            if let (Some(l), Some(al)) = (self.edges[e].label, d.edges[auxe].label) {
+                self.labels[l].pos = transformf(d.labels[al].pos);
+                self.labels[l].set = true;
+                self.update_bb_l(l);
+            }
+        }
         Ok(())
     }
 
