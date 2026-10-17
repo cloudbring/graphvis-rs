@@ -1,0 +1,23 @@
+graph ms3 {
+layout=neato;
+ splines=polyline; node [shape=hexagon];
+n0 -- n1;
+n0 -- n2;
+n0 -- n3;
+n2 -- n4;
+n4 -- n5;
+n4 -- n6;
+n3 -- n7;
+n2 -- n8;
+n6 -- n9;
+n7 -- n9;
+n7 -- n9;
+n4 -- n8;
+n4 -- n8;
+n4 -- n8;
+n4 -- n8;
+n0 -- n9;
+n0 -- n9;
+n6:se -- n2:nw;
+n0:nw -- n9:nw;
+}

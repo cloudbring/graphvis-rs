@@ -28,6 +28,7 @@ pub mod graphdata;
 pub mod legal;
 pub mod linalg;
 pub mod matrix_ops;
+pub mod multispline;
 pub mod neatoinit;
 pub mod neatosplines;
 pub mod overlap;

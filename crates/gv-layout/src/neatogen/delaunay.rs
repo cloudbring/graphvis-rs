@@ -28,7 +28,7 @@ fn in_circumcircle(p: &[(f64, f64)], t: &Tri, q: (f64, f64)) -> bool {
 
 /// `gts_triangle_enclosing(klass, points, scale)`: an equilateral triangle
 /// around the bounding box of the points (C fuses the marked multiply-adds).
-fn triangle_enclosing(pts: &[(f64, f64)], scale: f64) -> [(f64, f64); 3] {
+pub(crate) fn triangle_enclosing(pts: &[(f64, f64)], scale: f64) -> [(f64, f64); 3] {
     // GTS walks the list built with g_slist_prepend, i.e. last point first.
     let mut it = pts.iter().rev();
     let first = it.next().expect("points");

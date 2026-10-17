@@ -1,0 +1,3 @@
+digraph b5 {
+layout=neato;
+ splines=true; a [pos="0,0!"]; b [pos="3,2!"]; c [pos="1.5,1!"]; a -> b; a -> b; b -> a; a -> c; }

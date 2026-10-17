@@ -1,0 +1,3 @@
+graph m2 {
+layout=neato;
+ splines=true; node [shape=box]; a -- b; b -- c; c -- a; a:n -- b:s; b:e -- c:w; }

@@ -18,7 +18,11 @@ LAYOUT = re.compile(r"\blayout\s*=", re.I)
 
 # C output for these is not reproducible run to run (multispline reads
 # uninitialised state after a Pshortestpath failure), so they cannot be goldens.
-EXCLUDE = {"wild_gv16_undirected_ngk10_4_793340"}
+EXCLUDE = {
+    "wild_gv16_undirected_ngk10_4_793340",
+    # VPSC iterates std::set<Block*> in pointer order; C differs run to run.
+    "hw3_ipsep_tree_diredges",
+}
 
 
 def force_neato(src):
@@ -417,6 +421,34 @@ def handwritten3():
     c["hw3_ipsep_biglabels"] = BIGLABELS % "mode=ipsep; overlap=ipsep;"
     c["hw3_ipsep_subset"] = PETERSEN % "mode=ipsep; model=subset;"
     c["hw3_ipsep_tree_diredges"] = tree(3, "mode=ipsep; diredgeconstraints=true; overlap=ipsep;").replace("graph", "digraph", 1).replace("--", "->")
+    # makeMultiSpline (GTS router): multi-edges around obstacles, boundary ports
+    c["hw3_ms_fan2_box"] = 'graph b2 { splines=true; node [shape=box]; a [pos="0,0!"]; b [pos="4,0.3!"]; c [pos="2,0!"]; d [pos="2,1!"]; a -- b; a -- b; c -- d; }'
+    c["hw3_ms_fan3_digraph"] = 'digraph b5 { splines=true; a [pos="0,0!"]; b [pos="3,2!"]; c [pos="1.5,1!"]; a -> b; a -> b; b -> a; a -> c; }'
+    c["hw3_ms_fan3_labels"] = 'graph b6 { splines=true; node [shape=box, width=1]; a [pos="0,0!"]; b [pos="5,0!"]; c [pos="2.5,0.2!"]; e [pos="2.5,-1.2!"]; a -- b [label="ab"]; a -- b; a -- b [label="x"]; }'
+    c["hw3_ms_fan_fail"] = 'graph b1 { splines=true; a [pos="0,0!"]; b [pos="4,0!"]; c [pos="2,0.1!"]; a -- b; a -- b; a -- b; a -- c; c -- b; }'
+    c["hw3_ms_fan_polyline"] = 'graph b8 { splines=polyline; node [shape=hexagon]; a [pos="0,0!"]; b [pos="4,1!"]; c [pos="2,0.5!"]; d [pos="2,-0.6!"]; a -- b; a -- b; a -- b; a -- b; }'
+    c["hw3_ms_ports"] = 'graph b7 { splines=true; a [pos="0,0!"]; b [pos="4,0!"]; c [pos="2,0.1!"]; a:e -- b:w; a:n -- b:n; a:s -- b:s; }'
+    c["hw3_ms_ports_box"] = "graph m2 { splines=true; node [shape=box]; a -- b; b -- c; c -- a; a:n -- b:s; b:e -- c:w; }"
+    import random
+    for seed in range(6):
+        r = random.Random(300 + seed)
+        n = r.choice([10, 20, 30, 40])
+        sp = ["true", "polyline"][seed % 2]
+        shape = ["box", "ellipse", "circle", "hexagon"][seed % 4]
+        lines = [f"graph ms{seed} {{ splines={sp}; node [shape={shape}];"]
+        for i in range(1, n):
+            lines.append(f"n{r.randrange(i)} -- n{i};")
+        for k in range(n // 3):
+            a, b = r.randrange(n), r.randrange(n)
+            if a != b:
+                for m in range(r.randint(2, 4)):
+                    lines.append(f"n{a} -- n{b};" if m % 2 == 0 or seed % 5 else f"n{b} -- n{a};")
+        for k in range(n // 5):
+            a, b = r.randrange(n), r.randrange(n)
+            if a != b:
+                lines.append(f"n{a}:{r.choice(['n','s','e','w','ne','sw','nw','se'])} -- n{b}:{r.choice(['n','s','e','w','nw','se','c','_'])};")
+        lines.append("}")
+        c[f"hw3_ms_random{seed}"] = "\n".join(lines)
     # dynamic record ports (Run:Normal) through neato's port resolution
     b15 = (ROOT / "tests" / "wild" / "gv16_graphs_b15_8c212e.gv").read_text(encoding="utf-8")
     c["hw3_ports_b15"] = b15

@@ -1,0 +1,3 @@
+graph b8 {
+layout=neato;
+ splines=polyline; node [shape=hexagon]; a [pos="0,0!"]; b [pos="4,1!"]; c [pos="2,0.5!"]; d [pos="2,-0.6!"]; a -- b; a -- b; a -- b; a -- b; }
