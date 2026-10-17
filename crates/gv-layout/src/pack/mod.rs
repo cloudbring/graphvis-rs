@@ -496,10 +496,12 @@ fn fill_edge<P: PackGraph + ?Sized>(
         return;
     }
     for bz in spl.unwrap() {
+        // A one-point spline (polyline between overlapping nodes) makes C read
+        // bz.list[1] past the end of the list (undefined); take the point itself.
         let (mut pt, mut hpt, mut k) = if bz.sflag != 0 {
             (bz.sp, bz.list[0], 1)
         } else {
-            (bz.list[0], bz.list[1], 2)
+            (bz.list[0], *bz.list.get(1).unwrap_or(&bz.list[0]), 2)
         };
         pt = cell(mv(pt), ssize);
         hpt = cell(mv(hpt), ssize);
