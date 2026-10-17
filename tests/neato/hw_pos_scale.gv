@@ -1,0 +1,11 @@
+graph pos {
+layout=neato;
+
+inputscale=72;
+a [pos="0,0!"];
+b [pos="2,0!"];
+c [pos="1,1.5"];
+d; e;
+a -- b -- c -- a;
+c -- d -- e -- a;
+}

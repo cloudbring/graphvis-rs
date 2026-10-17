@@ -1,0 +1,11 @@
+graph lenweight {
+layout=neato;
+
+mode=hier;
+a -- b [len=2];
+b -- c [len=0.5];
+c -- d [weight=5];
+d -- a [len=3, weight=0.5];
+a -- c;
+b -- e [len=1.5];
+}

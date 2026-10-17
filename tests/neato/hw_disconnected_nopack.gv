@@ -1,0 +1,10 @@
+graph disc {
+layout=neato;
+
+pack=false;
+a -- b -- c -- a;
+d -- e -- f -- d;
+g -- h;
+i; j;
+k -- l -- m -- n -- k;
+}

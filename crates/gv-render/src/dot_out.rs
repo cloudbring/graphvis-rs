@@ -78,7 +78,11 @@ pub(crate) fn format_edge_pos(graph: &Graph, edge: &EdgeData) -> String {
         &edge.spline
     };
 
-    let (want_s, want_e) = edge_arrow_directions(graph, edge);
+    let (mut want_s, mut want_e) = edge_arrow_directions(graph, edge);
+    // `arrowhead=none` / `arrowtail=none` leave no arrow (`arrow_match_name`).
+    let is_none = |k: &str| edge.attrs.get(k).is_some_and(|v| v == "none");
+    want_e &= !is_none("arrowhead");
+    want_s &= !is_none("arrowtail");
     let mut out = String::new();
     for (seg_idx, seg) in spline.segments.iter().enumerate() {
         if seg.points.is_empty() {

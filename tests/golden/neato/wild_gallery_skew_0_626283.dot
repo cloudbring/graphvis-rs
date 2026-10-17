@@ -1,0 +1,18 @@
+graph {
+	graph [bb="0,0,257.4,106",
+		layout=neato
+	];
+	node [label="\N"];
+	SkewLeft	[height=0.5,
+		pos="188.7,88",
+		shape=polygon,
+		sides=4,
+		skew=-.5,
+		width=1.9084];
+	SkewRight	[height=0.5,
+		pos="76.311,18",
+		shape=polygon,
+		sides=4,
+		skew=.5,
+		width=2.1197];
+}

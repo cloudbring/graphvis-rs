@@ -1,0 +1,7 @@
+graph {
+layout=neato;
+
+  "1.5x0.5" [shape=rect margin="1.5,0.5"] # in inches
+  "0.5x1.5" [shape=rect margin="0.5,1.5"] # in inches
+  "1.5x1.5" [shape=rect margin="1.5"]     # in inches
+}

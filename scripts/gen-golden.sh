@@ -29,17 +29,26 @@ done
 GVBINDIR="$PLUGINS" dot -c
 export GVBINDIR="$PLUGINS"
 
-mkdir -p "$OUT"
-count=0
-for f in "$REPO_ROOT"/tests/wild/*.gv "$REPO_ROOT"/tests/fixtures/*.gv; do
-  stem="$(basename "$f" .gv)"
-  # C can exit non-zero yet still emit a layout (e.g. it drops an edge after a
-  # Pshortestpath failure); that output is still the reference behaviour.
-  dot -Tdot "$f" > "$OUT/$stem.dot" 2>/dev/null || echo "C dot reported errors on $f" >&2
-  if [ -s "$OUT/$stem.dot" ]; then
-    count=$((count + 1))
-  else
-    rm -f "$OUT/$stem.dot"
-  fi
-done
-echo "wrote $count golden layouts to $OUT"
+# gen_dir OUT_DIR INPUT...: lays out each input with C and writes OUT_DIR/<stem>.dot.
+gen_dir() {
+  local out="$1"; shift
+  mkdir -p "$out"
+  local count=0 f stem
+  for f in "$@"; do
+    stem="$(basename "$f" .gv)"
+    # C can exit non-zero yet still emit a layout (e.g. it drops an edge after a
+    # Pshortestpath failure); that output is still the reference behaviour.
+    dot -Tdot "$f" > "$out/$stem.dot" 2>/dev/null || echo "C dot reported errors on $f" >&2
+    if [ -s "$out/$stem.dot" ]; then
+      count=$((count + 1))
+    else
+      rm -f "$out/$stem.dot"
+    fi
+  done
+  echo "wrote $count golden layouts to $out"
+}
+
+# Main corpus: the engine is chosen by each graph's `layout` attribute (dot by default).
+gen_dir "$OUT" "$REPO_ROOT"/tests/wild/*.gv "$REPO_ROOT"/tests/fixtures/*.gv
+# Neato corpus: every input sets layout=neato (see scripts/gen-neato-corpus.py).
+gen_dir "$OUT/neato" "$REPO_ROOT"/tests/neato/*.gv
