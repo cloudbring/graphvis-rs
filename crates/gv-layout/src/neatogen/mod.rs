@@ -19,6 +19,7 @@
 pub mod adjust;
 pub mod bfs;
 pub mod conjgrad;
+pub mod delaunay;
 pub mod graphdata;
 pub mod legal;
 pub mod linalg;
