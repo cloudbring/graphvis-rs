@@ -500,23 +500,16 @@ pub fn resolve_port<S: PortGraph + ?Sized>(
 }
 
 /// `resolvePorts(e)`: pick the side of dynamic (`_`) ports facing the other end.
+/// `compassPort` regenerates every field but the name, so `tailclip=false` is lost.
 pub fn resolve_ports(g: &mut LGraph<'_>, e: usize) {
     let (t, h) = (g.edges[e].tail, g.edges[e].head);
     if g.edges[e].tail_port.dyna {
         let old = g.edges[e].tail_port.clone();
-        let mut np = resolve_port(g, t, h, &old);
-        if !old.clip {
-            np.clip = false;
-        }
-        g.edges[e].tail_port = np;
+        g.edges[e].tail_port = resolve_port(g, t, h, &old);
     }
     if g.edges[e].head_port.dyna {
         let old = g.edges[e].head_port.clone();
-        let mut np = resolve_port(g, h, t, &old);
-        if !old.clip {
-            np.clip = false;
-        }
-        g.edges[e].head_port = np;
+        g.edges[e].head_port = resolve_port(g, h, t, &old);
     }
 }
 
