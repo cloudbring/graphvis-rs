@@ -712,6 +712,15 @@ impl NodeShape {
         }
         let p = match ctx.scale {
             Some(s) if !self.fixedshape => Point::new(p.x * s.x, p.y * s.y),
+            _ if self.fixedshape && ctx.rankdir & 1 != 0 => {
+                // fixedsize=shape with GD_flip: xsize/ysize are the polyBB height
+                // and width, so the point is scaled by width/height and back.
+                let bb = self.poly_bb();
+                let (w, h) = (bb.ur.x - bb.ll.x, bb.ur.y - bb.ll.y);
+                let sx = if h == 0.0 { w } else { w / h };
+                let sy = if w == 0.0 { h } else { h / w };
+                Point::new(p.x * sx, p.y * sy)
+            }
             _ => p,
         };
         let sides = self.sides;
