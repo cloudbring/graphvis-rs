@@ -1,0 +1,8 @@
+digraph urls {
+  graph [URL="http://graph.example", tooltip="graph tip", id=gid, class="gc"];
+  subgraph cluster_a { label=Cluster; URL="http://c.example"; tooltip=ctip; target=_blank; class=cc; a; }
+  a [URL="http://a.example/\N", tooltip="a\ntip", target=_top, id=nodea, class="n1 n2"];
+  b [href="http://b.example", comment="a comment"];
+  a -> b [URL="http://e.example", labelURL="http://l.example", headURL="http://h.example", tailtooltip=tt, label=lab, headlabel=H, taillabel=T, edgetooltip=etip, id=e1];
+  b -> c [tooltip="only tip", class=ec];
+}

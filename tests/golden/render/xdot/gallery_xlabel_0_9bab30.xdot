@@ -1,0 +1,29 @@
+digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 141.6 99.32 141.6 99.32 0 ",
+		bb="0,0,99.324,141.6",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	⚡	[_draw_="c 7 -#000000 e 65.11 106.8 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 65.11 102.6 0 10.5 3 -⚡ F 14 11 -Times-Roman c 7 -#000000 T 19.06 129 0 38.11 6 -Sparks ",
+		height=0.5,
+		pos="65.11,106.8",
+		width=0.75,
+		xlabel=Sparks,
+		xlp="19.055,133.2"];
+	🔥	[_draw_="c 7 -#000000 e 65.11 18 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 65.11 13.8 0 14 4 -🔥 F 14 11 -Times-Roman c 7 -#000000 T 24.11 40.2 0 28 5 -Fires ",
+		height=0.5,
+		pos="65.11,18",
+		width=0.75,
+		xlabel=Fires,
+		xlp="24.11,44.4"];
+	⚡ -> 🔥	[_draw_="c 7 -#000000 B 4 65.11 88.65 65.11 76.96 65.11 61.19 65.11 47.62 ",
+		_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 68.61 47.92 65.11 37.92 61.61 47.92 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 82.22 58.2 0 34.21 5 -Cause F 14 11 -Times-Roman c 7 -#000000 T 34 67.01 0 62.22 9 -Sometimes ",
+		label=Cause,
+		lp="82.217,62.4",
+		pos="e,65.11,36.41 65.11,88.651 65.11,76.958 65.11,61.192 65.11,47.618",
+		xlabel=Sometimes,
+		xlp="34,71.211"];
+}

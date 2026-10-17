@@ -1,0 +1,4 @@
+graph 1 1.2083 0.52778
+node gvds_array0 0.47917 0.26389 0.95833 0.52778 "{<port1>1}|{<port2>2}|{<port3>3}" solid record black lightgrey
+edge gvds_array0:port2 gvds_array0 7 0.64396 0.32585 0.89357 0.38882 1.2083 0.36853 1.2083 0.26458 1.2083 0.23053 1.1745 0.20544 1.1203 0.18933 solid black
+stop

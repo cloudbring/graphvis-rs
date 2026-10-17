@@ -1,0 +1,29 @@
+digraph cats {
+	graph [bb="0,0,528.6,52"];
+	node [label="\N"];
+	subgraph cluster_big_cats {
+		graph [bb="0,0,228,52"];
+		Lion	[height=0.5,
+			pos="37,26",
+			width=0.8132];
+		"Snow Leopard"	[height=0.5,
+			pos="152,26",
+			width=1.8785];
+	}
+	subgraph domestic_cats {
+		graph [bb="236,0,435,52",
+			cluster=true
+		];
+		Siamese	[height=0.5,
+			pos="287,26",
+			width=1.2005];
+		Persian	[height=0.5,
+			pos="388,26",
+			width=1.0963];
+	}
+	subgraph not_a_cluster {
+		Wildcat	[height=0.5,
+			pos="487,26",
+			width=1.1556];
+	}
+}

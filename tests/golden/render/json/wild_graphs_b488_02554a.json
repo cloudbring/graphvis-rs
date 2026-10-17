@@ -1,0 +1,282 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,108.000],[665.530,108.000],[665.530,0.000]]
+    }
+  ],
+  "bb": "0,0,665.53,108",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "concatenatedname",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#0000ff"
+        },
+        {
+          "op": "e",
+          "rect": [85.750,18.000,82.350,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [85.750,13.800],
+          "align": "c",
+          "width": 103.380,
+          "text": "concatenatedname"
+        }
+      ],
+      "color": "blue",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "85.748,18",
+      "width": "2.2874"
+    },
+    {
+      "_gvid": 1,
+      "name": "concatenated with ports",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ffa500"
+        },
+        {
+          "op": "e",
+          "rect": [102.740,90.000,102.740,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [102.740,85.800],
+          "align": "c",
+          "width": 132.950,
+          "text": "concatenated with ports"
+        }
+      ],
+      "color": "orange",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "102.74,90",
+      "width": "2.854"
+    },
+    {
+      "_gvid": 2,
+      "name": "concatenated",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [444.740,90.000,220.780,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [444.740,85.800],
+          "align": "c",
+          "width": 304.080,
+          "text": "this is a longlong label that just goes on and on and on"
+        }
+      ],
+      "height": "0.5",
+      "label": "this is a longlong label that just goes on and on and on",
+      "pos": "444.74,90",
+      "width": "6.1329"
+    },
+    {
+      "_gvid": 3,
+      "name": "backslashed",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [444.740,18.000,57.690,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [444.740,13.800],
+          "align": "c",
+          "width": 67.640,
+          "text": "backslashed"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "444.74,18",
+      "width": "1.6026"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 0,
+      "_draw_": 
+      [
+        {
+          "op": "S",
+          "style": "setlinewidth(5)"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[108.720,71.580],[110.290,65.000],[111.290,57.430],[110.250,50.450]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "setlinewidth(5)"
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[114.330,48.830],[106.110,41.640],[106.410,52.550]]
+        }
+      ],
+      "arrows": "both",
+      "headport": "ne",
+      "penwidth": "5",
+      "pos": "e,103.45,36 108.72,71.575 110.29,65.004 111.29,57.431 110.25,50.452",
+      "tailport": "p45:sw"
+    },
+    {
+      "_gvid": 1,
+      "tail": 2,
+      "head": 3,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[444.740,71.700],[444.740,64.410],[444.740,55.730],[444.740,47.540]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[448.240,47.620],[444.740,37.620],[441.240,47.620]]
+        }
+      ],
+      "pos": "e,444.74,36.104 444.74,71.697 444.74,64.407 444.74,55.726 444.74,47.536",
+      "shape": "square"
+    }
+  ]
+}

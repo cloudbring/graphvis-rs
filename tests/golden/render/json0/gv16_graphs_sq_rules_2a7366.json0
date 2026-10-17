@@ -1,0 +1,94 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,1391,290",
+  "label": "",
+  "_subgraph_cnt": 4,
+  "objects": [
+    {
+      "name": "cluster_base",
+      "bb": "0,73,333,217",
+      "label": "table border:10,cellspacing:0,cellpadding:0,cell border:1",
+      "lheight": "0.23",
+      "lp": "166.5,204.6",
+      "lwidth": "4.40",
+      "_gvid": 0,
+      "nodes": [
+        4
+      ]
+    },
+    {
+      "name": "cluster_table_border",
+      "bb": "341,28,681,262",
+      "label": "table border:10,cellspacing:2,cellpadding:10,cell border:1",
+      "lheight": "0.23",
+      "lp": "511,249.6",
+      "lwidth": "4.50",
+      "_gvid": 1,
+      "nodes": [
+        5
+      ]
+    },
+    {
+      "name": "cluster_cellspacing",
+      "bb": "689,12,1036,278",
+      "label": "table border:10,cellspacing:10,cellpadding:10,cell border:0",
+      "lheight": "0.23",
+      "lp": "862.5,265.6",
+      "lwidth": "4.59",
+      "_gvid": 2,
+      "nodes": [
+        6
+      ]
+    },
+    {
+      "name": "cluster_cellpadding",
+      "bb": "1044,0,1391,290",
+      "label": "table border:10,cellspacing:10,cellpadding:10,cell border:3",
+      "lheight": "0.23",
+      "lp": "1217.5,277.6",
+      "lwidth": "4.59",
+      "_gvid": 3,
+      "nodes": [
+        7
+      ]
+    },
+    {
+      "_gvid": 4,
+      "name": "tbl1100",
+      "height": "1.4333",
+      "label": "\n <TABLE rows=\"*\" columns=\"*\" border=\"10\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"0\">\n  <TR><TD>00<\/TD><VR\/><TD >01<\/TD><TD >02<\/TD><TD >03<\/TD><\/TR>\n  <TR><TD >10<\/TD><TD  rowspan=\"2\">11<\/TD><TD >12<\/TD><TD >13<\/TD><\/TR>\n  <HR\/>\n  <TR><TD >20<\/TD><TD  colspan=\"2\">22<\/TD><\/TR>\n  <TR><TD >30<\/TD><TD >31<\/TD><TD >32<\/TD><TD >33<\/TD><\/TR>\n<\/TABLE>",
+      "pos": "166,132.6",
+      "shape": "plaintext",
+      "width": "1.3889"
+    },
+    {
+      "_gvid": 5,
+      "name": "tbl1010",
+      "height": "2.6833",
+      "label": "\n <TABLE border=\"10\" columns=\"*\" cellspacing=\"2\" cellpadding=\"10\" cellborder=\"1\">\n  <TR><TD >00<\/TD><TD >01<\/TD><TD >02<\/TD><TD >03<\/TD><\/TR>\n  <TR><TD >10<\/TD><TD  rowspan=\"2\">11<\/TD><TD >12<\/TD><TD >13<\/TD><\/TR>\n  <HR\/>\n  <TR><TD >20<\/TD><TD  colspan=\"2\">22<\/TD><\/TR>\n  <TR><TD >30<\/TD><TD >31<\/TD><TD >32<\/TD><TD >33<\/TD><\/TR>\n<\/TABLE>",
+      "pos": "511,132.6",
+      "shape": "plaintext",
+      "width": "2.6389"
+    },
+    {
+      "_gvid": 6,
+      "name": "tbl1110",
+      "height": "3.1278",
+      "label": "\n <TABLE border=\"10\" cellspacing=\"10\" cellpadding=\"10\" cellborder=\"0\" rows=\"*\">\n  <TR><TD >00<\/TD><VR\/><TD >01<\/TD><TD >02<\/TD><TD >03<\/TD><\/TR>\n  <TR><TD >10<\/TD><TD  rowspan=\"2\">11<\/TD><VR\/><TD >12<\/TD><TD >13<\/TD><\/TR>\n  <TR><TD >20<\/TD><TD  colspan=\"2\">22<\/TD><\/TR>\n  <TR><TD >30<\/TD><TD >31<\/TD><TD >32<\/TD><VR\/><TD >33<\/TD><\/TR>\n<\/TABLE>",
+      "pos": "862,132.6",
+      "shape": "plaintext",
+      "width": "3.0833"
+    },
+    {
+      "_gvid": 7,
+      "name": "tbl1111",
+      "height": "3.4611",
+      "label": "\n <TABLE border=\"10\" cellspacing=\"10\" cellpadding=\"10\" cellborder=\"3\" rows=\"*\">\n  <TR><TD >00<\/TD><VR\/><TD >01<\/TD><TD >02<\/TD><TD >03<\/TD><\/TR>\n  <TR><TD >10<\/TD><TD  rowspan=\"2\">11<\/TD><VR\/><TD >12<\/TD><TD >13<\/TD><\/TR>\n  <TR><TD >20<\/TD><TD  colspan=\"2\">22<\/TD><\/TR>\n  <TR><TD >30<\/TD><TD >31<\/TD><TD >32<\/TD><VR\/><TD >33<\/TD><\/TR>\n<\/TABLE>",
+      "pos": "1217,132.6",
+      "shape": "plaintext",
+      "width": "3.4167"
+    }
+  ]
+}

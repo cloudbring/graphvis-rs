@@ -1,0 +1,29 @@
+graph {
+	graph [bb="0,0,308,68",
+		bgcolor=lightgray,
+		margin=0
+	];
+	node [label="\N"];
+	subgraph cluster_one {
+		graph [bb="0,8,142,60",
+			margin=8
+		];
+		a	[height=0.5,
+			pos="35,34",
+			width=0.75];
+		b	[height=0.5,
+			pos="107,34",
+			width=0.75];
+	}
+	subgraph cluster_two {
+		graph [bb="150,0,308,68",
+			margin=16
+		];
+		c	[height=0.5,
+			pos="193,34",
+			width=0.75];
+		d	[height=0.5,
+			pos="265,34",
+			width=0.75];
+	}
+}

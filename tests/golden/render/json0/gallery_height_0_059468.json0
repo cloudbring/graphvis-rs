@@ -1,0 +1,33 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,219.85,144",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "default",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "37.848,72",
+      "width": "1.0513"
+    },
+    {
+      "_gvid": 1,
+      "name": "1in",
+      "height": "1",
+      "label": "\\N",
+      "pos": "120.85,72",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "2in",
+      "height": "2",
+      "label": "\\N",
+      "pos": "192.85,72",
+      "width": "0.75"
+    }
+  ]
+}

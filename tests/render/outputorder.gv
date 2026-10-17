@@ -1,0 +1,1 @@
+digraph G { outputorder=edgesfirst; a -> b; b -> c; c -> a; }

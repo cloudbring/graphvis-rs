@@ -1,0 +1,28 @@
+digraph G {
+	graph [bb="0,0,336.5,171.8"];
+	node [label="aaaaaaaaaaaaaa\nddd\l",
+		shape=box
+	];
+	n	[height=0.57778,
+		pos="108,137.6",
+		width=3];
+	m	[height=0.57778,
+		nojustify=true,
+		pos="108,34.2",
+		width=3];
+	n -> m	[pos="e,108,55.192 108,116.57 108,102.26 108,82.74 108,66.404"];
+	l	[height=0.95,
+		label="{aaaaaaaaaaaaaa\n | bbbbbb\nddd\l}",
+		pos="285,137.6",
+		rects="233.5,146.5,336.5,171.3 233.5,104.9,336.5,146.5",
+		shape=record,
+		width=1.4305];
+	p	[height=0.95,
+		label="{aaaaaaaaaaaaaa\n | bbbbbb\nddd\l}",
+		nojustify=true,
+		pos="285,34.2",
+		rects="233.5,43.1,336.5,67.9 233.5,1.4999,336.5,43.1",
+		shape=record,
+		width=1.4305];
+	l -> p	[pos="e,285,67.781 285,103.96 285,96.088 285,87.55 285,79.254"];
+}

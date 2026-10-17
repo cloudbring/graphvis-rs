@@ -9,6 +9,8 @@
 //! label positions, and cluster bounding boxes. [`compare`] scores how many elements
 //! match within fixed tolerances.
 
+pub mod render;
+
 use gv_core::{Graph, GraphKind};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

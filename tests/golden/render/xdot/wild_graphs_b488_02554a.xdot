@@ -1,0 +1,39 @@
+digraph G {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 108 665.53 108 665.53 0 ",
+		bb="0,0,665.53,108",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	concatenatedname	[_draw_="c 7 -#0000ff e 85.75 18 82.35 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 85.75 13.8 0 103.38 16 -concatenatedname ",
+		color=blue,
+		height=0.5,
+		pos="85.748,18",
+		width=2.2874];
+	"concatenated with ports"	[_draw_="c 7 -#ffa500 e 102.74 90 102.74 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 102.74 85.8 0 132.95 23 -concatenated with ports ",
+		color=orange,
+		height=0.5,
+		pos="102.74,90",
+		width=2.854];
+	"concatenated with ports":p45:sw -> concatenatedname:ne	[_draw_="S 15 -setlinewidth(5) c 7 -#000000 B 4 108.72 71.58 110.29 65 111.29 57.43 110.25 50.45 ",
+		_hdraw_="S 15 -setlinewidth(5) S 5 -solid c 7 -#000000 C 7 -#000000 P 3 114.33 48.83 106.11 41.64 106.41 52.55 ",
+		arrows=both,
+		penwidth=5,
+		pos="e,103.45,36 108.72,71.575 110.29,65.004 111.29,57.431 110.25,50.452"];
+	concatenated	[_draw_="c 7 -#000000 e 444.74 90 220.78 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 444.74 85.8 0 304.08 56 -this is a longlong label that just goes on and on and on ",
+		height=0.5,
+		label="this is a longlong label that just goes on and on and on",
+		pos="444.74,90",
+		width=6.1329];
+	backslashed	[_draw_="c 7 -#000000 e 444.74 18 57.69 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 444.74 13.8 0 67.64 11 -backslashed ",
+		height=0.5,
+		pos="444.74,18",
+		width=1.6026];
+	concatenated -> backslashed	[_draw_="c 7 -#000000 B 4 444.74 71.7 444.74 64.41 444.74 55.73 444.74 47.54 ",
+		_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 448.24 47.62 444.74 37.62 441.24 47.62 ",
+		pos="e,444.74,36.104 444.74,71.697 444.74,64.407 444.74,55.726 444.74,47.536",
+		shape=square];
+}

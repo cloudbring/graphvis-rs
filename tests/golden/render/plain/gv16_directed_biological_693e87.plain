@@ -1,0 +1,36 @@
+graph 1 16.606 2.1111
+node Hef1a 0.48611 1.75 0.75 0.5 Hef1a filled rpromoter 1 1
+node Gal4VP16 1.9151 1.75 1.108 0.5 "Gal4-VP16" filled rarrow 5 5
+node TRE 11.399 1.75 0.75 0.5 TRE filled rpromoter 1 1
+node DeltamCherry 14.046 1.75 1.3345 0.5 DeltamCherry filled rarrow 5 5
+node UAS 3.7333 1.75 0.75 0.5 UAS filled rpromoter 1 1
+node LacI 5.3725 1.75 0.75 0.5 LacI filled rarrow 5 5
+node Hef1aLacOid 6.92 1.75 1.345 0.5 "Hef1a-LacOid" filled rpromoter 1 1
+node rtTA3 9.0762 1.75 0.75 0.5 rtTA3 filled rarrow 5 5
+node Gal4VP16protein 3.7333 1 1.5285 0.5 "Gal4-VP16" filled oval 4 4
+node LacIprotein 6.92 1 0.79788 0.5 LacI filled oval 4 4
+node rtTA3protein 11.399 1 0.96213 0.5 rtTA3 filled oval 4 4
+node product 16.231 1.75 0.75 0.5 "" filled oval 2 2
+node repression 9.0762 1 1.9674 0.5 "LacI repression" dotted oval 5 5
+node combination 14.046 1 2.6181 0.5 "rtTA3 + Doxycycline" filled oval 4 4
+node IPTG 6.92 0.25 0.90266 0.5 IPTG filled oval 4 4
+node Doxycycline 11.399 0.25 1.6772 0.5 Doxycycline filled oval 4 4
+edge Hef1a Gal4VP16 4 0.86449 1.75 1.0153 1.75 1.1934 1.75 1.359 1.75 solid black
+edge Gal4VP16 UAS 4 2.4758 1.75 2.7618 1.75 3.1039 1.75 3.3568 1.75 solid black
+edge Gal4VP16 Gal4VP16protein 4 2.4758 1.5208 2.6744 1.4376 2.9003 1.3432 3.1043 1.2577 solid black
+edge TRE DeltamCherry 4 11.777 1.75 12.189 1.75 12.868 1.75 13.373 1.75 solid black
+edge DeltamCherry product 4 14.719 1.75 15.031 1.75 15.399 1.75 15.692 1.75 solid black
+edge UAS LacI 4 4.1129 1.75 4.3765 1.75 4.7311 1.75 4.9944 1.75 solid black
+edge LacI Hef1aLacOid 4 5.7543 1.75 5.9019 1.75 6.0767 1.75 6.2449 1.75 solid black
+edge LacI LacIprotein 4 5.7543 1.5685 5.9662 1.4639 6.234 1.3317 6.4581 1.2211 solid black
+edge Hef1aLacOid rtTA3 4 7.5957 1.75 7.9594 1.75 8.3965 1.75 8.6985 1.75 solid black
+edge rtTA3 TRE 4 9.4537 1.75 9.8821 1.75 10.59 1.75 11.019 1.75 solid black
+edge rtTA3 rtTA3protein 4 9.4537 1.6311 9.824 1.5101 10.403 1.3209 10.83 1.1812 solid black
+edge Gal4VP16protein UAS 4 3.7333 1.252 3.7333 1.2796 3.7333 1.3072 3.7333 1.3349 solid black
+edge LacIprotein repression 4 7.3243 1 7.4972 1 7.7104 1 7.9275 1 solid black
+edge rtTA3protein combination 4 11.881 1 12.079 1 12.323 1 12.574 1 solid black
+edge repression Hef1aLacOid 7 8.4721 1.2014 8.3467 1.2446 8.2151 1.2902 8.0926 1.3333 7.9526 1.3825 7.8035 1.4357 7.6604 1.4869 solid black
+edge combination TRE 7 13.229 1.1997 13.066 1.2422 12.896 1.288 12.737 1.3333 12.469 1.41 12.173 1.5024 11.928 1.5807 solid black
+edge IPTG repression 4 7.3096 0.38236 7.6164 0.49049 8.0571 0.64578 8.4199 0.7736 solid black
+edge Doxycycline combination 4 12.02 0.42394 12.355 0.51979 12.777 0.64051 13.147 0.74665 solid black
+stop

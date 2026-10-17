@@ -1,0 +1,39 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,666,232.8",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "1.5x0.5",
+      "height": "1.2333",
+      "label": "\\N",
+      "margin": "1.5,0.5",
+      "pos": "129,116.4",
+      "shape": "rect",
+      "width": "3.5833"
+    },
+    {
+      "_gvid": 1,
+      "name": "0.5x1.5",
+      "height": "3.2333",
+      "label": "\\N",
+      "margin": "0.5,1.5",
+      "pos": "333,116.4",
+      "shape": "rect",
+      "width": "1.5833"
+    },
+    {
+      "_gvid": 2,
+      "name": "1.5x1.5",
+      "height": "3.2333",
+      "label": "\\N",
+      "margin": "1.5",
+      "pos": "537,116.4",
+      "shape": "rect",
+      "width": "3.5833"
+    }
+  ]
+}

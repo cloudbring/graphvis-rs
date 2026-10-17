@@ -1,0 +1,1 @@
+digraph G { rankdir=LR; node [shape=record]; a [label="a|b|c"]; b [label="{x|y}"]; a -> b [label=lr]; b -> c [headlabel=h]; }

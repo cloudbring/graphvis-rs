@@ -1,0 +1,186 @@
+graph 1 42.425 19.271
+node node_1 28.622 18.532 1.5057 1.4771 "ID: 1\ntype: 48\nnbr out: 0\nnbr chi: 11" solid ellipse black lightgrey
+node node_2 20.428 16.556 1.3836 1.4771 "ID: 2\ntype: 8\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_3 22.067 16.556 1.3836 1.4771 "ID: 3\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_4 23.706 16.556 1.3836 1.4771 "ID: 4\ntype: 6\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_5 25.344 16.556 1.3836 1.4771 "ID: 5\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_6 26.983 16.556 1.3836 1.4771 "ID: 6\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_7 28.622 16.556 1.3836 1.4771 "ID: 7\ntype: 49\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_83 30.261 16.556 1.3836 1.4771 "ID: 83\ntype: 38\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_84 31.9 16.556 1.3836 1.4771 "ID: 84\ntype: 8\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_85 33.539 16.556 1.3836 1.4771 "ID: 85\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_86 35.178 16.556 1.3836 1.4771 "ID: 86\ntype: 5\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_87 36.817 16.556 1.3836 1.4771 "ID: 87\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_8 28.622 14.578 1.3836 1.4771 "ID: 8\ntype: 45\nnbr out: 2\nnbr chi: 0" solid ellipse black lightgrey
+node node_9 20.428 12.601 1.3836 1.4771 "ID: 9\ntype: 48\nnbr out: 0\nnbr chi: 4" solid ellipse black lightgrey
+node node_14 28.622 12.601 1.3836 1.4771 "ID: 14\ntype: 39\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_77 36.4 12.601 1.3836 1.4771 "ID: 77\ntype: 45\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_10 17.15 10.624 1.3836 1.4771 "ID: 10\ntype: 8\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_11 18.789 10.624 1.3836 1.4771 "ID: 11\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_12 20.428 10.624 1.3836 1.4771 "ID: 12\ntype: 5\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_13 22.067 10.624 1.3836 1.4771 "ID: 13\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_15 23.706 10.624 1.3836 1.4771 "ID: 15\ntype: 55\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_71 33.942 10.624 1.3836 1.4771 "ID: 71\ntype: 45\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_16 8.0668 8.6468 1.3836 1.4771 "ID: 16\ntype: 48\nnbr out: 0\nnbr chi: 3" solid ellipse black lightgrey
+node node_39 12.233 8.6468 1.3836 1.4771 "ID: 39\ntype: 45\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_45 17.15 8.6468 1.3836 1.4771 "ID: 45\ntype: 48\nnbr out: 0\nnbr chi: 4" solid ellipse black lightgrey
+node node_59 23.706 8.6468 1.3836 1.4771 "ID: 59\ntype: 48\nnbr out: 0\nnbr chi: 5" solid ellipse black lightgrey
+node node_65 30.664 8.6468 1.3836 1.4771 "ID: 65\ntype: 48\nnbr out: 0\nnbr chi: 5" solid ellipse black lightgrey
+node node_17 5.6085 6.6697 1.3836 1.4771 "ID: 17\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_18 7.2474 6.6697 1.3836 1.4771 "ID: 18\ntype: 6\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_19 8.8862 6.6697 1.3836 1.4771 "ID: 19\ntype: 45\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_20 4.789 4.6927 1.3836 1.4771 "ID: 20\ntype: 48\nnbr out: 0\nnbr chi: 5" solid ellipse black lightgrey
+node node_26 8.8862 4.6927 1.5211 1.4771 "ID: 26\ntype: 41\nnbr out: 12\nnbr chi: 0" solid ellipse black lightgrey
+node node_21 0.6918 2.7156 1.3836 1.4771 "ID: 21\ntype: 38\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_22 2.3307 2.7156 1.3836 1.4771 "ID: 22\ntype: 8\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_23 3.9696 2.7156 1.3836 1.4771 "ID: 23\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_24 5.6085 2.7156 1.3836 1.4771 "ID: 24\ntype: 5\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_25 7.2474 2.7156 1.3836 1.4771 "ID: 25\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_27 8.8862 2.7156 1.3836 1.4771 "ID: 27\ntype: 48\nnbr out: 0\nnbr chi: 5" solid ellipse black lightgrey
+node node_33 15.067 2.7156 1.3836 1.4771 "ID: 33\ntype: 48\nnbr out: 0\nnbr chi: 5" solid ellipse black lightgrey
+node node_28 4.789 0.73855 1.3836 1.4771 "ID: 28\ntype: 38\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_29 6.4279 0.73855 1.3836 1.4771 "ID: 29\ntype: 8\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_30 8.0668 0.73855 1.3836 1.4771 "ID: 30\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_31 9.7057 0.73855 1.3836 1.4771 "ID: 31\ntype: 5\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_32 11.345 0.73855 1.3836 1.4771 "ID: 32\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_34 12.983 0.73855 1.3836 1.4771 "ID: 34\ntype: 38\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_35 14.622 0.73855 1.3836 1.4771 "ID: 35\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_36 16.261 0.73855 1.3836 1.4771 "ID: 36\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_37 17.9 0.73855 1.3836 1.4771 "ID: 37\ntype: 20\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_38 19.539 0.73855 1.3836 1.4771 "ID: 38\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_40 10.595 6.6697 1.3836 1.4771 "ID: 40\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_41 12.233 6.6697 1.3836 1.4771 "ID: 41\ntype: 48\nnbr out: 0\nnbr chi: 3" solid ellipse black lightgrey
+node node_42 10.595 4.6927 1.3836 1.4771 "ID: 42\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_43 12.233 4.6927 1.3836 1.4771 "ID: 43\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_44 13.872 4.6927 1.3836 1.4771 "ID: 44\ntype: 6\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_46 13.872 6.6697 1.3836 1.4771 "ID: 46\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_47 15.511 6.6697 1.3836 1.4771 "ID: 47\ntype: 45\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_50 17.15 6.6697 1.3836 1.4771 "ID: 50\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_51 18.789 6.6697 1.3836 1.4771 "ID: 51\ntype: 45\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_48 15.511 4.6927 1.3836 1.4771 "ID: 48\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_49 17.15 4.6927 1.3836 1.4771 "ID: 49\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_52 18.789 4.6927 1.3836 1.4771 "ID: 52\ntype: 45\nnbr out: 1\nnbr chi: 0" solid ellipse black lightgrey
+node node_55 21.247 4.6927 1.3836 1.4771 "ID: 55\ntype: 48\nnbr out: 0\nnbr chi: 3" solid ellipse black lightgrey
+node node_53 17.15 2.7156 1.3836 1.4771 "ID: 53\ntype: 54\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_54 18.789 2.7156 1.3836 1.4771 "ID: 54\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_56 20.428 2.7156 1.3836 1.4771 "ID: 56\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_57 22.067 2.7156 1.3836 1.4771 "ID: 57\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_58 23.706 2.7156 1.3836 1.4771 "ID: 58\ntype: 6\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_60 20.428 6.6697 1.3836 1.4771 "ID: 60\ntype: 38\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_61 22.067 6.6697 1.3836 1.4771 "ID: 61\ntype: 8\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_62 23.706 6.6697 1.3836 1.4771 "ID: 62\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_63 25.344 6.6697 1.3836 1.4771 "ID: 63\ntype: 5\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_64 26.983 6.6697 1.3836 1.4771 "ID: 64\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_66 28.622 6.6697 1.3836 1.4771 "ID: 66\ntype: 38\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_67 30.261 6.6697 1.3836 1.4771 "ID: 67\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_68 31.9 6.6697 1.3836 1.4771 "ID: 68\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_69 33.539 6.6697 1.3836 1.4771 "ID: 69\ntype: 20\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_70 35.178 6.6697 1.3836 1.4771 "ID: 70\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_72 33.942 8.6468 1.3836 1.4771 "ID: 72\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_73 36.817 8.6468 1.3836 1.4771 "ID: 73\ntype: 48\nnbr out: 0\nnbr chi: 3" solid ellipse black lightgrey
+node node_74 36.817 6.6697 1.3836 1.4771 "ID: 74\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_75 38.456 6.6697 1.3836 1.4771 "ID: 75\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_76 40.094 6.6697 1.3836 1.4771 "ID: 76\ntype: 6\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_78 36.4 10.624 1.3836 1.4771 "ID: 78\ntype: 16\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_79 39.275 10.624 1.3836 1.4771 "ID: 79\ntype: 48\nnbr out: 0\nnbr chi: 3" solid ellipse black lightgrey
+node node_80 38.456 8.6468 1.3836 1.4771 "ID: 80\ntype: 14\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_81 40.094 8.6468 1.3836 1.4771 "ID: 81\ntype: 1\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+node node_82 41.733 8.6468 1.3836 1.4771 "ID: 82\ntype: 6\nnbr out: 0\nnbr chi: 0" solid ellipse black lightgrey
+edge node_1 node_2 7 27.865 18.528 26.482 18.517 23.483 18.358 21.247 17.293 21.179 17.261 21.112 17.221 21.049 17.176 solid black
+edge node_1 node_3 7 27.867 18.479 26.731 18.393 24.536 18.126 22.886 17.293 22.819 17.26 22.753 17.218 22.689 17.174 solid black
+edge node_1 node_4 7 27.878 18.396 27.026 18.235 25.611 17.897 24.525 17.293 24.457 17.256 24.39 17.213 24.325 17.164 solid black
+edge node_1 node_5 7 27.928 18.231 27.421 18.007 26.725 17.672 26.164 17.293 26.103 17.251 26.04 17.206 25.979 17.158 solid black
+edge node_1 node_6 4 28.149 17.954 27.958 17.728 27.737 17.467 27.54 17.232 solid black
+edge node_1 node_7 4 28.622 17.788 28.622 17.679 28.622 17.568 28.622 17.458 solid black
+edge node_1 node_83 4 29.096 17.954 29.286 17.728 29.507 17.467 29.704 17.232 solid black
+edge node_1 node_84 7 29.317 18.231 29.824 18.007 30.519 17.672 31.081 17.293 31.143 17.251 31.204 17.206 31.265 17.158 solid black
+edge node_1 node_85 7 29.367 18.396 30.218 18.235 31.635 17.897 32.719 17.293 32.787 17.256 32.854 17.213 32.919 17.164 solid black
+edge node_1 node_86 7 29.378 18.479 30.515 18.393 32.708 18.126 34.358 17.293 34.426 17.26 34.492 17.218 34.556 17.174 solid black
+edge node_1 node_87 7 29.379 18.528 30.764 18.517 33.762 18.358 35.997 17.293 36.065 17.261 36.132 17.221 36.197 17.176 solid black
+edge node_7 node_8 4 28.622 15.81 28.622 15.703 28.622 15.59 28.622 15.481 solid black
+edge node_8 node_9 4 27.944 14.403 26.451 14.047 22.881 13.198 21.257 12.812 solid black
+edge node_8 node_14 4 28.622 13.833 28.622 13.725 28.622 13.614 28.622 13.503 solid black
+edge node_8 node_77 4 29.299 14.394 30.722 14.038 34.025 13.21 35.572 12.822 solid black
+edge node_9 node_10 7 19.782 12.321 19.271 12.098 18.549 11.753 17.969 11.362 17.908 11.321 17.846 11.275 17.785 11.227 solid black
+edge node_9 node_11 4 19.971 12.044 19.778 11.814 19.55 11.543 19.346 11.301 solid black
+edge node_9 node_12 4 20.428 11.856 20.428 11.748 20.428 11.637 20.428 11.526 solid black
+edge node_9 node_13 4 20.885 12.044 21.078 11.814 21.306 11.543 21.51 11.301 solid black
+edge node_14 node_15 4 27.975 12.33 27.079 11.975 25.465 11.335 24.499 10.952 solid black
+edge node_14 node_71 4 29.275 12.348 30.249 11.991 32.083 11.319 33.139 10.932 solid black
+edge node_77 node_78 4 36.4 11.856 36.4 11.748 36.4 11.637 36.4 11.526 solid black
+edge node_77 node_79 4 36.982 12.193 37.44 11.882 38.079 11.448 38.568 11.118 solid black
+edge node_15 node_16 10 23.222 10.09 23.119 10.008 23.006 9.9338 22.886 9.8853 20.519 8.9297 13.944 9.7121 11.414 9.3853 10.544 9.2731 9.5654 9.0496 8.8921 8.8803 solid black
+edge node_15 node_39 10 23.221 10.093 23.119 10.01 23.006 9.9357 22.886 9.8853 21.54 9.3163 17.781 9.5684 16.331 9.3853 15.194 9.242 13.894 8.9982 13.069 8.8335 solid black
+edge node_15 node_45 7 23.211 10.102 23.11 10.02 23 9.9427 22.886 9.8853 21.282 9.0761 19.164 8.8006 18.003 8.7075 solid black
+edge node_15 node_59 4 23.706 9.8786 23.706 9.7711 23.706 9.6596 23.706 9.5495 solid black
+edge node_15 node_65 4 24.372 10.423 25.653 10.064 28.451 9.2807 29.843 8.8906 solid black
+edge node_71 node_72 4 33.942 9.8786 33.942 9.7711 33.942 9.6596 33.942 9.5495 solid black
+edge node_71 node_73 4 34.524 10.216 34.982 9.905 35.621 9.4711 36.11 9.1406 solid black
+edge node_16 node_17 7 7.4929 8.222 7.1743 7.9895 6.7737 7.6896 6.4279 7.4084 6.3701 7.3613 6.311 7.3118 6.2519 7.2616 solid black
+edge node_16 node_18 4 7.7871 7.9675 7.7225 7.8139 7.653 7.6488 7.5862 7.4897 solid black
+edge node_16 node_19 4 8.3465 7.9675 8.4111 7.8139 8.4806 7.6488 8.5474 7.4897 solid black
+edge node_39 node_40 4 11.777 8.0899 11.583 7.8596 11.356 7.5888 11.152 7.3467 solid black
+edge node_39 node_41 4 12.233 7.9016 12.233 7.7942 12.233 7.6825 12.233 7.5724 solid black
+edge node_45 node_46 7 16.504 8.3667 15.993 8.1434 15.271 7.7988 14.692 7.4084 14.631 7.3667 14.568 7.3209 14.507 7.2731 solid black
+edge node_45 node_47 4 16.693 8.0899 16.5 7.8596 16.272 7.5888 16.068 7.3467 solid black
+edge node_45 node_50 4 17.15 7.9016 17.15 7.7942 17.15 7.6825 17.15 7.5724 solid black
+edge node_45 node_51 4 17.607 8.0899 17.8 7.8596 18.028 7.5888 18.232 7.3467 solid black
+edge node_59 node_60 7 23.06 8.3667 22.549 8.1434 21.826 7.7988 21.247 7.4084 21.186 7.3667 21.124 7.3209 21.062 7.2731 solid black
+edge node_59 node_61 4 23.249 8.0899 23.056 7.8596 22.828 7.5888 22.624 7.3467 solid black
+edge node_59 node_62 4 23.706 7.9016 23.706 7.7942 23.706 7.6825 23.706 7.5724 solid black
+edge node_59 node_63 4 24.162 8.0899 24.356 7.8596 24.583 7.5888 24.787 7.3467 solid black
+edge node_59 node_64 7 24.353 8.3667 24.864 8.1434 25.585 7.7988 26.164 7.4084 26.226 7.3667 26.287 7.3209 26.349 7.2731 solid black
+edge node_65 node_66 4 30.154 8.1461 29.879 7.8842 29.539 7.5592 29.249 7.282 solid black
+edge node_65 node_67 4 30.518 7.9236 30.493 7.8028 30.467 7.6759 30.44 7.5514 solid black
+edge node_65 node_68 4 31.049 8.0268 31.171 7.8343 31.307 7.6193 31.433 7.4188 solid black
+edge node_65 node_69 7 31.281 8.3052 31.7 8.0734 32.258 7.7452 32.719 7.4084 32.779 7.3645 32.84 7.317 32.9 7.2681 solid black
+edge node_65 node_70 7 31.335 8.4457 32.25 8.1845 33.836 7.7086 34.358 7.4084 34.424 7.3711 34.487 7.3285 34.549 7.2827 solid black
+edge node_19 node_20 7 8.3797 6.1575 8.2808 6.0752 8.1743 5.9957 8.0668 5.9313 7.2874 5.4631 6.2987 5.1238 5.6122 4.9225 solid black
+edge node_19 node_26 4 8.8862 5.9245 8.8862 5.8171 8.8862 5.7054 8.8862 5.5953 solid black
+edge node_20 node_21 7 4.1162 4.506 3.43 4.3122 2.3497 3.9577 1.5112 3.4542 1.4475 3.4159 1.384 3.3722 1.3222 3.326 solid black
+edge node_20 node_22 7 4.2151 4.2678 3.8965 4.0353 3.496 3.7354 3.1501 3.4542 3.0924 3.4072 3.0332 3.3577 2.9742 3.3074 solid black
+edge node_20 node_23 4 4.5093 4.0134 4.4447 3.8597 4.3753 3.6946 4.3085 3.5356 solid black
+edge node_20 node_24 4 5.0687 4.0134 5.1333 3.8597 5.2028 3.6946 5.2696 3.5356 solid black
+edge node_20 node_25 7 5.3629 4.2678 5.6815 4.0353 6.0821 3.7354 6.4279 3.4542 6.4857 3.4072 6.5449 3.3577 6.6039 3.3074 solid black
+edge node_26 node_27 4 8.1722 4.432 7.7729 4.0785 7.7505 3.4286 8.1054 3.0421 solid black
+edge node_26 node_27 4 8.2187 4.3259 8.0004 3.9985 7.985 3.5104 8.1722 3.1603 solid black
+edge node_26 node_27 4 8.3129 4.202 8.215 3.9338 8.2037 3.5968 8.2794 3.3129 solid black
+edge node_26 node_27 4 8.4505 4.0834 8.4143 3.8853 8.4079 3.6625 8.4312 3.4556 solid black
+edge node_26 node_27 4 8.6167 3.997 8.605 3.8552 8.6021 3.7041 8.6078 3.5575 solid black
+edge node_26 node_27 4 8.7953 3.9529 8.7926 3.8399 8.7919 3.722 8.7929 3.6059 solid black
+edge node_26 node_27 4 8.9772 3.9529 8.9799 3.8399 8.9806 3.722 8.9796 3.6059 solid black
+edge node_26 node_27 4 9.1558 3.997 9.1675 3.8552 9.1704 3.7041 9.1646 3.5575 solid black
+edge node_26 node_27 4 9.3219 4.0834 9.3582 3.8853 9.3646 3.6625 9.3411 3.4556 solid black
+edge node_26 node_27 4 9.4596 4.202 9.5575 3.9338 9.5687 3.5968 9.4931 3.3129 solid black
+edge node_26 node_27 4 9.5537 4.3259 9.7721 3.9985 9.7875 3.5104 9.6003 3.1603 solid black
+edge node_26 node_27 4 9.6001 4.432 9.9996 4.0785 10.022 3.4286 9.6671 3.0421 solid black
+edge node_26 node_33 7 9.4285 4.1731 9.5374 4.0904 9.6553 4.0128 9.7751 3.9542 11.24 3.2363 13.141 2.9293 14.221 2.8059 solid black
+edge node_27 node_28 10 8.3921 2.1928 8.2911 2.1106 8.1807 2.0339 8.0668 1.9771 7.0689 1.4797 6.6064 1.9745 5.6085 1.4771 5.5408 1.4434 5.4744 1.4027 5.4105 1.3579 solid black
+edge node_27 node_29 10 8.3687 2.2197 8.271 2.1357 8.1676 2.0516 8.0668 1.9771 7.7236 1.7236 7.5905 1.7304 7.2474 1.4771 7.1875 1.4329 7.1268 1.3852 7.0668 1.3362 solid black
+edge node_27 node_30 4 8.6065 2.0364 8.5419 1.8827 8.4725 1.7175 8.4057 1.5586 solid black
+edge node_27 node_31 4 9.166 2.0364 9.2306 1.8827 9.3 1.7175 9.3668 1.5586 solid black
+edge node_27 node_32 7 9.4601 2.2907 9.7787 2.0582 10.179 1.7584 10.525 1.4771 10.583 1.4302 10.642 1.3806 10.701 1.3303 solid black
+edge node_33 node_34 4 14.551 2.2199 14.269 1.9552 13.915 1.6246 13.616 1.3442 solid black
+edge node_33 node_35 4 14.906 1.9925 14.876 1.8686 14.847 1.7386 14.818 1.6113 solid black
+edge node_33 node_36 4 15.442 2.0903 15.557 1.9017 15.686 1.6917 15.806 1.4952 solid black
+edge node_33 node_37 7 15.669 2.351 16.167 2.0588 16.831 1.6615 17.081 1.4771 17.14 1.4329 17.201 1.3853 17.261 1.3363 solid black
+edge node_33 node_38 10 15.653 2.315 15.86 2.1921 16.099 2.0652 16.331 1.9771 17.344 1.5914 17.75 1.9638 18.719 1.4771 18.787 1.4432 18.853 1.4024 18.917 1.3575 solid black
+edge node_41 node_42 4 11.777 6.1129 11.583 5.8825 11.356 5.6117 11.152 5.3696 solid black
+edge node_41 node_43 4 12.233 5.9245 12.233 5.8171 12.233 5.7054 12.233 5.5953 solid black
+edge node_41 node_44 4 12.69 6.1129 12.884 5.8825 13.111 5.6117 13.315 5.3696 solid black
+edge node_47 node_48 4 15.511 5.9245 15.511 5.8171 15.511 5.7054 15.511 5.5953 solid black
+edge node_47 node_49 4 15.968 6.1129 16.161 5.8825 16.389 5.6117 16.593 5.3696 solid black
+edge node_51 node_52 4 18.789 5.9245 18.789 5.8171 18.789 5.7054 18.789 5.5953 solid black
+edge node_51 node_55 7 19.312 6.1815 19.41 6.0968 19.511 6.0103 19.608 5.9313 19.91 5.6861 20.253 5.4271 20.546 5.2107 solid black
+edge node_52 node_53 4 18.332 4.1359 18.139 3.9054 17.911 3.6346 17.707 3.3925 solid black
+edge node_52 node_54 4 18.789 3.9474 18.789 3.84 18.789 3.7284 18.789 3.6182 solid black
+edge node_55 node_56 4 20.968 4.0134 20.903 3.8597 20.833 3.6946 20.767 3.5356 solid black
+edge node_55 node_57 4 21.526 4.0134 21.592 3.8597 21.661 3.6946 21.728 3.5356 solid black
+edge node_55 node_58 7 21.821 4.2678 22.14 4.0353 22.54 3.7354 22.886 3.4542 22.944 3.4072 23.003 3.3577 23.062 3.3074 solid black
+edge node_73 node_74 4 36.817 7.9016 36.817 7.7942 36.817 7.6825 36.817 7.5724 solid black
+edge node_73 node_75 4 37.274 8.0899 37.467 7.8596 37.694 7.5888 37.899 7.3467 solid black
+edge node_73 node_76 10 37.315 8.1328 37.417 8.0496 37.525 7.9704 37.636 7.9084 38.301 7.5364 38.611 7.7802 39.275 7.4084 39.343 7.3704 39.41 7.3263 39.475 7.2786 solid black
+edge node_79 node_80 4 38.996 9.9446 38.931 9.791 38.861 9.6259 38.794 9.4668 solid black
+edge node_79 node_81 4 39.554 9.9446 39.619 9.791 39.689 9.6259 39.756 9.4668 solid black
+edge node_79 node_82 7 39.849 10.199 40.168 9.9664 40.568 9.6667 40.914 9.3853 40.972 9.3384 41.031 9.2888 41.09 9.2385 solid black
+stop

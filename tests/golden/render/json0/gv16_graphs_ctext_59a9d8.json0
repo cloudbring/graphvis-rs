@@ -1,0 +1,131 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,350.07,236.78",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "xyz",
+      "color": "slateblue",
+      "fontcolor": "hotpink",
+      "fontname": "Palatino-Italic",
+      "fontsize": "24",
+      "height": "1.2885",
+      "label": "hello\\nworld",
+      "pos": "77.321,190.39",
+      "style": "filled",
+      "width": "1.4141"
+    },
+    {
+      "_gvid": 1,
+      "name": "red",
+      "color": "red",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "173.32,190.39",
+      "style": "filled",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "green",
+      "color": "green",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "130.32,90",
+      "style": "filled",
+      "width": "0.90227"
+    },
+    {
+      "_gvid": 3,
+      "name": "blue",
+      "color": "blue",
+      "fontcolor": "black",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "215.32,90",
+      "style": "filled",
+      "width": "0.76841"
+    },
+    {
+      "_gvid": 4,
+      "name": "yellow",
+      "color": "yellow",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "37.321,18",
+      "style": "filled",
+      "width": "1.0367"
+    },
+    {
+      "_gvid": 5,
+      "name": "orange",
+      "color": "orange",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "130.32,18",
+      "style": "filled",
+      "width": "1.0364"
+    },
+    {
+      "_gvid": 6,
+      "name": "cyan",
+      "color": "cyan",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "215.32,18",
+      "style": "filled",
+      "width": "0.81294"
+    },
+    {
+      "_gvid": 7,
+      "name": "magenta",
+      "color": "magenta",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "306.32,18",
+      "style": "filled",
+      "width": "1.2152"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 2,
+      "pos": "e,137.65,107.77 166.03,172.7 159.48,157.71 149.75,135.45 142.1,117.95"
+    },
+    {
+      "_gvid": 1,
+      "tail": 1,
+      "head": 3,
+      "pos": "e,208.16,107.77 180.44,172.7 186.84,157.71 196.34,135.45 203.82,117.95"
+    },
+    {
+      "_gvid": 2,
+      "tail": 2,
+      "head": 4,
+      "pos": "e,56.753,33.626 111.5,74.834 98.315,64.909 80.46,51.47 65.571,40.264"
+    },
+    {
+      "_gvid": 3,
+      "tail": 2,
+      "head": 5,
+      "pos": "e,130.32,36.104 130.32,71.697 130.32,64.407 130.32,55.726 130.32,47.536"
+    },
+    {
+      "_gvid": 4,
+      "tail": 3,
+      "head": 6,
+      "pos": "e,215.32,36.104 215.32,71.697 215.32,64.407 215.32,55.726 215.32,47.536"
+    },
+    {
+      "_gvid": 5,
+      "tail": 3,
+      "head": 7,
+      "pos": "e,286.43,34.301 232.44,75.834 245.14,66.06 262.76,52.505 277.61,41.083"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-use gv_engine::{GlobalAttrs, LayoutEngine, OutputFormat};
+use gv_engine::{GlobalAttrs, LayoutEngine, LayoutOptions, OutputFormat};
 use std::env;
 use std::fs;
 use std::io::{self, Read, Write};
@@ -18,7 +18,8 @@ const USAGE: &str = " -V          - Print version and exit
  -ofile      - Write output to 'file'
  -O          - Write each input's output to <input>.<format>
  -q[l]       - Set level of message suppression (accepted, ignored)
- -s[v], -x, -y, -n[v], -lv - accepted, ignored
+ -n[v]       - No layout mode 'v' (=1)
+ -s[v], -x, -y, -lv - accepted, ignored
 ";
 
 struct Options {
@@ -27,6 +28,7 @@ struct Options {
     output: Option<String>,
     auto_output: bool,
     globals: GlobalAttrs,
+    layout: LayoutOptions,
     inputs: Vec<String>,
 }
 
@@ -69,6 +71,7 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
         output: None,
         auto_output: false,
         globals: GlobalAttrs::default(),
+        layout: LayoutOptions::default(),
         inputs: Vec::new(),
     };
     let missing = |flag: char| {
@@ -123,7 +126,29 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
                     }
                 }
                 'O' => opts.auto_output = true,
-                'v' | 'q' | 's' | 'x' | 'y' | 'n' | 'P' | 'c' | 'L' => {}
+                // neato_extra_args: `-n` is `-n1`; `-nN` needs N > 0 (atoi semantics).
+                'n' => {
+                    if rest.is_empty() {
+                        opts.layout.nop = 1;
+                    } else {
+                        let digits: String = rest
+                            .trim_start()
+                            .chars()
+                            .enumerate()
+                            .take_while(|(i, c)| c.is_ascii_digit() || (*i == 0 && *c == '+'))
+                            .map(|(_, c)| c)
+                            .collect();
+                        match digits.parse::<i64>() {
+                            Ok(n) if n > 0 => opts.layout.nop = n.min(255) as u8,
+                            _ => {
+                                eprintln!("Error: Invalid parameter \"{rest}\" for -n flag");
+                                eprint!("{}", usage(argv0));
+                                return Parsed::Exit(ExitCode::FAILURE);
+                            }
+                        }
+                    }
+                }
+                'v' | 'q' | 's' | 'x' | 'y' | 'P' | 'c' | 'L' => {}
                 _ => {
                     eprintln!("{argv0}: option -{flag} unrecognized\n");
                     eprint!("{}", usage(argv0));
@@ -199,15 +224,20 @@ fn main() -> ExitCode {
                 continue;
             }
         };
-        let outputs =
-            match gv_engine::render_dot_all(&source, &opts.engine, &opts.format, &opts.globals) {
-                Ok(o) => o,
-                Err(e) => {
-                    eprintln!("Error: {name}: {e}");
-                    failed = true;
-                    continue;
-                }
-            };
+        let outputs = match gv_engine::render_dot_all_with_options(
+            &source,
+            &opts.engine,
+            &opts.format,
+            &opts.globals,
+            opts.layout,
+        ) {
+            Ok(o) => o,
+            Err(e) => {
+                eprintln!("Error: {name}: {e}");
+                failed = true;
+                continue;
+            }
+        };
 
         let mut per_input: Option<Box<dyn Write>> = None;
         if let (true, Some(path)) = (opts.auto_output, input) {

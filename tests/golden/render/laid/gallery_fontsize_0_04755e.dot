@@ -1,0 +1,27 @@
+digraph {
+	graph [bb="0,0,298.13,177.25",
+		fontsize=40,
+		label="40pt Graph Label",
+		lheight=0.67,
+		lp="149.06,28",
+		lwidth=3.92
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="29.564,64,268.56,169.25",
+			fontsize="30pt",
+			label="30pt Cluster Label",
+			lheight=0.50,
+			lp="149.06,147.25",
+			lwidth=3.10
+		];
+		"20pt Node"	[fontsize="20pt",
+			height=0.62854,
+			pos="119.56,94.627",
+			width=1.9618];
+		"20pt Node" -> "20pt Node"	[fontsize=10,
+			label="10pt Edge",
+			lp="228.6,94.627",
+			pos="e,186.04,86.52 186.04,102.74 198.99,101.79 208.19,99.091 208.19,94.627 208.19,91.628 204.04,89.424 197.38,88.015"];
+	}
+}

@@ -1,0 +1,63 @@
+graph 1 3.4722 15.172
+node n27 0.65278 1.3611 0.75 0.5 n27 filled polygon black bisque:brown
+node n26 0.65278 2.3611 0.75 0.5 n26 filled oval black bisque:brown
+node n25 0.65278 3.4556 0.84999 0.5 n25 filled egg black bisque:brown
+node n24 0.66667 4.55 1.0026 0.5 n24 filled trapezium black bisque:brown
+node n23 0.68056 5.55 1.0776 0.5 n23 filled parallelogram black bisque:brown
+node n22 0.68056 6.6429 0.8763 0.5 n22 filled house black bisque:brown
+node n21 0.68056 7.7915 0.76735 0.5 n21 filled octagon black bisque:brown
+node n20 0.68056 8.9582 0.75 0.5 n20 filled box black bisque:brown
+node n19 0.68056 10.174 0.70894 0.70894 n19 filled circle black bisque:brown
+node n18 0.72222 11.278 1.0026 0.5 n18 filled diamond black bisque:brown
+node n17 0.72222 12.278 0.75 0.5 n17 filled ellipse black bisque:brown
+node n16 0.72222 13.278 0.81862 0.5 n16 filled hexagon black bisque:brown
+node n15 0.81944 14.372 1.4179 0.68889 n15 filled invtriangle black bisque:brown
+node n14 2.0139 0.36111 0.8763 0.5 n14 filled pentagon black bisque:brown
+node n13 2.0139 1.3611 0.75 0.5 n13 filled rect black bisque:brown
+node n12 2.0139 2.3611 0.78687 0.5 n12 filled septagon black bisque:brown
+node n11 2.0139 3.4556 1.4179 0.68889 n11 filled triangle black bisque:brown
+node n10 2.0139 4.55 0.75 0.5 n10 filled rectangle black bisque:brown
+node n9 2.0139 5.55 0.5 0.5 n9 filled square black bisque:brown
+node n8 2.0139 6.6429 0.79704 0.79704 n8 filled doublecircle black bisque:brown
+node n7 2 7.7915 0.97222 0.72222 n7 filled doubleoctagon black bisque:brown
+node n6 2 8.9582 1.1944 0.94444 n6 filled tripleoctagon black bisque:brown
+node n5 1.9583 10.174 0.81292 0.5 n5 filled invtrapezium black bisque:brown
+node n4 1.9583 11.278 0.75 0.5 n4 filled invhouse black bisque:brown
+node n3 1.9583 12.278 0.81292 0.5 n3 filled Mdiamond black bisque:brown
+node n2 2.0139 13.278 0.5 0.5 n2 filled Msquare black bisque:brown
+node n1 2.0694 14.372 0.57482 0.57482 n1 filled Mcircle black bisque:brown
+node x1 2.9861 14.372 0.75 0.5 x1 filled note black bisque:brown
+node x2 2.9861 13.278 0.75 0.5 x2 filled tab black bisque:brown
+node x3 2.9861 12.278 0.75 0.5 x3 filled folder black bisque:brown
+node x4 2.9861 11.278 0.75 0.5 x4 filled box3d black bisque:brown
+node x5 2.9861 10.174 0.75 0.5 x5 filled component black bisque:brown
+edge n26 n27 4 0.65278 2.1069 0.65278 2.0057 0.65278 1.8851 0.65278 1.7714 solid black
+edge n25 n26 4 0.65278 3.1996 0.65278 3.0742 0.65278 2.9176 0.65278 2.7749 solid black
+edge n24 n25 4 0.66351 4.294 0.66187 4.1686 0.65985 4.0121 0.65799 3.8693 solid black
+edge n23 n24 4 0.67712 5.2958 0.67568 5.1946 0.67396 5.074 0.67233 4.9603 solid black
+edge n22 n23 4 0.68056 6.4386 0.68056 6.3058 0.68056 6.1238 0.68056 5.96 solid black
+edge n21 n22 4 0.68056 7.5399 0.68056 7.3997 0.68056 7.2186 0.68056 7.0569 solid black
+edge n20 n21 4 0.68056 8.7028 0.68056 8.5578 0.68056 8.3699 0.68056 8.2033 solid black
+edge n19 n20 4 0.68056 9.8163 0.68056 9.6774 0.68056 9.5162 0.68056 9.3721 solid black
+edge n18 n19 4 0.71297 11.025 0.70911 10.926 0.70449 10.806 0.69994 10.689 solid black
+edge n17 n18 4 0.72222 12.024 0.72222 11.923 0.72222 11.802 0.72222 11.688 solid black
+edge n16 n17 4 0.72222 13.024 0.72222 12.923 0.72222 12.802 0.72222 12.688 solid black
+edge n15 n16 4 0.79081 14.044 0.7806 13.932 0.76897 13.806 0.75824 13.687 solid black
+edge n13 n14 4 2.0139 1.1069 2.0139 1.0057 2.0139 0.88508 2.0139 0.77133 solid black
+edge n12 n13 4 2.0139 2.1314 2.0139 2.0268 2.0139 1.8978 2.0139 1.776 solid black
+edge n11 n12 4 2.0139 3.2797 2.0139 3.1463 2.0139 2.9514 2.0139 2.7767 solid black
+edge n10 n11 4 2.0139 4.294 2.0139 4.1963 2.0139 4.0797 2.0139 3.9654 solid black
+edge n9 n10 4 2.0139 5.2958 2.0139 5.1946 2.0139 5.074 2.0139 4.9603 solid black
+edge n8 n9 4 2.0139 6.2979 2.0139 6.1925 2.0139 6.0746 2.0139 5.9649 solid black
+edge n7 n8 4 2.0036 7.4832 2.0049 7.38 2.0064 7.2612 2.0078 7.1464 solid black
+edge n6 n7 4 2 8.5901 2 8.4861 2 8.3708 2 8.2612 solid black
+edge n5 n6 4 1.9668 9.9194 1.9711 9.794 1.9767 9.6354 1.9821 9.4842 solid black
+edge n4 n5 4 1.9583 11.025 1.9583 10.897 1.9583 10.734 1.9583 10.587 solid black
+edge n3 n4 4 1.9583 12.024 1.9583 11.908 1.9583 11.767 1.9583 11.64 solid black
+edge n2 n3 4 2.0001 13.024 1.9942 12.92 1.9871 12.796 1.9804 12.679 solid black
+edge n1 n2 4 2.0551 14.085 2.0489 13.964 2.0415 13.821 2.0346 13.69 solid black
+edge x1 x2 4 2.9861 14.117 2.9861 13.992 2.9861 13.835 2.9861 13.692 solid black
+edge x2 x3 4 2.9861 13.024 2.9861 12.923 2.9861 12.802 2.9861 12.688 solid black
+edge x3 x4 4 2.9861 12.024 2.9861 11.923 2.9861 11.802 2.9861 11.688 solid black
+edge x4 x5 4 2.9861 11.025 2.9861 10.897 2.9861 10.734 2.9861 10.587 solid black
+stop

@@ -1,0 +1,667 @@
+{
+  "name": "yours_truly",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,1284,971.6",
+  "label": "Complex Architecture",
+  "labelloc": "t",
+  "lheight": "0.23",
+  "lp": "642,963.2",
+  "lwidth": "1.73",
+  "nodesep": "0.25",
+  "splines": "true",
+  "_subgraph_cnt": 15,
+  "objects": [
+    {
+      "name": "cluster_clients_mobvm_a",
+      "bb": "198,589.2,500,667",
+      "label": "xvm_a Clients",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "349,654.6",
+      "lwidth": "1.13",
+      "nodesep": "0.25",
+      "splines": "true",
+      "style": "dashed",
+      "_gvid": 0,
+      "subgraphs": [
+        1
+      ],
+      "nodes": [
+        15,16
+      ]
+    },
+    {
+      "name": "%1",
+      "bb": "206,597.2,508,675",
+      "label": "xvm_a Clients",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "357,662.6",
+      "lwidth": "1.13",
+      "nodesep": "0.25",
+      "rank": "same",
+      "splines": "true",
+      "style": "dashed",
+      "_gvid": 1,
+      "nodes": [
+        15,16
+      ]
+    },
+    {
+      "name": "cluster_clients_prot_a",
+      "bb": "16,735.4,259,813.2",
+      "label": "Z Clients",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "137.5,800.8",
+      "lwidth": "0.72",
+      "nodesep": "0.25",
+      "splines": "true",
+      "style": "dashed",
+      "_gvid": 2,
+      "subgraphs": [
+        3
+      ],
+      "nodes": [
+        17,18
+      ]
+    },
+    {
+      "name": "%3",
+      "bb": "24,743.4,267,821.2",
+      "label": "Z Clients",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "145.5,808.8",
+      "lwidth": "0.72",
+      "nodesep": "0.25",
+      "rank": "same",
+      "splines": "true",
+      "style": "dashed",
+      "_gvid": 3,
+      "nodes": [
+        17,18
+      ]
+    },
+    {
+      "name": "cluster_prot_asrv",
+      "bb": "0,589.2,190,700.6",
+      "label": "Z Shapeshifters\\n(Configurable\\nZ Shapeshifter)",
+      "labelloc": "t",
+      "lheight": "0.70",
+      "lp": "95,671.4",
+      "lwidth": "1.21",
+      "nodesep": "0.25",
+      "splines": "true",
+      "style": "dashed",
+      "_gvid": 4,
+      "nodes": [
+        19
+      ]
+    },
+    {
+      "name": "cluster_machsrv",
+      "bb": "217,476.6,523,554.4",
+      "label": "Machsrv Shapeshifter",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "370,542",
+      "lwidth": "1.70",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 5,
+      "nodes": [
+        20
+      ]
+    },
+    {
+      "name": "cluster_accel",
+      "bb": "928,589.2,1068,667",
+      "label": "NOXd Shapeshifter",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "998,654.6",
+      "lwidth": "1.54",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 6,
+      "nodes": [
+        21
+      ]
+    },
+    {
+      "name": "cluster_yours_trulybox",
+      "bb": "531,394.6,920,942.8",
+      "label": "YoursTruly",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "725.5,930.4",
+      "lwidth": "0.91",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 7,
+      "subgraphs": [
+        8,
+9
+      ],
+      "nodes": [
+        22,23,24,25,26,27,28
+      ],
+      "edges": [
+        6,7,13,14,15,16,12
+      ]
+    },
+    {
+      "name": "cluster_tunnel",
+      "bb": "766,402.6,912,667",
+      "label": "Foo Reactor",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "839,654.6",
+      "lwidth": "0.96",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 8,
+      "nodes": [
+        22,23,24
+      ],
+      "edges": [
+        6,7
+      ]
+    },
+    {
+      "name": "cluster_frontend",
+      "bb": "539,589.2,758,910",
+      "label": "YoursTruly Front-End",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "648.5,897.6",
+      "lwidth": "1.76",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 9,
+      "nodes": [
+        25,26,27,28
+      ],
+      "edges": [
+        13,14,15,16
+      ]
+    },
+    {
+      "name": "cluster_shapeshifter_misc",
+      "bb": "1076,589.2,1284,667",
+      "label": "Other Shapeshifters",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "1180,654.6",
+      "lwidth": "1.54",
+      "nodesep": "0.25",
+      "splines": "true",
+      "style": "dashed",
+      "_gvid": 10,
+      "nodes": [
+        29,30
+      ]
+    },
+    {
+      "name": "cluster_space_ship_a",
+      "bb": "736,0,966,361.8",
+      "label": "ShipX",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "851,349.4",
+      "lwidth": "0.50",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 11,
+      "subgraphs": [
+        12,
+14
+      ],
+      "nodes": [
+        31,32,33,34,35
+      ],
+      "edges": [
+        19,20,17,18
+      ]
+    },
+    {
+      "name": "cluster_vm_a",
+      "bb": "757,8,915,126.6",
+      "label": "ReactorX",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "836,114.2",
+      "lwidth": "0.75",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 12,
+      "subgraphs": [
+        13
+      ],
+      "nodes": [
+        31,32
+      ]
+    },
+    {
+      "name": "cluster_tungsten",
+      "bb": "765,16,907,93.8",
+      "label": "Tungsten",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "836,81.4",
+      "lwidth": "0.72",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 13,
+      "nodes": [
+        31,32
+      ]
+    },
+    {
+      "name": "cluster_piston",
+      "bb": "744,161.4,958,329",
+      "label": "ReactorY",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "851,316.6",
+      "lwidth": "0.75",
+      "nodesep": "0.25",
+      "splines": "true",
+      "_gvid": 14,
+      "nodes": [
+        33,34,35
+      ],
+      "edges": [
+        19,20
+      ]
+    },
+    {
+      "_gvid": 15,
+      "name": "mobvm_a_req",
+      "height": "0.52778",
+      "label": "xvm_a Application ..",
+      "pos": "273,615.7",
+      "shape": "Mrecord",
+      "width": "1.8639"
+    },
+    {
+      "_gvid": 16,
+      "name": "mobvm_a_req1",
+      "height": "0.52778",
+      "label": "xvm_a Application 1",
+      "pos": "425,615.7",
+      "shape": "Mrecord",
+      "width": "1.8639"
+    },
+    {
+      "_gvid": 17,
+      "name": "z_req",
+      "height": "0.52778",
+      "label": "Z Application ..",
+      "pos": "199,761.9",
+      "shape": "Mrecord",
+      "width": "1.4535"
+    },
+    {
+      "_gvid": 18,
+      "name": "z_req1",
+      "height": "0.52778",
+      "label": "Z Application 1",
+      "pos": "76,761.9",
+      "shape": "Mrecord",
+      "width": "1.4535"
+    },
+    {
+      "_gvid": 19,
+      "name": "z_shapeshifter",
+      "height": "0.52778",
+      "label": "Z Shapeshifter Appearances",
+      "pos": "95,615.7",
+      "shape": "Mrecord",
+      "width": "2.4142"
+    },
+    {
+      "_gvid": 20,
+      "name": "machsrv_xprot_gen",
+      "height": "0.52778",
+      "label": "<f0>Machsrv Core|<f1>PROT_A-to-XPROT Converter",
+      "pos": "370,503.1",
+      "shape": "Mrecord",
+      "width": "4.0304"
+    },
+    {
+      "_gvid": 21,
+      "name": "accel_appearance",
+      "height": "0.52778",
+      "label": "NOXd Appearance",
+      "pos": "998,615.7",
+      "shape": "Mrecord",
+      "width": "1.7177"
+    },
+    {
+      "_gvid": 22,
+      "name": "tunnel_ingress",
+      "height": "0.52778",
+      "label": "Ingress Shapeshifter",
+      "pos": "839,615.7",
+      "shape": "Mrecord",
+      "width": "1.8044"
+    },
+    {
+      "_gvid": 23,
+      "name": "accel",
+      "height": "0.52778",
+      "label": "NOX Shapeshifter",
+      "pos": "840,503.1",
+      "shape": "Mrecord",
+      "width": "1.664"
+    },
+    {
+      "_gvid": 24,
+      "name": "tunnel_egress",
+      "height": "0.52778",
+      "label": "Egress Shapeshifter",
+      "pos": "840,429.1",
+      "shape": "Mrecord",
+      "width": "1.7612"
+    },
+    {
+      "_gvid": 25,
+      "name": "others",
+      "height": "0.52778",
+      "label": "Other Chunks",
+      "pos": "703,761.9",
+      "shape": "Mrecord",
+      "width": "1.3078"
+    },
+    {
+      "_gvid": 26,
+      "name": "other_xprot",
+      "height": "0.52778",
+      "label": "XPROT \"crystalizer\"",
+      "pos": "615,615.7",
+      "shape": "Mrecord",
+      "width": "1.8767"
+    },
+    {
+      "_gvid": 27,
+      "name": "front_end_jz",
+      "height": "0.52778",
+      "label": "JZ Chunk",
+      "pos": "602,761.9",
+      "shape": "Mrecord",
+      "width": "0.98386"
+    },
+    {
+      "_gvid": 28,
+      "name": "arbiter_vadam",
+      "height": "0.52778",
+      "label": "Arbiter Chunks",
+      "pos": "602,858.7",
+      "shape": "Mrecord",
+      "width": "1.4266"
+    },
+    {
+      "_gvid": 29,
+      "name": "handle_x",
+      "height": "0.52778",
+      "label": "Shapeshift X",
+      "pos": "1232,615.7",
+      "shape": "Mrecord",
+      "width": "1.2321"
+    },
+    {
+      "_gvid": 30,
+      "name": "handle_1",
+      "height": "0.52778",
+      "label": "Shapeshift 1",
+      "pos": "1127,615.7",
+      "shape": "Mrecord",
+      "width": "1.1889"
+    },
+    {
+      "_gvid": 31,
+      "name": "zzz",
+      "height": "0.52778",
+      "label": "ZZZ",
+      "pos": "800,42.5",
+      "shape": "Mrecord",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 32,
+      "name": "yyy",
+      "height": "0.52778",
+      "label": "YYY",
+      "pos": "872,42.5",
+      "shape": "Mrecord",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 33,
+      "name": "zzz_worker",
+      "height": "0.52778",
+      "label": "{ZZZ Worker}",
+      "pos": "796,187.9",
+      "shape": "Mrecord",
+      "width": "1.2209"
+    },
+    {
+      "_gvid": 34,
+      "name": "yyy_worker",
+      "height": "0.52778",
+      "label": "{YYY Worker}",
+      "pos": "904,187.9",
+      "shape": "Mrecord",
+      "width": "1.2859"
+    },
+    {
+      "_gvid": 35,
+      "name": "foo_agent",
+      "height": "0.52778",
+      "label": "{Foo Agent}",
+      "pos": "840,277.7",
+      "shape": "Mrecord",
+      "width": "1.0486"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 6,
+      "tail": 22,
+      "head": 23,
+      "dir": "both",
+      "label": "",
+      "pos": "s,839.16,597.42 e,839.84,521.26 839.26,586.19 839.41,569.66 839.59,548.91 839.74,532.4"
+    },
+    {
+      "_gvid": 7,
+      "tail": 23,
+      "head": 24,
+      "dir": "both",
+      "label": "",
+      "pos": "s,840,484.67 e,840,447.37 840,473.28 840,468.48 840,463.5 840,458.7"
+    },
+    {
+      "_gvid": 13,
+      "tail": 27,
+      "head": 26,
+      "dir": "both",
+      "label": "",
+      "pos": "s,603.57,743.51 e,613.43,634.16 604.57,732.38 606.84,707.24 610.12,670.78 612.4,645.55"
+    },
+    {
+      "_gvid": 14,
+      "tail": 28,
+      "head": 25,
+      "label": "",
+      "pos": "e,684.59,780.18 620.52,840.31 636.19,825.61 658.82,804.37 676.41,787.86",
+      "style": "dotted"
+    },
+    {
+      "_gvid": 15,
+      "tail": 28,
+      "head": 26,
+      "label": "",
+      "pos": "e,603.68,633.88 578.43,840.32 570.36,832.96 562.29,823.65 558,813.2 544.86,781.22 550.32,769.12 558,735.4 565.61,701.96 583.88,666.95 597.7,643.69",
+      "style": "dotted"
+    },
+    {
+      "_gvid": 16,
+      "tail": 28,
+      "head": 27,
+      "label": "",
+      "pos": "e,602,780.18 602,840.31 602,826.68 602,807.43 602,791.53",
+      "style": "dotted"
+    },
+    {
+      "_gvid": 12,
+      "tail": 27,
+      "head": 22,
+      "dir": "both",
+      "label": "XPROT over PROT_G",
+      "lp": "812.03,717",
+      "pos": "s,630.57,743.47 e,827.44,634.04 640.56,738.34 642.72,737.3 644.87,736.31 647,735.4 696.09,714.37 716.79,729.01 762,700.6 785.66,685.73 806.67,661.7 820.74,643.16"
+    },
+    {
+      "_gvid": 19,
+      "tail": 35,
+      "head": 33,
+      "constraint": "true",
+      "dir": "both",
+      "label": "MechCmd",
+      "lp": "835.45,232.8",
+      "pos": "s,819.67,259.54 e,796.78,206.19 812.12,250.86 809.76,247.78 807.62,244.54 805.9,241.2 802.14,233.92 799.8,225.4 798.34,217.38"
+    },
+    {
+      "_gvid": 20,
+      "tail": 35,
+      "head": 34,
+      "constraint": "true",
+      "dir": "both",
+      "label": "MechCmd",
+      "lp": "907.28,232.8",
+      "pos": "s,852.64,259.35 e,891.38,206.21 859.42,250.05 867.45,239.04 876.73,226.31 884.74,215.33"
+    },
+    {
+      "_gvid": 17,
+      "tail": 33,
+      "head": 31,
+      "constraint": "true",
+      "dir": "both",
+      "label": "SCADA_A()",
+      "lp": "825.06,143",
+      "pos": "s,791.38,169.69 e,795.77,60.692 789.13,158.61 788.72,156.18 788.37,153.75 788.11,151.4 785.14,124.37 789.3,93.54 793.49,71.769"
+    },
+    {
+      "_gvid": 18,
+      "tail": 34,
+      "head": 32,
+      "constraint": "true",
+      "dir": "both",
+      "label": "SCADA_A()",
+      "lp": "932.36,143",
+      "pos": "s,900.14,169.6 e,875.87,60.859 897.67,158.54 892.07,133.42 883.93,96.95 878.32,71.844"
+    },
+    {
+      "_gvid": 0,
+      "tail": 15,
+      "head": 20,
+      "constraint": "true",
+      "dir": "both",
+      "headport": "f0",
+      "label": "",
+      "pos": "s,272.93,597.29 e,272.76,522.1 272.89,585.95 272.83,570.88 272.78,551.81 272.76,533.59"
+    },
+    {
+      "_gvid": 1,
+      "tail": 16,
+      "head": 20,
+      "constraint": "true",
+      "dir": "both",
+      "headport": "f0",
+      "label": "",
+      "pos": "s,380.15,597.25 e,272.76,522.1 369.61,592.72 332.54,576.49 288.37,553.69 276.08,532.8"
+    },
+    {
+      "_gvid": 2,
+      "tail": 17,
+      "head": 19,
+      "constraint": "true",
+      "dir": "both",
+      "label": "",
+      "pos": "s,186.46,743.51 e,107.59,634.16 179.82,734.31 161.15,708.42 132.94,669.3 114.25,643.39"
+    },
+    {
+      "_gvid": 3,
+      "tail": 18,
+      "head": 19,
+      "constraint": "true",
+      "dir": "both",
+      "label": "",
+      "pos": "s,78.292,743.51 e,92.7,634.16 79.758,732.38 83.071,707.24 87.874,670.78 91.199,645.55"
+    },
+    {
+      "_gvid": 4,
+      "tail": 19,
+      "head": 20,
+      "constraint": "true",
+      "dir": "both",
+      "headport": "f0",
+      "label": "Foo SCADA",
+      "lp": "162.98,570.8",
+      "pos": "s,104.49,597.26 e,223.91,503.1 110.35,587.68 129.8,557.11 166.42,510.65 212.62,503.92"
+    },
+    {
+      "_gvid": 5,
+      "tail": 21,
+      "head": 23,
+      "constraint": "true",
+      "dir": "both",
+      "label": "",
+      "pos": "s,973.31,597.42 e,864.77,521.44 964.11,590.98 937.54,572.38 900.71,546.6 874.09,527.96"
+    },
+    {
+      "_gvid": 8,
+      "tail": 24,
+      "head": 35,
+      "constraint": "true",
+      "dir": "both",
+      "label": "Raw PROT_G",
+      "lp": "881.03,378.2",
+      "pos": "s,840,410.67 e,840,296.02 840,399.47 840,372.94 840,333.69 840,307.2"
+    },
+    {
+      "_gvid": 9,
+      "tail": 25,
+      "head": 29,
+      "constraint": "true",
+      "dir": "both",
+      "label": "",
+      "pos": "s,750.26,760.22 e,1226,633.88 761.64,759.95 873.48,757.12 1112.1,745.79 1179,700.6 1199.1,687.06 1213.1,663.13 1221.6,644.28",
+      "style": "dotted"
+    },
+    {
+      "_gvid": 10,
+      "tail": 25,
+      "head": 30,
+      "constraint": "true",
+      "dir": "both",
+      "label": "",
+      "pos": "s,750.52,757.87 e,1120.7,633.97 761.72,757.04 852.54,750.12 1021.8,733.2 1072,700.6 1092.5,687.27 1107.1,663.32 1116,644.41",
+      "style": "dotted"
+    },
+    {
+      "_gvid": 11,
+      "tail": 26,
+      "head": 20,
+      "constraint": "true",
+      "dir": "both",
+      "label": "XPROT over PROT_G",
+      "lp": "601.09,570.8",
+      "pos": "s,576.45,597.3 e,408.73,521.58 566.07,592.61 523.42,573.36 461.88,545.58 419.16,526.29"
+    }
+  ]
+}

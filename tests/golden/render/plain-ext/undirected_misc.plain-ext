@@ -1,0 +1,11 @@
+graph 1 1.5848 3.5
+node a 0.58477 3.25 0.5 0.5 a solid circle black lightgrey
+node b 0.26533 2.25 0.5 0.5 b solid circle black lightgrey
+node c 0.58477 1.25 0.5 0.5 c solid circle black lightgrey
+node d 0.58477 0.25 0.5 0.5 d solid circle black lightgrey
+node e 1.3348 3.25 0.5 0.5 "G e" solid circle black lightgrey
+edge a b 4 0.50907 3.0057 0.45814 2.8507 0.39129 2.6472 0.34048 2.4926 solid black
+edge b c 4 0.34102 2.0057 0.39195 1.8507 0.4588 1.6472 0.50961 1.4926 solid black
+edge c a 10 0.60733 1.5024 0.61982 1.6462 0.63405 1.8335 0.64033 2 0.64869 2.2221 0.64869 2.2779 0.64033 2.5 0.63405 2.6665 0.61982 2.8537 0.60733 2.9976 solid black
+edge c d 4 0.58477 0.99579 0.58477 0.84508 0.58477 0.65163 0.58477 0.50144 solid black
+stop

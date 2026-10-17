@@ -1,0 +1,16 @@
+digraph {
+	graph [bb="0,0,198,36"];
+	node [label="\N"];
+	t	[height=0.5,
+		labelloc=t,
+		pos="27,18",
+		width=0.75];
+	c	[height=0.5,
+		labelloc=c,
+		pos="99,18",
+		width=0.75];
+	b	[height=0.5,
+		labelloc=b,
+		pos="171,18",
+		width=0.75];
+}

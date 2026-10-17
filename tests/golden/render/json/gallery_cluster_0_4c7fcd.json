@@ -1,0 +1,276 @@
+{
+  "name": "cats",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,52.000],[528.600,52.000],[528.600,0.000]]
+    }
+  ],
+  "bb": "0,0,528.6,52",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 3,
+  "objects": [
+    {
+      "name": "cluster_big_cats",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[0.000,0.000],[0.000,52.000],[228.000,52.000],[228.000,0.000]]
+        }
+      ],
+      "bb": "0,0,228,52",
+      "_gvid": 0,
+      "nodes": [
+        3,4
+      ]
+    },
+    {
+      "name": "domestic_cats",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[236.000,0.000],[236.000,52.000],[435.000,52.000],[435.000,0.000]]
+        }
+      ],
+      "bb": "236,0,435,52",
+      "cluster": "true",
+      "_gvid": 1,
+      "nodes": [
+        5,6
+      ]
+    },
+    {
+      "name": "not_a_cluster",
+      "bb": "0,0,536.6,68",
+      "_gvid": 2,
+      "nodes": [
+        7
+      ]
+    },
+    {
+      "_gvid": 3,
+      "name": "Lion",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [37.000,26.000,29.280,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [37.000,21.800],
+          "align": "c",
+          "width": 26.440,
+          "text": "Lion"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "37,26",
+      "width": "0.8132"
+    },
+    {
+      "_gvid": 4,
+      "name": "Snow Leopard",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [152.000,26.000,67.630,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [152.000,21.800],
+          "align": "c",
+          "width": 82.040,
+          "text": "Snow Leopard"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "152,26",
+      "width": "1.8785"
+    },
+    {
+      "_gvid": 5,
+      "name": "Siamese",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [287.000,26.000,43.220,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [287.000,21.800],
+          "align": "c",
+          "width": 46.660,
+          "text": "Siamese"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "287,26",
+      "width": "1.2005"
+    },
+    {
+      "_gvid": 6,
+      "name": "Persian",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [388.000,26.000,39.470,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [388.000,21.800],
+          "align": "c",
+          "width": 41.210,
+          "text": "Persian"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "388,26",
+      "width": "1.0963"
+    },
+    {
+      "_gvid": 7,
+      "name": "Wildcat",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [487.000,26.000,41.600,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [487.000,21.800],
+          "align": "c",
+          "width": 44.310,
+          "text": "Wildcat"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "487,26",
+      "width": "1.1556"
+    }
+  ]
+}

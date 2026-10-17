@@ -1,0 +1,59 @@
+digraph G {
+	graph [bb="0,0,447.42,302.12",
+		rankdir=LR
+	];
+	node [label="\N",
+		shape=plaintext
+	];
+	{
+		graph [rank=same];
+		b	[height=2.4199,
+			label=<
+<TABLE BGCOLOR="bisque">
+  <TR><TD COLSPAN="3">elephant</TD> 
+      <TD ROWSPAN="2" BGCOLOR="chartreuse" 
+          VALIGN="bottom" ALIGN="right">two</TD> </TR>
+  <TR><TD COLSPAN="2" ROWSPAN="2">
+        <TABLE BGCOLOR="grey">
+          <TR> <TD>corn</TD> </TR> 
+          <TR> <TD BGCOLOR="yellow">c</TD> </TR> 
+          <TR> <TD>f</TD> </TR> 
+        </TABLE> </TD>
+      <TD BGCOLOR="white">penguin</TD> 
+  </TR> 
+  <TR> <TD COLSPAN="2" BORDER="4" ALIGN="right" PORT="there">4</TD> </TR>
+</TABLE>>,
+			pos="343.49,104.51",
+			shape=ellipse,
+			style=filled,
+			width=2.8869];
+		c	[height=0.81111,
+			label=<long line 1<BR/>line 2<BR ALIGN="LEFT"/>line 3<BR ALIGN="RIGHT"/>>,
+			pos="343.49,256.51",
+			width=1.0539];
+	}
+	c -> b	[pos="e,343.49,192.09 343.49,227.31 343.49,219.34 343.49,211.36 343.49,203.38"];
+	a	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD ROWSPAN="3" BGCOLOR="yellow">class</TD></TR>
+  <TR><TD PORT="here" BGCOLOR="lightblue">qualifier</TD></TR>
+</TABLE>>,
+		pos="51.318,72.511",
+		width=1.4255];
+	a:here -> b:there	[arrowtail=diamond,
+		pos="e,365.92,48.911 95.636,72.511 151.69,72.511 337.13,0 362.93,38.252"];
+	d	[height=0.68889,
+		pos="51.318,256.51",
+		shape=triangle,
+		width=0.88139];
+	d -> c	[label=<
+<TABLE>
+  <TR><TD BGCOLOR="red" WIDTH="10"> </TD>
+      <TD>Edge labels<BR/>also</TD>
+      <TD BGCOLOR="blue" WIDTH="10"> </TD>
+  </TR>
+</TABLE>>,
+		lp="171.1,279.31",
+		pos="e,305.76,256.51 72.722,256.51 118.38,256.51 229.85,256.51 294.3,256.51"];
+}

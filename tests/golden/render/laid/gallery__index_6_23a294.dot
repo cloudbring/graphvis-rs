@@ -1,0 +1,8 @@
+graph G {
+	graph [bb="0,0,54,36"];
+	node [label="\N"];
+	yen	[height=0.5,
+		label=¥,
+		pos="27,18",
+		width=0.75];
+}

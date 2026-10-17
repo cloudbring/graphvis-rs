@@ -1,0 +1,13 @@
+graph 1 4.6677 1.5
+node Marden 0.5704 1.25 1.1408 0.5 Marden solid ellipse black lightgrey
+node hg 0.5704 0.25 0.75 0.5 hg solid ellipse black lightgrey
+node Cannon 1.9593 1.25 1.141 0.5 Cannon solid ellipse black lightgrey
+node ggt 1.9593 0.25 0.75 0.5 ggt solid ellipse black lightgrey
+node Epstein 3.6399 1.25 1.1112 0.5 Epstein solid ellipse black lightgrey
+node kg 3.2927 0.25 0.75 0.5 kg solid ellipse black lightgrey
+node ldt 4.2927 0.25 0.75 0.5 ldt solid ellipse black lightgrey
+edge Marden hg 4 0.5704 0.99579 0.5704 0.84508 0.5704 0.65163 0.5704 0.50144 solid black
+edge Cannon ggt 4 1.9593 0.99579 1.9593 0.84508 1.9593 0.65163 1.9593 0.50144 solid black
+edge Epstein kg 4 3.5558 1.0008 3.5013 0.8479 3.4303 0.6495 3.3758 0.49707 solid black
+edge Epstein ldt 4 3.7946 1.0057 3.9002 0.84849 4.0392 0.64136 4.1435 0.48594 solid black
+stop

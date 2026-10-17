@@ -5,7 +5,9 @@ pub mod canon;
 pub mod lexer;
 pub mod parser;
 
-pub use canon::{canon_str, canon_value, is_html_string, write_canon};
+pub use canon::{
+    canon_str, canon_str_with, canon_value, is_html_string, write_canon, write_canon_forced,
+};
 pub use lexer::{Lexer, Token, TokenKind};
 pub use parser::{GlobalAttrs, Parser};
 
