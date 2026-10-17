@@ -377,6 +377,7 @@ fn write_xdots(out: &mut String, val: &str, level: &mut i32) {
 struct W<'g> {
     g: &'g Graph,
     do_xdot: bool,
+    latin1: bool,
     level: i32,
     out: String,
     graph_dict: Vec<String>,
@@ -410,7 +411,17 @@ impl W<'_> {
                 let mut level = self.level;
                 write_xdots(&mut self.out, v, &mut level);
             } else {
-                stoj(v, &mut self.out);
+                // HTML strings are stored with their delimiters; C keeps only the content.
+                let v = if self.g.html_strings.contains(v) && v.len() >= 2 {
+                    &v[1..v.len() - 1]
+                } else {
+                    v
+                };
+                if self.latin1 {
+                    stoj(&gv_core::font::latin1_to_utf8(v), &mut self.out);
+                } else {
+                    stoj(v, &mut self.out);
+                }
             }
         }
     }
@@ -695,6 +706,7 @@ pub(crate) fn write_json(g: &Graph, do_xdot: bool, edge_order: &[usize]) -> Stri
     let mut w = W {
         g,
         do_xdot,
+        latin1: gv_core::font::charset_is_latin1(g.graph_attrs.get("charset").map(String::as_str)),
         level: 0,
         out: String::new(),
         graph_dict: gd.into_iter().collect(),

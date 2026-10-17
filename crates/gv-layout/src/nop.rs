@@ -174,9 +174,11 @@ fn user_spline(pos: &str, tail_arrow: bool, head_arrow: bool) -> Option<Spline> 
     }
     let mut segments = Vec::new();
     let mut rest = pos;
+    // As in C, the arrow points persist across `;`-separated segments: a later segment
+    // without its own `s,`/`e,` reuses the previous one.
+    let mut sp = None;
+    let mut ep = None;
     loop {
-        let mut sp = None;
-        let mut ep = None;
         if let Some(r) = rest.strip_prefix("s,")
             && let Some((p, r)) = scan_point(r)
         {
