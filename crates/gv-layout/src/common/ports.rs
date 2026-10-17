@@ -394,10 +394,16 @@ pub fn shape_port<S: PortGraph + ?Sized>(
         rv.name = None;
         return rv;
     }
-    let is_box = matches!(
-        src.attrs.get("shape").map(String::as_str),
-        Some("box" | "rect" | "rectangle")
-    );
+    // IS_BOX: the shape's polygon is p_box, as for box, rect, rectangle, unknown names
+    // (bind_shape copies Shapes[0]) and shapefile user shapes.
+    let shape_name = src
+        .attrs
+        .get("shape")
+        .map(String::as_str)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("ellipse");
+    let custom = shape_name != "epsf" && src.attrs.get("shapefile").is_some_and(|f| !f.is_empty());
+    let is_box = custom || gv_geom::ShapeKind::parse(shape_name) == gv_geom::ShapeKind::Box;
     compass_port(g, n, None, &mut rv, portname, all, !is_box);
     rv.name = None;
     rv
