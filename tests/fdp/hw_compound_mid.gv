@@ -1,0 +1,6 @@
+graph c1 {
+layout=fdp;
+ splines=compound;
+subgraph cluster_mid { m1 -- m2 -- m3 -- m1; m4 -- m1; }
+a -- m1; b -- m2; a -- b; a -- c; c -- b; c -- m3; d -- a; d -- b; d -- c;
+}

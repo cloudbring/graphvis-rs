@@ -19,7 +19,7 @@ LAYOUT = re.compile(r"\blayout\s*=", re.I)
 CLUSTER = re.compile(r"subgraph\s*\"?cluster", re.I)
 
 # C 16.1.0 aborts on these (assertion in compoundEdges).
-EXCLUDE = {"hw_crossing_compound", "hw_deep_compound"}
+EXCLUDE = {"hw_crossing_compound", "hw_deep_compound", "hw_compound_two"}
 
 
 def force(src, engine="fdp"):
@@ -271,6 +271,27 @@ def handwritten():
     c["hw_multiedge_cluster"] = """graph mc {
 subgraph cluster_x { p; q; }
 r -- p; r -- p; r -- q; s -- q; s -- r;
+}"""
+    c["hw_compound_mid"] = """graph c1 { splines=compound;
+subgraph cluster_mid { m1 -- m2 -- m3 -- m1; m4 -- m1; }
+a -- m1; b -- m2; a -- b; a -- c; c -- b; c -- m3; d -- a; d -- b; d -- c;
+}"""
+    c["hw_compound_two"] = """graph c4 { splines=compound;
+subgraph cluster_l { l1 -- l2; l2 -- l3; }
+subgraph cluster_r { r1 -- r2; }
+l1 -- r1; l3 -- r2; x -- l2; x -- r2; y -- x; y -- l1;
+}"""
+    c["hw_clusteredge"] = """graph ce1 {
+subgraph cluster_a { a1 -- a2; } subgraph cluster_b { b1; b2; }
+x -- cluster_a; cluster_a -- cluster_b; cluster_b -- y; x -- y;
+}"""
+    c["hw_clusteredge_nested"] = """digraph ce2 { splines=true;
+subgraph cluster_o { o1; subgraph cluster_i { i1 -> i2; } }
+cluster_i -> z; z -> cluster_o; o1 -> i1;
+}"""
+    c["hw_clusteredge_inside"] = """digraph ce3 {
+subgraph cluster_a { a1 -> a2; }
+a1 -> cluster_a; cluster_a -> b; b -> cluster_a; cluster_a -> cluster_a;
 }"""
     return c
 
