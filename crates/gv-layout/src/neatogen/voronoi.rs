@@ -410,6 +410,7 @@ impl Vor<'_> {
         None
     }
 
+    #[allow(clippy::needless_late_init)]
     fn right_of(&self, el: usize, p: Point) -> bool {
         let HeEdge::E(ei) = self.he[el].edge else {
             unreachable!()
@@ -1035,14 +1036,12 @@ fn rm_equality(info: &mut [Info]) -> Vec<usize> {
                 info[order[j]].coord.x += (i + 1) as f64 * xdel;
             }
         } else {
-            let mut a = ip;
-            for j in (ip + 1)..kp {
+            for (a, j) in (ip..).zip((ip + 1)..kp) {
                 let pa = &info[order[a]].poly;
                 let mut xdel = pa.corner.x - pa.origin.x;
                 let pj = &info[order[j]].poly;
                 xdel += pj.corner.x - pj.origin.x;
                 info[order[j]].coord.x = info[order[a]].coord.x + xdel / 2.0;
-                a += 1;
             }
         }
         ip = kp;
