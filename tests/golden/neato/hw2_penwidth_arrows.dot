@@ -1,0 +1,26 @@
+digraph pa {
+	graph [bb="0,0,126.21,98.408",
+		layout=neato
+	];
+	node [label="\N"];
+	edge [arrowsize=1.5,
+		penwidth=3
+	];
+	a	[height=0.5,
+		pos="27,79.934",
+		width=0.75];
+	b	[height=0.5,
+		pos="99.206,80.408",
+		width=0.75];
+	a -> b	[arrowhead=diamond,
+		pos="e,71.87,80.228 54.298,80.113 54.388,80.114 54.478,80.114 54.568,80.115"];
+	c	[height=0.5,
+		pos="63.592,18",
+		width=0.75];
+	b -> c	[arrowhead=dot,
+		pos="e,73.312,35.033 89.475,63.354 86.726,58.539 83.653,53.153 80.61,47.82"];
+	c -> a	[arrowhead=crow,
+		arrowtail=tee,
+		dir=both,
+		pos="s,53.593,34.924 e,36.987,63.031 49.807,41.331 48.276,43.923 46.7,46.59 45.126,49.255"];
+}

@@ -200,6 +200,11 @@ pub(crate) fn build_positioned_graph(graph: &Graph, xdot: bool) -> Graph {
         if !is_clust {
             continue;
         }
+        // A cluster the layout gave no box (e.g. a nested cluster in neato,
+        // which only registers top-level clusters) gets no `bb`, as in C.
+        if g.subgraphs[idx].bb == BoundingBox::default() && !g.subgraphs[idx].nodes.is_empty() {
+            continue;
+        }
         let cbb = effective_cluster_bb(&g, &g.subgraphs[idx]);
         let subg = &mut g.subgraphs[idx];
         subg.bb = cbb;

@@ -272,13 +272,92 @@ def handwritten():
     c["hw_strict_multi"] = "strict graph sm { a -- b; a -- b; b -- c; c -- a; }"
     return c
 
+RECORDS = """digraph rec {
+%s
+node [shape=record];
+s1 [label="<f0> left|<f1> mid|<f2> right"];
+s2 [label="<f0> one|<f1> two"];
+s3 [label="hello\\nworld |{ b |{c|<here> d|e}| f}| g | h"];
+s1:f1 -> s2:f0;
+s1:f2 -> s3:here;
+s2:f1 -> s3:f0;
+}"""
+
+XLABELS = """graph xl {
+%s
+a [xlabel="ext a"]; b [xlabel="ext b"]; c;
+a -- b [xlabel="ex"];
+b -- c [label="mid", labelangle=30, headlabel="H", taillabel="T"];
+c -- a [label="ca"];
+}"""
+
+def randgraph(n, m, seed, extra=""):
+    import random
+    r = random.Random(seed)
+    lines = [f"graph r{n}_{seed} {{", extra]
+    edges = set()
+    for i in range(1, n):
+        j = r.randrange(i)
+        edges.add((j, i))
+    while len(edges) < m:
+        a, b = r.randrange(n), r.randrange(n)
+        if a != b:
+            edges.add((min(a, b), max(a, b)))
+    for a, b in sorted(edges):
+        lines.append(f"n{a} -- n{b};")
+    lines.append("}")
+    return "\n".join(lines)
+
+
+def handwritten2():
+    c = {}
+    c["hw2_overlap_voronoi_K6"] = complete(6, "overlap=voronoi; node [shape=box];")
+    c["hw2_overlap_voronoi_biglabels"] = BIGLABELS % "overlap=voronoi;"
+    c["hw2_overlap_oscale"] = OVERLAP % "overlap=oscale;"
+    c["hw2_overlap_scale_K6"] = complete(6, "overlap=scale; node [shape=box];")
+    c["hw2_overlap_scalexy_K6"] = complete(6, "overlap=scalexy; node [shape=box];")
+    c["hw2_overlap_false_grid"] = grid(5, 5, "overlap=false; node [shape=box, width=0.6];")
+    c["hw2_overlap_false_tree"] = tree(4, "overlap=false; node [width=0.6, fixedsize=false];")
+    c["hw2_records"] = RECORDS % ""
+    c["hw2_records_splines"] = RECORDS % "splines=true;"
+    c["hw2_xlabels"] = XLABELS % ""
+    c["hw2_xlabels_noforce"] = XLABELS % "forcelabels=false;"
+    c["hw2_concentrate"] = "digraph conc { concentrate=true; a -> b; b -> a; a -> c; c -> b; }"
+    c["hw2_KK_subset"] = PETERSEN % "mode=KK; model=subset;"
+    c["hw2_sgd_subset"] = PETERSEN % "mode=sgd; model=subset;"
+    c["hw2_KK_pos"] = POS % "mode=KK;"
+    c["hw2_pin_components"] = """graph pc {
+a [pos="0,0!"]; b [pos="1,1!"]; a -- b;
+c -- d -- e -- c;
+f -- g;
+}"""
+    c["hw2_packclust"] = CLUSTERS % "pack=true; packmode=\"clust\";"
+    c["hw2_packarray_u"] = DISCONNECTED % "pack=true; packmode=\"array_u\";"
+    c["hw2_packarray_c2"] = DISCONNECTED % "pack=true; packmode=\"array_c2\";"
+    for i, (n, m) in enumerate([(30, 40), (50, 70), (80, 120), (120, 160)]):
+        c[f"hw2_random_{n}"] = randgraph(n, m, 17 + i)
+    c["hw2_random_30_splines"] = randgraph(30, 40, 17, "splines=true;")
+    c["hw2_random_50_overlap"] = randgraph(50, 70, 18, "overlap=false; node [shape=box];")
+    c["hw2_random_30_KK"] = randgraph(30, 40, 17, "mode=KK;")
+    c["hw2_random_30_sgd"] = randgraph(30, 40, 17, "mode=sgd;")
+    c["hw2_random_30_circuit"] = randgraph(30, 40, 17, "model=circuit;")
+    c["hw2_random_30_self"] = randgraph(30, 40, 17, "start=self;")
+    c["hw2_graph_label"] = CUBE % "label=\"A cube\"; labelloc=t;"
+    c["hw2_graph_label_wide"] = "graph gl { label=\"a very very long graph label indeed\"; a -- b; }"
+    c["hw2_cluster_label"] = CLUSTERS % "subgraph cluster_c { label=\"C\"; x -- y; }"
+    c["hw2_ports_compass"] = "graph pcmp { node [shape=box]; a:n -- b:s; b:e -- c:w; c:ne -- a:sw; a:e -- a:w; }"
+    c["hw2_multi_splines"] = "graph ms { splines=true; a -- b; a -- b; a -- b; b -- c; }"
+    c["hw2_shapes_mix"] = """graph sm { a [shape=triangle]; b [shape=hexagon]; c [shape=star]; d [shape=doublecircle]; e [shape=cylinder]; f [shape=point]; a -- b -- c -- d -- e -- f -- a; a -- d; }"""
+    c["hw2_penwidth_arrows"] = "digraph pa { edge [penwidth=3, arrowsize=1.5]; a -> b [arrowhead=diamond]; b -> c [arrowhead=dot]; c -> a [arrowhead=crow, dir=both, arrowtail=tee]; }"
+    return c
+
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.gv"):
         old.unlink()
     n = 0
-    for name, src in {**corpus_cases(), **handwritten()}.items():
+    for name, src in {**corpus_cases(), **handwritten(), **handwritten2()}.items():
         if name in EXCLUDE or LAYOUT.search(src):
             continue
         forced = force_neato(src)

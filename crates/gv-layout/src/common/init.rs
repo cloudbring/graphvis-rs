@@ -317,13 +317,15 @@ impl<'a> LGraph<'a> {
                     })
                     .unwrap_or_default(),
             };
-            ed.label_pos = e.label.as_ref().filter(|l| l.set).map(|l| l.pos);
+            // C prints label positions even when placement failed (the
+            // unplaced position is the origin, moved by the final translation).
+            ed.label_pos = e.label.as_ref().map(|l| l.pos);
             for (key, lbl) in [
                 ("head_lp", &e.head_label),
                 ("tail_lp", &e.tail_label),
                 ("xlp", &e.xlabel),
             ] {
-                if let Some(l) = lbl.as_ref().filter(|l| l.set) {
+                if let Some(l) = lbl.as_ref() {
                     ed.attrs.insert(
                         key.to_string(),
                         format!("{},{}", fmt_g5(l.pos.x), fmt_g5(l.pos.y)),

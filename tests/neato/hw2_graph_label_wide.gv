@@ -1,0 +1,3 @@
+graph gl {
+layout=neato;
+ label="a very very long graph label indeed"; a -- b; }
