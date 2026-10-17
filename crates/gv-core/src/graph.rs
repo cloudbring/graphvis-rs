@@ -79,6 +79,11 @@ pub const CLUST_NODE_KEY: &str = "\u{1}clustnode";
 /// (`GD_label` stays NULL, e.g. patchwork's `mkClusters`): renderers neither draw nor size it.
 pub const NO_GRAPH_LABEL_KEY: &str = "\u{1}nolabel";
 
+/// Subgraph attribute set by a layout on a cluster it did not register in
+/// `GD_clust` (e.g. clusters nested below neato's top-level ones): it keeps its
+/// input `bb`, which C prints, but renderers do not draw it.
+pub const UNREGISTERED_CLUSTER_KEY: &str = "\u{1}unregclust";
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {

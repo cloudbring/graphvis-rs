@@ -225,7 +225,8 @@ fn angle_set(g: &LGraph<'_>) -> Option<f64> {
     while ang <= -180.0 {
         ang += 360.0;
     }
-    Some(ang.to_radians())
+    // RADIANS(ang)
+    Some(ang / 180.0 * std::f64::consts::PI)
 }
 
 /// `normalize(g)`: translate the first node to the origin and rotate so the
