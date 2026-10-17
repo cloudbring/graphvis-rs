@@ -1,0 +1,535 @@
+//! Box-path spline routing, ported from `lib/common/routespl.c`
+//! (`routesplines`, `routepolylines`, `simpleSplineRoute`, `limitBoxes`,
+//! `checkpath`, `overlap`) plus the `path`/`pathend_t` types of
+//! `lib/common/types.h`.
+//!
+//! A [`Path`] is a corridor of contiguous boxes from a start to an end point.
+//! `routesplines_` turns the boxes into a polygon, finds the shortest path
+//! inside it with `Pshortestpath` and fits a spline with `Proutespline`; it
+//! then shrinks each box to the horizontal extent the spline actually uses,
+//! so later edges can use the space (`recover_slack` in dot).
+
+use gv_core::{BoundingBox, Point};
+use gv_geom::pathplan::{Pedge, make_polyline, proutespline, pshortestpath};
+
+/// `port` end of a [`Path`] (`path.start` / `path.end`).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct PathPort {
+    pub p: Point,
+    pub theta: f64,
+    pub constrained: bool,
+}
+
+/// `path` (types.h): the boxes the router may use.
+#[derive(Debug, Clone, Default)]
+pub struct Path {
+    pub start: PathPort,
+    pub end: PathPort,
+    /// `boxes[0..nbox]`; `boxes.len()` is the C `nbox`.
+    pub boxes: Vec<BoundingBox>,
+    /// `data`: the edge being routed.
+    pub data: usize,
+}
+
+/// `pathend_t` (types.h).
+#[derive(Debug, Clone, Default)]
+pub struct PathEnd {
+    /// Node box (`nb`).
+    pub nb: BoundingBox,
+    /// Node port (`np`).
+    pub np: Point,
+    pub sidemask: u8,
+    /// `boxes[0..boxn]`.
+    pub boxes: Vec<BoundingBox>,
+}
+
+/// `add_box(P, b)` (splines.c): append `b` unless it is empty.
+pub fn add_box(p: &mut Path, b: BoundingBox) {
+    if b.ll.x < b.ur.x && b.ll.y < b.ur.y {
+        p.boxes.push(b);
+    }
+}
+
+fn gvdump() -> bool {
+    std::env::var_os("GVDUMP").is_some()
+}
+
+/// `simpleSplineRoute(tp, hp, poly, &n, polyline)`: route inside a simple polygon.
+pub fn simple_spline_route(
+    tp: Point,
+    hp: Point,
+    poly: &[Point],
+    polyline: bool,
+) -> Option<Vec<Point>> {
+    let pl = pshortestpath(poly, [tp, hp]).ok()?;
+    if polyline {
+        Some(make_polyline(&pl))
+    } else {
+        let pn = poly.len();
+        let edges: Vec<Pedge> = (0..pn)
+            .map(|i| Pedge {
+                a: poly[i],
+                b: poly[(i + 1) % pn],
+            })
+            .collect();
+        proutespline(&edges, &pl, [Point::default(), Point::default()]).ok()
+    }
+}
+
+/// `limitBoxes`: widen each box to the x-extent of the spline samples within it.
+fn limit_boxes(boxes: &mut [BoundingBox], pps: &[Point], delta: f64) {
+    let boxn = boxes.len();
+    let num_div = delta * boxn as f64;
+    let pn = pps.len();
+    let mut splinepi = 0;
+    while splinepi + 3 < pn {
+        let mut si = 0.0f64;
+        while si <= num_div {
+            let t = si / num_div;
+            let mut sp = [
+                pps[splinepi],
+                pps[splinepi + 1],
+                pps[splinepi + 2],
+                pps[splinepi + 3],
+            ];
+            // `a += t * (b - a)`, contracted to fma(t, b - a, a) by clang.
+            let lerp = |a: f64, b: f64| t.mul_add(b - a, a);
+            sp[0].x = lerp(sp[0].x, sp[1].x);
+            sp[0].y = lerp(sp[0].y, sp[1].y);
+            sp[1].x = lerp(sp[1].x, sp[2].x);
+            sp[1].y = lerp(sp[1].y, sp[2].y);
+            sp[2].x = lerp(sp[2].x, sp[3].x);
+            sp[2].y = lerp(sp[2].y, sp[3].y);
+            sp[0].x = lerp(sp[0].x, sp[1].x);
+            sp[0].y = lerp(sp[0].y, sp[1].y);
+            sp[1].x = lerp(sp[1].x, sp[2].x);
+            sp[1].y = lerp(sp[1].y, sp[2].y);
+            sp[0].x = lerp(sp[0].x, sp[1].x);
+            sp[0].y = lerp(sp[0].y, sp[1].y);
+            for b in boxes.iter_mut() {
+                // FUDGE .0001 (32-bit robustness in C).
+                if sp[0].y <= b.ur.y + 0.0001 && sp[0].y >= b.ll.y - 0.0001 {
+                    b.ll.x = b.ll.x.min(sp[0].x);
+                    b.ur.x = b.ur.x.max(sp[0].x);
+                }
+            }
+            si += 1.0;
+        }
+        splinepi += 3;
+    }
+}
+
+const INIT_DELTA: f64 = 10.0;
+const LOOP_TRIES: i32 = 15;
+
+/// `routesplines_(pp, &npoints, polyline)`. `is_loop` reports whether the
+/// path's real edge is a self loop (C refuses those). Returns `None` where C
+/// returns NULL (and `npoints == 0`).
+pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec<Point>> {
+    if checkpath(pp) {
+        return None;
+    }
+    let boxn = pp.boxes.len();
+    if gvdump() {
+        let mut s = format!("RS boxes {boxn}:");
+        for b in &pp.boxes {
+            s.push_str(&format!(" [{} {} {} {}]", b.ll.x, b.ll.y, b.ur.x, b.ur.y));
+        }
+        eprintln!("{s}");
+        eprintln!(
+            "RS ends {},{} {} {} -> {},{} {} {}",
+            pp.start.p.x,
+            pp.start.p.y,
+            pp.start.theta,
+            pp.start.constrained,
+            pp.end.p.x,
+            pp.end.p.y,
+            pp.end.theta,
+            pp.end.constrained
+        );
+    }
+    let boxes = &mut pp.boxes;
+    let mut polypoints: Vec<Point> = Vec::with_capacity(boxn * 8);
+    let flip = if boxn > 1 && boxes[0].ll.y > boxes[1].ll.y {
+        for b in boxes.iter_mut() {
+            let v = b.ur.y;
+            b.ur.y = -b.ll.y;
+            b.ll.y = -v;
+        }
+        true
+    } else {
+        false
+    };
+    if is_loop {
+        return None;
+    }
+    let pt = |x: f64, y: f64| Point::new(x, y);
+    for bi in 0..boxn {
+        let mut next = 0;
+        let mut prev = 0;
+        if bi > 0 {
+            prev = if boxes[bi].ll.y > boxes[bi - 1].ll.y {
+                -1
+            } else {
+                1
+            };
+        }
+        if bi + 1 < boxn {
+            next = if boxes[bi + 1].ll.y > boxes[bi].ll.y {
+                1
+            } else {
+                -1
+            };
+        }
+        let b = boxes[bi];
+        if prev != next {
+            if next == -1 || prev == 1 {
+                polypoints.push(pt(b.ll.x, b.ur.y));
+                polypoints.push(pt(b.ll.x, b.ll.y));
+            } else {
+                polypoints.push(pt(b.ur.x, b.ll.y));
+                polypoints.push(pt(b.ur.x, b.ur.y));
+            }
+        } else if prev == 0 {
+            polypoints.push(pt(b.ll.x, b.ur.y));
+            polypoints.push(pt(b.ll.x, b.ll.y));
+        } else if !(prev == -1 && next == -1) {
+            return None;
+        }
+    }
+    for bi in (0..boxn).rev() {
+        let mut next = 0;
+        let mut prev = 0;
+        if bi + 1 < boxn {
+            prev = if boxes[bi].ll.y > boxes[bi + 1].ll.y {
+                -1
+            } else {
+                1
+            };
+        }
+        if bi > 0 {
+            next = if boxes[bi - 1].ll.y > boxes[bi].ll.y {
+                1
+            } else {
+                -1
+            };
+        }
+        let b = boxes[bi];
+        if prev != next {
+            if next == -1 || prev == 1 {
+                polypoints.push(pt(b.ll.x, b.ur.y));
+                polypoints.push(pt(b.ll.x, b.ll.y));
+            } else {
+                polypoints.push(pt(b.ur.x, b.ll.y));
+                polypoints.push(pt(b.ur.x, b.ur.y));
+            }
+        } else if prev == 0 {
+            polypoints.push(pt(b.ur.x, b.ll.y));
+            polypoints.push(pt(b.ur.x, b.ur.y));
+        } else {
+            if !(prev == -1 && next == -1) {
+                return None;
+            }
+            polypoints.push(pt(b.ur.x, b.ll.y));
+            polypoints.push(pt(b.ur.x, b.ur.y));
+            polypoints.push(pt(b.ll.x, b.ur.y));
+            polypoints.push(pt(b.ll.x, b.ll.y));
+        }
+    }
+    if flip {
+        for b in boxes.iter_mut() {
+            let v = b.ur.y;
+            b.ur.y = -b.ll.y;
+            b.ll.y = -v;
+        }
+        for p in &mut polypoints {
+            p.y *= -1.0;
+        }
+    }
+    for b in boxes.iter_mut() {
+        b.ll.x = f64::MAX;
+        b.ur.x = -f64::MAX;
+    }
+    let eps = [pp.start.p, pp.end.p];
+    let pl = match pshortestpath(&polypoints, eps) {
+        Ok(pl) => pl,
+        Err(_) => {
+            if gvdump() {
+                eprintln!("RS Pshortestpath failed");
+            }
+            return None;
+        }
+    };
+    if gvdump() {
+        let mut s = format!("RS poly {}:", polypoints.len());
+        for p in &polypoints {
+            s.push_str(&format!(" {},{}", p.x, p.y));
+        }
+        eprintln!("{s}");
+        let mut s = format!("RS sp {}:", pl.len());
+        for p in &pl {
+            s.push_str(&format!(" {},{}", p.x, p.y));
+        }
+        eprintln!("{s}");
+    }
+    let spl = if polyline {
+        make_polyline(&pl)
+    } else {
+        let pn = polypoints.len();
+        let edges: Vec<Pedge> = (0..pn)
+            .map(|i| Pedge {
+                a: polypoints[i],
+                b: polypoints[(i + 1) % pn],
+            })
+            .collect();
+        let mut evs = [Point::default(); 2];
+        if pp.start.constrained {
+            evs[0] = Point::new(pp.start.theta.cos(), pp.start.theta.sin());
+        }
+        if pp.end.constrained {
+            evs[1] = Point::new(-pp.end.theta.cos(), -pp.end.theta.sin());
+        }
+        match proutespline(&edges, &pl, evs) {
+            Ok(s) => s,
+            Err(_) => {
+                if gvdump() {
+                    eprintln!("RS Proutespline failed");
+                }
+                return None;
+            }
+        }
+    };
+    let ps = spl;
+    let boxes = &mut pp.boxes;
+    let mut unbounded = true;
+    {
+        let is_horizontal = !ps.is_empty() && ps.iter().all(|p| (ps[0].y - p.y).abs() <= 0.0001);
+        let is_vertical = !ps.is_empty() && ps.iter().all(|p| (ps[0].x - p.x).abs() <= 0.0001);
+        if is_horizontal || is_vertical {
+            for b in boxes.iter_mut() {
+                b.ll.x = ps[0].x;
+                b.ur.x = ps[0].x;
+            }
+            unbounded = false;
+        }
+    }
+    let mut delta = INIT_DELTA;
+    let mut loopcnt = 0;
+    while unbounded && loopcnt < LOOP_TRIES {
+        limit_boxes(boxes, &ps, delta);
+        let mut all = true;
+        for b in boxes.iter() {
+            if b.ll.x == f64::MAX || b.ur.x == -f64::MAX {
+                delta *= 2.0;
+                all = false;
+                break;
+            }
+        }
+        if all {
+            unbounded = false;
+        }
+        loopcnt += 1;
+    }
+    if unbounded {
+        let polyspl = make_polyline(&pl);
+        limit_boxes(boxes, &polyspl, INIT_DELTA);
+    }
+    if gvdump() {
+        let mut s = format!("RS out {}:", ps.len());
+        for p in &ps {
+            s.push_str(&format!(" {},{}", p.x, p.y));
+        }
+        eprintln!("{s}");
+    }
+    Some(ps)
+}
+
+/// `routesplines(pp, &npoints)`.
+pub fn routesplines(pp: &mut Path, is_loop: bool) -> Option<Vec<Point>> {
+    routesplines_(pp, false, is_loop)
+}
+
+/// `routepolylines(pp, &npoints)`.
+pub fn routepolylines(pp: &mut Path, is_loop: bool) -> Option<Vec<Point>> {
+    routesplines_(pp, true, is_loop)
+}
+
+/// `overlap(i0, i1, j0, j1)`: length of the intersection of two intervals.
+fn overlap(i0: f64, i1: f64, j0: f64, j1: f64) -> f64 {
+    if i1 <= j0 {
+        return 0.0;
+    }
+    if i0 >= j1 {
+        return 0.0;
+    }
+    if i0 <= j0 && i1 >= j1 {
+        return i1 - i0;
+    }
+    if j0 <= i0 && j1 >= i1 {
+        return j1 - j0;
+    }
+    if j0 <= i0 && i0 <= j1 {
+        return j1 - i0;
+    }
+    i1 - j0
+}
+
+/// `checkpath(boxn, boxes, thepath)`: drop degenerate boxes, repair boxes that
+/// do not touch or that overlap, and clamp the end points into the end boxes.
+/// Returns true on failure.
+pub fn checkpath(thepath: &mut Path) -> bool {
+    let boxes = &mut thepath.boxes;
+    // Degenerate boxes are squeezed out in place, but C only shortens its local
+    // `boxn`: the caller keeps the original count, so the tail of the array
+    // still holds the last original boxes.
+    let mut i = 0;
+    for bi in 0..boxes.len() {
+        let b = boxes[bi];
+        if (b.ll.y - b.ur.y).abs() < 0.01 || (b.ll.x - b.ur.x).abs() < 0.01 {
+            continue;
+        }
+        boxes[i] = b;
+        i += 1;
+    }
+    let boxn = i;
+    if boxn == 0 {
+        return true;
+    }
+    let ba = boxes[0];
+    if ba.ll.x > ba.ur.x || ba.ll.y > ba.ur.y {
+        return true;
+    }
+    for bi in 0..boxn.saturating_sub(1) {
+        let (lo, hi) = boxes.split_at_mut(bi + 1);
+        let ba = &mut lo[bi];
+        let bb = &mut hi[0];
+        if bb.ll.x > bb.ur.x || bb.ll.y > bb.ur.y {
+            return true;
+        }
+        let mut l = i32::from(ba.ur.x < bb.ll.x);
+        let mut r = i32::from(ba.ll.x > bb.ur.x);
+        let mut d = i32::from(ba.ur.y < bb.ll.y);
+        let mut u = i32::from(ba.ll.y > bb.ur.y);
+        let errs = l + r + d + u;
+        if errs > 0 {
+            if l == 1 {
+                std::mem::swap(&mut ba.ur.x, &mut bb.ll.x);
+                l = 0;
+            } else if r == 1 {
+                std::mem::swap(&mut ba.ll.x, &mut bb.ur.x);
+                r = 0;
+            } else if d == 1 {
+                std::mem::swap(&mut ba.ur.y, &mut bb.ll.y);
+                d = 0;
+            } else if u == 1 {
+                std::mem::swap(&mut ba.ll.y, &mut bb.ur.y);
+                u = 0;
+            }
+            for _ in 0..errs - 1 {
+                if l == 1 {
+                    let xy = (ba.ur.x + bb.ll.x) / 2.0 + 0.5;
+                    ba.ur.x = xy;
+                    bb.ll.x = xy;
+                    l = 0;
+                } else if r == 1 {
+                    let xy = (ba.ll.x + bb.ur.x) / 2.0 + 0.5;
+                    ba.ll.x = xy;
+                    bb.ur.x = xy;
+                    r = 0;
+                } else if d == 1 {
+                    let xy = (ba.ur.y + bb.ll.y) / 2.0 + 0.5;
+                    ba.ur.y = xy;
+                    bb.ll.y = xy;
+                    d = 0;
+                } else if u == 1 {
+                    let xy = (ba.ll.y + bb.ur.y) / 2.0 + 0.5;
+                    ba.ll.y = xy;
+                    bb.ur.y = xy;
+                    u = 0;
+                }
+            }
+        }
+        let xoverlap = overlap(ba.ll.x, ba.ur.x, bb.ll.x, bb.ur.x);
+        let yoverlap = overlap(ba.ll.y, ba.ur.y, bb.ll.y, bb.ur.y);
+        if xoverlap > 0.0 && yoverlap > 0.0 {
+            if xoverlap < yoverlap {
+                if ba.ur.x - ba.ll.x > bb.ur.x - bb.ll.x {
+                    if ba.ur.x < bb.ur.x {
+                        ba.ur.x = bb.ll.x;
+                    } else {
+                        ba.ll.x = bb.ur.x;
+                    }
+                } else if ba.ur.x < bb.ur.x {
+                    bb.ll.x = ba.ur.x;
+                } else {
+                    bb.ur.x = ba.ll.x;
+                }
+            } else if ba.ur.y - ba.ll.y > bb.ur.y - bb.ll.y {
+                if ba.ur.y < bb.ur.y {
+                    ba.ur.y = bb.ll.y;
+                } else {
+                    ba.ll.y = bb.ur.y;
+                }
+            } else if ba.ur.y < bb.ur.y {
+                bb.ll.y = ba.ur.y;
+            } else {
+                bb.ur.y = ba.ll.y;
+            }
+        }
+    }
+    let b0 = boxes[0];
+    let sp = &mut thepath.start.p;
+    if sp.x < b0.ll.x || sp.x > b0.ur.x || sp.y < b0.ll.y || sp.y > b0.ur.y {
+        sp.x = sp.x.max(b0.ll.x);
+        sp.x = sp.x.min(b0.ur.x);
+        sp.y = sp.y.max(b0.ll.y);
+        sp.y = sp.y.min(b0.ur.y);
+    }
+    let bl = boxes[boxn - 1];
+    let ep = &mut thepath.end.p;
+    if ep.x < bl.ll.x || ep.x > bl.ur.x || ep.y < bl.ll.y || ep.y > bl.ur.y {
+        ep.x = ep.x.max(bl.ll.x);
+        ep.x = ep.x.min(bl.ur.x);
+        ep.y = ep.y.max(bl.ll.y);
+        ep.y = ep.y.min(bl.ur.y);
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlap_intervals() {
+        assert_eq!(overlap(0.0, 1.0, 2.0, 3.0), 0.0);
+        assert_eq!(overlap(0.0, 4.0, 1.0, 2.0), 4.0);
+        assert_eq!(overlap(1.0, 2.0, 0.0, 4.0), 4.0);
+        assert_eq!(overlap(1.0, 3.0, 0.0, 2.0), 1.0);
+        assert_eq!(overlap(0.0, 2.0, 1.0, 3.0), 1.0);
+    }
+
+    #[test]
+    fn straight_vertical_route() {
+        let mut p = Path {
+            start: PathPort {
+                p: Point::new(10.0, 100.0),
+                ..PathPort::default()
+            },
+            end: PathPort {
+                p: Point::new(10.0, 0.0),
+                ..PathPort::default()
+            },
+            boxes: vec![
+                BoundingBox::new(0.0, 60.0, 20.0, 100.0),
+                BoundingBox::new(0.0, 40.0, 20.0, 60.0),
+                BoundingBox::new(0.0, 0.0, 20.0, 40.0),
+            ],
+            data: 0,
+        };
+        let ps = routesplines(&mut p, false).unwrap();
+        assert_eq!(ps.len(), 4);
+        assert!(ps.iter().all(|q| (q.x - 10.0).abs() < 1e-9));
+        assert!(p.boxes.iter().all(|b| b.ll.x == 10.0 && b.ur.x == 10.0));
+    }
+}

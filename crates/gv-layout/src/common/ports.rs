@@ -177,6 +177,7 @@ fn compass_port(
             clip,
             bp,
             side,
+            ..PortInfo::default()
         },
         rv,
     )

@@ -43,18 +43,27 @@ pub struct TextLabel {
     pub fontname: String,
 }
 
-/// `port` (only the fields the neato family uses).
-#[derive(Debug, Clone, Default)]
+/// `port` (internal edge endpoint specification), shared by all engines.
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct PortInfo {
-    /// Aiming point relative to the node centre, in points.
+    /// Aiming point relative to the node centre, in points (dot: in
+    /// rank-direction layout space).
     pub p: Point,
+    /// Slope of the edge at the port (`theta`), used when `constrained`.
+    pub theta: f64,
     pub defined: bool,
     pub constrained: bool,
     pub clip: bool,
+    /// `dyna`: the side is resolved per edge (`resolvePort`).
+    pub dyna: bool,
+    /// `order`: port position used by mincross (`MC_SCALE` units).
+    pub order: u8,
     /// Box of the port's record field or HTML cell, in node coordinates.
     pub bp: Option<BoundingBox>,
     /// `BOTTOM`/`RIGHT`/`TOP`/`LEFT` bit mask.
     pub side: u8,
+    /// `name`: the port name, if it was explicitly given.
+    pub name: Option<String>,
 }
 
 /// `bezier`.

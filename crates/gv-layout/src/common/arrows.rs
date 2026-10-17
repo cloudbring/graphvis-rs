@@ -576,6 +576,93 @@ pub fn arrow_start_clip(
     startp
 }
 
+/// `arrowOrthoClip`: shorten the end segments of an orthogonal route by the
+/// arrowhead lengths.
+pub fn arrow_ortho_clip(
+    attrs: &AttrMap,
+    ps: &mut [Point],
+    startp: usize,
+    endp: usize,
+    spl: &mut super::types::Bezier,
+    sflag: u32,
+    eflag: u32,
+) {
+    if sflag != 0 && eflag != 0 && endp == startp {
+        let p = ps[endp];
+        let q = ps[endp + 3];
+        let mut tlen = arrow_length(attrs, sflag);
+        let mut hlen = arrow_length(attrs, eflag);
+        let d = dist(p, q);
+        if hlen + tlen >= d {
+            hlen = d / 3.0;
+            tlen = d / 3.0;
+        }
+        let (s, t);
+        if p.y == q.y {
+            if p.x < q.x {
+                t = Point::new(q.x - hlen, p.y);
+                s = Point::new(p.x + tlen, p.y);
+            } else {
+                t = Point::new(q.x + hlen, p.y);
+                s = Point::new(p.x - tlen, p.y);
+            }
+        } else if p.y < q.y {
+            t = Point::new(p.x, q.y - hlen);
+            s = Point::new(p.x, p.y + tlen);
+        } else {
+            t = Point::new(p.x, q.y + hlen);
+            s = Point::new(p.x, p.y - tlen);
+        }
+        ps[endp] = s;
+        ps[endp + 1] = s;
+        ps[endp + 2] = t;
+        ps[endp + 3] = t;
+        spl.sflag = sflag;
+        spl.sp = p;
+        spl.eflag = eflag;
+        spl.ep = q;
+        return;
+    }
+    if eflag != 0 {
+        let mut hlen = arrow_length(attrs, eflag);
+        let p = ps[endp];
+        let q = ps[endp + 3];
+        let maxd = 0.9 * dist(p, q);
+        if hlen >= maxd {
+            hlen = maxd;
+        }
+        let r = if p.y == q.y {
+            Point::new(if p.x < q.x { q.x - hlen } else { q.x + hlen }, p.y)
+        } else {
+            Point::new(p.x, if p.y < q.y { q.y - hlen } else { q.y + hlen })
+        };
+        ps[endp + 1] = p;
+        ps[endp + 2] = r;
+        ps[endp + 3] = r;
+        spl.eflag = eflag;
+        spl.ep = q;
+    }
+    if sflag != 0 {
+        let mut tlen = arrow_length(attrs, sflag);
+        let p = ps[startp];
+        let q = ps[startp + 3];
+        let maxd = 0.9 * dist(p, q);
+        if tlen >= maxd {
+            tlen = maxd;
+        }
+        let r = if p.y == q.y {
+            Point::new(if p.x < q.x { p.x + tlen } else { p.x - tlen }, p.y)
+        } else {
+            Point::new(p.x, if p.y < q.y { p.y + tlen } else { p.y - tlen })
+        };
+        ps[startp] = r;
+        ps[startp + 1] = r;
+        ps[startp + 2] = q;
+        spl.sflag = sflag;
+        spl.sp = p;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
