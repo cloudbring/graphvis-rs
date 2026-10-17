@@ -539,7 +539,9 @@ pub fn make_label(
         let dimen = lay.dimen;
         return LabelGeometry {
             dimen,
-            space: dimen,
+            // only make_simple_label sets lp->space; an HTML label's stays (0, 0)
+            // unless the shape sets it (poly_init, except fixedsize=shape).
+            space: Point::default(),
             valign: 'c',
             html: true,
             html_failed: lay.label.is_none(),
