@@ -22,6 +22,7 @@ pub use font::{
 pub use geom::{BezierSegment, BoundingBox, Point, Spline};
 pub use graph::{
     AttrDicts, AttrMap, AttrSym, CLUST_NODE_KEY, EdgeData, EdgeId, Graph, GraphKind,
-    NO_EDGE_INIT_KEY, NO_GRAPH_LABEL_KEY, NodeData, NodeId, Port, REGISTERED_CLUSTER_KEY, SEQ_KEY,
-    SubgraphData, SubgraphId, UNPLACED_PORT_LABELS_KEY, UNREGISTERED_CLUSTER_KEY,
+    HEAD_PORT_NAME_KEY, NO_EDGE_INIT_KEY, NO_GRAPH_LABEL_KEY, NodeData, NodeId, Port,
+    REGISTERED_CLUSTER_KEY, SEQ_KEY, SubgraphData, SubgraphId, TAIL_PORT_NAME_KEY,
+    UNPLACED_PORT_LABELS_KEY, UNREGISTERED_CLUSTER_KEY,
 };

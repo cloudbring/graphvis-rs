@@ -107,6 +107,12 @@ impl Output {
                     extra.push((k, fmt(p)));
                 }
             }
+            for (k, p) in [
+                (gv_core::TAIL_PORT_NAME_KEY, &ed.tail_port),
+                (gv_core::HEAD_PORT_NAME_KEY, &ed.head_port),
+            ] {
+                extra.push((k, p.name.clone().unwrap_or_default()));
+            }
             edge_attrs.push(extra);
             let spline = Spline {
                 segments: bzs

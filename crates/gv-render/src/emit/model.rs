@@ -426,16 +426,24 @@ impl<'g> Model<'g> {
                 xlabel,
                 head_label,
                 tail_label,
-                tail_port: e
-                    .tail_port
-                    .compass
-                    .as_deref()
-                    .or(e.tail_port.name.as_deref()),
-                head_port: e
-                    .head_port
-                    .compass
-                    .as_deref()
-                    .or(e.head_port.name.as_deref()),
+                tail_port: e.attrs.get(gv_core::TAIL_PORT_NAME_KEY).map_or_else(
+                    || {
+                        e.tail_port
+                            .compass
+                            .as_deref()
+                            .or(e.tail_port.name.as_deref())
+                    },
+                    |s| Some(s.as_str()).filter(|s| !s.is_empty()),
+                ),
+                head_port: e.attrs.get(gv_core::HEAD_PORT_NAME_KEY).map_or_else(
+                    || {
+                        e.head_port
+                            .compass
+                            .as_deref()
+                            .or(e.head_port.name.as_deref())
+                    },
+                    |s| Some(s.as_str()).filter(|s| !s.is_empty()),
+                ),
             });
         }
 
