@@ -55,6 +55,8 @@ pub struct PortInfo {
     pub bp: Option<BoundingBox>,
     /// `BOTTOM`/`RIGHT`/`TOP`/`LEFT` bit mask.
     pub side: u8,
+    /// `dyna`: the side is chosen per edge by `resolvePorts` (compass `_`).
+    pub dyna: bool,
 }
 
 /// `bezier`.

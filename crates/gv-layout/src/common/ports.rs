@@ -49,6 +49,7 @@ fn compass_port(
     let mut constrain = false;
     let mut clip = true;
     let mut side = 0u8;
+    let mut dyna = false;
     let cp = |y: f64, x: f64| compass_point(g, n, y, x);
     let c: Vec<char> = compass.chars().collect();
     if !c.is_empty() {
@@ -164,7 +165,10 @@ fn compass_port(
                     }
                 }
             }
-            '_' => side = sides,
+            '_' => {
+                dyna = true;
+                side = sides;
+            }
             'c' => {}
             _ => rv = true,
         }
@@ -177,14 +181,39 @@ fn compass_port(
             clip,
             bp,
             side,
+            dyna,
         },
         rv,
     )
 }
 
-fn is_html(label: &str) -> bool {
-    let t = label.trim();
-    t.starts_with('<') && t.ends_with('>')
+/// `portToTbl` / `portToCell` (`htmltable.c`): the box and sides of the
+/// table or cell whose `PORT` matches (case-insensitively).
+fn port_to_tbl(tbl: &gv_geom::html_label::HtmlTbl, id: &str) -> Option<(BoundingBox, u8)> {
+    if tbl
+        .data
+        .port
+        .as_deref()
+        .is_some_and(|p| p.eq_ignore_ascii_case(id))
+    {
+        return Some((tbl.data.bx, tbl.data.sides));
+    }
+    for cell in &tbl.cells {
+        if cell
+            .data
+            .port
+            .as_deref()
+            .is_some_and(|p| p.eq_ignore_ascii_case(id))
+        {
+            return Some((cell.data.bx, cell.data.sides));
+        }
+        if let gv_geom::html_label::HtmlContent::Table(t) = &cell.child
+            && let Some(r) = port_to_tbl(t, id)
+        {
+            return Some(r);
+        }
+    }
+    None
 }
 
 /// `chkPort(portfn, n, s)` for port string `s` (`name[:compass]`).
@@ -201,54 +230,35 @@ fn resolve_port(g: &LGraph<'_>, n: usize, s: &str) -> PortInfo {
     };
     let src = &g.src.nodes[n];
     let nd = &g.nodes[n];
-    let mut node = src.clone();
-    node.width = nd.width;
-    node.height = nd.height;
-    node.pos = Point::default();
-    let label = src.attrs.get("label").map(String::as_str).unwrap_or("\\N");
+    let env = gv_geom::NodeSizeEnv::from_graph_attrs(&g.src.name, &g.src.graph_attrs);
+    let geom = gv_geom::node_geometry(src, &env);
+    let all = BOTTOM | RIGHT | TOP | LEFT;
     match nd.shape.inside {
         InsideFn::Record => {
-            let field = gv_geom::record_layout(&node, &g.src.name, "TB")
+            let field = geom
+                .record
+                .as_ref()
                 .and_then(|rec| rec.find_port(portname).map(|f| f.bbox));
             match field {
-                Some(fb) => {
-                    compass_port(
-                        g,
-                        n,
-                        Some(fb),
-                        compass.unwrap_or("_"),
-                        BOTTOM | RIGHT | TOP | LEFT,
-                        false,
-                    )
-                    .0
-                }
+                Some(fb) => compass_port(g, n, Some(fb), compass.unwrap_or("_"), all, false).0,
                 None => {
                     let whole = BoundingBox::new(-nd.lw, -nd.ht / 2.0, nd.rw, nd.ht / 2.0);
-                    compass_port(
-                        g,
-                        n,
-                        Some(whole),
-                        portname,
-                        BOTTOM | RIGHT | TOP | LEFT,
-                        false,
-                    )
-                    .0
+                    compass_port(g, n, Some(whole), portname, all, false).0
                 }
             }
         }
         _ => {
-            let sides = BOTTOM | RIGHT | TOP | LEFT;
-            if is_html(label)
-                && let Some(tbl) = gv_geom::html_table_layout(&node, &g.src.name)
-                && let Some(pb) = tbl.find_port_box(portname)
+            if let Some(gv_geom::html_label::HtmlLabel::Table(tbl)) =
+                geom.label.html_label.as_deref()
+                && let Some((bp, sides)) = port_to_tbl(tbl, portname)
             {
-                return compass_port(g, n, Some(pb), compass.unwrap_or("_"), sides, false).0;
+                return compass_port(g, n, Some(bp), compass.unwrap_or("_"), sides, false).0;
             }
             let is_box = matches!(
                 src.attrs.get("shape").map(String::as_str),
                 Some("box" | "rect" | "rectangle")
             );
-            compass_port(g, n, None, portname, sides, !is_box).0
+            compass_port(g, n, None, portname, all, !is_box).0
         }
     }
 }
@@ -281,5 +291,64 @@ pub fn resolve_all_ports(g: &mut LGraph<'_>) {
         }
         g.edges[ei].tail_port = tp;
         g.edges[ei].head_port = hp;
+    }
+}
+
+/// `closestSide(n, other, oldport)`: compass of the side of the port box
+/// nearest to `other`, or `None` for the centre.
+fn closest_side(g: &LGraph<'_>, n: usize, other: usize, old: &PortInfo) -> Option<&'static str> {
+    const SIDE_PORT: [&str; 4] = ["s", "e", "n", "w"];
+    let pt = g.nodes[n].coord;
+    let opt = g.nodes[other].coord;
+    let sides = old.side;
+    if sides == 0 || sides == (TOP | BOTTOM | LEFT | RIGHT) {
+        return None;
+    }
+    let nd = &g.nodes[n];
+    let b = old
+        .bp
+        .unwrap_or(BoundingBox::new(-nd.lw, -nd.ht / 2.0, nd.lw, nd.ht / 2.0));
+    let mut rv = None;
+    let mut mind = 0.0;
+    for i in 0..4 {
+        if sides & (1 << i) == 0 {
+            continue;
+        }
+        let p = match i {
+            0 => Point::new((b.ll.x + b.ur.x) / 2.0, b.ll.y),
+            1 => Point::new(b.ur.x, (b.ll.y + b.ur.y) / 2.0),
+            2 => Point::new((b.ll.x + b.ur.x) / 2.0, b.ur.y),
+            _ => Point::new(b.ll.x, (b.ll.y + b.ur.y) / 2.0),
+        };
+        let p = Point::new(p.x + pt.x, p.y + pt.y);
+        let d = super::geom::dist2(p, opt);
+        if rv.is_none() || d < mind {
+            mind = d;
+            rv = Some(SIDE_PORT[i]);
+        }
+    }
+    rv
+}
+
+/// `resolvePorts(e)`: pick the side of dynamic (`_`) ports facing the other end.
+pub fn resolve_ports(g: &mut LGraph<'_>, e: usize) {
+    let (t, h) = (g.edges[e].tail, g.edges[e].head);
+    if g.edges[e].tail_port.dyna {
+        let old = g.edges[e].tail_port.clone();
+        let c = closest_side(g, t, h, &old).unwrap_or("");
+        let mut np = compass_port(g, t, old.bp, c, old.side, false).0;
+        if !old.clip {
+            np.clip = false;
+        }
+        g.edges[e].tail_port = np;
+    }
+    if g.edges[e].head_port.dyna {
+        let old = g.edges[e].head_port.clone();
+        let c = closest_side(g, h, t, &old).unwrap_or("");
+        let mut np = compass_port(g, h, old.bp, c, old.side, false).0;
+        if !old.clip {
+            np.clip = false;
+        }
+        g.edges[e].head_port = np;
     }
 }
