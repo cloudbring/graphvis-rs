@@ -397,7 +397,8 @@ class Gen:
         if e in ("fdp", "sfdp"):
             maybe(0.2, "K", lambda: self.num(0.05, 3))
             maybe(0.05, "maxiter", lambda: str(r.choice([1, 10, 100, 600])))
-            maybe(0.04, "start", lambda: r.choice(["random2", "3", "regular"]))
+            # fdp seeds non-random starts with time(NULL)
+            maybe(0.04, "start", lambda: r.choice(["random2", "3"]))
         if e == "fdp":
             maybe(0.05, "dim", lambda: "2")
         if e == "sfdp":
