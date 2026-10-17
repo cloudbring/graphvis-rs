@@ -2823,6 +2823,7 @@ fn route_all_dot_splines(graph: &mut Graph, vgraph: &VirtualGraph, rankdir: Rank
             &graph.edges[ei],
             &obstacles,
             rankdir_str,
+            graph.kind == gv_core::GraphKind::Directed,
         );
 
         // If this edge is a multi-rank edge with virtual nodes AND `route_edge_spline` produced a single

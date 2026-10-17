@@ -267,13 +267,26 @@ mod tests {
     }
 
     #[test]
+    fn undirected_graph_edges_have_no_arrows_unless_dir_set() {
+        let tail = make_node(0, "a", Point::new(0.0, 100.0), &[("shape", "box")]);
+        let head = make_node(1, "b", Point::new(0.0, 0.0), &[("shape", "box")]);
+        let plain = make_edge(0, tail.id, head.id, &[]);
+        let (sp, _) = route_edge_spline(&tail, &head, &plain, &[], "TB", false);
+        assert!(sp.segments[0].start_arrow.is_none());
+        assert!(sp.segments[0].end_arrow.is_none());
+        let fwd = make_edge(1, tail.id, head.id, &[("dir", "forward")]);
+        let (sp, _) = route_edge_spline(&tail, &head, &fwd, &[], "TB", false);
+        assert!(sp.segments[0].end_arrow.is_some());
+    }
+
+    #[test]
     fn test_route_edge_spline_arrows_self_loop_and_obstacles() {
         let tail = make_node(0, "a", Point::new(0.0, 100.0), &[("shape", "box")]);
         let head = make_node(1, "b", Point::new(0.0, 0.0), &[("shape", "box")]);
 
         // 1. Standard forward edge with label
         let edge = make_edge(0, tail.id, head.id, &[("label", "step")]);
-        let (spline, label_pos) = route_edge_spline(&tail, &head, &edge, &[], "TB");
+        let (spline, label_pos) = route_edge_spline(&tail, &head, &edge, &[], "TB", true);
         assert_eq!(spline.segments.len(), 1);
         let seg = &spline.segments[0];
         assert_eq!(seg.points.len(), 4);
@@ -287,13 +300,13 @@ mod tests {
 
         // 2. Bidirectional edge (`dir=both`)
         let both_edge = make_edge(1, tail.id, head.id, &[("dir", "both")]);
-        let (both_sp, _) = route_edge_spline(&tail, &head, &both_edge, &[], "TB");
+        let (both_sp, _) = route_edge_spline(&tail, &head, &both_edge, &[], "TB", true);
         assert!(both_sp.segments[0].start_arrow.is_some());
         assert!(both_sp.segments[0].end_arrow.is_some());
 
         // 3. Self-loop (`tail.id == head.id`)
         let self_edge = make_edge(2, tail.id, tail.id, &[("label", "loop")]);
-        let (self_sp, self_lbl) = route_edge_spline(&tail, &tail, &self_edge, &[], "TB");
+        let (self_sp, self_lbl) = route_edge_spline(&tail, &tail, &self_edge, &[], "TB", true);
         let self_seg = &self_sp.segments[0];
         assert_eq!(self_seg.points.len(), 4);
         // Control points extend to the right of tail's right boundary
@@ -304,7 +317,7 @@ mod tests {
 
         // 4. Obstacle avoidance around an intermediate box at (0, 50)
         let obstacle = BoundingBox::new(-27.0, 32.0, 27.0, 68.0);
-        let (detour_sp, _) = route_edge_spline(&tail, &head, &edge, &[obstacle], "TB");
+        let (detour_sp, _) = route_edge_spline(&tail, &head, &edge, &[obstacle], "TB", true);
         let mid = spline_midpoint(&detour_sp).unwrap();
         // Midpoint of the detoured spline must bypass the obstacle horizontally
         assert!(mid.x.abs() > 27.0);

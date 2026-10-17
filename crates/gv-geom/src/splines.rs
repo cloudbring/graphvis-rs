@@ -257,13 +257,10 @@ pub fn arrow_polygon_points(tip: Point, stem_end: Point, arrowsize: f64) -> [Poi
 }
 
 /// Resolves whether an edge has a start arrow (`arrowtail`) and/or end arrow (`arrowhead`),
-/// returning `(start_arrow_len, end_arrow_len)` in points.
-pub fn resolve_edge_arrow_lengths(edge: &EdgeData) -> (f64, f64) {
-    let default_dir = if edge.attrs.get("_undirected").is_some_and(|v| v == "true") {
-        "none"
-    } else {
-        "forward"
-    };
+/// returning `(start_arrow_len, end_arrow_len)` in points. The default `dir` is `forward` for
+/// directed graphs and `none` for undirected ones (`arrow_flags` in `lib/common/arrows.c`).
+pub fn resolve_edge_arrow_lengths(edge: &EdgeData, directed: bool) -> (f64, f64) {
+    let default_dir = if directed { "forward" } else { "none" };
 
     let dir = edge.attrs.get("dir").map_or(default_dir, |s| s.trim());
 
@@ -528,6 +525,7 @@ pub fn route_edge_spline(
     edge: &EdgeData,
     obstacles: &[BoundingBox],
     rankdir: &str,
+    directed: bool,
 ) -> (Spline, Option<Point>) {
     let parallel_index = edge
         .attrs
@@ -548,11 +546,13 @@ pub fn route_edge_spline(
         rankdir,
         parallel_index,
         parallel_count,
+        directed,
     )
 }
 
 /// Routes a cubic Bezier [`Spline`] with explicit `parallel_index` (`0..parallel_count`)
 /// for multi-edge bundles between the same pair of nodes.
+#[allow(clippy::too_many_arguments)]
 pub fn route_edge_spline_with_offset(
     tail: &NodeData,
     head: &NodeData,
@@ -561,9 +561,10 @@ pub fn route_edge_spline_with_offset(
     rankdir: &str,
     parallel_index: usize,
     parallel_count: usize,
+    directed: bool,
 ) -> (Spline, Option<Point>) {
     let (tail_port, head_port) = effective_ports(edge);
-    let (start_arrow_len, end_arrow_len) = resolve_edge_arrow_lengths(edge);
+    let (start_arrow_len, end_arrow_len) = resolve_edge_arrow_lengths(edge, directed);
 
     // 1. Self-loop (`tail.id == head.id` or identical positions with same id).
     if tail.id == head.id {

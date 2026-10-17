@@ -89,8 +89,14 @@ fn route_all_non_hierarchical_splines(graph: &mut Graph) {
             Vec::new()
         };
 
-        let (mut spline, mut label_pos) =
-            route_edge_spline(&tail_node, &head_node, &graph.edges[ei], &obstacles, "TB");
+        let (mut spline, mut label_pos) = route_edge_spline(
+            &tail_node,
+            &head_node,
+            &graph.edges[ei],
+            &obstacles,
+            "TB",
+            graph.kind == gv_core::GraphKind::Directed,
+        );
 
         if tail_id == head_id && self_loop_index[ei] > 0 {
             let extra = (self_loop_index[ei] as f64) * 14.0;
