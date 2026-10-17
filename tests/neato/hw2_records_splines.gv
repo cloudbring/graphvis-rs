@@ -1,0 +1,12 @@
+digraph rec {
+layout=neato;
+
+splines=true;
+node [shape=record];
+s1 [label="<f0> left|<f1> mid|<f2> right"];
+s2 [label="<f0> one|<f1> two"];
+s3 [label="hello\nworld |{ b |{c|<here> d|e}| f}| g | h"];
+s1:f1 -> s2:f0;
+s1:f2 -> s3:here;
+s2:f1 -> s3:f0;
+}

@@ -1,9 +1,15 @@
 //! Graphviz layout engines in pure Rust (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`).
 
+pub mod common;
+pub mod cutil;
 pub mod dot;
 pub mod dotgen;
 pub mod force_circular;
+pub mod neatogen;
 pub mod nop;
+pub mod pack;
+pub mod sfdpgen;
+pub mod sparse;
 
 use gv_core::{Graph, GraphvizError, Result};
 
@@ -78,7 +84,7 @@ pub fn layout_graph_with_options(
         LayoutEngine::Neato if options.nop > 0 => nop::layout_nop(graph, options.nop),
         LayoutEngine::Nop1 => nop::layout_nop(graph, 1),
         LayoutEngine::Nop2 => nop::layout_nop(graph, 2),
-        LayoutEngine::Neato => force_circular::layout_neato(graph),
+        LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph),
         LayoutEngine::Fdp => force_circular::layout_fdp(graph, false),
         LayoutEngine::Sfdp => force_circular::layout_fdp(graph, true),
         LayoutEngine::Twopi => force_circular::layout_twopi(graph),

@@ -1,0 +1,3 @@
+digraph pa {
+layout=neato;
+ edge [penwidth=3, arrowsize=1.5]; a -> b [arrowhead=diamond]; b -> c [arrowhead=dot]; c -> a [arrowhead=crow, dir=both, arrowtail=tee]; }
