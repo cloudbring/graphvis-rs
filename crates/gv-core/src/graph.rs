@@ -89,6 +89,27 @@ pub struct Graph {
     /// prints an anonymous subgraph's name as `%<id>`.
     #[serde(default)]
     pub anon_subgraph_ids: BTreeMap<u32, u64>,
+    /// cgraph attribute dictionaries (`Agdatadict_t`) as built while parsing: index 0 is the
+    /// root graph, index `i + 1` subgraph `i`. Writers that reproduce `agwrite` use them to
+    /// tell local declarations from inherited values.
+    #[serde(default)]
+    pub dicts: Vec<AttrDicts>,
+}
+
+/// One declared attribute (`Agsym_t`): its default value and whether a root attribute
+/// statement set it (`sym->print`).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct AttrSym {
+    pub defval: String,
+    pub print: bool,
+}
+
+/// The local graph, node and edge dictionaries of one graph or subgraph.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct AttrDicts {
+    pub graph: BTreeMap<String, AttrSym>,
+    pub node: BTreeMap<String, AttrSym>,
+    pub edge: BTreeMap<String, AttrSym>,
 }
 
 impl Graph {
@@ -107,6 +128,7 @@ impl Graph {
             bb: BoundingBox::default(),
             html_strings: BTreeSet::new(),
             anon_subgraph_ids: BTreeMap::new(),
+            dicts: Vec::new(),
         }
     }
 

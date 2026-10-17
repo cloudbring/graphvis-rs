@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+mod agwrite;
 pub mod emit;
 pub mod json;
 mod svg_engine;
@@ -107,9 +108,98 @@ fn attached(
     (g, forced)
 }
 
+/// Private graph attribute the no-layout engine sets (`gv_layout::nop`).
+const NOP_KEY: &str = "\u{1}nop";
+
+/// Records the attributes the layout and renderers set in cgraph's dictionaries:
+/// `safe_dcl` for node and edge attributes, and graph values as local symbols (`agxset`).
+fn sync_dicts(g: &mut Graph, orig: &Graph) {
+    use gv_core::AttrSym;
+    let set_graph = |d: &mut std::collections::BTreeMap<String, AttrSym>,
+                     now: &gv_core::AttrMap,
+                     before: &gv_core::AttrMap| {
+        for (k, v) in now {
+            if before.get(k) != Some(v) {
+                d.entry(k.clone()).or_default().defval = v.clone();
+            }
+        }
+    };
+    let (root_now, root_before) = (g.graph_attrs.clone(), &orig.graph_attrs);
+    // safe_dcl declares graph attributes on the root before setting them.
+    for k in root_now.keys() {
+        if !root_before.contains_key(k) {
+            g.dicts[0].graph.entry(k.clone()).or_default();
+        }
+    }
+    set_graph(&mut g.dicts[0].graph, &root_now, root_before);
+    for i in 0..g.subgraphs.len() {
+        let now = g.subgraphs[i].graph_attrs.clone();
+        for k in now.keys() {
+            if !orig.subgraphs[i].graph_attrs.contains_key(k) {
+                g.dicts[0].graph.entry(k.clone()).or_default();
+            }
+        }
+        set_graph(
+            &mut g.dicts[i + 1].graph,
+            &now,
+            &orig.subgraphs[i].graph_attrs,
+        );
+    }
+    let mut node_keys = std::collections::BTreeSet::new();
+    for n in &g.nodes {
+        node_keys.extend(n.attrs.keys().cloned());
+    }
+    for k in node_keys {
+        if !g.dicts.iter().any(|d| d.node.contains_key(&k)) {
+            g.dicts[0].node.insert(k, AttrSym::default());
+        }
+    }
+    let mut edge_keys = std::collections::BTreeSet::new();
+    for e in &g.edges {
+        edge_keys.extend(e.attrs.keys().cloned());
+    }
+    for k in edge_keys {
+        if !g.dicts.iter().any(|d| d.edge.contains_key(&k)) {
+            g.dicts[0].edge.insert(k, AttrSym::default());
+        }
+    }
+}
+
+/// dot's `mark_lowclusters`: an edge whose ends both lie in a cluster belongs to it and its
+/// ancestors.
+fn low_cluster_edges(graph: &Graph) -> Vec<std::collections::BTreeSet<usize>> {
+    let n = graph.subgraphs.len();
+    let mut parent: Vec<Option<usize>> = vec![None; n];
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        for c in &sg.subgraphs {
+            parent[c.0 as usize] = Some(i);
+        }
+    }
+    let mut sets = vec![std::collections::BTreeSet::new(); n];
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        if !sg.is_cluster {
+            continue;
+        }
+        let members: std::collections::BTreeSet<u32> = sg.nodes.iter().map(|x| x.0).collect();
+        for (ei, e) in graph.edges.iter().enumerate() {
+            if members.contains(&e.tail.0) && members.contains(&e.head.0) {
+                let mut cur = Some(i);
+                while let Some(c) = cur {
+                    sets[c].insert(ei);
+                    cur = parent[c];
+                }
+            }
+        }
+    }
+    sets
+}
+
 /// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
 pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Result<String> {
     if format == OutputFormat::Canon {
+        if graph.dicts.len() == graph.subgraphs.len() + 1 {
+            return Ok(agwrite::agwrite(graph, &[]));
+        }
         return Ok(write_canon(graph));
     }
     let m = emit::model::Model::build(graph);
@@ -121,8 +211,18 @@ pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Re
         }
         OutputFormat::Dot | OutputFormat::Xdot => {
             let (mut g, forced) = attached(&m, format == OutputFormat::Xdot);
-            emit::output::propagate_inherited(&mut g, graph, &forced);
-            gv_parser::write_canon_forced(&g, &forced)
+            if g.dicts.len() == g.subgraphs.len() + 1 {
+                sync_dicts(&mut g, graph);
+                let extra = if graph.graph_attrs.contains_key(NOP_KEY) {
+                    Vec::new()
+                } else {
+                    low_cluster_edges(graph)
+                };
+                agwrite::agwrite(&g, &extra)
+            } else {
+                emit::output::propagate_inherited(&mut g, graph, &forced);
+                gv_parser::write_canon_forced(&g, &forced)
+            }
         }
         OutputFormat::Plain => {
             let zoom = emit::job::Job::new(

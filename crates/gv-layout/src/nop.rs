@@ -898,6 +898,9 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
 
     // Store the results.
     graph.bb = bb;
+    graph
+        .graph_attrs
+        .insert("\u{1}nop".to_string(), nop.to_string());
     // Graph and cluster label positions go to a private key: `lp` itself keeps the parsed
     // value, which subgraphs inherited when they were opened.
     if let Some((l, _, _)) = root_label {
