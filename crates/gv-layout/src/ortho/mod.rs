@@ -11,7 +11,12 @@
 //! The router works on any layout implementing [`OrthoGraph`].
 
 // Faithful ports of C loops index several arrays in lockstep.
-#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+#![allow(
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    clippy::neg_multiply,
+    clippy::needless_late_init
+)]
 
 pub mod maze;
 pub mod partition;

@@ -1,0 +1,6 @@
+graph C3 {
+layout=circo;
+
+
+0 -- 1 -- 2 -- 0;
+}

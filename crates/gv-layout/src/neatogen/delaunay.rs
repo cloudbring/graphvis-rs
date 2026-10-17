@@ -1,10 +1,14 @@
 //! Delaunay triangulation edges (`delaunay_tri` in `lib/neatogen/delaunay.c`).
 //!
-//! C uses GTS's incremental Delaunay triangulation. This is an incremental
-//! Bowyer–Watson triangulation inside an enclosing triangle, which yields
-//! the same edge set for points in general position; ties between
-//! co-circular points and the edge enumeration order (a GTS hash table) may
-//! differ. Coincident points are merged like `gts_delaunay_add_vertex`.
+//! C uses GTS's incremental Delaunay triangulation inside the enclosing
+//! triangle of `gts_triangle_enclosing(..., 100)`, with Shewchuk's exact
+//! `incircle`. This is an incremental Bowyer–Watson triangulation inside the
+//! same enclosing triangle with exact-sign predicates ([`super::robust`]),
+//! which yields the same triangulation unless four points are exactly
+//! co-circular; the edge enumeration order (a GTS hash table) may differ.
+//! Coincident points are merged like `gts_delaunay_add_vertex`.
+
+use super::robust::{incircle, orient2d};
 
 #[derive(Clone, Copy)]
 struct Tri {
@@ -12,19 +16,49 @@ struct Tri {
 }
 
 fn orient(ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy: f64) -> f64 {
-    (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+    orient2d((ax, ay), (bx, by), (cx, cy))
 }
 
 fn in_circumcircle(p: &[(f64, f64)], t: &Tri, q: (f64, f64)) -> bool {
     let (a, b, c) = (p[t.v[0]], p[t.v[1]], p[t.v[2]]);
-    let (adx, ady) = (a.0 - q.0, a.1 - q.1);
-    let (bdx, bdy) = (b.0 - q.0, b.1 - q.1);
-    let (cdx, cdy) = (c.0 - q.0, c.1 - q.1);
-    let det = (adx * adx + ady * ady) * (bdx * cdy - cdx * bdy)
-        - (bdx * bdx + bdy * bdy) * (adx * cdy - cdx * ady)
-        + (cdx * cdx + cdy * cdy) * (adx * bdy - bdx * ady);
-    let o = orient(a.0, a.1, b.0, b.1, c.0, c.1);
+    let det = incircle(a, b, c, q);
+    let o = orient2d(a, b, c);
     if o > 0.0 { det > 0.0 } else { det < 0.0 }
+}
+
+/// `gts_triangle_enclosing(klass, points, scale)`: an equilateral triangle
+/// around the bounding box of the points (C fuses the marked multiply-adds).
+fn triangle_enclosing(pts: &[(f64, f64)], scale: f64) -> [(f64, f64); 3] {
+    // GTS walks the list built with g_slist_prepend, i.e. last point first.
+    let mut it = pts.iter().rev();
+    let first = it.next().expect("points");
+    let (mut xmax, mut xmin, mut ymax, mut ymin) = (first.0, first.0, first.1, first.1);
+    for p in it {
+        if p.0 > xmax {
+            xmax = p.0;
+        } else if p.0 < xmin {
+            xmin = p.0;
+        }
+        if p.1 > ymax {
+            ymax = p.1;
+        } else if p.1 < ymin {
+            ymin = p.1;
+        }
+    }
+    const SQRT3: f64 = 1.73205080757;
+    let xo = (xmax + xmin) / 2.0;
+    let yo = (ymax + ymin) / 2.0;
+    let dx = xmax - xo;
+    let dy = ymax - yo;
+    let mut r = scale * dx.mul_add(dx, dy * dy).sqrt();
+    if r == 0.0 {
+        r = scale;
+    }
+    [
+        (r.mul_add(SQRT3, xo), yo - r),
+        (xo, r.mul_add(2.0, yo)),
+        ((-r).mul_add(SQRT3, xo), yo - r),
+    ]
 }
 
 /// Edges `(i, j)` (`i < j`, sorted) of the Delaunay triangulation of the
@@ -56,19 +90,11 @@ pub fn delaunay_tri(x: &[f64], y: &[f64]) -> Vec<(usize, usize)> {
 pub fn delaunay_edges(x: &[f64], y: &[f64]) -> Vec<(usize, usize)> {
     let n = x.len();
     let mut pts: Vec<(f64, f64)> = (0..n).map(|i| (x[i], y[i])).collect();
-    // Enclosing triangle, like gts_triangle_enclosing(..., 100).
-    let (mut xmin, mut ymin, mut xmax, mut ymax) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
-    for &(px, py) in &pts {
-        xmin = xmin.min(px);
-        ymin = ymin.min(py);
-        xmax = xmax.max(px);
-        ymax = ymax.max(py);
+    if n == 0 {
+        return Vec::new();
     }
-    let d = (xmax - xmin).max(ymax - ymin).max(1.0) * 100.0;
-    let (cx, cy) = ((xmin + xmax) / 2.0, (ymin + ymax) / 2.0);
-    pts.push((cx - 2.0 * d, cy - d));
-    pts.push((cx + 2.0 * d, cy - d));
-    pts.push((cx, cy + 2.0 * d));
+    let enc = triangle_enclosing(&pts, 100.0);
+    pts.extend_from_slice(&enc);
     let mut tris = vec![Tri {
         v: [n, n + 1, n + 2],
     }];

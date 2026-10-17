@@ -161,10 +161,7 @@ impl<T> Cdt<T> {
                         self.rrotate(root, t);
                         self.set_left(link, *r, Some(t));
                         *r = P::N(t);
-                        match self.nodes[t].left {
-                            Some(x) => root = x,
-                            None => return None,
-                        }
+                        root = self.nodes[t].left?;
                     } else if c2 == Ordering::Equal {
                         self.set_left(link, *r, Some(root));
                         *r = P::N(root);
@@ -174,10 +171,7 @@ impl<T> Cdt<T> {
                         *l = P::N(t);
                         self.set_left(link, *r, Some(root));
                         *r = P::N(root);
-                        match self.nodes[t].right {
-                            Some(x) => root = x,
-                            None => return None,
-                        }
+                        root = self.nodes[t].right?;
                     }
                 } else {
                     self.set_left(link, *r, Some(root));
@@ -190,10 +184,7 @@ impl<T> Cdt<T> {
                     self.lrotate(root, t);
                     self.set_right(link, *l, Some(t));
                     *l = P::N(t);
-                    match self.nodes[t].right {
-                        Some(x) => root = x,
-                        None => return None,
-                    }
+                    root = self.nodes[t].right?;
                 } else if c2 == Ordering::Equal {
                     self.set_right(link, *l, Some(root));
                     *l = P::N(root);
@@ -203,10 +194,7 @@ impl<T> Cdt<T> {
                     *r = P::N(t);
                     self.set_right(link, *l, Some(root));
                     *l = P::N(root);
-                    match self.nodes[t].left {
-                        Some(x) => root = x,
-                        None => return None,
-                    }
+                    root = self.nodes[t].left?;
                 }
             } else {
                 self.set_right(link, *l, Some(root));

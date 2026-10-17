@@ -1,0 +1,3 @@
+digraph rm {
+layout=twopi;
+ a -> b; b -> a; b -> c; c -> b; c -> a; d -> a; d -> d; }

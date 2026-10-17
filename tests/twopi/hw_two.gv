@@ -1,0 +1,3 @@
+graph two {
+layout=twopi;
+ a -- b; }

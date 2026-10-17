@@ -1,0 +1,8 @@
+graph cube {
+layout=circo;
+
+rotate=90;
+a -- b -- c -- d -- a;
+e -- f -- g -- h -- e;
+a -- e; b -- f; c -- g; d -- h;
+}

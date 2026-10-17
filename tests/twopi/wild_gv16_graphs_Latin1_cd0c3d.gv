@@ -1,0 +1,7 @@
+digraph G {
+layout=twopi;
+
+graph [charset=latin1]
+node [fontsize=10]
+a [label = "���������������������������"];
+}

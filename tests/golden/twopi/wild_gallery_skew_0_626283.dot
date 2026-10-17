@@ -1,0 +1,18 @@
+graph {
+	graph [bb="0,0,258.01,106",
+		layout=twopi
+	];
+	node [label="\N"];
+	SkewLeft	[height=0.5,
+		pos="189.31,88",
+		shape=polygon,
+		sides=4,
+		skew=-.5,
+		width=1.9084];
+	SkewRight	[height=0.5,
+		pos="76.311,18",
+		shape=polygon,
+		sides=4,
+		skew=.5,
+		width=2.1197];
+}

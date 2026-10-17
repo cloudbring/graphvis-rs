@@ -1,0 +1,29 @@
+graph labels {
+	graph [bb="0,0,78.393,180",
+		layout=twopi
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		label="node A",
+		pos="39.196,90",
+		width=1.0888];
+	b	[height=0.5,
+		pos="39.196,162",
+		shape=box,
+		width=0.75];
+	a -- b	[label=ab,
+		lp="32.589,134.28",
+		pos="39.196,108.17 39.196,119 39.196,132.71 39.196,143.59"];
+	c	[height=0.5,
+		pos="39.196,18",
+		shape=diamond,
+		width=0.75];
+	b -- c	[head_lp="35.696,44.944",
+		headlabel=h,
+		label=bc,
+		lp="32.589,98.553",
+		pos="39.196,143.76 39.196,116.21 39.196,64.272 39.196,36.544",
+		tail_lp="41.141,135.36",
+		taillabel=t];
+	c -- a	[pos="39.196,36.542 39.196,47.375 39.196,60.991 39.196,71.77"];
+}
