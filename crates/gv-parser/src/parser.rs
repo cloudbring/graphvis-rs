@@ -24,25 +24,56 @@ impl SimpleItem {
     }
 }
 
+/// Attributes declared before the graph body, as set by the command line flags
+/// `-Gname=value`, `-Nname=value` and `-Ename=value`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GlobalAttrs {
+    pub graph: AttrMap,
+    pub node: AttrMap,
+    pub edge: AttrMap,
+}
+
 pub struct Parser {
     tokens: Vec<Token>,
     pos: usize,
     graph: Graph,
     scope_stack: Vec<SubgraphId>,
+    globals: GlobalAttrs,
 }
 
 impl Parser {
-    pub fn parse_str(input: &str) -> Result<Graph> {
+    fn new(input: &str, globals: &GlobalAttrs) -> Result<Self> {
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize_all()?;
-        let mut parser = Self {
+        Ok(Self {
             tokens,
             pos: 0,
             graph: Graph::new("", GraphKind::Undirected, false),
             scope_stack: Vec::new(),
-        };
+            globals: globals.clone(),
+        })
+    }
+
+    /// Parses the first graph in `input`.
+    pub fn parse_str(input: &str) -> Result<Graph> {
+        let mut parser = Self::new(input, &GlobalAttrs::default())?;
         parser.parse_graph()?;
         Ok(parser.graph)
+    }
+
+    /// Parses every graph in `input`, applying `globals` before each graph body.
+    pub fn parse_all(input: &str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
+        let mut parser = Self::new(input, globals)?;
+        let mut graphs = Vec::new();
+        while parser.peek().kind != TokenKind::Eof {
+            parser.scope_stack.clear();
+            parser.parse_graph()?;
+            graphs.push(std::mem::replace(
+                &mut parser.graph,
+                Graph::new("", GraphKind::Undirected, false),
+            ));
+        }
+        Ok(graphs)
     }
 
     fn peek(&self) -> &Token {
@@ -87,9 +118,15 @@ impl Parser {
 
     fn parse_atom(&mut self) -> Result<String> {
         let tok = self.peek().clone();
+        let mut is_html = false;
         let mut val = match tok.kind {
-            TokenKind::Ident(s) | TokenKind::Quoted(s) | TokenKind::Html(s) => {
+            TokenKind::Ident(s) | TokenKind::Quoted(s) => {
                 self.advance();
+                s
+            }
+            TokenKind::Html(s) => {
+                self.advance();
+                is_html = true;
                 s
             }
             _ => {
@@ -111,6 +148,7 @@ impl Parser {
             match next_tok.kind {
                 TokenKind::Ident(s) | TokenKind::Quoted(s) | TokenKind::Html(s) => {
                     self.advance();
+                    is_html = false;
                     val.push_str(&s);
                 }
                 _ => {
@@ -126,6 +164,9 @@ impl Parser {
             }
         }
 
+        if is_html {
+            self.graph.html_strings.insert(val.clone());
+        }
         Ok(val)
     }
 
@@ -202,6 +243,9 @@ impl Parser {
         };
 
         self.graph = Graph::new(name, kind, strict);
+        self.graph.graph_attrs.extend(self.globals.graph.clone());
+        self.graph.node_defaults.extend(self.globals.node.clone());
+        self.graph.edge_defaults.extend(self.globals.edge.clone());
 
         self.expect(&TokenKind::LBrace)?;
         self.parse_stmt_list()?;

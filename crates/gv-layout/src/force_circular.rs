@@ -11,7 +11,7 @@ use crate::dot::{
     compute_cluster_bounding_boxes, node_bounding_box, normalize_graph_coordinates, parse_attr_f64,
 };
 use gv_core::{BoundingBox, Graph, NodeId, Point, Result, SubgraphId};
-use gv_geom::{shapes::compute_node_dimensions, splines::route_edge_spline};
+use gv_geom::splines::route_edge_spline;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::f64::consts::{PI, TAU};
 
@@ -19,10 +19,7 @@ const POINTS_PER_INCH: f64 = 72.0;
 
 /// Common initialization for non-hierarchical engines: computes node dimensions and checks for empty graphs.
 fn init_non_hierarchical_nodes(graph: &mut Graph) -> bool {
-    let graph_name = graph.name.clone();
-    for node in &mut graph.nodes {
-        compute_node_dimensions(node, &graph_name);
-    }
+    gv_geom::node_size::size_graph_nodes(graph);
     if graph.nodes.is_empty() {
         graph.bb = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
         return false;
@@ -89,8 +86,14 @@ fn route_all_non_hierarchical_splines(graph: &mut Graph) {
             Vec::new()
         };
 
-        let (mut spline, mut label_pos) =
-            route_edge_spline(&tail_node, &head_node, &graph.edges[ei], &obstacles, "TB");
+        let (mut spline, mut label_pos) = route_edge_spline(
+            &tail_node,
+            &head_node,
+            &graph.edges[ei],
+            &obstacles,
+            "TB",
+            graph.kind == gv_core::GraphKind::Directed,
+        );
 
         if tail_id == head_id && self_loop_index[ei] > 0 {
             let extra = (self_loop_index[ei] as f64) * 14.0;

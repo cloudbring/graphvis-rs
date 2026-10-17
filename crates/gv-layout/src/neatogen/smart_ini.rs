@@ -20,6 +20,6 @@ pub fn sparse_stress_subspace_majorization_kd(
     _reweight_graph: bool,
     _n_iterations: usize,
     _num_centers: usize,
-) -> Result<(), ()> {
+) -> Result<(), super::SolverError> {
     Ok(())
 }

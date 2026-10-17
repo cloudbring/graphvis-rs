@@ -51,9 +51,9 @@ const NAMES: &[(&str, u32)] = &[
 
 fn match_frag<'s>(name: &'s str, table: &[(&str, u32)], flag: &mut u32) -> &'s str {
     for (n, t) in table {
-        if name.starts_with(n) {
+        if let Some(rest) = name.strip_prefix(n) {
             *flag |= t;
-            return &name[n.len()..];
+            return rest;
         }
     }
     name
@@ -584,7 +584,8 @@ mod tests {
     fn default_arrow_length() {
         let a = AttrMap::new();
         let l = arrow_length(&a, ARR_TYPE_NORM);
-        assert!((l - 10.0).abs() < 0.2, "{l}");
+        // Value computed by the C arrow_length_normal for penwidth 1.
+        assert!((l - 11.513_544_292_886_934).abs() < 1e-12, "{l}");
         assert_eq!(arrow_flags(&a, true), (0, 1));
         assert_eq!(arrow_flags(&a, false), (0, 0));
     }

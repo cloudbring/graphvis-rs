@@ -13,6 +13,9 @@
 //! - [`routing`] — obstacle-avoiding edges (`splines=true|polyline`)
 //! - [`adjust`] — `adjust.c` overlap removal
 
+// Faithful ports of numeric C loops index several arrays in lockstep.
+#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+
 pub mod adjust;
 pub mod bfs;
 pub mod conjgrad;
@@ -54,3 +57,15 @@ pub struct NeatoParams {
     pub initial_dist: f64,
     pub max_iter: i64,
 }
+
+/// A numeric solver failure (C returns a negative iteration count).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SolverError;
+
+impl std::fmt::Display for SolverError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("neato solver failure")
+    }
+}
+
+impl std::error::Error for SolverError {}

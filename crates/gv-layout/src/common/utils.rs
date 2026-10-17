@@ -164,24 +164,6 @@ pub fn c_round(f: f64) -> i64 {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn strtod_prefixes() {
-        assert_eq!(parse_leading_f64(" 2.5in"), Some(2.5));
-        assert_eq!(parse_leading_f64("-.5"), Some(-0.5));
-        assert_eq!(parse_leading_f64("1e2x"), Some(100.0));
-        assert_eq!(parse_leading_f64("1e"), Some(1.0));
-        assert_eq!(parse_leading_f64("abc"), None);
-        assert_eq!(parse_leading_int("12,3"), Some(12));
-        assert!(mapbool(Some("TRUE")));
-        assert!(mapbool(Some("2")));
-        assert!(!mapbool(Some("x")));
-    }
-}
-
 /// `compute_bb(g)` for a subgraph view: nodes, edge control points and
 /// positioned labels, top-level cluster boxes and (for the root) the graph
 /// label if already placed. Stores the result in `sub.bb` (and the root's
@@ -239,4 +221,22 @@ pub fn compute_bb(g: &mut super::types::LGraph<'_>, sub: &mut super::types::Sub,
 pub fn coord(g: &super::types::LGraph<'_>, n: usize) -> gv_core::Point {
     let p = &g.nodes[n].pos;
     gv_core::Point::new(72.0 * p[0], 72.0 * p[1])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strtod_prefixes() {
+        assert_eq!(parse_leading_f64(" 2.5in"), Some(2.5));
+        assert_eq!(parse_leading_f64("-.5"), Some(-0.5));
+        assert_eq!(parse_leading_f64("1e2x"), Some(100.0));
+        assert_eq!(parse_leading_f64("1e"), Some(1.0));
+        assert_eq!(parse_leading_f64("abc"), None);
+        assert_eq!(parse_leading_int("12,3"), Some(12));
+        assert!(mapbool(Some("TRUE")));
+        assert!(mapbool(Some("2")));
+        assert!(!mapbool(Some("x")));
+    }
 }

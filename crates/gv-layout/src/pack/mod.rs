@@ -6,6 +6,9 @@
 //! positions (`ND_pos`, inches), sizes and installed edge splines, and
 //! translates each component like `shiftGraphs`.
 
+// Faithful ports of numeric C loops index several arrays in lockstep.
+#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+
 use crate::common::geom::{add, sub as psub};
 use crate::common::types::{LGraph, P_PIN, Sub};
 use crate::common::utils::{compute_bb, coord, parse_leading_int};

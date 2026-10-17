@@ -68,7 +68,7 @@ pub fn proutespline(
     barriers: &[Pedge],
     input_route: &[Ppoint],
     endpoint_slopes: [Ppoint; 2],
-) -> Result<Vec<Ppoint>, ()> {
+) -> Result<Vec<Ppoint>, super::PathplanError> {
     let ev0 = normv(endpoint_slopes[0]);
     let ev1 = normv(endpoint_slopes[1]);
     let mut ops = vec![input_route[0]];
@@ -82,7 +82,7 @@ fn really_route_spline(
     ev0: Ppoint,
     ev1: Ppoint,
     ops: &mut Vec<Ppoint>,
-) -> Result<(), ()> {
+) -> Result<(), super::PathplanError> {
     let inpn = inps.len();
     let mut tnas = vec![Tna::default(); inpn];
     for i in 1..inpn {
@@ -120,7 +120,7 @@ fn really_route_spline(
         }
     }
     if maxi < 1 {
-        return Err(());
+        return Err(super::PathplanError);
     }
     let spliti = maxi as usize;
     let splitv1 = normv(sub(inps[spliti], inps[spliti - 1]));

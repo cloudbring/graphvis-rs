@@ -13,7 +13,7 @@ pub fn conjugate_gradient_mkernel(
     n: usize,
     tol: f64,
     max_iterations: usize,
-) -> Result<(), ()> {
+) -> Result<(), super::SolverError> {
     let mut r = vec![0.0f32; n];
     let mut p = vec![0.0f32; n];
     let mut ap = vec![0.0f32; n];
@@ -44,7 +44,7 @@ pub fn conjugate_gradient_mkernel(
             vectors_mult_additionf(n, &mut r, (-alpha) as f32, &ap);
             let r_r_new = vectors_inner_productf(n, &r, &r);
             if r_r == 0.0 {
-                return Err(());
+                return Err(super::SolverError);
             }
             let beta = r_r_new / r_r;
             r_r = r_r_new;
@@ -68,7 +68,7 @@ pub fn conjugate_gradient_f(
     tol: f64,
     max_iterations: usize,
     ortho1: bool,
-) -> Result<(), ()> {
+) -> Result<(), super::SolverError> {
     let mut r = vec![0.0f64; n];
     let mut p = vec![0.0f64; n];
     let mut ap = vec![0.0f64; n];
@@ -108,7 +108,7 @@ pub fn conjugate_gradient_f(
             }
             let r_r_new = vectors_inner_product(n, &r, &r);
             if r_r == 0.0 {
-                return Err(());
+                return Err(super::SolverError);
             }
             let beta = r_r_new / r_r;
             r_r = r_r_new;
@@ -132,7 +132,7 @@ pub fn conjugate_gradient(
     n: usize,
     tol: f64,
     max_iterations: usize,
-) -> Result<(), ()> {
+) -> Result<(), super::SolverError> {
     let mut r = vec![0.0f64; n];
     let mut p = vec![0.0f64; n];
     let mut ap = vec![0.0f64; n];
@@ -166,7 +166,7 @@ pub fn conjugate_gradient(
             }
             let r_r_new = vectors_inner_product(n, &r, &r);
             if r_r == 0.0 {
-                return Err(());
+                return Err(super::SolverError);
             }
             let beta = r_r_new / r_r;
             r_r = r_r_new;

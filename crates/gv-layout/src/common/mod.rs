@@ -11,6 +11,9 @@
 //! - [`xlabels`] — external label placement (`lib/label`)
 //! - [`geom`], [`utils`] — geometry macros, attribute parsing, `compute_bb`
 
+// Faithful ports of numeric C loops index several arrays in lockstep.
+#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+
 pub mod arrows;
 pub mod geom;
 pub mod init;

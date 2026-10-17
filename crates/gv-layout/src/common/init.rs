@@ -4,7 +4,7 @@
 
 use super::shapes::NodeShape;
 use super::types::*;
-use super::utils::{c_round, late_double, late_nnstring, map_bool, mapbool, parse_f64_rest};
+use super::utils::{c_round, late_double, map_bool, mapbool, parse_f64_rest};
 use crate::cutil::{CRand, Drand48};
 use gv_core::font::{LabelSubstContext, measure_multiline_label_with_context};
 use gv_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
@@ -71,13 +71,6 @@ pub fn make_label(
     }
 }
 
-fn label_font(attrs: &AttrMap) -> (String, f64) {
-    (
-        late_nnstring(attrs, "fontname", DEFAULT_FONTNAME).to_string(),
-        late_double(attrs, "fontsize", DEFAULT_FONTSIZE, MIN_FONTSIZE),
-    )
-}
-
 /// `do_graph_label` for a graph or cluster: the label and `GD_label_pos`.
 pub fn graph_label(
     attrs: &AttrMap,
@@ -88,14 +81,18 @@ pub fn graph_label(
     let Some(text) = attrs.get("label").filter(|s| !s.is_empty()) else {
         return (None, 0);
     };
-    let (fontname, fontsize) = label_font(attrs);
-    let ctx = LabelSubstContext {
-        graph_name: name,
-        label_text: text,
-        is_directed: directed,
-        ..Default::default()
+    let _ = directed;
+    let Some(geom) = gv_geom::graph_label_geometry(name, attrs, is_root, false, false) else {
+        return (None, 0);
     };
-    let lbl = make_label(text, &ctx, &fontname, fontsize);
+    let lbl = TextLabel {
+        text: text.clone(),
+        dimen: geom.label.dimen,
+        pos: Point::default(),
+        set: false,
+        fontsize: geom.label.font_size,
+        fontname: geom.label.font_name.clone(),
+    };
     let pos = attrs.get("labelloc").map(String::as_str);
     let mut flag = if is_root {
         if pos.is_some_and(|p| p.starts_with('t')) {
@@ -165,31 +162,32 @@ impl<'a> LGraph<'a> {
             Some(s) => edge_type_of(s, default_edge_type),
         };
 
+        let env = gv_geom::NodeSizeEnv::from_graph_attrs(&graph.name, gattrs);
         let mut nodes = Vec::with_capacity(graph.nodes.len());
         for nd in &graph.nodes {
+            let geom = gv_geom::node_geometry(nd, &env);
             let mut n = nd.clone();
-            gv_geom::compute_node_dimensions(&mut n, &graph.name);
-            let shape = NodeShape::new(&n);
-            let w = n.width * 72.0;
-            let xlabel = nd.attrs.get("xlabel").filter(|s| !s.is_empty()).map(|t| {
-                let (fname, fsize) = label_font(&nd.attrs);
-                let ctx = LabelSubstContext {
-                    node_name: &nd.name,
-                    graph_name: &graph.name,
-                    is_directed: directed,
-                    label_text: t,
-                    ..Default::default()
-                };
-                make_label(t, &ctx, &fname, fsize)
+            n.width = geom.width;
+            n.height = geom.height;
+            let mut shape = NodeShape::new(&n);
+            shape.apply_geometry(&geom);
+            let (lw, rw, ht) = geom.nodesize(false);
+            let xlabel = geom.xlabel.as_ref().map(|l| TextLabel {
+                text: nd.attrs.get("xlabel").cloned().unwrap_or_default(),
+                dimen: l.dimen,
+                pos: Point::default(),
+                set: false,
+                fontsize: l.font_size,
+                fontname: l.font_name.clone(),
             });
             nodes.push(LNode {
                 pos: vec![0.0; ndim],
                 coord: Point::default(),
                 width: n.width,
                 height: n.height,
-                lw: w / 2.0,
-                rw: w / 2.0,
-                ht: n.height * 72.0,
+                lw,
+                rw,
+                ht,
                 pinned: 0,
                 id: 0,
                 heapindex: -1,
@@ -212,25 +210,17 @@ impl<'a> LGraph<'a> {
             out[t].push(ei);
             inn[h].push(ei);
             let a = &ed.attrs;
-            let (fname, fsize) = label_font(a);
-            let lfname = late_nnstring(a, "labelfontname", &fname).to_string();
-            let lfsize = late_double(a, "labelfontsize", fsize, MIN_FONTSIZE);
             let tname = &graph.nodes[t].name;
             let hname = &graph.nodes[h].name;
-            let mk = |key: &str, fname: &str, fsize: f64| {
-                a.get(key).filter(|s| !s.is_empty()).map(|text| {
-                    let ctx = LabelSubstContext {
-                        graph_name: &graph.name,
-                        tail_name: tname,
-                        head_name: hname,
-                        is_edge: true,
-                        is_directed: directed,
-                        tail_port: ed.tail_port.name.as_deref(),
-                        head_port: ed.head_port.name.as_deref(),
-                        label_text: text,
-                        ..Default::default()
-                    };
-                    make_label(text, &ctx, fname, fsize)
+            let lg = gv_geom::edge_label_geometry(a, tname, hname, directed, &env);
+            let conv = |key: &str, l: &Option<gv_geom::node_size::LabelGeometry>| {
+                l.as_ref().map(|l| TextLabel {
+                    text: a.get(key).cloned().unwrap_or_default(),
+                    dimen: l.dimen,
+                    pos: Point::default(),
+                    set: false,
+                    fontsize: l.font_size,
+                    fontname: l.font_name.clone(),
                 })
             };
             let clip = |key: &str| map_bool(a.get(key).map(String::as_str), true);
@@ -242,10 +232,10 @@ impl<'a> LGraph<'a> {
                 count: 0,
                 to_virt: None,
                 spl: None,
-                label: mk("label", &fname, fsize),
-                xlabel: mk("xlabel", &fname, fsize),
-                head_label: mk("headlabel", &lfname, lfsize),
-                tail_label: mk("taillabel", &lfname, lfsize),
+                label: conv("label", &lg.label),
+                xlabel: conv("xlabel", &lg.xlabel),
+                head_label: conv("headlabel", &lg.head_label),
+                tail_label: conv("taillabel", &lg.tail_label),
                 tail_port: PortInfo {
                     clip: clip("tailclip"),
                     ..PortInfo::default()

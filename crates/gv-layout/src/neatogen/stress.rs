@@ -241,7 +241,7 @@ pub fn stress_majorization_kd_mkernel(
     opts: i32,
     model: i32,
     maxi: i64,
-) -> Result<i64, ()> {
+) -> Result<i64, super::SolverError> {
     if maxi < 0 {
         return Ok(0);
     }

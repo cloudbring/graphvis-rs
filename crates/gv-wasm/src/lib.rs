@@ -76,5 +76,5 @@ pub fn supported_formats() -> String {
 /// Returns the version of `graphvis-rs` (compatible with Graphviz 16.1.0).
 #[wasm_bindgen]
 pub fn version() -> String {
-    "graphvis-rs 0.1.0 (Graphviz 16.1.0 pure-Rust WASM)".to_string()
+    "graphvis-rs 0.1.0 (partial port of Graphviz 16.1.0)".to_string()
 }

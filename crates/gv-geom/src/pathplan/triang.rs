@@ -70,7 +70,10 @@ pub fn isdiagonal(i: usize, ip2: usize, pts: &[Ppoint]) -> bool {
 
 /// `Ptriangulate(polygon, fn, vc)`: calls `f` with each triangle; `Err` if
 /// no diagonal exists.
-pub fn ptriangulate(polygon: &[Ppoint], f: &mut dyn FnMut(&[Ppoint; 3])) -> Result<(), ()> {
+pub fn ptriangulate(
+    polygon: &[Ppoint],
+    f: &mut dyn FnMut(&[Ppoint; 3]),
+) -> Result<(), super::PathplanError> {
     let mut pts: Vec<Ppoint> = polygon.to_vec();
     loop {
         let n = pts.len();
@@ -87,7 +90,7 @@ pub fn ptriangulate(polygon: &[Ppoint], f: &mut dyn FnMut(&[Ppoint; 3])) -> Resu
                 }
             }
             if !found {
-                return Err(());
+                return Err(super::PathplanError);
             }
         } else {
             f(&[pts[0], pts[1], pts[2]]);

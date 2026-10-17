@@ -71,11 +71,10 @@ pub fn make_straight_edges(g: &mut LGraph<'_>, edge_list: &[usize], et: EdgeType
         add_edge_labels(g, e);
         return;
     }
-    let del;
-    if approxeqpt(dumb[0], dumb[3], MILLIPOINT) {
+    let del = if approxeqpt(dumb[0], dumb[3], MILLIPOINT) {
         dumb[1] = dumb[0];
         dumb[2] = dumb[3];
-        del = Point::new(0.0, 0.0);
+        Point::new(0.0, 0.0)
     } else {
         let perp = Point::new(dumb[0].y - dumb[3].y, dumb[3].x - dumb[0].x);
         let l_perp = perp.x.hypot(perp.y);
@@ -85,11 +84,11 @@ pub fn make_straight_edges(g: &mut LGraph<'_>, edge_list: &[usize], et: EdgeType
         dumb[1].y = dumb[0].y + dx * perp.y / l_perp;
         dumb[2].x = dumb[3].x + dx * perp.x / l_perp;
         dumb[2].y = dumb[3].y + dx * perp.y / l_perp;
-        del = Point::new(
+        Point::new(
             -(xstep as f64) * perp.x / l_perp,
             -(xstep as f64) * perp.y / l_perp,
-        );
-    }
+        )
+    };
     for &e0 in edge_list {
         let dumber = if g.edges[e0].head == head {
             dumb

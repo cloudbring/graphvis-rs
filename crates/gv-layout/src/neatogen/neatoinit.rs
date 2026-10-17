@@ -225,12 +225,15 @@ fn majorization(
 
 /// `neatoLayout(mg, g, layoutMode, layoutModel, am)`: lay out one component.
 fn neato_layout_component(g: &mut LGraph<'_>, sub: &Sub, layout_mode: i32, model: i32) {
-    let mut p = NeatoParams::default();
-    p.max_iter = match g.gattr("maxiter") {
+    let max_iter = match g.gattr("maxiter") {
         Some(s) => atoi(s),
         None if layout_mode == MODE_MAJOR => DFLT_ITERATIONS,
         None if layout_mode == MODE_SGD => 30,
         None => 100 * sub.nodes.len() as i64,
+    };
+    let mut p = NeatoParams {
+        max_iter,
+        ..NeatoParams::default()
     };
     let (ng, kk) = scan_graph_mode(g, sub, layout_mode, &mut p);
     if ng < 2 || p.max_iter < 0 {

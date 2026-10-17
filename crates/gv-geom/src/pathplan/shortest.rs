@@ -112,7 +112,10 @@ fn finddqsplit(dq: &Deque, pnl: &Pnl, p: usize) -> usize {
 
 /// `Pshortestpath(polyp, eps, &output)`: `Err` when an endpoint is outside
 /// the polygon or triangulation fails.
-pub fn pshortestpath(poly: &[Ppoint], eps: [Ppoint; 2]) -> Result<Vec<Ppoint>, ()> {
+pub fn pshortestpath(
+    poly: &[Ppoint],
+    eps: [Ppoint; 2],
+) -> Result<Vec<Ppoint>, super::PathplanError> {
     let pn = poly.len();
     // Load points in CCW order, dropping repeated points.
     let mut minpi = NONE;
@@ -213,10 +216,10 @@ pub fn pshortestpath(poly: &[Ppoint], eps: [Ppoint; 2]) -> Result<Vec<Ppoint>, (
     }
     let ftrii = (0..tris.len())
         .find(|&t| pointintri(&tris, &pnl, t, eps[0]))
-        .ok_or(())?;
+        .ok_or(super::PathplanError)?;
     let ltrii = (0..tris.len())
         .find(|&t| pointintri(&tris, &pnl, t, eps[1]))
-        .ok_or(())?;
+        .ok_or(super::PathplanError)?;
     if !marktripath(&mut tris, ftrii, ltrii) || ftrii == ltrii {
         return Ok(vec![eps[0], eps[1]]);
     }

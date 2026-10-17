@@ -16,6 +16,9 @@
 //! contraction enabled (`a*b + c*d` evaluates as `fma(a, b, c*d)`), so results
 //! match the reference build bit for bit where the platform `libm` agrees.
 
+// Faithful ports of numeric C loops index several arrays in lockstep.
+#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+
 pub mod cvt;
 pub mod inpoly;
 pub mod route;
@@ -43,3 +46,15 @@ pub use inpoly::in_poly;
 pub use route::proutespline;
 pub use shortest::pshortestpath;
 pub use util::{make_polyline, ppolybarriers};
+
+/// Failure of a pathplan routine (C returns a negative status).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PathplanError;
+
+impl std::fmt::Display for PathplanError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("pathplan failure")
+    }
+}
+
+impl std::error::Error for PathplanError {}

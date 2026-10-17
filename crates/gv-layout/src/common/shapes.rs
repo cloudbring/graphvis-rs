@@ -557,6 +557,22 @@ impl NodeShape {
         shape
     }
 
+    /// Replaces the reconstructed vertices with C's exact `poly_init` /
+    /// `point_init` data from [`gv_geom::node_size`].
+    pub fn apply_geometry(&mut self, geom: &gv_geom::node_size::NodeGeometry) {
+        self.outline_width = geom.outline_width * 72.0;
+        self.outline_height = geom.outline_height * 72.0;
+        if let Some(p) = &geom.polygon {
+            self.sides = p.sides;
+            self.peripheries = p.peripheries;
+            self.orientation = p.orientation;
+            self.distortion = p.distortion;
+            self.skew = p.skew;
+            self.regular = p.regular;
+            self.vertices = p.vertices.clone();
+        }
+    }
+
     /// Index of the first vertex of the outline used by the inside tests.
     fn outp(&self) -> usize {
         if self.peripheries >= 1 && self.penwidth > 0.0 {
