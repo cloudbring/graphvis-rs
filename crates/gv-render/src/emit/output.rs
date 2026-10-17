@@ -224,7 +224,14 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
             g5(n.geom.height),
             lbl,
             a.late_nnstring("style", "solid"),
-            a.late_nnstring("shape", "ellipse"),
+            {
+                let sh = a.late_nnstring("shape", "ellipse");
+                if sh != "epsf" && a.nonempty("shapefile").is_some() {
+                    "custom"
+                } else {
+                    sh
+                }
+            },
             a.late_nnstring("color", "black"),
             fill
         );

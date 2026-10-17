@@ -10,6 +10,7 @@ use gv_core::{BoundingBox, Point};
 pub(crate) const EMIT_SORTED: u32 = 1 << 0;
 pub(crate) const EMIT_CLUSTERS_LAST: u32 = 1 << 2;
 pub(crate) const EMIT_EDGE_SORTED: u32 = 1 << 4;
+pub(crate) const GVDEVICE_DOES_LAYERS: u32 = 1 << 6;
 pub(crate) const GVDEVICE_DOES_TRUECOLOR: u32 = 1 << 8;
 pub(crate) const GVRENDER_Y_GOES_DOWN: u32 = 1 << 12;
 pub(crate) const GVRENDER_DOES_TRANSFORM: u32 = 1 << 13;
@@ -188,6 +189,8 @@ pub(crate) trait Engine {
     fn begin_job(&mut self, j: &Job) {}
     fn begin_graph(&mut self, j: &Job) {}
     fn end_graph(&mut self, j: &Job) {}
+    fn begin_layer(&mut self, j: &Job, name: &str) {}
+    fn end_layer(&mut self, j: &Job) {}
     fn begin_page(&mut self, j: &Job) {}
     fn end_page(&mut self, j: &Job) {}
     fn begin_cluster(&mut self, j: &Job) {}
@@ -233,6 +236,15 @@ pub(crate) struct Job<'a> {
     pub pages: (i32, i32),
     /// The active `colorscheme` (`setColorScheme`).
     pub color_scheme: Option<String>,
+    /// `job->layerNum` and `job->numLayers`.
+    pub layer_num: i32,
+    pub num_layers: i32,
+    /// `gvc->layerIDs` (index 0 unused).
+    pub layer_ids: Vec<String>,
+    pub layer_delims: String,
+    pub layer_list_delims: String,
+    /// `gvc->layerlist`: the selected layers.
+    pub layer_list: Option<Vec<i32>>,
 }
 
 fn round(v: f64) -> i32 {
@@ -401,6 +413,12 @@ impl<'a> Job<'a> {
             scale,
             pages: (1, 1),
             color_scheme: None,
+            layer_num: 0,
+            num_layers: 1,
+            layer_ids: Vec::new(),
+            layer_delims: ":\t ".to_string(),
+            layer_list_delims: ",".to_string(),
+            layer_list: None,
         }
     }
 

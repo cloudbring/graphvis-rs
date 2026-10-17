@@ -67,6 +67,10 @@ pub(crate) fn xml_escape(s: &str, f: XmlFlags) -> String {
     String::from_utf8(out).unwrap_or_default()
 }
 
+fn xml_raw_id(s: &str) -> String {
+    s.to_string()
+}
+
 /// `gvputs_xml`.
 pub(crate) fn xml(s: &str) -> String {
     xml_escape(
@@ -447,7 +451,8 @@ impl SvgEngine {
 impl Engine for SvgEngine {
     fn features(&self) -> Features {
         Features {
-            flags: GVRENDER_Y_GOES_DOWN
+            flags: crate::emit::job::GVDEVICE_DOES_LAYERS
+                | GVRENDER_Y_GOES_DOWN
                 | GVRENDER_DOES_TRANSFORM
                 | GVRENDER_DOES_LABELS
                 | GVRENDER_DOES_MAPS
@@ -505,6 +510,15 @@ impl Engine for SvgEngine {
         self.put("</svg>\n");
     }
 
+    fn begin_layer(&mut self, j: &Job, name: &str) {
+        self.print_id_class(name, "layer", Self::obj_class(j, ObjKind::Root));
+        self.put(">\n");
+    }
+
+    fn end_layer(&mut self, _j: &Job) {
+        self.put("</g>\n");
+    }
+
     fn begin_page(&mut self, j: &Job) {
         let o = j.obj();
         let id = o.id.clone().unwrap_or_default();
@@ -545,7 +559,15 @@ impl Engine for SvgEngine {
     fn begin_node(&mut self, j: &Job) {
         let o = j.obj();
         let ObjKind::Node(n) = o.kind else { return };
-        let id = o.id.clone().unwrap_or_default();
+        let mut id = o.id.clone().unwrap_or_default();
+        if j.layer_num > 1 {
+            id.push('_');
+            id.push_str(&xml_raw_id(
+                j.layer_ids
+                    .get(j.layer_num as usize)
+                    .map_or("", String::as_str),
+            ));
+        }
         self.print_id_class(&id, "node", Self::obj_class(j, o.kind));
         self.put(">\n<title>");
         self.put(&xml(j.m.nodes[n].name));

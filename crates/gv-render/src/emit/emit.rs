@@ -267,10 +267,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
     /// `getObjId`.
     fn obj_id(&self, kind: ObjKind) -> String {
         let a = self.obj_attrs(kind);
+        let mut s = self.layer_page_prefix();
         if let Some(id) = a.nonempty("id") {
-            return id.to_string();
+            s.push_str(id);
+            return s;
         }
-        let mut s = String::new();
         if kind != ObjKind::Root
             && let Some(gid) = self.job.m.root_attrs().nonempty("id")
         {
@@ -349,13 +350,222 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let label = m.label.as_ref().map(|l| l.text.clone());
         self.init_obj_map_data(label, ObjKind::Root);
         self.eng.begin_graph(&self.job);
-        self.emit_page();
+        self.init_layering();
+        // firstlayer / validlayer / nextlayer
+        self.job.num_layers = self.job.num_layers.max(1);
+        let does_layers = self.job.flags & super::job::GVDEVICE_DOES_LAYERS != 0;
+        let mut list: Option<Vec<i32>> = self.job.layer_list.clone();
+        if let Some(l) = &mut list {
+            if l.len() > 1 && !does_layers {
+                eprintln!("Warning: layers not supported in this output");
+                l.truncate(1);
+            }
+        } else if self.job.num_layers > 1 && !does_layers {
+            eprintln!("Warning: layers not supported in this output");
+            self.job.num_layers = 1;
+        }
+        let layers: Vec<i32> = match &list {
+            Some(l) => l.clone(),
+            None => (1..=self.job.num_layers).collect(),
+        };
+        let physical = layers.len();
+        for ln in layers {
+            self.job.layer_num = ln;
+            if physical > 1 {
+                let name = self
+                    .job
+                    .layer_ids
+                    .get(ln as usize)
+                    .cloned()
+                    .unwrap_or_default();
+                self.eng.begin_layer(&self.job, &name);
+            }
+            self.emit_page();
+            if physical > 1 {
+                self.eng.end_layer(&self.job);
+            }
+        }
         self.eng.end_graph(&self.job);
         self.job.pop_obj();
     }
 
+    /// `init_layering` / `parse_layers` / `parse_layerselect`.
+    fn init_layering(&mut self) {
+        let a = self.job.m.root_attrs();
+        let Some(layers) = a.get("layers") else {
+            self.job.num_layers = 1;
+            return;
+        };
+        let mut delims = a.get("layersep").unwrap_or(":\t ").to_string();
+        let mut list_delims = a.get("layerlistsep").unwrap_or(",").to_string();
+        if delims.chars().any(|c| list_delims.contains(c)) {
+            eprintln!(
+                "Warning: The character appears in both the layersep and layerlistsep attributes - layerlistsep ignored."
+            );
+            list_delims = String::new();
+        }
+        if delims.is_empty() {
+            delims = String::new();
+        }
+        let mut ids = vec![String::new()];
+        ids.extend(
+            layers
+                .split(|c| delims.contains(c))
+                .filter(|t| !t.is_empty())
+                .map(str::to_string),
+        );
+        self.job.num_layers = (ids.len() - 1) as i32;
+        self.job.layer_ids = ids;
+        self.job.layer_delims = delims;
+        self.job.layer_list_delims = list_delims;
+        if let Some(sel) = a.nonempty("layerselect") {
+            let n = self.job.num_layers;
+            let l: Vec<i32> = (1..=n)
+                .filter(|&i| self.selected_layer(i, n, sel))
+                .collect();
+            if l.is_empty() {
+                eprintln!(
+                    "Warning: The layerselect attribute \"{sel}\" does not match any layer specifed by the layers attribute - ignored."
+                );
+            } else {
+                self.job.layer_list = Some(l);
+            }
+        }
+    }
+
+    fn layer_index(&self, s: &str, all: i32) -> i32 {
+        if s == "all" {
+            return all;
+        }
+        if s.bytes().all(|c| c.is_ascii_digit()) {
+            return super::attrs::atoi(s) as i32;
+        }
+        for (i, id) in self.job.layer_ids.iter().enumerate().skip(1) {
+            if id == s {
+                return i as i32;
+            }
+        }
+        -1
+    }
+
+    /// `selectedLayer`.
+    fn selected_layer(&self, layer: i32, num: i32, spec: &str) -> bool {
+        let ld = self.job.layer_list_delims.clone();
+        let d = self.job.layer_delims.clone();
+        for part in spec.split(|c| ld.contains(c)).filter(|t| !t.is_empty()) {
+            let mut ws = part.split(|c| d.contains(c)).filter(|t| !t.is_empty());
+            let w0 = ws.next();
+            let w1 = ws.next();
+            let r = match (w0, w1) {
+                (Some(a), Some(b)) => {
+                    let (mut n0, mut n1) = (self.layer_index(a, 0), self.layer_index(b, num));
+                    if n0 >= 0 || n1 >= 0 {
+                        if n0 > n1 {
+                            std::mem::swap(&mut n0, &mut n1);
+                        }
+                        n0 <= layer && layer <= n1
+                    } else {
+                        false
+                    }
+                }
+                (Some(a), None) => self.layer_index(a, layer) == layer,
+                _ => false,
+            };
+            if r {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn selectedlayer(&self, spec: &str) -> bool {
+        self.selected_layer(self.job.layer_num, self.job.num_layers, spec)
+    }
+
+    pub(crate) fn node_in_layer(&self, n: usize) -> bool {
+        if self.job.num_layers <= 1 {
+            return true;
+        }
+        let m = self.job.m;
+        let pn = m.nodes[n].attrs.late_string("layer", "");
+        if self.selectedlayer(pn) {
+            return true;
+        }
+        if !pn.is_empty() {
+            return false;
+        }
+        let edges: Vec<usize> = (0..m.edges.len())
+            .filter(|&e| m.edges[e].tail == n || m.edges[e].head == n)
+            .collect();
+        if edges.is_empty() {
+            return true;
+        }
+        edges.iter().any(|&e| {
+            let pe = m.edges[e].attrs.late_string("layer", "");
+            pe.is_empty() || self.selectedlayer(pe)
+        })
+    }
+
+    fn edge_in_layer(&self, e: usize) -> bool {
+        if self.job.num_layers <= 1 {
+            return true;
+        }
+        let m = self.job.m;
+        let pe = m.edges[e].attrs.late_string("layer", "");
+        if self.selectedlayer(pe) {
+            return true;
+        }
+        if !pe.is_empty() {
+            return false;
+        }
+        [m.edges[e].tail, m.edges[e].head].iter().any(|&n| {
+            let pn = m.nodes[n].attrs.late_string("layer", "");
+            pn.is_empty() || self.selectedlayer(pn)
+        })
+    }
+
+    fn clust_in_layer(&self, c: usize) -> bool {
+        if self.job.num_layers <= 1 {
+            return true;
+        }
+        let m = self.job.m;
+        let pg = m.clusters[c].attrs.late_string("layer", "");
+        if self.selectedlayer(pg) {
+            return true;
+        }
+        if !pg.is_empty() {
+            return false;
+        }
+        m.clusters[c].nodes.iter().any(|&n| self.node_in_layer(n))
+    }
+
+    /// `layerPagePrefix`.
+    pub(crate) fn layer_page_prefix(&self) -> String {
+        if self.job.layer_num > 1 {
+            format!(
+                "{}_",
+                self.job
+                    .layer_ids
+                    .get(self.job.layer_num as usize)
+                    .cloned()
+                    .unwrap_or_default()
+            )
+        } else {
+            String::new()
+        }
+    }
+
     fn emit_page(&mut self) {
         let m = self.job.m;
+        let saved_id = if self.job.layer_num > 1 {
+            let prefix = self.layer_page_prefix();
+            let o = self.job.obj_mut();
+            let save = o.id.clone();
+            o.id = Some(format!("{prefix}{}", save.as_deref().unwrap_or("layer")));
+            Some(save)
+        } else {
+            None
+        };
         let prev = self.set_scheme(m.root_attrs().get("colorscheme"));
         self.eng.begin_page(&self.job);
         self.set_pencolor(DEFAULT_COLOR);
@@ -382,6 +592,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
         }
         self.emit_view();
         self.eng.end_page(&self.job);
+        if let Some(save) = saved_id {
+            self.job.obj_mut().id = save;
+        }
         self.set_scheme(prev.as_deref());
     }
 
@@ -457,6 +670,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
     fn emit_clusters(&mut self, list: &[usize]) {
         let m = self.job.m;
         for &c in list {
+            if !self.clust_in_layer(c) {
+                continue;
+            }
             let cl = &m.clusters[c];
             let a = cl.attrs;
             self.job.push_obj(ObjKind::Cluster(c));
@@ -640,7 +856,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             nd.coord.x + nd.rw,
             nd.coord.y + half.y,
         );
-        if !overlap(nbb, self.job.clip) {
+        if !self.node_in_layer(n) || !overlap(nbb, self.job.clip) {
             return;
         }
         drawn[n] = true;
@@ -715,7 +931,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 .xlabel
                 .as_ref()
                 .is_some_and(|l| l.set && label_overlaps(l, clip));
-        if !in_box {
+        if !in_box || !self.edge_in_layer(e) {
             return;
         }
         let name = format!(
@@ -763,6 +979,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             self.set_penwidth(pw);
         }
         let ctx = self.ctx(ObjKind::Edge(e));
+        let layer_prefix = self.layer_page_prefix();
         let sub = |s: &str| strdup_and_subst_obj(s, &ctx);
         let o = self.job.obj_mut();
         if flags & GVRENDER_DOES_LABELS != 0 {
@@ -779,10 +996,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let pick = |k1: &str, k2: &str| a.nonempty(k1).or_else(|| a.nonempty(k2));
         if flags & GVRENDER_DOES_MAPS != 0 {
             let id = {
+                let prefix = layer_prefix.clone();
                 if let Some(id) = a.nonempty("id") {
-                    id.to_string()
+                    format!("{prefix}{id}")
                 } else {
-                    let mut s = String::new();
+                    let mut s = prefix;
                     if let Some(gid) = m.root_attrs().nonempty("id") {
                         s.push_str(gid);
                         s.push('_');
