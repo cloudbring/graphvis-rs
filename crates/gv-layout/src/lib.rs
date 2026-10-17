@@ -46,10 +46,11 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
 
     match effective_engine {
         LayoutEngine::Dot => {
-            if std::env::var_os("GV_DOTGEN").is_some() {
-                dotgen::layout_dot(graph)
-            } else {
+            // `GV_DOT_LEGACY=1` selects the previous approximate engine for comparison.
+            if std::env::var_os("GV_DOT_LEGACY").is_some() {
                 dot::layout_dot(graph)
+            } else {
+                dotgen::layout_dot(graph)
             }
         }
         LayoutEngine::Neato => force_circular::layout_neato(graph),

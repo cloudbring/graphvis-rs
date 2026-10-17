@@ -790,7 +790,11 @@ impl Dot<'_> {
         if std::env::var_os("GVDUMP").is_some() {
             let mut l = String::from("TBPRE");
             for &n in &tree_node {
-                let nm = if self.nodes[n].node_type == NORMAL { self.nodes[n].name.as_str() } else { "_" };
+                let nm = if self.nodes[n].node_type == NORMAL {
+                    self.nodes[n].name.as_str()
+                } else {
+                    "_"
+                };
                 l.push_str(&format!(" {}:{}", nm, self.nodes[n].rank));
             }
             eprintln!("{l}");
@@ -819,7 +823,11 @@ impl Dot<'_> {
         if dump {
             let mut l = String::from("TBORDER");
             for &n in &tree_node {
-                let nm = if self.nodes[n].node_type == NORMAL { self.nodes[n].name.as_str() } else { "_" };
+                let nm = if self.nodes[n].node_type == NORMAL {
+                    self.nodes[n].name.as_str()
+                } else {
+                    "_"
+                };
                 l.push_str(&format!(" {}:{}", nm, self.nodes[n].rank));
             }
             eprintln!("{l}");
@@ -869,7 +877,10 @@ impl Dot<'_> {
                     nrank[choice as usize] += 1;
                 }
                 if dump {
-                    eprintln!("TB {} {} {} {} -> {}", self.nodes[n].name, r, low, high, choice);
+                    eprintln!(
+                        "TB {} {} {} {} -> {}",
+                        self.nodes[n].name, r, low, high, choice
+                    );
                 }
                 self.nodes[n].rank = choice;
             }

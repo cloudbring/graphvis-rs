@@ -92,6 +92,32 @@ impl Dot<'_> {
             self.set_ycoords(g);
         }
         self.create_aux_edges(g);
+        if std::env::var_os("GVDUMP").is_some() {
+            let nl = self.nlist_nodes(g);
+            for (i, &n) in nl.iter().enumerate() {
+                self.nodes[n].low = i as i32;
+            }
+            for &n in &nl {
+                let nm = if self.nodes[n].node_type == NORMAL {
+                    self.nodes[n].name.as_str()
+                } else {
+                    "_"
+                };
+                let nd = &self.nodes[n];
+                let mut l = format!(
+                    "A {} {} r={} o={} t={} rw={} lw={}:",
+                    nd.low, nm, nd.rank, nd.order, nd.node_type, nd.rw, nd.lw
+                );
+                for &e in &self.nodes[n].out {
+                    let ed = &self.edges[e];
+                    l.push_str(&format!(
+                        " {}/{}/{}",
+                        self.nodes[ed.head].low, ed.minlen, ed.weight
+                    ));
+                }
+                eprintln!("{l}");
+            }
+        }
         let it = self.nsiter2(g);
         if self.ns_rank(g, 2, it) != 0 {
             self.connect_graph(g);

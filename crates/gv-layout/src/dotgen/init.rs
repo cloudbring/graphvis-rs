@@ -366,6 +366,39 @@ impl<'a> Dot<'a> {
             directed,
             &env,
         );
+        let mut geo = geo;
+        // `aghtmlstr`: only `<...>` tokens are HTML; a quoted "< x >" is plain text.
+        if let Some(text) = ie.attrs.get("label")
+            && geo.label.as_ref().is_some_and(|l| l.html)
+            && !self.input.html_strings.contains(text)
+        {
+            let fontsize = super::utils::late_double(
+                ie.attrs.get("fontsize").map(String::as_str),
+                gv_core::font::DEFAULT_FONT_SIZE,
+                1.0,
+            );
+            let fontname = ie
+                .attrs
+                .get("fontname")
+                .filter(|s| !s.is_empty())
+                .map_or(gv_core::font::DEFAULT_FONT_NAME, String::as_str);
+            let obj = gv_core::font::LabelSubstContext {
+                graph_name: &self.input.name,
+                tail_name: &self.nodes[t].name,
+                head_name: &self.nodes[h].name,
+                is_edge: true,
+                is_directed: directed,
+                ..Default::default()
+            };
+            geo.label = Some(gv_geom::make_label(
+                text,
+                false,
+                &obj,
+                fontname,
+                fontsize,
+                env.charset_latin1,
+            ));
+        }
         if let Some(lg) = &geo.label {
             let l = self.push_label(lg);
             self.edges[e].label = Some(l);
