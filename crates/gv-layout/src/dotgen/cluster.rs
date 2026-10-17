@@ -1,0 +1,416 @@
+//! Port of `lib/dotgen/cluster.c`: cluster skeletons, expansion and marking.
+
+use super::Dot;
+use super::fastgr::short;
+use super::types::*;
+use std::collections::VecDeque;
+
+impl Dot<'_> {
+    fn map_interclust_node(&self, n: N) -> N {
+        match self.nodes[n].clust {
+            None => n,
+            Some(c) if self.graphs[c].expanded => n,
+            Some(c) => self.graphs[c].rankleader[self.nodes[n].rank as usize].unwrap(),
+        }
+    }
+
+    /// `make_slots`: make `d` slots starting at `pos` (where one already exists).
+    fn make_slots(&mut self, root: G, r: i32, pos: i32, d: i32) {
+        let n = self.rk(root, r).n;
+        if d <= 0 {
+            let mut i = pos - d + 1;
+            while i < n {
+                let v = self.rv(root, r, i).unwrap();
+                self.nodes[v].order = i + d - 1;
+                let o = self.nodes[v].order;
+                self.set_rv(root, r, o, Some(v));
+                i += 1;
+            }
+            let mut i = n + d - 1;
+            while i < n {
+                self.set_rv(root, r, i, None);
+                i += 1;
+            }
+        } else {
+            let mut i = n - 1;
+            while i > pos {
+                let v = self.rv(root, r, i).unwrap();
+                self.nodes[v].order = i + d - 1;
+                let o = self.nodes[v].order;
+                self.set_rv(root, r, o, Some(v));
+                i -= 1;
+            }
+            let mut i = pos + 1;
+            while i < pos + d {
+                self.set_rv(root, r, i, None);
+                i += 1;
+            }
+        }
+        self.rk_mut(root, r).n += d - 1;
+    }
+
+    fn clone_vn(&mut self, g: G, vn: N) -> N {
+        let r = self.nodes[vn].rank;
+        let o = self.nodes[vn].order;
+        self.make_slots(g, r, o, 2);
+        let rv = self.virtual_node(g);
+        self.nodes[rv].lw = self.nodes[vn].lw;
+        self.nodes[rv].rw = self.nodes[vn].rw;
+        self.nodes[rv].rank = self.nodes[vn].rank;
+        self.nodes[rv].order = self.nodes[vn].order + 1;
+        let ro = self.nodes[rv].order;
+        self.set_rv(g, r, ro, Some(rv));
+        rv
+    }
+
+    fn map_path(&mut self, from: N, to: N, orig: E, ve: Option<E>, ty: u8) {
+        let Some(mut ve) = ve else {
+            return;
+        };
+        if self.edges[ve].tail == from && self.edges[ve].head == to {
+            return;
+        }
+        let (fr, tr) = (self.nodes[from].rank, self.nodes[to].rank);
+        if self.edges[ve].count > 1 {
+            self.edges[orig].to_virt = None;
+            if tr - fr == 1
+                && let Some(e) = self.find_fast_edge(from, to)
+                && self.ports_eq(orig, e)
+            {
+                self.merge_oneway(orig, e);
+                if self.nodes[from].node_type == NORMAL && self.nodes[to].node_type == NORMAL {
+                    self.other_edge(orig);
+                }
+                return;
+            }
+            let mut u = from;
+            let mut r = fr;
+            let mut vecur = Some(ve);
+            while r < tr {
+                let Some(vv) = vecur else { break };
+                let v = if r < tr - 1 {
+                    let hv = self.edges[vv].head;
+                    self.clone_vn(0, hv)
+                } else {
+                    to
+                };
+                let e = self.virtual_edge(u, v, Some(orig));
+                self.edges[e].edge_type = ty;
+                u = v;
+                self.edges[vv].count = short(self.edges[vv].count - 1);
+                let hv = self.edges[vv].head;
+                vecur = self.nodes[hv].out.first().copied();
+                r += 1;
+            }
+        } else {
+            if tr - fr == 1 {
+                let fe = self.find_fast_edge(from, to);
+                if let Some(x) = fe
+                    && self.ports_eq(orig, x)
+                {
+                    ve = x;
+                    self.edges[orig].to_virt = Some(ve);
+                    self.edges[ve].edge_type = ty;
+                    self.edges[ve].count = short(self.edges[ve].count + 1);
+                    if self.nodes[from].node_type == NORMAL && self.nodes[to].node_type == NORMAL
+                    {
+                        self.other_edge(orig);
+                    }
+                } else {
+                    self.edges[orig].to_virt = None;
+                    ve = self.virtual_edge(from, to, Some(orig));
+                    self.edges[ve].edge_type = ty;
+                }
+            }
+            if tr - fr > 1 {
+                let mut e;
+                if self.edges[ve].tail != from {
+                    self.edges[orig].to_virt = None;
+                    let hv = self.edges[ve].head;
+                    e = self.virtual_edge(from, hv, Some(orig));
+                    self.edges[orig].to_virt = Some(e);
+                    self.delete_fast_edge(ve);
+                } else {
+                    e = ve;
+                }
+                while self.nodes[self.edges[e].head].rank != tr {
+                    let hd = self.edges[e].head;
+                    e = self.nodes[hd].out[0];
+                }
+                if self.edges[e].head != to {
+                    let ve2 = e;
+                    let t = self.edges[e].tail;
+                    e = self.virtual_edge(t, to, Some(orig));
+                    self.edges[e].edge_type = ty;
+                    self.delete_fast_edge(ve2);
+                }
+            }
+        }
+    }
+
+    fn make_interclust_chain(&mut self, from: N, to: N, orig: E) {
+        let u = self.map_interclust_node(from);
+        let v = self.map_interclust_node(to);
+        let newtype = if u == from && v == to {
+            VIRTUAL
+        } else {
+            CLUSTER_EDGE
+        };
+        let tv = self.edges[orig].to_virt;
+        self.map_path(u, v, orig, tv, newtype);
+    }
+
+    fn interclexp(&mut self, subg: G) {
+        let g = 0;
+        for n in self.nodes_of(subg) {
+            let mut prev: Option<E> = None;
+            for e in self.all_edges(g, n) {
+                if self.agcontains_edge(subg, e) {
+                    continue;
+                }
+                let (et, eh) = (self.edges[e].tail, self.edges[e].head);
+                if self.mergeable(prev, Some(e)) {
+                    let p = prev.unwrap();
+                    if self.nodes[et].rank == self.nodes[eh].rank {
+                        self.edges[e].to_virt = Some(p);
+                    } else {
+                        self.edges[e].to_virt = None;
+                    }
+                    let Some(pv) = self.edges[p].to_virt else {
+                        continue;
+                    };
+                    self.edges[e].to_virt = None;
+                    self.merge_chain(subg, e, pv, false);
+                    self.safe_other_edge(e);
+                    continue;
+                }
+                if self.nodes[et].rank == self.nodes[eh].rank {
+                    match self.find_flat_edge(et, eh) {
+                        None => {
+                            if self.edges[e].to_virt.is_none() {
+                                self.flat_edge(g, e);
+                            }
+                            prev = Some(e);
+                        }
+                        Some(fe) if fe != e => {
+                            self.safe_other_edge(e);
+                            if self.edges[e].to_virt.is_none() {
+                                self.merge_oneway(e, fe);
+                            }
+                        }
+                        _ => {}
+                    }
+                    continue;
+                }
+                if self.nodes[eh].rank > self.nodes[et].rank {
+                    self.make_interclust_chain(et, eh, e);
+                    prev = Some(e);
+                    continue;
+                }
+                self.make_interclust_chain(eh, et, e);
+                prev = Some(e);
+            }
+        }
+    }
+
+    fn merge_ranks(&mut self, subg: G) {
+        let root = 0;
+        let (minr, maxr) = (self.graphs[subg].minrank, self.graphs[subg].maxrank);
+        if minr > 0 {
+            self.rk_mut(root, minr - 1).valid = false;
+        }
+        let mut r = minr;
+        while r <= maxr {
+            let d = self.rk(subg, r).n;
+            let leader = self.graphs[subg].rankleader[r as usize].unwrap();
+            let ipos = self.nodes[leader].order;
+            let mut pos = ipos;
+            self.make_slots(root, r, pos, d);
+            for i in 0..self.rk(subg, r).n {
+                let v = self.rv(subg, r, i).unwrap();
+                self.set_rv(root, r, pos, Some(v));
+                self.nodes[v].order = pos;
+                pos += 1;
+                self.delete_fast_node(subg, v);
+                self.fast_node(root, v);
+            }
+            let (rb, ro) = (self.rk(root, r).vbuf, self.rk(root, r).voff);
+            let sr = self.rk_mut(subg, r);
+            sr.vbuf = rb;
+            sr.voff = ro + ipos as usize;
+            self.rk_mut(root, r).valid = false;
+            r += 1;
+        }
+        if r < self.graphs[root].maxrank {
+            self.rk_mut(root, r).valid = false;
+        }
+        self.graphs[subg].expanded = true;
+    }
+
+    fn remove_rankleaders(&mut self, g: G) {
+        let (minr, maxr) = (self.graphs[g].minrank, self.graphs[g].maxrank);
+        for r in minr..=maxr {
+            let v = self.graphs[g].rankleader[r as usize].unwrap();
+            while let Some(&e) = self.nodes[v].out.first() {
+                self.delete_fast_edge(e);
+            }
+            while let Some(&e) = self.nodes[v].in_.first() {
+                self.delete_fast_edge(e);
+            }
+            self.delete_fast_node(0, v);
+            self.graphs[g].rankleader[r as usize] = None;
+        }
+    }
+
+    /// `expand_cluster`: install the cluster contents in place of its skeleton.
+    pub fn expand_cluster(&mut self, subg: G) -> Result<(), String> {
+        self.class2(subg);
+        let nl = self.graphs[subg].nlist;
+        self.graphs[subg].comp = vec![nl];
+        self.allocate_ranks(subg);
+        self.build_ranks(subg, 0)?;
+        self.merge_ranks(subg);
+        self.interclexp(subg);
+        self.remove_rankleaders(subg);
+        Ok(())
+    }
+
+    /// `mark_clusters`: marks every node in `g` with its top-level cluster under `g`.
+    pub fn mark_clusters(&mut self, g: G) {
+        for n in self.nodes_of(g) {
+            if self.nodes[n].ranktype == CLUSTER {
+                self.uf_singleton(n);
+            }
+            self.nodes[n].clust = None;
+        }
+        for clust in self.graphs[g].clust.clone() {
+            for n in self.nodes_of(clust) {
+                if self.nodes[n].ranktype != NORMAL {
+                    // agwarningf("%s was already in a rankset, deleted from cluster %s\n")
+                    self.agdelnode(clust, n);
+                    continue;
+                }
+                let leader = self.graphs[clust].leader.unwrap();
+                self.uf_setname(n, leader);
+                self.nodes[n].clust = Some(clust);
+                self.nodes[n].ranktype = CLUSTER;
+                for orig in self.out_edges(clust, n) {
+                    let mut e = self.edges[orig].to_virt;
+                    while let Some(x) = e {
+                        let vn = self.edges[x].head;
+                        if self.nodes[vn].node_type != VIRTUAL {
+                            break;
+                        }
+                        self.nodes[vn].clust = Some(clust);
+                        e = self.nodes[vn].out.first().copied();
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn build_skeleton(&mut self, g: G, subg: G) {
+        let (minr, maxr) = (self.graphs[subg].minrank, self.graphs[subg].maxrank);
+        self.graphs[subg].rankleader = vec![None; (maxr + 2).max(0) as usize];
+        let mut prev: Option<N> = None;
+        for r in minr..=maxr {
+            let v = self.virtual_node(g);
+            self.graphs[subg].rankleader[r as usize] = Some(v);
+            self.nodes[v].rank = r;
+            self.nodes[v].ranktype = CLUSTER;
+            self.nodes[v].clust = Some(subg);
+            if let Some(p) = prev {
+                let e = self.virtual_edge(p, v, None);
+                self.edges[e].xpenalty = short(self.edges[e].xpenalty * CL_CROSS);
+            }
+            prev = Some(v);
+        }
+        for v in self.nodes_of(subg) {
+            let rl = self.graphs[subg].rankleader[self.nodes[v].rank as usize].unwrap();
+            self.nodes[rl].uf_size += 1;
+            for e in self.out_edges(subg, v) {
+                let (tr, hr) = (
+                    self.nodes[self.edges[e].tail].rank,
+                    self.nodes[self.edges[e].head].rank,
+                );
+                let mut r = tr;
+                while r < hr {
+                    let oe = self.nodes[rl].out[0];
+                    self.edges[oe].count = short(self.edges[oe].count + 1);
+                    r += 1;
+                }
+            }
+        }
+        for r in minr..=maxr {
+            let rl = self.graphs[subg].rankleader[r as usize].unwrap();
+            if self.nodes[rl].uf_size > 1 {
+                self.nodes[rl].uf_size -= 1;
+            }
+        }
+    }
+
+    pub fn install_cluster(
+        &mut self,
+        g: G,
+        n: N,
+        pass: i32,
+        q: &mut VecDeque<N>,
+    ) -> Result<(), String> {
+        let clust = self.nodes[n].clust.unwrap();
+        if self.graphs[clust].installed != pass + 1 {
+            let (minr, maxr) = (self.graphs[clust].minrank, self.graphs[clust].maxrank);
+            for r in minr..=maxr {
+                let rl = self.graphs[clust].rankleader[r as usize].unwrap();
+                self.install_in_rank(g, rl)?;
+            }
+            for r in minr..=maxr {
+                let rl = self.graphs[clust].rankleader[r as usize].unwrap();
+                self.enqueue_neighbors(q, rl, pass);
+            }
+            self.graphs[clust].installed = pass + 1;
+        }
+        Ok(())
+    }
+
+    pub fn mark_lowclusters(&mut self, root: G) {
+        for n in self.nodes_of(root) {
+            self.nodes[n].clust = None;
+            for orig in self.out_edges(root, n) {
+                let mut e = self.edges[orig].to_virt;
+                while let Some(x) = e {
+                    let vn = self.edges[x].head;
+                    if self.nodes[vn].node_type != VIRTUAL {
+                        break;
+                    }
+                    self.nodes[vn].clust = None;
+                    e = self.nodes[vn].out.first().copied();
+                }
+            }
+        }
+        self.mark_lowcluster_basic(root);
+    }
+
+    fn mark_lowcluster_basic(&mut self, g: G) {
+        for clust in self.graphs[g].clust.clone() {
+            self.mark_lowcluster_basic(clust);
+        }
+        for n in self.nodes_of(g) {
+            if self.nodes[n].clust.is_none() {
+                self.nodes[n].clust = Some(g);
+            }
+            for orig in self.out_edges(g, n) {
+                let mut e = self.edges[orig].to_virt;
+                while let Some(x) = e {
+                    let vn = self.edges[x].head;
+                    if self.nodes[vn].node_type != VIRTUAL {
+                        break;
+                    }
+                    if self.nodes[vn].clust.is_none() {
+                        self.nodes[vn].clust = Some(g);
+                    }
+                    e = self.nodes[vn].out.first().copied();
+                }
+            }
+        }
+    }
+}

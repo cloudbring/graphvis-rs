@@ -1,0 +1,200 @@
+//! Port of `lib/dotgen/fastgr.c`: operations on the fast internal graph.
+
+use super::Dot;
+use super::types::*;
+
+/// `zapinlist`: remove `e` from `l`, filling the hole with the last member.
+pub fn zapinlist(l: &mut Vec<E>, e: E) {
+    if let Some(i) = l.iter().position(|&x| x == e) {
+        l.swap_remove(i);
+    }
+}
+
+/// C `short` assignment semantics for `ED_count` / `ED_xpenalty`.
+#[inline]
+pub fn short(v: i32) -> i32 {
+    v as i16 as i32
+}
+
+impl Dot<'_> {
+    fn ffe(&self, u: N, ul: &[E], v: N, vl: &[E]) -> Option<E> {
+        if !ul.is_empty() && !vl.is_empty() {
+            if ul.len() < vl.len() {
+                ul.iter().copied().find(|&e| self.edges[e].head == v)
+            } else {
+                vl.iter().copied().find(|&e| self.edges[e].tail == u)
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn find_fast_edge(&self, u: N, v: N) -> Option<E> {
+        self.ffe(u, &self.nodes[u].out, v, &self.nodes[v].in_)
+    }
+
+    pub fn find_flat_edge(&self, u: N, v: N) -> Option<E> {
+        self.ffe(u, &self.nodes[u].flat_out, v, &self.nodes[v].flat_in)
+    }
+
+    pub fn fast_edge(&mut self, e: E) -> E {
+        let (t, h) = (self.edges[e].tail, self.edges[e].head);
+        self.nodes[t].out.push(e);
+        self.nodes[h].in_.push(e);
+        e
+    }
+
+    pub fn delete_fast_edge(&mut self, e: E) {
+        let (t, h) = (self.edges[e].tail, self.edges[e].head);
+        zapinlist(&mut self.nodes[t].out, e);
+        zapinlist(&mut self.nodes[h].in_, e);
+    }
+
+    pub fn other_edge(&mut self, e: E) {
+        let t = self.edges[e].tail;
+        self.nodes[t].other.push(e);
+    }
+
+    pub fn safe_other_edge(&mut self, e: E) {
+        let t = self.edges[e].tail;
+        if !self.nodes[t].other.contains(&e) {
+            self.nodes[t].other.push(e);
+        }
+    }
+
+    /// Allocates a bare edge record (`make_aux_edge`/`new_virtual_edge` storage).
+    pub fn alloc_edge(&mut self, u: N, v: N) -> E {
+        let e = self.edges.len();
+        self.edges.push(EdgeInfo {
+            tail: u,
+            head: v,
+            ..EdgeInfo::default()
+        });
+        e
+    }
+
+    pub fn new_virtual_edge(&mut self, u: N, v: N, orig: Option<E>) -> E {
+        let e = self.alloc_edge(u, v);
+        self.edges[e].edge_type = VIRTUAL;
+        if let Some(o) = orig {
+            let oe = self.edges[o].clone();
+            let ed = &mut self.edges[e];
+            ed.seq = oe.seq;
+            ed.count = oe.count;
+            ed.xpenalty = oe.xpenalty;
+            ed.weight = oe.weight;
+            ed.minlen = oe.minlen;
+            if u == oe.tail {
+                ed.tail_port = oe.tail_port.clone();
+            } else if u == oe.head {
+                ed.tail_port = oe.head_port.clone();
+            }
+            if v == oe.head {
+                ed.head_port = oe.head_port.clone();
+            } else if v == oe.tail {
+                ed.head_port = oe.tail_port.clone();
+            }
+            if self.edges[o].to_virt.is_none() {
+                self.edges[o].to_virt = Some(e);
+            }
+            self.edges[e].to_orig = Some(o);
+        } else {
+            let ed = &mut self.edges[e];
+            ed.weight = 1;
+            ed.xpenalty = 1;
+            ed.count = 1;
+            ed.minlen = 1;
+        }
+        e
+    }
+
+    pub fn virtual_edge(&mut self, u: N, v: N, orig: Option<E>) -> E {
+        let e = self.new_virtual_edge(u, v, orig);
+        self.fast_edge(e)
+    }
+
+    /// `fast_node`: prepends `n` to `GD_nlist(g)`.
+    pub fn fast_node(&mut self, g: G, n: N) {
+        let head = self.graphs[g].nlist;
+        self.nodes[n].next = head;
+        if let Some(h) = head {
+            self.nodes[h].prev = Some(n);
+        }
+        self.graphs[g].nlist = Some(n);
+        self.nodes[n].prev = None;
+    }
+
+    pub fn delete_fast_node(&mut self, g: G, n: N) {
+        let (next, prev) = (self.nodes[n].next, self.nodes[n].prev);
+        if let Some(nx) = next {
+            self.nodes[nx].prev = prev;
+        }
+        if let Some(pv) = prev {
+            self.nodes[pv].next = next;
+        } else {
+            self.graphs[g].nlist = next;
+        }
+    }
+
+    pub fn virtual_node(&mut self, g: G) -> N {
+        let n = self.nodes.len();
+        self.nodes.push(NodeInfo {
+            name: "virtual".to_string(),
+            node_type: VIRTUAL,
+            lw: 1.0,
+            rw: 1.0,
+            ht: 1.0,
+            uf_size: 1,
+            ..NodeInfo::default()
+        });
+        self.fast_node(g, n);
+        n
+    }
+
+    pub fn flat_edge(&mut self, g: G, e: E) {
+        let (t, h) = (self.edges[e].tail, self.edges[e].head);
+        self.nodes[t].flat_out.push(e);
+        self.nodes[h].flat_in.push(e);
+        self.graphs[0].has_flat_edges = true;
+        self.graphs[g].has_flat_edges = true;
+    }
+
+    pub fn delete_flat_edge(&mut self, e: E) {
+        if let Some(o) = self.edges[e].to_orig
+            && self.edges[o].to_virt == Some(e)
+        {
+            self.edges[o].to_virt = None;
+        }
+        let (t, h) = (self.edges[e].tail, self.edges[e].head);
+        zapinlist(&mut self.nodes[t].flat_out, e);
+        zapinlist(&mut self.nodes[h].flat_in, e);
+    }
+
+    fn basic_merge(&mut self, e: E, rep: E) {
+        if self.edges[rep].minlen < self.edges[e].minlen {
+            self.edges[rep].minlen = self.edges[e].minlen;
+        }
+        let (c, x, w) = (
+            self.edges[e].count,
+            self.edges[e].xpenalty,
+            self.edges[e].weight,
+        );
+        let mut r = Some(rep);
+        while let Some(rr) = r {
+            let ed = &mut self.edges[rr];
+            ed.count = short(ed.count + c);
+            ed.xpenalty = short(ed.xpenalty + x);
+            ed.weight += w;
+            r = ed.to_virt;
+        }
+    }
+
+    pub fn merge_oneway(&mut self, e: E, rep: E) {
+        if Some(rep) == self.edges[e].to_virt || Some(e) == self.edges[rep].to_virt {
+            // agwarningf("merge_oneway glitch\n")
+            return;
+        }
+        self.edges[e].to_virt = Some(rep);
+        self.basic_merge(e, rep);
+    }
+}
