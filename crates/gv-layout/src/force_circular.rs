@@ -11,7 +11,7 @@ use crate::dot::{
     compute_cluster_bounding_boxes, node_bounding_box, normalize_graph_coordinates, parse_attr_f64,
 };
 use gv_core::{BoundingBox, Graph, NodeId, Point, Result, SubgraphId};
-use gv_geom::{shapes::compute_node_dimensions, splines::route_edge_spline};
+use gv_geom::splines::route_edge_spline;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::f64::consts::{PI, TAU};
 
@@ -19,10 +19,7 @@ const POINTS_PER_INCH: f64 = 72.0;
 
 /// Common initialization for non-hierarchical engines: computes node dimensions and checks for empty graphs.
 fn init_non_hierarchical_nodes(graph: &mut Graph) -> bool {
-    let graph_name = graph.name.clone();
-    for node in &mut graph.nodes {
-        compute_node_dimensions(node, &graph_name);
-    }
+    gv_geom::node_size::size_graph_nodes(graph);
     if graph.nodes.is_empty() {
         graph.bb = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
         return false;
