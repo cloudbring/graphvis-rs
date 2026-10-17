@@ -11,7 +11,11 @@ pub(crate) fn strtod(s: &str) -> Option<(f64, &str)> {
     if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
         i += 1;
     }
-    let lower: String = t[i..].chars().take(8).collect::<String>().to_ascii_lowercase();
+    let lower: String = t[i..]
+        .chars()
+        .take(8)
+        .collect::<String>()
+        .to_ascii_lowercase();
     for word in ["infinity", "inf", "nan"] {
         if lower.starts_with(word) {
             let end = i + word.len();
@@ -95,17 +99,6 @@ pub(crate) fn atoi(s: &str) -> i64 {
 /// `atof`.
 pub(crate) fn atof(s: &str) -> f64 {
     strtod(s).map_or(0.0, |x| x.0)
-}
-
-/// `sscanf(s, "%lf,%lf", ...)`: the number of values read and the values.
-pub(crate) fn scan_pair(s: &str) -> (usize, f64, f64) {
-    let Some((a, rest)) = strtod(s) else {
-        return (0, 0.0, 0.0);
-    };
-    match rest.strip_prefix(',').and_then(strtod) {
-        Some((b, _)) => (2, a, b),
-        None => (1, a, 0.0),
-    }
 }
 
 /// `mapBool(p, dflt)`.

@@ -220,6 +220,7 @@ pub(crate) struct Job<'a> {
     objs: Vec<ObjState>,
     pub flags: u32,
     pub features: Features,
+    #[allow(dead_code)]
     pub pad: Point,
     pub zoom: f64,
     pub rotation: i32,
@@ -491,9 +492,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
                     o.penwidth = item.args.first().map_or(0.0, |a| super::attrs::atof(a));
                 }
                 "filled" | "unfilled" | "tapered" => {}
-                other => eprintln!(
-                    "Warning: gvrender_set_style: unsupported style {other} - ignoring"
-                ),
+                other => {
+                    eprintln!("Warning: gvrender_set_style: unsupported style {other} - ignoring")
+                }
             }
         }
     }

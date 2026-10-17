@@ -15,6 +15,7 @@ pub(crate) mod html;
 pub(crate) mod job;
 pub(crate) mod model;
 pub(crate) mod num;
+pub(crate) mod output;
 pub(crate) mod shapes;
 
 use job::{Emitter, Engine, Job};

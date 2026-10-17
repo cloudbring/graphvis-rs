@@ -95,7 +95,11 @@ impl<E: Engine> Emitter<'_, E> {
         match lp {
             HtmlLabel::Table(tbl) => {
                 self.set_style(&default_line_style());
-                let pc = tbl.data.pencolor.clone().unwrap_or(DEFAULT_COLOR.to_string());
+                let pc = tbl
+                    .data
+                    .pencolor
+                    .clone()
+                    .unwrap_or(DEFAULT_COLOR.to_string());
                 self.set_pencolor(&pc);
                 self.emit_html_tbl(tbl, &mut env);
             }
@@ -319,7 +323,11 @@ impl<E: Engine> Emitter<'_, E> {
     fn emit_html_rules(&mut self, tbl: &HtmlTbl, k: usize, env: &Env) {
         let cp = &tbl.cells[k];
         let nextc = tbl.cells.get(k + 1);
-        let color = tbl.data.pencolor.clone().unwrap_or(DEFAULT_COLOR.to_string());
+        let color = tbl
+            .data
+            .pencolor
+            .clone()
+            .unwrap_or(DEFAULT_COLOR.to_string());
         self.set_fillcolor(&color);
         self.set_pencolor(&color);
         let pts = offset(cp.data.bx, env.pos);
@@ -395,8 +403,9 @@ impl<E: Engine> Emitter<'_, E> {
             id: None,
             explicit_tooltip: false,
         };
-        let anchor =
-            do_anchor && self.job.flags & EMIT_CLUSTERS_LAST == 0 && self.init_anchor(env, &tbl.data, &mut saved);
+        let anchor = do_anchor
+            && self.job.flags & EMIT_CLUSTERS_LAST == 0
+            && self.init_anchor(env, &tbl.data, &mut saved);
         if !tbl.data.style.invisible {
             if let Some(bg) = &tbl.data.bgcolor {
                 let filled = self.set_fill(bg, tbl.data.gradientangle, tbl.data.style.radial);
@@ -446,8 +455,9 @@ impl<E: Engine> Emitter<'_, E> {
             id: None,
             explicit_tooltip: false,
         };
-        let anchor =
-            do_anchor && self.job.flags & EMIT_CLUSTERS_LAST == 0 && self.init_anchor(env, &cp.data, &mut saved);
+        let anchor = do_anchor
+            && self.job.flags & EMIT_CLUSTERS_LAST == 0
+            && self.init_anchor(env, &cp.data, &mut saved);
         if !cp.data.style.invisible {
             if let Some(bg) = &cp.data.bgcolor {
                 let filled = self.set_fill(bg, cp.data.gradientangle, cp.data.style.radial);

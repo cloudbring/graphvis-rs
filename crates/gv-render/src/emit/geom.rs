@@ -88,7 +88,12 @@ pub(crate) fn split_bspline(list: &[Point], t: f64) -> (Vec<Point>, Vec<Point>) 
     let mut right: Vec<Point> = list[k..k + 3 * (cnt - i) + 1].to_vec();
     let last = lens[i];
     let r = (len - (s - last)) / last;
-    let c = [list[3 * i], list[3 * i + 1], list[3 * i + 2], list[3 * i + 3]];
+    let c = [
+        list[3 * i],
+        list[3 * i + 1],
+        list[3 * i + 2],
+        list[3 * i + 3],
+    ];
     let (_, l, rr) = bezier_split(&c, r);
     left[3 * i..3 * i + 4].copy_from_slice(&l);
     right[..4].copy_from_slice(&rr);
@@ -201,7 +206,11 @@ pub(crate) fn taper(list: &[Point], dir: TaperDir, initwid: f64) -> Vec<Point> {
         TaperDir::None => initwid / 2.0,
         TaperDir::Both => {
             let fr = cur / total;
-            if fr <= 0.5 { fr * initwid } else { (1.0 - fr) * initwid }
+            if fr <= 0.5 {
+                fr * initwid
+            } else {
+                (1.0 - fr) * initwid
+            }
         }
     };
     let mut left = Vec::with_capacity(n);

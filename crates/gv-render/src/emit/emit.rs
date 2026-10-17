@@ -6,9 +6,9 @@
 
 use super::attrs::{Attrs, StyleItem, default_line_style, mapbool, parse_style};
 use super::job::{
-    EMIT_CLUSTERS_LAST, EMIT_EDGE_SORTED, EMIT_SORTED, EmitState, Emitter, Engine, FILL,
-    GRADIENT, GVDEVICE_DOES_TRUECOLOR, GVRENDER_DOES_LABELS, GVRENDER_DOES_MAPS,
-    GVRENDER_DOES_TARGETS, GVRENDER_DOES_TOOLTIPS, GVRENDER_NO_WHITE_BG, ObjKind, RGRADIENT,
+    EMIT_CLUSTERS_LAST, EMIT_EDGE_SORTED, EMIT_SORTED, EmitState, Emitter, Engine, FILL, GRADIENT,
+    GVDEVICE_DOES_TRUECOLOR, GVRENDER_DOES_LABELS, GVRENDER_DOES_MAPS, GVRENDER_DOES_TARGETS,
+    GVRENDER_DOES_TOOLTIPS, GVRENDER_NO_WHITE_BG, ObjKind, RGRADIENT,
 };
 use super::model::{Bz, TextLabel};
 use gv_core::font::{LabelSubstContext, html_entity_utf8, strdup_and_subst_obj};
@@ -149,7 +149,10 @@ fn splines_bb(bz: &[Bz]) -> Option<BoundingBox> {
         let mut i = 1;
         while i + 2 < b.list.len() + 1 && i + 1 < b.list.len() {
             let (p1, p2) = (b.list[i], b.list[i + 1]);
-            expand(&mut bb, Point::new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0));
+            expand(
+                &mut bb,
+                Point::new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0),
+            );
             if let Some(p) = b.list.get(i + 2) {
                 expand(&mut bb, *p);
             }
@@ -458,7 +461,10 @@ impl<'a, E: Engine> Emitter<'a, E> {
             let a = cl.attrs;
             self.job.push_obj(ObjKind::Cluster(c));
             self.job.obj_mut().emit_state = EmitState::CDraw;
-            self.init_obj_map_data(cl.label.as_ref().map(|l| l.text.clone()), ObjKind::Cluster(c));
+            self.init_obj_map_data(
+                cl.label.as_ref().map(|l| l.text.clone()),
+                ObjKind::Cluster(c),
+            );
             self.eng.begin_cluster(&self.job);
             let anchored = {
                 let o = self.job.obj();
@@ -678,7 +684,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             return;
         }
         self.set_pencolor(&lp.fontcolor);
-        let mut p = Point::default();
+        let mut p = Point::new(0.0, 0.0);
         p.y = match lp.valign {
             't' => lp.pos.y + lp.space.y / 2.0 - lp.fontsize,
             'b' => lp.pos.y - lp.space.y / 2.0 + lp.dimen.y - lp.fontsize,
@@ -848,6 +854,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn emit_edge_label(
         &mut self,
         lbl: Option<&TextLabel>,
@@ -989,7 +996,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
             self.set_fillcolor(fillcolor);
         }
         if tapered {
-            let color = if color.is_empty() { DEFAULT_COLOR } else { color };
+            let color = if color.is_empty() {
+                DEFAULT_COLOR
+            } else {
+                color
+            };
             let fillcolor = if fillcolor.is_empty() {
                 DEFAULT_COLOR
             } else {
@@ -1006,7 +1017,14 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 self.set_fillcolor(fillcolor);
             }
             if bz.sflag != 0 {
-                self.arrow_gen(EmitState::TDraw, bz.sp, bz.list[0], arrowsize, penwidth, bz.sflag);
+                self.arrow_gen(
+                    EmitState::TDraw,
+                    bz.sp,
+                    bz.list[0],
+                    arrowsize,
+                    penwidth,
+                    bz.sflag,
+                );
             }
             if bz.eflag != 0 {
                 self.arrow_gen(
@@ -1036,7 +1054,14 @@ impl<'a, E: Engine> Emitter<'a, E> {
             for bz in &ed.bz {
                 self.bezier(&bz.list, 0);
                 if bz.sflag != 0 {
-                    self.arrow_gen(EmitState::TDraw, bz.sp, bz.list[0], arrowsize, penwidth, bz.sflag);
+                    self.arrow_gen(
+                        EmitState::TDraw,
+                        bz.sp,
+                        bz.list[0],
+                        arrowsize,
+                        penwidth,
+                        bz.sflag,
+                    );
                 }
                 if bz.eflag != 0 {
                     self.arrow_gen(
@@ -1132,7 +1157,14 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 self.set_pencolor(&cur);
                 self.set_fillcolor(&cur);
             }
-            self.arrow_gen(EmitState::TDraw, bz.sp, bz.list[0], arrowsize, penwidth, bz.sflag);
+            self.arrow_gen(
+                EmitState::TDraw,
+                bz.sp,
+                bz.list[0],
+                arrowsize,
+                penwidth,
+                bz.sflag,
+            );
         }
         if bz.eflag != 0 {
             if cur != headcolor {
@@ -1203,7 +1235,14 @@ impl<'a, E: Engine> Emitter<'a, E> {
                     self.set_pencolor(&c);
                     self.set_fillcolor(&c);
                 }
-                self.arrow_gen(EmitState::TDraw, bz.sp, bz.list[0], arrowsize, penwidth, bz.sflag);
+                self.arrow_gen(
+                    EmitState::TDraw,
+                    bz.sp,
+                    bz.list[0],
+                    arrowsize,
+                    penwidth,
+                    bz.sflag,
+                );
             }
             if bz.eflag != 0 {
                 if let Some(c) = &endcolor {

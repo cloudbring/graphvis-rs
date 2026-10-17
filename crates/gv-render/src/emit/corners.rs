@@ -45,7 +45,10 @@ pub(crate) fn draw_special<E: Engine>(
             let sseg = sides - 1;
             let c0 = b[3 * sseg + 2];
             let c1 = b[3 * sseg + 4];
-            let c2 = p(c1.x + (c0.x - b[3 * sseg + 3].x), c1.y + (c0.y - b[3 * sseg + 3].y));
+            let c2 = p(
+                c1.x + (c0.x - b[3 * sseg + 3].x),
+                c1.y + (c0.y - b[3 * sseg + 3].y),
+            );
             em.polyline(&[c1, c2]);
             em.polyline(&[c0, c2]);
         }
@@ -53,24 +56,29 @@ pub(crate) fn draw_special<E: Engine>(
             let mut d = vec![Point::default(); sides + 2];
             d[0] = af[0];
             d[1] = b[2];
-            d[2] = p(b[2].x + (b[3].x - b[4].x) / 3.0, b[2].y + (b[3].y - b[4].y) / 3.0);
-            d[3] = p(b[3].x + (b[3].x - b[4].x) / 3.0, b[3].y + (b[3].y - b[4].y) / 3.0);
-            for seg in 4..sides + 2 {
-                d[seg] = af[seg - 2];
-            }
+            d[2] = p(
+                b[2].x + (b[3].x - b[4].x) / 3.0,
+                b[2].y + (b[3].y - b[4].y) / 3.0,
+            );
+            d[3] = p(
+                b[3].x + (b[3].x - b[4].x) / 3.0,
+                b[3].y + (b[3].y - b[4].y) / 3.0,
+            );
+            d[4..sides + 2].copy_from_slice(&af[2..sides]);
             em.polygon(&d, filled);
             em.polyline(&[b[3], b[2]]);
         }
         S::Folder => {
             let mut d = vec![Point::default(); sides + 3];
             d[0] = af[0];
-            d[1] = p(af[0].x - (af[0].x - b[1].x) / 4.0, af[0].y + (b[3].y - b[4].y) / 3.0);
+            d[1] = p(
+                af[0].x - (af[0].x - b[1].x) / 4.0,
+                af[0].y + (b[3].y - b[4].y) / 3.0,
+            );
             d[2] = p(af[0].x - 2.0 * (af[0].x - b[1].x), d[1].y);
             d[3] = p(af[0].x - 2.25 * (af[0].x - b[1].x), b[3].y);
             d[4] = p(b[3].x, b[3].y);
-            for seg in 4..sides + 3 {
-                d[seg] = af[seg - 3];
-            }
+            d[4..sides + 3].copy_from_slice(&af[1..sides]);
             em.polygon(&d, filled);
         }
         S::Box3d => {
@@ -105,7 +113,10 @@ pub(crate) fn draw_special<E: Engine>(
         }
         S::Promoter => {
             let mut d = [Point::default(); 9];
-            d[0] = p(mid_x(af) + (af[0].x - af[1].x) / 8.0, mid_y(&af[1..]) + bh() * 3.0 / 2.0);
+            d[0] = p(
+                mid_x(af) + (af[0].x - af[1].x) / 8.0,
+                mid_y(&af[1..]) + bh() * 3.0 / 2.0,
+            );
             d[1] = p(mid_x(af) - (af[0].x - af[1].x) / 4.0, d[0].y);
             d[2] = p(d[1].x, mid_y(&af[1..]));
             d[3] = p(d[2].x + bw() / 2.0, mid_y(&af[1..]));
@@ -216,12 +227,21 @@ pub(crate) fn draw_special<E: Engine>(
                 let d3 = p(d0.x, d2.y);
                 [d0, d1, d2, d3]
             };
-            em.polygon(&rect(mid_x(af) - bw() * 9.0 / 8.0, mid_y(&af[1..]) + bh() / 8.0), filled);
             em.polygon(
-                &rect(mid_x(af) - bw() * 9.0 / 8.0, mid_y(&af[1..]) - bh() * 5.0 / 8.0),
+                &rect(mid_x(af) - bw() * 9.0 / 8.0, mid_y(&af[1..]) + bh() / 8.0),
                 filled,
             );
-            em.polygon(&rect(mid_x(af) + bw() / 8.0, mid_y(&af[1..]) - bh() * 5.0 / 8.0), filled);
+            em.polygon(
+                &rect(
+                    mid_x(af) - bw() * 9.0 / 8.0,
+                    mid_y(&af[1..]) - bh() * 5.0 / 8.0,
+                ),
+                filled,
+            );
+            em.polygon(
+                &rect(mid_x(af) + bw() / 8.0, mid_y(&af[1..]) - bh() * 5.0 / 8.0),
+                filled,
+            );
             let d = rect(mid_x(af) + bw() / 8.0, mid_y(&af[1..]) + bh() / 8.0);
             em.polygon(&d, filled);
             dna(em, d[1].x, af[0].x);
@@ -267,7 +287,10 @@ pub(crate) fn draw_special<E: Engine>(
                 p(mid_x(af) - bw() / 2.0, mid_y(&af[1..]) + bw() / 2.0),
             ];
             em.polygon(&d, filled);
-            let c0 = p(mid_x(af) + bw() * 3.0 / 4.0, mid_y(&af[1..]) + bw() * 3.0 / 4.0);
+            let c0 = p(
+                mid_x(af) + bw() * 3.0 / 4.0,
+                mid_y(&af[1..]) + bw() * 3.0 / 4.0,
+            );
             let c1 = p(c0.x, mid_y(&af[1..]) - bw() * 3.0 / 4.0);
             let c2 = p(mid_x(af) - bw() * 3.0 / 4.0, c1.y);
             let c3 = p(c2.x, c0.y);

@@ -4,12 +4,24 @@
 
 pub mod dot_out;
 pub mod emit;
-mod svg_engine;
 pub mod json;
 pub mod svg;
+mod svg_engine;
+mod xdot_engine;
 
 pub use dot_out::{render_dot_positioned, render_plain};
-pub use json::render_json;
+
+/// Renders `-Tjson` (`json0 == false`) or `-Tjson0`.
+pub fn render_json(graph: &Graph, json0: bool) -> Result<String> {
+    render_graph(
+        graph,
+        if json0 {
+            OutputFormat::Json0
+        } else {
+            OutputFormat::Json
+        },
+    )
+}
 pub use emit::reset_render_state;
 
 /// Renders `graph` as SVG (`-Tsvg`).
@@ -48,15 +60,63 @@ impl OutputFormat {
 }
 
 pub fn render_graph(graph: &Graph, format: OutputFormat) -> Result<String> {
-    match format {
-        OutputFormat::Svg => Ok(render_svg(graph)),
-        OutputFormat::Json => render_json(graph, false),
-        OutputFormat::Json0 => render_json(graph, true),
-        OutputFormat::Dot => Ok(render_dot_positioned(graph, false)),
-        OutputFormat::Xdot => Ok(render_dot_positioned(graph, true)),
-        OutputFormat::Canon => Ok(write_canon(graph)),
-        OutputFormat::Plain => Ok(render_plain(graph)),
+    render_graph_named(graph, format, "")
+}
+
+/// Edge iteration order of `agfstnode`/`agfstout` (numbering of `_gvid` in JSON).
+fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
+    m.out_edges.iter().flatten().copied().collect()
+}
+
+/// The graph with layout attributes and, for xdot, draw operations attached.
+fn attached(m: &emit::model::Model<'_>, xdot: bool) -> Graph {
+    let (mut g, _, _) = emit::output::attach_attrs(m);
+    if xdot {
+        let eng = xdot_engine::XdotEngine::new(m.root_attrs().get("xdotversion"), None);
+        let eng = emit::run(m, eng);
+        for (kind, name, value) in eng.sets {
+            let attrs = match kind {
+                emit::job::ObjKind::Root => &mut g.graph_attrs,
+                emit::job::ObjKind::Cluster(c) => &mut g.subgraphs[m.clusters[c].sub].graph_attrs,
+                emit::job::ObjKind::Node(n) => &mut g.nodes[n].attrs,
+                emit::job::ObjKind::Edge(e) => &mut g.edges[e].attrs,
+            };
+            attrs.insert(name.to_string(), value);
+        }
     }
+    g
+}
+
+/// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
+pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Result<String> {
+    if format == OutputFormat::Canon {
+        return Ok(write_canon(graph));
+    }
+    let m = emit::model::Model::build(graph);
+    Ok(match format {
+        OutputFormat::Svg => emit::run(&m, svg_engine::SvgEngine::default()).out,
+        OutputFormat::Json | OutputFormat::Json0 => {
+            let g = attached(&m, format == OutputFormat::Json);
+            json::write_json(&g, format == OutputFormat::Json, &edge_order(&m))
+        }
+        OutputFormat::Dot => write_canon(&attached(&m, false)),
+        OutputFormat::Xdot => write_canon(&attached(&m, true)),
+        OutputFormat::Plain => {
+            let zoom = emit::job::Job::new(
+                &m,
+                emit::job::Features {
+                    flags: 0,
+                    default_pad: 0.0,
+                    knowncolors: &[],
+                    rgba: false,
+                },
+                0,
+            )
+            .zoom;
+            emit::output::write_plain(&m, zoom, name.eq_ignore_ascii_case("plain-ext"))
+        }
+        OutputFormat::Canon => unreachable!(),
+    })
 }
 
 #[cfg(test)]

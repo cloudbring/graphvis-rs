@@ -120,7 +120,11 @@ fn match_name(name: &str) -> u32 {
 /// `arrow_flags`: `(sflag, eflag)`.
 pub(crate) fn arrow_flags(a: Attrs<'_>, directed: bool) -> (u32, u32) {
     let mut s = ARR_TYPE_NONE;
-    let mut e = if directed { ARR_TYPE_NORM } else { ARR_TYPE_NONE };
+    let mut e = if directed {
+        ARR_TYPE_NORM
+    } else {
+        ARR_TYPE_NONE
+    };
     if let Some(dir) = a.nonempty("dir") {
         match dir {
             "forward" => (s, e) = (ARR_TYPE_NONE, ARR_TYPE_NORM),
@@ -235,7 +239,11 @@ fn normal0(mut pp: Point, u: Point, penwidth: f64, flag: u32, a: &mut [Point; 5]
     let mut delta_base = p(0.0, 0.0);
     let origin = p(0.0, 0.0);
     let v_inv = p(-v.x, -v.y);
-    let normal_left = if flag & ARR_MOD_RIGHT != 0 { origin } else { v_inv };
+    let normal_left = if flag & ARR_MOD_RIGHT != 0 {
+        origin
+    } else {
+        v_inv
+    };
     let normal_right = if flag & ARR_MOD_LEFT != 0 { origin } else { v };
     let inv = flag & ARR_MOD_INV != 0;
     let base_left = if inv { normal_right } else { normal_left };
@@ -308,7 +316,11 @@ fn crow0(
     let origin = p(0.0, 0.0);
     let v_inv = p(-v.x, -v.y);
     let normal_left = if flag & ARR_MOD_RIGHT != 0 { origin } else { v };
-    let normal_right = if flag & ARR_MOD_LEFT != 0 { origin } else { v_inv };
+    let normal_right = if flag & ARR_MOD_LEFT != 0 {
+        origin
+    } else {
+        v_inv
+    };
     let base_left = if inv { normal_right } else { normal_left };
     let base_right = if inv { normal_left } else { normal_right };
     let tip = if inv { p(-u.x, -u.y) } else { u };
@@ -431,7 +443,14 @@ pub(crate) fn bezier_split(v: &[Point; 4], t: f64) -> (Point, [Point; 4], [Point
 }
 
 impl<E: Engine> Emitter<'_, E> {
-    fn arrow_gen_type(&mut self, pp: Point, u: Point, arrowsize: f64, penwidth: f64, flag: u32) -> Point {
+    fn arrow_gen_type(
+        &mut self,
+        pp: Point,
+        u: Point,
+        arrowsize: f64,
+        penwidth: f64,
+        flag: u32,
+    ) -> Point {
         let f = flag & ((1 << BITS_PER_ARROW_TYPE) - 1);
         let Some(&(_, lenfact)) = TYPES.iter().find(|t| t.0 == f) else {
             return pp;
@@ -565,11 +584,23 @@ impl<E: Engine> Emitter<'_, E> {
                 af[0] = p(pp.x + v.x + w.x, pp.y + v.y + w.y);
                 af[3] = p(pp.x - v.x + w.x, pp.y - v.y + w.y);
                 if flag & ARR_MOD_INV != 0 {
-                    af[1] = p(pp.x + 0.95 * v.x + w.x + w.x * 4.0 / 3.0, af[0].y + w.y * 4.0 / 3.0);
-                    af[2] = p(pp.x - 0.95 * v.x + w.x + w.x * 4.0 / 3.0, af[3].y + w.y * 4.0 / 3.0);
+                    af[1] = p(
+                        pp.x + 0.95 * v.x + w.x + w.x * 4.0 / 3.0,
+                        af[0].y + w.y * 4.0 / 3.0,
+                    );
+                    af[2] = p(
+                        pp.x - 0.95 * v.x + w.x + w.x * 4.0 / 3.0,
+                        af[3].y + w.y * 4.0 / 3.0,
+                    );
                 } else {
-                    af[1] = p(pp.x + 0.95 * v.x + w.x - w.x * 4.0 / 3.0, af[0].y - w.y * 4.0 / 3.0);
-                    af[2] = p(pp.x - 0.95 * v.x + w.x - w.x * 4.0 / 3.0, af[3].y - w.y * 4.0 / 3.0);
+                    af[1] = p(
+                        pp.x + 0.95 * v.x + w.x - w.x * 4.0 / 3.0,
+                        af[0].y - w.y * 4.0 / 3.0,
+                    );
+                    af[2] = p(
+                        pp.x - 0.95 * v.x + w.x - w.x * 4.0 / 3.0,
+                        af[3].y - w.y * 4.0 / 3.0,
+                    );
                 }
                 self.polyline(&[a0, q]);
                 if flag & ARR_MOD_LEFT != 0 {

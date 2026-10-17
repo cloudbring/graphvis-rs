@@ -3,14 +3,20 @@
 pub use gv_core::{Graph, GraphvizError, Result};
 pub use gv_layout::{LayoutEngine, LayoutOptions, layout_graph, layout_graph_with_options};
 pub use gv_parser::{GlobalAttrs, parse_dot, parse_dot_all};
-pub use gv_render::{OutputFormat, render_graph};
+pub use gv_render::{OutputFormat, render_graph, render_graph_named};
 
 /// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
 /// first graph in `dot_source`.
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
     let output_format = OutputFormat::parse(format)?;
     let graph = parse_dot(dot_source)?;
-    render_parsed(graph, engine, output_format, LayoutOptions::default())
+    render_parsed(
+        graph,
+        engine,
+        output_format,
+        format,
+        LayoutOptions::default(),
+    )
 }
 
 /// Renders every graph in `dot_source`, applying `globals` (`-G`/`-N`/`-E`) before each graph body.
@@ -38,9 +44,10 @@ pub fn render_dot_all_with_options(
     options: LayoutOptions,
 ) -> Result<Vec<String>> {
     let output_format = OutputFormat::parse(format)?;
+    gv_render::reset_render_state();
     parse_dot_all(dot_source, globals)?
         .into_iter()
-        .map(|graph| render_parsed(graph, engine, output_format, options))
+        .map(|graph| render_parsed(graph, engine, output_format, format, options))
         .collect()
 }
 
@@ -48,6 +55,7 @@ fn render_parsed(
     mut graph: Graph,
     engine: &str,
     output_format: OutputFormat,
+    format_name: &str,
     options: LayoutOptions,
 ) -> Result<String> {
     // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
@@ -58,7 +66,7 @@ fn render_parsed(
     if output_format != OutputFormat::Canon {
         layout_graph_with_options(&mut graph, layout_engine, options)?;
     }
-    render_graph(&graph, output_format)
+    render_graph_named(&graph, output_format, format_name)
 }
 
 #[cfg(test)]

@@ -17,15 +17,11 @@
 //! node `xlp`, edge `xlp`, `head_lp`, `tail_lp`) are written back to those attributes in Rust's
 //! shortest round-trip notation, so renderers read the exact values.
 
-use gv_core::font::{
-    DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LINESPACING, LabelSubstContext,
-    measure_multiline_label_with_context,
-};
+use gv_core::font::{DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext};
 use gv_core::{
     AttrMap, BezierSegment, BoundingBox, Graph, GraphKind, GraphvizError, Point, Result, Spline,
     SubgraphId,
 };
-use gv_geom::shapes::compute_node_dimensions_with_rankdir;
 
 const POINTS_PER_INCH: f64 = 72.0;
 /// `PAD` in `const.h`: horizontal and vertical label padding.
@@ -216,26 +212,20 @@ fn user_spline(pos: &str, tail_arrow: bool, head_arrow: bool) -> Option<Spline> 
     Some(Spline { segments })
 }
 
-/// Size of a plain-text label in points (`make_label` / `make_simple_label`).
+/// Size of a label in points (`make_label`).
 fn label_dimen(text: &str, fontname: &str, fontsize: f64, ctx: &LabelSubstContext<'_>) -> Point {
     if text.is_empty() {
         return Point::default();
     }
-    if text.starts_with('<') && text.ends_with('>') {
-        // HTML labels are sized by the renderer; approximate with their text.
-        let l = measure_multiline_label_with_context(text, ctx, fontname, fontsize);
-        return Point::new(l.width, l.height);
-    }
-    let l = measure_multiline_label_with_context(text, ctx, fontname, fontsize);
-    let mut h = 0.0;
-    for line in &l.lines {
-        h += if line.text.is_empty() {
-            (fontsize * LINESPACING).trunc()
-        } else {
-            line.height
-        };
-    }
-    Point::new(l.width, h)
+    gv_geom::node_size::make_label(
+        text,
+        gv_geom::node_size::is_html_value(text),
+        ctx,
+        fontname,
+        fontsize,
+        false,
+    )
+    .dimen
 }
 
 fn attr_f64(attrs: &AttrMap, key: &str, default: f64, min: f64) -> f64 {
@@ -341,10 +331,8 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
         .get("rankdir")
         .cloned()
         .unwrap_or_else(|| "TB".to_string());
-    let gname = graph.name.clone();
-    for node in &mut graph.nodes {
-        compute_node_dimensions_with_rankdir(node, &gname, &rankdir);
-    }
+    let _ = rankdir;
+    gv_geom::node_size::size_graph_nodes(graph);
 
     // user_pos: positions in points, stored in inches as ND_pos.
     let mut npos: Vec<(f64, f64)> = Vec::with_capacity(graph.nodes.len());

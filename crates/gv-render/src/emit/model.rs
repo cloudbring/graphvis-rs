@@ -7,8 +7,8 @@
 //! `EdgeData::label_pos`, `SubgraphData::bb`, `Graph::bb`) and the label position attributes
 //! (`lp`, `xlp`, `head_lp`, `tail_lp`).
 
-use super::attrs::{Attrs, strtod};
 use super::arrows::arrow_flags;
+use super::attrs::{Attrs, strtod};
 use gv_core::font::{PostscriptFontAlias, TextJustify, translate_postscript_fontname};
 use gv_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
 use gv_geom::html_label::HtmlLabel;
@@ -71,6 +71,19 @@ impl TextLabel {
     pub fn from_geometry(g: &LabelGeometry, raw: &str, fontcolor: &str) -> Self {
         let mut spans = Vec::new();
         let mut text = raw.to_string();
+        if g.html {
+            text = match g.html_label.as_deref() {
+                Some(HtmlLabel::Table(_)) => "<TABLE>".to_string(),
+                _ => {
+                    let inner = if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
+                        &raw[1..raw.len() - 1]
+                    } else {
+                        raw
+                    };
+                    gv_core::font::html_entity_utf8(inner)
+                }
+            };
+        }
         if let Some(t) = &g.text {
             text = t.source.clone();
             for line in &t.lines {
@@ -148,6 +161,7 @@ pub(crate) struct RCluster<'g> {
     pub label: Option<TextLabel>,
     pub children: Vec<usize>,
     /// Nodes (indices) directly or indirectly in the cluster.
+    #[allow(dead_code)]
     pub nodes: Vec<usize>,
 }
 
@@ -170,6 +184,7 @@ pub(crate) struct Model<'g> {
     pub out_edges: Vec<Vec<usize>>,
     pub clusters: Vec<RCluster<'g>>,
     pub root_clusters: Vec<usize>,
+    #[allow(dead_code)]
     pub has_labels: u32,
 }
 
@@ -207,8 +222,7 @@ impl<'g> Model<'g> {
         if a.get("rotate").is_some_and(|r| super::attrs::atoi(r) == 90) {
             return true;
         }
-        if a
-            .get("orientation")
+        if a.get("orientation")
             .is_some_and(|o| o.starts_with('l') || o.starts_with('L'))
         {
             return true;
@@ -218,7 +232,10 @@ impl<'g> Model<'g> {
 
     /// `N_penwidth != NULL`: some node declares `penwidth`.
     pub fn node_penwidth_declared(&self) -> bool {
-        self.g.nodes.iter().any(|n| n.attrs.contains_key("penwidth"))
+        self.g
+            .nodes
+            .iter()
+            .any(|n| n.attrs.contains_key("penwidth"))
             || self.g.node_defaults.contains_key("penwidth")
     }
 
@@ -336,9 +353,23 @@ impl<'g> Model<'g> {
                 xlabel,
                 head_label,
                 tail_label,
-                tail_port: e.tail_port.compass.as_deref().or(e.tail_port.name.as_deref()),
-                head_port: e.head_port.compass.as_deref().or(e.head_port.name.as_deref()),
+                tail_port: e
+                    .tail_port
+                    .compass
+                    .as_deref()
+                    .or(e.tail_port.name.as_deref()),
+                head_port: e
+                    .head_port
+                    .compass
+                    .as_deref()
+                    .or(e.head_port.name.as_deref()),
             });
+        }
+
+        // `agfstout`/`agnxtout` order: by head node id (cgraph `agedgeseqcmpf`), then by edge
+        // sequence. Node ids follow the interning of their names, approximated by creation order.
+        for list in &mut out_edges {
+            list.sort_by_key(|&ei| (g.edges[ei].head.0, ei));
         }
 
         // Cluster tree (`GD_clust`): clusters with a box, found through plain subgraphs.
@@ -363,40 +394,35 @@ impl<'g> Model<'g> {
             let s = &g.subgraphs[sid];
             if is_a_cluster(&s.name, &s.graph_attrs) && s.bb != BoundingBox::default() {
                 let a = Attrs(&s.graph_attrs);
-                let label = graph_label_geometry(
-                    &s.name,
-                    &s.graph_attrs,
-                    false,
-                    flip,
-                    env.charset_latin1,
-                )
-                .map(|gl| {
-                    *has_labels |= GRAPH_LABEL;
-                    let mut l = TextLabel::from_geometry(
-                        &gl.label,
-                        a.get("label").unwrap_or(""),
-                        a.late_nnstring("fontcolor", "black"),
-                    );
-                    l.pos = parse_point(a.get("lp")).unwrap_or_else(|| {
-                        let d = gl.border.map_or(Point::default(), |b| b.1);
-                        let bb = s.bb;
-                        let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
-                            bb.ur.y - d.y / 2.0
-                        } else {
-                            bb.ll.y + d.y / 2.0
-                        };
-                        let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
-                            bb.ur.x - d.x / 2.0
-                        } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
-                            bb.ll.x + d.x / 2.0
-                        } else {
-                            (bb.ll.x + bb.ur.x) / 2.0
-                        };
-                        Point::new(x, y)
-                    });
-                    l.set = true;
-                    l
-                });
+                let label =
+                    graph_label_geometry(&s.name, &s.graph_attrs, false, flip, env.charset_latin1)
+                        .map(|gl| {
+                            *has_labels |= GRAPH_LABEL;
+                            let mut l = TextLabel::from_geometry(
+                                &gl.label,
+                                a.get("label").unwrap_or(""),
+                                a.late_nnstring("fontcolor", "black"),
+                            );
+                            l.pos = parse_point(a.get("lp")).unwrap_or_else(|| {
+                                let d = gl.border.map_or(Point::default(), |b| b.1);
+                                let bb = s.bb;
+                                let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
+                                    bb.ur.y - d.y / 2.0
+                                } else {
+                                    bb.ll.y + d.y / 2.0
+                                };
+                                let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
+                                    bb.ur.x - d.x / 2.0
+                                } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
+                                    bb.ll.x + d.x / 2.0
+                                } else {
+                                    (bb.ll.x + bb.ur.x) / 2.0
+                                };
+                                Point::new(x, y)
+                            });
+                            l.set = true;
+                            l
+                        });
                 let idx = clusters.len();
                 clusters.push(RCluster {
                     name: &s.name,
