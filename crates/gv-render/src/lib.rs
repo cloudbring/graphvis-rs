@@ -66,7 +66,8 @@ impl OutputFormat {
             "json" => Ok(Self::Json),
             "json0" => Ok(Self::Json0),
             "dot" | "gv" => Ok(Self::Dot),
-            "xdot" | "xdot1.2" | "xdot1.4" | "xdot_json" => Ok(Self::Xdot),
+            "xdot" | "xdot1.2" | "xdot1.4" => Ok(Self::Xdot),
+            "dot_json" | "xdot_json" => Ok(Self::Json),
             "canon" => Ok(Self::Canon),
             "plain" | "plain-ext" => Ok(Self::Plain),
             other => Err(GraphvizError::UnsupportedFormat(other.to_string())),
@@ -78,6 +79,18 @@ pub fn render_graph(graph: &Graph, format: OutputFormat) -> Result<String> {
     render_graph_named(graph, format, "")
 }
 
+/// `agfstnode`/`agfstout` edge order of an unlaid graph.
+fn input_edge_order(g: &Graph) -> Vec<usize> {
+    let mut out = vec![Vec::new(); g.nodes.len()];
+    for (i, e) in g.edges.iter().enumerate() {
+        out[e.tail.0 as usize].push(i);
+    }
+    for l in &mut out {
+        l.sort_by_key(|&e| (g.edges[e].head.0, e));
+    }
+    out.into_iter().flatten().collect()
+}
+
 /// Edge iteration order of `agfstnode`/`agfstout` (numbering of `_gvid` in JSON).
 fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
     m.out_edges.iter().flatten().copied().collect()
@@ -87,10 +100,11 @@ fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
 fn attached(
     m: &emit::model::Model<'_>,
     xdot: bool,
+    fixed_xdot: Option<&str>,
 ) -> (Graph, Vec<std::collections::BTreeSet<String>>) {
     let (mut g, _, _, mut forced) = emit::output::attach_attrs(m);
     if xdot {
-        let eng = xdot_engine::XdotEngine::new(m.root_attrs().get("xdotversion"), None);
+        let eng = xdot_engine::XdotEngine::new(m.root_attrs().get("xdotversion"), fixed_xdot);
         let eng = emit::run(m, eng);
         for (kind, name, value) in eng.sets {
             let attrs = match kind {
@@ -202,15 +216,32 @@ pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Re
         }
         return Ok(write_canon(graph));
     }
+    let lname = name.to_ascii_lowercase();
+    if lname == "dot_json" || lname == "xdot_json" {
+        // No layout: the parsed graph, with any `_draw_` attributes expanded for xdot_json.
+        return Ok(json::write_json(
+            graph,
+            lname == "xdot_json",
+            &input_edge_order(graph),
+        ));
+    }
     let m = emit::model::Model::build(graph);
     Ok(match format {
         OutputFormat::Svg => emit::run(&m, svg_engine::SvgEngine::default()).out,
         OutputFormat::Json | OutputFormat::Json0 => {
-            let (g, _) = attached(&m, format == OutputFormat::Json);
+            let (g, _) = attached(&m, format == OutputFormat::Json, None);
             json::write_json(&g, format == OutputFormat::Json, &edge_order(&m))
         }
         OutputFormat::Dot | OutputFormat::Xdot => {
-            let (mut g, forced) = attached(&m, format == OutputFormat::Xdot);
+            let (mut g, forced) = attached(
+                &m,
+                format == OutputFormat::Xdot,
+                match lname.as_str() {
+                    "xdot1.2" => Some("1.2"),
+                    "xdot1.4" => Some("1.4"),
+                    _ => None,
+                },
+            );
             if g.dicts.len() == g.subgraphs.len() + 1 {
                 sync_dicts(&mut g, graph);
                 let extra = if graph.graph_attrs.contains_key(NOP_KEY) {

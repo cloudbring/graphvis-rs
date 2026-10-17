@@ -63,7 +63,8 @@ fn render_parsed(
         Some(name) if !name.trim().is_empty() => LayoutEngine::parse(name.trim())?,
         _ => LayoutEngine::parse(engine)?,
     };
-    if output_format != OutputFormat::Canon {
+    let lname = format_name.to_ascii_lowercase();
+    if output_format != OutputFormat::Canon && lname != "dot_json" && lname != "xdot_json" {
         layout_graph_with_options(&mut graph, layout_engine, options)?;
     }
     render_graph_named(&graph, output_format, format_name)
