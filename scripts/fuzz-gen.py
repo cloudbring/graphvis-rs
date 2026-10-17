@@ -378,7 +378,8 @@ class Gen:
         if e == "neato":
             maybe(0.15, "mode", lambda: r.choice(["major", "KK", "sgd", "hier", "ipsep"]))
             maybe(0.12, "model", lambda: r.choice(["shortpath", "circuit", "subset", "mds"]))
-            maybe(0.06, "start", lambda: r.choice(["random", "self", "regular", "5", "random3"]))
+            # an unseeded start=random uses time(NULL) in C: always give a seed
+            maybe(0.06, "start", lambda: r.choice(["random7", "self", "regular", "5", "random3"]))
             maybe(0.06, "maxiter", lambda: str(r.choice([1, 10, 50, 200])))
             maybe(0.04, "epsilon", lambda: r.choice(["0.1", "0.0001"]))
             maybe(0.04, "Damping", lambda: self.num(0.1, 0.99))
@@ -396,7 +397,7 @@ class Gen:
         if e in ("fdp", "sfdp"):
             maybe(0.2, "K", lambda: self.num(0.05, 3))
             maybe(0.05, "maxiter", lambda: str(r.choice([1, 10, 100, 600])))
-            maybe(0.04, "start", lambda: r.choice(["random", "3", "regular"]))
+            maybe(0.04, "start", lambda: r.choice(["random2", "3", "regular"]))
         if e == "fdp":
             maybe(0.05, "dim", lambda: "2")
         if e == "sfdp":
