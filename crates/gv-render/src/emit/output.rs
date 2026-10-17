@@ -39,7 +39,7 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
     let mut g = m.g.clone();
     g.graph_attrs.retain(|k, _| !k.starts_with('\u{1}'));
     for sg in &mut g.subgraphs {
-        sg.graph_attrs.remove(super::model::LABEL_POS_KEY);
+        sg.graph_attrs.retain(|k, _| !k.starts_with('\u{1}'));
     }
     let (mut s_arrows, mut e_arrows) = (false, false);
     for (i, n) in m.nodes.iter().enumerate() {

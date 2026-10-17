@@ -347,7 +347,7 @@ fn add_cluster(g: &mut LGraph<'_>) {
             continue;
         }
         let (label, label_pos) =
-            crate::common::init::graph_label(&sg.graph_attrs, &sg.name, false, g.is_directed());
+            crate::common::init::graph_label(&sg.graph_attrs, &sg.name, false, &src.html_strings);
         let mut border = [Point::default(); 4];
         if let Some(l) = &label {
             let d = crate::common::init::pad(l.dimen);

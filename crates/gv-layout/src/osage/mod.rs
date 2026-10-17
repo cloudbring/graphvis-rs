@@ -232,10 +232,9 @@ impl Osage<'_, '_> {
 /// `mkClusters` with `do_graph_label`: register every cluster with its label
 /// and border in `g.clusters` (indexed like the [`ClusterTree`]).
 pub fn register_clusters(g: &mut LGraph<'_>, tree: &ClusterTree) {
-    let directed = g.is_directed();
     for c in 0..tree.len() {
         let sg = &g.src.subgraphs[tree.subgraph[c]];
-        let (label, label_pos) = graph_label(&sg.graph_attrs, &sg.name, false, directed);
+        let (label, label_pos) = graph_label(&sg.graph_attrs, &sg.name, false, &g.src.html_strings);
         let mut border = [Point::default(); 4];
         if let Some(l) = &label {
             border[if label_pos & LABEL_AT_TOP != 0 { 2 } else { 0 }] = pad(l.dimen);

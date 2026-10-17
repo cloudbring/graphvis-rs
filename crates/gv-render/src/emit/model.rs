@@ -424,36 +424,40 @@ impl<'g> Model<'g> {
             let s = &g.subgraphs[sid];
             if is_a_cluster(&s.name, &s.graph_attrs) && s.bb != BoundingBox::default() {
                 let a = Attrs(&s.graph_attrs);
-                let label =
-                    graph_label_geometry_in(&s.name, &s.graph_attrs, false, flip, env).map(|gl| {
-                        *has_labels |= GRAPH_LABEL;
-                        let mut l = TextLabel::from_geometry(
-                            &gl.label,
-                            a.get("label").unwrap_or(""),
-                            a.late_nnstring("fontcolor", "black"),
-                        );
-                        l.pos = parse_point(a.get(LABEL_POS_KEY))
-                            .or_else(|| parse_point(a.get("lp")))
-                            .unwrap_or_else(|| {
-                                let d = gl.border.map_or(Point::default(), |b| b.1);
-                                let bb = s.bb;
-                                let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
-                                    bb.ur.y - d.y / 2.0
-                                } else {
-                                    bb.ll.y + d.y / 2.0
-                                };
-                                let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
-                                    bb.ur.x - d.x / 2.0
-                                } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
-                                    bb.ll.x + d.x / 2.0
-                                } else {
-                                    (bb.ll.x + bb.ur.x) / 2.0
-                                };
-                                Point::new(x, y)
-                            });
-                        l.set = true;
-                        l
-                    });
+                let label = if s.graph_attrs.contains_key(gv_core::NO_GRAPH_LABEL_KEY) {
+                    None
+                } else {
+                    graph_label_geometry_in(&s.name, &s.graph_attrs, false, flip, env)
+                };
+                let label = label.map(|gl| {
+                    *has_labels |= GRAPH_LABEL;
+                    let mut l = TextLabel::from_geometry(
+                        &gl.label,
+                        a.get("label").unwrap_or(""),
+                        a.late_nnstring("fontcolor", "black"),
+                    );
+                    l.pos = parse_point(a.get(LABEL_POS_KEY))
+                        .or_else(|| parse_point(a.get("lp")))
+                        .unwrap_or_else(|| {
+                            let d = gl.border.map_or(Point::default(), |b| b.1);
+                            let bb = s.bb;
+                            let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
+                                bb.ur.y - d.y / 2.0
+                            } else {
+                                bb.ll.y + d.y / 2.0
+                            };
+                            let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
+                                bb.ur.x - d.x / 2.0
+                            } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
+                                bb.ll.x + d.x / 2.0
+                            } else {
+                                (bb.ll.x + bb.ur.x) / 2.0
+                            };
+                            Point::new(x, y)
+                        });
+                    l.set = true;
+                    l
+                });
                 let idx = clusters.len();
                 clusters.push(RCluster {
                     name: &s.name,
