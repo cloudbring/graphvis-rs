@@ -200,7 +200,15 @@ fn get_metrics_for_font_family(font_name: &str) -> &'static FontFamilyMetrics {
     font_tables::FONT_METRICS
         .iter()
         .find(|m| font_in_list_permissive(font_name, m.font_names))
-        .unwrap_or(&font_tables::FONT_METRICS[0])
+        .unwrap_or_else(|| {
+            let warning = format!(
+                "Warning: no hard-coded metrics for '{font_name}'.  Falling back to 'Times' metrics\n"
+            );
+            if crate::diag::emit_once(&warning) {
+                crate::diag::agwarningf(&warning);
+            }
+            &font_tables::FONT_METRICS[0]
+        })
 }
 
 /// `get_metrics_for_font_variant` from `lib/common/textspan_lut.c`.
@@ -225,9 +233,28 @@ fn get_metrics_for_font_variant(
 /// the width of `' '`; unknown ASCII widths (`-1`) count as `0`.
 #[inline]
 fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) -> u16 {
-    let character = if byte >= 128 { b' ' } else { byte };
+    let character = if byte >= 128 {
+        // once per process (stderr spam prevention)
+        if crate::diag::emit_once("\0non-ascii") {
+            crate::diag::agwarningf(&format!(
+                "Warning: no value for width of non-ASCII character {byte}. Falling back to width of space character\n"
+            ));
+        }
+        b' '
+    } else {
+        byte
+    };
     let width = variant_metrics[usize::from(character)];
-    if width == -1 { 0 } else { width as u16 }
+    if width == -1 {
+        if crate::diag::emit_once("\0ascii") {
+            crate::diag::agwarningf(&format!(
+                "Warning: no value for width of ASCII character {character}. Falling back to 0\n"
+            ));
+        }
+        0
+    } else {
+        width as u16
+    }
 }
 
 /// `estimate_text_width_1pt` from `lib/common/textspan_lut.c`: width of `text` at 1pt.
