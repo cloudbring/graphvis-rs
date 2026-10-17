@@ -1,0 +1,4 @@
+digraph {
+  rotate=90
+  a -> b
+}

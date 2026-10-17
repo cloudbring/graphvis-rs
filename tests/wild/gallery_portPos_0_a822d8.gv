@@ -1,0 +1,3 @@
+digraph {
+  node1:port1 -> node2:port5:nw;
+}

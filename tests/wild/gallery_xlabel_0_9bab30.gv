@@ -1,0 +1,5 @@
+digraph {
+  "⚡" [xlabel="Sparks"]
+  "🔥" [xlabel="Fires"]
+  "⚡"->"🔥" [xlabel="Sometimes" label="Cause"]
+}

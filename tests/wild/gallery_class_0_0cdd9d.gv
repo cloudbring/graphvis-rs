@@ -1,0 +1,10 @@
+digraph G {
+  graph [class="cats"];
+
+  subgraph cluster_big {
+    graph [class="big_cats"];
+
+    "Lion" [class="yellow social"];
+    "Snow Leopard" [class="white solitary"];
+  }
+}

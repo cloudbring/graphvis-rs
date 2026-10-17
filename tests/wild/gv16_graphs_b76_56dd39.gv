@@ -1,0 +1,4 @@
+digraph polyport {
+  edge [headport=":w", tailport=":e"]
+  n0->n0
+}

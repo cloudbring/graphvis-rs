@@ -1,0 +1,4 @@
+digraph {
+  edge [style="invis"]
+  a -> b
+}

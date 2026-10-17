@@ -1,0 +1,10 @@
+digraph {
+    layout="dot"
+
+    { rank="min"; "min" }
+    { rank="max"; "max" }
+    "min" -> "middle" -> "max"
+    
+    "Floater 1"
+    "Floater 2"
+}

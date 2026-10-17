@@ -1,0 +1,10 @@
+digraph {
+    label="Comic Sans MS"
+    fontname="Comic Sans MS"
+    subgraph cluster_a {
+      label="Courier New"
+      fontname="Courier New"
+      Arial [fontname="Arial"];
+      Arial -> Arial [label="Impact" fontname="Impact"]
+    }
+}

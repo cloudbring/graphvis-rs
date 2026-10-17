@@ -1,0 +1,7 @@
+{
+  "source_hash": "c4957778ba6448fa348b8b710a7765f7f65dc2968e0502a40aaf138730703baf",
+  "rustc_version": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "targets_verified": ["aarch64-apple-darwin", "wasm32-unknown-unknown"],
+  "verified_at": "2026-10-13T18:21:47Z",
+  "sccache_enabled": true
+}

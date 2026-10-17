@@ -1,0 +1,5 @@
+digraph {
+  t [labelloc=t]
+  c [labelloc=c]
+  b [labelloc=b]
+}
