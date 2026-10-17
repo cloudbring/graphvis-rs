@@ -13,7 +13,9 @@ pub mod cg;
 pub mod class1;
 pub mod class2;
 pub mod cluster;
+pub mod compound;
 pub mod decomp;
+pub mod dotsplines;
 pub mod fastgr;
 pub mod flat;
 pub mod init;
@@ -25,6 +27,7 @@ pub mod postproc;
 pub mod qsort;
 pub mod rank;
 pub mod sameport;
+pub mod splinegraph;
 pub mod types;
 pub mod utils;
 
@@ -59,8 +62,10 @@ pub struct Dot<'a> {
     pub global_min_rank: i32,
     pub global_max_rank: i32,
     pub remincross: bool,
-    /// `ED_spl(e)` for real edges, in layout space until postprocessing.
-    pub spl: Vec<Option<Vec<Bezier>>>,
+    /// `EDGE_TYPE(g)` (`setEdgeType(g, EDGETYPE_SPLINE)`).
+    pub et: crate::common::types::EdgeType,
+    /// `State == GVSPLINES`: splines exist and are mapped by postprocessing.
+    pub splines_done: bool,
 }
 
 impl<'a> Dot<'a> {
@@ -85,7 +90,8 @@ impl<'a> Dot<'a> {
             global_min_rank: 0,
             global_max_rank: 0,
             remincross: false,
-            spl: Vec::new(),
+            et: crate::common::types::EdgeType::Spline,
+            splines_done: false,
         }
     }
 
@@ -169,9 +175,20 @@ impl<'a> Dot<'a> {
         }
     }
 
-    /// `dotLayout` (dotinit.c), without the splines phase.
+    /// `setEdgeType(g, EDGETYPE_SPLINE)` (utils.c).
+    pub fn set_edge_type(&mut self) {
+        use crate::common::types::EdgeType;
+        self.et = match self.agget(0, "splines") {
+            None => EdgeType::Spline,
+            Some("") => EdgeType::None,
+            Some(s) => crate::common::init::edge_type_of(s, EdgeType::Spline),
+        };
+    }
+
+    /// `dotLayout` (dotinit.c).
     pub fn dot_layout(&mut self) -> std::result::Result<(), String> {
         let maxphase = utils::late_int(self.agget(0, "phase"), -1, 1);
+        self.set_edge_type();
         self.dot_init_subg();
         self.dot_init_node_edge();
         self.dot_rank();
@@ -193,6 +210,10 @@ impl<'a> Dot<'a> {
             self.remove_fill();
         }
         self.dot_sameports();
+        self.dot_splines()?;
+        if utils::mapbool(self.agget(0, "compound")) {
+            self.dot_compound_edges();
+        }
         Ok(())
     }
 }
@@ -216,7 +237,6 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         if (1..=3).contains(&maxphase) {
             output::Output::phase(&d, maxphase)
         } else {
-            d.phase1_splines();
             d.dotneato_postprocess();
             output::Output::collect(&d)
         }

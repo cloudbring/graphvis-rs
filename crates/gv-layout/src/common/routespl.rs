@@ -496,6 +496,89 @@ pub fn checkpath(thepath: &mut Path) -> bool {
     false
 }
 
+/// `bend(spl, centroid)`: pull both control points away from the centroid.
+pub fn bend(spl: &mut [Point; 4], centroid: Point) {
+    let midpt = super::geom::mid(spl[0], spl[3]);
+    let dist = super::geom::dist(spl[3], spl[0]);
+    let r = dist / 5.0;
+    let vx = centroid.x - midpt.x;
+    let vy = centroid.y - midpt.y;
+    let mag_v = vx.hypot(vy);
+    if mag_v == 0.0 {
+        return;
+    }
+    let a = Point::new(midpt.x - vx / mag_v * r, midpt.y - vy / mag_v * r);
+    spl[1] = a;
+    spl[2] = a;
+}
+
+/// `makeStraightEdges(g, edge_list, e_cnt, et, sinfo)`: straight (or, for
+/// `splines=curved`, bent) edges, spread `GD_nodesep(g->root)` apart.
+/// `centroid` is `get_cycle_centroid(g, e)` of the caller's graph.
+pub fn make_straight_edges<S: super::splines::SplineGraph + ?Sized>(
+    g: &mut S,
+    edge_list: &[usize],
+    et: super::types::EdgeType,
+    nodesep: i64,
+    concentrate: bool,
+    centroid: &dyn Fn(&S, usize) -> Point,
+) {
+    use super::geom::{MILLIPOINT, add, approxeqpt};
+    use super::splines::{add_edge_labels, clip_and_install};
+    use super::types::EdgeType;
+    let e = edge_list[0];
+    let n = g.tail(e);
+    let head = g.head(e);
+    let p0 = add(g.coord(n), g.tail_port(e).p);
+    let p3 = add(g.coord(head), g.head_port(e).p);
+    let mut dumb = [p0, p0, p3, p3];
+    let e_cnt = edge_list.len();
+    if e_cnt == 1 || concentrate {
+        if et == EdgeType::Curved {
+            let c = centroid(g, e);
+            bend(&mut dumb, c);
+        }
+        clip_and_install(g, e, head, &dumb);
+        add_edge_labels(g, e);
+        return;
+    }
+    let del = if approxeqpt(dumb[0], dumb[3], MILLIPOINT) {
+        dumb[1] = dumb[0];
+        dumb[2] = dumb[3];
+        Point::new(0.0, 0.0)
+    } else {
+        let perp = Point::new(dumb[0].y - dumb[3].y, dumb[3].x - dumb[0].x);
+        let l_perp = perp.x.hypot(perp.y);
+        let xstep = nodesep;
+        let dx = (xstep * (e_cnt as i64 - 1) / 2) as f64;
+        dumb[1].x = dumb[0].x + dx * perp.x / l_perp;
+        dumb[1].y = dumb[0].y + dx * perp.y / l_perp;
+        dumb[2].x = dumb[3].x + dx * perp.x / l_perp;
+        dumb[2].y = dumb[3].y + dx * perp.y / l_perp;
+        Point::new(
+            -(xstep as f64) * perp.x / l_perp,
+            -(xstep as f64) * perp.y / l_perp,
+        )
+    };
+    for &e0 in edge_list {
+        let dumber = if g.head(e0) == head {
+            dumb
+        } else {
+            [dumb[3], dumb[2], dumb[1], dumb[0]]
+        };
+        let h0 = g.head(e0);
+        if et == EdgeType::Pline {
+            let spl = make_polyline(&dumber);
+            clip_and_install(g, e0, h0, &spl);
+        } else {
+            clip_and_install(g, e0, h0, &dumber);
+        }
+        add_edge_labels(g, e0);
+        dumb[1] = super::geom::add(dumb[1], del);
+        dumb[2] = super::geom::add(dumb[2], del);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

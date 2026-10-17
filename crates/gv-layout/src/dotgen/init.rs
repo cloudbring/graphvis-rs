@@ -317,7 +317,19 @@ impl<'a> Dot<'a> {
         let env = gv_geom::NodeSizeEnv::from_graph(self.input);
         let geom = gv_geom::node_geometry(nd, &env);
         let (lw, rw, ht) = geom.nodesize(flip);
+        let mut sized = nd.clone();
+        sized.width = geom.width;
+        sized.height = geom.height;
+        let mut shape = crate::common::shapes::NodeShape::new(&sized);
+        shape.apply_geometry(&geom);
+        let rec_fields = geom
+            .record
+            .as_ref()
+            .map(|r| r.children.iter().map(|f| f.bbox).collect())
+            .unwrap_or_default();
         let info = &mut self.nodes[n];
+        info.shape = Some(shape);
+        info.rec_fields = rec_fields;
         info.width = geom.width;
         info.height = geom.height;
         info.is_record = geom.record.is_some();
@@ -461,7 +473,7 @@ impl<'a> Dot<'a> {
     /// `poly_port` / `record_port`
     fn shape_port(&self, n: N, portname: &str, compass: Option<&str>) -> Port {
         if portname.is_empty() {
-            return Port::center();
+            return port_center();
         }
         let compass = compass.unwrap_or("_");
         let all = BOTTOM | RIGHT | TOP | LEFT;
@@ -530,7 +542,7 @@ impl<'a> Dot<'a> {
     }
 
     /// `compassPort`
-    fn compass_port(
+    pub fn compass_port(
         &self,
         n: N,
         bp: Option<BoxF>,

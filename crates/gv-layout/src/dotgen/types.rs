@@ -72,37 +72,18 @@ pub const RANKDIR_LR: i32 = 1;
 pub const RANKDIR_BT: i32 = 2;
 pub const RANKDIR_RL: i32 = 3;
 
-/// `boxf`
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct BoxF {
-    pub ll: Point,
-    pub ur: Point,
-}
+/// `boxf`.
+pub type BoxF = gv_core::BoundingBox;
 
-/// `port` (internal edge endpoint specification).
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Port {
-    /// Aiming point relative to the node centre, in layout (rank-direction) space.
-    pub p: Point,
-    pub theta: f64,
-    pub bp: Option<BoxF>,
-    pub defined: bool,
-    pub constrained: bool,
-    pub clip: bool,
-    pub dyna: bool,
-    pub order: u8,
-    pub side: u8,
-    pub name: Option<String>,
-}
+/// `port` (internal edge endpoint specification), shared with `lib/common`.
+pub type Port = crate::common::types::PortInfo;
 
-impl Port {
-    /// `Center` in shapes.c.
-    pub fn center() -> Self {
-        Port {
-            theta: -1.0,
-            clip: true,
-            ..Port::default()
-        }
+/// `Center` in shapes.c: the port of an edge without a port name.
+pub fn port_center() -> Port {
+    Port {
+        theta: -1.0,
+        clip: true,
+        ..Port::default()
     }
 }
 
@@ -257,6 +238,11 @@ pub struct NodeInfo {
     pub subtree: Option<usize>,
     /// Input node shape is a record (`shapeOf(n) == SH_RECORD`).
     pub is_record: bool,
+    /// `ND_shape(n)` data used by the `insidefn` clipping (real nodes only).
+    pub shape: Option<crate::common::shapes::NodeShape>,
+    /// Boxes of the top-level record fields (`ND_shape_info(n)->fld[i]->b`),
+    /// in drawing orientation relative to the node centre (`record_path`).
+    pub rec_fields: Vec<BoxF>,
 }
 
 /// `Agedgeinfo_t` plus cgraph edge identity.
@@ -287,6 +273,11 @@ pub struct EdgeInfo {
     pub tree_index: i32,
     pub count: i32,
     pub minlen: i32,
+    /// `ED_spl(e)`.
+    pub spl: Option<Vec<Bezier>>,
+    /// `ED_alg(e)`: the edge's clone in the auxiliary graph of
+    /// `make_flat_adj_edges` (an index into that graph's edges).
+    pub alg: Option<usize>,
 }
 
 /// `Agraphinfo_t` plus cgraph graph identity and membership.
@@ -358,12 +349,5 @@ impl GraphInfo {
     }
 }
 
-/// `bezier` (one piece of an edge spline).
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Bezier {
-    pub list: Vec<Point>,
-    /// Arrow tip at the start (`sflag`/`sp`).
-    pub sp: Option<Point>,
-    /// Arrow tip at the end (`eflag`/`ep`).
-    pub ep: Option<Point>,
-}
+/// `bezier` (one piece of an edge spline), shared with `lib/common`.
+pub use crate::common::types::Bezier;
