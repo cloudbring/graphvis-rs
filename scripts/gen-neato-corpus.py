@@ -386,6 +386,24 @@ def handwritten3():
     c["hw3_vpsc_sep_scale"] = OVERLAP % "overlap=vpsc; sep=0.4;"
     c["hw3_vpsc_clusters"] = CLUSTERS % "overlap=vpsc; node [shape=box, width=1];"
     c["hw3_vpsc_tree"] = tree(4, "overlap=vpsc; node [shape=box, width=1.2];")
+    # mode=hier (DiG-CoLa)
+    c["hw3_hier_digraph"] = DIGRAPH % "mode=hier;"
+    c["hw3_hier_tree"] = tree(4, "mode=hier;").replace("graph", "digraph", 1).replace("--", "->")
+    c["hw3_hier_levelsgap"] = DIGRAPH % "mode=hier; levelsgap=1;"
+    c["hw3_hier_levelsgap_neg"] = PETERSEN % "mode=hier; levelsgap=-0.5;"
+    c["hw3_hier_start_random"] = PETERSEN % "mode=hier; start=random5;"
+    c["hw3_hier_start_rand_lg"] = DIGRAPH % "mode=hier; start=3; levelsgap=0.5;"
+    c["hw3_hier_subset"] = PETERSEN % "mode=hier; model=subset;"
+    c["hw3_hier_circuit"] = PETERSEN % "mode=hier; model=circuit;"
+    c["hw3_hier_mds"] = LENWEIGHT % "mode=hier; model=mds;"
+    c["hw3_hier_random30"] = randgraph(30, 40, 17, "mode=hier;")
+    c["hw3_hier_random80"] = randgraph(80, 120, 19, "mode=hier;")
+    c["hw3_hier_dirnone"] = "digraph dn { mode=hier; a -> b -> c; c -> d [dir=none]; a -> d; d -> e; }"
+    c["hw3_hier_nodir"] = "graph nd { mode=hier; edge [dir=none]; a -- b -- c -- a; c -- d; }"
+    c["hw3_hier_dim3"] = DIGRAPH % "mode=hier; dim=3;"
+    c["hw3_hier_disconnected"] = DISCONNECTED % "mode=hier;"
+    c["hw3_hier_overlap"] = OVERLAP % "mode=hier; overlap=false;"
+    c["hw3_hier_maxiter"] = PETERSEN % "mode=hier; maxiter=3;"
     return c
 
 

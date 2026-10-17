@@ -22,6 +22,7 @@ pub mod call_tri;
 pub mod conjgrad;
 pub mod constraint;
 pub mod delaunay;
+pub mod digcola;
 pub mod graphdata;
 pub mod legal;
 pub mod linalg;

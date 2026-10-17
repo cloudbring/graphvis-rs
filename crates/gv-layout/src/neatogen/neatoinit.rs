@@ -197,20 +197,40 @@ fn majorization(
     let (gp, _ne, nodes) = make_graph_data(g, sub, mode, model);
     let mut drand = g.drand;
     let mut crand = g.crand;
-    let rv = stress_majorization_kd_mkernel(
-        g,
-        p,
-        &mut drand,
-        &mut crand,
-        &gp,
-        nv,
-        &mut coords,
-        &nodes,
-        dim,
-        opts,
-        model,
-        p.max_iter,
-    );
+    let rv = if mode == MODE_HIER {
+        let lgap =
+            crate::common::utils::late_double(&g.src.graph_attrs, "levelsgap", 0.0, -f64::MAX);
+        super::digcola::stress_majorization_with_hierarchy(
+            g,
+            p,
+            &mut drand,
+            &mut crand,
+            &gp,
+            nv,
+            &mut coords,
+            &nodes,
+            dim,
+            opts,
+            model,
+            p.max_iter,
+            lgap,
+        )
+    } else {
+        stress_majorization_kd_mkernel(
+            g,
+            p,
+            &mut drand,
+            &mut crand,
+            &gp,
+            nv,
+            &mut coords,
+            &nodes,
+            dim,
+            opts,
+            model,
+            p.max_iter,
+        )
+    };
     g.drand = drand;
     g.crand = crand;
     if rv.is_ok() {
