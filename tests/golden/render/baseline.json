@@ -334,8 +334,8 @@
         "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -406,16 +406,16 @@
         "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_sdh_29b016": {
-        "identical": false,
-        "diff_lines": 262
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_switch_2841f8": {
         "identical": true,
@@ -542,8 +542,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b143_5416de": {
         "identical": true,
@@ -563,7 +563,7 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 54
+        "diff_lines": 14
       },
       "gv16_graphs_b22_5c14b4": {
         "identical": true,
@@ -622,16 +622,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b68_c3ec50": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b69_4b5b48": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -902,8 +902,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_jsort_590c20": {
-        "identical": false,
-        "diff_lines": 170
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbc_886274": {
         "identical": true,
@@ -1190,8 +1190,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
-        "identical": false,
-        "diff_lines": 156
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -1346,8 +1346,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_structs_68f492": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -1358,8 +1358,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_trapeziumlr_79037b": {
-        "identical": false,
-        "diff_lines": 104
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -1474,8 +1474,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -2365,7 +2365,7 @@
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
-        "diff_lines": 8
+        "diff_lines": 2
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -2528,8 +2528,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b145_794862": {
         "identical": true,
@@ -2584,8 +2584,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b68_c3ec50": {
         "identical": true,
@@ -3245,7 +3245,7 @@
       },
       "gv16_graphs_structs_68f492": {
         "identical": false,
-        "diff_lines": 8
+        "diff_lines": 2
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -3256,8 +3256,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_trapeziumlr_79037b": {
-        "identical": false,
-        "diff_lines": 312
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -3365,7 +3365,7 @@
       },
       "gv16_infosrc_record_14407c": {
         "identical": false,
-        "diff_lines": 8
+        "diff_lines": 2
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -4258,8 +4258,8 @@
         "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -4330,16 +4330,16 @@
         "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_sdh_29b016": {
-        "identical": false,
-        "diff_lines": 262
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_switch_2841f8": {
         "identical": true,
@@ -4466,8 +4466,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b143_5416de": {
         "identical": true,
@@ -4487,7 +4487,7 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 52
+        "diff_lines": 14
       },
       "gv16_graphs_b22_5c14b4": {
         "identical": true,
@@ -4546,16 +4546,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b68_c3ec50": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b69_4b5b48": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -4826,8 +4826,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_jsort_590c20": {
-        "identical": false,
-        "diff_lines": 170
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbc_886274": {
         "identical": true,
@@ -5114,8 +5114,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
-        "identical": false,
-        "diff_lines": 156
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -5270,8 +5270,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_structs_68f492": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -5282,8 +5282,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_trapeziumlr_79037b": {
-        "identical": false,
-        "diff_lines": 104
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -5398,8 +5398,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -6288,8 +6288,8 @@
         "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -6360,16 +6360,16 @@
         "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_sdh_29b016": {
-        "identical": false,
-        "diff_lines": 262
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_switch_2841f8": {
         "identical": true,
@@ -6492,8 +6492,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b143_5416de": {
         "identical": true,
@@ -6513,7 +6513,7 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 54
+        "diff_lines": 14
       },
       "gv16_graphs_b22_5c14b4": {
         "identical": true,
@@ -6564,16 +6564,16 @@
         "diff_lines": 2
       },
       "gv16_graphs_b62_a87251": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b68_c3ec50": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b69_4b5b48": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -6844,8 +6844,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_jsort_590c20": {
-        "identical": false,
-        "diff_lines": 170
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbc_886274": {
         "identical": true,
@@ -7132,8 +7132,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
-        "identical": false,
-        "diff_lines": 156
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -7288,8 +7288,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_structs_68f492": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -7300,8 +7300,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_trapeziumlr_79037b": {
-        "identical": false,
-        "diff_lines": 104
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -7416,8 +7416,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -8306,8 +8306,8 @@
         "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -8378,16 +8378,16 @@
         "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_sdh_29b016": {
-        "identical": false,
-        "diff_lines": 262
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_switch_2841f8": {
         "identical": true,
@@ -8510,8 +8510,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b143_5416de": {
         "identical": true,
@@ -8531,7 +8531,7 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 54
+        "diff_lines": 14
       },
       "gv16_graphs_b22_5c14b4": {
         "identical": true,
@@ -8582,16 +8582,16 @@
         "diff_lines": 2
       },
       "gv16_graphs_b62_a87251": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b68_c3ec50": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b69_4b5b48": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -8862,8 +8862,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_jsort_590c20": {
-        "identical": false,
-        "diff_lines": 170
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbc_886274": {
         "identical": true,
@@ -9150,8 +9150,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
-        "identical": false,
-        "diff_lines": 156
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -9306,8 +9306,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_structs_68f492": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -9318,8 +9318,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_trapeziumlr_79037b": {
-        "identical": false,
-        "diff_lines": 104
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -9434,8 +9434,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -10328,8 +10328,8 @@
         "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -10400,16 +10400,16 @@
         "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_sdh_29b016": {
-        "identical": false,
-        "diff_lines": 370
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_switch_2841f8": {
         "identical": true,
@@ -10536,8 +10536,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b143_5416de": {
         "identical": true,
@@ -10557,7 +10557,7 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 112
+        "diff_lines": 28
       },
       "gv16_graphs_b22_5c14b4": {
         "identical": true,
@@ -10616,16 +10616,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b68_c3ec50": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b69_4b5b48": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -10896,8 +10896,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_jsort_590c20": {
-        "identical": false,
-        "diff_lines": 340
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbc_886274": {
         "identical": true,
@@ -11184,8 +11184,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
-        "identical": false,
-        "diff_lines": 312
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -11340,8 +11340,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_structs_68f492": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -11352,8 +11352,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_trapeziumlr_79037b": {
-        "identical": false,
-        "diff_lines": 208
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -11468,8 +11468,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -12363,7 +12363,7 @@
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
-        "diff_lines": 8
+        "diff_lines": 2
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -12434,16 +12434,16 @@
         "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
-        "identical": false,
-        "diff_lines": 42
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_sdh_29b016": {
-        "identical": false,
-        "diff_lines": 632
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_switch_2841f8": {
         "identical": true,
@@ -12570,8 +12570,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b143_5416de": {
         "identical": true,
@@ -12591,7 +12591,7 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 158
+        "diff_lines": 42
       },
       "gv16_graphs_b22_5c14b4": {
         "identical": true,
@@ -12650,16 +12650,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b68_c3ec50": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b69_4b5b48": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -12931,7 +12931,7 @@
       },
       "gv16_graphs_jsort_590c20": {
         "identical": false,
-        "diff_lines": 512
+        "diff_lines": 2
       },
       "gv16_graphs_labelclust-fbc_886274": {
         "identical": true,
@@ -13218,8 +13218,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
-        "identical": false,
-        "diff_lines": 468
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -13375,7 +13375,7 @@
       },
       "gv16_graphs_structs_68f492": {
         "identical": false,
-        "diff_lines": 8
+        "diff_lines": 2
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -13386,8 +13386,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_trapeziumlr_79037b": {
-        "identical": false,
-        "diff_lines": 312
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -13503,7 +13503,7 @@
       },
       "gv16_infosrc_record_14407c": {
         "identical": false,
-        "diff_lines": 8
+        "diff_lines": 2
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
