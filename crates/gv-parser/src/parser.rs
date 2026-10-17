@@ -41,6 +41,8 @@ pub struct Parser {
     graph: Graph,
     scope_stack: Vec<SubgraphId>,
     globals: GlobalAttrs,
+    /// Line of the root graph's closing `}`.
+    rbrace_line: usize,
     /// cgraph's id counter for anonymous objects (`ctr` in `idmap`).
     anon_ctr: u64,
     /// Parent of each subgraph (`None`: the root graph).
@@ -65,6 +67,7 @@ impl Parser {
             graph: Graph::new("", GraphKind::Undirected, false),
             scope_stack: Vec::new(),
             globals: globals.clone(),
+            rbrace_line: 0,
             anon_ctr: 1,
             sub_parent: Vec::new(),
         })
@@ -79,17 +82,46 @@ impl Parser {
 
     /// Parses every graph in `input`, applying `globals` before each graph body.
     pub fn parse_all(input: &str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
-        let mut parser = Self::new(input, globals)?;
-        let mut graphs = Vec::new();
-        while parser.peek().kind != TokenKind::Eof {
-            parser.scope_stack.clear();
-            parser.parse_graph()?;
-            graphs.push(std::mem::replace(
-                &mut parser.graph,
-                Graph::new("", GraphKind::Undirected, false),
-            ));
+        match Self::parse_all_partial(input, globals) {
+            (graphs, None) => Ok(graphs),
+            (_, Some(e)) => Err(e),
         }
-        Ok(graphs)
+    }
+
+    /// Like [`Parser::parse_all`], but keeps the graphs read before a syntax error: C's
+    /// `agread` returns them one at a time, so `dot` lays out and renders those first.
+    ///
+    /// cgraph's scanner reads its input a line at a time (`fgets`) and each `agread`
+    /// starts a new scanner, so whatever follows a graph's closing `}` on the same line
+    /// is dropped, and the next graph is read from the next line, its line numbers
+    /// counted from there.
+    pub fn parse_all_partial(
+        input: &str,
+        globals: &GlobalAttrs,
+    ) -> (Vec<Graph>, Option<GraphvizError>) {
+        let mut graphs = Vec::new();
+        let mut rest = input;
+        loop {
+            let mut parser = match Self::new(rest, globals) {
+                Ok(p) => p,
+                Err(e) => return (graphs, Some(e)),
+            };
+            if parser.peek().kind == TokenKind::Eof {
+                return (graphs, None);
+            }
+            if let Err(e) = parser.parse_graph() {
+                return (graphs, Some(e));
+            }
+            graphs.push(parser.graph);
+            // the byte after the `rbrace_line`-th newline
+            match rest
+                .match_indices('\n')
+                .nth(parser.rbrace_line.saturating_sub(1))
+            {
+                Some((i, _)) => rest = &rest[i + 1..],
+                None => return (graphs, None),
+            }
+        }
     }
 
     fn peek(&self) -> &Token {
@@ -296,27 +328,14 @@ impl Parser {
 
         self.expect(&TokenKind::LBrace)?;
         self.parse_stmt_list()?;
-        self.expect(&TokenKind::RBrace)?;
+        self.rbrace_line = self.expect(&TokenKind::RBrace)?.line;
         // Consume optional trailing semicolons
         while self.peek().kind == TokenKind::Semi {
             self.advance();
         }
 
-        // Allow multi-graph DOT streams (`digraph G { ... } digraph H { ... }`), where C Graphviz
-        // parses and renders the first graph in single-graph invocation mode, while rejecting
-        // stray non-graph tokens after the closing brace.
-        if !matches!(
-            self.peek().kind,
-            TokenKind::Eof | TokenKind::Strict | TokenKind::Graph | TokenKind::Digraph
-        ) {
-            let extra = self.peek();
-            return Err(GraphvizError::SyntaxError {
-                line: extra.line,
-                col: extra.col,
-                message: format!("unexpected token after end of graph: {:?}", extra.kind),
-            });
-        }
-
+        // Stray tokens after the closing brace are the next read's syntax error
+        // (`parse_all_partial`).
         Ok(())
     }
 
