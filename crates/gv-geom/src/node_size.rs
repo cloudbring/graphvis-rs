@@ -1001,7 +1001,9 @@ fn poly_init(
     } else {
         let temp = bb.y * SQRT2;
         if height > temp && valign == 'c' {
-            bb.x *= (1.0 / (1.0 - (bb.y / height) * (bb.y / height))).sqrt();
+            // clang contracts `1. - SQR(t)` into a fused multiply-add.
+            let t = bb.y / height;
+            bb.x *= (1.0 / (-t).mul_add(t, 1.0)).sqrt();
         } else {
             bb.x *= SQRT2;
             bb.y = temp;
@@ -1117,10 +1119,12 @@ fn poly_init(
                 angle += sectorangle;
                 sinx = angle.sin();
                 cosx = angle.cos();
-                r.x += sidelength * cosx;
-                r.y += sidelength * sinx;
-                let mut p = Point::new(r.x * (skewdist + r.y * gdistortion) + r.y * gskew, r.y);
-                let alpha = orientation.to_radians() + p.y.atan2(p.x);
+                // C's `a * b + c` expressions are fused (clang -ffp-contract=on).
+                r.x = sidelength.mul_add(cosx, r.x);
+                r.y = sidelength.mul_add(sinx, r.y);
+                let inner = r.y.mul_add(gdistortion, skewdist);
+                let mut p = Point::new(r.x.mul_add(inner, r.y * gskew), r.y);
+                let alpha = (orientation / 180.0).mul_add(PI, p.y.atan2(p.x));
                 sinx = alpha.sin();
                 cosx = alpha.cos();
                 let h = p.x.hypot(p.y);
