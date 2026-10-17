@@ -519,7 +519,7 @@ pub fn sparse_stress_subspace_majorization_kd(
             for j in 0..n {
                 dist[j] = dist[j].min(dij[i][j]);
                 if dist[j] > max_dist
-                    || (dist[j] == max_dist && (crand.rand() as usize) % (j + 1) == 0)
+                    || (dist[j] == max_dist && (crand.rand() as usize).is_multiple_of(j + 1))
                 {
                     node = j;
                     max_dist = dist[j];
