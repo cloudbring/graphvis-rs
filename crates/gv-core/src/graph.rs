@@ -50,6 +50,10 @@ pub struct EdgeData {
     pub attrs: AttrMap,
     pub spline: Spline,
     pub label_pos: Option<Point>,
+    /// The layout could not place the label (`ED_label(e)->set` is false):
+    /// `lp` is still printed, but renderers do not draw it.
+    #[serde(default)]
+    pub label_unplaced: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -83,6 +87,11 @@ pub const NO_EDGE_INIT_KEY: &str = "\u{1}noedgeinit";
 /// (`AGSEQ`), which the renderers print in object ids. Without it the sequence follows the
 /// object's index.
 pub const SEQ_KEY: &str = "\u{1}seq";
+
+/// Subgraph attribute set by a layout on a cluster it did not register in
+/// `GD_clust` (e.g. clusters nested below neato's top-level ones): it keeps its
+/// input `bb`, which C prints, but renderers do not draw it.
+pub const UNREGISTERED_CLUSTER_KEY: &str = "\u{1}unregclust";
 
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -202,6 +211,7 @@ impl Graph {
             attrs: merged_attrs,
             spline: Spline::default(),
             label_pos: None,
+            label_unplaced: false,
         });
         id
     }

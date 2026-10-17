@@ -26,12 +26,6 @@ pub fn approxeqpt(p: Point, q: Point, tol: f64) -> bool {
 
 pub const MILLIPOINT: f64 = 0.001;
 
-/// `RADIANS(deg)`: `deg / 180 * M_PI`, which rounds differently from `f64::to_radians`.
-#[inline]
-pub fn radians(deg: f64) -> f64 {
-    deg / 180.0 * std::f64::consts::PI
-}
-
 pub fn add(p: Point, q: Point) -> Point {
     Point::new(p.x + q.x, p.y + q.y)
 }

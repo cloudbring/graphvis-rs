@@ -1,0 +1,3 @@
+digraph dn {
+layout=neato;
+ mode=hier; a -> b -> c; c -> d [dir=none]; a -> d; d -> e; }

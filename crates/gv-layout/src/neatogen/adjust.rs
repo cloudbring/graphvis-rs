@@ -225,7 +225,8 @@ fn angle_set(g: &LGraph<'_>) -> Option<f64> {
     while ang <= -180.0 {
         ang += 360.0;
     }
-    Some(ang.to_radians())
+    // RADIANS(ang)
+    Some(ang / 180.0 * std::f64::consts::PI)
 }
 
 /// `normalize(g)`: translate the first node to the origin and rotate so the
@@ -317,7 +318,7 @@ pub fn remove_overlap_with(g: &mut LGraph<'_>, sub: &Sub, am: &AdjustData) -> bo
         | AdjustMode::POrthoYX
         | AdjustMode::POrthoXY
         | AdjustMode::POrthoYXrev => {
-            super::scadjust::c_adjust(g, sub, am.mode);
+            super::constraint::c_adjust(g, sub, am.mode);
             false
         }
         AdjustMode::Prism => {

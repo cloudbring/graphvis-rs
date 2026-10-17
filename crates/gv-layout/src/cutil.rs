@@ -436,6 +436,768 @@ impl RkState {
     }
 }
 
+/// `Dtoset`/`Dtobag` of `lib/cdt` (`dttree.c`): a splay tree of item ids,
+/// insert-only, flattened in order. The position of a new element among
+/// equal keys depends on the splay shape (a bag puts it just before the equal
+/// element the search stops at), so the tree is reproduced exactly.
+#[derive(Debug, Clone)]
+pub struct DtTree {
+    left: Vec<usize>,
+    right: Vec<usize>,
+    root: usize,
+    bag: bool,
+}
+
+const DT_NIL: usize = usize::MAX;
+
+impl DtTree {
+    /// `dtopen(disc, Dtobag)` (`bag`) or `Dtoset`.
+    pub fn new(bag: bool) -> Self {
+        // Slot 0 is the C `link` sentinel; item `i` lives in slot `i + 1`.
+        DtTree {
+            left: vec![DT_NIL],
+            right: vec![DT_NIL],
+            root: DT_NIL,
+            bag,
+        }
+    }
+
+    /// `dtinsert(dt, obj)`; `cmp(a, b)` compares the keys of items `a` and
+    /// `b`. Returns false when a set already holds an equal key.
+    pub fn insert(
+        &mut self,
+        obj: usize,
+        mut cmp: impl FnMut(usize, usize) -> std::cmp::Ordering,
+    ) -> bool {
+        let me = obj + 1;
+        if self.left.len() <= me {
+            self.left.resize(me + 1, DT_NIL);
+            self.right.resize(me + 1, DT_NIL);
+        }
+        let c = |a: usize, b: usize, f: &mut dyn FnMut(usize, usize) -> std::cmp::Ordering| {
+            f(a - 1, b - 1)
+        };
+        let (left, right) = (&mut self.left, &mut self.right);
+        const S: usize = 0;
+        left[S] = DT_NIL;
+        right[S] = DT_NIL;
+        let (mut l, mut r) = (S, S);
+        let mut root = self.root;
+        if root != DT_NIL {
+            loop {
+                match c(me, root, &mut cmp) {
+                    std::cmp::Ordering::Equal => break,
+                    std::cmp::Ordering::Less => {
+                        let t = left[root];
+                        if t != DT_NIL {
+                            match c(me, t, &mut cmp) {
+                                std::cmp::Ordering::Less => {
+                                    left[root] = right[t];
+                                    right[t] = root;
+                                    left[r] = t;
+                                    r = t;
+                                    root = left[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                                std::cmp::Ordering::Equal => {
+                                    left[r] = root;
+                                    r = root;
+                                    root = t;
+                                    break;
+                                }
+                                std::cmp::Ordering::Greater => {
+                                    right[l] = t;
+                                    l = t;
+                                    left[r] = root;
+                                    r = root;
+                                    root = right[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            left[r] = root;
+                            r = root;
+                            root = DT_NIL;
+                            break;
+                        }
+                    }
+                    std::cmp::Ordering::Greater => {
+                        let t = right[root];
+                        if t != DT_NIL {
+                            match c(me, t, &mut cmp) {
+                                std::cmp::Ordering::Greater => {
+                                    right[root] = left[t];
+                                    left[t] = root;
+                                    right[l] = t;
+                                    l = t;
+                                    root = right[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                                std::cmp::Ordering::Equal => {
+                                    right[l] = root;
+                                    l = root;
+                                    root = t;
+                                    break;
+                                }
+                                std::cmp::Ordering::Less => {
+                                    left[r] = t;
+                                    r = t;
+                                    right[l] = root;
+                                    l = root;
+                                    root = left[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            right[l] = root;
+                            l = root;
+                            root = DT_NIL;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if root != DT_NIL {
+            right[l] = left[root];
+            left[r] = right[root];
+            if !self.bag {
+                // has_root: the equal element stays.
+                left[root] = right[S];
+                right[root] = left[S];
+                self.root = root;
+                return false;
+            }
+            left[root] = DT_NIL;
+            right[root] = left[S];
+            left[S] = root;
+        } else {
+            left[r] = DT_NIL;
+            right[l] = DT_NIL;
+        }
+        left[me] = right[S];
+        right[me] = left[S];
+        self.root = me;
+        true
+    }
+
+    /// `dtflatten` order: item ids in key order.
+    pub fn flatten(&self) -> Vec<usize> {
+        let mut out = Vec::new();
+        let mut stack = Vec::new();
+        let mut cur = self.root;
+        while cur != DT_NIL || !stack.is_empty() {
+            while cur != DT_NIL {
+                stack.push(cur);
+                cur = self.left[cur];
+            }
+            let n = stack.pop().unwrap();
+            out.push(n - 1);
+            cur = self.right[n];
+        }
+        out
+    }
+}
+
+/// libc++ (`<algorithm>`, as shipped with the macOS SDK) `std::sort` and heap
+/// operations for non-arithmetic element types, reproduced exactly: element
+/// movement decides the order of equivalent elements, which leaks into C++
+/// code such as `lib/vpsc`. `less(a, b)` is the C++ comparator.
+pub mod libcxx {
+    fn sort3<T: Clone>(
+        v: &mut [T],
+        x: usize,
+        y: usize,
+        z: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) -> bool {
+        if !c(&v[y], &v[x]) {
+            if !c(&v[z], &v[y]) {
+                return false;
+            }
+            v.swap(y, z);
+            if c(&v[y], &v[x]) {
+                v.swap(x, y);
+            }
+            return true;
+        }
+        if c(&v[z], &v[y]) {
+            v.swap(x, z);
+            return true;
+        }
+        v.swap(x, y);
+        if c(&v[z], &v[y]) {
+            v.swap(y, z);
+        }
+        true
+    }
+
+    fn sort4<T: Clone>(
+        v: &mut [T],
+        x1: usize,
+        x2: usize,
+        x3: usize,
+        x4: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        sort3(v, x1, x2, x3, c);
+        if c(&v[x4], &v[x3]) {
+            v.swap(x3, x4);
+            if c(&v[x3], &v[x2]) {
+                v.swap(x2, x3);
+                if c(&v[x2], &v[x1]) {
+                    v.swap(x1, x2);
+                }
+            }
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn sort5<T: Clone>(
+        v: &mut [T],
+        x1: usize,
+        x2: usize,
+        x3: usize,
+        x4: usize,
+        x5: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        sort4(v, x1, x2, x3, x4, c);
+        if c(&v[x5], &v[x4]) {
+            v.swap(x4, x5);
+            if c(&v[x4], &v[x3]) {
+                v.swap(x3, x4);
+                if c(&v[x3], &v[x2]) {
+                    v.swap(x2, x3);
+                    if c(&v[x2], &v[x1]) {
+                        v.swap(x1, x2);
+                    }
+                }
+            }
+        }
+    }
+
+    fn insertion_sort<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        if first == last {
+            return;
+        }
+        for i in first + 1..last {
+            let mut j = i - 1;
+            if c(&v[i], &v[j]) {
+                let t = v[i].clone();
+                let mut k = j;
+                j = i;
+                loop {
+                    v[j] = v[k].clone();
+                    j = k;
+                    if j == first {
+                        break;
+                    }
+                    k -= 1;
+                    if !c(&t, &v[k]) {
+                        break;
+                    }
+                }
+                v[j] = t;
+            }
+        }
+    }
+
+    fn insertion_sort_unguarded<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        if first == last {
+            return;
+        }
+        for i in first + 1..last {
+            let mut j = i - 1;
+            if c(&v[i], &v[j]) {
+                let t = v[i].clone();
+                let mut k = j;
+                j = i;
+                loop {
+                    v[j] = v[k].clone();
+                    j = k;
+                    k -= 1;
+                    if !c(&t, &v[k]) {
+                        break;
+                    }
+                }
+                v[j] = t;
+            }
+        }
+    }
+
+    fn insertion_sort_incomplete<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) -> bool {
+        match last - first {
+            0 | 1 => return true,
+            2 => {
+                if c(&v[last - 1], &v[first]) {
+                    v.swap(first, last - 1);
+                }
+                return true;
+            }
+            3 => {
+                sort3(v, first, first + 1, last - 1, c);
+                return true;
+            }
+            4 => {
+                sort4(v, first, first + 1, first + 2, last - 1, c);
+                return true;
+            }
+            5 => {
+                sort5(v, first, first + 1, first + 2, first + 3, last - 1, c);
+                return true;
+            }
+            _ => {}
+        }
+        let mut j = first + 2;
+        sort3(v, first, first + 1, j, c);
+        const LIMIT: u32 = 8;
+        let mut count = 0;
+        let mut i = j + 1;
+        while i != last {
+            if c(&v[i], &v[j]) {
+                let t = v[i].clone();
+                let mut k = j;
+                j = i;
+                loop {
+                    v[j] = v[k].clone();
+                    j = k;
+                    if j == first {
+                        break;
+                    }
+                    k -= 1;
+                    if !c(&t, &v[k]) {
+                        break;
+                    }
+                }
+                v[j] = t;
+                count += 1;
+                if count == LIMIT {
+                    return i + 1 == last;
+                }
+            }
+            j = i;
+            i += 1;
+        }
+        true
+    }
+
+    fn partition_with_equals_on_right<T: Clone>(
+        v: &mut [T],
+        mut first: usize,
+        mut last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) -> (usize, bool) {
+        let begin = first;
+        let pivot = v[first].clone();
+        loop {
+            first += 1;
+            if !c(&v[first], &pivot) {
+                break;
+            }
+        }
+        if begin == first - 1 {
+            while first < last {
+                last -= 1;
+                if c(&v[last], &pivot) {
+                    break;
+                }
+            }
+        } else {
+            loop {
+                last -= 1;
+                if c(&v[last], &pivot) {
+                    break;
+                }
+            }
+        }
+        let already = first >= last;
+        while first < last {
+            v.swap(first, last);
+            loop {
+                first += 1;
+                if !c(&v[first], &pivot) {
+                    break;
+                }
+            }
+            loop {
+                last -= 1;
+                if c(&v[last], &pivot) {
+                    break;
+                }
+            }
+        }
+        let pivot_pos = first - 1;
+        if begin != pivot_pos {
+            v[begin] = v[pivot_pos].clone();
+        }
+        v[pivot_pos] = pivot;
+        (pivot_pos, already)
+    }
+
+    fn partition_with_equals_on_left<T: Clone>(
+        v: &mut [T],
+        mut first: usize,
+        mut last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) -> usize {
+        let begin = first;
+        let pivot = v[first].clone();
+        if c(&pivot, &v[last - 1]) {
+            loop {
+                first += 1;
+                if c(&pivot, &v[first]) {
+                    break;
+                }
+            }
+        } else {
+            loop {
+                first += 1;
+                if !(first < last && !c(&pivot, &v[first])) {
+                    break;
+                }
+            }
+        }
+        if first < last {
+            loop {
+                last -= 1;
+                if !c(&pivot, &v[last]) {
+                    break;
+                }
+            }
+        }
+        while first < last {
+            v.swap(first, last);
+            loop {
+                first += 1;
+                if c(&pivot, &v[first]) {
+                    break;
+                }
+            }
+            loop {
+                last -= 1;
+                if !c(&pivot, &v[last]) {
+                    break;
+                }
+            }
+        }
+        let pivot_pos = first - 1;
+        if begin != pivot_pos {
+            v[begin] = v[pivot_pos].clone();
+        }
+        v[pivot_pos] = pivot;
+        first
+    }
+
+    fn sift_down<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        len: usize,
+        mut start: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        let f = first;
+        let len = len as isize;
+        let mut child = start as isize;
+        if len < 2 || (len - 2) / 2 < child {
+            return;
+        }
+        child = 2 * child + 1;
+        if child + 1 < len && c(&v[f + child as usize], &v[f + child as usize + 1]) {
+            child += 1;
+        }
+        if c(&v[f + child as usize], &v[f + start]) {
+            return;
+        }
+        let top = v[f + start].clone();
+        loop {
+            v[f + start] = v[f + child as usize].clone();
+            start = child as usize;
+            if (len - 2) / 2 < child {
+                break;
+            }
+            child = 2 * child + 1;
+            if child + 1 < len && c(&v[f + child as usize], &v[f + child as usize + 1]) {
+                child += 1;
+            }
+            if c(&v[f + child as usize], &top) {
+                break;
+            }
+        }
+        v[f + start] = top;
+    }
+
+    fn floyd_sift_down<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        len: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) -> usize {
+        let mut hole = first;
+        let mut child_i = first;
+        let mut child: usize = 0;
+        loop {
+            child_i += child + 1;
+            child = 2 * child + 1;
+            if child + 1 < len && c(&v[child_i], &v[child_i + 1]) {
+                child_i += 1;
+                child += 1;
+            }
+            v[hole] = v[child_i].clone();
+            hole = child_i;
+            if child as isize > (len as isize - 2) / 2 {
+                return hole;
+            }
+        }
+    }
+
+    fn sift_up<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        mut last: usize,
+        len: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        if len > 1 {
+            let mut len = (len - 2) / 2;
+            let mut ptr = first + len;
+            last -= 1;
+            if c(&v[ptr], &v[last]) {
+                let t = v[last].clone();
+                loop {
+                    v[last] = v[ptr].clone();
+                    last = ptr;
+                    if len == 0 {
+                        break;
+                    }
+                    len = (len - 1) / 2;
+                    ptr = first + len;
+                    if !c(&v[ptr], &t) {
+                        break;
+                    }
+                }
+                v[last] = t;
+            }
+        }
+    }
+
+    fn make_heap_range<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        let n = last - first;
+        if n > 1 {
+            let mut start = (n as isize - 2) / 2;
+            while start >= 0 {
+                sift_down(v, first, n, start as usize, c);
+                start -= 1;
+            }
+        }
+    }
+
+    fn pop_heap_range<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        mut last: usize,
+        len: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        if len > 1 {
+            let top = v[first].clone();
+            let mut hole = floyd_sift_down(v, first, len, c);
+            last -= 1;
+            if hole == last {
+                v[hole] = top;
+            } else {
+                v[hole] = v[last].clone();
+                hole += 1;
+                v[last] = top;
+                sift_up(v, first, hole, hole - first, c);
+            }
+        }
+    }
+
+    /// `std::make_heap(v.begin(), v.end(), less)`.
+    pub fn make_heap<T: Clone>(v: &mut [T], mut less: impl FnMut(&T, &T) -> bool) {
+        let n = v.len();
+        make_heap_range(v, 0, n, &mut less);
+    }
+
+    /// `std::push_heap(v.begin(), v.end(), less)` (the new element is last).
+    pub fn push_heap<T: Clone>(v: &mut [T], mut less: impl FnMut(&T, &T) -> bool) {
+        let n = v.len();
+        sift_up(v, 0, n, n, &mut less);
+    }
+
+    /// `std::pop_heap(v.begin(), v.end(), less)` (the top moves last).
+    pub fn pop_heap<T: Clone>(v: &mut [T], mut less: impl FnMut(&T, &T) -> bool) {
+        let n = v.len();
+        pop_heap_range(v, 0, n, n, &mut less);
+    }
+
+    fn partial_sort_all<T: Clone>(
+        v: &mut [T],
+        first: usize,
+        last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+    ) {
+        if first == last {
+            return;
+        }
+        make_heap_range(v, first, last, c);
+        let mut l = last;
+        let mut n = last - first;
+        while n > 1 {
+            pop_heap_range(v, first, l, n, c);
+            l -= 1;
+            n -= 1;
+        }
+    }
+
+    fn introsort<T: Clone>(
+        v: &mut [T],
+        mut first: usize,
+        mut last: usize,
+        c: &mut impl FnMut(&T, &T) -> bool,
+        mut depth: isize,
+        mut leftmost: bool,
+    ) {
+        const LIMIT: usize = 24;
+        const NINTHER: usize = 128;
+        loop {
+            let len = last - first;
+            match len {
+                0 | 1 => return,
+                2 => {
+                    if c(&v[last - 1], &v[first]) {
+                        v.swap(first, last - 1);
+                    }
+                    return;
+                }
+                3 => {
+                    sort3(v, first, first + 1, last - 1, c);
+                    return;
+                }
+                4 => {
+                    sort4(v, first, first + 1, first + 2, last - 1, c);
+                    return;
+                }
+                5 => {
+                    sort5(v, first, first + 1, first + 2, first + 3, last - 1, c);
+                    return;
+                }
+                _ => {}
+            }
+            if len < LIMIT {
+                if leftmost {
+                    insertion_sort(v, first, last, c);
+                } else {
+                    insertion_sort_unguarded(v, first, last, c);
+                }
+                return;
+            }
+            if depth == 0 {
+                partial_sort_all(v, first, last, c);
+                return;
+            }
+            depth -= 1;
+            let half = len / 2;
+            if len > NINTHER {
+                sort3(v, first, first + half, last - 1, c);
+                sort3(v, first + 1, first + (half - 1), last - 2, c);
+                sort3(v, first + 2, first + (half + 1), last - 3, c);
+                sort3(v, first + (half - 1), first + half, first + (half + 1), c);
+                v.swap(first, first + half);
+            } else {
+                sort3(v, first + half, first, last - 1, c);
+            }
+            if !leftmost && !c(&v[first - 1], &v[first]) {
+                first = partition_with_equals_on_left(v, first, last, c);
+                continue;
+            }
+            let (mut i, already) = partition_with_equals_on_right(v, first, last, c);
+            if already {
+                let fs = insertion_sort_incomplete(v, first, i, c);
+                if insertion_sort_incomplete(v, i + 1, last, c) {
+                    if fs {
+                        return;
+                    }
+                    last = i;
+                    continue;
+                } else if fs {
+                    i += 1;
+                    first = i;
+                    continue;
+                }
+            }
+            introsort(v, first, i, c, depth, leftmost);
+            leftmost = false;
+            first = i + 1;
+        }
+    }
+
+    /// `std::sort(v.begin(), v.end(), less)`.
+    pub fn sort<T: Clone>(v: &mut [T], mut less: impl FnMut(&T, &T) -> bool) {
+        let n = v.len();
+        if n == 0 {
+            return;
+        }
+        let depth = 2 * (usize::BITS - 1 - n.leading_zeros()) as isize;
+        introsort(v, 0, n, &mut less, depth, true);
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn sorts_and_heaps() {
+            let mut s: u32 = 7;
+            for n in 0..400usize {
+                let mut v: Vec<(u32, usize)> = (0..n)
+                    .map(|i| {
+                        s = s.wrapping_mul(1_103_515_245).wrapping_add(12345);
+                        ((s >> 16) % 13, i)
+                    })
+                    .collect();
+                super::sort(&mut v, |a, b| a.0 < b.0);
+                assert!(v.windows(2).all(|w| w[0].0 <= w[1].0));
+                let mut h: Vec<u32> = v.iter().map(|x| x.0 * 7 % 11).collect();
+                super::make_heap(&mut h, |a, b| a < b);
+                let mut out = Vec::new();
+                while !h.is_empty() {
+                    super::pop_heap(&mut h, |a, b| a < b);
+                    out.push(h.pop().unwrap());
+                }
+                assert!(out.windows(2).all(|w| w[0] >= w[1]));
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

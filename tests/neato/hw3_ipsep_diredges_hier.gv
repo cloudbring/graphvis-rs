@@ -1,0 +1,9 @@
+digraph dg {
+layout=neato;
+
+mode=ipsep; diredgeconstraints=hier; levelsgap=0.5;
+a -> b -> c -> d -> a;
+a -> c;
+b -> d [dir=both];
+e -> a [arrowhead=none];
+}

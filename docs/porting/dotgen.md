@@ -23,7 +23,7 @@ C file-scope statics live as fields on `Dot` (`cmark`, `min_quit`, `max_iter`,
 | `acyclic.rs` | `acyclic.c` | ported (dfs iterative, same visiting order) |
 | `decomp.rs` | `decomp.c` | ported (incl. the `Cmark` static) |
 | `rank.rs` | `rank.c` | `dot1_rank` (collapse_sets/clusters, rank=same/min/max/source/sink, minmax_edges, expand_ranksets, cleanup1) and `dot2_rank` (newrank: compile_samerank/nodes/edges/clusters, strong/weak, break_cycles, connect_components, readout_levels) ported |
-| `ns.rs` | `common/ns.c` | full network simplex: init_rank, feasible_tree with STheap, leave/enter edge search order, update/treeupdate/invalidate_path/dfs_range, TB_balance (with `TBbalance=min|max`), LR_balance, `searchsize`, maxiter |
+| `ns.rs` | `common/ns.c` | binding of the generic `common::ns` (shared with neato's `constraint.c`) to dot's fast graph via the `NsGraph` trait; full network simplex: init_rank, feasible_tree with STheap, leave/enter edge search order, update/treeupdate/invalidate_path/dfs_range, TB_balance (with `TBbalance=min|max`), LR_balance, `searchsize`, maxiter |
 | `class2.rs` | `class2.c` (+ `ports_eq` from position.c) | ported |
 | `cluster.rs` | `cluster.c` | ported (expand_cluster, map_path, interclexp, merge_ranks, build_skeleton, install_cluster, mark_clusters, mark_lowclusters) |
 | `mincross.rs` | `mincross.c` | ported: ordered components, build_ranks (BFS, backwards walk for clusters), install_in_rank, transpose, reorder, medians, flat_mval, flat_breakcycles/flat_search/flat_rev, flat_reorder/postorder, mincross_clust recursion, remincross, `mclimit`, `ordering=in/out` (graph and node), rec_save/reset_vlists, fillRanks (newrank), checkLabelOrder/fixLabelOrder |

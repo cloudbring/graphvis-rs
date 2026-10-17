@@ -18,7 +18,11 @@ LAYOUT = re.compile(r"\blayout\s*=", re.I)
 
 # C output for these is not reproducible run to run (multispline reads
 # uninitialised state after a Pshortestpath failure), so they cannot be goldens.
-EXCLUDE = {"wild_gv16_undirected_ngk10_4_793340"}
+EXCLUDE = {
+    "wild_gv16_undirected_ngk10_4_793340",
+    # VPSC iterates std::set<Block*> in pointer order; C differs run to run.
+    "hw3_ipsep_tree_diredges",
+}
 
 
 def force_neato(src):
@@ -352,12 +356,112 @@ f -- g;
     return c
 
 
+ORTHO_MODES = ["ortho", "ortho_yx", "orthoxy", "orthoyx", "portho", "portho_yx", "porthoxy", "porthoyx"]
+
+
+def handwritten3():
+    """Cases for constraint.c (ortho*), vpsc, mode=hier/ipsep and multisplines."""
+    c = {}
+    for ov in ORTHO_MODES:
+        c[f"hw3_{ov}_overlap"] = OVERLAP % f"overlap={ov};"
+        c[f"hw3_{ov}_biglabels"] = BIGLABELS % f"overlap={ov};"
+        c[f"hw3_{ov}_K6"] = complete(6, f"overlap={ov}; node [shape=box];")
+        c[f"hw3_{ov}_random50"] = randgraph(50, 70, 18, f"overlap={ov}; node [shape=box];")
+    # equal coordinates share a constraint node (grid), digraph edge lookup,
+    # additive and multiplicative sep
+    c["hw3_ortho_grid"] = grid(4, 4, "overlap=ortho; node [shape=box, width=1.5];")
+    c["hw3_portho_grid"] = grid(4, 4, "overlap=portho; node [shape=box, width=1.5];")
+    c["hw3_ortho_digraph"] = DIGRAPH % "overlap=ortho; node [shape=box, width=1.5];"
+    c["hw3_portho_digraph"] = DIGRAPH % "overlap=portho; node [shape=box, width=1.5];"
+    c["hw3_ortho_sep_add"] = OVERLAP % "overlap=ortho; sep=\"+12\";"
+    c["hw3_ortho_sep_scale"] = OVERLAP % "overlap=ortho; sep=0.4;"
+    c["hw3_portho_sep_scale"] = OVERLAP % "overlap=portho_yx; sep=\"0.3,0.6\";"
+    c["hw3_ortho_random120"] = randgraph(120, 160, 20, "overlap=ortho; node [shape=box];")
+    c["hw3_ortho_clusters"] = CLUSTERS % "overlap=orthoxy; node [shape=box, width=1];"
+    # overlap=vpsc (lib/vpsc removeoverlaps)
+    c["hw3_vpsc_biglabels"] = BIGLABELS % "overlap=vpsc;"
+    c["hw3_vpsc_K6"] = complete(6, "overlap=vpsc; node [shape=box];")
+    c["hw3_vpsc_random50"] = randgraph(50, 70, 18, "overlap=vpsc; node [shape=box];")
+    c["hw3_vpsc_random120"] = randgraph(120, 160, 20, "overlap=vpsc; node [shape=box];")
+    c["hw3_vpsc_random200"] = randgraph(200, 260, 5, "overlap=vpsc; node [shape=box, width=1];")
+    c["hw3_vpsc_grid"] = grid(4, 4, "overlap=vpsc; node [shape=box, width=1.5];")
+    c["hw3_vpsc_grid_tall"] = grid(5, 3, "overlap=vpsc; node [shape=box, height=1.2];")
+    c["hw3_vpsc_sep_add"] = OVERLAP % "overlap=vpsc; sep=\"+12\";"
+    c["hw3_vpsc_sep_scale"] = OVERLAP % "overlap=vpsc; sep=0.4;"
+    c["hw3_vpsc_clusters"] = CLUSTERS % "overlap=vpsc; node [shape=box, width=1];"
+    c["hw3_vpsc_tree"] = tree(4, "overlap=vpsc; node [shape=box, width=1.2];")
+    # mode=hier (DiG-CoLa)
+    c["hw3_hier_digraph"] = DIGRAPH % "mode=hier;"
+    c["hw3_hier_tree"] = tree(4, "mode=hier;").replace("graph", "digraph", 1).replace("--", "->")
+    c["hw3_hier_levelsgap"] = DIGRAPH % "mode=hier; levelsgap=1;"
+    c["hw3_hier_levelsgap_neg"] = PETERSEN % "mode=hier; levelsgap=-0.5;"
+    c["hw3_hier_start_random"] = PETERSEN % "mode=hier; start=random5;"
+    c["hw3_hier_start_rand_lg"] = DIGRAPH % "mode=hier; start=3; levelsgap=0.5;"
+    c["hw3_hier_subset"] = PETERSEN % "mode=hier; model=subset;"
+    c["hw3_hier_circuit"] = PETERSEN % "mode=hier; model=circuit;"
+    c["hw3_hier_mds"] = LENWEIGHT % "mode=hier; model=mds;"
+    c["hw3_hier_random30"] = randgraph(30, 40, 17, "mode=hier;")
+    c["hw3_hier_random80"] = randgraph(80, 120, 19, "mode=hier;")
+    c["hw3_hier_dirnone"] = "digraph dn { mode=hier; a -> b -> c; c -> d [dir=none]; a -> d; d -> e; }"
+    c["hw3_hier_nodir"] = "graph nd { mode=hier; edge [dir=none]; a -- b -- c -- a; c -- d; }"
+    c["hw3_hier_dim3"] = DIGRAPH % "mode=hier; dim=3;"
+    c["hw3_hier_disconnected"] = DISCONNECTED % "mode=hier;"
+    c["hw3_hier_overlap"] = OVERLAP % "mode=hier; overlap=false;"
+    c["hw3_hier_maxiter"] = PETERSEN % "mode=hier; maxiter=3;"
+    # mode=ipsep (stress_majorization_cola)
+    c["hw3_ipsep_petersen"] = PETERSEN % "mode=ipsep;"
+    c["hw3_ipsep_digraph"] = DIGRAPH % "mode=ipsep;"
+    c["hw3_ipsep_overlap"] = OVERLAP % "mode=ipsep; overlap=ipsep;"
+    c["hw3_ipsep_vpsc"] = OVERLAP % "mode=ipsep; overlap=vpsc;"
+    c["hw3_ipsep_diredges"] = DIGRAPH % "mode=ipsep; diredgeconstraints=true;"
+    c["hw3_ipsep_diredges_hier"] = DIGRAPH % "mode=ipsep; diredgeconstraints=hier; levelsgap=0.5;"
+    c["hw3_ipsep_clusters"] = CLUSTERS % "mode=ipsep;"
+    c["hw3_ipsep_clusters_overlap"] = CLUSTERS % "mode=ipsep; overlap=ipsep; node [shape=box];"
+    c["hw3_ipsep_random30"] = randgraph(30, 40, 17, "mode=ipsep; overlap=ipsep; node [shape=box];")
+    c["hw3_ipsep_biglabels"] = BIGLABELS % "mode=ipsep; overlap=ipsep;"
+    c["hw3_ipsep_subset"] = PETERSEN % "mode=ipsep; model=subset;"
+    c["hw3_ipsep_tree_diredges"] = tree(3, "mode=ipsep; diredgeconstraints=true; overlap=ipsep;").replace("graph", "digraph", 1).replace("--", "->")
+    # makeMultiSpline (GTS router): multi-edges around obstacles, boundary ports
+    c["hw3_ms_fan2_box"] = 'graph b2 { splines=true; node [shape=box]; a [pos="0,0!"]; b [pos="4,0.3!"]; c [pos="2,0!"]; d [pos="2,1!"]; a -- b; a -- b; c -- d; }'
+    c["hw3_ms_fan3_digraph"] = 'digraph b5 { splines=true; a [pos="0,0!"]; b [pos="3,2!"]; c [pos="1.5,1!"]; a -> b; a -> b; b -> a; a -> c; }'
+    c["hw3_ms_fan3_labels"] = 'graph b6 { splines=true; node [shape=box, width=1]; a [pos="0,0!"]; b [pos="5,0!"]; c [pos="2.5,0.2!"]; e [pos="2.5,-1.2!"]; a -- b [label="ab"]; a -- b; a -- b [label="x"]; }'
+    c["hw3_ms_fan_fail"] = 'graph b1 { splines=true; a [pos="0,0!"]; b [pos="4,0!"]; c [pos="2,0.1!"]; a -- b; a -- b; a -- b; a -- c; c -- b; }'
+    c["hw3_ms_fan_polyline"] = 'graph b8 { splines=polyline; node [shape=hexagon]; a [pos="0,0!"]; b [pos="4,1!"]; c [pos="2,0.5!"]; d [pos="2,-0.6!"]; a -- b; a -- b; a -- b; a -- b; }'
+    c["hw3_ms_ports"] = 'graph b7 { splines=true; a [pos="0,0!"]; b [pos="4,0!"]; c [pos="2,0.1!"]; a:e -- b:w; a:n -- b:n; a:s -- b:s; }'
+    c["hw3_ms_ports_box"] = "graph m2 { splines=true; node [shape=box]; a -- b; b -- c; c -- a; a:n -- b:s; b:e -- c:w; }"
+    import random
+    for seed in range(6):
+        r = random.Random(300 + seed)
+        n = r.choice([10, 20, 30, 40])
+        sp = ["true", "polyline"][seed % 2]
+        shape = ["box", "ellipse", "circle", "hexagon"][seed % 4]
+        lines = [f"graph ms{seed} {{ splines={sp}; node [shape={shape}];"]
+        for i in range(1, n):
+            lines.append(f"n{r.randrange(i)} -- n{i};")
+        for k in range(n // 3):
+            a, b = r.randrange(n), r.randrange(n)
+            if a != b:
+                for m in range(r.randint(2, 4)):
+                    lines.append(f"n{a} -- n{b};" if m % 2 == 0 or seed % 5 else f"n{b} -- n{a};")
+        for k in range(n // 5):
+            a, b = r.randrange(n), r.randrange(n)
+            if a != b:
+                lines.append(f"n{a}:{r.choice(['n','s','e','w','ne','sw','nw','se'])} -- n{b}:{r.choice(['n','s','e','w','nw','se','c','_'])};")
+        lines.append("}")
+        c[f"hw3_ms_random{seed}"] = "\n".join(lines)
+    # dynamic record ports (Run:Normal) through neato's port resolution
+    b15 = (ROOT / "tests" / "wild" / "gv16_graphs_b15_8c212e.gv").read_text(encoding="utf-8")
+    c["hw3_ports_b15"] = b15
+    c["hw3_ports_b15_splines"] = HEADER.sub(lambda m: m.group(0) + "\nsplines=true;", b15, count=1)
+    return c
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.gv"):
         old.unlink()
     n = 0
-    for name, src in {**corpus_cases(), **handwritten(), **handwritten2()}.items():
+    for name, src in {**corpus_cases(), **handwritten(), **handwritten2(), **handwritten3()}.items():
         if name in EXCLUDE or LAYOUT.search(src):
             continue
         forced = force_neato(src)

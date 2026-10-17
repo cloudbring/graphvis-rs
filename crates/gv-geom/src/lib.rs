@@ -90,6 +90,7 @@ mod tests {
             attrs: map,
             spline: Spline::default(),
             label_pos: None,
+            label_unplaced: false,
         }
     }
 

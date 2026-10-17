@@ -1,7 +1,6 @@
 //! Scaling and constraint-based overlap removal from `lib/neatogen/constraint.c`
 //! (`scAdjust`, `cAdjust`) and `adjust.c` (`vpscAdjust`).
 
-use super::adjust::AdjustMode;
 use crate::common::types::{LGraph, Sub};
 use gv_core::{BoundingBox, Point};
 
@@ -163,10 +162,40 @@ pub fn sc_adjust(g: &mut LGraph<'_>, sub: &Sub, equal: i32) -> bool {
     true
 }
 
-/// `cAdjust(g, mode)`.
-pub fn c_adjust(_g: &mut LGraph<'_>, _sub: &Sub, _mode: AdjustMode) {}
-
-/// `vpscAdjust(G)`.
-pub fn vpsc_adjust(_g: &mut LGraph<'_>, _sub: &Sub) -> bool {
+/// `vpscAdjust(G)`: `removeoverlaps` on single-precision coordinates; C
+/// returns 0 even when nodes move.
+pub fn vpsc_adjust(g: &mut LGraph<'_>, sub: &Sub) -> bool {
+    use super::adjust::{DFLT_MARGIN, sep_factor};
+    use super::quad_prog_vpsc::{IpsepOptions, removeoverlaps};
+    let nnodes = sub.nodes.len();
+    let mut coords = vec![vec![0.0f32; nnodes]; 2];
+    let mut nsize = Vec::with_capacity(nnodes);
+    for (j, &v) in sub.nodes.iter().enumerate() {
+        for (i, c) in coords.iter_mut().enumerate() {
+            c[j] = g.nodes[v].pos[i] as f32;
+        }
+        nsize.push((g.nodes[v].width, g.nodes[v].height));
+    }
+    let exp_margin = sep_factor(g);
+    // Multiply by 2 since opt.gap is the gap size, not the margin
+    let gap = if exp_margin.do_add {
+        (2.0 * (exp_margin.x / 72.0), 2.0 * (exp_margin.y / 72.0))
+    } else {
+        (2.0 * (DFLT_MARGIN / 72.0), 2.0 * (DFLT_MARGIN / 72.0))
+    };
+    let mut opt = IpsepOptions {
+        diredges: 0,
+        edge_gap: 0.0,
+        noverlap: 2,
+        gap,
+        nsize,
+        ..Default::default()
+    };
+    removeoverlaps(nnodes, &mut coords, &mut opt);
+    for (j, &v) in sub.nodes.iter().enumerate() {
+        for (i, c) in coords.iter().enumerate() {
+            g.nodes[v].pos[i] = c[j] as f64;
+        }
+    }
     false
 }

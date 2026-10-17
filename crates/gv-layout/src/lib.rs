@@ -17,6 +17,7 @@ pub mod patchwork;
 pub mod sfdpgen;
 pub mod sparse;
 pub mod twopigen;
+pub mod vpsc;
 
 use gv_core::{Graph, GraphvizError, Result};
 
