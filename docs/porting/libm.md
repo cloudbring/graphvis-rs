@@ -65,7 +65,8 @@ Candidates were compared with the system results on the inputs above:
   differ on 4–40% of inputs.
 - **`cbrt`**: equals Apple's open-source `Libm-2026/Source/ARM/cbrt.c` compiled with clang's
   default FMA contraction, with 0 differences. Without contraction it differs on 1,038 of the
-  corpus arguments.
+  corpus arguments. The port does not use that code (see Provenance): the corpus output is the
+  same with the `libm` crate's correctly rounded `cbrt`.
 - **`pow`, `sin`, `cos`, `tan`, `atan2`, `acos`, `exp`, `log`**: no match. The published
   Libm's `Source/ARM/*.s` files are empty, and the arm64 `libsystem_m` routines are
   hand-written assembly. Tried and rejected:
@@ -86,13 +87,12 @@ writes `hypot(a, b)`. The rewrite was mechanical, done with a `syn`-based rewrit
 - On every other target, or with `--features gv-core/portable-math` on macOS, they use
   `math::portable`:
   - `hypot`: the formula above, with exact power-of-two scaling outside `[2^-500, 2^500]`.
-  - `cbrt`: a port of Apple's ARM `cbrt.c`, with `mul_add` where clang contracts.
-  - everything else: the `libm` crate 0.2.16. This is the same musl-derived code compiler-builtins
+  - everything else, `cbrt` included: the `libm` crate 0.2.16. This is the same musl-derived code compiler-builtins
     uses for wasm32, so the wasm results do not change. Linux now gets the same bits as wasm
     (glibc's `pow`/`exp` pick FMA or non-FMA paths by CPU), and `Cargo.lock` pins the results
     rather than the toolchain.
-- `crates/gv-core/src/math/tests.rs` (macOS only) checks the portable `hypot` and `cbrt`
-  against the system libm on 1,000,000 random and edge inputs each.
+- `crates/gv-core/src/math/tests.rs` (macOS only) checks the portable `hypot` against the
+  system libm on 1,000,000 random and edge inputs.
 
 ## Results
 
@@ -149,16 +149,21 @@ make Linux CI meaningful, either close the gap above or add per-target ("portabl
 
 ## Provenance and licences
 
-- `portable/hypot.rs`: an original formula, identified by black-box comparison. No code was
-  copied.
-- `portable/cbrt.rs`: a Rust port of `Source/ARM/cbrt.c` from Apple's Libm-2026
-  (`apple-oss-distributions/Libm`). The file is "Copyright 2008 Apple Inc. All rights
-  reserved" (Jeff Kidder; polynomial by Steve Canon) and carries no licence header. The rest
-  of Apple's Libm release is under the Apple Public Source License, a file-level copyleft.
-  The port keeps the algorithm, the polynomial coefficients and the table's cube roots, with
-  `z` and `1/z` recomputed. **A maintainer should review the licence before release.** If
-  APSL terms are unacceptable, the libm crate's (CR) `cbrt` is the fallback. It differs from
-  Apple on 7.8% of calls, but only pathplan's cubic solver uses `cbrt`, and the corpus did not
-  change with it (cbrt is not among the functions that move the corpus above).
-- `libm` crate 0.2.16: MIT, from rust-lang/compiler-builtins (a musl port).
-- Measurement tools: `scripts/libm-probe.c` (Apple vs MPFR) and the `math-trace` feature.
+Everything under `crates/gv-core/src/math/`:
+
+| file | what | origin | licence |
+|---|---|---|---|
+| `mod.rs` | the `math::*` entry points, `PORTABLE`, `PROFILE` | written for this port | project licence |
+| `portable/mod.rs` | re-exports of the `libm` crate | written for this port | project licence |
+| `portable/hypot.rs` | Apple-equivalent `hypot` | an original formula identified by black-box comparison with the system libm; no code copied | project licence |
+| `trace.rs` | `math-trace` argument logging | written for this port | project licence |
+| `tests.rs` | portable `hypot` vs system libm | written for this port | project licence |
+| `libm` crate 0.2.16 (dependency) | `pow`, `atan2`, `sin`, `cos`, `tan`, `asin`, `acos`, `exp`, `log`, `log2`, `cbrt` | rust-lang/compiler-builtins: musl/fdlibm ports; `cbrt` is CORE-MATH's (Alexei Sibidanov) | MIT |
+
+No Apple source is shipped. An earlier version ported Apple Libm's `Source/ARM/cbrt.c`, which
+has no licence header and comes from an APSL release; it was replaced by the `libm` crate's
+`cbrt`. On macOS with `portable-math`, the swap left every corpus output unchanged: the per-file
+scores of all eight layout ratchets, the render ratchet, and the `gv-diff e2e --hashes` hashes
+of all 2538 outputs were identical before and after. Only pathplan's cubic solver calls `cbrt`.
+
+Measurement tools: `scripts/libm-probe.c` (Apple vs MPFR) and the `math-trace` feature.

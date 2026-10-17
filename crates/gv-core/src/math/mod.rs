@@ -5,10 +5,9 @@
 //! the port reproduces C's last bits. On other targets Rust takes them from a different libm
 //! (glibc on Linux, compiler-builtins' musl port on wasm32) that disagrees in the last ulp on
 //! some inputs, which is enough to change a force-directed layout. Every call in the port goes
-//! through this module, and on those targets it uses [`portable`] implementations: ports that
-//! reproduce Apple's results where Apple's algorithm is known (`hypot`, `cbrt`), and the `libm`
-//! crate (the musl port Rust itself uses on wasm32) for the rest, so that every non-Apple
-//! target computes the same bits. See `docs/porting/libm.md`.
+//! through this module, and on those targets it uses [`portable`] implementations: a
+//! reproduction of Apple's `hypot`, and the `libm` crate (the musl port Rust itself uses on
+//! wasm32) for the rest, so that every non-Apple target computes the same bits. See `docs/porting/libm.md`.
 //!
 //! `sqrt` and `mul_add` are correctly rounded everywhere and stay `f64` methods.
 
