@@ -1,9 +1,10 @@
 # dotgen port (`crates/gv-layout/src/dotgen/`)
 
 Faithful, function-by-function port of Graphviz 16.1.0 `lib/dotgen` plus
-`lib/common/ns.c` and the parts of `lib/common` that dot uses. It is the active
-`dot` engine (`crates/gv-layout/src/lib.rs`); `GV_DOT_LEGACY=1` selects the old
-approximate engine (`dot.rs`) for comparison.
+`lib/common/ns.c` and the parts of `lib/common` that dot uses. It is the `dot`
+engine (`crates/gv-layout/src/lib.rs`); the old approximate engine (`dot.rs`,
+`GV_DOT_LEGACY`) and its helpers (gv-geom's old spline router and node sizing,
+`force_circular.rs`) are deleted.
 
 Functions keep their C names (snake_case) so the two can be read side by side.
 C file-scope statics live as fields on `Dot` (`cmark`, `min_quit`, `max_iter`,
@@ -35,6 +36,7 @@ C file-scope statics live as fields on `Dot` (`cmark`, `min_quit`, `max_iter`,
 | `compound.rs` | `compound.c` | ported: `dot_compoundEdges`, `makeCompoundEdge`, `splineIntersectf`, `boxIntersectf`, cluster map |
 | `splinegraph.rs` | glue | `SplineGraph`/`PortGraph`/`XLabelGraph`/`OrthoGraph` for `Dot` (the `ND_*`/`ED_*` view the shared `lib/common` and `lib/ortho` code uses), `record_path` (`pboxfn`), `arrow_flags` with `ED_conc_opp_flag` |
 | `postproc.rs` | `common/postproc.c` (`gv_postprocess`, `place_graph_label`, `place_flip_graph_label`, `place_root_label`, `translate_drawing`, `map_edge`, `translate_bb`, `map_point`), `dotinit.c` (`removeFill`) | ported; `addXLabels` is the shared `common::xlabels::add_xlabels` |
+| `pack.rs` | `dotinit.c` (`doDot`'s pack branch, `initSubg`, `attachPos`, `resetCoord`, `copyCluster`, `copyClusterInfo`) | ported, see "Phase 3" |
 | `output.rs` | `common/output.c` (`attach_attrs_and_arrows`, the parts the IR needs) | write-back into `gv_core::Graph`: positions, splines with `sflag`/`eflag`, `lp`/`head_lp`/`tail_lp`/`xlp` with C's emission rules, graph/cluster label positions (`nop::LABEL_POS_KEY`) |
 
 Shared code outside `dotgen/` that dot uses (one implementation per C function):
@@ -49,6 +51,8 @@ Shared code outside `dotgen/` that dot uses (one implementation per C function):
 | `common/xlabels.rs` | `postproc.c` `addXLabels` + `lib/label` |
 | `ortho/` | `lib/ortho` (all files) |
 | `cdt.rs` | `lib/cdt` ordered set (`dttree.c`, `dtflatten.c`, `dtrestore.c`) |
+| `pack/cccomps.rs` | `lib/pack/ccomps.c` `cccomps` (`deriveGraph`, `deriveClusters`, `unionNodes`, `subGInduce`/`projectG`) on the parsed graph |
+| `pack/mod.rs` | `lib/pack/pack.c`, generic over `PackGraph` (neato-family `LGraph` components and dot's `DotPack`) |
 
 ### Data model
 
@@ -118,7 +122,14 @@ match C (pos/lp/head_lp/tail_lp/xlp within 2pt) except where C itself exceeds a
 * `dot_concentrate` failures (C aborts the layout with "concentrate=true may not
   work correctly") are ignored.
 * `aspect.c` is not ported (16.1.0's `setAspect` only warns).
-* Not ported (phase 3): `pack`/`packmode` component packing in `doDot`.
+* Pack branch: a node that belongs to two non-nested clusters (C reports an
+  error) is laid out once per component that holds it; C's components share
+  the node record, so stale state from the first layout leaks into the
+  second. `wild_GraphViz-Samples_complex` with `-Gpack=true` differs.
+* Latin-1 input: the CLI decodes non-UTF-8 files byte for byte; with
+  `charset=latin1` the label is then converted a second time, so the five
+  Latin-1 test graphs of the 16.1.0 sources differ from C (the UTF-8 corpus
+  copies are exact).
 * `agcontains` of virtual nodes is false (they have ID 0 in C), as in C.
 
 ## Validation
@@ -147,13 +158,70 @@ match C (pos/lp/head_lp/tail_lp/xlp within 2pt) except where C itself exceeds a
 * Note: C's `-Gphase=2` `order` attributes do not reflect the final in-rank
   order; compare `M` dumps instead.
 
-## Handoff: phase 3
+## Phase 3: pack, legacy removal, validation (done)
 
-* `pack`/`packmode` in `doDot`: `cccomps` (components respecting clusters),
-  `dotLayout` per component subgraph (`initSubg` copies nodesep/ranksep/rankdir),
-  `attachPos`/`packSubgraphs`/`resetCoord`, `copyClusterInfo`. `crate::pack`
-  (from neato) has `packSubgraphs`; the four corpus `pack` files need this.
-* `lib/ortho` is generic (`ortho::OrthoGraph`); neato-family `splines=ortho`
-  could use it.
-* `GV_DOT_LEGACY=1` / `dot.rs` (old approximate engine) can be deleted once
-  nobody compares against it.
+`doDot` (`pack.rs`): with `pack` or `packmode` set, `cccomps` splits the graph
+into components that keep top-level clusters whole. The derived graph finds
+its nodes by name, as `agnode(dg, name, 1)` does, so a node named like a
+cluster shares (and takes over) the cluster's derived node; `unionNodes` then
+drops the cluster's other nodes, which can turn the graph into one component
+(`b145`, `fdp.gv`). With one component, or a `ratio`, dot lays the root out
+as usual. Otherwise each component becomes a standalone `gv_core::Graph`
+(`CComp::to_graph`: root graph attributes, induced edges, the projected
+subgraphs with their attributes) laid out by its own `Dot` with
+`Dot::new_component`, which reproduces what C sees through `agroot`:
+
+* `initSubg`: rankdir, nodesep and ranksep from the root, a zeroed drawing
+  (no `size`, no `ranksep=equally`), no root label;
+* `GD_has_labels(g->root)` holds the root's flags so far (its graph label
+  and the components initialised before), while the component's own record
+  has none, so `edgelabel_ranks` does not double ranks;
+* `build_ranks` walks backwards (`g != agroot(g)`) at the component root;
+* `Dot::root_input` answers `agattr(agroot(g), ...)` declaration checks over
+  the whole graph.
+
+The node and edge records are copied into the root's `Dot` (C shares them),
+each component's cluster records are kept apart (`PClust`, the projected
+subgraphs) and `lib/pack` packs through the `PackGraph` trait (`DotPack`:
+`ND_pos` from `attachPos`, `compute_bb` per component, `l_clust` with dot's
+`ND_clust`, array modes, `sortv`). `packSubgraphs` sets the root box,
+`resetCoord` and `copyClusterInfo` (later components win) follow, and
+postprocessing runs with `EDGE_TYPE(root) = EDGETYPE_NONE` (the root never
+had `setEdgeType`), so edge labels and xlabels stay unplaced as in C: the
+output marks them (`label_unplaced`, `gv_core::UNPLACED_PORT_LABELS_KEY`) and
+the renderers do not draw them.
+
+Other fixes found on the way: command-line `-G/-N/-E` attributes are `fixed`
+at the root (`global_def`), so root statements cannot override them (parser);
+`lib/ortho`'s search graph keeps `initSEdges`' 6 adjacency slots per node,
+whose overflow into the next node C relies on; its point dictionaries use the
+cdt splay tree; `edge_attr_declared` is cached (it made splines quadratic).
+
+### Validation (phase 3)
+
+* Main corpus: 499/508 -> 508/508 exact before the additions; with the six
+  `tests/wild/phase3_*` cases (pack/packmode, records/samehead, neato ortho
+  components) 514/514. `-Tsvg` byte identity (`gv-diff e2e`): main 514/514.
+* The main corpus with `-Gpack=true`, `-Gpackmode=clust`, `-Gpackmode=node`
+  and `-Gpackmode=array_t3`: 507, 508, 507, 507 of 508 exact (the misses are
+  `complex`, see deviations).
+* `scripts/dot-broad-validate.sh c|port` lays out the 379 graphs of
+  `graphs/**`, `tests/graphs/**` and `tests/regression_tests/**` with C and
+  the port (60 s cap) as is and with `-Grankdir=LR`, `-Gsplines=ortho`,
+  `-Gconcentrate=true`, `-Gnewrank=true`; `gv-diff pairs C_DIR PORT_DIR`
+  compares them. Exact: 374/379 in every variant (ortho: 371/376, C times out
+  on `b100`, `b103`, `b104`); the five misses are the Latin-1 inputs.
+* Timing (min of 3 process runs, `-Tsvg`, shared machine): b100 4.5 s (C) /
+  4.7 s (port), b104 4.6/4.6, b103 0.73/0.69, b29 0.36/0.27, random DAGs of
+  2000 and 8000 nodes 0.56/0.46 and 24.5/20.0, 40x40 grid 0.12/0.08.
+  `splines=ortho`: root 3.6/0.36, badvoro 20.3/0.80, b100 >300/20.1.
+
+## Handoff
+
+* `pack` with nodes in two non-nested clusters would need the components to
+  share node records (C lays such nodes out repeatedly).
+* `-Tdot`/`-Tsvg` of Latin-1 input needs byte strings in the parser and
+  writers.
+* `neato -n2` (`nop.rs`) does not run `addXLabels`, so an edge `xlabel`
+  without `xlp` in its input (dot's pack branch leaves edge xlabels unplaced)
+  is placed by C but not by the port.

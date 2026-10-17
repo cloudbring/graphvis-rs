@@ -10,8 +10,7 @@
 
 graphvis-rs is a work in progress. Output is not byte-compatible with Graphviz, and only part of Graphviz is ported.
 
-- **`dot` is the only engine that is a (partial) port.** `crates/gv-layout/src/dot.rs` follows the stages of `lib/dotgen` (rank, mincross, position, splines) and `lib/common/ns.c`, but several parts are simplified or missing (for example `compound.c` and `pathplan`).
-- **`neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage` and `patchwork` are currently approximations**, not ports of the C algorithms. They produce a plausible layout, and they are being replaced.
+- Every layout engine (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`) is a function-by-function port of the Graphviz 16.1.0 C code; see `docs/porting/` for the module maps and the remaining differences.
 - Output formats: `svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`.
 - Text is measured with Graphviz's built-in font metric tables (the layout C produces when it is built without Pango), not with real font rendering.
 

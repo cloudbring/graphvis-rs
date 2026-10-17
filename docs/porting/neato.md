@@ -147,8 +147,13 @@ mode (C returns failure too).
 - `model=mds` with `mode=KK` indexes by layout id where C uses 1-based
   `AGSEQ` (undefined behaviour in C).
 - Engines/attributes outside neato's code paths (`-n` / `Nop`, `dim>2` output
-  via `z`, `splines=ortho` routing) are not covered; `splines=ortho` falls back
-  to polylines.
+  via `z`) are not covered. `splines=ortho` runs the `lib/ortho` port through the ortho branch of
+  `spline_edges_` (`neatosplines::spline_edges_route`: `makeObstacle(isOrtho)`,
+  `Plegal_arrangement`, `orthoEdges` on the component being routed,
+  `addEdgeLabels`), shared by neato, twopi, circo, sfdp, fdp and osage (opus5.5/dot-phase3);
+  `-Gsplines=ortho` over the first 120 files of each of `tests/neato`,
+  `tests/twopi`, `tests/circo`, `tests/sfdp` matches C except where the
+  layout itself differs.
 - Renderer changes made for C parity (`gv-render`): edges without a spline get
   no `pos`; `arrowhead/arrowtail=none` produce no `e,`/`s,` point; degenerate
   graph boxes print as computed; clusters with no layout box get no `bb`.

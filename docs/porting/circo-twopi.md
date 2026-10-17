@@ -26,8 +26,9 @@ Both reuse the shared neato-family infrastructure (`common::LGraph`, `pack`,
 
 Remaining differences, all in shared code:
 
-- `splines=ortho` (`nshare_radius_dot`, both engines): `lib/ortho` is not
-  ported; polylines are drawn instead.
+- `splines=ortho` now routes through `lib/ortho` (see `neato.md`); circo's
+  arrows graphs with `-Gsplines=ortho` (4 files) still differ by one track
+  position.
 - twopi `splines=true` on the arrows graphs (7 files): `i`, `Z` and `I` are
   exactly vertically aligned, and which side the pathplan router passes an
   obstacle vertex on is a floating-point tie. The Homebrew build (the goldens),

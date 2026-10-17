@@ -40,7 +40,7 @@ nodes (checked locally beyond the corpus: 5000-node random, 3000-node `dim=3`
 octree, `quadtree=fast` with 12000 nodes, 7 packed components of 143 nodes,
 `overlap=false` on 600 boxes). The remaining non-exact corpus files:
 
-- `splines=ortho`: shared neato gap (see `docs/porting/neato.md`);
+- `splines=ortho`: routed by `lib/ortho` (see `docs/porting/neato.md`);
   `overlap=ortho*` and `overlap=vpsc` are ported (opus5.5/neato-gaps).
 - `label_scheme=4` with `overlap=false`: the penalty iteration is chaotic
   (C itself runs ~180 tries; scheme 2 diverges to 1e142 in C). C's Delaunay
