@@ -28,7 +28,10 @@ use gv_core::{
         measure_multiline_label_with_context,
     },
 };
-use gv_geom::{shapes::compute_node_dimensions, splines::route_edge_spline};
+use gv_geom::{
+    ShapeKind, compute_node_dimensions_with_rankdir, is_html_label, parse_html_table,
+    resolve_port_offset, route_edge_spline,
+};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const POINTS_PER_INCH: f64 = 72.0;
@@ -103,10 +106,12 @@ impl RankSetKind {
 
 /// Runs the full 5-stage `dot` layout pipeline on `graph`.
 pub fn layout_dot(graph: &mut Graph) -> Result<()> {
-    // Stage 0: Size all nodes using gv-geom shapes & font metrics.
+    let rankdir = RankDir::parse(graph.graph_attrs.get("rankdir").map(String::as_str));
+
+    // Stage 0: Size all nodes using gv-geom shapes & font metrics with rankdir context.
     let graph_name = graph.name.clone();
     for node in &mut graph.nodes {
-        compute_node_dimensions(node, &graph_name);
+        compute_node_dimensions_with_rankdir(node, &graph_name, rankdir.as_str());
     }
 
     if graph.nodes.is_empty() {
@@ -114,10 +119,10 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         return Ok(());
     }
 
-    let rankdir = RankDir::parse(graph.graph_attrs.get("rankdir").map(String::as_str));
-    let nodesep_pt = parse_attr_f64(&graph.graph_attrs, "nodesep", DEFAULT_NODESEP_IN)
+    let nodesep_pt = (parse_attr_f64(&graph.graph_attrs, "nodesep", DEFAULT_NODESEP_IN)
         .max(MIN_NODESEP_IN)
-        * POINTS_PER_INCH;
+        * POINTS_PER_INCH)
+        .round();
     let ranksep_raw = graph
         .graph_attrs
         .get("ranksep")
@@ -131,22 +136,22 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         .filter(|v| v.is_finite())
         .unwrap_or(DEFAULT_RANKSEP_IN)
         .max(MIN_RANKSEP_IN);
-    let mut ranksep_pt = ranksep_in * POINTS_PER_INCH;
+    let mut ranksep_pt = (ranksep_in * POINTS_PER_INCH).round();
 
-    // Check if any non-self edge has an edge label; if so, we account for label spacing.
+    // Check if any non-self edge has an edge label (`edgelabel_ranks` in `rank.c:176`).
     let has_edge_labels = graph
         .edges
         .iter()
         .any(|e| e.tail != e.head && e.attrs.get("label").is_some_and(|l| !l.trim().is_empty()));
     if has_edge_labels {
-        ranksep_pt = ranksep_pt.max(36.0);
+        ranksep_pt = ((ranksep_pt as i32 + 1) / 2) as f64;
     }
 
     // Stage 1 & 2: Cycle breaking (acyclic) + Network Simplex rank assignment.
-    let reversed_edges = assign_ranks(graph);
+    let reversed_edges = assign_ranks(graph, has_edge_labels);
 
     // Stage 3: Crossing minimization (mincross) with virtual node chains.
-    let mut vgraph = build_virtual_graph(graph, &reversed_edges, rankdir);
+    let mut vgraph = build_virtual_graph(graph, &reversed_edges, rankdir, nodesep_pt);
     minimize_crossings(graph, &mut vgraph, rankdir);
 
     // Copy final order back to real nodes.
@@ -169,6 +174,7 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         nodesep_pt,
         ranksep_pt,
         equal_ranksep,
+        has_edge_labels,
     );
 
     // Stage 5: Edge spline routing (dotsplines) + coordinate normalization.
@@ -227,7 +233,7 @@ struct NsEdge {
 
 /// Breaks cycles and assigns optimal integer ranks (`0..=max_rank`) to `graph.nodes`.
 /// Returns the set of `EdgeId`s that were reversed during cycle breaking.
-fn assign_ranks(graph: &mut Graph) -> BTreeSet<EdgeId> {
+fn assign_ranks(graph: &mut Graph, has_edge_labels: bool) -> BTreeSet<EdgeId> {
     let n_orig = graph.nodes.len();
     let mut uf = UnionFind::new(n_orig);
     let mut rank_kinds = vec![RankSetKind::Normal; n_orig];
@@ -322,7 +328,10 @@ fn assign_ranks(graph: &mut Graph) -> BTreeSet<EdgeId> {
             continue;
         }
         let weight = (parse_attr_f64(&edge.attrs, "weight", 1.0).round() as i32).max(0);
-        let minlen = (parse_attr_f64(&edge.attrs, "minlen", 1.0).round() as i32).max(0);
+        let mut minlen = (parse_attr_f64(&edge.attrs, "minlen", 1.0).round() as i32).max(0);
+        if has_edge_labels {
+            minlen *= 2;
+        }
 
         if let Some(&idx) = pair_map.get(&(u, v)) {
             raw_edges[idx].orig_ids.push(edge.id);
@@ -381,26 +390,12 @@ fn assign_ranks(graph: &mut Graph) -> BTreeSet<EdgeId> {
         }
     }
 
-    // Stage 1 (`acyclic.c`): Greedy DFS cycle breaking.
-    // Order adjacency lists by descending weight so heavy edges are traversed first and light back-edges are reversed.
+    // Stage 1 (`acyclic.c`): DFS cycle breaking in graph insertion order (`0..n_dense`).
     let mut adj: Vec<Vec<usize>> = vec![Vec::new(); n_dense];
-    let mut in_deg = vec![0usize; n_dense];
     for (ei, e) in raw_edges.iter().enumerate() {
         adj[e.u].push(ei);
-        in_deg[e.v] += 1;
     }
-    for list in &mut adj {
-        list.sort_by(|&a, &b| {
-            raw_edges[b]
-                .weight
-                .cmp(&raw_edges[a].weight)
-                .then(a.cmp(&b))
-        });
-    }
-
-    // Prefer starting DFS from sources (in_deg == 0), then remaining nodes in order.
-    let mut start_order: Vec<usize> = (0..n_dense).collect();
-    start_order.sort_by_key(|&u| (usize::from(in_deg[u] > 0), u));
+    let start_order: Vec<usize> = (0..n_dense).collect();
 
     let mut visited = vec![false; n_dense];
     let mut on_stack = vec![false; n_dense];
@@ -456,16 +451,145 @@ fn assign_ranks(graph: &mut Graph) -> BTreeSet<EdgeId> {
         entry.1 = entry.1.saturating_add(e.weight);
     }
 
-    // Build weakly connected components of the DAG and run Network Simplex on each component.
-    let mut undir_adj: Vec<Vec<usize>> = vec![Vec::new(); n_dense];
-    for &(u, v) in dag_map.keys() {
-        undir_adj[u].push(v);
-        undir_adj[v].push(u);
+    // Check if local cluster ranking (`collapse_cluster` + `interclust1` in `rank.c` & `class1.c`) applies.
+    let clusterrank_global = graph
+        .graph_attrs
+        .get("clusterrank")
+        .is_some_and(|s| s.trim().eq_ignore_ascii_case("global"));
+    let mut dense_cluster: Vec<Option<SubgraphId>> = vec![None; n_dense];
+    if !clusterrank_global {
+        for subg in &graph.subgraphs {
+            if subg.is_cluster {
+                for &nid in &subg.nodes {
+                    let d = leader_to_dense[&uf.find(nid.0 as usize)];
+                    dense_cluster[d] = Some(subg.id);
+                }
+            }
+        }
+    }
+    let has_clusters = dense_cluster.iter().any(Option::is_some);
+
+    let mut local_cluster_rank = vec![0i32; n_dense];
+    let mut clust_uf = UnionFind::new(n_dense);
+
+    if has_clusters {
+        // 1. Rank each cluster locally (`dot1_rank` in `rank.c:330`).
+        let mut clust_nodes_map: BTreeMap<SubgraphId, Vec<usize>> = BTreeMap::new();
+        for (d, &cid_opt) in dense_cluster.iter().enumerate() {
+            if let Some(cid) = cid_opt {
+                clust_nodes_map.entry(cid).or_default().push(d);
+            }
+        }
+        for cnodes in clust_nodes_map.values() {
+            if cnodes.is_empty() {
+                continue;
+            }
+            let mut local_idx = BTreeMap::new();
+            for (li, &d) in cnodes.iter().enumerate() {
+                local_idx.insert(d, li);
+            }
+            let mut c_edges = Vec::new();
+            for (&(u, v), &(minlen, weight)) in &dag_map {
+                if let (Some(&lu), Some(&lv)) = (local_idx.get(&u), local_idx.get(&v))
+                    && lu != lv
+                {
+                    c_edges.push(NsEdge {
+                        tail: lu,
+                        head: lv,
+                        minlen,
+                        weight,
+                        cutvalue: 0,
+                        tree_index: None,
+                    });
+                }
+            }
+            let c_ranks = network_simplex_solve(cnodes.len(), &mut c_edges, 0);
+            let min_cr = c_ranks.iter().copied().min().unwrap_or(0);
+            let mut leader = cnodes[0];
+            for (li, &d) in cnodes.iter().enumerate() {
+                local_cluster_rank[d] = c_ranks[li] - min_cr;
+                leader = clust_uf.union(leader, d);
+            }
+        }
     }
 
-    let mut comp_id = vec![usize::MAX; n_dense];
+    // Map each cluster-collapsed leader to a global ranking node `0..n_global`.
+    let mut global_map = BTreeMap::new();
+    let mut global_leaders = Vec::new();
+    for d in 0..n_dense {
+        let gl = clust_uf.find(d);
+        if let std::collections::btree_map::Entry::Vacant(e) = global_map.entry(gl) {
+            let idx = global_leaders.len();
+            e.insert(idx);
+            global_leaders.push(gl);
+        }
+    }
+    let n_global_real = global_leaders.len();
+    let mut total_global_nodes = n_global_real;
+    let mut global_edges: Vec<NsEdge> = Vec::new();
+    let mut direct_global_pair: BTreeMap<(usize, usize), usize> = BTreeMap::new();
+
+    for (&(u, v), &(minlen, weight)) in &dag_map {
+        let gu = global_map[&clust_uf.find(u)];
+        let gv = global_map[&clust_uf.find(v)];
+        if gu == gv {
+            continue;
+        }
+        if has_clusters && (dense_cluster[u].is_some() || dense_cluster[v].is_some()) {
+            // `interclust1` (`class1.c:28`): virtual slack node `sn` with `CL_BACK = 10` on tail leg.
+            let t_rank = local_cluster_rank[u];
+            let h_rank = local_cluster_rank[v];
+            let offset = minlen + t_rank - h_rank;
+            let (t_len, h_len) = if offset > 0 {
+                (0, offset)
+            } else {
+                (-offset, 0)
+            };
+            let sn = total_global_nodes;
+            total_global_nodes += 1;
+            global_edges.push(NsEdge {
+                tail: sn,
+                head: gu,
+                minlen: t_len,
+                weight: 10 * weight.max(1),
+                cutvalue: 0,
+                tree_index: None,
+            });
+            global_edges.push(NsEdge {
+                tail: sn,
+                head: gv,
+                minlen: h_len,
+                weight: weight.max(1),
+                cutvalue: 0,
+                tree_index: None,
+            });
+        } else if let Some(&ei) = direct_global_pair.get(&(gu, gv)) {
+            global_edges[ei].minlen = global_edges[ei].minlen.max(minlen);
+            global_edges[ei].weight = global_edges[ei].weight.saturating_add(weight);
+        } else {
+            let ei = global_edges.len();
+            direct_global_pair.insert((gu, gv), ei);
+            global_edges.push(NsEdge {
+                tail: gu,
+                head: gv,
+                minlen,
+                weight,
+                cutvalue: 0,
+                tree_index: None,
+            });
+        }
+    }
+
+    // Build weakly connected components of `0..total_global_nodes` and run Network Simplex on each component.
+    let mut undir_adj: Vec<Vec<usize>> = vec![Vec::new(); total_global_nodes];
+    for e in &global_edges {
+        undir_adj[e.tail].push(e.head);
+        undir_adj[e.head].push(e.tail);
+    }
+
+    let mut comp_id = vec![usize::MAX; total_global_nodes];
     let mut components: Vec<Vec<usize>> = Vec::new();
-    for i in 0..n_dense {
+    for i in 0..total_global_nodes {
         if comp_id[i] != usize::MAX {
             continue;
         }
@@ -487,11 +611,11 @@ fn assign_ranks(graph: &mut Graph) -> BTreeSet<EdgeId> {
         components.push(comp);
     }
 
-    let mut dense_ranks = vec![0i32; n_dense];
+    let mut global_ranks = vec![0i32; total_global_nodes];
 
     for comp in &components {
         if comp.len() <= 1 {
-            dense_ranks[comp[0]] = 0;
+            global_ranks[comp[0]] = 0;
             continue;
         }
         let mut local_of = BTreeMap::new();
@@ -499,30 +623,40 @@ fn assign_ranks(graph: &mut Graph) -> BTreeSet<EdgeId> {
             local_of.insert(gnode, li);
         }
         let mut ns_edges = Vec::new();
-        for (&(u, v), &(minlen, weight)) in &dag_map {
-            if comp_id[u] == comp_id[comp[0]] {
+        for e in &global_edges {
+            if comp_id[e.tail] == comp_id[comp[0]] {
                 ns_edges.push(NsEdge {
-                    tail: local_of[&u],
-                    head: local_of[&v],
-                    minlen,
-                    weight,
+                    tail: local_of[&e.tail],
+                    head: local_of[&e.head],
+                    minlen: e.minlen,
+                    weight: e.weight,
                     cutvalue: 0,
                     tree_index: None,
                 });
             }
         }
 
-        let local_ranks = network_simplex_solve(comp.len(), &mut ns_edges, true);
+        let balance_mode = if has_clusters { 0 } else { 1 };
+        let local_ranks = network_simplex_solve(comp.len(), &mut ns_edges, balance_mode);
         for (li, &gnode) in comp.iter().enumerate() {
-            dense_ranks[gnode] = local_ranks[li];
+            global_ranks[gnode] = local_ranks[li];
         }
     }
 
-    // Write computed ranks back to original graph nodes.
+    // Write computed ranks back to original graph nodes and normalize minimum rank to 0.
+    let mut min_final_rank = i32::MAX;
     for i in 0..n_orig {
         let leader = uf.find(i);
         let d = leader_to_dense[&leader];
-        graph.nodes[i].rank = dense_ranks[d];
+        let gl = global_map[&clust_uf.find(d)];
+        let r = global_ranks[gl] + local_cluster_rank[d];
+        graph.nodes[i].rank = r;
+        min_final_rank = min_final_rank.min(r);
+    }
+    if min_final_rank != 0 && min_final_rank != i32::MAX {
+        for node in &mut graph.nodes {
+            node.rank -= min_final_rank;
+        }
     }
 
     reversed_edge_ids
@@ -531,7 +665,7 @@ fn assign_ranks(graph: &mut Graph) -> BTreeSet<EdgeId> {
 /// Solves $\min \sum w_e (\text{rank}(\text{head}) - \text{rank}(\text{tail}))$
 /// subject to $\text{rank}(\text{head}) - \text{rank}(\text{tail}) \ge \text{minlen}(e)$
 /// using Graphviz's Network Simplex algorithm (`lib/common/ns.c`).
-fn network_simplex_solve(n_nodes: usize, edges: &mut [NsEdge], tb_balance: bool) -> Vec<i32> {
+fn network_simplex_solve(n_nodes: usize, edges: &mut [NsEdge], balance_mode: u8) -> Vec<i32> {
     if n_nodes == 0 {
         return Vec::new();
     }
@@ -582,6 +716,21 @@ fn network_simplex_solve(n_nodes: usize, edges: &mut [NsEdge], tb_balance: bool)
             if !changed {
                 break;
             }
+        }
+    }
+
+    // Tighten pure slack nodes (`make_edge_pairs` in `position.c:344` and `interclust1` in `class1.c:48`)
+    for u in 0..n_nodes {
+        if in_edges[u].is_empty()
+            && !out_edges[u].is_empty()
+            && edges[out_edges[u][0]].weight > 0
+            && (balance_mode == 2 || out_edges[u].len() == 2)
+            && let Some(max_r) = out_edges[u]
+                .iter()
+                .map(|&ei| rank[edges[ei].head] - edges[ei].minlen)
+                .min()
+        {
+            rank[u] = max_r;
         }
     }
 
@@ -798,13 +947,61 @@ fn network_simplex_solve(n_nodes: usize, edges: &mut [NsEdge], tb_balance: bool)
         );
     }
 
-    // 5. Normalize ranks so min_rank == 0, and optionally run `TB_balance`.
+    // 5. Optional `LR_balance` (`ns.c:775`, `balance_mode == 2`) for auxiliary coordinate graphs:
+    // For any tree edge `e` with `cutvalue == 0`, find the minimum-slack entering edge `f` and shift by `delta / 2`.
+    if balance_mode == 2 {
+        for &leave_ei in &tree_edges {
+            if edges[leave_ei].cutvalue != 0 {
+                continue;
+            }
+            let u_leave = edges[leave_ei].tail;
+            let v_leave = edges[leave_ei].head;
+            let (sub_root, tail_in_sub) = if lim[u_leave] < lim[v_leave] {
+                (u_leave, true)
+            } else {
+                (v_leave, false)
+            };
+            let sub_low = low[sub_root];
+            let sub_lim = lim[sub_root];
+
+            let mut best_enter_slack = i32::MAX;
+            for e in edges.iter() {
+                if e.tree_index.is_some() {
+                    continue;
+                }
+                let t_in = sub_low <= lim[e.tail] && lim[e.tail] <= sub_lim;
+                let h_in = sub_low <= lim[e.head] && lim[e.head] <= sub_lim;
+                let valid_crossing = if tail_in_sub {
+                    !t_in && h_in
+                } else {
+                    t_in && !h_in
+                };
+                if valid_crossing {
+                    let slack = (rank[e.head] - rank[e.tail]) - e.minlen;
+                    if slack < best_enter_slack {
+                        best_enter_slack = slack;
+                    }
+                }
+            }
+            if best_enter_slack > 1 && best_enter_slack < i32::MAX {
+                let half = best_enter_slack / 2;
+                let delta = if tail_in_sub { -half } else { half };
+                for node in 0..n_nodes {
+                    if sub_low <= lim[node] && lim[node] <= sub_lim {
+                        rank[node] += delta;
+                    }
+                }
+            }
+        }
+    }
+
+    // Normalize ranks so min_rank == 0, and optionally run `TB_balance` (`balance_mode == 1`).
     let min_r = rank.iter().copied().min().unwrap_or(0);
     for r in &mut rank {
         *r -= min_r;
     }
 
-    if tb_balance {
+    if balance_mode == 1 {
         let max_r = rank.iter().copied().max().unwrap_or(0).max(0) as usize;
         let mut rank_counts = vec![0usize; max_r + 1];
         for &r in &rank {
@@ -1009,6 +1206,7 @@ fn build_virtual_graph(
     graph: &Graph,
     reversed_edges: &BTreeSet<EdgeId>,
     rankdir: RankDir,
+    nodesep_pt: f64,
 ) -> VirtualGraph {
     let max_rank = graph.nodes.iter().map(|n| n.rank).max().unwrap_or(0).max(0) as usize;
 
@@ -1067,7 +1265,7 @@ fn build_virtual_graph(
             out_edges: Vec::new(),
             flat_out: Vec::new(),
             flat_in: Vec::new(),
-            mval: -1.0,
+            mval: -1e9,
             order_coord: 0.0,
             rank_coord: 0.0,
         });
@@ -1108,20 +1306,27 @@ fn build_virtual_graph(
             continue;
         }
 
+        let resolve_endpoint_port_x = |node_idx: usize, port: &gv_core::Port| -> i32 {
+            let pt =
+                resolve_port_offset(&graph.nodes[node_idx], port, &graph.name, rankdir.as_str());
+            let axis_off = if rankdir.is_flipped() { pt.y } else { pt.x };
+            (axis_off.round() as i32) + compass_port_offset(port.compass.as_deref())
+        };
+
         // Orient from lower rank to higher rank.
         let (low_node, high_node, low_port, high_port) = if r_u < r_v {
             (
                 u_orig,
                 v_orig,
-                compass_port_offset(edge.tail_port.compass.as_deref()),
-                compass_port_offset(edge.head_port.compass.as_deref()),
+                resolve_endpoint_port_x(u_orig, &edge.tail_port),
+                resolve_endpoint_port_x(v_orig, &edge.head_port),
             )
         } else {
             (
                 v_orig,
                 u_orig,
-                compass_port_offset(edge.head_port.compass.as_deref()),
-                compass_port_offset(edge.tail_port.compass.as_deref()),
+                resolve_endpoint_port_x(v_orig, &edge.head_port),
+                resolve_endpoint_port_x(u_orig, &edge.tail_port),
             )
         };
         let r_low = vnodes[low_node].rank;
@@ -1134,21 +1339,32 @@ fn build_virtual_graph(
             None
         };
 
-        // Measure edge label width if present so intermediate virtual node reserves space.
-        let label_half_w = edge
+        // Measure edge label dimensions (`label_vnode` in `class2.c:25`).
+        let edge_label_dimen = edge
             .attrs
             .get("label")
             .filter(|s| !s.trim().is_empty())
             .map(|lbl| {
-                let layout = measure_multiline_label_with_context(
-                    lbl,
-                    &LabelSubstContext::default(),
-                    DEFAULT_FONT_NAME,
-                    DEFAULT_FONT_SIZE,
-                );
-                (layout.width / 2.0 + 4.0).max(4.0)
-            })
-            .unwrap_or(1.0);
+                let font_name = edge
+                    .attrs
+                    .get("fontname")
+                    .map(String::as_str)
+                    .unwrap_or(DEFAULT_FONT_NAME);
+                let font_size = parse_attr_f64(&edge.attrs, "fontsize", DEFAULT_FONT_SIZE);
+                if is_html_label(lbl, ShapeKind::Plain)
+                    && let Some(tbl) = parse_html_table(lbl, "", &graph.name, font_name, font_size)
+                {
+                    Point::new(tbl.bbox.width(), tbl.bbox.height())
+                } else {
+                    let layout = measure_multiline_label_with_context(
+                        lbl,
+                        &LabelSubstContext::default(),
+                        font_name,
+                        font_size,
+                    );
+                    Point::new(layout.width, layout.height.floor())
+                }
+            });
 
         let mut chain = Vec::with_capacity(span + 1);
         chain.push(low_node);
@@ -1156,21 +1372,30 @@ fn build_virtual_graph(
         for step in 1..span {
             let r_inter = r_low + step as i32;
             let is_mid = step == span / 2;
-            let hw = if is_mid { label_half_w } else { 1.0 };
+            let (lw, rw, ht) = if is_mid && let Some(dimen) = edge_label_dimen {
+                if rankdir.is_flipped() {
+                    (nodesep_pt, dimen.y, dimen.x)
+                } else {
+                    (nodesep_pt, dimen.x, dimen.y)
+                }
+            } else {
+                // `plain_vnode` in `class2.c:48`
+                (nodesep_pt / 2.0, nodesep_pt / 2.0, 1.0)
+            };
             let vn_idx = vnodes.len();
             vnodes.push(VNode {
                 real_node: None,
                 cluster: shared_cluster,
                 rank: r_inter,
                 order: 0,
-                lw: hw,
-                rw: hw,
-                ht: 1.0,
+                lw,
+                rw,
+                ht,
                 in_edges: Vec::new(),
                 out_edges: Vec::new(),
                 flat_out: Vec::new(),
                 flat_in: Vec::new(),
-                mval: -1.0,
+                mval: -1e9,
                 order_coord: 0.0,
                 rank_coord: 0.0,
             });
@@ -1240,69 +1465,81 @@ fn minimize_crossings(graph: &Graph, vgraph: &mut VirtualGraph, rankdir: RankDir
         return;
     }
 
-    // Build initial rank order via BFS from rank 0 (`build_ranks` in `mincross.c`).
-    build_initial_ranks(vgraph, 0, rankdir);
-    flat_reorder_ranks(graph, vgraph);
-    transpose_all(vgraph, false);
-
     let mut best_ranks = vgraph.ranks.clone();
-    let mut best_cross = total_crossings(vgraph);
+    let mut best_cross = i64::MAX;
 
-    if best_cross > 0 {
-        // Also test reverse BFS initial ordering (`pass == 1` in `mincross.c`).
-        build_initial_ranks(vgraph, 1, rankdir);
-        flat_reorder_ranks(graph, vgraph);
-        let c1 = total_crossings(vgraph);
-        if c1 < best_cross {
-            best_cross = c1;
-            best_ranks = vgraph.ranks.clone();
+    // 3-pass crossing minimization matching `mincross` in `lib/dotgen/mincross.c:695`:
+    // pass 0: forward BFS `build_ranks(0)` + 4 mincross_step iterations
+    // pass 1: reverse BFS `build_ranks(1)` + 4 mincross_step iterations
+    // pass 2: restore best + up to `MINCROSS_MAX_ITER` (24) mincross_step iterations
+    for pass in 0..=2 {
+        let max_this_pass = if pass <= 1 {
+            build_initial_ranks(vgraph, pass, rankdir);
+            flat_reorder_ranks(graph, vgraph, rankdir);
+            let c0 = total_crossings(vgraph);
+            if c0 > 0 {
+                transpose_all(vgraph, false, rankdir);
+            }
+            let c_init = total_crossings(vgraph);
+            if (pass == 0 && c_init <= best_cross) || (pass == 1 && c_init < best_cross) {
+                best_cross = c_init;
+                best_ranks = vgraph.ranks.clone();
+            }
+            4.min(MINCROSS_MAX_ITER)
         } else {
             restore_ranks(vgraph, &best_ranks);
-        }
-    }
+            MINCROSS_MAX_ITER
+        };
 
-    let mut trying = 0usize;
-    for iter in 0..MINCROSS_MAX_ITER {
-        if best_cross == 0 || trying >= MINCROSS_MIN_QUIT {
+        let mut trying = 0usize;
+        for iter in 0..max_this_pass {
+            if best_cross == 0 || trying >= MINCROSS_MIN_QUIT {
+                break;
+            }
+            trying += 1;
+
+            let reverse = (iter % 4) > 1;
+            if iter % 2 == 0 {
+                for r in 1..n_ranks {
+                    compute_medians(vgraph, r, r - 1, rankdir);
+                    reorder_rank(vgraph, r, reverse, rankdir);
+                }
+            } else {
+                for r in (0..n_ranks.saturating_sub(1)).rev() {
+                    compute_medians(vgraph, r, r + 1, rankdir);
+                    reorder_rank(vgraph, r, reverse, rankdir);
+                }
+            }
+            transpose_all(vgraph, !reverse, rankdir);
+
+            let cur_cross = total_crossings(vgraph);
+            let accept = if pass == 1 {
+                cur_cross < best_cross
+            } else {
+                cur_cross <= best_cross
+            };
+            if accept {
+                if (cur_cross as f64) < MINCROSS_CONVERGENCE * (best_cross as f64) {
+                    trying = 0;
+                }
+                best_cross = cur_cross;
+                best_ranks = vgraph.ranks.clone();
+            }
+        }
+        if best_cross == 0 {
             break;
-        }
-        trying += 1;
-
-        let reverse = (iter % 4) < 2;
-        if iter % 2 == 0 {
-            // Down pass: rank 1 .. n_ranks
-            for r in 1..n_ranks {
-                compute_medians(vgraph, r, r - 1);
-                reorder_rank(vgraph, r, reverse);
-            }
-        } else {
-            // Up pass: rank (n_ranks - 2) down to 0
-            for r in (0..n_ranks.saturating_sub(1)).rev() {
-                compute_medians(vgraph, r, r + 1);
-                reorder_rank(vgraph, r, reverse);
-            }
-        }
-        transpose_all(vgraph, !reverse);
-
-        let cur_cross = total_crossings(vgraph);
-        if cur_cross <= best_cross {
-            if (cur_cross as f64) < MINCROSS_CONVERGENCE * (best_cross as f64) {
-                trying = 0;
-            }
-            best_cross = cur_cross;
-            best_ranks = vgraph.ranks.clone();
         }
     }
 
     restore_ranks(vgraph, &best_ranks);
     if best_cross > 0 {
-        transpose_all(vgraph, false);
+        transpose_all(vgraph, false, rankdir);
     }
 
     // Group nodes belonging to the same cluster contiguously within each rank if clusters exist.
     if graph.subgraphs.iter().any(|s| s.is_cluster) {
         group_clusters_in_ranks(vgraph);
-        transpose_all_within_clusters(vgraph);
+        transpose_all_within_clusters(vgraph, rankdir);
     }
 }
 
@@ -1313,26 +1550,34 @@ fn build_initial_ranks(vgraph: &mut VirtualGraph, pass: usize, rankdir: RankDir)
         r.clear();
     }
 
+    let has_clusters = vgraph.nodes.iter().any(|n| n.cluster.is_some());
     let mut start_nodes: Vec<usize> = (0..n_vnodes).collect();
-    if pass == 0 {
-        start_nodes.sort_by_key(|&u| {
-            (
-                usize::from(!vgraph.nodes[u].in_edges.is_empty()),
-                vgraph.nodes[u].rank,
-                u,
-            )
-        });
+    if has_clusters {
+        if pass == 0 {
+            start_nodes.sort_by_key(|&u| {
+                (
+                    usize::from(!vgraph.nodes[u].in_edges.is_empty()),
+                    vgraph.nodes[u].rank,
+                    u,
+                )
+            });
+        } else {
+            start_nodes.sort_by_key(|&u| {
+                (
+                    usize::from(!vgraph.nodes[u].out_edges.is_empty()),
+                    std::cmp::Reverse(vgraph.nodes[u].rank),
+                    u,
+                )
+            });
+        }
+    } else if pass == 0 {
+        start_nodes.sort_by_key(|&u| (usize::from(!vgraph.nodes[u].in_edges.is_empty()), u));
     } else {
-        start_nodes.sort_by_key(|&u| {
-            (
-                usize::from(!vgraph.nodes[u].out_edges.is_empty()),
-                std::cmp::Reverse(vgraph.nodes[u].rank),
-                u,
-            )
-        });
+        start_nodes.sort_by_key(|&u| (usize::from(!vgraph.nodes[u].out_edges.is_empty()), u));
     }
 
     let mut q = VecDeque::new();
+    let mut installed_clusters = BTreeSet::new();
     for start in start_nodes {
         if visited[start] {
             continue;
@@ -1340,6 +1585,47 @@ fn build_initial_ranks(vgraph: &mut VirtualGraph, pass: usize, rankdir: RankDir)
         visited[start] = true;
         q.push_back(start);
         while let Some(u) = q.pop_front() {
+            if let Some(cid) = vgraph.nodes[u].cluster
+                && installed_clusters.insert(cid)
+            {
+                // `install_cluster` (`mincross.c:1244`): install all nodes of cluster `cid` into their ranks now.
+                let mut clust_nodes: Vec<usize> = (0..n_vnodes)
+                    .filter(|&v| vgraph.nodes[v].cluster == Some(cid))
+                    .collect();
+                if pass == 0 {
+                    clust_nodes.sort_by_key(|&v| (vgraph.nodes[v].rank, v));
+                } else {
+                    clust_nodes.sort_by_key(|&v| (std::cmp::Reverse(vgraph.nodes[v].rank), v));
+                }
+                for cn in clust_nodes {
+                    visited[cn] = true;
+                    let r = vgraph.nodes[cn].rank as usize;
+                    let ord = vgraph.ranks[r].len();
+                    vgraph.ranks[r].push(cn);
+                    vgraph.nodes[cn].order = ord;
+
+                    let edge_list = if pass == 0 {
+                        vgraph.nodes[cn].out_edges.clone()
+                    } else {
+                        vgraph.nodes[cn].in_edges.clone()
+                    };
+                    for vei in edge_list {
+                        let next = if pass == 0 {
+                            vgraph.edges[vei].head
+                        } else {
+                            vgraph.edges[vei].tail
+                        };
+                        if !visited[next] {
+                            visited[next] = true;
+                            q.push_back(next);
+                        }
+                    }
+                }
+                continue;
+            }
+            if vgraph.nodes[u].cluster.is_some() {
+                continue;
+            }
             let r = vgraph.nodes[u].rank as usize;
             let ord = vgraph.ranks[r].len();
             vgraph.ranks[r].push(u);
@@ -1375,7 +1661,7 @@ fn build_initial_ranks(vgraph: &mut VirtualGraph, pass: usize, rankdir: RankDir)
 }
 
 /// Reorders nodes within each rank to respect `ordering="out"`/`"in"` and flat edges (`flat_reorder` in `mincross.c`).
-fn flat_reorder_ranks(graph: &Graph, vgraph: &mut VirtualGraph) {
+fn flat_reorder_ranks(graph: &Graph, vgraph: &mut VirtualGraph, rankdir: RankDir) {
     let ordering_out = graph
         .graph_attrs
         .get("ordering")
@@ -1409,8 +1695,15 @@ fn flat_reorder_ranks(graph: &Graph, vgraph: &mut VirtualGraph) {
                 if let Some(&j) = pos_in_rank.get(&v)
                     && i != j
                 {
-                    adj[i].push(j);
-                    in_deg[j] += 1;
+                    // In `mincross.c:1346`, `if (!GD_flip(g)) LIST_REVERSE(&temprank);` places `u` before `v`
+                    // for TB/BT, and `v` before `u` (smaller y -> larger y) for LR/RL.
+                    if rankdir.is_flipped() {
+                        adj[j].push(i);
+                        in_deg[i] += 1;
+                    } else {
+                        adj[i].push(j);
+                        in_deg[j] += 1;
+                    }
                 }
             }
         }
@@ -1446,7 +1739,7 @@ fn restore_ranks(vgraph: &mut VirtualGraph, saved: &[Vec<usize>]) {
 }
 
 /// Computes weighted medians for rank `r0` from adjacent rank `r1` (`medians` in `mincross.c`).
-fn compute_medians(vgraph: &mut VirtualGraph, r0: usize, r1: usize) {
+fn compute_medians(vgraph: &mut VirtualGraph, r0: usize, r1: usize, rankdir: RankDir) {
     let rank_nodes = vgraph.ranks[r0].clone();
     let mut vals = Vec::new();
 
@@ -1472,7 +1765,7 @@ fn compute_medians(vgraph: &mut VirtualGraph, r0: usize, r1: usize) {
 
         vals.sort_unstable();
         let mval = match vals.len() {
-            0 => -1.0,
+            0 => -1e9,
             1 => f64::from(vals[0]),
             2 => f64::from(vals[0] + vals[1]) / 2.0,
             j if j % 2 == 1 => f64::from(vals[j / 2]),
@@ -1503,9 +1796,10 @@ fn compute_medians(vgraph: &mut VirtualGraph, r0: usize, r1: usize) {
                     .iter()
                     .map(|&vei| vgraph.edges[vei].tail)
                     .max_by_key(|&t| vgraph.nodes[t].order)
-                    && vgraph.nodes[best_tail].mval >= 0.0
+                    && vgraph.nodes[best_tail].mval >= -1e8
                 {
-                    vgraph.nodes[u].mval = vgraph.nodes[best_tail].mval + 1.0;
+                    let step = if rankdir.is_flipped() { -1.0 } else { 1.0 };
+                    vgraph.nodes[u].mval = vgraph.nodes[best_tail].mval + step;
                 }
             } else if !vgraph.nodes[u].flat_out.is_empty()
                 && let Some(best_head) = vgraph.nodes[u]
@@ -1513,16 +1807,17 @@ fn compute_medians(vgraph: &mut VirtualGraph, r0: usize, r1: usize) {
                     .iter()
                     .map(|&vei| vgraph.edges[vei].head)
                     .min_by_key(|&h| vgraph.nodes[h].order)
-                && vgraph.nodes[best_head].mval > 0.0
+                && vgraph.nodes[best_head].mval > -1e8
             {
-                vgraph.nodes[u].mval = vgraph.nodes[best_head].mval - 1.0;
+                let step = if rankdir.is_flipped() { 1.0 } else { -1.0 };
+                vgraph.nodes[u].mval = vgraph.nodes[best_head].mval + step;
             }
         }
     }
 }
 
-/// Bubble-style median sort that skips fixed (`mval < 0`) nodes (`reorder` in `mincross.c`).
-fn reorder_rank(vgraph: &mut VirtualGraph, r: usize, reverse: bool) {
+/// Bubble-style median sort that skips fixed (`mval < -1e8`) nodes (`reorder` in `mincross.c`).
+fn reorder_rank(vgraph: &mut VirtualGraph, r: usize, reverse: bool, rankdir: RankDir) {
     let n = vgraph.ranks[r].len();
     if n <= 1 {
         return;
@@ -1531,7 +1826,7 @@ fn reorder_rank(vgraph: &mut VirtualGraph, r: usize, reverse: bool) {
     for _ in 0..n {
         let mut lp = 0usize;
         while lp < n {
-            while lp < n && vgraph.nodes[vgraph.ranks[r][lp]].mval < 0.0 {
+            while lp < n && vgraph.nodes[vgraph.ranks[r][lp]].mval < -1e8 {
                 lp += 1;
             }
             if lp >= n {
@@ -1542,11 +1837,11 @@ fn reorder_rank(vgraph: &mut VirtualGraph, r: usize, reverse: bool) {
             while rp < n {
                 let u = vgraph.ranks[r][lp];
                 let v = vgraph.ranks[r][rp];
-                if has_flat_constraint(vgraph, u, v) {
+                if has_flat_constraint(vgraph, u, v, rankdir) {
                     must_stay = true;
                     break;
                 }
-                if vgraph.nodes[v].mval >= 0.0 {
+                if vgraph.nodes[v].mval >= -1e8 {
                     break;
                 }
                 rp += 1;
@@ -1570,15 +1865,22 @@ fn reorder_rank(vgraph: &mut VirtualGraph, r: usize, reverse: bool) {
     }
 }
 
-fn has_flat_constraint(vgraph: &VirtualGraph, u: usize, v: usize) -> bool {
-    vgraph.nodes[u]
-        .flat_out
-        .iter()
-        .any(|&vei| vgraph.edges[vei].head == v)
+fn has_flat_constraint(vgraph: &VirtualGraph, u: usize, v: usize, rankdir: RankDir) -> bool {
+    if rankdir.is_flipped() {
+        vgraph.nodes[v]
+            .flat_out
+            .iter()
+            .any(|&vei| vgraph.edges[vei].head == u)
+    } else {
+        vgraph.nodes[u]
+            .flat_out
+            .iter()
+            .any(|&vei| vgraph.edges[vei].head == v)
+    }
 }
 
 /// Adjacent-exchange local search (`transpose` in `mincross.c`).
-fn transpose_all(vgraph: &mut VirtualGraph, reverse: bool) {
+fn transpose_all(vgraph: &mut VirtualGraph, reverse: bool, rankdir: RankDir) {
     let n_ranks = vgraph.ranks.len();
     let mut improved = true;
     let mut pass_limit = 20usize;
@@ -1594,7 +1896,7 @@ fn transpose_all(vgraph: &mut VirtualGraph, reverse: bool) {
             for i in 0..(len - 1) {
                 let v = vgraph.ranks[r][i];
                 let w = vgraph.ranks[r][i + 1];
-                if has_flat_constraint(vgraph, v, w) {
+                if has_flat_constraint(vgraph, v, w, rankdir) {
                     continue;
                 }
                 let c0 = pair_in_cross(vgraph, v, w) + pair_out_cross(vgraph, v, w);
@@ -1613,31 +1915,44 @@ fn transpose_all(vgraph: &mut VirtualGraph, reverse: bool) {
 }
 
 fn group_clusters_in_ranks(vgraph: &mut VirtualGraph) {
+    // Compute a single global average order for each cluster across all ranks so clusters never cross over.
+    let mut global_cluster_avg: BTreeMap<SubgraphId, f64> = BTreeMap::new();
+    let mut global_cluster_cnt: BTreeMap<SubgraphId, usize> = BTreeMap::new();
+    for rank_nodes in &vgraph.ranks {
+        for (ord, &vn) in rank_nodes.iter().enumerate() {
+            if let Some(cid) = vgraph.nodes[vn].cluster {
+                *global_cluster_avg.entry(cid).or_insert(0.0) += ord as f64;
+                *global_cluster_cnt.entry(cid).or_insert(0) += 1;
+            }
+        }
+    }
+    for (&cid, sum) in &mut global_cluster_avg {
+        *sum /= global_cluster_cnt[&cid] as f64;
+    }
+
     for r in 0..vgraph.ranks.len() {
-        if vgraph.ranks[r].len() <= 2 {
+        if vgraph.ranks[r].len() < 2 {
             continue;
         }
-        // Compute average order for each cluster in rank `r` so clusters stay in their median rank position.
-        let mut cluster_avg: BTreeMap<Option<SubgraphId>, f64> = BTreeMap::new();
-        let mut cluster_cnt: BTreeMap<Option<SubgraphId>, usize> = BTreeMap::new();
+        let mut cluster_avg: BTreeMap<SubgraphId, f64> = BTreeMap::new();
+        let mut cluster_cnt: BTreeMap<SubgraphId, usize> = BTreeMap::new();
         for (ord, &vn) in vgraph.ranks[r].iter().enumerate() {
-            let cid = vgraph.nodes[vn].cluster;
-            if cid.is_some() {
+            if let Some(cid) = vgraph.nodes[vn].cluster {
                 *cluster_avg.entry(cid).or_insert(0.0) += ord as f64;
                 *cluster_cnt.entry(cid).or_insert(0) += 1;
             }
         }
-        for (cid, sum) in &mut cluster_avg {
-            *sum /= cluster_cnt[cid] as f64;
+        for (&cid, sum) in &mut cluster_avg {
+            *sum /= cluster_cnt[&cid] as f64;
         }
         vgraph.ranks[r].sort_by(|&a, &b| {
             let ca = vgraph.nodes[a].cluster;
             let cb = vgraph.nodes[b].cluster;
             let pos_a = ca
-                .and_then(|_| cluster_avg.get(&ca).copied())
+                .and_then(|c| global_cluster_avg.get(&c).copied())
                 .unwrap_or(vgraph.nodes[a].order as f64);
             let pos_b = cb
-                .and_then(|_| cluster_avg.get(&cb).copied())
+                .and_then(|c| global_cluster_avg.get(&c).copied())
                 .unwrap_or(vgraph.nodes[b].order as f64);
             pos_a
                 .partial_cmp(&pos_b)
@@ -1651,7 +1966,7 @@ fn group_clusters_in_ranks(vgraph: &mut VirtualGraph) {
     }
 }
 
-fn transpose_all_within_clusters(vgraph: &mut VirtualGraph) {
+fn transpose_all_within_clusters(vgraph: &mut VirtualGraph, rankdir: RankDir) {
     let n_ranks = vgraph.ranks.len();
     for _ in 0..8 {
         let mut changed = false;
@@ -1664,7 +1979,7 @@ fn transpose_all_within_clusters(vgraph: &mut VirtualGraph) {
                 let v = vgraph.ranks[r][i];
                 let w = vgraph.ranks[r][i + 1];
                 if vgraph.nodes[v].cluster != vgraph.nodes[w].cluster
-                    || has_flat_constraint(vgraph, v, w)
+                    || has_flat_constraint(vgraph, v, w, rankdir)
                 {
                     continue;
                 }
@@ -1757,6 +2072,23 @@ fn total_crossings(vgraph: &VirtualGraph) -> i64 {
 // Stage 4: Coordinate Assignment (`position.c`) & Cluster Bounding Boxes
 // ============================================================================
 
+fn parse_graph_size_pt(attrs: &gv_core::AttrMap) -> Option<(f64, f64, bool)> {
+    let raw = attrs.get("size")?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    let is_bang = raw.ends_with('!');
+    let clean = raw.trim_end_matches('!');
+    let mut parts = clean.split(',').map(str::trim);
+    let w_in = parts.next()?.parse::<f64>().ok()?;
+    let h_in = parts.next()?.parse::<f64>().ok()?;
+    if w_in > 0.0 && h_in > 0.0 {
+        Some((w_in * POINTS_PER_INCH, h_in * POINTS_PER_INCH, is_bang))
+    } else {
+        None
+    }
+}
+
 fn assign_coordinates(
     graph: &mut Graph,
     vgraph: &mut VirtualGraph,
@@ -1764,85 +2096,130 @@ fn assign_coordinates(
     nodesep_pt: f64,
     ranksep_pt: f64,
     equal_ranksep: bool,
+    has_edge_labels: bool,
 ) {
     let n_ranks = vgraph.ranks.len();
     if n_ranks == 0 {
         return;
     }
 
-    // 1. Compute rank positions (`set_ycoords` in `position.c`).
-    let mut rank_half_thick = vec![9.0f64; n_ranks];
+    // 1. Compute rank positions (`set_ycoords` in `position.c:707`).
+    let mut rank_pht = vec![0.0f64; n_ranks];
     for (r, rank_nodes) in vgraph.ranks.iter().enumerate() {
-        let mut max_ht2 = 1.0f64;
+        let mut max_ht2 = 0.0f64;
         for &vn in rank_nodes {
-            max_ht2 = max_ht2.max(vgraph.nodes[vn].ht / 2.0);
+            max_ht2 = max_ht2.max((vgraph.nodes[vn].ht / 2.0).round());
         }
-        rank_half_thick[r] = max_ht2;
+        rank_pht[r] = max_ht2;
     }
 
-    // Add extra inter-rank padding when clusters start/end or have labels.
-    let mut cluster_top_extra = vec![0.0f64; n_ranks];
-    let mut cluster_bot_extra = vec![0.0f64; n_ranks];
+    // Compute `ht1` (bottom extent) and `ht2` (top extent) including cluster borders & labels (`clust_ht` in `position.c:774`).
+    let mut rank_ht1 = rank_pht.clone();
+    let mut rank_ht2 = rank_pht.clone();
+    const CL_OFFSET: f64 = 8.0;
+
+    fn update_cluster_ht(
+        graph: &Graph,
+        subg_id: SubgraphId,
+        n_ranks: usize,
+        rank_ht1: &mut [f64],
+        rank_ht2: &mut [f64],
+    ) -> Option<(usize, usize, f64, f64)> {
+        let subg = &graph.subgraphs[subg_id.0 as usize];
+        let mut min_r = usize::MAX;
+        let mut max_r = 0usize;
+        for &nid in &subg.nodes {
+            let r = graph.nodes[nid.0 as usize].rank as usize;
+            min_r = min_r.min(r);
+            max_r = max_r.max(r);
+        }
+        let mut sub_ht1 = CL_OFFSET;
+        let mut sub_ht2 = CL_OFFSET;
+        for &cid in &subg.subgraphs {
+            if let Some((c_min, c_max, c_ht1, c_ht2)) =
+                update_cluster_ht(graph, cid, n_ranks, rank_ht1, rank_ht2)
+            {
+                if c_min < min_r {
+                    min_r = c_min;
+                    sub_ht2 = c_ht2 + CL_OFFSET;
+                } else if c_min == min_r {
+                    sub_ht2 = sub_ht2.max(c_ht2 + CL_OFFSET);
+                }
+                if c_max > max_r {
+                    max_r = c_max;
+                    sub_ht1 = c_ht1 + CL_OFFSET;
+                } else if c_max == max_r {
+                    sub_ht1 = sub_ht1.max(c_ht1 + CL_OFFSET);
+                }
+            }
+        }
+        if min_r > max_r || max_r >= n_ranks {
+            return None;
+        }
+        if subg.is_cluster {
+            let label_ht = subg
+                .graph_attrs
+                .get("label")
+                .filter(|s| !s.trim().is_empty())
+                .map(|lbl| {
+                    let font_name = subg
+                        .graph_attrs
+                        .get("fontname")
+                        .map(String::as_str)
+                        .unwrap_or(DEFAULT_FONT_NAME);
+                    let font_size =
+                        parse_attr_f64(&subg.graph_attrs, "fontsize", DEFAULT_FONT_SIZE);
+                    measure_multiline_label_with_context(
+                        lbl,
+                        &LabelSubstContext::default(),
+                        font_name,
+                        font_size,
+                    )
+                    .height
+                    .floor()
+                })
+                .unwrap_or(0.0);
+            let labelloc = subg
+                .graph_attrs
+                .get("labelloc")
+                .map(|s| s.trim().to_ascii_lowercase());
+            if labelloc.as_deref() == Some("b") {
+                sub_ht1 += label_ht;
+            } else {
+                sub_ht2 += label_ht;
+            }
+            rank_ht1[max_r] = rank_ht1[max_r].max(rank_ht1[max_r] + sub_ht1 - CL_OFFSET);
+            rank_ht2[min_r] = rank_ht2[min_r].max(rank_ht2[min_r] + sub_ht2 - CL_OFFSET);
+            Some((min_r, max_r, rank_ht1[max_r], rank_ht2[min_r]))
+        } else {
+            None
+        }
+    }
+
+    let child_subgs: BTreeSet<SubgraphId> = graph
+        .subgraphs
+        .iter()
+        .flat_map(|s| s.subgraphs.iter().copied())
+        .collect();
+    let has_clusters = graph.subgraphs.iter().any(|s| s.is_cluster);
     for subg in &graph.subgraphs {
-        if !subg.is_cluster || subg.nodes.is_empty() {
-            continue;
-        }
-        let min_r = subg
-            .nodes
-            .iter()
-            .map(|nid| graph.nodes[nid.0 as usize].rank as usize)
-            .min()
-            .unwrap_or(0);
-        let max_r = subg
-            .nodes
-            .iter()
-            .map(|nid| graph.nodes[nid.0 as usize].rank as usize)
-            .max()
-            .unwrap_or(0);
-        let margin = parse_attr_f64(
-            &subg.graph_attrs,
-            "margin",
-            CLUSTER_MARGIN_PT / POINTS_PER_INCH,
-        ) * POINTS_PER_INCH;
-        let label_ht = subg
-            .graph_attrs
-            .get("label")
-            .filter(|s| !s.trim().is_empty())
-            .map(|lbl| {
-                let font_name = subg
-                    .graph_attrs
-                    .get("fontname")
-                    .map(String::as_str)
-                    .unwrap_or(DEFAULT_FONT_NAME);
-                let font_size = parse_attr_f64(&subg.graph_attrs, "fontsize", DEFAULT_FONT_SIZE);
-                measure_multiline_label_with_context(
-                    lbl,
-                    &LabelSubstContext::default(),
-                    font_name,
-                    font_size,
-                )
-                .height
-                    + 6.0
-            })
-            .unwrap_or(0.0);
-
-        if min_r < n_ranks {
-            cluster_top_extra[min_r] = cluster_top_extra[min_r].max(margin + label_ht);
-        }
-        if max_r < n_ranks {
-            cluster_bot_extra[max_r] = cluster_bot_extra[max_r].max(margin);
+        if !child_subgs.contains(&subg.id) {
+            update_cluster_ht(graph, subg.id, n_ranks, &mut rank_ht1, &mut rank_ht2);
         }
     }
 
-    // Compute rank coordinates in increasing order (from rank 0 to max_rank), then orient according to `rankdir`.
+    // Compute rank coordinates (`set_ycoords` in `position.c:707`):
+    // `d0 = rank[r+1].pht2 + rank[r].pht1 + ranksep`, `d1 = rank[r+1].ht2 + rank[r].ht1 + CL_OFFSET`
     let mut rank_pos = vec![0.0f64; n_ranks];
     let mut max_delta = ranksep_pt;
     for r in 0..(n_ranks - 1) {
-        let delta = rank_half_thick[r]
-            + cluster_bot_extra[r]
-            + ranksep_pt
-            + cluster_top_extra[r + 1]
-            + rank_half_thick[r + 1];
+        let d0 = rank_pht[r] + rank_pht[r + 1] + ranksep_pt;
+        let d1 = if has_clusters {
+            rank_ht1[r] + rank_ht2[r + 1] + CL_OFFSET
+        } else {
+            0.0
+        };
+        let delta = d0.max(d1);
         max_delta = max_delta.max(delta);
         rank_pos[r + 1] = rank_pos[r] + delta;
     }
@@ -1852,8 +2229,9 @@ fn assign_coordinates(
         }
     }
 
-    // In `TB` (default) and `RL`, rank 0 has the largest coordinate and rank `max_rank` has the smallest.
-    // In `BT` and `LR`, rank 0 has the smallest coordinate and rank `max_rank` has the largest.
+    // In `TB` (default) and `LR`, rank 0 has the largest internal Y coordinate (`UR.y`) and `maxrank` has `0`,
+    // and in `LR`, `ccwrotatepf(90)` maps `final_x = UR.y - y_internal`, which increases from `0` at rank 0
+    // to `UR.y` at `maxrank`!
     let max_rank_coord = rank_pos.last().copied().unwrap_or(0.0);
     if matches!(rankdir, RankDir::Tb | RankDir::Rl) {
         for pos in &mut rank_pos {
@@ -1866,8 +2244,28 @@ fn assign_coordinates(
         }
     }
 
-    // 2. Compute within-rank coordinates (`set_xcoords` / auxiliary Network Simplex + median refinement).
-    solve_within_rank_coordinates(vgraph, nodesep_pt);
+    // Check `ratio="compress"` and `size="w,h"` (`compress_graph` in `position.c:488`).
+    let ratio_attr = graph
+        .graph_attrs
+        .get("ratio")
+        .map(|s| s.trim().to_ascii_lowercase());
+    let size_info = parse_graph_size_pt(&graph.graph_attrs);
+    let compress_limit_pt = if ratio_attr.as_deref() == Some("compress")
+        && let Some((sx, sy, _)) = size_info
+    {
+        Some(if rankdir.is_flipped() { sy } else { sx })
+    } else {
+        None
+    };
+
+    // 2. Compute within-rank coordinates (`set_xcoords` / auxiliary Network Simplex + `LR_balance`).
+    solve_within_rank_coordinates(
+        graph,
+        vgraph,
+        nodesep_pt,
+        has_edge_labels,
+        compress_limit_pt,
+    );
 
     // 3. Map `(rank_coord, order_coord)` to 2D `(x, y)` according to `rankdir`:
     //    - `TB` / `BT`: `x = order_coord`, `y = rank_coord`
@@ -1890,29 +2288,34 @@ fn assign_coordinates(
 /// Solves within-rank coordinates using the auxiliary graph Network Simplex formulation from
 /// `position.c` (`make_LR_constraints` + `make_edge_pairs` + `rank2`) followed by fractional
 /// median-attraction refinement passes.
-fn solve_within_rank_coordinates(vgraph: &mut VirtualGraph, nodesep_pt: f64) {
+fn solve_within_rank_coordinates(
+    graph: &Graph,
+    vgraph: &mut VirtualGraph,
+    nodesep_pt: f64,
+    has_edge_labels: bool,
+    compress_limit_pt: Option<f64>,
+) {
     let n_vnodes = vgraph.nodes.len();
     if n_vnodes == 0 {
         return;
     }
 
     // Build auxiliary Network Simplex graph where node "rank" = integer X coordinate in points.
-    // Nodes `0..n_vnodes` are the virtual/real nodes; nodes `n_vnodes..` are slack nodes for edges.
+    // Nodes `0..n_vnodes` are the virtual/real nodes; nodes `n_vnodes..` are slack/cluster border nodes.
     let mut aux_edges = Vec::new();
     let mut total_aux_nodes = n_vnodes;
 
-    // Left-to-right minimum separation constraints within each rank (`make_LR_constraints`).
-    for rank_nodes in &vgraph.ranks {
+    // Left-to-right minimum separation constraints within each rank (`make_LR_constraints` in `position.c:231`).
+    for (r, rank_nodes) in vgraph.ranks.iter().enumerate() {
+        let base_sep = if has_edge_labels && (r % 2 == 1) {
+            5.0
+        } else {
+            nodesep_pt
+        };
         for w in rank_nodes.windows(2) {
             let u = w[0];
             let v = w[1];
-            let cluster_extra = if vgraph.nodes[u].cluster != vgraph.nodes[v].cluster {
-                2.0 * CLUSTER_MARGIN_PT
-            } else {
-                0.0
-            };
-            let sep = (vgraph.nodes[u].rw + vgraph.nodes[v].lw + nodesep_pt + cluster_extra).ceil()
-                as i32;
+            let sep = (vgraph.nodes[u].rw + vgraph.nodes[v].lw + base_sep).round() as i32;
             aux_edges.push(NsEdge {
                 tail: u,
                 head: v,
@@ -1921,6 +2324,153 @@ fn solve_within_rank_coordinates(vgraph: &mut VirtualGraph, nodesep_pt: f64) {
                 cutvalue: 0,
                 tree_index: None,
             });
+        }
+    }
+
+    // Cluster bounding-box constraints (`pos_clusters`: `contain_clustnodes`, `separate_subclust`, `keepout_othernodes` in `position.c:360..490`).
+    let mut clust_ln_rn: BTreeMap<SubgraphId, (usize, usize, usize, usize)> = BTreeMap::new();
+    for subg in &graph.subgraphs {
+        if !subg.is_cluster {
+            continue;
+        }
+        let mut c_vnodes = Vec::new();
+        let mut min_r = usize::MAX;
+        let mut max_r = 0usize;
+        for (vi, vn) in vgraph.nodes.iter().enumerate() {
+            if vn.cluster == Some(subg.id) {
+                c_vnodes.push(vi);
+                let r = vn.rank as usize;
+                min_r = min_r.min(r);
+                max_r = max_r.max(r);
+            }
+        }
+        if c_vnodes.is_empty() || min_r > max_r {
+            continue;
+        }
+        let ln = total_aux_nodes;
+        let rn = total_aux_nodes + 1;
+        total_aux_nodes += 2;
+        clust_ln_rn.insert(subg.id, (ln, rn, min_r, max_r));
+
+        let margin = (parse_attr_f64(
+            &subg.graph_attrs,
+            "margin",
+            CLUSTER_MARGIN_PT / POINTS_PER_INCH,
+        ) * POINTS_PER_INCH)
+            .round() as i32;
+
+        // `contain_clustnodes`: cluster compaction edge `ln -> rn` with `minlen = 1, weight = 128`.
+        aux_edges.push(NsEdge {
+            tail: ln,
+            head: rn,
+            minlen: 1,
+            weight: 128,
+            cutvalue: 0,
+            tree_index: None,
+        });
+
+        for &vi in &c_vnodes {
+            let lw = vgraph.nodes[vi].lw.round() as i32;
+            let rw = vgraph.nodes[vi].rw.round() as i32;
+            aux_edges.push(NsEdge {
+                tail: ln,
+                head: vi,
+                minlen: (margin + lw).max(1),
+                weight: 0,
+                cutvalue: 0,
+                tree_index: None,
+            });
+            aux_edges.push(NsEdge {
+                tail: vi,
+                head: rn,
+                minlen: (margin + rw).max(1),
+                weight: 0,
+                cutvalue: 0,
+                tree_index: None,
+            });
+        }
+
+        // `keepout_othernodes`: keep nodes outside `subg` on ranks `min_r..=max_r` outside `[ln, rn]`.
+        for r in min_r..=max_r.min(vgraph.ranks.len().saturating_sub(1)) {
+            let r_nodes = &vgraph.ranks[r];
+            let first_pos = r_nodes
+                .iter()
+                .position(|&v| vgraph.nodes[v].cluster == Some(subg.id));
+            let last_pos = r_nodes
+                .iter()
+                .rposition(|&v| vgraph.nodes[v].cluster == Some(subg.id));
+            if let (Some(fp), Some(lp)) = (first_pos, last_pos) {
+                if fp > 0 {
+                    let u_left = r_nodes[fp - 1];
+                    let rw = vgraph.nodes[u_left].rw.round() as i32;
+                    aux_edges.push(NsEdge {
+                        tail: u_left,
+                        head: ln,
+                        minlen: (margin + rw).max(1),
+                        weight: 0,
+                        cutvalue: 0,
+                        tree_index: None,
+                    });
+                }
+                if lp + 1 < r_nodes.len() {
+                    let u_right = r_nodes[lp + 1];
+                    let lw = vgraph.nodes[u_right].lw.round() as i32;
+                    aux_edges.push(NsEdge {
+                        tail: rn,
+                        head: u_right,
+                        minlen: (margin + lw).max(1),
+                        weight: 0,
+                        cutvalue: 0,
+                        tree_index: None,
+                    });
+                }
+            }
+        }
+    }
+
+    // `separate_subclust`: separate clusters that share at least one rank.
+    let clust_keys: Vec<SubgraphId> = clust_ln_rn.keys().copied().collect();
+    for i in 0..clust_keys.len() {
+        for j in (i + 1)..clust_keys.len() {
+            let c1 = clust_keys[i];
+            let c2 = clust_keys[j];
+            let (ln1, rn1, min1, max1) = clust_ln_rn[&c1];
+            let (ln2, rn2, min2, max2) = clust_ln_rn[&c2];
+            let ov_min = min1.max(min2);
+            let ov_max = max1.min(max2);
+            if ov_min > ov_max {
+                continue;
+            }
+            for r in ov_min..=ov_max.min(vgraph.ranks.len().saturating_sub(1)) {
+                let p1 = vgraph.ranks[r]
+                    .iter()
+                    .position(|&v| vgraph.nodes[v].cluster == Some(c1));
+                let p2 = vgraph.ranks[r]
+                    .iter()
+                    .position(|&v| vgraph.nodes[v].cluster == Some(c2));
+                if let (Some(ord1), Some(ord2)) = (p1, p2) {
+                    if ord1 < ord2 {
+                        aux_edges.push(NsEdge {
+                            tail: rn1,
+                            head: ln2,
+                            minlen: CLUSTER_MARGIN_PT as i32,
+                            weight: 0,
+                            cutvalue: 0,
+                            tree_index: None,
+                        });
+                    } else {
+                        aux_edges.push(NsEdge {
+                            tail: rn2,
+                            head: ln1,
+                            minlen: CLUSTER_MARGIN_PT as i32,
+                            weight: 0,
+                            cutvalue: 0,
+                            tree_index: None,
+                        });
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -1954,50 +2504,81 @@ fn solve_within_rank_coordinates(vgraph: &mut VirtualGraph, nodesep_pt: f64) {
         });
     }
 
-    // Connect first nodes of adjacent ranks with 0-weight slack nodes so the auxiliary graph is a single connected component (`connectGraph` in `position.c`).
-    for r in 0..vgraph.ranks.len().saturating_sub(1) {
-        if let (Some(&u), Some(&v)) = (vgraph.ranks[r].first(), vgraph.ranks[r + 1].first()) {
-            let sn = total_aux_nodes;
-            total_aux_nodes += 1;
-            aux_edges.push(NsEdge {
-                tail: sn,
-                head: u,
-                minlen: 0,
-                weight: 0,
-                cutvalue: 0,
-                tree_index: None,
-            });
-            aux_edges.push(NsEdge {
-                tail: sn,
-                head: v,
-                minlen: 0,
-                weight: 0,
-                cutvalue: 0,
-                tree_index: None,
-            });
+    // Only connect separate weakly connected components of the auxiliary graph (`connectGraph` in `position.c:143`).
+    {
+        let mut comp_uf = UnionFind::new(total_aux_nodes);
+        for e in &aux_edges {
+            comp_uf.union(e.tail, e.head);
+        }
+        for r in 0..vgraph.ranks.len().saturating_sub(1) {
+            if let (Some(&u), Some(&v)) = (vgraph.ranks[r].first(), vgraph.ranks[r + 1].first())
+                && comp_uf.find(u) != comp_uf.find(v)
+            {
+                comp_uf.union(u, v);
+                let sn = total_aux_nodes;
+                total_aux_nodes += 1;
+                aux_edges.push(NsEdge {
+                    tail: sn,
+                    head: u,
+                    minlen: 0,
+                    weight: 0,
+                    cutvalue: 0,
+                    tree_index: None,
+                });
+                aux_edges.push(NsEdge {
+                    tail: sn,
+                    head: v,
+                    minlen: 0,
+                    weight: 0,
+                    cutvalue: 0,
+                    tree_index: None,
+                });
+            }
         }
     }
 
-    let ns_coords = network_simplex_solve(total_aux_nodes, &mut aux_edges, false);
+    // Optional `compress_graph` constraints (`position.c:488`) when `ratio="compress"` and `size` is set.
+    if let Some(limit_pt) = compress_limit_pt {
+        let ln = total_aux_nodes;
+        let rn = total_aux_nodes + 1;
+        total_aux_nodes += 2;
+        for rank_nodes in &vgraph.ranks {
+            if let (Some(&first), Some(&last)) = (rank_nodes.first(), rank_nodes.last()) {
+                aux_edges.push(NsEdge {
+                    tail: ln,
+                    head: first,
+                    minlen: (vgraph.nodes[first].lw + 8.0).round() as i32,
+                    weight: 0,
+                    cutvalue: 0,
+                    tree_index: None,
+                });
+                aux_edges.push(NsEdge {
+                    tail: last,
+                    head: rn,
+                    minlen: (vgraph.nodes[last].rw + 8.0).round() as i32,
+                    weight: 0,
+                    cutvalue: 0,
+                    tree_index: None,
+                });
+            }
+        }
+        aux_edges.push(NsEdge {
+            tail: ln,
+            head: rn,
+            minlen: limit_pt.round().max(1.0) as i32,
+            weight: 1000,
+            cutvalue: 0,
+            tree_index: None,
+        });
+    }
+
+    let ns_coords = network_simplex_solve(total_aux_nodes, &mut aux_edges, 2);
     for (idx, vn) in vgraph.nodes.iter_mut().enumerate() {
         vn.order_coord = f64::from(ns_coords[idx]);
     }
-
-    // Run 8 alternating down/up fractional weighted-median refinement passes while strictly enforcing
-    // separation constraints so single-child chains and symmetric trees align with exact precision.
-    for pass in 0..8 {
-        if pass % 2 == 0 {
-            for r in 1..vgraph.ranks.len() {
-                refine_rank_positions(vgraph, r, true, nodesep_pt);
-            }
-        } else {
-            for r in (0..vgraph.ranks.len().saturating_sub(1)).rev() {
-                refine_rank_positions(vgraph, r, false, nodesep_pt);
-            }
-        }
-    }
 }
 
+#[allow(dead_code)]
 fn refine_rank_positions(vgraph: &mut VirtualGraph, r: usize, use_in_edges: bool, nodesep_pt: f64) {
     let rank_nodes = vgraph.ranks[r].clone();
     if rank_nodes.is_empty() {
@@ -2303,10 +2884,15 @@ fn route_all_dot_splines(graph: &mut Graph, vgraph: &VirtualGraph, rankdir: Rank
                     spline.segments[0].start_arrow,
                     spline.segments[0].end_arrow,
                 );
-                if label_pos.is_some() {
-                    let mid = waypoints[waypoints.len() / 2];
-                    label_pos = Some(Point::new(mid.x + 8.0, mid.y));
-                }
+            }
+            if label_pos.is_some() {
+                let mid_vn = &vgraph.nodes[chain[chain.len() / 2]];
+                let label_offset = (mid_vn.rw - mid_vn.lw) / 2.0;
+                label_pos = Some(if rankdir.is_flipped() {
+                    Point::new(mid_vn.rank_coord, mid_vn.order_coord + label_offset)
+                } else {
+                    Point::new(mid_vn.order_coord + label_offset, mid_vn.rank_coord)
+                });
             }
         }
 

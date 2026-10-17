@@ -535,8 +535,65 @@ pub fn render_svg(graph: &Graph) -> String {
     let clip_ll = Point::new(bb.ll.x - pad_x, bb.ll.y - pad_y);
     let clip_ur = Point::new(bb.ur.x + pad_x, bb.ur.y + pad_y);
 
-    let width_pt = (clip_ur.x - clip_ll.x).round().max(1.0) as i64;
-    let height_pt = (clip_ur.y - clip_ll.y).round().max(1.0) as i64;
+    let sz_x = clip_ur.x - clip_ll.x;
+    let sz_y = clip_ur.y - clip_ll.y;
+
+    let rotation = if graph
+        .graph_attrs
+        .get("rotate")
+        .and_then(|s| s.trim().parse::<i32>().ok())
+        == Some(90)
+        || graph.graph_attrs.get("orientation").is_some_and(|s| {
+            s.trim()
+                .as_bytes()
+                .first()
+                .is_some_and(|b| b.eq_ignore_ascii_case(&b'l'))
+        })
+        || gv_geom::shapes::parse_graphviz_bool(
+            graph.graph_attrs.get("landscape").map(String::as_str),
+            false,
+        ) {
+        90
+    } else {
+        0
+    };
+
+    let mut zoom = 1.0_f64;
+    if let Some(raw_size) = graph.graph_attrs.get("size") {
+        let trimmed = raw_size.trim();
+        let is_bang = trimmed.ends_with('!');
+        let clean = trimmed.trim_end_matches('!');
+        let mut parts = clean.split(',').map(str::trim);
+        if let (Some(Ok(w_in)), Some(Ok(h_in))) = (
+            parts.next().map(str::parse::<f64>),
+            parts.next().map(str::parse::<f64>),
+        ) {
+            let size_x = w_in * 72.0;
+            let size_y = h_in * 72.0;
+            let is_filled = is_bang
+                || graph
+                    .graph_attrs
+                    .get("ratio")
+                    .is_some_and(|r| r.trim().eq_ignore_ascii_case("fill"));
+            if size_x > 0.001 && size_y > 0.001 && (size_x < sz_x || size_y < sz_y || is_filled) {
+                zoom = (size_x / sz_x).min(size_y / sz_y);
+            }
+        }
+    }
+
+    let view_x = zoom * sz_x;
+    let view_y = zoom * sz_y;
+    let (width_pt, height_pt) = if rotation == 90 {
+        (
+            view_y.round().max(1.0) as i64,
+            view_x.round().max(1.0) as i64,
+        )
+    } else {
+        (
+            view_x.round().max(1.0) as i64,
+            view_y.round().max(1.0) as i64,
+        )
+    };
 
     let _ = writeln!(out, "<svg width=\"{width_pt}pt\" height=\"{height_pt}pt\"");
     let _ = write!(
@@ -554,8 +611,17 @@ pub fn render_svg(graph: &Graph) -> String {
     out.push_str(">\n");
 
     // 3. Page group `<g id="graph0" class="graph" transform="...">` (matching `svg_begin_page`)
-    let tx = -clip_ll.x;
-    let ty = clip_ur.y;
+    let (tx, ty, rot_deg) = if rotation == 90 {
+        (-clip_ur.x, clip_ur.y, -90)
+    } else {
+        (-clip_ll.x, clip_ur.y, 0)
+    };
+    let zoom_str = if (zoom - 1.0).abs() < 1e-6 {
+        "1".to_string()
+    } else {
+        let s = format!("{zoom:.6}");
+        s.trim_end_matches('0').trim_end_matches('.').to_string()
+    };
     let graph_id = graph
         .graph_attrs
         .get("id")
@@ -571,7 +637,7 @@ pub fn render_svg(graph: &Graph) -> String {
     }
     let _ = writeln!(
         out,
-        "<g id=\"{graph_id}\" class=\"{graph_class}\" transform=\"scale(1 1) rotate(0) translate({} {})\">",
+        "<g id=\"{graph_id}\" class=\"{graph_class}\" transform=\"scale({zoom_str} {zoom_str}) rotate({rot_deg}) translate({} {})\">",
         fmt_gv_double(tx),
         fmt_gv_double(ty)
     );
@@ -1674,6 +1740,16 @@ fn emit_record_node(
         .get("rankdir")
         .map(String::as_str)
         .unwrap_or("TB");
+    if let Some(geom_rec) = gv_geom::shapes::record_layout(_node, &graph.name, rankdir) {
+        let center = Point::new(
+            (node_bb.ll.x + node_bb.ur.x) / 2.0,
+            (node_bb.ll.y + node_bb.ur.y) / 2.0,
+        );
+        emit_geom_record_field_recursive(
+            out, &geom_rec, center, gstyle, subst_ctx, font_name, font_size, font_color, scheme,
+        );
+        return;
+    }
     let root_horizontal = !matches!(rankdir, "LR" | "RL");
     let substituted = substitute_object_escapes(raw_label, subst_ctx);
     let mut root_field = parse_record_fields(&substituted, root_horizontal);
@@ -1732,6 +1808,60 @@ fn emit_record_field_recursive(
         }
         emit_record_field_recursive(
             out, child, gstyle, subst_ctx, font_name, font_size, font_color, scheme,
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_geom_record_field_recursive(
+    out: &mut String,
+    field: &gv_geom::shapes::RecordField,
+    center: Point,
+    gstyle: &GraphicStyle,
+    subst_ctx: &LabelSubstContext<'_>,
+    font_name: &str,
+    font_size: f64,
+    font_color: &str,
+    scheme: Option<&str>,
+) {
+    let f_bb = BoundingBox::new(
+        center.x + field.bbox.ll.x,
+        center.y + field.bbox.ll.y,
+        center.x + field.bbox.ur.x,
+        center.y + field.bbox.ur.y,
+    );
+    if field.children.is_empty() && !field.text.trim().is_empty() {
+        let layout =
+            measure_multiline_label_with_context(&field.text, subst_ctx, font_name, font_size);
+        let f_center = Point::new((f_bb.ll.x + f_bb.ur.x) / 2.0, (f_bb.ll.y + f_bb.ur.y) / 2.0);
+        emit_text_label(
+            out, &layout, f_center, font_color, scheme, false, false, false,
+        );
+    }
+
+    for (i, child) in field.children.iter().enumerate() {
+        if i > 0 {
+            let c_bb = BoundingBox::new(
+                center.x + child.bbox.ll.x,
+                center.y + child.bbox.ll.y,
+                center.x + child.bbox.ur.x,
+                center.y + child.bbox.ur.y,
+            );
+            let line_pts = if field.horizontal {
+                [
+                    Point::new(c_bb.ll.x, c_bb.ll.y),
+                    Point::new(c_bb.ll.x, c_bb.ur.y),
+                ]
+            } else {
+                [
+                    Point::new(c_bb.ll.x, c_bb.ur.y),
+                    Point::new(c_bb.ur.x, c_bb.ur.y),
+                ]
+            };
+            svg_polyline(out, &line_pts, gstyle);
+        }
+        emit_geom_record_field_recursive(
+            out, child, center, gstyle, subst_ctx, font_name, font_size, font_color, scheme,
         );
     }
 }
@@ -1958,6 +2088,116 @@ fn extract_html_attr(tag: &str, attr_name: &str) -> Option<String> {
 }
 
 #[allow(clippy::too_many_arguments)]
+fn emit_geom_html_table_recursive(
+    out: &mut String,
+    tbl: &gv_geom::shapes::HtmlTable,
+    center: Point,
+    font_name: &str,
+    font_size: f64,
+    default_font_color: &str,
+    default_stroke: &str,
+    scheme: Option<&str>,
+) {
+    let t_bb = BoundingBox::new(
+        center.x + tbl.bbox.ll.x,
+        center.y + tbl.bbox.ll.y,
+        center.x + tbl.bbox.ur.x,
+        center.y + tbl.bbox.ur.y,
+    );
+    if tbl.border > 0.0 || tbl.bgcolor.is_some() {
+        let (fill, fill_opacity) = format_paint_and_opacity(tbl.bgcolor.as_deref(), "none", scheme);
+        let tbl_style = GraphicStyle {
+            fill,
+            fill_opacity,
+            stroke: if tbl.border > 0.0 {
+                default_stroke.to_string()
+            } else {
+                "none".to_string()
+            },
+            stroke_opacity: None,
+            penwidth: tbl.border.max(1.0),
+            dashed: false,
+            dotted: false,
+        };
+        let pts = [
+            Point::new(t_bb.ll.x, t_bb.ur.y),
+            Point::new(t_bb.ll.x, t_bb.ll.y),
+            Point::new(t_bb.ur.x, t_bb.ll.y),
+            Point::new(t_bb.ur.x, t_bb.ur.y),
+        ];
+        if tbl.rounded {
+            svg_rounded_box(out, t_bb, &tbl_style, tbl.bgcolor.is_some());
+        } else {
+            svg_polygon(out, &pts, &tbl_style, tbl.bgcolor.is_some());
+        }
+    }
+
+    for cell in &tbl.cells {
+        let c_bb = BoundingBox::new(
+            center.x + cell.bbox.ll.x,
+            center.y + cell.bbox.ll.y,
+            center.x + cell.bbox.ur.x,
+            center.y + cell.bbox.ur.y,
+        );
+        if cell.border > 0.0 || cell.bgcolor.is_some() {
+            let (c_fill, c_op) = format_paint_and_opacity(cell.bgcolor.as_deref(), "none", scheme);
+            let c_style = GraphicStyle {
+                fill: c_fill,
+                fill_opacity: c_op,
+                stroke: if cell.border > 0.0 {
+                    default_stroke.to_string()
+                } else {
+                    "none".to_string()
+                },
+                stroke_opacity: None,
+                penwidth: cell.border.max(1.0),
+                dashed: false,
+                dotted: false,
+            };
+            let c_pts = [
+                Point::new(c_bb.ll.x, c_bb.ur.y),
+                Point::new(c_bb.ll.x, c_bb.ll.y),
+                Point::new(c_bb.ur.x, c_bb.ll.y),
+                Point::new(c_bb.ur.x, c_bb.ur.y),
+            ];
+            svg_polygon(out, &c_pts, &c_style, cell.bgcolor.is_some());
+        }
+
+        if let Some(nested) = &cell.nested_table {
+            emit_geom_html_table_recursive(
+                out,
+                nested,
+                center,
+                font_name,
+                font_size,
+                default_font_color,
+                default_stroke,
+                scheme,
+            );
+        } else if !cell.text.is_empty() {
+            let ctx = LabelSubstContext::default();
+            let mut layout =
+                measure_multiline_label_with_context(&cell.text, &ctx, font_name, font_size);
+            for line in &mut layout.lines {
+                line.justify = cell.align;
+            }
+            let cell_center =
+                Point::new((c_bb.ll.x + c_bb.ur.x) / 2.0, (c_bb.ll.y + c_bb.ur.y) / 2.0);
+            emit_text_label(
+                out,
+                &layout,
+                cell_center,
+                default_font_color,
+                scheme,
+                false,
+                false,
+                false,
+            );
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn emit_html_label(
     out: &mut String,
     html: &str,
@@ -1968,6 +2208,20 @@ fn emit_html_label(
     default_stroke: &str,
     scheme: Option<&str>,
 ) {
+    if let Some(geom_tbl) = gv_geom::shapes::parse_html_table(html, "", "", font_name, font_size) {
+        let center = Point::new((bb.ll.x + bb.ur.x) / 2.0, (bb.ll.y + bb.ur.y) / 2.0);
+        emit_geom_html_table_recursive(
+            out,
+            &geom_tbl,
+            center,
+            font_name,
+            font_size,
+            default_font_color,
+            default_stroke,
+            scheme,
+        );
+        return;
+    }
     let table = parse_html_table(html);
     let num_rows = table.rows.len().max(1);
 

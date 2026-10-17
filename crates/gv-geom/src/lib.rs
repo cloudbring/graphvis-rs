@@ -11,8 +11,8 @@ pub use shapes::{
     HtmlCell, HtmlTable, MIN_NODE_HEIGHT, MIN_NODE_WIDTH, MIN_POINT_SIZE, PERIPHERY_GAP_PTS,
     POINTS_PER_INCH, RecordField, ShapeKind, clip_ray_to_node_boundary, compute_node_dimensions,
     compute_node_dimensions_with_rankdir, html_table_layout, is_html_label, parse_graphviz_bool,
-    parse_html_table, parse_node_margin, record_layout, resolve_port_box_and_compass,
-    resolve_port_offset, shape_polygon_vertices,
+    parse_html_table, parse_node_margin, record_layout, resolve_port_offset,
+    shape_polygon_vertices,
 };
 pub use splines::{
     ArrowKind, ArrowSpec, DEFAULT_ARROW_HALF_WIDTH, DEFAULT_ARROW_LENGTH, EdgeLabelPositions,

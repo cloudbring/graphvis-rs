@@ -579,8 +579,8 @@ pub fn route_edge_spline_with_offset(
         );
     }
 
-    let tail_offset = resolve_port_offset(tail, &tail_port);
-    let head_offset = resolve_port_offset(head, &head_port);
+    let tail_offset = resolve_port_offset(tail, &tail_port, "", rankdir);
+    let head_offset = resolve_port_offset(head, &head_port, "", rankdir);
     let p_tail_origin = Point::new(tail.pos.x + tail_offset.x, tail.pos.y + tail_offset.y);
     let p_head_origin = Point::new(head.pos.x + head_offset.x, head.pos.y + head_offset.y);
 
