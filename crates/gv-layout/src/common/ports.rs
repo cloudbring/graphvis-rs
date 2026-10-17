@@ -378,22 +378,7 @@ pub fn shape_port<S: PortGraph + ?Sized>(
     if is_record && let Some(rec) = geom.record.as_ref() {
         match rec.find_port(portname) {
             Some(f) => {
-                // f->sides: the sides of the record box the field lies on.
-                let (fb, rb) = (f.bbox, rec.bbox);
-                let eq = |a: f64, b: f64| (a - b).abs() < 0.5;
-                let mut sides = 0u8;
-                if eq(fb.ll.y, rb.ll.y) {
-                    sides |= BOTTOM;
-                }
-                if eq(fb.ur.x, rb.ur.x) {
-                    sides |= RIGHT;
-                }
-                if eq(fb.ur.y, rb.ur.y) {
-                    sides |= TOP;
-                }
-                if eq(fb.ll.x, rb.ll.x) {
-                    sides |= LEFT;
-                }
+                let (fb, sides) = (f.bbox, f.sides);
                 compass_port(g, n, Some(fb), &mut rv, compass, sides, false);
             }
             None => {

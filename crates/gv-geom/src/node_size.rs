@@ -1360,6 +1360,9 @@ struct Field {
     flds: Vec<Field>,
     size: Point,
     b: BoundingBox,
+    /// `f->sides`: the sides of the record box the field lies on (`BOTTOM` = 1,
+    /// `RIGHT` = 2, `TOP` = 4, `LEFT` = 8).
+    sides: u8,
 }
 
 /// Byte-level port of `parse_reclbl`, sharing one text buffer between recursion levels as C
@@ -1609,12 +1612,27 @@ fn resize_reclbl(f: &mut Field, sz: Point, nojustify: bool) {
     }
 }
 
-/// `pos_reclbl` from `shapes.c` (box placement only).
-fn pos_reclbl(f: &mut Field, mut ul: Point) {
+/// `pos_reclbl` from `shapes.c`: field boxes and the record sides each field lies on.
+fn pos_reclbl(f: &mut Field, mut ul: Point, sides: u8) {
+    const BOTTOM: u8 = 1;
+    const RIGHT: u8 = 2;
+    const TOP: u8 = 4;
+    const LEFT: u8 = 8;
+    f.sides = sides;
     f.b = BoundingBox::new(ul.x, ul.y - f.size.y, ul.x + f.size.x, ul.y);
     let lr = f.lr;
-    for sub in &mut f.flds {
-        pos_reclbl(sub, ul);
+    let last = f.flds.len().saturating_sub(1);
+    for (i, sub) in f.flds.iter_mut().enumerate() {
+        let mask = match (lr, i == 0, i == last) {
+            (_, true, true) => TOP | BOTTOM | RIGHT | LEFT,
+            (true, true, false) => TOP | BOTTOM | LEFT,
+            (true, false, true) => TOP | BOTTOM | RIGHT,
+            (true, false, false) => TOP | BOTTOM,
+            (false, true, false) => TOP | RIGHT | LEFT,
+            (false, false, true) => LEFT | BOTTOM | RIGHT,
+            (false, false, false) => LEFT | RIGHT,
+        };
+        pos_reclbl(sub, ul, sides & mask);
         if lr {
             ul.x += sub.size.x;
         } else {
@@ -1652,6 +1670,7 @@ fn to_record_field(f: &Field) -> RecordField {
         children: f.flds.iter().map(to_record_field).collect(),
         horizontal: f.lr,
         label: f.lp.clone(),
+        sides: f.sides,
     }
 }
 
@@ -1704,7 +1723,7 @@ fn record_init(
     let nojustify = mapbool(Some(attrs.get("nojustify").map_or("false", String::as_str)));
     resize_reclbl(&mut info, sz, nojustify);
     let ul = Point::new(-sz.x / 2.0, sz.y / 2.0);
-    pos_reclbl(&mut info, ul);
+    pos_reclbl(&mut info, ul, 0b1111);
     geom.width = ps2inch(info.size.x);
     // Kluge!! +1 to fix rounding diff between layout and rendering
     geom.height = ps2inch(info.size.y + 1.0);
