@@ -47,6 +47,8 @@ pub struct Dot<'a> {
     /// The layout graph is a component subgraph (`dot_root(g) != agroot(g)`, doDot's
     /// pack branch).
     pub comp: bool,
+    /// Edge attribute names declared in `root_input` (`agattr(g, AGEDGE, k, NULL)`).
+    pub edge_decls: std::cell::OnceCell<std::collections::BTreeSet<String>>,
     pub nodes: Vec<NodeInfo>,
     pub edges: Vec<EdgeInfo>,
     pub graphs: Vec<GraphInfo>,
@@ -82,6 +84,7 @@ impl<'a> Dot<'a> {
             input,
             root_input: input,
             comp: false,
+            edge_decls: std::cell::OnceCell::new(),
             nodes: Vec::new(),
             edges: Vec::new(),
             graphs: Vec::new(),

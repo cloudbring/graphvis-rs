@@ -21,7 +21,7 @@ JOBS="${JOBS:-6}"
 
 case "$SIDE" in
   c) BIN="dot"; export GVBINDIR="${GVBINDIR:-$HOME/src/gv-ref/lutplugins}" ;;
-  port) BIN="$REPO_ROOT/target/release/dot-rs" ;;
+  port) BIN="${PORT_BIN:-$REPO_ROOT/target/release/dot-rs}" ;;
   *) echo "side must be c or port" >&2; exit 1 ;;
 esac
 

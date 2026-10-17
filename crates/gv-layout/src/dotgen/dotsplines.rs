@@ -421,14 +421,7 @@ impl Dot<'_> {
     /// The `finish:` tail of `dot_splines_`: place port labels.
     fn finish_splines(&mut self) {
         self.splines_done = true;
-        let declared = |k: &str| {
-            self.root_input.edge_defaults.contains_key(k)
-                || self
-                    .root_input
-                    .edges
-                    .iter()
-                    .any(|e| e.attrs.contains_key(k))
-        };
+        let declared = |k: &str| self.edge_attr_declared(k);
         let has_head = declared("headlabel");
         let has_tail = declared("taillabel");
         if (has_head || has_tail) && (declared("labelangle") || declared("labeldistance")) {
