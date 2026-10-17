@@ -14,7 +14,8 @@ pub struct Output {
     phase_attrs: Option<i32>,
     bb: BoundingBox,
     cluster_bb: Vec<(usize, BoundingBox)>,
-    edges: Vec<Option<(Spline, Option<Point>)>>,
+    /// Spline, `lp`, and whether the label is unplaced (`!ED_label(e)->set`).
+    edges: Vec<Option<(Spline, Option<Point>, bool)>>,
     /// Extra edge label attributes (`head_lp`, `tail_lp`, `xlp`).
     edge_attrs: Vec<Vec<(&'static str, String)>>,
     node_xlp: Vec<Option<String>>,
@@ -78,6 +79,14 @@ impl Output {
                 edges.push(None);
                 continue;
             };
+            let unplaced: String = [('h', ed.head_label), ('t', ed.tail_label)]
+                .into_iter()
+                .filter(|(_, l)| l.is_some_and(|l| !d.labels[l].set))
+                .map(|(c, _)| c)
+                .collect();
+            if !unplaced.is_empty() {
+                extra.push((gv_core::UNPLACED_PORT_LABELS_KEY, unplaced));
+            }
             for (k, p) in [
                 ("head_lp", pos_of(ed.head_label)),
                 ("tail_lp", pos_of(ed.tail_label)),
@@ -98,7 +107,8 @@ impl Output {
                     })
                     .collect(),
             };
-            edges.push(Some((spline, pos_of(ed.label))));
+            let unplaced = ed.label.is_some_and(|l| !d.labels[l].set);
+            edges.push(Some((spline, pos_of(ed.label), unplaced)));
         }
         let node_xlp = (0..n).map(|i| lp_of(d.nodes[i].xlabel).map(fmt)).collect();
         let graph_lp = lp_of(d.graphs[0].label).map(fmt);
@@ -158,9 +168,10 @@ impl Output {
             graph.subgraphs[si].is_cluster = true;
         }
         for (i, e) in self.edges.into_iter().enumerate() {
-            if let Some((s, lp)) = e {
+            if let Some((s, lp, unplaced)) = e {
                 graph.edges[i].spline = s;
                 graph.edges[i].label_pos = lp;
+                graph.edges[i].label_unplaced = unplaced;
             }
         }
         for (i, extra) in self.edge_attrs.into_iter().enumerate() {

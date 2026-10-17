@@ -378,18 +378,27 @@ impl<'g> Model<'g> {
                 l.set = false;
             }
             let xlabel = mk(&lg.xlabel, "xlabel", parse_point(a.get("xlp")), fontcolor);
-            let head_label = mk(
+            let mut head_label = mk(
                 &lg.head_label,
                 "headlabel",
                 parse_point(a.get("head_lp")),
                 lfontcolor,
             );
-            let tail_label = mk(
+            let mut tail_label = mk(
                 &lg.tail_label,
                 "taillabel",
                 parse_point(a.get("tail_lp")),
                 lfontcolor,
             );
+            if let Some(u) = e.attrs.get(gv_core::UNPLACED_PORT_LABELS_KEY) {
+                for (c, l) in [('h', &mut head_label), ('t', &mut tail_label)] {
+                    if u.contains(c)
+                        && let Some(l) = l.as_mut()
+                    {
+                        l.set = false;
+                    }
+                }
+            }
             if label.is_some() {
                 has_labels |= EDGE_LABEL;
             }

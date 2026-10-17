@@ -41,6 +41,9 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
     for sg in &mut g.subgraphs {
         sg.graph_attrs.retain(|k, _| !k.starts_with('\u{1}'));
     }
+    for e in &mut g.edges {
+        e.attrs.retain(|k, _| !k.starts_with('\u{1}'));
+    }
     let (mut s_arrows, mut e_arrows) = (false, false);
     for (i, n) in m.nodes.iter().enumerate() {
         let a = &mut g.nodes[i].attrs;

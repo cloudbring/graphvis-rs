@@ -97,6 +97,11 @@ pub const UNREGISTERED_CLUSTER_KEY: &str = "\u{1}unregclust";
 /// positioned (fdp stopping on a layout error): renderers draw it with its empty box.
 pub const REGISTERED_CLUSTER_KEY: &str = "\u{1}regclust";
 
+/// Edge attribute set by a layout whose head or tail label it could not place
+/// (`ED_head_label(e)->set` false: `h`, tail: `t`): `head_lp`/`tail_lp` are still
+/// printed, but renderers do not draw the label.
+pub const UNPLACED_PORT_LABELS_KEY: &str = "\u{1}unplacedportlbl";
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
