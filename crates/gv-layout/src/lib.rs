@@ -1,5 +1,6 @@
 //! Graphviz layout engines in pure Rust (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`).
 
+pub mod circogen;
 pub mod common;
 pub mod cutil;
 pub mod dot;
@@ -64,7 +65,7 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
         LayoutEngine::Fdp => force_circular::layout_fdp(graph, false),
         LayoutEngine::Sfdp => force_circular::layout_fdp(graph, true),
         LayoutEngine::Twopi => twopigen::twopiinit::twopi_layout(graph),
-        LayoutEngine::Circo => force_circular::layout_circo(graph),
+        LayoutEngine::Circo => circogen::circularinit::circo_layout(graph),
         LayoutEngine::Osage => force_circular::layout_osage(graph),
         LayoutEngine::Patchwork => force_circular::layout_patchwork(graph),
     }
