@@ -17,6 +17,7 @@
 pub mod arrows;
 pub mod geom;
 pub mod init;
+pub mod ns;
 pub mod ports;
 pub mod postproc;
 pub mod shapes;
