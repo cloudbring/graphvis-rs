@@ -10,7 +10,8 @@
 //! records, the field tree. [`NodeGeometry::nodesize`] mirrors `gv_nodesize` (`ND_lw`, `ND_rw`,
 //! `ND_ht`).
 
-use crate::shapes::{RecordField, ShapeKind, html_label_dimen, is_html_label};
+use crate::html_label::HtmlLabel;
+use crate::shapes::{RecordField, ShapeKind, html_label_layout, is_html_label};
 use gv_core::font::{
     DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext, MIN_FONT_SIZE, TextLabelLayout,
     charset_is_latin1, make_text_label,
@@ -392,6 +393,9 @@ pub struct LabelGeometry {
     pub valign: char,
     /// `true` for HTML-like labels.
     pub html: bool,
+    /// Parsed, sized and positioned HTML label (`lp->u.html`); `None` for plain text or when
+    /// C rejected the HTML (the label then has `dimen = (0, 0)`).
+    pub html_label: Option<Box<HtmlLabel>>,
     /// Measured lines of a plain-text label (`u.txt.span`); `None` for HTML and records.
     pub text: Option<TextLabelLayout>,
     /// `fontname`, `fontsize` used for the label.
@@ -471,12 +475,14 @@ pub fn make_label(
     // disregard HTML intent for empty string labels
     let html = is_html && !label.is_empty();
     if html {
-        let dimen = html_label_dimen(label, obj, font_name, font_size);
+        let lay = html_label_layout(label, obj, font_name, font_size);
+        let dimen = lay.dimen;
         return LabelGeometry {
             dimen,
             space: dimen,
             valign: 'c',
             html: true,
+            html_label: lay.label.map(Box::new),
             text: None,
             font_name: font_name.to_string(),
             font_size,
@@ -489,6 +495,7 @@ pub fn make_label(
         space: dimen,
         valign: 'c',
         html: false,
+        html_label: None,
         text: Some(layout),
         font_name: font_name.to_string(),
         font_size,
@@ -527,6 +534,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             space: Point::default(),
             valign: 'c',
             html: is_html_label(label_str, shape),
+            html_label: None,
             text: None,
             font_name: font_name.to_string(),
             font_size,

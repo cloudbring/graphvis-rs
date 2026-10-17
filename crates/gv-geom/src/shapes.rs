@@ -2,11 +2,11 @@
 //! and ray-to-boundary intersection ported from Graphviz 16.1.0 (`lib/common/shapes.c`
 //! and `lib/common/htmltable.c`).
 
-use crate::node_size::{LabelGeometry, NodeSizeEnv, node_geometry};
-use gv_core::font::{
-    DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LINESPACING, LabelSubstContext, TextJustify,
-    estimate_text_size_styled, substitute_object_escapes,
+use crate::html_label::{
+    HtmlContent, HtmlLabel, HtmlLabelLayout, HtmlTbl, HtmlText, make_html_label,
 };
+use crate::node_size::{LabelGeometry, NodeSizeEnv, node_font, node_geometry};
+use gv_core::font::{LabelSubstContext, TextJustify};
 use gv_core::{BoundingBox, NodeData, Point, Port};
 use std::f64::consts::{FRAC_PI_2, PI, SQRT_2};
 
@@ -687,7 +687,7 @@ pub fn record_layout(node: &NodeData, graph_name: &str, rankdir: &str) -> Option
 }
 
 // ============================================================================
-// HTML-like label & table parser and layout (`lib/common/htmltable.c`)
+// HTML-like label & table layout (`lib/common/htmltable.c`, see `html_label.rs`)
 // ============================================================================
 
 /// Parses and lays out an HTML-like `<TABLE>` label for `node` if present.
@@ -697,70 +697,31 @@ pub fn html_table_layout(node: &NodeData, graph_name: &str) -> Option<HtmlTable>
     if !is_html_label(raw_label, shape) {
         return None;
     }
-    let font_name = node
-        .attrs
-        .get("fontname")
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .unwrap_or(DEFAULT_FONT_NAME);
-    let font_size = node
-        .attrs
-        .get("fontsize")
-        .and_then(|s| parse_f64_strip_units(s))
-        .unwrap_or(DEFAULT_FONT_SIZE)
-        .max(1.0);
+    let (font_name, font_size) = node_font(&node.attrs);
     parse_html_table(raw_label, &node.name, graph_name, font_name, font_size)
 }
 
-/// Size (`dimen`) of an HTML-like label `<...>` for `make_label`.
-pub(crate) fn html_label_dimen(
+/// Strips the `<`...`>` delimiters the parser keeps around HTML strings.
+pub(crate) fn html_inner(raw: &str) -> &str {
+    if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
+        &raw[1..raw.len() - 1]
+    } else {
+        raw
+    }
+}
+
+/// `make_html_label` for an HTML-like label value `<...>` (with delimiters).
+pub(crate) fn html_label_layout(
     raw_label: &str,
     obj: &LabelSubstContext<'_>,
     font_name: &str,
     font_size: f64,
-) -> Point {
-    measure_html_label_dimen(
-        raw_label,
-        obj.node_name,
-        obj.graph_name,
-        font_name,
-        font_size,
-    )
+) -> HtmlLabelLayout {
+    make_html_label(html_inner(raw_label), obj, font_name, font_size, None, None)
 }
 
-fn measure_html_label_dimen(
-    raw_label: &str,
-    node_name: &str,
-    graph_name: &str,
-    font_name: &str,
-    font_size: f64,
-) -> Point {
-    if let Some(tbl) = parse_html_table(raw_label, node_name, graph_name, font_name, font_size) {
-        return Point::new(tbl.bbox.width(), tbl.bbox.height());
-    }
-    let trimmed = raw_label.trim();
-    let inner = if trimmed.starts_with('<') && trimmed.ends_with('>') && trimmed.len() >= 2 {
-        &trimmed[1..trimmed.len() - 1]
-    } else {
-        trimmed
-    };
-    let ctx = LabelSubstContext {
-        node_name,
-        graph_name,
-        tail_name: "",
-        head_name: "",
-        is_edge: false,
-        is_directed: true,
-        tail_port: None,
-        head_port: None,
-        label_text: "",
-    };
-    let sz = measure_html_rich_text(inner, &ctx, font_name, font_size).0;
-    Point::new(sz.x, sz.y.floor())
-}
-
-/// Parses and lays out an HTML-like `<TABLE>` label string, returning [`HtmlTable`] with cell boxes
-/// centered around `(0, 0)`.
+/// Parses and lays out an HTML-like `<TABLE>` label string, returning [`HtmlTable`] with cell
+/// boxes centered around `(0, 0)` (y up), as `pos_html_tbl` places them.
 pub fn parse_html_table(
     raw_html: &str,
     node_name: &str,
@@ -768,700 +729,69 @@ pub fn parse_html_table(
     font_name: &str,
     font_size: f64,
 ) -> Option<HtmlTable> {
-    let trimmed = raw_html.trim();
-    let inner = if trimmed.starts_with('<') && trimmed.ends_with('>') && trimmed.len() >= 2 {
-        trimmed[1..trimmed.len() - 1].trim()
-    } else {
-        trimmed
-    };
     let ctx = LabelSubstContext {
-        node_name,
         graph_name,
-        tail_name: "",
-        head_name: "",
-        is_edge: false,
-        is_directed: true,
-        tail_port: None,
-        head_port: None,
-        label_text: "",
+        ..LabelSubstContext::for_node(node_name)
     };
-    let mut tbl = parse_single_table(inner, &ctx, font_name, font_size)?;
-    let w = tbl.bbox.width();
-    let h = tbl.bbox.height();
-    let root_box = BoundingBox::new(-w / 2.0, -h / 2.0, w / 2.0, h / 2.0);
-    position_html_table(&mut tbl, root_box);
-    Some(tbl)
-}
-
-fn find_tag_ci(haystack: &str, tag_prefix: &str) -> Option<usize> {
-    let hb = haystack.as_bytes();
-    let tb = tag_prefix.as_bytes();
-    if tb.len() > hb.len() {
-        return None;
-    }
-    for i in 0..=(hb.len() - tb.len()) {
-        if hb[i..i + tb.len()].eq_ignore_ascii_case(tb) {
-            let next_b = hb.get(i + tb.len()).copied();
-            if matches!(
-                next_b,
-                None | Some(b'>')
-                    | Some(b' ')
-                    | Some(b'\t')
-                    | Some(b'\n')
-                    | Some(b'\r')
-                    | Some(b'/')
-            ) {
-                return Some(i);
-            }
-        }
-    }
-    None
-}
-
-fn find_matching_close_tag(s: &str, open_tag: &str, close_tag: &str) -> Option<(usize, usize)> {
-    let open_prefix = format!("<{open_tag}");
-    let close_prefix = format!("</{close_tag}");
-    let start_idx = find_tag_ci(s, &open_prefix)?;
-    let tag_end_rel = s[start_idx..].find('>')?;
-    let content_start = start_idx + tag_end_rel + 1;
-
-    let mut depth = 1usize;
-    let mut cursor = content_start;
-    while cursor < s.len() {
-        let rem = &s[cursor..];
-        let next_open = find_tag_ci(rem, &open_prefix);
-        let next_close = find_tag_ci(rem, &close_prefix);
-        match (next_open, next_close) {
-            (Some(o), Some(c)) if o < c => {
-                depth += 1;
-                let after = cursor + o + open_prefix.len();
-                cursor = s[after..].find('>').map_or(s.len(), |p| after + p + 1);
-            }
-            (_, Some(c)) => {
-                depth -= 1;
-                let close_pos = cursor + c;
-                if depth == 0 {
-                    return Some((content_start, close_pos));
-                }
-                let after = close_pos + close_prefix.len();
-                cursor = s[after..].find('>').map_or(s.len(), |p| after + p + 1);
-            }
-            _ => break,
-        }
-    }
-    None
-}
-
-fn parse_tag_attrs(open_tag_header: &str) -> Vec<(String, String)> {
-    let mut attrs = Vec::new();
-    let bytes = open_tag_header.as_bytes();
-    let mut i = 0;
-    // Skip `<TAGNAME`
-    while i < bytes.len() && (bytes[i] == b'<' || bytes[i].is_ascii_whitespace()) {
-        i += 1;
-    }
-    while i < bytes.len() && !bytes[i].is_ascii_whitespace() && bytes[i] != b'>' && bytes[i] != b'/'
-    {
-        i += 1;
-    }
-
-    while i < bytes.len() {
-        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-            i += 1;
-        }
-        if i >= bytes.len() || bytes[i] == b'>' || bytes[i] == b'/' {
-            break;
-        }
-        let key_start = i;
-        while i < bytes.len()
-            && !bytes[i].is_ascii_whitespace()
-            && bytes[i] != b'='
-            && bytes[i] != b'>'
-        {
-            i += 1;
-        }
-        let key = open_tag_header[key_start..i].to_ascii_lowercase();
-        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-            i += 1;
-        }
-        if i < bytes.len() && bytes[i] == b'=' {
-            i += 1;
-            while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-                i += 1;
-            }
-            if i < bytes.len() && (bytes[i] == b'"' || bytes[i] == b'\'') {
-                let quote = bytes[i];
-                i += 1;
-                let val_start = i;
-                while i < bytes.len() && bytes[i] != quote {
-                    i += 1;
-                }
-                let val = open_tag_header[val_start..i].to_string();
-                if i < bytes.len() {
-                    i += 1;
-                }
-                attrs.push((key, val));
-            } else {
-                let val_start = i;
-                while i < bytes.len() && !bytes[i].is_ascii_whitespace() && bytes[i] != b'>' {
-                    i += 1;
-                }
-                let val = open_tag_header[val_start..i].to_string();
-                attrs.push((key, val));
-            }
-        }
-    }
-    attrs
-}
-
-fn parse_single_table(
-    s: &str,
-    ctx: &LabelSubstContext<'_>,
-    font_name: &str,
-    font_size: f64,
-) -> Option<HtmlTable> {
-    let table_start = find_tag_ci(s, "<table")?;
-    let header_end = table_start + s[table_start..].find('>')?;
-    let table_header = &s[table_start..=header_end];
-    let (body_start, body_end) = find_matching_close_tag(&s[table_start..], "table", "table")?;
-    let table_body = &s[table_start + body_start..table_start + body_end];
-
-    let t_attrs = parse_tag_attrs(table_header);
-    let mut border = 1.0_f64;
-    let mut cellborder: Option<f64> = None;
-    let mut cellspacing = 2.0_f64;
-    let mut cellpadding = 2.0_f64;
-    let mut cellpadding_set = false;
-    let mut port: Option<String> = None;
-    let mut bgcolor: Option<String> = None;
-    let mut rounded = false;
-    let mut min_width = 0.0_f64;
-    let mut min_height = 0.0_f64;
-
-    for (k, v) in t_attrs {
-        match k.as_str() {
-            "border" => {
-                if let Ok(b) = v.trim().parse::<f64>() {
-                    border = b.max(0.0);
-                }
-            }
-            "cellborder" => {
-                if let Ok(cb) = v.trim().parse::<f64>() {
-                    cellborder = Some(cb.max(0.0));
-                }
-            }
-            "cellspacing" => {
-                if let Ok(cs) = v.trim().parse::<f64>() {
-                    cellspacing = cs.max(0.0);
-                }
-            }
-            "cellpadding" => {
-                if let Ok(cp) = v.trim().parse::<f64>() {
-                    cellpadding = cp.max(0.0);
-                    cellpadding_set = true;
-                }
-            }
-            "port" => port = Some(v),
-            "bgcolor" => bgcolor = Some(v),
-            "style" => {
-                if v.to_ascii_lowercase().contains("rounded") {
-                    rounded = true;
-                }
-            }
-            "width" => {
-                if let Ok(w) = v.trim().parse::<f64>() {
-                    min_width = w.max(0.0);
-                }
-            }
-            "height" => {
-                if let Ok(h) = v.trim().parse::<f64>() {
-                    min_height = h.max(0.0);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    // Extract rows `<TR>...</TR>` at the current table level.
-    let mut raw_rows: Vec<&str> = Vec::new();
-    let mut cursor = 0usize;
-    while cursor < table_body.len() {
-        let rem = &table_body[cursor..];
-        let Some(tr_rel) = find_tag_ci(rem, "<tr") else {
-            break;
-        };
-        let tr_abs = cursor + tr_rel;
-        let Some((c_start, c_end)) = find_matching_close_tag(&table_body[tr_abs..], "tr", "tr")
-        else {
-            break;
-        };
-        raw_rows.push(&table_body[tr_abs + c_start..tr_abs + c_end]);
-        let after_close = tr_abs + c_end;
-        cursor = table_body[after_close..]
-            .find('>')
-            .map_or(table_body.len(), |p| after_close + p + 1);
-    }
-
-    let row_count = raw_rows.len();
-    if row_count == 0 {
-        let w = (2.0 * border).max(min_width);
-        let h = (2.0 * border).max(min_height);
-        return Some(HtmlTable {
-            port,
-            border,
-            cellborder,
-            cellspacing,
-            cellpadding,
-            bgcolor,
-            rounded,
-            row_count: 0,
-            col_count: 0,
-            bbox: BoundingBox::new(0.0, 0.0, w, h),
-            cells: Vec::new(),
-        });
-    }
-
-    // Parse cells and place them on a 2D occupancy grid (handling `rowspan` and `colspan`).
-    let mut occupied: Vec<Vec<bool>> = vec![Vec::new(); row_count];
-    let mut cells: Vec<HtmlCell> = Vec::new();
-    let mut max_cols = 0usize;
-
-    for (r_idx, &row_str) in raw_rows.iter().enumerate() {
-        let mut td_cursor = 0usize;
-        let mut c_idx = 0usize;
-        while td_cursor < row_str.len() {
-            let rem = &row_str[td_cursor..];
-            let Some(td_rel) = find_tag_ci(rem, "<td") else {
-                break;
-            };
-            let td_abs = td_cursor + td_rel;
-            let Some(td_hdr_end_rel) = row_str[td_abs..].find('>') else {
-                break;
-            };
-            let td_header = &row_str[td_abs..=td_abs + td_hdr_end_rel];
-            let Some((c_start, c_end)) = find_matching_close_tag(&row_str[td_abs..], "td", "td")
-            else {
-                break;
-            };
-            let td_body = &row_str[td_abs + c_start..td_abs + c_end];
-
-            // Advance `c_idx` past any columns occupied by prior rowspans.
-            while c_idx < occupied[r_idx].len() && occupied[r_idx][c_idx] {
-                c_idx += 1;
-            }
-
-            let td_attrs = parse_tag_attrs(td_header);
-            let mut colspan = 1usize;
-            let mut rowspan = 1usize;
-            let mut cell_port: Option<String> = None;
-            let mut cell_bg: Option<String> = None;
-            let mut cell_border = cellborder.unwrap_or(1.0);
-            let mut cell_pad = if cellpadding_set { cellpadding } else { 2.0 };
-            let mut cell_align = TextJustify::Center;
-            let mut cell_min_w = 0.0_f64;
-            let mut cell_min_h = 0.0_f64;
-            let mut cell_fixed = false;
-
-            for (k, v) in td_attrs {
-                match k.as_str() {
-                    "colspan" => {
-                        if let Ok(cs) = v.trim().parse::<usize>() {
-                            colspan = cs.max(1);
-                        }
-                    }
-                    "rowspan" => {
-                        if let Ok(rs) = v.trim().parse::<usize>() {
-                            rowspan = rs.max(1);
-                        }
-                    }
-                    "port" => cell_port = Some(v),
-                    "bgcolor" => cell_bg = Some(v),
-                    "border" => {
-                        if let Ok(b) = v.trim().parse::<f64>() {
-                            cell_border = b.max(0.0);
-                        }
-                    }
-                    "cellpadding" => {
-                        if let Ok(cp) = v.trim().parse::<f64>() {
-                            cell_pad = cp.max(0.0);
-                        }
-                    }
-                    "align" | "balign" => {
-                        cell_align = match v.trim().to_ascii_lowercase().as_str() {
-                            "left" => TextJustify::Left,
-                            "right" => TextJustify::Right,
-                            _ => TextJustify::Center,
-                        };
-                    }
-                    "width" => {
-                        if let Ok(w) = v.trim().parse::<f64>() {
-                            cell_min_w = w.max(0.0);
-                        }
-                    }
-                    "height" => {
-                        if let Ok(h) = v.trim().parse::<f64>() {
-                            cell_min_h = h.max(0.0);
-                        }
-                    }
-                    "fixedsize" => {
-                        cell_fixed = parse_graphviz_bool(Some(&v), false);
-                    }
-                    _ => {}
-                }
-            }
-
-            // Clamp rowspan to `row_count - r_idx` (or expand if needed; in Graphviz `rowspan` exceeding table rows is clamped/extended).
-            let eff_rowspan = rowspan.min(row_count - r_idx).max(1);
-            for row_occ in occupied.iter_mut().skip(r_idx).take(eff_rowspan) {
-                if row_occ.len() < c_idx + colspan {
-                    row_occ.resize(c_idx + colspan, false);
-                }
-                for cell_occ in row_occ.iter_mut().skip(c_idx).take(colspan) {
-                    *cell_occ = true;
-                }
-            }
-            max_cols = max_cols.max(c_idx + colspan);
-
-            // Check if `td_body` contains a nested `<TABLE>`.
-            let nested_table = if find_tag_ci(td_body, "<table").is_some() {
-                parse_single_table(td_body, ctx, font_name, font_size)
-            } else {
-                None
-            };
-
-            let (content_sz, plain_text) = if let Some(ref nt) = nested_table {
-                (Point::new(nt.bbox.width(), nt.bbox.height()), String::new())
-            } else {
-                measure_html_rich_text(td_body, ctx, font_name, font_size)
-            };
-
-            let pad_delta = 2.0 * (cell_pad + cell_border);
-            let nat_w = content_sz.x + pad_delta;
-            let nat_h = content_sz.y + pad_delta;
-            let cw = if cell_fixed && cell_min_w > 0.0 {
-                cell_min_w
-            } else {
-                nat_w.max(cell_min_w)
-            };
-            let ch = if cell_fixed && cell_min_h > 0.0 {
-                cell_min_h
-            } else {
-                nat_h.max(cell_min_h)
-            };
-
-            cells.push(HtmlCell {
-                port: cell_port,
-                text: plain_text,
-                row: r_idx,
-                col: c_idx,
-                rowspan: eff_rowspan,
-                colspan,
-                border: cell_border,
-                cellpadding: cell_pad,
-                bgcolor: cell_bg,
-                align: cell_align,
-                bbox: BoundingBox::new(0.0, 0.0, cw, ch),
-                nested_table,
-            });
-
-            c_idx += colspan;
-            let after_close = td_abs + c_end;
-            td_cursor = row_str[after_close..]
-                .find('>')
-                .map_or(row_str.len(), |p| after_close + p + 1);
-        }
-    }
-
-    let col_count = max_cols.max(1);
-    let mut col_widths = vec![0.0_f64; col_count];
-    let mut row_heights = vec![0.0_f64; row_count];
-
-    // Pass 1: Single-column / single-row cells establish baseline widths and heights.
-    for cell in &cells {
-        if cell.colspan == 1 {
-            col_widths[cell.col] = col_widths[cell.col].max(cell.bbox.width());
-        }
-        if cell.rowspan == 1 {
-            row_heights[cell.row] = row_heights[cell.row].max(cell.bbox.height());
-        }
-    }
-
-    // Pass 2: Multi-column / multi-row cells distribute any excess across spanned columns/rows.
-    for cell in &cells {
-        if cell.colspan > 1 {
-            let span_cols = &mut col_widths[cell.col..cell.col + cell.colspan];
-            let current_sum: f64 =
-                span_cols.iter().sum::<f64>() + ((cell.colspan - 1) as f64) * cellspacing;
-            if cell.bbox.width() > current_sum {
-                let extra = (cell.bbox.width() - current_sum) / (cell.colspan as f64);
-                for w in span_cols.iter_mut() {
-                    *w += extra;
-                }
-            }
-        }
-        if cell.rowspan > 1 {
-            let span_rows = &mut row_heights[cell.row..cell.row + cell.rowspan];
-            let current_sum: f64 =
-                span_rows.iter().sum::<f64>() + ((cell.rowspan - 1) as f64) * cellspacing;
-            if cell.bbox.height() > current_sum {
-                let extra = (cell.bbox.height() - current_sum) / (cell.rowspan as f64);
-                for h in span_rows.iter_mut() {
-                    *h += extra;
-                }
-            }
-        }
-    }
-
-    let total_cols_w: f64 = col_widths.iter().sum();
-    let total_rows_h: f64 = row_heights.iter().sum();
-    let total_w =
-        (total_cols_w + ((col_count + 1) as f64) * cellspacing + 2.0 * border).max(min_width);
-    let total_h =
-        (total_rows_h + ((row_count + 1) as f64) * cellspacing + 2.0 * border).max(min_height);
-
-    // Store column widths and row heights into cell bboxes relative to table `(0, 0)..(total_w, total_h)`.
-    if total_w > total_cols_w + ((col_count + 1) as f64) * cellspacing + 2.0 * border {
-        let extra = (total_w
-            - (total_cols_w + ((col_count + 1) as f64) * cellspacing + 2.0 * border))
-            / (col_count as f64);
-        for w in &mut col_widths {
-            *w += extra;
-        }
-    }
-    if total_h > total_rows_h + ((row_count + 1) as f64) * cellspacing + 2.0 * border {
-        let extra = (total_h
-            - (total_rows_h + ((row_count + 1) as f64) * cellspacing + 2.0 * border))
-            / (row_count as f64);
-        for h in &mut row_heights {
-            *h += extra;
-        }
-    }
-
-    let mut col_x = vec![0.0_f64; col_count + 1];
-    col_x[0] = border + cellspacing;
-    for c in 0..col_count {
-        col_x[c + 1] = col_x[c] + col_widths[c] + cellspacing;
-    }
-
-    let mut row_y_top = vec![0.0_f64; row_count + 1];
-    row_y_top[0] = total_h - border - cellspacing;
-    for r in 0..row_count {
-        row_y_top[r + 1] = row_y_top[r] - row_heights[r] - cellspacing;
-    }
-
-    for cell in &mut cells {
-        let x0 = col_x[cell.col];
-        let x1 = col_x[cell.col + cell.colspan] - cellspacing;
-        let y1 = row_y_top[cell.row];
-        let y0 = row_y_top[cell.row + cell.rowspan] + cellspacing;
-        cell.bbox = BoundingBox::new(x0, y0, x1, y1);
-    }
-
-    Some(HtmlTable {
-        port,
-        border,
-        cellborder,
-        cellspacing,
-        cellpadding,
-        bgcolor,
-        rounded,
-        row_count,
-        col_count,
-        bbox: BoundingBox::new(0.0, 0.0, total_w, total_h),
-        cells,
-    })
-}
-
-fn position_html_table(tbl: &mut HtmlTable, target_box: BoundingBox) {
-    let cur_w = tbl.bbox.width().max(1e-9);
-    let cur_h = tbl.bbox.height().max(1e-9);
-    let sx = target_box.width() / cur_w;
-    let sy = target_box.height() / cur_h;
-    let ox = target_box.ll.x - tbl.bbox.ll.x * sx;
-    let oy = target_box.ll.y - tbl.bbox.ll.y * sy;
-    tbl.bbox = target_box;
-
-    for cell in &mut tbl.cells {
-        let c_ll = Point::new(ox + cell.bbox.ll.x * sx, oy + cell.bbox.ll.y * sy);
-        let c_ur = Point::new(ox + cell.bbox.ur.x * sx, oy + cell.bbox.ur.y * sy);
-        cell.bbox = BoundingBox::new(c_ll.x, c_ll.y, c_ur.x, c_ur.y);
-        if let Some(ref mut nested) = cell.nested_table {
-            let inset = cell.border + cell.cellpadding;
-            let inner_box = BoundingBox::new(
-                (c_ll.x + inset).min(c_ur.x),
-                (c_ll.y + inset).min(c_ur.y),
-                (c_ur.x - inset).max(c_ll.x),
-                (c_ur.y - inset).max(c_ll.y),
-            );
-            position_html_table(nested, inner_box);
-        }
+    match html_label_layout(raw_html, &ctx, font_name, font_size).label? {
+        HtmlLabel::Table(t) => Some(convert_html_tbl(&t)),
+        HtmlLabel::Text(_) => None,
     }
 }
 
-/// Measures HTML rich text (supporting `<BR/>`, `<B>`, `<I>`, `<FONT FACE="..." POINT-SIZE="...">`),
-/// returning `(Point(width, height), plain_text)`.
-fn measure_html_rich_text(
-    html_fragment: &str,
-    ctx: &LabelSubstContext<'_>,
-    base_font: &str,
-    base_size: f64,
-) -> (Point, String) {
-    #[derive(Clone)]
-    struct StyleState {
-        font: String,
-        size: f64,
-        bold: bool,
-        italic: bool,
-    }
+fn html_text_string(t: &HtmlText) -> String {
+    t.spans
+        .iter()
+        .map(|s| s.items.iter().map(|i| i.text.as_str()).collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
 
-    let mut stack = vec![StyleState {
-        font: base_font.to_string(),
-        size: base_size,
-        bold: false,
-        italic: false,
-    }];
-
-    let mut line_widths: Vec<f64> = Vec::new();
-    let mut line_heights: Vec<f64> = Vec::new();
-    let mut cur_line_w = 0.0_f64;
-    let mut cur_line_h = 0.0_f64;
-    let mut cur_text = String::new();
-    let mut all_text = String::new();
-
-    let flush_segment =
-        |seg: &str, st: &StyleState, cur_w: &mut f64, cur_h: &mut f64, plain_out: &mut String| {
-            if seg.is_empty() {
-                return;
-            }
-            let collapsed = collapse_html_whitespace(seg);
-            if collapsed.is_empty() {
-                return;
-            }
-            let sub = substitute_object_escapes(&collapsed, ctx);
-            let (w, h) = estimate_text_size_styled(&sub, &st.font, st.size, st.bold, st.italic);
-            *cur_w += w;
-            *cur_h = cur_h.max(h.floor());
-            plain_out.push_str(&sub);
-        };
-
-    let bytes = html_fragment.as_bytes();
-    let mut i = 0usize;
-    while i < bytes.len() {
-        if bytes[i] == b'<'
-            && let Some(rel_end) = html_fragment[i..].find('>')
-        {
-            let cur_style = stack.last().unwrap().clone();
-            flush_segment(
-                &cur_text,
-                &cur_style,
-                &mut cur_line_w,
-                &mut cur_line_h,
-                &mut all_text,
-            );
-            cur_text.clear();
-
-            let tag_str = html_fragment[i + 1..i + rel_end].trim();
-            let tag_lower = tag_str.to_ascii_lowercase();
-            let tag_name = tag_lower
-                .split(|c: char| c.is_ascii_whitespace() || c == '/')
-                .next()
-                .unwrap_or("");
-
-            match tag_name {
-                "br" => {
-                    let h = if cur_line_h > 0.0 {
-                        cur_line_h
-                    } else {
-                        (cur_style.size * LINESPACING).floor()
-                    };
-                    line_widths.push(cur_line_w);
-                    line_heights.push(h);
-                    cur_line_w = 0.0;
-                    cur_line_h = 0.0;
-                    all_text.push('\n');
-                }
-                "b" | "strong" => {
-                    let mut next = cur_style;
-                    next.bold = true;
-                    stack.push(next);
-                }
-                "/b" | "/strong" | "/i" | "/em" | "/font" => {
-                    if stack.len() > 1 {
-                        stack.pop();
-                    }
-                }
-                "i" | "em" => {
-                    let mut next = cur_style;
-                    next.italic = true;
-                    stack.push(next);
-                }
-                "font" => {
-                    let mut next = cur_style;
-                    for (k, v) in parse_tag_attrs(&html_fragment[i..=i + rel_end]) {
-                        if k == "face" && !v.trim().is_empty() {
-                            next.font = v.trim().to_string();
-                        } else if k == "point-size"
-                            && let Ok(sz) = v.trim().parse::<f64>()
-                        {
-                            next.size = sz.max(1.0);
-                        }
-                    }
-                    stack.push(next);
-                }
-                _ => {}
-            }
-            i += rel_end + 1;
-            continue;
-        }
-        let ch = html_fragment[i..].chars().next().unwrap();
-        cur_text.push(ch);
-        i += ch.len_utf8();
-    }
-
-    let cur_style = stack.last().unwrap().clone();
-    flush_segment(
-        &cur_text,
-        &cur_style,
-        &mut cur_line_w,
-        &mut cur_line_h,
-        &mut all_text,
-    );
-    if cur_line_w > 0.0 || line_widths.is_empty() {
-        let h = if cur_line_h > 0.0 {
-            cur_line_h
-        } else if !all_text.trim().is_empty() {
-            (cur_style.size * LINESPACING).floor()
+fn convert_html_tbl(t: &HtmlTbl) -> HtmlTable {
+    HtmlTable {
+        port: t.data.port.clone(),
+        border: f64::from(t.data.border),
+        cellborder: (t.cellborder >= 0).then(|| f64::from(t.cellborder)),
+        cellspacing: f64::from(t.data.space),
+        cellpadding: if t.data.flags & crate::html_label::PAD_SET != 0 {
+            f64::from(t.data.pad)
         } else {
-            0.0
-        };
-        line_widths.push(cur_line_w);
-        line_heights.push(h);
+            2.0
+        },
+        bgcolor: t.data.bgcolor.clone(),
+        rounded: t.data.style.rounded,
+        row_count: t.row_count,
+        col_count: t.column_count,
+        bbox: t.data.bx,
+        cells: t
+            .cells
+            .iter()
+            .map(|c| HtmlCell {
+                port: c.data.port.clone(),
+                text: match &c.child {
+                    HtmlContent::Text(tx) => html_text_string(tx),
+                    _ => String::new(),
+                },
+                row: usize::from(c.row),
+                col: usize::from(c.col),
+                rowspan: usize::from(c.rowspan),
+                colspan: usize::from(c.colspan),
+                border: f64::from(c.data.border),
+                cellpadding: f64::from(c.data.pad),
+                bgcolor: c.data.bgcolor.clone(),
+                align: match c.data.flags & crate::html_label::HALIGN_MASK {
+                    crate::html_label::HALIGN_LEFT => TextJustify::Left,
+                    crate::html_label::HALIGN_RIGHT => TextJustify::Right,
+                    _ => TextJustify::Center,
+                },
+                bbox: c.data.bx,
+                nested_table: match &c.child {
+                    HtmlContent::Table(n) => Some(convert_html_tbl(n)),
+                    _ => None,
+                },
+            })
+            .collect(),
     }
-
-    let trimmed_lines: Vec<String> = all_text.lines().map(|l| l.trim().to_string()).collect();
-    let final_plain = trimmed_lines.join("\n");
-
-    let max_w = line_widths.into_iter().fold(0.0_f64, f64::max);
-    let total_h: f64 = line_heights.into_iter().map(f64::floor).sum();
-    (Point::new(max_w.ceil(), total_h.floor()), final_plain)
-}
-
-fn collapse_html_whitespace(s: &str) -> String {
-    let decoded = gv_core::font::decode_html_entities(s);
-    let mut out = String::with_capacity(decoded.len());
-    let mut prev_space = false;
-    for ch in decoded.chars() {
-        if ch.is_ascii_whitespace() {
-            if !prev_space {
-                out.push(' ');
-                prev_space = true;
-            }
-        } else {
-            out.push(ch);
-            prev_space = false;
-        }
-    }
-    out.trim().to_string()
 }
 
 // ============================================================================
