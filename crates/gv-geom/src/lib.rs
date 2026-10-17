@@ -3,9 +3,16 @@
 
 #![forbid(unsafe_code)]
 
+pub mod html_label;
+pub mod node_size;
 pub mod shapes;
 pub mod splines;
 
+pub use node_size::{
+    EdgeLabelGeometry, GraphLabelGeometry, LabelGeometry, NodeGeometry, NodeSizeEnv,
+    PolygonGeometry, edge_label_geometry, graph_label_geometry, make_label, node_geometry,
+    size_graph_nodes,
+};
 pub use shapes::{
     DEF_POINT_SIZE, DEFAULT_MARGIN_X, DEFAULT_MARGIN_Y, DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH,
     HtmlCell, HtmlTable, MIN_NODE_HEIGHT, MIN_NODE_WIDTH, MIN_POINT_SIZE, PERIPHERY_GAP_PTS,
