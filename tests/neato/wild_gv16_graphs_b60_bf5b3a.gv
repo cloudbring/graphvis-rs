@@ -1,0 +1,7 @@
+digraph G{
+layout=neato;
+
+graph [charset=latin1]
+"0"[label="XXXr��������������leXXX"];
+"1"[label="XXXrooooooooooooooleXXX"];
+}

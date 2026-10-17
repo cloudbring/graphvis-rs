@@ -1,0 +1,11 @@
+digraph G {
+layout=neato;
+
+    graph [concentrate=true];
+
+    routine1;
+    routine2;
+
+    routine1->routine2;
+    routine1->routine2;
+}

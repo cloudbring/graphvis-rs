@@ -1,0 +1,11 @@
+graph pospin {
+layout=neato;
+
+notranslate=true;
+node [pin=true];
+a [pos="0,0"];
+b [pos="100,0"];
+c [pos="50,80"];
+d [pin=false];
+a -- b -- c -- a; c -- d; d -- a;
+}
