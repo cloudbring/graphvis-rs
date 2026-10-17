@@ -49,6 +49,8 @@ pub enum DKind {
 #[derive(Debug, Clone)]
 pub struct DNode {
     pub kind: DKind,
+    /// Name, for `GVDBG` traces.
+    pub name: String,
     /// `ND_pos`, inches.
     pub pos: [f64; 2],
     pub width: f64,
@@ -66,6 +68,7 @@ impl DNode {
     fn new(kind: DKind) -> Self {
         Self {
             kind,
+            name: String::new(),
             pos: [0.0, 0.0],
             width: 0.0,
             height: 0.0,
@@ -360,6 +363,8 @@ struct Fdp<'g, 'a> {
     pack: PackInfo,
     coords_declared: bool,
     inputscale: f64,
+    /// `IS_CLUST_NODE(n)`.
+    is_clust: Vec<bool>,
 }
 
 impl Fdp<'_, '_> {
@@ -464,6 +469,8 @@ impl Fdp<'_, '_> {
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));
+            dn.name
+                .clone_from(&src.subgraphs[self.tree.subgraph[c]].name);
             if self.coords_declared {
                 self.chk_pos(c, &mut dn, &mut fix_bb);
             }
@@ -488,8 +495,12 @@ impl Fdp<'_, '_> {
                 return None;
             }
             self.parent[n] = Some(g);
+            if self.is_clust[n] {
+                continue;
+            }
             let rn = &self.rg.nodes[n];
             let mut dn = DNode::new(DKind::Real(n));
+            dn.name.clone_from(&src.nodes[n].name);
             dn.width = rn.width;
             dn.height = rn.height;
             dn.lw = rn.lw;
@@ -505,7 +516,11 @@ impl Fdp<'_, '_> {
 
         let root = self.rg.root_sub();
         for &n in &members {
-            let tl = self.dnode[n].expect("derived node").1;
+            // Cluster nodes inside their own cluster have no derived node
+            // (and no edges there: cluster-edge clones live in the root).
+            let Some((_, tl)) = self.dnode[n] else {
+                continue;
+            };
             let outs: Vec<usize> = self.rg.outs(&root, n).collect();
             for e in outs {
                 if let Some(c) = g
@@ -513,7 +528,9 @@ impl Fdp<'_, '_> {
                 {
                     continue;
                 }
-                let hd = self.dnode[self.rg.edges[e].head].expect("derived node").1;
+                let Some((_, hd)) = self.dnode[self.rg.edges[e].head] else {
+                    continue;
+                };
                 if hd == tl {
                     continue;
                 }
@@ -542,7 +559,9 @@ impl Fdp<'_, '_> {
                 if u != uid {
                     continue;
                 }
-                let dn = dg.add_node(DNode::new(DKind::Port));
+                let mut pn = DNode::new(DKind::Port);
+                pn.name = "_port".to_string();
+                let dn = dg.add_node(pn);
                 let (de, _) = dg.edge(m, dn);
                 dg.edges[de].dist = self.rg.edges[pp.e].dist;
                 dg.edges[de].factor = self.rg.edges[pp.e].factor;
@@ -790,6 +809,7 @@ impl Fdp<'_, '_> {
         for ci in 0..cc.len() {
             let mut xpms = XParams::default();
             fdp_t_layout(&mut self.st, &mut dg, &cc[ci], &mut xpms);
+            self.dbg("TL", g, &dg, &cc[ci], false);
             for n in cc[ci].nodes.clone() {
                 match dg.nodes[n].kind {
                     DKind::Clust(c) => {
@@ -813,6 +833,7 @@ impl Fdp<'_, '_> {
                 // never declares it.
                 fdp_x_layout(&mut self.st, &mut dg, &cc[ci], &xpms);
             }
+            self.dbg("XL", g, &dg, &cc[ci], true);
         }
 
         let keep: Vec<usize> = (0..dg.nodes.len())
@@ -864,6 +885,87 @@ impl Fdp<'_, '_> {
         Ok(())
     }
 
+    /// `GVDBG=1` trace of derived positions (matches an instrumented C build).
+    fn dbg(&self, tag: &str, g: Option<usize>, dg: &DG, comp: &Comp, sizes: bool) {
+        if !super::trace(1) {
+            return;
+        }
+        let src = self.rg.src;
+        let gname = g.map_or(src.name.as_str(), |c| {
+            src.subgraphs[self.tree.subgraph[c]].name.as_str()
+        });
+        eprintln!("{tag} {gname}");
+        for &n in &comp.nodes {
+            let d = &dg.nodes[n];
+            let name = match d.kind {
+                DKind::Clust(c) => src.subgraphs[self.tree.subgraph[c]].name.clone(),
+                DKind::Real(r) => src.nodes[r].name.clone(),
+                DKind::Port => "_port".to_string(),
+            };
+            if sizes {
+                eprintln!(
+                    "  {name} {:?} {:?} {:?} {:?}",
+                    d.pos[0], d.pos[1], d.width, d.height
+                );
+            } else {
+                eprintln!("  {name} {:?} {:?}", d.pos[0], d.pos[1]);
+            }
+        }
+    }
+
+    /// `setClustNodes(root)`: a cluster node becomes a box the size of its
+    /// cluster, centred in it (in the cluster's coordinates).
+    fn set_clust_nodes(&mut self) {
+        for n in 0..self.rg.nodes.len() {
+            if !self.is_clust[n] {
+                continue;
+            }
+            let Some(p) = self.parent[n] else { continue };
+            let bb = self.bb_of(p);
+            let w = bb.ur.x - bb.ll.x;
+            let h = bb.ur.y - bb.ll.y;
+            let w2 = 72.0 * (w / 2.0);
+            let h2 = 72.0 * (h / 2.0);
+            let h_pts = 72.0 * h;
+            let penwidth = crate::common::utils::late_double(
+                &self.rg.src.nodes[n].attrs,
+                "penwidth",
+                1.0,
+                0.0,
+            );
+            let nd = &mut self.rg.nodes[n];
+            nd.pos[0] = w / 2.0;
+            nd.pos[1] = h / 2.0;
+            nd.width = w;
+            nd.height = h;
+            nd.lw = w2;
+            nd.rw = w2;
+            nd.ht = h_pts;
+            let sh = &mut nd.shape;
+            sh.width = 72.0 * w;
+            sh.height = 72.0 * h;
+            // ND_outline_width = w + penwidth (inches plus points, as in C).
+            sh.outline_width = 72.0 * (w + penwidth);
+            sh.outline_height = 72.0 * (h + penwidth);
+            let (rw, lw) = (w2, w2);
+            let e = penwidth / 2.0;
+            let v = [
+                Point::new(rw, h2),
+                Point::new(-lw, h2),
+                Point::new(-lw, -h2),
+                Point::new(rw, -h2),
+                Point::new(rw + e, h2 + e),
+                Point::new(-lw - e, h2 + e),
+                Point::new(-lw - e, -h2 - e),
+                Point::new(rw + e, -h2 - e),
+            ];
+            if sh.vertices.len() < 8 {
+                sh.vertices.resize(8, Point::default());
+            }
+            sh.vertices[..8].copy_from_slice(&v);
+        }
+    }
+
     /// `evalPositions(g, rootg)`.
     fn eval_positions(&mut self, g: Option<usize>) {
         let bb = self.bb_of(g);
@@ -890,8 +992,12 @@ impl Fdp<'_, '_> {
 }
 
 /// `fdpSplines(g)`.
-fn fdp_splines(g: &mut LGraph<'_>) {
+fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool) {
     let mut et = g.edge_type;
+    if et > EdgeType::Ortho && has_clust_edge {
+        // "splines and cluster edges not supported - using line segments"
+        et = EdgeType::Line;
+    }
     let root = g.root_sub();
     if et == EdgeType::Ortho || et == EdgeType::CompoundEdge {
         // lib/ortho and compoundEdges are not ported; fall back as
@@ -903,7 +1009,14 @@ fn fdp_splines(g: &mut LGraph<'_>) {
 
 /// `fdp_layout(g)`.
 pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
-    let src = graph.clone();
+    let tree0 = mk_clusters(graph);
+    let ce = crate::common::cluster_edges::process_cluster_edges(graph, &tree0);
+    let src = ce
+        .as_ref()
+        .map_or_else(|| graph.clone(), |c| c.work.clone());
+    let is_clust: Vec<bool> = (0..src.nodes.len())
+        .map(|n| ce.as_ref().is_some_and(|c| c.is_clust_node(n)))
+        .collect();
     let attrs = &src.graph_attrs;
     let ndim = late_int(attrs, "dim", 2, 2).min(MAXDIM as i64) as usize;
     let mut g = LGraph::new(&src, ndim, EdgeType::Line);
@@ -958,13 +1071,26 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
         pack,
         coords_declared,
         inputscale,
+        is_clust,
     };
-    if f.layout(None).is_err() {
+    let ok = f.layout(None).is_ok();
+    if ok {
+        f.set_clust_nodes();
+        f.eval_positions(None);
+    }
+    let finish = |g: &LGraph<'_>, graph: &mut Graph| match &ce {
+        Some(c) => {
+            let mut w = c.work.clone();
+            g.write_back(&mut w);
+            crate::common::cluster_edges::undo_cluster_edges(c, &w, graph);
+        }
+        None => g.write_back(graph),
+    };
+    if !ok {
         // C reports the error and returns before positioning anything.
-        g.write_back(graph);
+        finish(&g, graph);
         return Ok(());
     }
-    f.eval_positions(None);
     // setBB
     let root_bb = f.root_bb;
     let gbb = f.gbb.clone();
@@ -979,9 +1105,9 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
     let root = g.root_sub();
     neato_set_aspect(&mut g, &root, true);
     if g.edge_type != EdgeType::None {
-        fdp_splines(&mut g);
+        fdp_splines(&mut g, ce.is_some());
     }
     gv_postprocess(&mut g, false);
-    g.write_back(graph);
+    finish(&g, graph);
     Ok(())
 }

@@ -30,6 +30,19 @@ pub mod xlayout;
 use crate::common::utils::mapbool;
 use gv_core::{Graph, SubgraphData};
 
+/// Whether `GVDBG` (level 1) or `GVDBG2` (level 2) tracing is on: traces of
+/// derived positions and forces, line-compatible with an instrumented C build.
+pub(crate) fn trace(level: u8) -> bool {
+    static ON: std::sync::OnceLock<(bool, bool)> = std::sync::OnceLock::new();
+    let on = ON.get_or_init(|| {
+        (
+            std::env::var_os("GVDBG").is_some(),
+            std::env::var_os("GVDBG2").is_some(),
+        )
+    });
+    if level >= 2 { on.1 } else { on.0 }
+}
+
 /// `is_a_cluster(g)` for a subgraph.
 pub fn is_a_cluster(sg: &SubgraphData) -> bool {
     (sg.name.len() >= 7 && sg.name.as_bytes()[..7].eq_ignore_ascii_case(b"cluster"))

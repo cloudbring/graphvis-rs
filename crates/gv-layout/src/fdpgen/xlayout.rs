@@ -98,6 +98,17 @@ impl X {
         }
         add_disp(dg, q, xdelta, ydelta, force);
         add_disp(dg, p, -xdelta, -ydelta, force);
+        if super::trace(2) {
+            eprintln!(
+                "R {} {} {:?} {:?} {:?} {}",
+                dg.nodes[p].name,
+                dg.nodes[q].name,
+                xdelta,
+                ydelta,
+                force,
+                i32::from(ov)
+            );
+        }
         ov
     }
 
@@ -114,6 +125,12 @@ impl X {
         let force = dout * dout / ((self.p.k + din) * dist);
         add_disp(dg, q, -xdelta, -ydelta, force);
         add_disp(dg, p, xdelta, ydelta, force);
+        if super::trace(2) {
+            eprintln!(
+                "A {} {} {:?} {:?} {:?}",
+                dg.nodes[p].name, dg.nodes[q].name, xdelta, ydelta, force
+            );
+        }
     }
 
     /// `adjust(g, temp, X_ov, X_nonov)`: returns the overlaps before the move.
@@ -233,6 +250,16 @@ fn x_layout(
                 break;
             }
             ov = x.adjust(st, dg, comp, temp, x_ov, x_nonov);
+            if super::trace(1) {
+                eprintln!("XI {t} {i} {ov} {:?} {:?} {:?}", temp, x_ov, x_nonov);
+                for &n in &comp.nodes {
+                    let d = &dg.nodes[n];
+                    eprintln!(
+                        "  xi {:?} {:?} {:?} {:?}",
+                        d.pos[0], d.pos[1], d.disp[0], d.disp[1]
+                    );
+                }
+            }
             if ov == 0 {
                 break;
             }

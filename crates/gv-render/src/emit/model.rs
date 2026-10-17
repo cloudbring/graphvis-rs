@@ -167,6 +167,7 @@ pub(crate) struct RCluster<'g> {
 
 /// Private attribute with a layout-computed graph or cluster label position (exact).
 pub(crate) const LABEL_POS_KEY: &str = "\u{1}lp";
+pub(crate) use gv_core::CLUST_NODE_KEY;
 
 /// `GD_has_labels` bits.
 pub(crate) const EDGE_LABEL: u32 = 1 << 0;

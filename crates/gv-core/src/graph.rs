@@ -66,6 +66,11 @@ pub struct SubgraphData {
     pub bb: BoundingBox,
 }
 
+/// Node attribute set by a layout on a node it replaced by a cluster node
+/// (fdp's `processClusterEdges`/`undoClusterEdges`, `IS_CLUST_NODE`):
+/// renderers neither draw it nor give it layout attributes.
+pub const CLUST_NODE_KEY: &str = "\u{1}clustnode";
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
