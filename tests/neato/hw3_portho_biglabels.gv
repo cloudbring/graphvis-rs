@@ -1,0 +1,10 @@
+graph biglabel {
+layout=neato;
+
+overlap=portho;
+"a long node name" -- "short";
+"short" -- "another long label here";
+"another long label here" -- "x";
+"x" -- "a long node name";
+"x" -- "y"; "y" -- "z"; "z" -- "short";
+}

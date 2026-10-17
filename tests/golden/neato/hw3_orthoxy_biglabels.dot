@@ -1,0 +1,32 @@
+graph biglabel {
+	graph [bb="0,0,330.71,212",
+		layout=neato,
+		overlap=orthoxy
+	];
+	node [label="\N"];
+	"a long node name"	[height=0.5,
+		pos="79.418,107",
+		width=2.2061];
+	short	[height=0.5,
+		pos="196.42,62",
+		width=0.84307];
+	"a long node name" -- short	[pos="120.34,91.261 137.08,84.824 155.93,77.572 170.68,71.898"];
+	"another long label here"	[height=0.5,
+		pos="230.92,18",
+		width=2.7719];
+	short -- "another long label here"	[pos="209.46,45.365 211.83,42.348 214.31,39.187 216.7,36.129"];
+	x	[height=0.5,
+		pos="261.42,106",
+		width=0.75];
+	"another long label here" -- x	[pos="237.24,36.234 242.51,51.437 249.97,72.978 255.21,88.091"];
+	x -- "a long node name"	[pos="234.17,106.15 214.24,106.26 186.11,106.41 159.28,106.56"];
+	y	[height=0.5,
+		pos="262.42,150",
+		width=0.75];
+	x -- y	[pos="261.84,124.41 261.89,126.76 261.94,129.17 262,131.53"];
+	z	[height=0.5,
+		pos="200.42,194",
+		width=0.75];
+	y -- z	[pos="243.82,163.2 235.97,168.77 226.85,175.24 219.01,180.81"];
+	z -- short	[pos="199.86,175.65 199.1,150.43 197.73,105.33 196.97,80.198"];
+}

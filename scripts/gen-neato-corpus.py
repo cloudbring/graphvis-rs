@@ -352,12 +352,37 @@ f -- g;
     return c
 
 
+ORTHO_MODES = ["ortho", "ortho_yx", "orthoxy", "orthoyx", "portho", "portho_yx", "porthoxy", "porthoyx"]
+
+
+def handwritten3():
+    """Cases for constraint.c (ortho*), vpsc, mode=hier/ipsep and multisplines."""
+    c = {}
+    for ov in ORTHO_MODES:
+        c[f"hw3_{ov}_overlap"] = OVERLAP % f"overlap={ov};"
+        c[f"hw3_{ov}_biglabels"] = BIGLABELS % f"overlap={ov};"
+        c[f"hw3_{ov}_K6"] = complete(6, f"overlap={ov}; node [shape=box];")
+        c[f"hw3_{ov}_random50"] = randgraph(50, 70, 18, f"overlap={ov}; node [shape=box];")
+    # equal coordinates share a constraint node (grid), digraph edge lookup,
+    # additive and multiplicative sep
+    c["hw3_ortho_grid"] = grid(4, 4, "overlap=ortho; node [shape=box, width=1.5];")
+    c["hw3_portho_grid"] = grid(4, 4, "overlap=portho; node [shape=box, width=1.5];")
+    c["hw3_ortho_digraph"] = DIGRAPH % "overlap=ortho; node [shape=box, width=1.5];"
+    c["hw3_portho_digraph"] = DIGRAPH % "overlap=portho; node [shape=box, width=1.5];"
+    c["hw3_ortho_sep_add"] = OVERLAP % "overlap=ortho; sep=\"+12\";"
+    c["hw3_ortho_sep_scale"] = OVERLAP % "overlap=ortho; sep=0.4;"
+    c["hw3_portho_sep_scale"] = OVERLAP % "overlap=portho_yx; sep=\"0.3,0.6\";"
+    c["hw3_ortho_random120"] = randgraph(120, 160, 20, "overlap=ortho; node [shape=box];")
+    c["hw3_ortho_clusters"] = CLUSTERS % "overlap=orthoxy; node [shape=box, width=1];"
+    return c
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.gv"):
         old.unlink()
     n = 0
-    for name, src in {**corpus_cases(), **handwritten(), **handwritten2()}.items():
+    for name, src in {**corpus_cases(), **handwritten(), **handwritten2(), **handwritten3()}.items():
         if name in EXCLUDE or LAYOUT.search(src):
             continue
         forced = force_neato(src)

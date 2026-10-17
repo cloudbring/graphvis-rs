@@ -436,6 +436,177 @@ impl RkState {
     }
 }
 
+/// `Dtoset`/`Dtobag` of `lib/cdt` (`dttree.c`): a splay tree of item ids,
+/// insert-only, flattened in order. The position of a new element among
+/// equal keys depends on the splay shape (a bag puts it just before the equal
+/// element the search stops at), so the tree is reproduced exactly.
+#[derive(Debug, Clone)]
+pub struct DtTree {
+    left: Vec<usize>,
+    right: Vec<usize>,
+    root: usize,
+    bag: bool,
+}
+
+const DT_NIL: usize = usize::MAX;
+
+impl DtTree {
+    /// `dtopen(disc, Dtobag)` (`bag`) or `Dtoset`.
+    pub fn new(bag: bool) -> Self {
+        // Slot 0 is the C `link` sentinel; item `i` lives in slot `i + 1`.
+        DtTree {
+            left: vec![DT_NIL],
+            right: vec![DT_NIL],
+            root: DT_NIL,
+            bag,
+        }
+    }
+
+    /// `dtinsert(dt, obj)`; `cmp(a, b)` compares the keys of items `a` and
+    /// `b`. Returns false when a set already holds an equal key.
+    pub fn insert(
+        &mut self,
+        obj: usize,
+        mut cmp: impl FnMut(usize, usize) -> std::cmp::Ordering,
+    ) -> bool {
+        let me = obj + 1;
+        if self.left.len() <= me {
+            self.left.resize(me + 1, DT_NIL);
+            self.right.resize(me + 1, DT_NIL);
+        }
+        let c = |a: usize, b: usize, f: &mut dyn FnMut(usize, usize) -> std::cmp::Ordering| {
+            f(a - 1, b - 1)
+        };
+        let (left, right) = (&mut self.left, &mut self.right);
+        const S: usize = 0;
+        left[S] = DT_NIL;
+        right[S] = DT_NIL;
+        let (mut l, mut r) = (S, S);
+        let mut root = self.root;
+        if root != DT_NIL {
+            loop {
+                match c(me, root, &mut cmp) {
+                    std::cmp::Ordering::Equal => break,
+                    std::cmp::Ordering::Less => {
+                        let t = left[root];
+                        if t != DT_NIL {
+                            match c(me, t, &mut cmp) {
+                                std::cmp::Ordering::Less => {
+                                    left[root] = right[t];
+                                    right[t] = root;
+                                    left[r] = t;
+                                    r = t;
+                                    root = left[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                                std::cmp::Ordering::Equal => {
+                                    left[r] = root;
+                                    r = root;
+                                    root = t;
+                                    break;
+                                }
+                                std::cmp::Ordering::Greater => {
+                                    right[l] = t;
+                                    l = t;
+                                    left[r] = root;
+                                    r = root;
+                                    root = right[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            left[r] = root;
+                            r = root;
+                            root = DT_NIL;
+                            break;
+                        }
+                    }
+                    std::cmp::Ordering::Greater => {
+                        let t = right[root];
+                        if t != DT_NIL {
+                            match c(me, t, &mut cmp) {
+                                std::cmp::Ordering::Greater => {
+                                    right[root] = left[t];
+                                    left[t] = root;
+                                    right[l] = t;
+                                    l = t;
+                                    root = right[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                                std::cmp::Ordering::Equal => {
+                                    right[l] = root;
+                                    l = root;
+                                    root = t;
+                                    break;
+                                }
+                                std::cmp::Ordering::Less => {
+                                    left[r] = t;
+                                    r = t;
+                                    right[l] = root;
+                                    l = root;
+                                    root = left[t];
+                                    if root == DT_NIL {
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            right[l] = root;
+                            l = root;
+                            root = DT_NIL;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if root != DT_NIL {
+            right[l] = left[root];
+            left[r] = right[root];
+            if !self.bag {
+                // has_root: the equal element stays.
+                left[root] = right[S];
+                right[root] = left[S];
+                self.root = root;
+                return false;
+            }
+            left[root] = DT_NIL;
+            right[root] = left[S];
+            left[S] = root;
+        } else {
+            left[r] = DT_NIL;
+            right[l] = DT_NIL;
+        }
+        left[me] = right[S];
+        right[me] = left[S];
+        self.root = me;
+        true
+    }
+
+    /// `dtflatten` order: item ids in key order.
+    pub fn flatten(&self) -> Vec<usize> {
+        let mut out = Vec::new();
+        let mut stack = Vec::new();
+        let mut cur = self.root;
+        while cur != DT_NIL || !stack.is_empty() {
+            while cur != DT_NIL {
+                stack.push(cur);
+                cur = self.left[cur];
+            }
+            let n = stack.pop().unwrap();
+            out.push(n - 1);
+            cur = self.right[n];
+        }
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

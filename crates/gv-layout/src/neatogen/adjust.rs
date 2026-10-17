@@ -317,7 +317,7 @@ pub fn remove_overlap_with(g: &mut LGraph<'_>, sub: &Sub, am: &AdjustData) -> bo
         | AdjustMode::POrthoYX
         | AdjustMode::POrthoXY
         | AdjustMode::POrthoYXrev => {
-            super::scadjust::c_adjust(g, sub, am.mode);
+            super::constraint::c_adjust(g, sub, am.mode);
             false
         }
         AdjustMode::Prism => {
