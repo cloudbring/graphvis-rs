@@ -22,6 +22,10 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
     for n in &mut graph.nodes {
         n.attrs.insert("shape".to_string(), "box".to_string());
     }
+    // patchwork_init_edge only binds the edge record: no common_init_edge, so no labels.
+    graph
+        .graph_attrs
+        .insert(gv_core::NO_EDGE_INIT_KEY.to_string(), String::new());
     let tree = mk_clusters(graph);
     // mkClusters(g, NULL, g) never calls do_graph_label: clusters get no label.
     for &sg in &tree.subgraph {

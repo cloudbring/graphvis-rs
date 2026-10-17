@@ -285,6 +285,7 @@ impl<'g> Model<'g> {
             });
         }
 
+        let no_edge_init = g.graph_attrs.contains_key(gv_core::NO_EDGE_INIT_KEY);
         let mut edges = Vec::with_capacity(g.edges.len());
         let mut out_edges = vec![Vec::new(); g.nodes.len()];
         for (ei, e) in g.edges.iter().enumerate() {
@@ -331,7 +332,11 @@ impl<'g> Model<'g> {
                 .collect();
             let tname = &g.nodes[e.tail.0 as usize].name;
             let hname = &g.nodes[e.head.0 as usize].name;
-            let lg = edge_label_geometry(&e.attrs, tname, hname, directed, &env);
+            let lg = if no_edge_init {
+                gv_geom::node_size::EdgeLabelGeometry::default()
+            } else {
+                edge_label_geometry(&e.attrs, tname, hname, directed, &env)
+            };
             let fontcolor = a.late_nnstring("fontcolor", "black");
             let lfontcolor = a.late_nnstring("labelfontcolor", fontcolor);
             let mk = |geo: &Option<LabelGeometry>,
