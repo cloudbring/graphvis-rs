@@ -40,7 +40,6 @@ const DEFAULT_RANKSEP_IN: f64 = 0.50;
 const MIN_NODESEP_IN: f64 = 0.02;
 const MIN_RANKSEP_IN: f64 = 0.02;
 const CLUSTER_MARGIN_PT: f64 = 8.0;
-const DEFAULT_PAD_PT: f64 = 4.0;
 const NS_SEARCH_SIZE: usize = 30;
 const NS_MAX_ITER: usize = 2000;
 const MINCROSS_MAX_ITER: usize = 24;
@@ -2133,8 +2132,13 @@ fn assign_coordinates(
             min_r = min_r.min(r);
             max_r = max_r.max(r);
         }
-        let mut sub_ht1 = CL_OFFSET;
-        let mut sub_ht2 = CL_OFFSET;
+        let cl_offset = if subg.is_cluster {
+            parse_cluster_margin_pt(&subg.graph_attrs)
+        } else {
+            CL_OFFSET
+        };
+        let mut sub_ht1 = cl_offset;
+        let mut sub_ht2 = cl_offset;
         for &cid in &subg.subgraphs {
             if let Some((c_min, c_max, c_ht1, c_ht2)) =
                 update_cluster_ht(graph, cid, n_ranks, rank_ht1, rank_ht2)
@@ -2352,12 +2356,7 @@ fn solve_within_rank_coordinates(
         total_aux_nodes += 2;
         clust_ln_rn.insert(subg.id, (ln, rn, min_r, max_r));
 
-        let margin = (parse_attr_f64(
-            &subg.graph_attrs,
-            "margin",
-            CLUSTER_MARGIN_PT / POINTS_PER_INCH,
-        ) * POINTS_PER_INCH)
-            .round() as i32;
+        let margin = parse_cluster_margin_pt(&subg.graph_attrs).round() as i32;
 
         // `contain_clustnodes`: cluster compaction edge `ln -> rn` with `minlen = 1, weight = 128`.
         aux_edges.push(NsEdge {
@@ -2705,11 +2704,7 @@ pub(crate) fn compute_cluster_bounding_boxes(graph: &mut Graph) {
         }
 
         if graph.subgraphs[idx].is_cluster {
-            let margin = parse_attr_f64(
-                &graph.subgraphs[idx].graph_attrs,
-                "margin",
-                CLUSTER_MARGIN_PT / POINTS_PER_INCH,
-            ) * POINTS_PER_INCH;
+            let margin = parse_cluster_margin_pt(&graph.subgraphs[idx].graph_attrs);
             min_x -= margin;
             max_x += margin;
             min_y -= margin;
@@ -3016,10 +3011,10 @@ pub(crate) fn normalize_graph_coordinates(graph: &mut Graph) {
 
     for subg in &graph.subgraphs {
         if subg.is_cluster && (subg.bb.width() > 0.0 || subg.bb.height() > 0.0) {
-            min_x = min_x.min(subg.bb.ll.x);
-            min_y = min_y.min(subg.bb.ll.y);
-            max_x = max_x.max(subg.bb.ur.x);
-            max_y = max_y.max(subg.bb.ur.y);
+            min_x = min_x.min(subg.bb.ll.x - CLUSTER_MARGIN_PT);
+            min_y = min_y.min(subg.bb.ll.y - CLUSTER_MARGIN_PT);
+            max_x = max_x.max(subg.bb.ur.x + CLUSTER_MARGIN_PT);
+            max_y = max_y.max(subg.bb.ur.y + CLUSTER_MARGIN_PT);
         }
     }
 
@@ -3052,25 +3047,17 @@ pub(crate) fn normalize_graph_coordinates(graph: &mut Graph) {
         }
     }
 
-    // Account for graph `pad` / `margin` and root graph label if present.
-    let pad_pt = graph
-        .graph_attrs
-        .get("pad")
-        .and_then(|s| s.split(',').next())
-        .and_then(|s| s.trim().parse::<f64>().ok())
-        .filter(|v| v.is_finite() && *v >= 0.0)
-        .map(|v| v * POINTS_PER_INCH)
-        .unwrap_or(DEFAULT_PAD_PT);
+    // Account for root graph `margin` and label if present (`pad` is applied by the renderer in `gvrender_core_svg.c`).
     let margin_pt = graph
         .graph_attrs
         .get("margin")
         .and_then(|s| s.split(',').next())
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(gv_geom::shapes::parse_f64_strip_units)
         .filter(|v| v.is_finite() && *v >= 0.0)
         .map(|v| v * POINTS_PER_INCH)
         .unwrap_or(0.0);
 
-    let border = pad_pt + margin_pt;
+    let border = margin_pt;
     min_x -= border;
     min_y -= border;
     max_x += border;
@@ -3149,14 +3136,34 @@ pub(crate) fn normalize_graph_coordinates(graph: &mut Graph) {
         }
     }
 
-    graph.bb = BoundingBox::new(0.0, 0.0, (max_x - min_x).max(1.0), (max_y - min_y).max(1.0));
+    graph.bb = BoundingBox::new(0.0, 0.0, (max_x - min_x).max(0.0), (max_y - min_y).max(0.0));
 }
 
 pub(crate) fn parse_attr_f64(attrs: &AttrMap, key: &str, default: f64) -> f64 {
     attrs
         .get(key)
         .and_then(|s| s.split([',', ' ']).next())
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(gv_geom::shapes::parse_f64_strip_units)
         .filter(|v| v.is_finite())
         .unwrap_or(default)
+}
+
+/// Parses cluster `margin` in points (`late_int(g, G_margin, CL_OFFSET, 0)` in `position.c:412`).
+pub(crate) fn parse_cluster_margin_pt(attrs: &AttrMap) -> f64 {
+    let Some(raw) = attrs.get("margin") else {
+        return CLUSTER_MARGIN_PT;
+    };
+    let Some(first) = raw.split([',', ' ']).find(|s| !s.is_empty()) else {
+        return CLUSTER_MARGIN_PT;
+    };
+    let Some(val) = gv_geom::shapes::parse_f64_strip_units(first) else {
+        return CLUSTER_MARGIN_PT;
+    };
+    if val <= 0.0 {
+        0.0
+    } else if val < 1.0 && first.contains('.') {
+        val * POINTS_PER_INCH
+    } else {
+        val
+    }
 }

@@ -542,11 +542,14 @@ fn parse_json0_layout(json_str: &str) -> Result<ParsedJsonLayout, String> {
         (54.0, 36.0)
     };
 
+    let sg_cnt = val
+        .get("_subgraph_cnt")
+        .and_then(Value::as_u64)
+        .unwrap_or(0) as usize;
     let mut gvid_to_name = BTreeMap::new();
     let mut nodes = BTreeMap::new();
     if let Some(objs) = val.get("objects").and_then(Value::as_array) {
-        for obj in objs {
-            // Skip subgraphs/clusters (`nodes` or `subgraphs` array present without `pos` node attributes)
+        for obj in objs.iter().skip(sg_cnt) {
             if obj.get("nodes").is_some() || obj.get("subgraphs").is_some() {
                 continue;
             }
@@ -828,6 +831,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut out_dir: Option<PathBuf> = None;
     let mut json_out: Option<PathBuf> = None;
+    let mut custom_dir: Option<PathBuf> = None;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -837,6 +841,10 @@ fn main() {
             }
             "--json" if i + 1 < args.len() => {
                 json_out = Some(PathBuf::from(&args[i + 1]));
+                i += 2;
+            }
+            "--dir" if i + 1 < args.len() => {
+                custom_dir = Some(PathBuf::from(&args[i + 1]));
                 i += 2;
             }
             _ => {
@@ -849,9 +857,11 @@ fn main() {
         let _ = fs::create_dir_all(d);
     }
 
-    let fixtures_dir = Path::new("tests/fixtures");
+    let default_fixtures_dir = Path::new("tests/fixtures");
+    let fixtures_dir = custom_dir.as_deref().unwrap_or(default_fixtures_dir);
     println!("=== 1. C GRAPHVIZ 16.1.0 SELF-NOISE FLOOR (C vs. C) ===");
-    let noise_floor = measure_c_noise_floor(fixtures_dir).expect("Noise floor check failed");
+    let noise_floor =
+        measure_c_noise_floor(default_fixtures_dir).expect("Noise floor check failed");
     println!(
         "{:<10} {:<12} {:<12} {:<12} {:<12}",
         "Engine", "Fixture", "BytesIdent", "PixelRMSE", "SoftInkDice"

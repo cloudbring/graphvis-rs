@@ -263,7 +263,7 @@ fn parse_pad_pt(attrs: &AttrMap) -> (f64, f64) {
 pub(crate) fn parse_f64_attr(attrs: &AttrMap, key: &str, default: f64) -> f64 {
     attrs
         .get(key)
-        .and_then(|v| v.trim().parse::<f64>().ok())
+        .and_then(|v| gv_geom::shapes::parse_f64_strip_units(v))
         .filter(|v| v.is_finite())
         .unwrap_or(default)
 }

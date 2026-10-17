@@ -1206,18 +1206,328 @@ fn get_metrics_for_font_variant(
 #[inline]
 fn estimate_character_width_canonical(variant_metrics: &[i16; 128], ch: char) -> u32 {
     let code = ch as u32;
-    let idx = if code >= 128 {
-        b' ' as usize
-    } else {
-        code as usize
-    };
-    let width = variant_metrics[idx];
-    if width < 0 { 0 } else { width as u32 }
+    if code < 128 {
+        let width = variant_metrics[code as usize];
+        return if width < 0 { 0 } else { width as u32 };
+    }
+    let space_w = variant_metrics[b' ' as usize].max(0) as u32;
+    if code == 0x00A0 {
+        return space_w;
+    }
+    if (0x3000..=0x9FFF).contains(&code)
+        || (0xF900..=0xFAFF).contains(&code)
+        || (0xFF01..=0xFF60).contains(&code)
+    {
+        return space_w * 4;
+    }
+    space_w * (ch.len_utf8() as u32)
 }
 
 /// Estimates the width in points of `text` at a `1pt` font size, ported from
 /// `estimate_text_width_1pt` in `lib/common/textspan_lut.c`.
+static HTML_ENTITIES: &[(&str, u32)] = &[
+    ("AElig", 198),
+    ("Aacute", 193),
+    ("Acirc", 194),
+    ("Agrave", 192),
+    ("Alpha", 913),
+    ("Aring", 197),
+    ("Atilde", 195),
+    ("Auml", 196),
+    ("Beta", 914),
+    ("Ccedil", 199),
+    ("Chi", 935),
+    ("Dagger", 8225),
+    ("Delta", 916),
+    ("ETH", 208),
+    ("Eacute", 201),
+    ("Ecirc", 202),
+    ("Egrave", 200),
+    ("Epsilon", 917),
+    ("Eta", 919),
+    ("Euml", 203),
+    ("Gamma", 915),
+    ("Iacute", 205),
+    ("Icirc", 206),
+    ("Igrave", 204),
+    ("Iota", 921),
+    ("Iuml", 207),
+    ("Kappa", 922),
+    ("Lambda", 923),
+    ("Mu", 924),
+    ("Ntilde", 209),
+    ("Nu", 925),
+    ("OElig", 338),
+    ("Oacute", 211),
+    ("Ocirc", 212),
+    ("Ograve", 210),
+    ("Omega", 937),
+    ("Omicron", 927),
+    ("Oslash", 216),
+    ("Otilde", 213),
+    ("Ouml", 214),
+    ("Phi", 934),
+    ("Pi", 928),
+    ("Prime", 8243),
+    ("Psi", 936),
+    ("Rho", 929),
+    ("Scaron", 352),
+    ("Sigma", 931),
+    ("THORN", 222),
+    ("Tau", 932),
+    ("Theta", 920),
+    ("Uacute", 218),
+    ("Ucirc", 219),
+    ("Ugrave", 217),
+    ("Upsilon", 933),
+    ("Uuml", 220),
+    ("Xi", 926),
+    ("Yacute", 221),
+    ("Yuml", 376),
+    ("Zeta", 918),
+    ("aacute", 225),
+    ("acirc", 226),
+    ("acute", 180),
+    ("aelig", 230),
+    ("agrave", 224),
+    ("alefsym", 8501),
+    ("alpha", 945),
+    ("amp", 38),
+    ("and", 8743),
+    ("ang", 8736),
+    ("aring", 229),
+    ("asymp", 8776),
+    ("atilde", 227),
+    ("auml", 228),
+    ("bdquo", 8222),
+    ("beta", 946),
+    ("brvbar", 166),
+    ("bull", 8226),
+    ("cap", 8745),
+    ("ccedil", 231),
+    ("cedil", 184),
+    ("cent", 162),
+    ("chi", 967),
+    ("circ", 710),
+    ("clubs", 9827),
+    ("cong", 8773),
+    ("copy", 169),
+    ("crarr", 8629),
+    ("cup", 8746),
+    ("curren", 164),
+    ("dArr", 8659),
+    ("dagger", 8224),
+    ("darr", 8595),
+    ("deg", 176),
+    ("delta", 948),
+    ("diams", 9830),
+    ("divide", 247),
+    ("eacute", 233),
+    ("ecirc", 234),
+    ("egrave", 232),
+    ("empty", 8709),
+    ("emsp", 8195),
+    ("ensp", 8194),
+    ("epsilon", 949),
+    ("equiv", 8801),
+    ("eta", 951),
+    ("eth", 240),
+    ("euml", 235),
+    ("euro", 8364),
+    ("exist", 8707),
+    ("fnof", 402),
+    ("forall", 8704),
+    ("frac12", 189),
+    ("frac14", 188),
+    ("frac34", 190),
+    ("frasl", 8260),
+    ("gamma", 947),
+    ("ge", 8805),
+    ("gt", 62),
+    ("hArr", 8660),
+    ("harr", 8596),
+    ("hearts", 9829),
+    ("hellip", 8230),
+    ("iacute", 237),
+    ("icirc", 238),
+    ("iexcl", 161),
+    ("igrave", 236),
+    ("image", 8465),
+    ("infin", 8734),
+    ("int", 8747),
+    ("iota", 953),
+    ("iquest", 191),
+    ("isin", 8712),
+    ("iuml", 239),
+    ("kappa", 954),
+    ("lArr", 8656),
+    ("lambda", 955),
+    ("lang", 9001),
+    ("laquo", 171),
+    ("larr", 8592),
+    ("lceil", 8968),
+    ("ldquo", 8220),
+    ("le", 8804),
+    ("lfloor", 8970),
+    ("lowast", 8727),
+    ("loz", 9674),
+    ("lrm", 8206),
+    ("lsaquo", 8249),
+    ("lsquo", 8216),
+    ("lt", 60),
+    ("macr", 175),
+    ("mdash", 8212),
+    ("micro", 181),
+    ("middot", 183),
+    ("minus", 8722),
+    ("mu", 956),
+    ("nabla", 8711),
+    ("nbsp", 160),
+    ("ndash", 8211),
+    ("ne", 8800),
+    ("ni", 8715),
+    ("not", 172),
+    ("notin", 8713),
+    ("nsub", 8836),
+    ("ntilde", 241),
+    ("nu", 957),
+    ("oacute", 243),
+    ("ocirc", 244),
+    ("oelig", 339),
+    ("ograve", 242),
+    ("oline", 8254),
+    ("omega", 969),
+    ("omicron", 959),
+    ("oplus", 8853),
+    ("or", 8744),
+    ("ordf", 170),
+    ("ordm", 186),
+    ("oslash", 248),
+    ("otilde", 245),
+    ("otimes", 8855),
+    ("ouml", 246),
+    ("para", 182),
+    ("part", 8706),
+    ("permil", 8240),
+    ("perp", 8869),
+    ("phi", 966),
+    ("pi", 960),
+    ("piv", 982),
+    ("plusmn", 177),
+    ("pound", 163),
+    ("prime", 8242),
+    ("prod", 8719),
+    ("prop", 8733),
+    ("psi", 968),
+    ("quot", 34),
+    ("rArr", 8658),
+    ("radic", 8730),
+    ("rang", 9002),
+    ("raquo", 187),
+    ("rarr", 8594),
+    ("rceil", 8969),
+    ("rdquo", 8221),
+    ("real", 8476),
+    ("reg", 174),
+    ("rfloor", 8971),
+    ("rho", 961),
+    ("rlm", 8207),
+    ("rsaquo", 8250),
+    ("rsquo", 8217),
+    ("sbquo", 8218),
+    ("scaron", 353),
+    ("sdot", 8901),
+    ("sect", 167),
+    ("shy", 173),
+    ("sigma", 963),
+    ("sigmaf", 962),
+    ("sim", 8764),
+    ("spades", 9824),
+    ("sub", 8834),
+    ("sube", 8838),
+    ("sum", 8721),
+    ("sup", 8835),
+    ("sup1", 185),
+    ("sup2", 178),
+    ("sup3", 179),
+    ("supe", 8839),
+    ("szlig", 223),
+    ("tau", 964),
+    ("there4", 8756),
+    ("theta", 952),
+    ("thetasym", 977),
+    ("thinsp", 8201),
+    ("thorn", 254),
+    ("tilde", 732),
+    ("times", 215),
+    ("trade", 8482),
+    ("uArr", 8657),
+    ("uacute", 250),
+    ("uarr", 8593),
+    ("ucirc", 251),
+    ("ugrave", 249),
+    ("uml", 168),
+    ("upsih", 978),
+    ("upsilon", 965),
+    ("uuml", 252),
+    ("weierp", 8472),
+    ("xi", 958),
+    ("yacute", 253),
+    ("yen", 165),
+    ("yuml", 255),
+    ("zeta", 950),
+    ("zwj", 8205),
+    ("zwnj", 8204),
+];
+
+/// Decodes HTML 4.0 character entity references (`&alpha;`, `&forall;`, `&#165;`, `&#x03B1;`)
+/// into UTF-8 characters, matching `htmlEntityUTF8` in `lib/common/htmllex.c` and `entities.h`.
+pub fn decode_html_entities(text: &str) -> String {
+    if !text.contains('&') {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len());
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'&' {
+            let max_end = (i + 14).min(bytes.len());
+            if let Some(rel_semi) = text[i + 1..max_end].find(';') {
+                let entity = &text[i + 1..i + 1 + rel_semi];
+                let decoded_char = if let Some(num_part) = entity.strip_prefix('#') {
+                    let code_opt = if let Some(hex) = num_part
+                        .strip_prefix('x')
+                        .or_else(|| num_part.strip_prefix('X'))
+                    {
+                        u32::from_str_radix(hex, 16).ok()
+                    } else {
+                        num_part.parse::<u32>().ok()
+                    };
+                    code_opt.and_then(char::from_u32)
+                } else {
+                    HTML_ENTITIES
+                        .binary_search_by_key(&entity, |&(k, _)| k)
+                        .ok()
+                        .and_then(|idx| char::from_u32(HTML_ENTITIES[idx].1))
+                        .or_else(|| if entity == "apos" { Some('\'') } else { None })
+                };
+                if let Some(ch) = decoded_char {
+                    out.push(ch);
+                    i += 1 + rel_semi + 1;
+                    continue;
+                }
+            }
+        }
+        let ch = text[i..].chars().next().unwrap();
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
+}
+
 pub fn estimate_text_width_1pt(font_name: &str, text: &str, bold: bool, italic: bool) -> f64 {
+    let decoded = decode_html_entities(text);
+    let text = decoded.as_str();
     let (family_metrics, eff_bold, eff_italic) = resolve_metrics_and_style(font_name, bold, italic);
     let variant_metrics = get_metrics_for_font_variant(family_metrics, eff_bold, eff_italic);
     let mut text_width_canonical: u32 = 0;
@@ -1317,7 +1627,7 @@ pub fn measure_multiline_label_with_context(
     font_name: &str,
     font_size: f64,
 ) -> TextLabelLayout {
-    let substituted = substitute_object_escapes(label, ctx);
+    let substituted = decode_html_entities(&substitute_object_escapes(label, ctx));
     let mut layout = TextLabelLayout {
         lines: Vec::new(),
         line_widths: Vec::new(),

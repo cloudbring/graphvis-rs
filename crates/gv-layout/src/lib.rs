@@ -34,7 +34,16 @@ impl LayoutEngine {
 }
 
 pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
-    match engine {
+    let effective_engine = if engine == LayoutEngine::Dot
+        && let Some(attr_layout) = graph.graph_attrs.get("layout")
+        && let Ok(parsed) = LayoutEngine::parse(attr_layout)
+    {
+        parsed
+    } else {
+        engine
+    };
+
+    match effective_engine {
         LayoutEngine::Dot => dot::layout_dot(graph),
         LayoutEngine::Neato => force_circular::layout_neato(graph),
         LayoutEngine::Fdp => force_circular::layout_fdp(graph, false),
