@@ -1,0 +1,1 @@
+digraph G { fontnames=svg; a [fontname="Times-Bold"]; b [fontname="Helvetica-Oblique"]; c [fontname="Courier"]; d [fontname="Palatino-BoldItalic"]; e [fontname="Arial"]; a -> b -> c -> d -> e; }

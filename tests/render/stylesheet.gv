@@ -1,0 +1,1 @@
+digraph G { stylesheet="style.css"; svgid=mysvg; comment="graph comment"; a [class=x]; a -> b [comment="edge comment"]; }

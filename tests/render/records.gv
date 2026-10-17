@@ -1,0 +1,8 @@
+digraph rec {
+  node [shape=record];
+  s1 [label="<f0> left|<f1> mid\ dle|<f2> right"];
+  s2 [label="{a|{b|c|d}|e}", style=filled, fillcolor=pink];
+  s3 [shape=Mrecord, label="hello\nworld |{ b |{c|<here> d|e}| f}| g | h"];
+  s4 [label="\<esc\>|\{brace\}|left\l|right\r"];
+  s1:f1 -> s2; s1:f2 -> s3:here; s3 -> s4;
+}

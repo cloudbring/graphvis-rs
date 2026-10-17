@@ -1,0 +1,70 @@
+digraph urls {
+	graph [URL="http://graph.example",
+		_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 230.6 70 230.6 70 0 ",
+		bb="0,0,70,230.6",
+		class=gc,
+		id=gid,
+		tooltip="graph tip",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [URL="http://c.example",
+			_draw_="c 7 -#000000 p 4 0 153.8 0 230.6 70 230.6 70 153.8 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 214 0 40.44 7 -Cluster ",
+			bb="0,153.8,70,230.6",
+			class=cc,
+			label=Cluster,
+			lheight=0.23,
+			lp="35,218.2",
+			lwidth=0.56,
+			target=_blank,
+			tooltip=ctip
+		];
+		a	[URL="http://a.example/\N",
+			_draw_="c 7 -#000000 e 35 179.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 175.6 0 6.21 1 -a ",
+			class="n1 n2",
+			height=0.5,
+			id=nodea,
+			pos="35,179.8",
+			target=_top,
+			tooltip="a\ntip",
+			width=0.75];
+	}
+	b	[_draw_="c 7 -#000000 e 35 91 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 86.8 0 7 1 -b ",
+		comment="a comment",
+		height=0.5,
+		href="http://b.example",
+		pos="35,91",
+		width=0.75];
+	a -> b	[URL="http://e.example",
+		_draw_="c 7 -#000000 B 4 35 161.65 35 149.96 35 134.19 35 120.62 ",
+		_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 38.5 120.92 35 110.92 31.5 120.92 ",
+		_hldraw_="F 14 11 -Times-Roman c 7 -#000000 T 29.95 113.61 0 10.11 1 -H ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 43.55 131.2 0 17.1 3 -lab ",
+		_tldraw_="F 14 11 -Times-Roman c 7 -#000000 T 30.72 149.05 0 8.55 1 -T ",
+		edgetooltip=etip,
+		headURL="http://h.example",
+		head_lp="29.945,117.81",
+		headlabel=H,
+		id=e1,
+		label=lab,
+		labelURL="http://l.example",
+		lp="43.552,135.4",
+		pos="e,35,109.41 35,161.65 35,149.96 35,134.19 35,120.62",
+		tail_lp="30.724,153.25",
+		taillabel=T,
+		tailtooltip=tt];
+	c	[_draw_="c 7 -#000000 e 35 18 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 13.8 0 6.21 1 -c ",
+		height=0.5,
+		pos="35,18",
+		width=0.75];
+	b -> c	[_draw_="c 7 -#000000 B 4 35 72.81 35 65.23 35 56.1 35 47.54 ",
+		_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 38.5 47.54 35 37.54 31.5 47.54 ",
+		class=ec,
+		pos="e,35,36.029 35,72.813 35,65.226 35,56.101 35,47.539",
+		tooltip="only tip"];
+}

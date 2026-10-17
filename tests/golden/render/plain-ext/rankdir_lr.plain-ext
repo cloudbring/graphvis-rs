@@ -1,0 +1,7 @@
+graph 1 3.3826 1.0611
+node a 0.375 0.53054 0.75 1.0611 "a|b|c" solid record black lightgrey
+node b 1.7437 0.53054 0.75 0.52778 "{x|y}" solid record black lightgrey
+node c 3.0076 0.53054 0.75 0.52778 "\N" solid record black lightgrey
+edge a b 4 0.75532 0.53054 0.89428 0.53054 1.0553 0.53054 1.206 0.53054 lr 1.0594 0.64721 solid black
+edge b c 4 2.1218 0.53054 2.2315 0.53054 2.3542 0.53054 2.4719 0.53054 solid black
+stop

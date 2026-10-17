@@ -1,0 +1,40 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,81.604,124.8",
+  "forcelabels": "true",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "54.604,90",
+      "width": "0.75",
+      "xlabel": "ext a",
+      "xlp": "14.195,116.4"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "54.604,18",
+      "width": "0.75",
+      "xlabel": "ext b",
+      "xlp": "13.802,44.4"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,54.604,36.104 54.604,71.697 54.604,64.407 54.604,55.726 54.604,47.536",
+      "xlabel": "edge xl",
+      "xlp": "34.195,62.531"
+    }
+  ]
+}

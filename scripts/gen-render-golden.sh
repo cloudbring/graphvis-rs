@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Regenerates the render-fidelity corpus under tests/golden/render/ from C Graphviz 16.1.0.
+# Regenerates the render-fidelity corpus under tests/golden/render/ from C Graphviz 16.1.0,
+# for the inputs in tests/wild, tests/fixtures and tests/render (renderer feature tests).
 #
 # Rendering is isolated from layout: C lays every corpus graph out once
 # (`dot -Tdot`, honouring any `layout` attribute), and the result is re-read in
@@ -29,12 +30,13 @@ case "$version" in
   *) echo "need Graphviz 16.1.0, found: $version" >&2; exit 1 ;;
 esac
 
-rm -rf "$OUT"
+# Keep the ratchet baseline (baseline.json); rebuild everything else.
+find "$OUT" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
 mkdir -p "$OUT/laid"
 for fmt in $FORMATS; do mkdir -p "$OUT/$fmt"; done
 
 count=0
-for f in "$REPO_ROOT"/tests/wild/*.gv "$REPO_ROOT"/tests/fixtures/*.gv; do
+for f in "$REPO_ROOT"/tests/wild/*.gv "$REPO_ROOT"/tests/fixtures/*.gv "$REPO_ROOT"/tests/render/*.gv; do
   stem="$(basename "$f" .gv)"
   laid="$OUT/laid/$stem.dot"
   # Rewrite any `layout` attribute to neato: it overrides the -K engine, and -n2

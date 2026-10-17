@@ -1,0 +1,189 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,241,289.6",
+  "bgcolor": "lightyellow",
+  "fontcolor": "navy",
+  "fontname": "Helvetica",
+  "label": "Root label\\nsecond line",
+  "labeljust": "r",
+  "labelloc": "t",
+  "lheight": "0.47",
+  "lp": "205.59,272.8",
+  "lwidth": "0.98",
+  "_subgraph_cnt": 5,
+  "objects": [
+    {
+      "name": "cluster_0",
+      "bb": "0,125.6,142,202.4",
+      "bgcolor": "lightyellow",
+      "fillcolor": "lightblue:white",
+      "fontcolor": "navy",
+      "fontname": "Helvetica",
+      "gradientangle": "270",
+      "label": "left bottom",
+      "labeljust": "l",
+      "labelloc": "b",
+      "lheight": "0.23",
+      "lp": "40.683,138",
+      "lwidth": "0.91",
+      "style": "filled",
+      "_gvid": 0,
+      "nodes": [
+        5,6
+      ]
+    },
+    {
+      "name": "cluster_1",
+      "bb": "0,0,150,117.6",
+      "bgcolor": "lightyellow",
+      "color": "red",
+      "fontcolor": "navy",
+      "fontname": "Helvetica",
+      "label": "rounded",
+      "labeljust": "r",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "116.31,105.2",
+      "lwidth": "0.71",
+      "penwidth": "2",
+      "style": "rounded,dashed",
+      "_gvid": 1,
+      "subgraphs": [
+        2
+      ],
+      "nodes": [
+        7,8
+      ]
+    },
+    {
+      "name": "cluster_2",
+      "bb": "72,8,142,84.8",
+      "bgcolor": "lightyellow",
+      "color": "red",
+      "fillcolor": "white:gray",
+      "fontcolor": "navy",
+      "fontname": "Helvetica",
+      "label": "inner",
+      "labeljust": "r",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "118.43,72.4",
+      "lwidth": "0.43",
+      "penwidth": "2",
+      "style": "radial",
+      "_gvid": 2,
+      "nodes": [
+        7
+      ]
+    },
+    {
+      "name": "cluster_3",
+      "bb": "154,150.4,241,244",
+      "bgcolor": "lightyellow",
+      "fillcolor": "red:green:blue",
+      "fontcolor": "navy",
+      "fontname": "Helvetica",
+      "label": "Root label\\nsecond line",
+      "labeljust": "r",
+      "labelloc": "t",
+      "lheight": "0.47",
+      "lp": "197.59,223.2",
+      "lwidth": "0.98",
+      "style": "striped",
+      "_gvid": 3,
+      "nodes": [
+        9
+      ]
+    },
+    {
+      "name": "cluster_4",
+      "bb": "158,8,228,84.8",
+      "bgcolor": "lightyellow",
+      "fillcolor": "pink",
+      "fontcolor": "navy",
+      "fontname": "Helvetica",
+      "label": "nop",
+      "labeljust": "r",
+      "labelloc": "t",
+      "lheight": "0.23",
+      "lp": "208.32,72.4",
+      "lwidth": "0.32",
+      "peripheries": "0",
+      "style": "filled",
+      "_gvid": 4,
+      "nodes": [
+        10
+      ]
+    },
+    {
+      "_gvid": 5,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "35,176.4",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 6,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "107,176.4",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 7,
+      "name": "d",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "107,34",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 8,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "35,34",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 9,
+      "name": "e",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "193,176.4",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 10,
+      "name": "f",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "193,34",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 5,
+      "head": 8,
+      "pos": "e,35,52.277 35,157.9 35,134.23 35,91.724 35,63.434"
+    },
+    {
+      "_gvid": 1,
+      "tail": 6,
+      "head": 7,
+      "pos": "e,107,52.277 107,157.9 107,134.23 107,91.724 107,63.434"
+    },
+    {
+      "_gvid": 2,
+      "tail": 9,
+      "head": 10,
+      "pos": "e,193,52.277 193,157.9 193,134.23 193,91.724 193,63.434"
+    }
+  ]
+}

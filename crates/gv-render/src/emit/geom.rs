@@ -188,19 +188,25 @@ pub(crate) fn taper_dir(a: Attrs<'_>, directed: bool) -> TaperDir {
     }
 }
 
-/// `taper`: the outline of a tapered edge. Approximation: the control polygon offset by the
-/// local half width (C flattens the Bézier first; not yet ported exactly).
+/// `taper` (`lib/common/taper.c`): the outline of a tapered edge.
 pub(crate) fn taper(list: &[Point], dir: TaperDir, initwid: f64) -> Vec<Point> {
-    let n = list.len();
-    if n < 2 {
-        return list.to_vec();
-    }
-    let mut cum = vec![0.0; n];
-    for i in 1..n {
-        cum[i] = cum[i - 1] + dist(list[i - 1], list[i]);
-    }
-    let total = cum[n - 1].max(1e-9);
-    let rad = |cur: f64| match dir {
+    use std::f64::consts::PI;
+    let d2r = |d: f64| PI * d / 180.0;
+    let myatan = |y: f64, x: f64| {
+        if x == 0.0 && y == 0.0 {
+            return 0.0;
+        }
+        let v = y.atan2(x);
+        if v >= 0.0 { v } else { v + 2.0 * PI }
+    };
+    let mymod = |o: f64, m: f64| {
+        if o < 0.0 || o >= m {
+            -(o / m).floor() * m + o
+        } else {
+            o
+        }
+    };
+    let radfunc = |cur: f64, total: f64| match dir {
         TaperDir::Forward => (1.0 - cur / total) * initwid / 2.0,
         TaperDir::Back => cur / total * initwid / 2.0,
         TaperDir::None => initwid / 2.0,
@@ -213,21 +219,98 @@ pub(crate) fn taper(list: &[Point], dir: TaperDir, initwid: f64) -> Vec<Point> {
             }
         }
     };
-    let mut left = Vec::with_capacity(n);
-    let mut right = Vec::with_capacity(n);
-    for i in 0..n {
-        let (a, b) = if i + 1 < n {
-            (list[i], list[i + 1])
-        } else {
-            (list[i - 1], list[i])
-        };
-        let o = computeoffset_p(a, b, rad(cum[i]));
-        left.push(Point::new(list[i].x + o.x, list[i].y + o.y));
-        right.push(Point::new(list[i].x - o.x, list[i].y - o.y));
+    // pathtolines
+    let mut pts: Vec<(Point, f64)> = vec![(list[0], 0.0)];
+    let mut linelen = 0.0;
+    let mut v3 = list[0];
+    let mut i = 0;
+    while i + 3 < list.len() {
+        let v = [v3, list[i + 1], list[i + 2], list[i + 3]];
+        let mut p0 = v[0];
+        for step in 1..=20 {
+            let p1 = bezier_split(&v, f64::from(step) / 20.0).0;
+            linelen += (p0.x - p1.x).hypot(p0.y - p1.y);
+            pts.push((p1, linelen));
+            p0 = p1;
+        }
+        v3 = v[3];
+        i += 3;
     }
-    right.reverse();
-    left.extend(right);
-    left
+    let n = pts.len();
+    let total = pts[n - 1].1;
+    // (dir, lout, bevel, dir2)
+    let mut info: Vec<(f64, f64, bool, f64)> = Vec::with_capacity(n);
+    for i in 0..n {
+        let l = if i == 0 { n - 1 } else { i - 1 };
+        let nx = (i + 1) % n;
+        let (p, dist) = pts[i];
+        let ndir = myatan(pts[nx].0.y - p.y, pts[nx].0.x - p.x);
+        let ldir = myatan(pts[l].0.y - p.y, pts[l].0.x - p.x);
+        let linerad = radfunc(dist, total);
+        let (mut bevel, mut direction, direction2, lineout);
+        bevel = false;
+        if i == 0 || i == n - 1 {
+            lineout = linerad;
+            direction = if i == 0 {
+                ndir + d2r(90.0)
+            } else {
+                ldir - d2r(90.0)
+            };
+            direction2 = direction;
+        } else {
+            let mut theta = ndir - ldir;
+            if theta < 0.0 {
+                theta += d2r(360.0);
+            }
+            let phi = d2r(90.0) - theta / 2.0;
+            let mut lo = if phi.cos() == 0.0 {
+                0.0
+            } else {
+                linerad / phi.cos()
+            };
+            direction = ndir + d2r(90.0) + phi;
+            if lo > 10.0 * linerad {
+                bevel = true;
+                lo = linerad;
+                direction = mymod(ldir - d2r(90.0), d2r(360.0));
+                direction2 = mymod(ndir + d2r(90.0), d2r(360.0));
+            } else {
+                direction2 = direction;
+            }
+            lineout = lo;
+        }
+        info.push((direction, lineout, bevel, direction2));
+    }
+    let mut out = Vec::new();
+    let (mut x, mut y, mut direction, mut lineout) = (0.0, 0.0, 0.0, 0.0);
+    for i in 0..n {
+        x = pts[i].0.x;
+        y = pts[i].0.y;
+        let (d, lo, bevel, d2) = info[i];
+        direction = d;
+        lineout = lo;
+        out.push(Point::new(x + d.cos() * lo, y + d.sin() * lo));
+        if bevel {
+            // drawbevel (C uses x for both coordinates)
+            out.push(Point::new(x + lo * d2.cos(), x + lo * d2.sin()));
+        }
+    }
+    direction += d2r(180.0);
+    out.push(Point::new(
+        x + direction.cos() * lineout,
+        y + direction.sin() * lineout,
+    ));
+    for i in (0..n.saturating_sub(1)).rev() {
+        let (px, py) = (pts[i].0.x, pts[i].0.y);
+        let (d, lo, bevel, d2) = info[i];
+        let dir = d + d2r(180.0);
+        let dir2 = d2 + d2r(180.0);
+        out.push(Point::new(px + dir2.cos() * lo, py + dir2.sin() * lo));
+        if bevel {
+            out.push(Point::new(px + lo * dir.cos(), px + lo * dir.sin()));
+        }
+    }
+    out
 }
 
 /// `ellipticWedge` (`lib/common/ellipse.c`): a closed Bézier path from the centre around

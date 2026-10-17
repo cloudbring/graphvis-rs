@@ -1,0 +1,91 @@
+{
+  "name": "urls",
+  "directed": true,
+  "strict": false,
+  "URL": "http:\/\/graph.example",
+  "bb": "0,0,70,230.6",
+  "class": "gc",
+  "id": "gid",
+  "label": "",
+  "tooltip": "graph tip",
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "cluster_a",
+      "URL": "http:\/\/c.example",
+      "bb": "0,153.8,70,230.6",
+      "class": "cc",
+      "id": "gid",
+      "label": "Cluster",
+      "lheight": "0.23",
+      "lp": "35,218.2",
+      "lwidth": "0.56",
+      "target": "_blank",
+      "tooltip": "ctip",
+      "_gvid": 0,
+      "nodes": [
+        1
+      ]
+    },
+    {
+      "_gvid": 1,
+      "name": "a",
+      "URL": "http:\/\/a.example\/\\N",
+      "class": "n1 n2",
+      "height": "0.5",
+      "id": "nodea",
+      "label": "\\N",
+      "pos": "35,179.8",
+      "target": "_top",
+      "tooltip": "a\\ntip",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "b",
+      "comment": "a comment",
+      "height": "0.5",
+      "href": "http:\/\/b.example",
+      "label": "\\N",
+      "pos": "35,91",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "35,18",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 2,
+      "URL": "http:\/\/e.example",
+      "edgetooltip": "etip",
+      "headURL": "http:\/\/h.example",
+      "head_lp": "29.945,117.81",
+      "headlabel": "H",
+      "id": "e1",
+      "label": "lab",
+      "labelURL": "http:\/\/l.example",
+      "lp": "43.552,135.4",
+      "pos": "e,35,109.41 35,161.65 35,149.96 35,134.19 35,120.62",
+      "tail_lp": "30.724,153.25",
+      "taillabel": "T",
+      "tailtooltip": "tt"
+    },
+    {
+      "_gvid": 1,
+      "tail": 2,
+      "head": 3,
+      "class": "ec",
+      "label": "",
+      "pos": "e,35,36.029 35,72.813 35,65.226 35,56.101 35,47.539",
+      "tooltip": "only tip"
+    }
+  ]
+}

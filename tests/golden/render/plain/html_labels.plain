@@ -1,0 +1,12 @@
+graph 1 2.496 5.2556
+node a 1.248 4.8111 2.496 0.88889 <<B>bold</B> <I>italic</I> <U>under</U> <S>strike</S> x<SUB>2</SUB> y<SUP>3</SUP><BR ALIGN="LEFT"/>left<BR ALIGN="RIGHT"/>right<BR/>center> solid plaintext black lightgrey
+node b 1.4286 3.275 1.0969 1.1556 <<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" BGCOLOR="lightgrey">
+    <TR><TD COLSPAN="2" BGCOLOR="yellow"><FONT COLOR="red" POINT-SIZE="18">Title</FONT></TD></TR>
+    <TR><TD PORT="p1" HREF="http://example.com" TOOLTIP="cell tip">one</TD><TD ROWSPAN="2" STYLE="rounded" BGCOLOR="green:blue">two</TD></TR>
+    <TR><TD SIDES="LB" ALIGN="LEFT">three</TD></TR></TABLE>> solid plaintext black lightgrey
+node c 1.4286 1.7139 0.75 0.93889 <<TABLE STYLE="rounded" BORDER="2" COLOR="blue"><TR><TD>r</TD><TD STYLE="rounded" BORDER="1">d</TD></TR><HR/><TR><TD>s</TD><VR/><TD>t</TD></TR></TABLE>> solid box black lightgrey
+node d 1.4286 0.25556 0.82366 0.51111 <<TABLE><TR><TD><IMG SRC="missing.png"/></TD><TD><FONT FACE="Helvetica-Bold">face</FONT></TD></TR></TABLE>> solid plaintext black lightgrey
+edge a b 4 1.0128 4.3681 0.8163 3.9724 0.603 3.4249 0.83787 3.2788 solid black
+edge b c 4 1.4286 2.6989 1.4286 2.585 1.4286 2.4646 1.4286 2.3489 solid black
+edge c d 4 1.4286 1.2395 1.4286 1.055 1.4286 0.84458 1.4286 0.66694 "<I>html edge</I>" 1.8093 0.87778 solid black
+stop

@@ -1,0 +1,1 @@
+digraph G { a [penwidth=0]; b [penwidth=4, shape=box]; c [penwidth=4, shape=point]; d [shape=point, peripheries=2, color=red]; a -> b [penwidth=0.2]; b -> c -> d; }
