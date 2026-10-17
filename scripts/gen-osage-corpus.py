@@ -101,6 +101,8 @@ def handwritten():
     c["hw_pack_false"] = CLUSTERS % "pack=false;"
     c["hw_cluster_pack"] = CLUSTERS.replace("subgraph cluster_a {", "subgraph cluster_a { pack=20; packmode=array_c1;") % ""
     c["hw_splines_true"] = CLUSTERS % "splines=true;"
+    c["hw_splines_ortho"] = CLUSTERS % "splines=ortho;"
+    c["hw_splines_ortho_nested"] = NESTED % "splines=ortho;"
     c["hw_splines_none"] = CLUSTERS % "splines=none;"
     c["hw_ratio"] = CLUSTERS % 'ratio=fill; size="3,3";'
     c["hw_label"] = CLUSTERS % 'label="root label";'

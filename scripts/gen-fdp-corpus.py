@@ -253,8 +253,9 @@ def handwritten():
         c[f"hw_overlap_{name}"] = OVERLAP % f'overlap="{ov}";'
     c["hw_overlap_sep"] = OVERLAP % 'sep="+20";'
     c["hw_overlap_sep_scale"] = OVERLAP % 'sep="0.5";'
-    for sp in ["true", "false", "polyline", "line", "curved", "none", "compound"]:
+    for sp in ["true", "false", "polyline", "line", "curved", "none", "compound", "ortho"]:
         c[f"hw_splines_{sp}_wheel"] = WHEEL % f"splines={sp};"
+    c["hw_splines_ortho_clusters"] = NESTED % "splines=ortho;"
     c["hw_esep"] = OVERLAP % "splines=true; esep=5;"
     c["hw_clusters_splines_true"] = CLUSTERS % "splines=true;"
     c["hw_clusters_compound"] = CLUSTERS % "splines=compound;"
