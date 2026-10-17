@@ -4,7 +4,7 @@ use super::circle::{RData, circle_layout};
 use crate::common::postproc::gv_postprocess;
 use crate::common::types::{EdgeType, LGraph};
 use crate::common::utils::mapbool;
-use crate::neatogen::adjust::{graph_adjust_mode, remove_overlap_with};
+use crate::neatogen::adjust::adjust_nodes;
 use crate::neatogen::neatoinit::CL_OFFSET;
 use crate::neatogen::neatosplines::spline_edges;
 use crate::pack::{PackInfo, PackMode, ccomps, get_pack_info, pack_graphs};
@@ -13,12 +13,6 @@ use gv_core::{Graph, Result};
 /// `findRootNode(sg, rootattr)`: first node whose `root` is true.
 fn find_root_node(g: &LGraph<'_>, nodes: &[usize]) -> Option<usize> {
     nodes.iter().copied().find(|&n| mapbool(g.nattr(n, "root")))
-}
-
-/// `adjustNodes(G)`: overlap removal driven by the `overlap` attribute.
-fn adjust_nodes(g: &mut LGraph<'_>, sub: &crate::common::types::Sub) {
-    let am = graph_adjust_mode(g, None);
-    remove_overlap_with(g, sub, &am);
 }
 
 /// `twopi_layout(g)`.
