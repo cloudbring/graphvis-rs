@@ -76,13 +76,16 @@ pub fn graph_label(
     attrs: &AttrMap,
     name: &str,
     is_root: bool,
-    directed: bool,
+    html_strings: &std::collections::BTreeSet<String>,
 ) -> (Option<TextLabel>, u8) {
     let Some(text) = attrs.get("label").filter(|s| !s.is_empty()) else {
         return (None, 0);
     };
-    let _ = directed;
-    let Some(geom) = gv_geom::graph_label_geometry(name, attrs, is_root, false, false) else {
+    let env = gv_geom::NodeSizeEnv {
+        html_strings: Some(html_strings),
+        ..gv_geom::NodeSizeEnv::new(name)
+    };
+    let Some(geom) = gv_geom::graph_label_geometry_in(name, attrs, is_root, false, &env) else {
         return (None, 0);
     };
     let lbl = TextLabel {
@@ -154,7 +157,7 @@ impl<'a> LGraph<'a> {
             mapbool(gattrs.get("landscape").map(String::as_str))
         };
         let concentrate = mapbool(gattrs.get("concentrate").map(String::as_str));
-        let (label, label_pos) = graph_label(gattrs, &graph.name, true, directed);
+        let (label, label_pos) = graph_label(gattrs, &graph.name, true, &graph.html_strings);
 
         let edge_type = match gattrs.get("splines") {
             None => default_edge_type,
@@ -162,7 +165,10 @@ impl<'a> LGraph<'a> {
             Some(s) => edge_type_of(s, default_edge_type),
         };
 
-        let env = gv_geom::NodeSizeEnv::from_graph_attrs(&graph.name, gattrs);
+        let env = gv_geom::NodeSizeEnv {
+            html_strings: Some(&graph.html_strings),
+            ..gv_geom::NodeSizeEnv::from_graph_attrs(&graph.name, gattrs)
+        };
         let mut nodes = Vec::with_capacity(graph.nodes.len());
         for nd in &graph.nodes {
             let geom = gv_geom::node_geometry(nd, &env);

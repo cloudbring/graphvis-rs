@@ -15,10 +15,20 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
     graph
         .node_defaults
         .insert("shape".to_string(), "box".to_string());
+    // agattr on the root sets the declared default, which agwrite prints.
+    if let Some(d) = graph.dicts.first_mut() {
+        d.node.entry("shape".to_string()).or_default().defval = "box".to_string();
+    }
     for n in &mut graph.nodes {
         n.attrs.insert("shape".to_string(), "box".to_string());
     }
     let tree = mk_clusters(graph);
+    // mkClusters(g, NULL, g) never calls do_graph_label: clusters get no label.
+    for &sg in &tree.subgraph {
+        graph.subgraphs[sg]
+            .graph_attrs
+            .insert(gv_core::NO_GRAPH_LABEL_KEY.to_string(), String::new());
+    }
     if graph.nodes.is_empty() && tree.root.is_empty() {
         graph.bb = Default::default();
         return Ok(());
