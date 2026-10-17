@@ -820,6 +820,12 @@ impl Dot<'_> {
         // cloneGraph: node/edge attribute declarations, rankdir turned.
         let mut aux = gv_core::Graph::new("auxg", input.kind, false);
         aux.graph_attrs.insert("rank".to_string(), String::new());
+        // GD_drawing(auxg)->quantum and GD_charset(auxg) come from the main graph.
+        for k in ["quantum", "charset"] {
+            if let Some(v) = input.graph_attrs.get(k) {
+                aux.graph_attrs.insert(k.to_string(), v.clone());
+            }
+        }
         aux.node_defaults = input.node_defaults.clone();
         aux.edge_defaults = input.edge_defaults.clone();
         aux.html_strings = input.html_strings.clone();
