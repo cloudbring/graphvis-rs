@@ -87,9 +87,15 @@ impl Parser {
 
     fn parse_atom(&mut self) -> Result<String> {
         let tok = self.peek().clone();
+        let mut is_html = false;
         let mut val = match tok.kind {
-            TokenKind::Ident(s) | TokenKind::Quoted(s) | TokenKind::Html(s) => {
+            TokenKind::Ident(s) | TokenKind::Quoted(s) => {
                 self.advance();
+                s
+            }
+            TokenKind::Html(s) => {
+                self.advance();
+                is_html = true;
                 s
             }
             _ => {
@@ -111,6 +117,7 @@ impl Parser {
             match next_tok.kind {
                 TokenKind::Ident(s) | TokenKind::Quoted(s) | TokenKind::Html(s) => {
                     self.advance();
+                    is_html = false;
                     val.push_str(&s);
                 }
                 _ => {
@@ -126,6 +133,9 @@ impl Parser {
             }
         }
 
+        if is_html {
+            self.graph.html_strings.insert(val.clone());
+        }
         Ok(val)
     }
 

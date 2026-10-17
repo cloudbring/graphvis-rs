@@ -5,7 +5,7 @@ pub mod canon;
 pub mod lexer;
 pub mod parser;
 
-pub use canon::{canon_str, is_html_string, write_canon};
+pub use canon::{canon_str, canon_value, is_html_string, write_canon};
 pub use lexer::{Lexer, Token, TokenKind};
 pub use parser::Parser;
 
@@ -161,6 +161,26 @@ mod tests {
                 .map(String::as_str),
             Some("Mdiamond")
         );
+    }
+
+    #[test]
+    fn canon_distinguishes_quoted_and_html_labels() {
+        let g = parse_dot(
+            "digraph { a [label=\"<x>\"]; b [label=<<b>x</b>>]; a -> b [label=\"<e>\"]; }",
+        )
+        .unwrap();
+        let canon = write_canon(&g);
+        assert!(canon.contains("a\t[label=\"<x>\"];"), "{canon}");
+        assert!(canon.contains("b\t[label=<<b>x</b>>];"), "{canon}");
+        assert!(canon.contains("a -> b\t[label=\"<e>\"];"), "{canon}");
+        assert!(canon.contains("node [label=\"\\N\"];"), "{canon}");
+    }
+
+    #[test]
+    fn canon_orders_out_edges_by_head_sequence() {
+        let g = parse_dot("digraph { b; c; a -> c; a -> b; }").unwrap();
+        let canon = write_canon(&g);
+        assert!(canon.find("a -> b").unwrap() < canon.find("a -> c").unwrap());
     }
 
     #[test]

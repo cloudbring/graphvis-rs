@@ -15,7 +15,7 @@ use gv_core::{
     resolve_color_with_scheme,
 };
 use gv_geom::straight_spline;
-use gv_parser::{canon_str, is_html_string, write_canon};
+use gv_parser::{canon_str, canon_value, write_canon};
 use std::fmt::Write;
 
 const POINTS_PER_INCH: f64 = 72.0;
@@ -785,8 +785,8 @@ pub fn render_plain(graph: &Graph) -> String {
         let h_in = fmt_g5(node.height);
 
         let raw_label = node.attrs.get("label").map(String::as_str).unwrap_or("\\N");
-        let label_str = if is_html_string(raw_label) {
-            canon_str(raw_label)
+        let label_str = if graph.html_strings.contains(raw_label) {
+            canon_value(raw_label, &graph.html_strings)
         } else {
             let ctx = LabelSubstContext {
                 node_name: &node.name,
