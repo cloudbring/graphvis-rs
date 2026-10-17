@@ -1,0 +1,9 @@
+digraph dg {
+layout=neato;
+
+overlap=portho; node [shape=box, width=1.5];
+a -> b -> c -> d -> a;
+a -> c;
+b -> d [dir=both];
+e -> a [arrowhead=none];
+}

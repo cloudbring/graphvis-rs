@@ -1185,7 +1185,9 @@ pub fn place_portlabel<S: SplineGraph + ?Sized>(g: &mut S, e: usize, head_p: boo
             (bez.list[n - 1], bezier_pt(&c, 0.9))
         }
     };
-    let angle = (pf.y - pe.y).atan2(pf.x - pe.x) + angle_attr.to_radians();
+    // atan2(..) + RADIANS(a), with RADIANS(d) = d/180.0 * M_PI fused into the sum
+    let angle =
+        (angle_attr / 180.0).mul_add(std::f64::consts::PI, (pf.y - pe.y).atan2(pf.x - pe.x));
     let d = PORT_LABEL_DISTANCE * dist_attr;
     let pos = Point::new(d.mul_add(angle.cos(), pe.x), d.mul_add(angle.sin(), pe.y));
     let k = if head_p {

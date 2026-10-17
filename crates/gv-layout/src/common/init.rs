@@ -326,6 +326,7 @@ impl<'a> LGraph<'a> {
             // C prints label positions even when placement failed (the
             // unplaced position is the origin, moved by the final translation).
             ed.label_pos = e.label.as_ref().map(|l| l.pos);
+            ed.label_unplaced = e.label.as_ref().is_some_and(|l| !l.set);
             for (key, lbl) in [
                 ("head_lp", &e.head_label),
                 ("tail_lp", &e.tail_label),
@@ -358,8 +359,16 @@ impl<'a> LGraph<'a> {
                 }
             }
         }
+        let mut registered = vec![false; graph.subgraphs.len()];
         for c in &self.clusters {
             graph.subgraphs[c.subgraph].bb = c.bb;
+            registered[c.subgraph] = true;
+        }
+        for (i, sg) in graph.subgraphs.iter_mut().enumerate() {
+            if !registered[i] && sg.bb != gv_core::BoundingBox::default() {
+                sg.graph_attrs
+                    .insert(gv_core::UNREGISTERED_CLUSTER_KEY.to_string(), String::new());
+            }
         }
         // Placed graph and cluster labels go to the renderer through the private
         // key the no-layout engine uses; it would otherwise re-place them with

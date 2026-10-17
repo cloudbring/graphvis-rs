@@ -3,9 +3,8 @@
 //! the `vconfig` branch of `spline_edges_`, `getPath`, `makeSpline`,
 //! `makePolyline`.
 //!
-//! Not ported: `makeMultiSpline` (GTS builds route multi-edges and edges with
-//! boundary ports through a triangulated router); such edges use the
-//! single-edge path of C's fallback branch instead.
+//! Multi-edges and edges with boundary ports go through `makeMultiSpline`
+//! ([`super::multispline`]) first, as in C's GTS builds.
 
 use super::adjust::Expand;
 use super::legal::plegal_arrangement;
@@ -21,6 +20,8 @@ use gv_geom::pathplan::{
 pub struct Router {
     obs: Vec<Vec<Point>>,
     vconfig: Vconfig,
+    /// `router_t* rtr` of `spline_edges_`, built on first use (`mkRouter`).
+    rtr: std::cell::RefCell<Option<Option<super::multispline::MRouter>>>,
 }
 
 fn ellipse_tangent_slope(a: f64, b: f64, p: Point) -> f64 {
@@ -154,7 +155,11 @@ impl Router {
             return None;
         }
         let vconfig = pobsopen(&obs);
-        Some(Router { obs, vconfig })
+        Some(Router {
+            obs,
+            vconfig,
+            rtr: std::cell::RefCell::new(None),
+        })
     }
 
     /// Path-finding pass: `ED_path(e) = getPath(e, vconfig, true)`.
@@ -165,6 +170,12 @@ impl Router {
                 let (t, h) = (g.edges[e].tail, g.edges[e].head);
                 let p = crate::common::geom::add(g.nodes[t].coord, g.edges[e].tail_port.p);
                 let q = crate::common::geom::add(g.nodes[h].coord, g.edges[e].head_port.p);
+                if std::env::var_os("GVDUMP").is_some() {
+                    eprintln!(
+                        "OP {} {:?},{:?} {} {:?},{:?}",
+                        g.nodes[t].lim, p.x, p.y, g.nodes[h].lim, q.x, q.y
+                    );
+                }
                 let path = pobspath(
                     &self.vconfig,
                     p,
@@ -222,9 +233,23 @@ impl Router {
     /// Spline-drawing pass for one non-loop representative edge.
     pub fn route_edge(&self, g: &mut LGraph<'_>, sub: &Sub, e: usize, et: EdgeType) {
         let boundary_port = g.edges[e].tail_port.side != 0 || g.edges[e].head_port.side != 0;
-        if (g.edges[e].count > 1 || boundary_port) && g.edges[e].path.len() == 2 && !boundary_port {
-            super::neatosplines::make_straight_edge(g, sub, e, et);
-            return;
+        if g.edges[e].count > 1 || boundary_port {
+            let fail = if g.edges[e].path.len() == 2 && !boundary_port {
+                super::neatosplines::make_straight_edge(g, sub, e, et);
+                false
+            } else {
+                let mut slot = self.rtr.borrow_mut();
+                let rtr = slot.get_or_insert_with(|| super::multispline::MRouter::new(&self.obs));
+                match rtr {
+                    Some(r) => {
+                        super::multispline::make_multi_spline(g, sub, e, r, et == EdgeType::Pline)
+                    }
+                    None => true,
+                }
+            };
+            if !fail {
+                return;
+            }
         }
         let cnt = if g.concentrate { 1 } else { g.edges[e].count };
         let mut e0 = Some(e);

@@ -15,18 +15,19 @@ Entry point: `gv_layout::neatogen::neatoinit::neato_layout(&mut Graph)`.
 
 | corpus | before | after |
 |---|---|---|
-| `tests/neato` (343 files; 307 at the start) | 62 exact, score 95.97/307 (31%) | 338 exact, score 338.6/343 (98.7%) |
+| `tests/neato` (438 files; 307 at the start) | 62 exact, score 95.97/307 (31%) | 438 exact, score 438.0/438 (100%) |
 | main corpus, the two `layout=neato` files | 0/12 nodes, 0/11 edges | both exact |
 | main corpus overall (508 files) | — | no regressions; renderer/gv-diff fixes from this branch add exact files |
 
 Node positions, edge splines, label positions, cluster and graph boxes match
-C within the gv-diff tolerances on every `tests/neato` file except:
+C within the gv-diff tolerances on every `tests/neato` file, including
+`mode=hier|ipsep`, `overlap=ortho*|portho*|vpsc|ipsep` and multi-edge routing
+(see [Gap closure](#gap-closure-opus55neato-gaps)).
 
-- `mode=hier` (2 files): DIGCOLA's `stress_majorization_with_hierarchy` is not
-  ported; plain stress majorization runs instead.
-- `overlap=ortho|orthoxy|...` (2 files) and `overlap=vpsc` (1 file): not
-  ported (`cAdjust` needs `lib/common/ns.c` on a constraint graph; vpsc is the
-  C++ `lib/vpsc`). No adjustment is applied.
+Full-pipeline `-Tsvg` byte identity (`gv-diff e2e --filter neato/`, the 343
+files hashed in `tests/golden/e2e.json`): 335/343. Seven of the rest are the
+`overlap=false` arrow graphs (prism's GTS matrix order, an ulp in a label
+coordinate flips a printed digit) and one is `splines=ortho`.
 
 Most layouts are bit-identical to C: floating-point expressions follow the C
 source as compiled by clang with `-ffp-contract=on` (an expression `a*b + c`
@@ -60,6 +61,8 @@ number, sort and container order reproduces macOS libc/cgraph behaviour.
 | `CRand` | Apple libc `rand`/`srand` (Park–Miller, seed 1) |
 | `qsort_by` | Apple libc `qsort` (FreeBSD introsort: isort switch, heapsort fallback). `dotgen::qsort::qsort` delegates to it |
 | `RkState` | `lib/neatogen/randomkit.c` (Mersenne Twister, 64-bit `long`) |
+| `DtTree` | `lib/cdt` `dttree.c` ordered set/bag (splay insert, `dtflatten`) |
+| `libcxx` | libc++ `std::sort`, `make_heap`/`push_heap`/`pop_heap` (macOS SDK headers) |
 
 ### `gv_layout::common` (`lib/common`, `lib/label`)
 
@@ -74,6 +77,7 @@ number, sort and container order reproduces macOS libc/cgraph behaviour.
 | `postproc` | `gv_postprocess`, `translate_drawing`, `place_graph_label`, `place_root_label` (rankdir TB, no flip) |
 | `xlabels` | `addXLabels` and `lib/label` (`placeLabels`, `xladjust`, `xlintersections`, Hilbert keys, R-tree `index.c`/`node.c`/`rectangle.c`/`split.q.c`) |
 | `geom`, `utils` | `geom.h` macros, `late_*`, `mapbool`, `compute_bb`, `coord` |
+| `ns` | `ns.c` network simplex, generic over `NsGraph` (dot's fast graph, neato's `NsData`) |
 
 ### `gv_layout::pack` (`lib/pack`)
 
@@ -98,9 +102,14 @@ mode (C returns failure too).
 | `conjgrad`, `matrix_ops`, `linalg` | `conjugate_gradient(_f/_mkernel)`, vector kernels, `solve`, `lu_decompose`/`lu_solve`, `matinv`, `solveCircuit` |
 | `neatosplines` | `spline_edges`, `spline_edges0`, `splineEdges` (equivalence classes), `spline_edges_`, `makeSelfArcs`, `neato_set_aspect`, `neato_translate`; `makeStraightEdge(s)`, `bend`, `get_cycle_centroid` from `routespl.c` |
 | `routing` | `makeObstacle`, vconfig branch of `spline_edges_`, `getPath`, `makeSpline`, `makePolyline` |
+| `multispline` | `multispline.c` (`mkRouter`, `makeMultiSpline`, `genroute`, `mkPoly`, `mkCtrlPts`, `triPath` + `fPQ.h`, `addEndpoint`, `tweakPath`), `delaunay.c` `mkSurface` (constrained Delaunay) |
+| `constraint` | `constraint.c` `cAdjust` (`mkConstraintG`, `mkNConstraintG`, `mapGraphs`, `constrainX/Y`, `initItem`, `intersect*`) |
+| `quad_prog_vpsc` | `quad_prog_vpsc.c` (`initCMajVPSC`, `constrained_majorization_vpsc`, `generateNonoverlapConstraints`, `removeoverlaps`, DiG-CoLa levels), `unpackMatrix` |
+| `digcola` | `constrained_majorization.c` `stress_majorization_with_hierarchy`, `quad_prog_solve.c`, `compute_hierarchy.c`, `opt_arrangement.c`, `smart_ini_x.c` (`IMDS_given_dim`) |
+| `cola` | `constrained_majorization_ipsep.c` `stress_majorization_cola`, `neatoinit.c` `cluster_map` |
 | `legal` | `Plegal_arrangement` (sweep line) |
 | `adjust` | `graphAdjustMode`, `getAdjustMode`, `removeOverlapWith`, `removeOverlapAs`, `adjustNodes`, `normalize`, `simpleScale`, `sepFactor`, `esepFactor` |
-| `scadjust` | `scAdjust` (scale, scalexy, compress) |
+| `scadjust` | `scAdjust` (scale, scalexy, compress), `adjust.c` `vpscAdjust` |
 | `voronoi` | `vAdjust`, `sAdjust` (oscale), Fortune sweep (`voronoi.c`, `hedges.c`, `heap.c`, `edges.c`, `site.c`, `geometry.c`, `info.c`), `poly.c` |
 | `overlap`, `delaunay` | prism: `fdpAdjust`, `remove_overlap`, `OverlapSmoother_new`, `get_overlap_graph`, `overlap_scaling`, `call_tri`, `delaunay_tri` |
 
@@ -123,11 +132,11 @@ mode (C returns failure too).
 
 ## Deviations
 
-- `mode=hier`, `mode=ipsep`, `overlap=ortho*|portho*|vpsc|ipsep` are not
-  ported (see above). `overlap=ipsep` is a no-op in C's adjust step as well.
-- `makeMultiSpline` (GTS router for multi-edges and boundary ports with
-  `splines=true`) is not ported; such edges take C's fallback branch
-  (`makeSpline` per edge, or straight lines when the path is direct).
+- `overlap=ipsep` is a no-op in C's adjust step (handled during `mode=ipsep`).
+- The `makeMultiSpline` router's triangulation numbers faces in creation order,
+  not GTS's pointer-hash order (see below).
+- VPSC's `std::set<Block*>` and scanline `NodeSet` pointer order are modelled
+  as allocation order (see below).
 - Prism's Delaunay triangulation is a Bowyer–Watson port, not GTS; the edge
   set matches for points in general position, but ties between co-circular
   points and the matrix entry order may differ (all prism corpus files are
@@ -188,3 +197,99 @@ Key types and conventions:
   Voronoi in `neatogen::voronoi`, scaling in `neatogen::scadjust`.
 - sfdp can reuse `sparse::SparseMatrix` and
   `sfdpgen::post_process::StressMajorizationSmoother`.
+
+## Gap closure (opus5.5/neato-gaps)
+
+### Generic network simplex and `constraint.c` (`overlap=ortho*`, `portho*`)
+
+`lib/common/ns.c` lives once, in `common::ns`, generic over the `NsGraph`
+trait (the node/edge fields `ns.c` reads: `ND_in/out`, `ND_tree_in/out`,
+`ND_rank/low/lim/par/priority/mark/subtree`, `ED_minlen/weight/cutvalue/
+tree_index`, `GD_nlist`, `agget`). `dotgen::ns` implements it over dot's fast
+graph; `NsData` is a standalone graph. `-Tdot` of all 1148 corpus files was
+byte-identical before and after the move.
+
+`neatogen::constraint` ports `cAdjust`: `initItem` (integer boxes in tenths of
+a point, fused `ROUND`), the cdt `Dtobag` sort (`cutil::DtTree`, a faithful
+splay insert: the position of equal keys depends on the tree shape),
+`mkConstraintG` (chain over distinct coordinates plus visibility constraints
+merged through `mapGraphs`, strict `agedge`), `mkNConstraintG` (pairwise
+constraints, weight 100 on real edges via `agfindedge`), and
+`rank(cg, 2, INT_MAX)`. 43 `hw3_*ortho*` cases.
+
+### VPSC (`overlap=vpsc`) — `gv_layout::vpsc`, `neatogen::quad_prog_vpsc`
+
+Graphviz only instantiates `IncVPSC` (`newIncVPSC`), so the port covers
+`IncVPSC::solve/satisfy/splitBlocks/moveBlocks/mostViolated`, `Block`
+(`merge`, `split`, `splitBetween`, `findMinLM(Between)`, `compute_dfdv(_between)`,
+`populateSplitBlock`, `cost`), constraint generation (`generateX/YConstraints`
+with libc++ `std::sort` of the scanline events, neighbour sets) and the C
+bridge. Unreachable: non-incremental `VPSC`, `Blocks::mergeLeft/Right/split`,
+the block constraint heaps, cycle checks. C++ orders that depend on pointers
+(`Blocks : std::set<Block*>`, `CmpNodePos` ties) use allocation order; a block
+split mid-iteration is visited when it sorts after the current block, as with
+`std::set`. A leaked block (C's `satisfy` merges into a block it never inserts
+into `bs`) is reproduced. `removeoverlaps`/`vpscAdjust` run on `float`
+coordinates as in C. 11 `hw3_vpsc_*` cases; one `mode=ipsep` case whose C
+output changes run to run (pointer order) is excluded from the corpus.
+
+### `mode=hier` (DiG-CoLa) and `mode=ipsep` — `neatogen::digcola`, `neatogen::cola`
+
+`stress_majorization_with_hierarchy`: `compute_y_coords` (CG on uniform
+weights, `init_vec_orth1` with `rand()`), `compute_hierarchy` (libc `qsort`),
+smart init through `IMDS_given_dim` (classical MDS power iteration with
+`rand() % 100`), `levelsgap`, and `constrained_majorization_new_with_gaps`
+for the y axis (including C's `lev[right]` indexing by position).
+`stress_majorization_cola`: cluster dummy variables and the extended
+Laplacian, `initCMajVPSC` for `diredgeconstraints=true|hier` (DiG-CoLa level
+boundaries; C loops forever when there is no boundary, the port skips),
+`overlap=ipsep` node-size ramp and `overlap=vpsc` post-pass, gradient
+projection in `float`. `cluster_map` maps top-level clusters of the root.
+17 `hw3_hier_*` and 12 `hw3_ipsep_*` cases.
+
+### `makeMultiSpline` — `neatogen::multispline`
+
+Homebrew's build links GTS, so `spline_edges_` sends multi-edges and edges with
+boundary ports (`splines=true|polyline`) to the router before falling back to
+per-edge `makeSpline`/`makePolyline`. `mkSurface` is a constrained Delaunay
+triangulation with exact predicates (Bowyer–Watson inside GTS's enclosing
+triangle, Sloan flips for each constraint, Lawson restoration with fixed
+constraints) and GTS's hole rule (drop faces whose constraint edges run against
+the CCW face orientation; interior faces without a constraint side survive, as
+in C). GTS's own `triangulate_polygon` yields the same constrained Delaunay
+triangulation unless four points are co-circular. Face and neighbour numbering
+follow creation order, not GTS's hash order; that only matters for exact ties
+in the triangle shortest path. Validated with `Pshortestpath`/`Pobspath`
+interposed into Homebrew's `dot` (`DYLD_INSERT_LIBRARIES`): guiding polygons
+match C. 13 `hw3_ms_*` cases (fan-out of 2–4 multi-edges, failing fan-outs,
+compass ports, random graphs with multi-edges and ports).
+
+### `gv16_graphs_b15` dynamic record ports
+
+Fixed upstream by the dot-splines branch's single rankdir-aware
+`common::ports` (record field sides for dynamic ports); the main corpus file is
+exact and `hw3_ports_b15(_splines)` check the same ports through neato.
+
+### Full-pipeline (`-Tsvg`) fixes found with `gv-diff e2e`
+
+- Edges whose endpoint is a subgraph (`a -> {B A}`) are created in node
+  sequence order, as cgraph's grammar walks `agfstnode(subg)` (parser).
+- Unplaced edge labels (`ED_label(e)->set == false`) print `lp` but are not
+  drawn (`EdgeData::label_unplaced`).
+- Clusters the layout did not register (`GD_clust`) keep their input `bb` but
+  are not drawn (`UNREGISTERED_CLUSTER_KEY`).
+- `RADIANS(d)` is `d/180*M_PI` (fused when added to `atan2`), not
+  `to_radians()`.
+
+### Remaining gaps
+
+- Prism (`overlap=false`, default for sfdp): GTS's edge enumeration order
+  (pointer hashing) changes summation order in the solver by an ulp; visible
+  only in printed digits (7 arrow graphs in e2e) and in chaotic cases.
+- `splines=ortho` in neato is left to the dot-phase3 branch.
+- VPSC/IncVPSC pointer-ordered containers are approximated by allocation
+  order; C itself is not reproducible on some `mode=ipsep` inputs.
+
+Ratchets at the end of this branch: main 504/508 exact (score 506.08),
+neato 438/438, sfdp 296/297, circo 279/280, twopi 280/282, fdp 383, osage 178,
+patchwork 140, render unchanged, e2e 2379/2428 identical.

@@ -519,11 +519,18 @@ impl Parser {
     fn parse_simple(&mut self) -> Result<SimpleItem> {
         if matches!(self.peek().kind, TokenKind::Subgraph | TokenKind::LBrace) {
             let subg_id = self.parse_subgraph()?;
-            let endpoints = self.graph.subgraphs[subg_id.0 as usize]
-                .nodes
-                .iter()
-                .map(|&nid| (nid, Port::default()))
-                .collect();
+            // `agfstnode(subg)..agnxtnode`: every node of the subgraph
+            // (nested subgraphs included) in node sequence order.
+            let mut ids: Vec<NodeId> = Vec::new();
+            let mut stack = vec![subg_id];
+            while let Some(s) = stack.pop() {
+                let sg = &self.graph.subgraphs[s.0 as usize];
+                ids.extend(sg.nodes.iter().copied());
+                stack.extend(sg.subgraphs.iter().copied());
+            }
+            ids.sort_by_key(|n| n.0);
+            ids.dedup();
+            let endpoints = ids.into_iter().map(|nid| (nid, Port::default())).collect();
             Ok(SimpleItem::Subgraph(endpoints))
         } else {
             let mut nodes = vec![self.parse_node_ref()?];
