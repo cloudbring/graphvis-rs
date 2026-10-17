@@ -8,9 +8,10 @@
 //! contracts `a*b + c` into a fused multiply-add on arm64, `mul_add` is used.
 
 use super::multilevel::{MultilevelControl, multilevel_new};
+use super::post_process::RelativePositionConstraints;
 use super::post_process::post_process_smoothing;
 use crate::cutil::CRand;
-use crate::neatogen::overlap::remove_overlap;
+use crate::neatogen::overlap::remove_overlap_el;
 use crate::sparse::quad_tree::{QuadTree, Supernodes};
 use crate::sparse::{
     MINDIST, SparseMatrix, distance, distance_cropped, drand, from_coordinate_arrays,
@@ -874,17 +875,24 @@ fn remove_overlap_ctrl(
     x: &mut [f64],
     label_sizes: Option<&[f64]>,
     ctrl: &SpringElectricalControl,
-    _edge_label_nodes: &[usize],
+    edge_label_nodes: &[usize],
     crand: &mut CRand,
 ) {
     let Some(ls) = label_sizes else { return };
-    remove_overlap(
+    let constraints = RelativePositionConstraints {
+        constr_penalty: 1.0,
+        edge_labeling_scheme: ctrl.edge_labeling_scheme,
+        constr_nodes: edge_label_nodes.to_vec(),
+        a_constr: a.clone(),
+    };
+    remove_overlap_el(
         dim,
         a,
         x,
         ls,
         ctrl.overlap,
         ctrl.initial_scaling,
+        Some(&constraints),
         ctrl.do_shrinking,
         crand,
     );

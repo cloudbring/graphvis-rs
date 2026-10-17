@@ -8,7 +8,7 @@ use super::delaunay::delaunay_tri;
 use crate::common::types::{LGraph, Sub};
 use crate::common::utils::map_bool;
 use crate::cutil::{CRand, qsort_by};
-use crate::sfdpgen::post_process::StressMajorizationSmoother;
+use crate::sfdpgen::post_process::{RelativePositionConstraints, StressMajorizationSmoother};
 use crate::sparse::{Format, MACHINEACC, SparseMatrix, distance};
 
 /// `call_tri(n, x)`: Delaunay graph plus the diagonal, symmetrized.
@@ -340,6 +340,34 @@ pub fn remove_overlap(
     do_shrinking: bool,
     crand: &mut CRand,
 ) {
+    remove_overlap_el(
+        dim,
+        a,
+        x,
+        label_sizes,
+        ntry,
+        initial_scaling,
+        None,
+        do_shrinking,
+        crand,
+    );
+}
+
+/// `remove_overlap(dim, A, x, label_sizes, ntry, initial_scaling,
+/// edge_labeling_scheme, n_constr_nodes, constr_nodes, A_constr, do_shrinking)`;
+/// `constraints` carries the edge-labeling scheme, nodes and `A_constr`.
+pub fn remove_overlap_el(
+    dim: usize,
+    a: &mut SparseMatrix,
+    x: &mut [f64],
+    label_sizes: &[f64],
+    ntry: i32,
+    initial_scaling: f64,
+    constraints: Option<&RelativePositionConstraints>,
+    do_shrinking: bool,
+    crand: &mut CRand,
+) {
+    let epsilon = 0.005;
     let large = 100_000.0;
     let mut res = large;
     let mut max_overlap = 0.0;
@@ -369,6 +397,9 @@ pub fn remove_overlap(
     if ntry == 0 {
         return;
     }
+    let constraints =
+        constraints.filter(|c| c.edge_labeling_scheme != 0 && !c.constr_nodes.is_empty());
+    let has_penalty_terms = constraints.is_some();
     let mut i = 0;
     while i < ntry {
         let mut sm = overlap_smoother_new(
@@ -382,7 +413,13 @@ pub fn remove_overlap(
             &mut min_overlap,
             shrink,
         );
-        if max_overlap <= 1.0 {
+        // check_convergence(max_overlap, res, has_penalty_terms, epsilon)
+        let converged = if has_penalty_terms {
+            res < epsilon
+        } else {
+            max_overlap <= 1.0
+        };
+        if converged {
             if !neighborhood_only {
                 break;
             }
@@ -394,10 +431,12 @@ pub fn remove_overlap(
             i += 1;
             continue;
         }
-        res = sm.smooth(dim, x, 1, crand);
+        res = sm.smooth_with(dim, x, 1, constraints, crand);
         i += 1;
     }
-    let _ = res;
+    if has_penalty_terms {
+        remove_overlap_el(dim, a, x, label_sizes, ntry, 0.0, None, do_shrinking, crand);
+    }
 }
 
 /// `makeMatrix(g)`: assigns `ND_id` in node order and returns the adjacency

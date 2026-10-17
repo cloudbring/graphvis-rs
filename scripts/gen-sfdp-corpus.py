@@ -166,6 +166,16 @@ a -- b [weight=5]; b -- c [weight=0.5]; c -- d; d -- a [weight=3];
 a -- e; e -- f [weight=2]; f -- b;
 }"""
 
+ELABELS = """graph el {
+%s
+a -- "|edgelabel|ab" -- b;
+b -- "|edgelabel|bc" -- c;
+c -- "|edgelabel|ca" -- a;
+c -- d -- e -- c;
+d -- "|edgelabel|da" -- a;
+e -- f; f -- g; g -- "|edgelabel|ga" -- a;
+}"""
+
 LOOPS = """graph loops {
 %s
 a -- a; a -- b; a -- b; b -- c; c -- c [label="self"]; c -- d; d -- a;
@@ -233,6 +243,11 @@ def handwritten():
     c["attr_overlap_scaling_default_ov"] = OVERLAP % "overlap_scaling=-1;"
     c["attr_start_7"] = PETERSEN % "start=7;"
     c["attr_start_random42"] = PETERSEN % "start=random42;"
+    # label_scheme: edge-label nodes. With overlap=false C 16.1.0 crashes for
+    # schemes 1 and 3 and diverges for 2, so only scheme 4 is run with it.
+    for ls in ["1", "2", "3", "4"]:
+        c[f"attr_label_scheme_{ls}"] = ELABELS % f"label_scheme={ls};"
+    c["attr_label_scheme_4_overlap"] = ELABELS % "label_scheme=4; overlap=false;"
     c["attr_dim3"] = PETERSEN % "dim=3;"
     for sp in ["true", "polyline", "curved", "false"]:
         c[f"attr_splines_{sp}"] = OVERLAP % f"splines={sp};"
