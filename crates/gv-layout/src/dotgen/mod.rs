@@ -14,6 +14,7 @@ pub mod class1;
 pub mod class2;
 pub mod cluster;
 pub mod compound;
+pub mod conc;
 pub mod decomp;
 pub mod dotsplines;
 pub mod fastgr;

@@ -59,7 +59,7 @@ fn trim_trailing_zeros(s: &str) -> String {
 }
 
 /// Formats an edge spline into Graphviz `pos` attribute syntax (`"e,ex,ey x0,y0 x1,y1 ..."`).
-pub(crate) fn format_edge_pos(graph: &Graph, edge: &EdgeData) -> String {
+pub(crate) fn format_edge_pos(_graph: &Graph, edge: &EdgeData) -> String {
     // An edge without a spline has no `pos`, as in C (e.g. the non-leader
     // edges of `concentrate=true` in neato).
     if edge.spline.segments.is_empty() {
@@ -67,11 +67,8 @@ pub(crate) fn format_edge_pos(graph: &Graph, edge: &EdgeData) -> String {
     }
     let spline = &edge.spline;
 
-    let (mut want_s, mut want_e) = edge_arrow_directions(graph, edge);
-    // `arrowhead=none` / `arrowtail=none` leave no arrow (`arrow_match_name`).
-    let is_none = |k: &str| edge.attrs.get(k).is_some_and(|v| v == "none");
-    want_e &= !is_none("arrowhead");
-    want_s &= !is_none("arrowtail");
+    // Layouts record arrowheads per Bézier (`sflag`/`eflag`, as C); a
+    // segment without them has no `s,`/`e,` point.
     let mut out = String::new();
     for (seg_idx, seg) in spline.segments.iter().enumerate() {
         if seg.points.is_empty() {
@@ -82,13 +79,9 @@ pub(crate) fn format_edge_pos(graph: &Graph, edge: &EdgeData) -> String {
         }
         if let Some(sp) = seg.start_arrow {
             let _ = write!(out, "s,{},{} ", fmt_g5(sp.x), fmt_g5(sp.y));
-        } else if want_s && let Some(first) = seg.points.first() {
-            let _ = write!(out, "s,{},{} ", fmt_g5(first.x), fmt_g5(first.y));
         }
         if let Some(ep) = seg.end_arrow {
             let _ = write!(out, "e,{},{} ", fmt_g5(ep.x), fmt_g5(ep.y));
-        } else if want_e && let Some(last) = seg.points.last() {
-            let _ = write!(out, "e,{},{} ", fmt_g5(last.x), fmt_g5(last.y));
         }
         for (i, pt) in seg.points.iter().enumerate() {
             if i > 0 {

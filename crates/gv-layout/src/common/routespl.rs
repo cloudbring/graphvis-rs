@@ -133,7 +133,10 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
     if gvdump() {
         let mut s = format!("RS boxes {boxn}:");
         for b in &pp.boxes {
-            s.push_str(&format!(" [{} {} {} {}]", b.ll.x, b.ll.y, b.ur.x, b.ur.y));
+            s.push_str(&format!(
+                " [{:.6} {:.6} {:.6} {:.6}]",
+                b.ll.x, b.ll.y, b.ur.x, b.ur.y
+            ));
         }
         eprintln!("{s}");
         eprintln!(
