@@ -939,61 +939,6 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn scan_double_matches_strtod_prefixes() {
-        assert_eq!(scan_double("12.5,3").map(|x| x.0), Some(12.5));
-        assert_eq!(
-            scan_double(" -3e2x").map(|x| (x.0, x.1)),
-            Some((-300.0, "x"))
-        );
-        assert_eq!(scan_double(".5").map(|x| x.0), Some(0.5));
-        assert_eq!(scan_double("5.").map(|x| x.0), Some(5.0));
-        assert!(scan_double("abc").is_none());
-        assert!(scan_double("-").is_none());
-    }
-
-    #[test]
-    fn user_spline_parses_arrows_and_multiple_beziers() {
-        let s = user_spline("s,1,2 e,9,9 1,1 2,2 3,3 4,4;5,5 6,6 7,7 8,8", true, true).unwrap();
-        assert_eq!(s.segments.len(), 2);
-        assert_eq!(s.segments[0].start_arrow, Some(Point::new(1.0, 2.0)));
-        assert_eq!(s.segments[0].end_arrow, Some(Point::new(9.0, 9.0)));
-        assert_eq!(s.segments[1].points.len(), 4);
-        // An `s,` point without a tail arrow is dropped, as `sflag = stype` is 0.
-        let s = user_spline("s,1,2 1,1 2,2 3,3 4,4", false, true).unwrap();
-        assert_eq!(s.segments[0].start_arrow, None);
-        assert!(user_spline("1,1 2,2 3,3", true, true).is_none());
-    }
-
-    #[test]
-    fn nop_translates_to_origin_and_keeps_edges() {
-        let mut g = gv_parser_free_graph();
-        layout_nop(&mut g, 2).unwrap();
-        assert_eq!(g.nodes[0].pos, Point::new(27.0, 18.0));
-        assert_eq!(g.bb.ll, Point::new(0.0, 0.0));
-        assert_eq!(
-            g.edges[0].spline.segments[0].points[0],
-            Point::new(27.0, 18.0)
-        );
-    }
-
-    fn gv_parser_free_graph() -> Graph {
-        let mut g = Graph::new("G", GraphKind::Undirected, false);
-        let a = g.ensure_node("a");
-        let b = g.ensure_node("b");
-        g.nodes[0].attrs.insert("pos".into(), "127,118".into());
-        g.nodes[1].attrs.insert("pos".into(), "227,118".into());
-        let mut attrs = AttrMap::new();
-        attrs.insert("pos".into(), "127,118 150,118 180,118 227,118".into());
-        g.add_edge(a, b, attrs);
-        g
-    }
-}
-
 type RoutedEdge = (Spline, [Option<Point>; 4]);
 
 /// `spline_edges_` for the edges not in `keep`: straight lines (or the `splines` routing)
@@ -1126,4 +1071,59 @@ fn route_missing_edges(graph: &Graph, keep: &[bool]) -> Vec<RoutedEdge> {
             )
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scan_double_matches_strtod_prefixes() {
+        assert_eq!(scan_double("12.5,3").map(|x| x.0), Some(12.5));
+        assert_eq!(
+            scan_double(" -3e2x").map(|x| (x.0, x.1)),
+            Some((-300.0, "x"))
+        );
+        assert_eq!(scan_double(".5").map(|x| x.0), Some(0.5));
+        assert_eq!(scan_double("5.").map(|x| x.0), Some(5.0));
+        assert!(scan_double("abc").is_none());
+        assert!(scan_double("-").is_none());
+    }
+
+    #[test]
+    fn user_spline_parses_arrows_and_multiple_beziers() {
+        let s = user_spline("s,1,2 e,9,9 1,1 2,2 3,3 4,4;5,5 6,6 7,7 8,8", true, true).unwrap();
+        assert_eq!(s.segments.len(), 2);
+        assert_eq!(s.segments[0].start_arrow, Some(Point::new(1.0, 2.0)));
+        assert_eq!(s.segments[0].end_arrow, Some(Point::new(9.0, 9.0)));
+        assert_eq!(s.segments[1].points.len(), 4);
+        // An `s,` point without a tail arrow is dropped, as `sflag = stype` is 0.
+        let s = user_spline("s,1,2 1,1 2,2 3,3 4,4", false, true).unwrap();
+        assert_eq!(s.segments[0].start_arrow, None);
+        assert!(user_spline("1,1 2,2 3,3", true, true).is_none());
+    }
+
+    #[test]
+    fn nop_translates_to_origin_and_keeps_edges() {
+        let mut g = gv_parser_free_graph();
+        layout_nop(&mut g, 2).unwrap();
+        assert_eq!(g.nodes[0].pos, Point::new(27.0, 18.0));
+        assert_eq!(g.bb.ll, Point::new(0.0, 0.0));
+        assert_eq!(
+            g.edges[0].spline.segments[0].points[0],
+            Point::new(27.0, 18.0)
+        );
+    }
+
+    fn gv_parser_free_graph() -> Graph {
+        let mut g = Graph::new("G", GraphKind::Undirected, false);
+        let a = g.ensure_node("a");
+        let b = g.ensure_node("b");
+        g.nodes[0].attrs.insert("pos".into(), "127,118".into());
+        g.nodes[1].attrs.insert("pos".into(), "227,118".into());
+        let mut attrs = AttrMap::new();
+        attrs.insert("pos".into(), "127,118 150,118 180,118 227,118".into());
+        g.add_edge(a, b, attrs);
+        g
+    }
 }
