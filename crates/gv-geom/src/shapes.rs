@@ -30,11 +30,11 @@ pub const DEF_POINT_SIZE: f64 = 0.05;
 /// Minimum `point` shape diameter in inches (`0.0003`).
 pub const MIN_POINT_SIZE: f64 = 0.0003;
 
-/// Default horizontal node margin in inches (`0.11`, i.e., `7.92` points per side).
-pub const DEFAULT_MARGIN_X: f64 = 0.11;
+/// Default horizontal node margin in inches (`2 * GAP = 8.0 pt = 8.0 / 72.0 in` per side, matching `PAD(d)` in `lib/common/macros.h`).
+pub const DEFAULT_MARGIN_X: f64 = 8.0 / 72.0;
 
-/// Default vertical node margin in inches (`0.055`, i.e., `3.96` points per side).
-pub const DEFAULT_MARGIN_Y: f64 = 0.055;
+/// Default vertical node margin in inches (`GAP = 4.0 pt = 4.0 / 72.0 in` per side, matching `PAD(d)` in `lib/common/macros.h`).
+pub const DEFAULT_MARGIN_Y: f64 = 4.0 / 72.0;
 
 /// Default periphery gap in points (`4.0`).
 pub const PERIPHERY_GAP_PTS: f64 = 4.0;
@@ -416,8 +416,10 @@ pub struct HtmlTable {
     /// Bounding box in points relative to the node center `(0, 0)`.
     pub bbox: BoundingBox,
     /// Laid-out cells in reading order.
-    pub cells: Vec<HtmlCell>,
+    pub cells: Vec<HtmlTableCellOrCell>,
 }
+
+type HtmlTableCellOrCell = HtmlCell;
 
 impl HtmlTable {
     /// Finds the bounding box (relative to node center) of a port by name (case-insensitive, matching `htmltable.c`).
@@ -474,7 +476,7 @@ pub fn parse_graphviz_bool(val: Option<&str>, default: bool) -> bool {
     default
 }
 
-/// Parses the `(margin_x, margin_y)` attribute in inches, defaulting to `(0.11, 0.055)`.
+/// Parses the `(margin_x, margin_y)` attribute in inches, defaulting to `(8.0 / 72.0, 4.0 / 72.0)`.
 pub fn parse_node_margin(margin_attr: Option<&str>) -> (f64, f64) {
     let Some(raw) = margin_attr else {
         return (DEFAULT_MARGIN_X, DEFAULT_MARGIN_Y);
@@ -677,7 +679,11 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
     }
 
     // 4. Measure label dimensions (HTML table/text vs plain multiline text).
-    let mut dimen = if is_html_label(&raw_label, shape) {
+    // In C Graphviz (`make_label` / `make_simple_label`), plain text labels are stored in
+    // integer points (`dimen.x = (int)w`, `dimen.y = (int)h`), and HTML table labels
+    // with `shape=plaintext` have `PAD` skipped when `<TABLE>` is the root.
+    let is_html = is_html_label(&raw_label, shape);
+    let mut dimen = if is_html {
         measure_html_label_dimen(&raw_label, &node.name, graph_name, &font_name, font_size)
     } else {
         let ctx = LabelSubstContext {
@@ -692,7 +698,7 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
             label_text: "",
         };
         let layout = measure_multiline_label_with_context(&raw_label, &ctx, &font_name, font_size);
-        Point::new(layout.width, layout.height)
+        Point::new(layout.width, layout.height.floor())
     };
 
     // Add padding around non-empty label (`poly_init` in `shapes.c`).
@@ -1298,7 +1304,9 @@ fn size_record_field(
     let size = if field.children.is_empty() {
         let layout = measure_multiline_label_with_context(&field.text, ctx, font_name, font_size);
         let mut w = layout.width;
-        let mut h = layout.height;
+        // In C Graphviz (`record_size` / `make_simple_label`), plain text height is truncated
+        // to integer points before adding `2 * margin_y`.
+        let mut h = layout.height.floor();
         if w > 0.0 || h > 0.0 {
             w += 2.0 * margin_x * POINTS_PER_INCH;
             h += 2.0 * margin_y * POINTS_PER_INCH;
@@ -1420,7 +1428,8 @@ fn measure_html_label_dimen(
         head_port: None,
         label_text: "",
     };
-    measure_html_rich_text(inner, &ctx, font_name, font_size).0
+    let sz = measure_html_rich_text(inner, &ctx, font_name, font_size).0;
+    Point::new(sz.x, sz.y.floor())
 }
 
 /// Parses and lays out an HTML-like `<TABLE>` label string, returning [`HtmlTable`] with cell boxes
@@ -1660,63 +1669,86 @@ fn parse_single_table(
             break;
         };
         raw_rows.push(&table_body[tr_abs + c_start..tr_abs + c_end]);
-        let after = tr_abs + c_end + "</tr".len();
-        cursor = table_body[after..]
+        let after_close = tr_abs + c_end;
+        cursor = table_body[after_close..]
             .find('>')
-            .map_or(table_body.len(), |p| after + p + 1);
+            .map_or(table_body.len(), |p| after_close + p + 1);
     }
 
-    // Track occupied `(row, col)` grid slots for `ROWSPAN` and `COLSPAN`.
-    let mut occupied: std::collections::BTreeSet<(usize, usize)> =
-        std::collections::BTreeSet::new();
-    let mut cells: Vec<HtmlCell> = Vec::new();
-    let mut n_rows = 0usize;
-    let mut n_cols = 0usize;
+    let row_count = raw_rows.len();
+    if row_count == 0 {
+        let w = (2.0 * border).max(min_width);
+        let h = (2.0 * border).max(min_height);
+        return Some(HtmlTable {
+            port,
+            border,
+            cellborder,
+            cellspacing,
+            cellpadding,
+            bgcolor,
+            rounded,
+            row_count: 0,
+            col_count: 0,
+            bbox: BoundingBox::new(0.0, 0.0, w, h),
+            cells: Vec::new(),
+        });
+    }
 
-    for (r_idx, row_str) in raw_rows.iter().enumerate() {
-        let mut c_idx = 0usize;
+    // Parse cells and place them on a 2D occupancy grid (handling `rowspan` and `colspan`).
+    let mut occupied: Vec<Vec<bool>> = vec![Vec::new(); row_count];
+    let mut cells: Vec<HtmlCell> = Vec::new();
+    let mut max_cols = 0usize;
+
+    for (r_idx, &row_str) in raw_rows.iter().enumerate() {
         let mut td_cursor = 0usize;
+        let mut c_idx = 0usize;
         while td_cursor < row_str.len() {
             let rem = &row_str[td_cursor..];
             let Some(td_rel) = find_tag_ci(rem, "<td") else {
                 break;
             };
             let td_abs = td_cursor + td_rel;
-            let Some(td_hdr_end) = row_str[td_abs..].find('>') else {
+            let Some(td_hdr_end_rel) = row_str[td_abs..].find('>') else {
                 break;
             };
-            let td_header = &row_str[td_abs..=td_abs + td_hdr_end];
+            let td_header = &row_str[td_abs..=td_abs + td_hdr_end_rel];
             let Some((c_start, c_end)) = find_matching_close_tag(&row_str[td_abs..], "td", "td")
             else {
                 break;
             };
-            let td_content = &row_str[td_abs + c_start..td_abs + c_end];
+            let td_body = &row_str[td_abs + c_start..td_abs + c_end];
 
-            let c_attrs = parse_tag_attrs(td_header);
-            let mut rowspan = 1usize;
+            // Advance `c_idx` past any columns occupied by prior rowspans.
+            while c_idx < occupied[r_idx].len() && occupied[r_idx][c_idx] {
+                c_idx += 1;
+            }
+
+            let td_attrs = parse_tag_attrs(td_header);
             let mut colspan = 1usize;
+            let mut rowspan = 1usize;
             let mut cell_port: Option<String> = None;
-            let mut cell_bgcolor: Option<String> = None;
-            let mut cell_border = cellborder.unwrap_or(border);
+            let mut cell_bg: Option<String> = None;
+            let mut cell_border = cellborder.unwrap_or(1.0);
             let mut cell_pad = if cellpadding_set { cellpadding } else { 2.0 };
+            let mut cell_align = TextJustify::Center;
             let mut cell_min_w = 0.0_f64;
             let mut cell_min_h = 0.0_f64;
-            let mut align = TextJustify::Center;
+            let mut cell_fixed = false;
 
-            for (k, v) in c_attrs {
+            for (k, v) in td_attrs {
                 match k.as_str() {
-                    "rowspan" => {
-                        if let Ok(rs) = v.trim().parse::<usize>() {
-                            rowspan = rs.max(1);
-                        }
-                    }
                     "colspan" => {
                         if let Ok(cs) = v.trim().parse::<usize>() {
                             colspan = cs.max(1);
                         }
                     }
+                    "rowspan" => {
+                        if let Ok(rs) = v.trim().parse::<usize>() {
+                            rowspan = rs.max(1);
+                        }
+                    }
                     "port" => cell_port = Some(v),
-                    "bgcolor" => cell_bgcolor = Some(v),
+                    "bgcolor" => cell_bg = Some(v),
                     "border" => {
                         if let Ok(b) = v.trim().parse::<f64>() {
                             cell_border = b.max(0.0);
@@ -1726,6 +1758,13 @@ fn parse_single_table(
                         if let Ok(cp) = v.trim().parse::<f64>() {
                             cell_pad = cp.max(0.0);
                         }
+                    }
+                    "align" | "balign" => {
+                        cell_align = match v.trim().to_ascii_lowercase().as_str() {
+                            "left" => TextJustify::Left,
+                            "right" => TextJustify::Right,
+                            _ => TextJustify::Center,
+                        };
                     }
                     "width" => {
                         if let Ok(w) = v.trim().parse::<f64>() {
@@ -1737,137 +1776,159 @@ fn parse_single_table(
                             cell_min_h = h.max(0.0);
                         }
                     }
-                    "align" | "balign" => {
-                        if v.eq_ignore_ascii_case("left") {
-                            align = TextJustify::Left;
-                        } else if v.eq_ignore_ascii_case("right") {
-                            align = TextJustify::Right;
-                        }
+                    "fixedsize" => {
+                        cell_fixed = parse_graphviz_bool(Some(&v), false);
                     }
                     _ => {}
                 }
             }
 
-            // Find first available column `c_idx` where `c_idx..c_idx + colspan` is free on `r_idx`.
-            loop {
-                let conflict = (c_idx..c_idx + colspan)
-                    .rev()
-                    .find(|&c| occupied.contains(&(r_idx, c)));
-                if let Some(conf_c) = conflict {
-                    c_idx = conf_c + 1;
-                } else {
-                    break;
+            // Clamp rowspan to `row_count - r_idx` (or expand if needed; in Graphviz `rowspan` exceeding table rows is clamped/extended).
+            let eff_rowspan = rowspan.min(row_count - r_idx).max(1);
+            for row_occ in occupied.iter_mut().skip(r_idx).take(eff_rowspan) {
+                if row_occ.len() < c_idx + colspan {
+                    row_occ.resize(c_idx + colspan, false);
+                }
+                for cell_occ in row_occ.iter_mut().skip(c_idx).take(colspan) {
+                    *cell_occ = true;
                 }
             }
-            for rr in r_idx..r_idx + rowspan {
-                for cc in c_idx..c_idx + colspan {
-                    occupied.insert((rr, cc));
-                }
-            }
+            max_cols = max_cols.max(c_idx + colspan);
 
-            let nested_table = if find_tag_ci(td_content, "<table").is_some() {
-                parse_single_table(td_content, ctx, font_name, font_size)
+            // Check if `td_body` contains a nested `<TABLE>`.
+            let nested_table = if find_tag_ci(td_body, "<table").is_some() {
+                parse_single_table(td_body, ctx, font_name, font_size)
             } else {
                 None
             };
 
-            let (child_dim, plain_txt) = if let Some(ref nt) = nested_table {
+            let (content_sz, plain_text) = if let Some(ref nt) = nested_table {
                 (Point::new(nt.bbox.width(), nt.bbox.height()), String::new())
             } else {
-                measure_html_rich_text(td_content, ctx, font_name, font_size)
+                measure_html_rich_text(td_body, ctx, font_name, font_size)
             };
 
-            let margin = 2.0 * (cell_pad + cell_border);
-            let cw = (child_dim.x + margin).max(cell_min_w);
-            let ch = (child_dim.y + margin).max(cell_min_h);
+            let pad_delta = 2.0 * (cell_pad + cell_border);
+            let nat_w = content_sz.x + pad_delta;
+            let nat_h = content_sz.y + pad_delta;
+            let cw = if cell_fixed && cell_min_w > 0.0 {
+                cell_min_w
+            } else {
+                nat_w.max(cell_min_w)
+            };
+            let ch = if cell_fixed && cell_min_h > 0.0 {
+                cell_min_h
+            } else {
+                nat_h.max(cell_min_h)
+            };
 
             cells.push(HtmlCell {
                 port: cell_port,
-                text: plain_txt,
+                text: plain_text,
                 row: r_idx,
                 col: c_idx,
-                rowspan,
+                rowspan: eff_rowspan,
                 colspan,
                 border: cell_border,
                 cellpadding: cell_pad,
-                bgcolor: cell_bgcolor,
-                align,
+                bgcolor: cell_bg,
+                align: cell_align,
                 bbox: BoundingBox::new(0.0, 0.0, cw, ch),
                 nested_table,
             });
 
             c_idx += colspan;
-            n_cols = n_cols.max(c_idx);
-            n_rows = n_rows.max(r_idx + rowspan);
-
-            let after = td_abs + c_end + "</td".len();
-            td_cursor = row_str[after..]
+            let after_close = td_abs + c_end;
+            td_cursor = row_str[after_close..]
                 .find('>')
-                .map_or(row_str.len(), |p| after + p + 1);
+                .map_or(row_str.len(), |p| after_close + p + 1);
         }
     }
 
-    n_rows = n_rows.max(1);
-    n_cols = n_cols.max(1);
+    let col_count = max_cols.max(1);
+    let mut col_widths = vec![0.0_f64; col_count];
+    let mut row_heights = vec![0.0_f64; row_count];
 
-    // Compute column widths (`set_cell_widths` in `htmltable.c`).
-    let mut col_widths = vec![0.0_f64; n_cols];
+    // Pass 1: Single-column / single-row cells establish baseline widths and heights.
     for cell in &cells {
         if cell.colspan == 1 {
             col_widths[cell.col] = col_widths[cell.col].max(cell.bbox.width());
         }
-    }
-    for cell in &cells {
-        if cell.colspan > 1 {
-            let span_w: f64 = col_widths[cell.col..cell.col + cell.colspan].iter().sum();
-            let spacing = ((cell.colspan - 1) as f64) * cellspacing;
-            if span_w + spacing < cell.bbox.width() {
-                let widen_by = (cell.bbox.width() - spacing - span_w) / (cell.colspan as f64);
-                for w in &mut col_widths[cell.col..cell.col + cell.colspan] {
-                    *w += widen_by;
-                }
-            }
-        }
-    }
-
-    // Compute row heights (`set_cell_heights` in `htmltable.c`).
-    let mut row_heights = vec![0.0_f64; n_rows];
-    for cell in &cells {
         if cell.rowspan == 1 {
             row_heights[cell.row] = row_heights[cell.row].max(cell.bbox.height());
         }
     }
+
+    // Pass 2: Multi-column / multi-row cells distribute any excess across spanned columns/rows.
     for cell in &cells {
+        if cell.colspan > 1 {
+            let span_cols = &mut col_widths[cell.col..cell.col + cell.colspan];
+            let current_sum: f64 =
+                span_cols.iter().sum::<f64>() + ((cell.colspan - 1) as f64) * cellspacing;
+            if cell.bbox.width() > current_sum {
+                let extra = (cell.bbox.width() - current_sum) / (cell.colspan as f64);
+                for w in span_cols.iter_mut() {
+                    *w += extra;
+                }
+            }
+        }
         if cell.rowspan > 1 {
-            let span_h: f64 = row_heights[cell.row..cell.row + cell.rowspan].iter().sum();
-            let spacing = ((cell.rowspan - 1) as f64) * cellspacing;
-            if span_h + spacing < cell.bbox.height() {
-                let heighten_by = (cell.bbox.height() - spacing - span_h) / (cell.rowspan as f64);
-                for h in &mut row_heights[cell.row..cell.row + cell.rowspan] {
-                    *h += heighten_by;
+            let span_rows = &mut row_heights[cell.row..cell.row + cell.rowspan];
+            let current_sum: f64 =
+                span_rows.iter().sum::<f64>() + ((cell.rowspan - 1) as f64) * cellspacing;
+            if cell.bbox.height() > current_sum {
+                let extra = (cell.bbox.height() - current_sum) / (cell.rowspan as f64);
+                for h in span_rows.iter_mut() {
+                    *h += extra;
                 }
             }
         }
     }
 
-    // Store column widths and row heights into cell bboxes prior to positioning.
-    for cell in &mut cells {
-        let min_w: f64 = col_widths[cell.col..cell.col + cell.colspan].iter().sum();
-        let sp_x = ((cell.colspan - 1) as f64) * cellspacing;
-        let w = cell.bbox.width().max(min_w + sp_x);
+    let total_cols_w: f64 = col_widths.iter().sum();
+    let total_rows_h: f64 = row_heights.iter().sum();
+    let total_w =
+        (total_cols_w + ((col_count + 1) as f64) * cellspacing + 2.0 * border).max(min_width);
+    let total_h =
+        (total_rows_h + ((row_count + 1) as f64) * cellspacing + 2.0 * border).max(min_height);
 
-        let min_h: f64 = row_heights[cell.row..cell.row + cell.rowspan].iter().sum();
-        let sp_y = ((cell.rowspan - 1) as f64) * cellspacing;
-        let h = cell.bbox.height().max(min_h + sp_y);
-        cell.bbox = BoundingBox::new(0.0, 0.0, w, h);
+    // Store column widths and row heights into cell bboxes relative to table `(0, 0)..(total_w, total_h)`.
+    if total_w > total_cols_w + ((col_count + 1) as f64) * cellspacing + 2.0 * border {
+        let extra = (total_w
+            - (total_cols_w + ((col_count + 1) as f64) * cellspacing + 2.0 * border))
+            / (col_count as f64);
+        for w in &mut col_widths {
+            *w += extra;
+        }
+    }
+    if total_h > total_rows_h + ((row_count + 1) as f64) * cellspacing + 2.0 * border {
+        let extra = (total_h
+            - (total_rows_h + ((row_count + 1) as f64) * cellspacing + 2.0 * border))
+            / (row_count as f64);
+        for h in &mut row_heights {
+            *h += extra;
+        }
     }
 
-    let total_w =
-        (((n_cols + 1) as f64) * cellspacing + 2.0 * border + col_widths.iter().sum::<f64>())
-            .max(min_width);
-    let total_h =
-        (((n_rows + 1) as f64) * cellspacing + 2.0 * border + row_heights.iter().sum::<f64>())
-            .max(min_height);
+    let mut col_x = vec![0.0_f64; col_count + 1];
+    col_x[0] = border + cellspacing;
+    for c in 0..col_count {
+        col_x[c + 1] = col_x[c] + col_widths[c] + cellspacing;
+    }
+
+    let mut row_y_top = vec![0.0_f64; row_count + 1];
+    row_y_top[0] = total_h - border - cellspacing;
+    for r in 0..row_count {
+        row_y_top[r + 1] = row_y_top[r] - row_heights[r] - cellspacing;
+    }
+
+    for cell in &mut cells {
+        let x0 = col_x[cell.col];
+        let x1 = col_x[cell.col + cell.colspan] - cellspacing;
+        let y1 = row_y_top[cell.row];
+        let y0 = row_y_top[cell.row + cell.rowspan] + cellspacing;
+        cell.bbox = BoundingBox::new(x0, y0, x1, y1);
+    }
 
     Some(HtmlTable {
         port,
@@ -1877,606 +1938,608 @@ fn parse_single_table(
         cellpadding,
         bgcolor,
         rounded,
-        row_count: n_rows,
-        col_count: n_cols,
+        row_count,
+        col_count,
         bbox: BoundingBox::new(0.0, 0.0, total_w, total_h),
         cells,
     })
 }
 
-fn position_html_table(tbl: &mut HtmlTable, pos: BoundingBox) {
-    let n_cols = tbl.col_count.max(1);
-    let n_rows = tbl.row_count.max(1);
-
-    let mut col_widths = vec![0.0_f64; n_cols];
-    let mut row_heights = vec![0.0_f64; n_rows];
-
-    for cell in &tbl.cells {
-        if cell.colspan == 1 {
-            col_widths[cell.col] = col_widths[cell.col].max(cell.bbox.width());
-        }
-        if cell.rowspan == 1 {
-            row_heights[cell.row] = row_heights[cell.row].max(cell.bbox.height());
-        }
-    }
-    for cell in &tbl.cells {
-        if cell.colspan > 1 {
-            let span_w: f64 = col_widths[cell.col..cell.col + cell.colspan].iter().sum();
-            let sp = ((cell.colspan - 1) as f64) * tbl.cellspacing;
-            if span_w + sp < cell.bbox.width() {
-                let add = (cell.bbox.width() - sp - span_w) / (cell.colspan as f64);
-                for w in &mut col_widths[cell.col..cell.col + cell.colspan] {
-                    *w += add;
-                }
-            }
-        }
-        if cell.rowspan > 1 {
-            let span_h: f64 = row_heights[cell.row..cell.row + cell.rowspan].iter().sum();
-            let sp = ((cell.rowspan - 1) as f64) * tbl.cellspacing;
-            if span_h + sp < cell.bbox.height() {
-                let add = (cell.bbox.height() - sp - span_h) / (cell.rowspan as f64);
-                for h in &mut row_heights[cell.row..cell.row + cell.rowspan] {
-                    *h += add;
-                }
-            }
-        }
-    }
-
-    let natural_w =
-        ((n_cols + 1) as f64) * tbl.cellspacing + 2.0 * tbl.border + col_widths.iter().sum::<f64>();
-    let natural_h = ((n_rows + 1) as f64) * tbl.cellspacing
-        + 2.0 * tbl.border
-        + row_heights.iter().sum::<f64>();
-
-    let extra_x = (pos.width() - natural_w).max(0.0) / (n_cols as f64);
-    let extra_y = (pos.height() - natural_h).max(0.0) / (n_rows as f64);
-
-    let mut x_offsets = Vec::with_capacity(n_cols + 1);
-    let mut x = pos.ll.x + tbl.border + tbl.cellspacing;
-    for &cw in &col_widths {
-        x_offsets.push(x);
-        x += cw + extra_x + tbl.cellspacing;
-    }
-    x_offsets.push(x);
-
-    let mut y_offsets = Vec::with_capacity(n_rows + 1);
-    let mut y = pos.ur.y - tbl.border - tbl.cellspacing;
-    for &rh in &row_heights {
-        y_offsets.push(y);
-        y -= rh + extra_y + tbl.cellspacing;
-    }
-    y_offsets.push(y);
+fn position_html_table(tbl: &mut HtmlTable, target_box: BoundingBox) {
+    let cur_w = tbl.bbox.width().max(1e-9);
+    let cur_h = tbl.bbox.height().max(1e-9);
+    let sx = target_box.width() / cur_w;
+    let sy = target_box.height() / cur_h;
+    let ox = target_box.ll.x - tbl.bbox.ll.x * sx;
+    let oy = target_box.ll.y - tbl.bbox.ll.y * sy;
+    tbl.bbox = target_box;
 
     for cell in &mut tbl.cells {
-        let ll_x = x_offsets[cell.col];
-        let ur_x = x_offsets[cell.col + cell.colspan] - tbl.cellspacing;
-        let ur_y = y_offsets[cell.row];
-        let ll_y = y_offsets[cell.row + cell.rowspan] + tbl.cellspacing;
-        let cbox = BoundingBox::new(ll_x, ll_y, ur_x, ur_y);
-        cell.bbox = cbox;
-
+        let c_ll = Point::new(ox + cell.bbox.ll.x * sx, oy + cell.bbox.ll.y * sy);
+        let c_ur = Point::new(ox + cell.bbox.ur.x * sx, oy + cell.bbox.ur.y * sy);
+        cell.bbox = BoundingBox::new(c_ll.x, c_ll.y, c_ur.x, c_ur.y);
         if let Some(ref mut nested) = cell.nested_table {
             let inset = cell.border + cell.cellpadding;
             let inner_box = BoundingBox::new(
-                cbox.ll.x + inset,
-                cbox.ll.y + inset,
-                (cbox.ur.x - inset).max(cbox.ll.x + inset),
-                (cbox.ur.y - inset).max(cbox.ll.y + inset),
+                (c_ll.x + inset).min(c_ur.x),
+                (c_ll.y + inset).min(c_ur.y),
+                (c_ur.x - inset).max(c_ll.x),
+                (c_ur.y - inset).max(c_ll.y),
             );
             position_html_table(nested, inner_box);
         }
     }
-
-    tbl.bbox = pos;
 }
 
+/// Measures HTML rich text (supporting `<BR/>`, `<B>`, `<I>`, `<FONT FACE="..." POINT-SIZE="...">`),
+/// returning `(Point(width, height), plain_text)`.
 fn measure_html_rich_text(
-    html: &str,
+    html_fragment: &str,
     ctx: &LabelSubstContext<'_>,
-    base_font_name: &str,
-    base_font_size: f64,
+    base_font: &str,
+    base_size: f64,
 ) -> (Point, String) {
-    let mut lines: Vec<String> = Vec::new();
-    let mut current_line = String::new();
-    let mut bold_depth = 0usize;
-    let mut italic_depth = 0usize;
-    let mut font_stack: Vec<(String, f64)> = vec![(base_font_name.to_string(), base_font_size)];
+    #[derive(Clone)]
+    struct StyleState {
+        font: String,
+        size: f64,
+        bold: bool,
+        italic: bool,
+    }
 
-    let mut max_w = 0.0_f64;
-    let mut total_h = 0.0_f64;
-    let mut line_w = 0.0_f64;
-    let mut line_max_fs = base_font_size;
+    let mut stack = vec![StyleState {
+        font: base_font.to_string(),
+        size: base_size,
+        bold: false,
+        italic: false,
+    }];
 
-    let flush_span = |text: &str,
-                      font_stack: &[(String, f64)],
-                      bold: bool,
-                      italic: bool,
-                      line_w: &mut f64,
-                      line_max_fs: &mut f64| {
-        if text.is_empty() {
-            return;
-        }
-        let (fn_name, fs) = font_stack.last().unwrap();
-        let fs = *fs;
-        let subst = substitute_object_escapes(text, ctx);
-        let (w, _) = estimate_text_size_styled(&subst, fn_name, fs, bold, italic);
-        *line_w += w;
-        *line_max_fs = line_max_fs.max(fs);
-    };
+    let mut line_widths: Vec<f64> = Vec::new();
+    let mut line_heights: Vec<f64> = Vec::new();
+    let mut cur_line_w = 0.0_f64;
+    let mut cur_line_h = 0.0_f64;
+    let mut cur_text = String::new();
+    let mut all_text = String::new();
 
-    let mut span_buf = String::new();
-    let bytes = html.as_bytes();
+    let flush_segment =
+        |seg: &str, st: &StyleState, cur_w: &mut f64, cur_h: &mut f64, plain_out: &mut String| {
+            if seg.is_empty() {
+                return;
+            }
+            let collapsed = collapse_html_whitespace(seg);
+            if collapsed.is_empty() {
+                return;
+            }
+            let sub = substitute_object_escapes(&collapsed, ctx);
+            let (w, h) = estimate_text_size_styled(&sub, &st.font, st.size, st.bold, st.italic);
+            *cur_w += w;
+            *cur_h = cur_h.max(h.floor());
+            plain_out.push_str(&sub);
+        };
+
+    let bytes = html_fragment.as_bytes();
     let mut i = 0usize;
     while i < bytes.len() {
         if bytes[i] == b'<'
-            && let Some(end_rel) = html[i..].find('>')
+            && let Some(rel_end) = html_fragment[i..].find('>')
         {
-            flush_span(
-                &span_buf,
-                &font_stack,
-                bold_depth > 0,
-                italic_depth > 0,
-                &mut line_w,
-                &mut line_max_fs,
+            let cur_style = stack.last().unwrap().clone();
+            flush_segment(
+                &cur_text,
+                &cur_style,
+                &mut cur_line_w,
+                &mut cur_line_h,
+                &mut all_text,
             );
-            span_buf.clear();
+            cur_text.clear();
 
-            let tag = html[i + 1..i + end_rel].trim();
-            let tag_lower = tag.to_ascii_lowercase();
-            if tag_lower.starts_with("br") {
-                max_w = max_w.max(line_w);
-                total_h += line_max_fs * LINESPACING;
-                line_w = 0.0;
-                line_max_fs = font_stack.last().map_or(base_font_size, |f| f.1);
-                lines.push(std::mem::take(&mut current_line));
-            } else if tag_lower == "b" || tag_lower.starts_with("b ") {
-                bold_depth += 1;
-            } else if tag_lower == "/b" {
-                bold_depth = bold_depth.saturating_sub(1);
-            } else if tag_lower == "i" || tag_lower.starts_with("i ") {
-                italic_depth += 1;
-            } else if tag_lower == "/i" {
-                italic_depth = italic_depth.saturating_sub(1);
-            } else if tag_lower.starts_with("font") {
-                let attrs = parse_tag_attrs(&html[i..=i + end_rel]);
-                let (mut fn_name, mut fs) = font_stack.last().cloned().unwrap();
-                for (k, v) in attrs {
-                    if k == "face" && !v.trim().is_empty() {
-                        fn_name = v.trim().to_string();
-                    } else if k == "point-size"
-                        && let Ok(parsed_fs) = v.trim().parse::<f64>()
-                    {
-                        fs = parsed_fs.max(1.0);
+            let tag_str = html_fragment[i + 1..i + rel_end].trim();
+            let tag_lower = tag_str.to_ascii_lowercase();
+            let tag_name = tag_lower
+                .split(|c: char| c.is_ascii_whitespace() || c == '/')
+                .next()
+                .unwrap_or("");
+
+            match tag_name {
+                "br" => {
+                    let h = if cur_line_h > 0.0 {
+                        cur_line_h
+                    } else {
+                        (cur_style.size * LINESPACING).floor()
+                    };
+                    line_widths.push(cur_line_w);
+                    line_heights.push(h);
+                    cur_line_w = 0.0;
+                    cur_line_h = 0.0;
+                    all_text.push('\n');
+                }
+                "b" | "strong" => {
+                    let mut next = cur_style;
+                    next.bold = true;
+                    stack.push(next);
+                }
+                "/b" | "/strong" | "/i" | "/em" | "/font" => {
+                    if stack.len() > 1 {
+                        stack.pop();
                     }
                 }
-                font_stack.push((fn_name, fs));
-            } else if tag_lower.starts_with("/font") && font_stack.len() > 1 {
-                font_stack.pop();
+                "i" | "em" => {
+                    let mut next = cur_style;
+                    next.italic = true;
+                    stack.push(next);
+                }
+                "font" => {
+                    let mut next = cur_style;
+                    for (k, v) in parse_tag_attrs(&html_fragment[i..=i + rel_end]) {
+                        if k == "face" && !v.trim().is_empty() {
+                            next.font = v.trim().to_string();
+                        } else if k == "point-size"
+                            && let Ok(sz) = v.trim().parse::<f64>()
+                        {
+                            next.size = sz.max(1.0);
+                        }
+                    }
+                    stack.push(next);
+                }
+                _ => {}
             }
-            i += end_rel + 1;
+            i += rel_end + 1;
             continue;
         }
-        let ch = html[i..].chars().next().unwrap();
-        if ch == '\n' || ch == '\r' {
-            if !span_buf.ends_with(' ') && !span_buf.is_empty() {
-                span_buf.push(' ');
-                current_line.push(' ');
-            }
-        } else {
-            span_buf.push(ch);
-            current_line.push(ch);
-        }
+        let ch = html_fragment[i..].chars().next().unwrap();
+        cur_text.push(ch);
         i += ch.len_utf8();
     }
 
-    flush_span(
-        &span_buf,
-        &font_stack,
-        bold_depth > 0,
-        italic_depth > 0,
-        &mut line_w,
-        &mut line_max_fs,
+    let cur_style = stack.last().unwrap().clone();
+    flush_segment(
+        &cur_text,
+        &cur_style,
+        &mut cur_line_w,
+        &mut cur_line_h,
+        &mut all_text,
     );
-    if !current_line.is_empty() || lines.is_empty() {
-        max_w = max_w.max(line_w);
-        if max_w > 0.0 || !lines.is_empty() {
-            total_h += line_max_fs * LINESPACING;
-        }
-        if !current_line.is_empty() {
-            lines.push(current_line);
-        }
+    if cur_line_w > 0.0 || line_widths.is_empty() {
+        let h = if cur_line_h > 0.0 {
+            cur_line_h
+        } else if !all_text.trim().is_empty() {
+            (cur_style.size * LINESPACING).floor()
+        } else {
+            0.0
+        };
+        line_widths.push(cur_line_w);
+        line_heights.push(h);
     }
 
-    let plain = decode_basic_html_entities(&lines.join("\n"));
-    (Point::new(max_w, total_h), plain)
+    let trimmed_lines: Vec<String> = all_text.lines().map(|l| l.trim().to_string()).collect();
+    let final_plain = trimmed_lines.join("\n");
+
+    let max_w = line_widths.into_iter().fold(0.0_f64, f64::max);
+    let total_h: f64 = line_heights.into_iter().map(f64::floor).sum();
+    (Point::new(max_w.ceil(), total_h.floor()), final_plain)
 }
 
-fn decode_basic_html_entities(s: &str) -> String {
-    s.replace("&amp;", "&")
+fn collapse_html_whitespace(s: &str) -> String {
+    let decoded = s
+        .replace("&amp;", "&")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
-        .replace("&nbsp;", " ")
+        .replace("&#39;", "'")
+        .replace("&nbsp;", " ");
+    let mut out = String::with_capacity(decoded.len());
+    let mut prev_space = false;
+    for ch in decoded.chars() {
+        if ch.is_ascii_whitespace() {
+            if !prev_space {
+                out.push(' ');
+                prev_space = true;
+            }
+        } else {
+            out.push(ch);
+            prev_space = false;
+        }
+    }
+    out.trim().to_string()
 }
 
 // ============================================================================
-// Port resolution & Ray-to-boundary clipping (`poly_port`, `record_port`, `bezier_clip`)
+// Ray-to-boundary clipping (`clip_ray_to_node_boundary`)
 // ============================================================================
 
-fn parse_compass_direction(s: &str) -> Option<&'static str> {
-    match s.trim().to_ascii_lowercase().as_str() {
-        "n" => Some("n"),
-        "ne" => Some("ne"),
-        "e" => Some("e"),
-        "se" => Some("se"),
-        "s" => Some("s"),
-        "sw" => Some("sw"),
-        "w" => Some("w"),
-        "nw" => Some("nw"),
-        "c" => Some("c"),
-        "_" => Some("_"),
+/// Returns the `(dx, dy)` offset in points from `node.pos` to the center of `port`,
+/// if `port.name` refers to a valid `record` field or HTML table `<TD PORT="...">` cell.
+pub fn resolve_port_offset(node: &NodeData, port: &Port, graph_name: &str, rankdir: &str) -> Point {
+    let Some(ref port_name) = port.name else {
+        return Point::new(0.0, 0.0);
+    };
+    let shape = ShapeKind::from_node(node);
+    let raw_label = node.attrs.get("label").map_or("\\N", |s| s.as_str());
+
+    if shape.is_record()
+        && !is_html_label(raw_label, shape)
+        && let Some(rec) = record_layout(node, graph_name, rankdir)
+        && let Some(field) = rec.find_port(port_name)
+    {
+        return Point::new(
+            (field.bbox.ll.x + field.bbox.ur.x) / 2.0,
+            (field.bbox.ll.y + field.bbox.ur.y) / 2.0,
+        );
+    }
+
+    if is_html_label(raw_label, shape)
+        && let Some(tbl) = html_table_layout(node, graph_name)
+        && let Some(pbox) = tbl.find_port_box(port_name)
+    {
+        return Point::new((pbox.ll.x + pbox.ur.x) / 2.0, (pbox.ll.y + pbox.ur.y) / 2.0);
+    }
+
+    Point::new(0.0, 0.0)
+}
+
+/// Computes the exact intersection point on a node's boundary (`ellipse`, `box`, `polygon`,
+/// `record`, or HTML table cell) along the ray from the node/port center (or compass direction)
+/// toward `outside_pt`, matching `clip_and_install` / `poly_inside` / `record_inside` in C Graphviz.
+pub fn clip_ray_to_node_boundary(node: &NodeData, port: &Port, outside_pt: Point) -> Point {
+    clip_ray_to_node_boundary_with_context(node, port, outside_pt, "", "TB")
+}
+
+/// Computes the boundary intersection point with explicit `graph_name` and `rankdir` context
+/// for resolving `record` and HTML-table ports.
+pub fn clip_ray_to_node_boundary_with_context(
+    node: &NodeData,
+    port: &Port,
+    outside_pt: Point,
+    graph_name: &str,
+    rankdir: &str,
+) -> Point {
+    let shape = ShapeKind::from_node(node);
+    let w_pts = (node.width * POINTS_PER_INCH).max(MIN_POINT_SIZE * POINTS_PER_INCH);
+    let h_pts = (node.height * POINTS_PER_INCH).max(MIN_POINT_SIZE * POINTS_PER_INCH);
+    let rx = w_pts / 2.0;
+    let ry = h_pts / 2.0;
+
+    // 1. Check if `port.name` resolves to a sub-box inside a `record` or HTML `<TABLE>` node.
+    let raw_label = node.attrs.get("label").map_or("\\N", |s| s.as_str());
+    let sub_box: Option<BoundingBox> = if let Some(ref pname) = port.name {
+        if shape.is_record() && !is_html_label(raw_label, shape) {
+            record_layout(node, graph_name, rankdir)
+                .and_then(|rec| rec.find_port(pname).map(|f| f.bbox))
+        } else if is_html_label(raw_label, shape) {
+            html_table_layout(node, graph_name).and_then(|tbl| tbl.find_port_box(pname))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    if let Some(local_box) = sub_box {
+        let world_box = BoundingBox::new(
+            node.pos.x + local_box.ll.x,
+            node.pos.y + local_box.ll.y,
+            node.pos.x + local_box.ur.x,
+            node.pos.y + local_box.ur.y,
+        );
+        if let Some(compass_pt) = compass_point_on_box(&world_box, port.compass.as_deref()) {
+            return compass_pt;
+        }
+        return clip_ray_to_box(
+            &world_box,
+            Point::new(
+                (world_box.ll.x + world_box.ur.x) / 2.0,
+                (world_box.ll.y + world_box.ur.y) / 2.0,
+            ),
+            outside_pt,
+        );
+    }
+
+    // 2. If a compass point (`n`, `ne`, `e`, `se`, `s`, `sw`, `w`, `nw`, `c`) is specified on the node:
+    if let Some(ref comp) = port.compass {
+        let c = comp.trim().to_ascii_lowercase();
+        if c == "c" || c == "_" {
+            return node.pos;
+        }
+        if matches!(
+            shape,
+            ShapeKind::Box
+                | ShapeKind::Record
+                | ShapeKind::Mrecord
+                | ShapeKind::Plain
+                | ShapeKind::Note
+                | ShapeKind::Tab
+                | ShapeKind::Folder
+                | ShapeKind::Box3d
+                | ShapeKind::Component
+                | ShapeKind::Cylinder
+        ) {
+            let nbox = BoundingBox::new(
+                node.pos.x - rx,
+                node.pos.y - ry,
+                node.pos.x + rx,
+                node.pos.y + ry,
+            );
+            if let Some(pt) = compass_point_on_box(&nbox, Some(&c)) {
+                return pt;
+            }
+        }
+        if let Some((dx, dy)) = compass_unit_vector(&c) {
+            let far_pt = Point::new(
+                node.pos.x + dx * (rx + ry + 1024.0),
+                node.pos.y + dy * (rx + ry + 1024.0),
+            );
+            return clip_center_ray_to_shape(node, shape, rx, ry, far_pt);
+        }
+    }
+
+    // 3. Default ray from `node.pos` toward `outside_pt`.
+    clip_center_ray_to_shape(node, shape, rx, ry, outside_pt)
+}
+
+fn compass_unit_vector(compass: &str) -> Option<(f64, f64)> {
+    let s = FRAC_PI_2.sin(); // 1.0
+    let d = std::f64::consts::FRAC_1_SQRT_2;
+    match compass {
+        "n" => Some((0.0, s)),
+        "ne" => Some((d, d)),
+        "e" => Some((s, 0.0)),
+        "se" => Some((d, -d)),
+        "s" => Some((0.0, -s)),
+        "sw" => Some((-d, -d)),
+        "w" => Some((-s, 0.0)),
+        "nw" => Some((-d, d)),
         _ => None,
     }
 }
 
-/// Resolves the sub-box (in absolute coordinates centered at `node.pos`) targeted by `port`,
-/// plus an optional compass direction (`"n"`, `"ne"`, `"e"`, `"se"`, `"s"`, `"sw"`, `"w"`, `"nw"`, `"c"`).
-pub fn resolve_port_box_and_compass(
+fn compass_point_on_box(b: &BoundingBox, compass: Option<&str>) -> Option<Point> {
+    let c = compass?.trim().to_ascii_lowercase();
+    let cx = (b.ll.x + b.ur.x) / 2.0;
+    let cy = (b.ll.y + b.ur.y) / 2.0;
+    match c.as_str() {
+        "n" => Some(Point::new(cx, b.ur.y)),
+        "ne" => Some(Point::new(b.ur.x, b.ur.y)),
+        "e" => Some(Point::new(b.ur.x, cy)),
+        "se" => Some(Point::new(b.ur.x, b.ll.y)),
+        "s" => Some(Point::new(cx, b.ll.y)),
+        "sw" => Some(Point::new(b.ll.x, b.ll.y)),
+        "w" => Some(Point::new(b.ll.x, cy)),
+        "nw" => Some(Point::new(b.ll.x, b.ur.y)),
+        "c" | "_" => Some(Point::new(cx, cy)),
+        _ => None,
+    }
+}
+
+fn clip_center_ray_to_shape(
     node: &NodeData,
-    port: &Port,
-) -> (BoundingBox, Option<&'static str>, bool) {
-    let rx = (node.width * POINTS_PER_INCH / 2.0).max(0.5);
-    let ry = (node.height * POINTS_PER_INCH / 2.0).max(0.5);
-    let node_box = BoundingBox::new(
+    shape: ShapeKind,
+    rx: f64,
+    ry: f64,
+    outside_pt: Point,
+) -> Point {
+    let dx = outside_pt.x - node.pos.x;
+    let dy = outside_pt.y - node.pos.y;
+    if dx.abs() <= 1e-9 && dy.abs() <= 1e-9 {
+        return Point::new(node.pos.x, node.pos.y + ry);
+    }
+
+    let distortion = shape.default_distortion()
+        + node
+            .attrs
+            .get("distortion")
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .unwrap_or(0.0);
+    let skew = shape.default_skew()
+        + node
+            .attrs
+            .get("skew")
+            .and_then(|s| s.trim().parse::<f64>().ok())
+            .unwrap_or(0.0);
+
+    // Elliptical / circular shapes without distortion/skew: exact analytical ellipse intersection.
+    if matches!(
+        shape,
+        ShapeKind::Ellipse
+            | ShapeKind::Circle
+            | ShapeKind::DoubleCircle
+            | ShapeKind::Mcircle
+            | ShapeKind::Point
+    ) && distortion.abs() <= 1e-9
+        && skew.abs() <= 1e-9
+    {
+        let denom = ((dx / rx.max(1e-6)).powi(2) + (dy / ry.max(1e-6)).powi(2)).sqrt();
+        if denom <= 1e-9 {
+            return node.pos;
+        }
+        return Point::new(node.pos.x + dx / denom, node.pos.y + dy / denom);
+    }
+
+    // Polygonal shapes: intersect ray `(0, 0) -> (dx, dy)` with the polygon's edges.
+    let poly_verts = shape_polygon_vertices(node);
+    if poly_verts.len() >= 3
+        && let Some(hit) = clip_ray_to_local_polygon(&poly_verts, Point::new(dx, dy))
+    {
+        return Point::new(node.pos.x + hit.x, node.pos.y + hit.y);
+    }
+
+    // Fallback to axis-aligned bounding box intersection (`box`, `record`, `plaintext`, `cylinder`, etc.).
+    let world_box = BoundingBox::new(
         node.pos.x - rx,
         node.pos.y - ry,
         node.pos.x + rx,
         node.pos.y + ry,
     );
-
-    let explicit_compass = port.compass.as_deref().and_then(parse_compass_direction);
-    let rankdir = node.attrs.get("_rankdir").map_or("TB", String::as_str);
-
-    if let Some(ref port_name) = port.name {
-        // 1. Check record sub-field port.
-        if let Some(rec) = record_layout(node, "", rankdir)
-            && let Some(sub) = rec.find_port(port_name)
-        {
-            let sub_box = BoundingBox::new(
-                node.pos.x + sub.bbox.ll.x,
-                node.pos.y + sub.bbox.ll.y,
-                node.pos.x + sub.bbox.ur.x,
-                node.pos.y + sub.bbox.ur.y,
-            );
-            return (sub_box, explicit_compass, true);
-        }
-
-        // 2. Check HTML table cell port.
-        if let Some(tbl) = html_table_layout(node, "")
-            && let Some(sub_bb) = tbl.find_port_box(port_name)
-        {
-            let sub_box = BoundingBox::new(
-                node.pos.x + sub_bb.ll.x,
-                node.pos.y + sub_bb.ll.y,
-                node.pos.x + sub_bb.ur.x,
-                node.pos.y + sub_bb.ur.y,
-            );
-            return (sub_box, explicit_compass, true);
-        }
-
-        // 3. If `port.compass` is None and `port.name` is itself a compass token (`a:n -> b:s`).
-        if explicit_compass.is_none()
-            && let Some(comp) = parse_compass_direction(port_name)
-        {
-            return (node_box, Some(comp), false);
-        }
-    }
-
-    (node_box, explicit_compass, false)
+    clip_ray_to_box(&world_box, node.pos, outside_pt)
 }
 
-/// Resolves the center offset of `port` relative to `node.pos` in points.
-pub fn resolve_port_offset(node: &NodeData, port: &Port) -> Point {
-    let (bbox, compass, is_subbox) = resolve_port_box_and_compass(node, port);
-    let cx = (bbox.ll.x + bbox.ur.x) / 2.0;
-    let cy = (bbox.ll.y + bbox.ur.y) / 2.0;
-    if is_subbox {
-        if let Some(comp) = compass {
-            let pt = compass_point_on_box(bbox, comp);
-            return Point::new(pt.x - node.pos.x, pt.y - node.pos.y);
-        }
-        return Point::new(cx - node.pos.x, cy - node.pos.y);
+fn clip_ray_to_box(b: &BoundingBox, origin: Point, target: Point) -> Point {
+    let dx = target.x - origin.x;
+    let dy = target.y - origin.y;
+    if dx.abs() <= 1e-9 && dy.abs() <= 1e-9 {
+        return origin;
     }
-    if let Some(comp) = compass
-        && comp != "c"
-        && comp != "_"
-    {
-        let dir = compass_unit_vector(comp);
-        let far = Point::new(
-            node.pos.x + dir.x * (bbox.width() + bbox.height()) * 4.0,
-            node.pos.y + dir.y * (bbox.width() + bbox.height()) * 4.0,
-        );
-        let boundary = clip_ray_from_origin(node, node.pos, far);
-        return Point::new(boundary.x - node.pos.x, boundary.y - node.pos.y);
+    let mut t_min = f64::INFINITY;
+    if dx > 1e-9 {
+        t_min = t_min.min((b.ur.x - origin.x) / dx);
+    } else if dx < -1e-9 {
+        t_min = t_min.min((b.ll.x - origin.x) / dx);
     }
-    Point::new(0.0, 0.0)
+    if dy > 1e-9 {
+        t_min = t_min.min((b.ur.y - origin.y) / dy);
+    } else if dy < -1e-9 {
+        t_min = t_min.min((b.ll.y - origin.y) / dy);
+    }
+    if !t_min.is_finite() || t_min < 0.0 {
+        return origin;
+    }
+    Point::new(origin.x + dx * t_min, origin.y + dy * t_min)
 }
 
-fn compass_point_on_box(b: BoundingBox, compass: &str) -> Point {
-    let cx = (b.ll.x + b.ur.x) / 2.0;
-    let cy = (b.ll.y + b.ur.y) / 2.0;
-    match compass {
-        "n" => Point::new(cx, b.ur.y),
-        "ne" => Point::new(b.ur.x, b.ur.y),
-        "e" => Point::new(b.ur.x, cy),
-        "se" => Point::new(b.ur.x, b.ll.y),
-        "s" => Point::new(cx, b.ll.y),
-        "sw" => Point::new(b.ll.x, b.ll.y),
-        "w" => Point::new(b.ll.x, cy),
-        "nw" => Point::new(b.ll.x, b.ur.y),
-        _ => Point::new(cx, cy),
-    }
-}
-
-fn compass_unit_vector(compass: &str) -> Point {
-    let s = FRAC_PI_2.sin(); // 1.0
-    let d = std::f64::consts::FRAC_1_SQRT_2;
-    match compass {
-        "n" => Point::new(0.0, s),
-        "ne" => Point::new(d, d),
-        "e" => Point::new(s, 0.0),
-        "se" => Point::new(d, -d),
-        "s" => Point::new(0.0, -s),
-        "sw" => Point::new(-d, -d),
-        "w" => Point::new(-s, 0.0),
-        "nw" => Point::new(-d, d),
-        _ => Point::new(0.0, 0.0),
-    }
-}
-
-/// Computes the exact intersection point on the perimeter of `node` (ellipse, circle, box,
-/// polygon, star, or record/HTML port sub-box) for a ray originating at `node`/`port` and
-/// aiming toward `outside_pt`.
-pub fn clip_ray_to_node_boundary(node: &NodeData, port: &Port, outside_pt: Point) -> Point {
-    let (target_box, compass, is_subbox) = resolve_port_box_and_compass(node, port);
-
-    if is_subbox {
-        if let Some(comp) = compass
-            && comp != "c"
-            && comp != "_"
-        {
-            return compass_point_on_box(target_box, comp);
-        }
-        let origin = Point::new(
-            (target_box.ll.x + target_box.ur.x) / 2.0,
-            (target_box.ll.y + target_box.ur.y) / 2.0,
-        );
-        let shape = ShapeKind::from_node(node);
-        if shape.is_record() {
-            return intersect_ray_with_box(origin, outside_pt, target_box);
-        }
-        return clip_ray_from_origin(node, origin, outside_pt);
-    }
-
-    if let Some(comp) = compass {
-        match comp {
-            "c" => {
-                if outside_pt.dist(node.pos) <= 1e-9 {
-                    return node.pos;
-                }
-                return clip_ray_from_origin(node, node.pos, outside_pt);
-            }
-            "_" => return clip_ray_from_origin(node, node.pos, outside_pt),
-            dir_str => {
-                let shape = ShapeKind::from_node(node);
-                let sides = shape.default_sides();
-                let is_axis_box = sides == 4
-                    && (shape.default_orientation().rem_euclid(90.0)).abs() < 0.5
-                    && shape.default_distortion().abs() <= 1e-9
-                    && shape.default_skew().abs() <= 1e-9
-                    && !matches!(shape, ShapeKind::Star);
-                if is_axis_box || shape.is_record() {
-                    return compass_point_on_box(target_box, dir_str);
-                }
-                let dir = compass_unit_vector(dir_str);
-                let maxv = target_box.width().max(target_box.height()) * 4.0;
-                let far = Point::new(node.pos.x + dir.x * maxv, node.pos.y + dir.y * maxv);
-                return clip_ray_from_origin(node, node.pos, far);
-            }
-        }
-    }
-
-    clip_ray_from_origin(node, node.pos, outside_pt)
-}
-
-fn clip_ray_from_origin(node: &NodeData, origin: Point, outside_pt: Point) -> Point {
-    let rx = (node.width * POINTS_PER_INCH) / 2.0;
-    let ry = (node.height * POINTS_PER_INCH) / 2.0;
-    if rx <= 1e-9 || ry <= 1e-9 {
-        return node.pos;
-    }
-
-    let dx = outside_pt.x - origin.x;
-    let dy = outside_pt.y - origin.y;
-    if dx.hypot(dy) <= 1e-12 {
-        return Point::new(node.pos.x + rx, node.pos.y);
-    }
-
-    let shape = ShapeKind::from_node(node);
-    let mut sides = shape.default_sides();
-    let orientation = shape.default_orientation()
-        + node
-            .attrs
-            .get("orientation")
-            .and_then(|s| s.trim().parse::<f64>().ok())
-            .unwrap_or(0.0);
-    let mut distortion = shape.default_distortion();
-    let mut skew = shape.default_skew();
-    if sides == 0 {
-        sides = node
-            .attrs
-            .get("sides")
-            .and_then(|s| s.trim().parse::<usize>().ok())
-            .unwrap_or(4);
-        distortion = node
-            .attrs
-            .get("distortion")
-            .and_then(|s| s.trim().parse::<f64>().ok())
-            .unwrap_or(0.0);
-        skew = node
-            .attrs
-            .get("skew")
-            .and_then(|s| s.trim().parse::<f64>().ok())
-            .unwrap_or(0.0);
-    }
-
-    // 1. Ellipses and circles (`sides <= 2` and no distortion/skew).
-    if sides <= 2 && distortion.abs() <= 1e-9 && skew.abs() <= 1e-9 && !shape.is_record() {
-        return intersect_ray_with_ellipse(origin, outside_pt, node.pos, rx, ry);
-    }
-
-    // 2. Axis-aligned rectangular boxes and records.
-    let is_box = (sides == 4
-        && (orientation.rem_euclid(90.0)).abs() < 0.5
-        && distortion.abs() <= 1e-9
-        && skew.abs() <= 1e-9
-        && !matches!(shape, ShapeKind::Star))
-        || shape.is_record()
-        || shape == ShapeKind::Cylinder;
-    if is_box {
-        let bbox = BoundingBox::new(
-            node.pos.x - rx,
-            node.pos.y - ry,
-            node.pos.x + rx,
-            node.pos.y + ry,
-        );
-        return intersect_ray_with_box(origin, outside_pt, bbox);
-    }
-
-    // 3. General convex/non-convex polygons (diamond, triangle, hexagon, octagon, trapezium, star, etc.).
-    let verts = shape_polygon_vertices(node);
-    if verts.len() >= 3
-        && let Some(hit) = intersect_ray_with_polygon(origin, outside_pt, node.pos, &verts)
-    {
-        return hit;
-    }
-
-    intersect_ray_with_ellipse(origin, outside_pt, node.pos, rx, ry)
-}
-
-fn intersect_ray_with_ellipse(
-    origin: Point,
-    outside_pt: Point,
-    center: Point,
-    rx: f64,
-    ry: f64,
-) -> Point {
-    let dx = outside_pt.x - origin.x;
-    let dy = outside_pt.y - origin.y;
-    let ox = origin.x - center.x;
-    let oy = origin.y - center.y;
-
-    let a = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
-    if a <= 1e-18 {
-        return Point::new(center.x + rx, center.y);
-    }
-    let b = 2.0 * ((ox * dx) / (rx * rx) + (oy * dy) / (ry * ry));
-    let c = (ox * ox) / (rx * rx) + (oy * oy) / (ry * ry) - 1.0;
-
-    let disc = b * b - 4.0 * a * c;
-    if disc >= 0.0 {
-        let t = (-b + disc.sqrt()) / (2.0 * a);
-        if t >= 0.0 {
-            return Point::new(origin.x + t * dx, origin.y + t * dy);
-        }
-    }
-
-    // Fallback: radial projection from ellipse center.
-    let rdx = outside_pt.x - center.x;
-    let rdy = outside_pt.y - center.y;
-    let scale = ((rdx / rx).powi(2) + (rdy / ry).powi(2)).sqrt();
-    if scale <= 1e-12 {
-        Point::new(center.x + rx, center.y)
-    } else {
-        Point::new(center.x + rdx / scale, center.y + rdy / scale)
-    }
-}
-
-fn intersect_ray_with_box(origin: Point, outside_pt: Point, bbox: BoundingBox) -> Point {
-    let ox = origin.x.clamp(bbox.ll.x, bbox.ur.x);
-    let oy = origin.y.clamp(bbox.ll.y, bbox.ur.y);
-    let dx = outside_pt.x - ox;
-    let dy = outside_pt.y - oy;
-
-    if dx.hypot(dy) <= 1e-12 {
-        return Point::new(bbox.ur.x, oy);
-    }
-
-    let tx = if dx > 1e-12 {
-        (bbox.ur.x - ox) / dx
-    } else if dx < -1e-12 {
-        (bbox.ll.x - ox) / dx
-    } else {
-        f64::INFINITY
-    };
-
-    let ty = if dy > 1e-12 {
-        (bbox.ur.y - oy) / dy
-    } else if dy < -1e-12 {
-        (bbox.ll.y - oy) / dy
-    } else {
-        f64::INFINITY
-    };
-
-    let t = tx.min(ty);
-    if t.is_finite() && t >= 0.0 {
-        Point::new(ox + t * dx, oy + t * dy)
-    } else {
-        Point::new(bbox.ur.x, oy)
-    }
-}
-
-fn intersect_ray_with_polygon(
-    origin: Point,
-    outside_pt: Point,
-    center: Point,
-    local_verts: &[Point],
-) -> Option<Point> {
-    let dx = outside_pt.x - origin.x;
-    let dy = outside_pt.y - origin.y;
-    if dx.hypot(dy) <= 1e-12 {
-        return None;
-    }
-
-    let mut best_t: Option<f64> = None;
-    let n = local_verts.len();
+fn clip_ray_to_local_polygon(verts: &[Point], dir: Point) -> Option<Point> {
+    let n = verts.len();
+    let mut best_t = f64::INFINITY;
     for i in 0..n {
-        let a = Point::new(center.x + local_verts[i].x, center.y + local_verts[i].y);
-        let b = Point::new(
-            center.x + local_verts[(i + 1) % n].x,
-            center.y + local_verts[(i + 1) % n].y,
-        );
-        let sx = b.x - a.x;
-        let sy = b.y - a.y;
-
-        // Solve: origin + t * d = a + u * s
-        let denom = dx * sy - dy * sx;
-        if denom.abs() <= 1e-12 {
+        let a = verts[i];
+        let b = verts[(i + 1) % n];
+        let edge = Point::new(b.x - a.x, b.y - a.y);
+        // Solve `t * dir = a + u * edge` for `t > 0` and `u in [0, 1]`.
+        let det = dir.x * (-edge.y) - dir.y * (-edge.x);
+        if det.abs() <= 1e-9 {
             continue;
         }
-        let qpx = a.x - origin.x;
-        let qpy = a.y - origin.y;
-        let t = (qpx * sy - qpy * sx) / denom;
-        let u = (qpx * dy - qpy * dx) / denom;
+        let t = (a.x * (-edge.y) - a.y * (-edge.x)) / det;
+        let u = (dir.x * a.y - dir.y * a.x) / det;
+        if t >= 0.0 && (-1e-7..=1.0 + 1e-7).contains(&u) && t < best_t {
+            best_t = t;
+        }
+    }
+    if best_t.is_finite() {
+        Some(Point::new(dir.x * best_t, dir.y * best_t))
+    } else {
+        None
+    }
+}
 
-        if t >= -1e-9 && (-1e-9..=1.0 + 1e-9).contains(&u) {
-            let t_pos = t.max(0.0);
-            best_t = Some(match best_t {
-                Some(prev) => prev.max(t_pos),
-                None => t_pos,
-            });
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gv_core::{AttrMap, NodeId};
+
+    fn make_node(name: &str, attrs: &[(&str, &str)]) -> NodeData {
+        let mut map = AttrMap::new();
+        for &(k, v) in attrs {
+            map.insert(k.to_string(), v.to_string());
+        }
+        NodeData {
+            id: NodeId(0),
+            name: name.to_string(),
+            attrs: map,
+            pos: Point::new(100.0, 200.0),
+            width: DEFAULT_NODE_WIDTH,
+            height: DEFAULT_NODE_HEIGHT,
+            rank: 0,
+            order: 0,
         }
     }
 
-    best_t.map(|t| Point::new(origin.x + t * dx, origin.y + t * dy))
+    #[test]
+    fn test_default_ellipse_and_point_dimensions() {
+        let mut n = make_node("A", &[]);
+        compute_node_dimensions(&mut n, "G");
+        assert!((n.width - 0.75).abs() < 1e-6);
+        assert!((n.height - 0.50).abs() < 1e-6);
+
+        let mut pt = make_node("P", &[("shape", "point")]);
+        compute_node_dimensions(&mut pt, "G");
+        assert!((pt.width - DEF_POINT_SIZE).abs() < 1e-6);
+        assert!((pt.height - DEF_POINT_SIZE).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_circle_and_doublecircle_dimensions() {
+        let mut c = make_node("C", &[("shape", "circle")]);
+        compute_node_dimensions(&mut c, "G");
+        assert!((c.width - c.height).abs() < 1e-6);
+
+        let mut dc = make_node("C", &[("shape", "doublecircle")]);
+        compute_node_dimensions(&mut dc, "G");
+        assert!((dc.width - dc.height).abs() < 1e-6);
+        // Doublecircle adds 2 * 4pt = 8pt (8/72 in) over circle.
+        assert!(((dc.width - c.width) * POINTS_PER_INCH - 8.0).abs() < 1e-4);
+    }
+
+    fn bbox_center(bb: &BoundingBox) -> Point {
+        Point::new((bb.ll.x + bb.ur.x) / 2.0, (bb.ll.y + bb.ur.y) / 2.0)
+    }
+
+    #[test]
+    fn test_record_nested_fields_and_ports() {
+        let mut rec = make_node(
+            "struct1",
+            &[
+                ("shape", "record"),
+                ("label", "<f0> left|{<f1> mid|<f2> bottom}|<f3> right"),
+            ],
+        );
+        compute_node_dimensions(&mut rec, "G");
+        assert!(rec.width > 1.5);
+        assert!(rec.height > 0.6);
+
+        let layout = record_layout(&rec, "G", "TB").expect("record layout");
+        assert_eq!(layout.children.len(), 3);
+        let f0 = layout.find_port("f0").expect("port f0");
+        let f1 = layout.find_port("f1").expect("port f1");
+        let f2 = layout.find_port("f2").expect("port f2");
+        let f3 = layout.find_port("f3").expect("port f3");
+
+        assert!(bbox_center(&f0.bbox).x < bbox_center(&f1.bbox).x);
+        assert!(bbox_center(&f1.bbox).x < bbox_center(&f3.bbox).x);
+        assert!(bbox_center(&f1.bbox).y > bbox_center(&f2.bbox).y);
+    }
+
+    #[test]
+    fn test_html_table_layout_and_port_lookup() {
+        let html = r#"<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="2">
+            <TR><TD PORT="p1">Header</TD><TD COLSPAN="2">Wide Cell</TD></TR>
+            <TR><TD ROWSPAN="2">Tall</TD><TD>A</TD><TD PORT="p2">B</TD></TR>
+            <TR><TD COLSPAN="2">Footer</TD></TR>
+        </TABLE>>"#;
+        let mut n = make_node("html_node", &[("shape", "plaintext"), ("label", html)]);
+        compute_node_dimensions(&mut n, "G");
+        assert!(n.width > 0.8);
+        assert!(n.height > 0.6);
+
+        let tbl = html_table_layout(&n, "G").expect("html table layout");
+        assert_eq!(tbl.row_count, 3);
+        assert_eq!(tbl.col_count, 3);
+        let p1 = tbl.find_port_box("p1").expect("port p1");
+        let p2 = tbl.find_port_box("p2").expect("port p2");
+        assert!(bbox_center(&p1).x < bbox_center(&p2).x);
+        assert!(bbox_center(&p1).y > bbox_center(&p2).y);
+    }
+
+    #[test]
+    fn test_clip_ray_to_ellipse_and_box_and_compass() {
+        let mut ell = make_node("E", &[("shape", "ellipse")]);
+        compute_node_dimensions(&mut ell, "G");
+        let rx = ell.width * POINTS_PER_INCH / 2.0;
+        let ry = ell.height * POINTS_PER_INCH / 2.0;
+
+        let east_hit = clip_ray_to_node_boundary(
+            &ell,
+            &Port::default(),
+            Point::new(ell.pos.x + 200.0, ell.pos.y),
+        );
+        assert!((east_hit.x - (ell.pos.x + rx)).abs() < 1e-4);
+        assert!((east_hit.y - ell.pos.y).abs() < 1e-4);
+
+        let north_port = Port {
+            name: None,
+            compass: Some("n".to_string()),
+        };
+        let north_hit =
+            clip_ray_to_node_boundary(&ell, &north_port, Point::new(ell.pos.x + 200.0, ell.pos.y));
+        assert!((north_hit.x - ell.pos.x).abs() < 1e-4);
+        assert!((north_hit.y - (ell.pos.y + ry)).abs() < 1e-4);
+    }
 }

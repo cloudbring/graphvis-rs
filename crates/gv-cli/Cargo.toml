@@ -18,6 +18,10 @@ path = "src/bin/bench_phase1.rs"
 name = "bench_phase2"
 path = "src/bin/bench_phase2.rs"
 
+[[bin]]
+name = "visual_diff"
+path = "src/bin/visual_diff.rs"
+
 [dependencies]
 gv-core.workspace = true
 gv-parser.workspace = true
