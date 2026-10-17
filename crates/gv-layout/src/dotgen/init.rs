@@ -123,6 +123,16 @@ impl<'a> Dot<'a> {
             d.graphs[0].edges.insert(i);
         }
         d.edge_seq = ne as u64;
+        // cgraph orders a node's out-edges by (head seq, edge seq) and its in-edges by
+        // (tail seq, edge seq) (`agedgeseqcmpf`).
+        for n in 0..nn {
+            let mut o = std::mem::take(&mut d.nodes[n].cg_out);
+            o.sort_by_key(|&e| (d.edges[e].head, d.edges[e].seq));
+            d.nodes[n].cg_out = o;
+            let mut i = std::mem::take(&mut d.nodes[n].cg_in);
+            i.sort_by_key(|&e| (d.edges[e].tail, d.edges[e].seq));
+            d.nodes[n].cg_in = i;
+        }
         d.n_real_nodes = nn;
         // Subgraphs: create in input order, then wire the hierarchy.
         let base = d.graphs.len();

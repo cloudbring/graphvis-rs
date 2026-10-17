@@ -787,6 +787,14 @@ impl Dot<'_> {
         let nsz = (maxrank.max(0) as usize) + 1;
         let mut nrank = vec![0i32; nsz];
         let mut tree_node = self.nlist_vec(ctx.g);
+        if std::env::var_os("GVDUMP").is_some() {
+            let mut l = String::from("TBPRE");
+            for &n in &tree_node {
+                let nm = if self.nodes[n].node_type == NORMAL { self.nodes[n].name.as_str() } else { "_" };
+                l.push_str(&format!(" {}:{}", nm, self.nodes[n].rank));
+            }
+            eprintln!("{l}");
+        }
         {
             let nodes = &self.nodes;
             if adj > 1 {
@@ -806,6 +814,15 @@ impl Dot<'_> {
                     nrank[r as usize] += 1;
                 }
             }
+        }
+        let dump = std::env::var_os("GVDUMP").is_some();
+        if dump {
+            let mut l = String::from("TBORDER");
+            for &n in &tree_node {
+                let nm = if self.nodes[n].node_type == NORMAL { self.nodes[n].name.as_str() } else { "_" };
+                l.push_str(&format!(" {}:{}", nm, self.nodes[n].rank));
+            }
+            eprintln!("{l}");
         }
         for &n in &tree_node {
             if self.nodes[n].node_type != NORMAL {
@@ -850,6 +867,9 @@ impl Dot<'_> {
                 }
                 if choice >= 0 && (choice as usize) < nsz {
                     nrank[choice as usize] += 1;
+                }
+                if dump {
+                    eprintln!("TB {} {} {} {} -> {}", self.nodes[n].name, r, low, high, choice);
                 }
                 self.nodes[n].rank = choice;
             }

@@ -684,12 +684,12 @@ impl Dot<'_> {
 
     /// Live `agnxtout(g, e)` for an edge of `v` (sequence order).
     fn live_next_out(&self, g: G, v: N, e: E) -> Option<E> {
-        let seq = self.edges[e].seq;
+        let k = self.out_key(e);
         self.nodes[v]
             .cg_out
             .iter()
             .copied()
-            .find(|&x| self.edges[x].seq > seq && self.graphs[g].edges.contains(&x))
+            .find(|&x| self.out_key(x) > k && self.graphs[g].edges.contains(&x))
     }
 
     fn nr_dfs(&mut self, g: G, v: N) {

@@ -139,20 +139,53 @@ impl<'a> Dot<'a> {
         self.bufs.len() - 1
     }
 
+    /// Debug dump of the layout state (`GVDUMP=1`), matching the instrumented C build
+    /// described in docs/porting/dotgen.md.
+    pub fn gvdump(&self, phase: &str) {
+        if std::env::var_os("GVDUMP").is_none() {
+            return;
+        }
+        if phase == "R" {
+            for n in self.nodes_of(0) {
+                eprintln!("R {} {}", self.nodes[n].name, self.nodes[n].rank);
+            }
+            return;
+        }
+        for r in self.graphs[0].minrank..=self.graphs[0].maxrank {
+            let mut line = format!("{phase} {r}:");
+            for i in 0..self.rank_n(0, r) {
+                let Some(v) = self.rv(0, r, i) else { continue };
+                if self.nodes[v].node_type == NORMAL {
+                    line.push(' ');
+                    line.push_str(&self.nodes[v].name);
+                } else {
+                    line.push_str(" _");
+                }
+                if phase == "P" {
+                    line.push_str(&format!("@{}", self.nodes[v].coord.x));
+                }
+            }
+            eprintln!("{line}");
+        }
+    }
+
     /// `dotLayout` (dotinit.c), without the splines phase.
     pub fn dot_layout(&mut self) -> std::result::Result<(), String> {
         let maxphase = utils::late_int(self.agget(0, "phase"), -1, 1);
         self.dot_init_subg();
         self.dot_init_node_edge();
         self.dot_rank();
+        self.gvdump("R");
         if maxphase == 1 {
             return Ok(());
         }
         self.dot_mincross()?;
+        self.gvdump("M");
         if maxphase == 2 {
             return Ok(());
         }
         self.dot_position()?;
+        self.gvdump("P");
         if maxphase == 3 {
             return Ok(());
         }

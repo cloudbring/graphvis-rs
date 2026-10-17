@@ -285,9 +285,34 @@ impl Dot<'_> {
             seq: self.edge_seq,
             ..EdgeInfo::default()
         });
-        self.nodes[t].cg_out.push(e);
-        self.nodes[h].cg_in.push(e);
+        self.cg_insert_out(t, e);
+        self.cg_insert_in(h, e);
         self.agsubedge(g, e);
         e
+    }
+
+    /// Key of an out-edge in cgraph's `agedgeseqcmpf` order.
+    pub fn out_key(&self, e: E) -> (N, u64) {
+        (self.edges[e].head, self.edges[e].seq)
+    }
+
+    fn cg_insert_out(&mut self, t: N, e: E) {
+        let k = self.out_key(e);
+        let pos = self.nodes[t]
+            .cg_out
+            .iter()
+            .position(|&x| self.out_key(x) > k)
+            .unwrap_or(self.nodes[t].cg_out.len());
+        self.nodes[t].cg_out.insert(pos, e);
+    }
+
+    fn cg_insert_in(&mut self, h: N, e: E) {
+        let k = (self.edges[e].tail, self.edges[e].seq);
+        let pos = self.nodes[h]
+            .cg_in
+            .iter()
+            .position(|&x| (self.edges[x].tail, self.edges[x].seq) > k)
+            .unwrap_or(self.nodes[h].cg_in.len());
+        self.nodes[h].cg_in.insert(pos, e);
     }
 }

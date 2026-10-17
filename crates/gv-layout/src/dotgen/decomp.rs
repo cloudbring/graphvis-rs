@@ -35,6 +35,12 @@ impl Dot<'_> {
                 continue;
             }
             self.add_to_component(g, n);
+            if std::env::var_os("GVDUMP").is_some() {
+                let nm = |x: N| self.nodes[x].name.clone();
+                let ins: String = self.nodes[n].in_.iter().map(|&e| format!(" {}", nm(self.edges[e].tail))).collect();
+                let outs: String = self.nodes[n].out.iter().map(|&e| format!(" {}", nm(self.edges[e].head))).collect();
+                eprintln!("SC {} in:{} out:{}", self.nodes[n].name, ins, outs);
+            }
             let vecs = [
                 self.nodes[n].flat_in.clone(),
                 self.nodes[n].flat_out.clone(),

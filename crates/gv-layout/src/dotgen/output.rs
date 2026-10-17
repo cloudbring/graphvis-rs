@@ -227,7 +227,10 @@ impl Dot<'_> {
                     ep: seg.end_arrow.map(|p| cwrotatepf(p, rd)),
                 });
             }
-            for bz in &bzs {
+            // The phase-1 router overshoots where C's splines stay inside the node
+            // boxes; only self loops (which C routes outside the node) grow the bb.
+            let bb_from_spline = t == h;
+            for bz in bzs.iter().filter(|_| bb_from_spline) {
                 let pts = &bz.list;
                 let mut k = 0;
                 while k + 3 < pts.len() {
