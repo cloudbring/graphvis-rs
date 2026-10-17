@@ -1,0 +1,9 @@
+graph labels {
+layout=twopi;
+
+
+a -- b [label="ab"];
+b -- c [label="bc", headlabel="h", taillabel="t"];
+c -- a;
+a [label="node A"]; b [shape=box]; c [shape=diamond];
+}

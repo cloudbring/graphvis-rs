@@ -1,0 +1,25 @@
+digraph G {
+	graph [bb="0,0,54,268.04",
+		fontsize=24,
+		layout=twopi,
+		nodesep=.25,
+		ranksep=1.5
+	];
+	node [fontsize=24,
+		label="\N"
+	];
+	edge [fontsize=24,
+		style="setlinewidth(3)"
+	];
+	a	[height=0.72282,
+		pos="27,26.022",
+		width=0.75];
+	b	[height=0.72282,
+		pos="27,134.02",
+		width=0.75];
+	a -> b	[pos="e,27,107.5 27,52.441 27,65.647 27,81.861 27,96.345"];
+	c	[height=0.72282,
+		pos="27,242.02",
+		width=0.75];
+	b -> c	[pos="e,27,215.5 27,160.44 27,173.65 27,189.86 27,204.35"];
+}

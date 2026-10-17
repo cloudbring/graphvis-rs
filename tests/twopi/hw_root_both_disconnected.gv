@@ -1,0 +1,9 @@
+graph disc2 {
+layout=twopi;
+
+root=b; m [root=true];
+a -- b -- c -- a;
+d -- e -- f -- d;
+g -- h;
+k -- l -- m -- n -- k;
+}

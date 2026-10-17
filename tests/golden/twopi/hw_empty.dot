@@ -1,0 +1,6 @@
+graph empty {
+	graph [bb="0,0,0,0",
+		layout=twopi
+	];
+	node [label="\N"];
+}

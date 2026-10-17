@@ -1,0 +1,5 @@
+graph G {
+layout=twopi;
+
+  yen [label="&#165;"]
+}

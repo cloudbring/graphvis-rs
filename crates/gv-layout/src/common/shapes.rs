@@ -49,6 +49,10 @@ pub struct NodeShape {
     pub penwidth: f64,
     /// True for shapes with no `insidefn` (user shapes); edges are not clipped.
     pub no_clip: bool,
+    /// Box of the record's root field (`((field_t *)ND_shape_info(n))->b`),
+    /// which `record_inside` tests against; unlike `ND_ht` it lacks the
+    /// `+1` of `record_init`.
+    pub record_box: Option<gv_core::BoundingBox>,
 }
 
 /// Static shape description (`polygon_t` initialisers and the `Shapes[]` table).
@@ -422,6 +426,7 @@ impl NodeShape {
             outline_height: height,
             penwidth,
             no_clip: false,
+            record_box: None,
         };
         match desc.inside {
             InsideFn::Record | InsideFn::Epsf => {
@@ -562,6 +567,9 @@ impl NodeShape {
     pub fn apply_geometry(&mut self, geom: &gv_geom::node_size::NodeGeometry) {
         self.outline_width = geom.outline_width * 72.0;
         self.outline_height = geom.outline_height * 72.0;
+        if let Some(r) = &geom.record {
+            self.record_box = Some(r.bbox);
+        }
         if let Some(p) = &geom.polygon {
             self.sides = p.sides;
             self.peripheries = p.peripheries;
@@ -633,15 +641,15 @@ impl NodeShape {
                 pr.x.hypot(pr.y) <= radius
             }
             InsideFn::Record => {
-                // `fld0->b` spans the record size; `record_init` stores
-                // ND_height = size.y + 1 ("Kluge!!"), so the box is 1pt shorter.
-                let h = self.height - 1.0;
-                let mut b = ctx.bp.unwrap_or(gv_core::BoundingBox::new(
-                    -self.width / 2.0,
-                    -h / 2.0,
-                    self.width / 2.0,
-                    h / 2.0,
-                ));
+                let mut b = ctx
+                    .bp
+                    .or(self.record_box)
+                    .unwrap_or(gv_core::BoundingBox::new(
+                        -self.width / 2.0,
+                        -self.height / 2.0,
+                        self.width / 2.0,
+                        self.height / 2.0,
+                    ));
                 let e = self.penwidth / 2.0;
                 b.ll.x -= e;
                 b.ll.y -= e;

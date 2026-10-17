@@ -1,0 +1,6 @@
+graph {
+layout=circo;
+
+  LargeBottom [shape=polygon sides=4 distortion=-.5]
+  LargeTop    [shape=polygon sides=4 distortion=.5]
+}

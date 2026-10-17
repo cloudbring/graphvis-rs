@@ -1,0 +1,17 @@
+graph {
+layout=twopi;
+
+    bgcolor=lightgray
+    margin=0 # in inches
+    
+    subgraph cluster_one {
+      margin=8 # in points
+      a
+      b
+    }
+    subgraph cluster_two {
+      margin=16 # in points
+      c
+      d
+    }
+}

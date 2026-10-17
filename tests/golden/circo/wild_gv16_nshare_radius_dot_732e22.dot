@@ -1,0 +1,20 @@
+digraph {
+	graph [bb="0,0,306,36",
+		layout=circo,
+		nodesep=1.0,
+		splines=ortho
+	];
+	node [label="\N"];
+	x	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	y	[height=0.5,
+		pos="153,18",
+		width=0.75];
+	x -> y	[pos="e,125.71,18 54.34,18 54.34,18 114.2,18 114.2,18",
+		radius=8];
+	z	[height=0.5,
+		pos="279,18",
+		width=0.75];
+	z -> y	[pos="e,180.29,18 251.66,18 251.66,18 191.8,18 191.8,18"];
+}

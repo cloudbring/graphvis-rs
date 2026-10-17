@@ -1,0 +1,15 @@
+digraph G {
+	graph [bb="0,0,158.44,36",
+		concentrate=true,
+		layout=twopi
+	];
+	node [label="\N"];
+	routine1	[height=0.5,
+		pos="115.22,18",
+		width=1.2005];
+	routine2	[height=0.5,
+		pos="43.218,18",
+		width=1.2005];
+	routine1 -> routine2	[pos="e,71.32,18 71.675,18 71.616,18 71.556,18 71.497,18"];
+	routine1 -> routine2;
+}
