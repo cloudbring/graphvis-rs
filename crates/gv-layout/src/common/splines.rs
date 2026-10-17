@@ -79,6 +79,8 @@ pub enum LabelKind {
     Main,
     Head,
     Tail,
+    /// `ED_xlabel`.
+    Xlabel,
 }
 
 /// Snapshot of a `textlabel_t` (`dimen`, `pos`, `set`).
@@ -1250,6 +1252,7 @@ impl SplineGraph for LGraph<'_> {
             LabelKind::Main => ed.label.as_ref(),
             LabelKind::Head => ed.head_label.as_ref(),
             LabelKind::Tail => ed.tail_label.as_ref(),
+            LabelKind::Xlabel => ed.xlabel.as_ref(),
         }?;
         Some(LabelView {
             dimen: l.dimen,
@@ -1263,6 +1266,7 @@ impl SplineGraph for LGraph<'_> {
             LabelKind::Main => ed.label.as_mut(),
             LabelKind::Head => ed.head_label.as_mut(),
             LabelKind::Tail => ed.tail_label.as_mut(),
+            LabelKind::Xlabel => ed.xlabel.as_mut(),
         };
         if let Some(l) = l {
             l.pos = pos;

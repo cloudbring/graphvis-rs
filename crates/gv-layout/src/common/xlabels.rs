@@ -5,8 +5,11 @@
 //! Positions every unset node `xlabel` and edge `label`/`xlabel`/`headlabel`/
 //! `taillabel` next to its anchor so it avoids nodes and other labels.
 
-use super::splines::{add_label_bb, edge_midpoint};
-use super::types::{EdgeType, LGraph, TextLabel};
+use super::splines::{
+    LabelKind, LabelView, SplineGraph, add_label_bb_dims, edge_midpoint, getsplinepoints,
+    update_bb_label,
+};
+use super::types::{EdgeType, LGraph};
 use gv_core::{BoundingBox, Point};
 
 // ---------------------------------------------------------------- R-tree
@@ -727,10 +730,29 @@ fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bo
     }
 }
 
-#[derive(Clone, Copy)]
+/// Extra layout state `addXLabels` reads beyond [`SplineGraph`].
+pub trait XLabelGraph: SplineGraph {
+    /// Nodes in `agfstnode` order.
+    fn xl_nodes(&self) -> Vec<usize>;
+    /// Out-edges of `n` in `agfstout` order.
+    fn xl_out_edges(&self, n: usize) -> Vec<usize>;
+    /// `INCH2PS(ND_width(n))`, `INCH2PS(ND_height(n))`.
+    fn xl_node_size(&self, n: usize) -> Point;
+    /// `ND_xlabel(n)`.
+    fn node_xlabel(&self, n: usize) -> Option<LabelView>;
+    fn set_node_xlabel_pos(&mut self, n: usize, pos: Point);
+    /// Set cluster labels in `addClusterObj` order (children first).
+    fn xl_cluster_labels(&self) -> Vec<LabelView>;
+    /// `EDGE_TYPE(g)`.
+    fn xl_edge_type(&self) -> EdgeType;
+    /// `late_bool(gp, agfindgraphattr(gp, "forcelabels"), true)`.
+    fn xl_forcelabels(&self) -> bool;
+}
+
+#[derive(Debug, Clone, Copy)]
 enum LblRef {
     NodeX(usize),
-    Edge(usize, u8),
+    Edge(usize, LabelKind),
 }
 
 fn adjust_bb(o: &Object, bb: &mut BoundingBox) {
@@ -740,50 +762,43 @@ fn adjust_bb(o: &Object, bb: &mut BoundingBox) {
     bb.ur.y = bb.ur.y.max(o.pos.y + o.sz.y);
 }
 
-fn label_obj(lp: &TextLabel, bb: &mut BoundingBox) -> Object {
+/// `addLabelObj(lp, objp, bb)`.
+fn label_obj(lp: &LabelView, flip: bool, bb: &mut BoundingBox) -> Object {
+    let sz = if flip {
+        Point::new(lp.dimen.y, lp.dimen.x)
+    } else {
+        lp.dimen
+    };
     let o = Object {
-        sz: lp.dimen,
-        pos: Point::new(lp.pos.x - lp.dimen.x / 2.0, lp.pos.y - lp.dimen.y / 2.0),
+        sz,
+        pos: Point::new(lp.pos.x - sz.x / 2.0, lp.pos.y - sz.y / 2.0),
         lbl: None,
     };
     adjust_bb(&o, bb);
     o
 }
 
-fn edge_label<'g>(g: &'g LGraph<'_>, e: usize, k: u8) -> Option<&'g TextLabel> {
-    let ed = &g.edges[e];
-    match k {
-        0 => ed.label.as_ref(),
-        1 => ed.tail_label.as_ref(),
-        2 => ed.head_label.as_ref(),
-        _ => ed.xlabel.as_ref(),
-    }
-}
-
-fn edge_label_mut<'g>(g: &'g mut LGraph<'_>, e: usize, k: u8) -> Option<&'g mut TextLabel> {
-    let ed = &mut g.edges[e];
-    match k {
-        0 => ed.label.as_mut(),
-        1 => ed.tail_label.as_mut(),
-        2 => ed.head_label.as_mut(),
-        _ => ed.xlabel.as_mut(),
-    }
-}
-
-/// `addXLabels(gp)` for unflipped graphs.
-pub fn add_xlabels(g: &mut LGraph<'_>) {
-    let et = g.edge_type;
-    let have_edge = |g: &LGraph<'_>, e: usize| et != EdgeType::None && g.edges[e].spl.is_some();
-    let any_unset_node = g
-        .nodes
-        .iter()
-        .any(|n| n.xlabel.as_ref().is_some_and(|l| !l.set));
-    let mut n_lbls = usize::from(any_unset_node);
-    if n_lbls == 0 {
-        for e in 0..g.edges.len() {
-            for k in 0..4 {
-                if edge_label(g, e, k).is_some_and(|l| !l.set) && have_edge(g, e) {
-                    n_lbls = 1;
+/// `addXLabels(gp)`.
+pub fn add_xlabels<S: XLabelGraph + ?Sized>(g: &mut S) {
+    let et = g.xl_edge_type();
+    let flip = g.flip();
+    let have_edge = |g: &S, e: usize| et != EdgeType::None && g.spl(e).is_some();
+    let kinds = [
+        LabelKind::Main,
+        LabelKind::Tail,
+        LabelKind::Head,
+        LabelKind::Xlabel,
+    ];
+    let nodes = g.xl_nodes();
+    let mut n_lbls = 0;
+    for &n in &nodes {
+        if g.node_xlabel(n).is_some_and(|l| !l.set) {
+            n_lbls += 1;
+        }
+        for e in g.xl_out_edges(n) {
+            for k in kinds {
+                if g.label(e, k).is_some_and(|l| !l.set) && have_edge(g, e) {
+                    n_lbls += 1;
                 }
             }
         }
@@ -791,29 +806,30 @@ pub fn add_xlabels(g: &mut LGraph<'_>) {
     if n_lbls == 0 {
         return;
     }
-    let root = g.root_sub();
     let mut objs: Vec<Object> = Vec::new();
     let mut lbls: Vec<XLabel> = Vec::new();
     let mut refs: Vec<LblRef> = Vec::new();
     let mut bb = BoundingBox::new(f64::MAX, f64::MAX, -f64::MAX, -f64::MAX);
-    for n in 0..g.nodes.len() {
-        let nd = &g.nodes[n];
-        let sz = Point::new(nd.width * 72.0, nd.height * 72.0);
+    let xsz = |d: Point| if flip { Point::new(d.y, d.x) } else { d };
+    for &n in &nodes {
+        let s = g.xl_node_size(n);
+        let sz = if flip { Point::new(s.y, s.x) } else { s };
+        let c = g.coord(n);
         let o = Object {
             sz,
-            pos: Point::new(nd.coord.x - sz.x / 2.0, nd.coord.y - sz.y / 2.0),
+            pos: Point::new(c.x - sz.x / 2.0, c.y - sz.y / 2.0),
             lbl: None,
         };
         adjust_bb(&o, &mut bb);
         objs.push(o);
-        if let Some(lp) = nd.xlabel.clone() {
+        if let Some(lp) = g.node_xlabel(n) {
             if lp.set {
-                let lo = label_obj(&lp, &mut bb);
+                let lo = label_obj(&lp, flip, &mut bb);
                 objs.push(lo);
             } else {
                 let li = lbls.len();
                 lbls.push(XLabel {
-                    sz: lp.dimen,
+                    sz: xsz(lp.dimen),
                     pos: Point::default(),
                     set: false,
                 });
@@ -822,24 +838,22 @@ pub fn add_xlabels(g: &mut LGraph<'_>) {
                 objs[last].lbl = Some(li);
             }
         }
-        let outs: Vec<usize> = g.outs(&root, n).collect();
-        for e in outs {
-            for k in [0u8, 1, 2, 3] {
-                let Some(lp) = edge_label(g, e, k).cloned() else {
-                    continue;
-                };
+        'edges: for e in g.xl_out_edges(n) {
+            for k in kinds {
+                let Some(lp) = g.label(e, k) else { continue };
                 if lp.set {
-                    let lo = label_obj(&lp, &mut bb);
+                    let lo = label_obj(&lp, flip, &mut bb);
                     objs.push(lo);
                 } else if have_edge(g, e) {
-                    let spl = g.edges[e].spl.as_ref().unwrap();
+                    let spl = g.spl(e).unwrap();
                     let pos = match k {
-                        1 => {
-                            let b = &spl[0];
+                        LabelKind::Tail => {
+                            let b = &getsplinepoints(g, e).unwrap()[0];
                             if b.sflag != 0 { b.sp } else { b.list[0] }
                         }
-                        2 => {
-                            let b = &spl[spl.len() - 1];
+                        LabelKind::Head => {
+                            let sp = getsplinepoints(g, e).unwrap();
+                            let b = &sp[sp.len() - 1];
                             if b.eflag != 0 {
                                 b.ep
                             } else {
@@ -850,7 +864,7 @@ pub fn add_xlabels(g: &mut LGraph<'_>) {
                     };
                     let li = lbls.len();
                     lbls.push(XLabel {
-                        sz: lp.dimen,
+                        sz: xsz(lp.dimen),
                         pos: Point::default(),
                         set: false,
                     });
@@ -860,23 +874,18 @@ pub fn add_xlabels(g: &mut LGraph<'_>) {
                         sz: Point::default(),
                         lbl: Some(li),
                     });
+                } else {
+                    // C warns "no position for edge with label" and skips the
+                    // edge's remaining labels.
+                    continue 'edges;
                 }
             }
         }
     }
-    // Cluster labels already placed act as obstacles.
-    fn add_clusters(g: &LGraph<'_>, c: usize, objs: &mut Vec<Object>, bb: &mut BoundingBox) {
-        for &k in &g.clusters[c].children {
-            add_clusters(g, k, objs, bb);
-        }
-        if let Some(l) = g.clusters[c].label.as_ref().filter(|l| l.set) {
-            objs.push(label_obj(l, bb));
-        }
+    for l in g.xl_cluster_labels() {
+        objs.push(label_obj(&l, flip, &mut bb));
     }
-    for c in g.root_clusters.clone() {
-        add_clusters(g, c, &mut objs, &mut bb);
-    }
-    let force = crate::common::utils::map_bool(g.gattr("forcelabels"), true);
+    let force = g.xl_forcelabels();
     place_labels(&objs, &mut lbls, bb, force);
     for (li, r) in refs.iter().enumerate() {
         let xl = lbls[li];
@@ -884,15 +893,66 @@ pub fn add_xlabels(g: &mut LGraph<'_>) {
             continue;
         }
         let center = Point::new(xl.pos.x + xl.sz.x / 2.0, xl.pos.y + xl.sz.y / 2.0);
-        let lp = match *r {
-            LblRef::NodeX(n) => g.nodes[n].xlabel.as_mut(),
-            LblRef::Edge(e, k) => edge_label_mut(g, e, k),
-        };
-        if let Some(lp) = lp {
-            lp.set = true;
-            lp.pos = center;
-            let l = lp.clone();
-            add_label_bb(&mut g.bb, &l, false);
+        match *r {
+            LblRef::NodeX(n) => {
+                g.set_node_xlabel_pos(n, center);
+                let l = g.node_xlabel(n).unwrap();
+                add_label_bb_dims(g.bb_mut(), l.dimen, l.pos, flip);
+            }
+            LblRef::Edge(e, k) => {
+                g.set_label_pos(e, k, center);
+                update_bb_label(g, e, k);
+            }
         }
+    }
+}
+
+impl XLabelGraph for LGraph<'_> {
+    fn xl_nodes(&self) -> Vec<usize> {
+        (0..self.nodes.len()).collect()
+    }
+    fn xl_out_edges(&self, n: usize) -> Vec<usize> {
+        self.out[n].clone()
+    }
+    fn xl_node_size(&self, n: usize) -> Point {
+        Point::new(self.nodes[n].width * 72.0, self.nodes[n].height * 72.0)
+    }
+    fn node_xlabel(&self, n: usize) -> Option<LabelView> {
+        self.nodes[n].xlabel.as_ref().map(|l| LabelView {
+            dimen: l.dimen,
+            pos: l.pos,
+            set: l.set,
+        })
+    }
+    fn set_node_xlabel_pos(&mut self, n: usize, pos: Point) {
+        if let Some(l) = self.nodes[n].xlabel.as_mut() {
+            l.pos = pos;
+            l.set = true;
+        }
+    }
+    fn xl_cluster_labels(&self) -> Vec<LabelView> {
+        fn rec(g: &LGraph<'_>, c: usize, out: &mut Vec<LabelView>) {
+            for &k in &g.clusters[c].children {
+                rec(g, k, out);
+            }
+            if let Some(l) = g.clusters[c].label.as_ref().filter(|l| l.set) {
+                out.push(LabelView {
+                    dimen: l.dimen,
+                    pos: l.pos,
+                    set: true,
+                });
+            }
+        }
+        let mut out = Vec::new();
+        for &c in &self.root_clusters {
+            rec(self, c, &mut out);
+        }
+        out
+    }
+    fn xl_edge_type(&self) -> EdgeType {
+        self.edge_type
+    }
+    fn xl_forcelabels(&self) -> bool {
+        crate::common::utils::map_bool(self.gattr("forcelabels"), true)
     }
 }

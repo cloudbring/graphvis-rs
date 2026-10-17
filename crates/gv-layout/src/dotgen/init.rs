@@ -330,7 +330,9 @@ impl<'a> Dot<'a> {
         info.rw = rw;
         info.ht = ht;
         info.uf_size = 1;
-        if geom.xlabel.is_some() {
+        if let Some(xl) = &geom.xlabel {
+            let l = self.push_label(xl);
+            self.nodes[n].xlabel = Some(l);
             self.graphs[0].has_labels |= NODE_XLABEL;
         }
     }

@@ -19,6 +19,7 @@ impl Dot<'_> {
             LabelKind::Main => ed.label,
             LabelKind::Head => ed.head_label,
             LabelKind::Tail => ed.tail_label,
+            LabelKind::Xlabel => ed.xlabel,
         }
     }
 
@@ -239,5 +240,58 @@ impl SplineGraph for Dot<'_> {
         // No field contains the port: C returns `side` with the end's previous
         // boxes; fall back to the node box.
         None
+    }
+}
+
+impl crate::common::xlabels::XLabelGraph for Dot<'_> {
+    fn xl_nodes(&self) -> Vec<usize> {
+        self.nodes_of(0)
+    }
+    fn xl_out_edges(&self, n: usize) -> Vec<usize> {
+        self.out_edges(0, n)
+    }
+    fn xl_node_size(&self, n: usize) -> Point {
+        Point::new(self.nodes[n].width * 72.0, self.nodes[n].height * 72.0)
+    }
+    fn node_xlabel(&self, n: usize) -> Option<LabelView> {
+        let l = &self.labels[self.nodes[n].xlabel?];
+        Some(LabelView {
+            dimen: l.dimen,
+            pos: l.pos,
+            set: l.set,
+        })
+    }
+    fn set_node_xlabel_pos(&mut self, n: usize, pos: Point) {
+        if let Some(l) = self.nodes[n].xlabel {
+            self.labels[l].pos = pos;
+            self.labels[l].set = true;
+        }
+    }
+    fn xl_cluster_labels(&self) -> Vec<LabelView> {
+        fn rec(d: &Dot<'_>, g: G, out: &mut Vec<LabelView>) {
+            for &c in &d.graphs[g].clust {
+                rec(d, c, out);
+            }
+            if g != 0
+                && let Some(l) = d.graphs[g].label
+                && d.labels[l].set
+            {
+                let l = &d.labels[l];
+                out.push(LabelView {
+                    dimen: l.dimen,
+                    pos: l.pos,
+                    set: true,
+                });
+            }
+        }
+        let mut out = Vec::new();
+        rec(self, 0, &mut out);
+        out
+    }
+    fn xl_edge_type(&self) -> crate::common::types::EdgeType {
+        self.et
+    }
+    fn xl_forcelabels(&self) -> bool {
+        super::utils::map_bool(self.agget(0, "forcelabels"), true)
     }
 }

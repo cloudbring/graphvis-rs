@@ -88,7 +88,11 @@ fn find_cross(pts: &[Point; 4], tmin: f64, tmax: f64, c: f64, lo: f64, hi: f64, 
         (pts[3].y, pts[3].x)
     };
     if no_cross == 1 && (along - c).abs() <= 0.005 {
-        return if lo <= across && across <= hi { tmax } else { -1.0 };
+        return if lo <= across && across <= hi {
+            tmax
+        } else {
+            -1.0
+        };
     }
     let (_, left, right) = bezier_split(pts, 0.5);
     let t = find_cross(&left, tmin, (tmin + tmax) / 2.0, c, lo, hi, vert);
@@ -172,7 +176,14 @@ impl Dot<'_> {
                         bez.list[0] = mid(bez.list[1], bez.sp);
                         bez.list[2] = mid(bez.list[1], p);
                         if bez.eflag != 0 {
-                            endi = arrow_end_clip(&attrs, &mut bez.list, starti, 0, &mut nbez, bez.eflag);
+                            endi = arrow_end_clip(
+                                &attrs,
+                                &mut bez.list,
+                                starti,
+                                0,
+                                &mut nbez,
+                                bez.eflag,
+                            );
                         }
                         endi += 3;
                         fixed = true;
@@ -180,7 +191,12 @@ impl Dot<'_> {
                 } else {
                     endi = 0;
                     while endi < size - 1 {
-                        let mut pts = [bez.list[endi], bez.list[endi + 1], bez.list[endi + 2], bez.list[endi + 3]];
+                        let mut pts = [
+                            bez.list[endi],
+                            bez.list[endi + 1],
+                            bez.list[endi + 2],
+                            bez.list[endi + 3],
+                        ];
                         let hit = spline_intersectf(&mut pts, &bb);
                         bez.list[endi..endi + 4].copy_from_slice(&pts);
                         if hit {
@@ -192,7 +208,14 @@ impl Dot<'_> {
                         nbez.ep = box_intersectf(bez.ep, bez.list[endi], &bb);
                     } else {
                         if bez.eflag != 0 {
-                            endi = arrow_end_clip(&attrs, &mut bez.list, starti, endi, &mut nbez, bez.eflag);
+                            endi = arrow_end_clip(
+                                &attrs,
+                                &mut bez.list,
+                                starti,
+                                endi,
+                                &mut nbez,
+                                bez.eflag,
+                            );
                         }
                         endi += 3;
                     }
@@ -219,8 +242,14 @@ impl Dot<'_> {
                         bez.list[starti + 3] = mid(bez.list[starti + 2], nbez.ep);
                         bez.list[starti + 1] = mid(bez.list[starti + 2], p);
                         if bez.sflag != 0 {
-                            starti =
-                                arrow_start_clip(&attrs, &mut bez.list, starti, endi - 3, &mut nbez, bez.sflag);
+                            starti = arrow_start_clip(
+                                &attrs,
+                                &mut bez.list,
+                                starti,
+                                endi - 3,
+                                &mut nbez,
+                                bez.sflag,
+                            );
                         }
                         fixed = true;
                     }
@@ -246,8 +275,14 @@ impl Dot<'_> {
                     } else if starti != 0 {
                         starti -= 3;
                         if bez.sflag != 0 {
-                            starti =
-                                arrow_start_clip(&attrs, &mut bez.list, starti, endi - 3, &mut nbez, bez.sflag);
+                            starti = arrow_start_clip(
+                                &attrs,
+                                &mut bez.list,
+                                starti,
+                                endi - 3,
+                                &mut nbez,
+                                bez.sflag,
+                            );
                         }
                     }
                     fixed = true;

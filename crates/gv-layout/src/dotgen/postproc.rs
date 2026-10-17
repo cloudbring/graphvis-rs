@@ -171,6 +171,7 @@ impl Dot<'_> {
         } else {
             self.place_graph_label(g);
         }
+        self.add_xlabels();
         let mut dimen = Point::new(0.0, 0.0);
         if let Some(l) = self.graphs[g].label
             && !self.labels[l].set
@@ -221,6 +222,17 @@ impl Dot<'_> {
         {
             self.place_root_label(dimen);
         }
+    }
+
+    /// `addXLabels(gp)`, gated on `GD_has_labels` and `EdgeLabelsDone` as in C.
+    fn add_xlabels(&mut self) {
+        let hl = self.graphs[0].has_labels;
+        if hl & (NODE_XLABEL | EDGE_XLABEL | TAIL_LABEL | HEAD_LABEL) == 0
+            && (hl & EDGE_LABEL == 0 || self.splines_done)
+        {
+            return;
+        }
+        crate::common::xlabels::add_xlabels(self);
     }
 
     /// `removeFill`: delete the newrank fill nodes before splines.
