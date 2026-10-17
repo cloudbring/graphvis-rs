@@ -251,6 +251,44 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
     })
 }
 
+/// The laid-out `work` graph as C's renderers draw it before `undoClusterEdges`: kept
+/// objects keep their input sequence numbers; cluster nodes and cloned edges, created by
+/// `processClusterEdges`, follow the input's last node and edge.
+pub fn render_view(ce: &ClusterEdges, work: &Graph, input: &Graph) -> Graph {
+    let mut v = work.clone();
+    let mut node_seq = vec![0usize; v.nodes.len()];
+    for (i, m) in ce.node_map.iter().enumerate() {
+        if let Some(w) = *m {
+            node_seq[w] = i + 1;
+        }
+    }
+    let mut next = input.nodes.len();
+    for s in node_seq.iter_mut().filter(|s| **s == 0) {
+        next += 1;
+        *s = next;
+    }
+    // Work edges: the kept input edges in input order, then the `count` clones.
+    let kept = v.edges.len() - ce.count;
+    let mut edge_seq = vec![0usize; v.edges.len()];
+    for (i, m) in ce.edge_map.iter().enumerate() {
+        if let Some(w) = *m
+            && w < kept
+        {
+            edge_seq[w] = i + 1;
+        }
+    }
+    for (k, s) in edge_seq[kept..].iter_mut().enumerate() {
+        *s = input.edges.len() + k + 1;
+    }
+    for (e, s) in v.edges.iter_mut().zip(edge_seq) {
+        e.attrs.insert(gv_core::SEQ_KEY.to_string(), s.to_string());
+    }
+    for (n, s) in v.nodes.iter_mut().zip(node_seq) {
+        n.attrs.insert(gv_core::SEQ_KEY.to_string(), s.to_string());
+    }
+    v
+}
+
 /// `undoClusterEdges(g)`: copy the layout of `work` (after `write_back`)
 /// into the input graph. Deleted cluster-named nodes come back with default
 /// attributes and are marked with [`CLUST_NODE_KEY`]; their edges take the
@@ -308,5 +346,108 @@ pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
             .iter()
             .filter_map(|e| new_id[e.0 as usize].map(|n| EdgeId(n as u32)))
             .collect();
+    }
+    renumber_undone(ce, work, graph, &new_id);
+}
+
+/// Sequence order after `undoClusterEdges`: `undoCompound` re-creates each compound edge
+/// (`cloneEdge`) after every other edge, visiting them in `agfstnode`/`agfstout` order of
+/// the work graph, and `mapN` re-creates a cluster-named endpoint (in the root graph only)
+/// after every other node. Out-edge iteration and the writers follow these sequences.
+fn renumber_undone(ce: &ClusterEdges, work: &Graph, graph: &mut Graph, new_id: &[Option<usize>]) {
+    let kept_work = work.edges.len() - ce.count;
+    // Work edge -> final edge, for the clones.
+    let mut from_clone: Vec<Option<usize>> = vec![None; work.edges.len()];
+    for (i, m) in ce.edge_map.iter().enumerate() {
+        if let (Some(w), Some(f)) = (*m, new_id[i])
+            && w >= kept_work
+        {
+            from_clone[w] = Some(f);
+        }
+    }
+    let mut outs: Vec<Vec<usize>> = vec![Vec::new(); work.nodes.len()];
+    for (i, e) in work.edges.iter().enumerate() {
+        outs[e.tail.0 as usize].push(i);
+    }
+    let mut compound = Vec::new();
+    for l in &mut outs {
+        l.sort_by_key(|&e| (work.edges[e].head.0, e));
+        compound.extend(l.iter().filter_map(|&e| from_clone[e]));
+    }
+    if compound.is_empty() {
+        return;
+    }
+    // Nodes: the kept ones, then the cluster-named ones in mapN order (tail, then head).
+    let deleted: Vec<bool> = ce.node_map.iter().map(Option::is_none).collect();
+    let mut order: Vec<usize> = (0..graph.nodes.len()).filter(|&n| !deleted[n]).collect();
+    for &e in &compound {
+        for n in [
+            graph.edges[e].tail.0 as usize,
+            graph.edges[e].head.0 as usize,
+        ] {
+            if deleted[n] && !order.contains(&n) {
+                order.push(n);
+            }
+        }
+    }
+    let mut node_id = vec![None; graph.nodes.len()];
+    for (k, &n) in order.iter().enumerate() {
+        node_id[n] = Some(NodeId(k as u32));
+    }
+    let mut old_nodes: Vec<Option<gv_core::NodeData>> = std::mem::take(&mut graph.nodes)
+        .into_iter()
+        .map(Some)
+        .collect();
+    graph.node_lookup.clear();
+    for (k, &n) in order.iter().enumerate() {
+        let mut d = old_nodes[n].take().expect("each node once");
+        d.id = NodeId(k as u32);
+        graph.node_lookup.insert(d.name.clone(), d.id);
+        graph.nodes.push(d);
+    }
+    for sg in &mut graph.subgraphs {
+        sg.nodes = sg
+            .nodes
+            .iter()
+            .filter(|n| !deleted[n.0 as usize])
+            .filter_map(|n| node_id[n.0 as usize])
+            .collect();
+    }
+    // Edges: the others in order, then the compound ones.
+    let is_compound: Vec<bool> = {
+        let mut v = vec![false; graph.edges.len()];
+        for &e in &compound {
+            v[e] = true;
+        }
+        v
+    };
+    let eorder: Vec<usize> = (0..graph.edges.len())
+        .filter(|&e| !is_compound[e])
+        .chain(compound.iter().copied())
+        .collect();
+    let mut edge_id = vec![0u32; graph.edges.len()];
+    for (k, &e) in eorder.iter().enumerate() {
+        edge_id[e] = k as u32;
+    }
+    let mut old_edges: Vec<Option<gv_core::EdgeData>> = std::mem::take(&mut graph.edges)
+        .into_iter()
+        .map(Some)
+        .collect();
+    for (k, &e) in eorder.iter().enumerate() {
+        let mut d = old_edges[e].take().expect("each edge once");
+        d.id = EdgeId(k as u32);
+        d.tail = node_id[d.tail.0 as usize].expect("endpoint kept");
+        d.head = node_id[d.head.0 as usize].expect("endpoint kept");
+        graph.edges.push(d);
+    }
+    for sg in &mut graph.subgraphs {
+        let mut v: Vec<EdgeId> = sg
+            .edges
+            .iter()
+            .filter(|e| !is_compound[e.0 as usize])
+            .map(|e| EdgeId(edge_id[e.0 as usize]))
+            .collect();
+        v.sort();
+        sg.edges = v;
     }
 }

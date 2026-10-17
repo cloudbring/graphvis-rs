@@ -79,10 +79,23 @@ pub const CLUST_NODE_KEY: &str = "\u{1}clustnode";
 /// (`GD_label` stays NULL, e.g. patchwork's `mkClusters`): renderers neither draw nor size it.
 pub const NO_GRAPH_LABEL_KEY: &str = "\u{1}nolabel";
 
+/// Root graph attribute set by a layout that binds edge records without calling
+/// `common_init_edge` (patchwork's `patchwork_init_edge`): edges have no labels.
+pub const NO_EDGE_INIT_KEY: &str = "\u{1}noedgeinit";
+
+/// Node or edge attribute of a [`Graph::render_view`] object: its cgraph sequence number
+/// (`AGSEQ`), which the renderers print in object ids. Without it the sequence follows the
+/// object's index.
+pub const SEQ_KEY: &str = "\u{1}seq";
+
 /// Subgraph attribute set by a layout on a cluster it did not register in
 /// `GD_clust` (e.g. clusters nested below neato's top-level ones): it keeps its
 /// input `bb`, which C prints, but renderers do not draw it.
 pub const UNREGISTERED_CLUSTER_KEY: &str = "\u{1}unregclust";
+
+/// Subgraph attribute set by a layout on a cluster it registered in `GD_clust` but never
+/// positioned (fdp stopping on a layout error): renderers draw it with its empty box.
+pub const REGISTERED_CLUSTER_KEY: &str = "\u{1}regclust";
 
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -112,6 +125,12 @@ pub struct Graph {
     /// tell local declarations from inherited values.
     #[serde(default)]
     pub dicts: Vec<AttrDicts>,
+    /// The graph as renderers that run before `undoClusterEdges` see it: fdp leaves its
+    /// cluster nodes (`__0:cluster`) and cloned cluster edges in the graph it lays out, and
+    /// only the output writers (dot, xdot, json, canon, plain) undo them. `-Tsvg` draws this
+    /// graph when it is set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_view: Option<Box<Graph>>,
 }
 
 /// One declared attribute (`Agsym_t`): its default value and whether a root attribute
@@ -147,6 +166,7 @@ impl Graph {
             html_strings: BTreeSet::new(),
             anon_subgraph_ids: BTreeMap::new(),
             dicts: Vec::new(),
+            render_view: None,
         }
     }
 

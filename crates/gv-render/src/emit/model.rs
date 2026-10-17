@@ -192,6 +192,24 @@ pub(crate) struct Model<'g> {
     pub has_labels: u32,
 }
 
+impl Model<'_> {
+    /// `AGSEQ(n)`.
+    pub fn node_seq(&self, n: usize) -> usize {
+        seq_of(&self.g.nodes[n].attrs, n)
+    }
+    /// `AGSEQ(e)`.
+    pub fn edge_seq(&self, e: usize) -> usize {
+        seq_of(&self.g.edges[e].attrs, e)
+    }
+}
+
+fn seq_of(attrs: &AttrMap, index: usize) -> usize {
+    attrs
+        .get(gv_core::SEQ_KEY)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(index + 1)
+}
+
 fn parse_point(s: Option<&str>) -> Option<Point> {
     let s = s?;
     let (x, rest) = strtod(s)?;
@@ -285,6 +303,7 @@ impl<'g> Model<'g> {
             });
         }
 
+        let no_edge_init = g.graph_attrs.contains_key(gv_core::NO_EDGE_INIT_KEY);
         let mut edges = Vec::with_capacity(g.edges.len());
         let mut out_edges = vec![Vec::new(); g.nodes.len()];
         for (ei, e) in g.edges.iter().enumerate() {
@@ -331,7 +350,11 @@ impl<'g> Model<'g> {
                 .collect();
             let tname = &g.nodes[e.tail.0 as usize].name;
             let hname = &g.nodes[e.head.0 as usize].name;
-            let lg = edge_label_geometry(&e.attrs, tname, hname, directed, &env);
+            let lg = if no_edge_init {
+                gv_geom::node_size::EdgeLabelGeometry::default()
+            } else {
+                edge_label_geometry(&e.attrs, tname, hname, directed, &env)
+            };
             let fontcolor = a.late_nnstring("fontcolor", "black");
             let lfontcolor = a.late_nnstring("labelfontcolor", fontcolor);
             let mk = |geo: &Option<LabelGeometry>,
@@ -428,7 +451,8 @@ impl<'g> Model<'g> {
         ) {
             let s = &g.subgraphs[sid];
             if is_a_cluster(&s.name, &s.graph_attrs)
-                && s.bb != BoundingBox::default()
+                && (s.bb != BoundingBox::default()
+                    || s.graph_attrs.contains_key(gv_core::REGISTERED_CLUSTER_KEY))
                 && !s
                     .graph_attrs
                     .contains_key(gv_core::UNREGISTERED_CLUSTER_KEY)

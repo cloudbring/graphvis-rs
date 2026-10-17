@@ -327,25 +327,25 @@ impl<'a> LGraph<'a> {
             // unplaced position is the origin, moved by the final translation).
             ed.label_pos = e.label.as_ref().map(|l| l.pos);
             ed.label_unplaced = e.label.as_ref().is_some_and(|l| !l.set);
+            // Exact values, as the no-layout engine stores them: the renderer works from
+            // these positions as C works from ED_head_label(e)->pos, and the output
+            // formatters round them when they print `head_lp`, `tail_lp` and `xlp`.
             for (key, lbl) in [
                 ("head_lp", &e.head_label),
                 ("tail_lp", &e.tail_label),
                 ("xlp", &e.xlabel),
             ] {
                 if let Some(l) = lbl.as_ref() {
-                    ed.attrs.insert(
-                        key.to_string(),
-                        format!("{},{}", fmt_g5(l.pos.x), fmt_g5(l.pos.y)),
-                    );
+                    ed.attrs
+                        .insert(key.to_string(), format!("{:?},{:?}", l.pos.x, l.pos.y));
                 }
             }
         }
         for (i, n) in self.nodes.iter().enumerate() {
             if let Some(l) = n.xlabel.as_ref().filter(|l| l.set) {
-                graph.nodes[i].attrs.insert(
-                    "xlp".to_string(),
-                    format!("{},{}", fmt_g5(l.pos.x), fmt_g5(l.pos.y)),
-                );
+                graph.nodes[i]
+                    .attrs
+                    .insert("xlp".to_string(), format!("{:?},{:?}", l.pos.x, l.pos.y));
             }
         }
         graph.bb = self.bb;
@@ -390,26 +390,6 @@ impl<'a> LGraph<'a> {
                     .insert(crate::nop::LABEL_POS_KEY.to_string(), exact(l.pos));
             }
         }
-    }
-}
-
-/// `%.5g`-style formatting used for extra label attributes.
-pub fn fmt_g5(v: f64) -> String {
-    if !v.is_finite() || v.abs() < 1e-9 {
-        return "0".to_string();
-    }
-    let log10 = v.abs().log10().floor() as i32;
-    let decimals = (4 - log10).clamp(0, 6) as usize;
-    let s = format!("{v:.decimals$}");
-    if s.contains('.') {
-        let t = s.trim_end_matches('0').trim_end_matches('.');
-        if t == "-0" {
-            "0".to_string()
-        } else {
-            t.to_string()
-        }
-    } else {
-        s
     }
 }
 

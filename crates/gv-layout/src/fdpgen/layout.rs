@@ -407,6 +407,8 @@ struct Fdp<'g, 'a> {
     inputscale: f64,
     /// `IS_CLUST_NODE(n)`.
     is_clust: Vec<bool>,
+    /// Clusters `deriveGraph` reached, which `do_graph_label` gave their label.
+    labeled: Vec<bool>,
     heap: NodeHeap,
 }
 
@@ -509,6 +511,7 @@ impl Fdp<'_, '_> {
         }
 
         for c in self.tree.kids(g).to_vec() {
+            self.labeled[c] = true;
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));
@@ -1193,6 +1196,7 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
         coords_declared,
         inputscale,
         is_clust,
+        labeled: vec![false; nc],
         heap,
     };
     let ok = f.layout(None).is_ok();
@@ -1204,13 +1208,42 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
         Some(c) => {
             let mut w = c.work.clone();
             g.write_back(&mut w);
+            let view = crate::common::cluster_edges::render_view(c, &w, graph);
             crate::common::cluster_edges::undo_cluster_edges(c, &w, graph);
+            graph.render_view = Some(Box::new(view));
         }
         None => g.write_back(graph),
     };
     if !ok {
-        // C reports the error and returns before positioning anything.
+        // C reports the error and returns before positioning anything: every cluster
+        // stays in GD_clust with an empty box, the clusters deriveGraph reached have
+        // their label, and all labels stay at the origin.
+        let labeled: Vec<(usize, bool)> = f
+            .tree
+            .subgraph
+            .iter()
+            .copied()
+            .zip(f.labeled.iter().copied())
+            .collect();
         finish(&g, graph);
+        let origin = "0.0,0.0".to_string();
+        let mark = |gr: &mut Graph| {
+            gr.graph_attrs
+                .insert(crate::nop::LABEL_POS_KEY.to_string(), origin.clone());
+            for &(sg, has_label) in &labeled {
+                let a = &mut gr.subgraphs[sg].graph_attrs;
+                a.insert(gv_core::REGISTERED_CLUSTER_KEY.to_string(), String::new());
+                if has_label {
+                    a.insert(crate::nop::LABEL_POS_KEY.to_string(), origin.clone());
+                } else {
+                    a.insert(gv_core::NO_GRAPH_LABEL_KEY.to_string(), String::new());
+                }
+            }
+        };
+        mark(graph);
+        if let Some(v) = graph.render_view.as_deref_mut() {
+            mark(v);
+        }
         return Ok(());
     }
     // setBB
