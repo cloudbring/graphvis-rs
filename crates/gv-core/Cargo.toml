@@ -9,6 +9,8 @@ description = "Core graph arena, attributes, font metrics LUT, color tables, and
 [features]
 # Logs the arguments of every `math` call to `$GV_MATH_TRACE/` (see docs/porting/libm.md).
 math-trace = []
+# Uses the portable `math` implementations on macOS too (to check them against the corpus).
+portable-math = []
 
 [dependencies]
 serde.workspace = true
