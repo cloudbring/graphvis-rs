@@ -2456,16 +2456,16 @@
         "diff_lines": 0
       },
       "gallery_shape_0_1f5390": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_0_851a8a": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -3132,16 +3132,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_lsunix1_37d385": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix2_844fa2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix3_09a727": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_mike_7b77a0": {
         "identical": true,
@@ -3348,8 +3348,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_structs_68f492": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -3384,8 +3384,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_unix_2c2bbe": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_url_debf45": {
         "identical": true,
@@ -3468,8 +3468,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -3656,12 +3656,12 @@
         "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot_0e4e43": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_record_dot_f557a8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_shapes_dot_6f8450": {
         "identical": true,
@@ -3728,8 +3728,8 @@
         "diff_lines": 0
       },
       "gv16_reference_doubleoctagon_e79b27": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_egg_e6e3f4": {
         "identical": true,
@@ -3904,8 +3904,8 @@
         "diff_lines": 0
       },
       "gv16_reference_tripleoctagon_78323f": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_underline_bf8328": {
         "identical": true,
@@ -3996,8 +3996,8 @@
         "diff_lines": 0
       },
       "unix": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "urls": {
         "identical": true,
@@ -12874,16 +12874,16 @@
         "diff_lines": 0
       },
       "gallery_shape_0_1f5390": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_0_851a8a": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -13454,8 +13454,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_jsort_590c20": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbc_886274": {
         "identical": true,
@@ -13666,16 +13666,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_lsunix1_37d385": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix2_844fa2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix3_09a727": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_mike_7b77a0": {
         "identical": true,
@@ -13898,8 +13898,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_structs_68f492": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -13934,8 +13934,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_unix_2c2bbe": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_url_debf45": {
         "identical": true,
@@ -14026,8 +14026,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -14214,12 +14214,12 @@
         "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot_0e4e43": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_record_dot_f557a8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_shapes_dot_6f8450": {
         "identical": true,
@@ -14286,8 +14286,8 @@
         "diff_lines": 0
       },
       "gv16_reference_doubleoctagon_e79b27": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_egg_e6e3f4": {
         "identical": true,
@@ -14462,8 +14462,8 @@
         "diff_lines": 0
       },
       "gv16_reference_tripleoctagon_78323f": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_underline_bf8328": {
         "identical": true,
@@ -14554,8 +14554,8 @@
         "diff_lines": 0
       },
       "unix": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "urls": {
         "identical": true,
