@@ -1037,18 +1037,18 @@
     },
     "gallery_osage_0_f6bd9e": {
       "nodes": 16,
-      "nodes_ok": 0,
+      "nodes_ok": 16,
       "edges": 0,
       "edges_ok": 0,
       "clusters": 3,
-      "clusters_ok": 0,
-      "bb_ok": false,
-      "node_err": 105.38026380684383,
+      "clusters_ok": 3,
+      "bb_ok": true,
+      "node_err": 0.0,
       "edge_err": 0.0,
       "missing": 0,
       "sizes_ok": 16,
-      "rank_ok": false,
-      "order_ok": false
+      "rank_ok": true,
+      "order_ok": true
     },
     "gallery_patchwork_0_7dbf8c": {
       "nodes": 6,
