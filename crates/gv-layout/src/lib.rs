@@ -3,6 +3,7 @@
 pub mod common;
 pub mod cutil;
 pub mod dot;
+pub mod dotgen;
 pub mod force_circular;
 pub mod neatogen;
 pub mod pack;
@@ -50,7 +51,14 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
     };
 
     match effective_engine {
-        LayoutEngine::Dot => dot::layout_dot(graph),
+        LayoutEngine::Dot => {
+            // `GV_DOT_LEGACY=1` selects the previous approximate engine for comparison.
+            if std::env::var_os("GV_DOT_LEGACY").is_some() {
+                dot::layout_dot(graph)
+            } else {
+                dotgen::layout_dot(graph)
+            }
+        }
         LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph),
         LayoutEngine::Fdp => force_circular::layout_fdp(graph, false),
         LayoutEngine::Sfdp => force_circular::layout_fdp(graph, true),
