@@ -1,0 +1,8 @@
+graph 1 6.2587 1.2667
+node 34 3.1294 0.63335 6.2587 1.2667 <<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"ZapfChancery-MediumItalic"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>> solid box black lightgrey
+stop

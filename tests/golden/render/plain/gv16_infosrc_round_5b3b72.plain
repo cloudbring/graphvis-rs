@@ -1,0 +1,7 @@
+graph 1 4.0471 0.52778
+node node1 0.375 0.26389 0.75 0.5 node1 rounded box black lightgrey
+node node2 1.9303 0.26389 1.3607 0.5 node2 rounded,filled diamond black yellow
+node node3 3.5789 0.26389 0.9365 0.52778 "{ a | b | c }" rounded record black lightgrey
+edge node1 node2 4 0.75478 0.26389 0.85196 0.26389 0.96107 0.26389 1.0725 0.26389 solid black
+edge node2 node3 4 2.6269 0.26389 2.7325 0.26389 2.8411 0.26389 2.9451 0.26389 solid black
+stop

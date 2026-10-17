@@ -1,0 +1,10 @@
+digraph dg {
+layout=sfdp;
+
+
+a -> b -> c -> d -> a;
+a -> c;
+b -> d [dir=both];
+e -> a [arrowhead=none];
+d -> f -> g;
+}

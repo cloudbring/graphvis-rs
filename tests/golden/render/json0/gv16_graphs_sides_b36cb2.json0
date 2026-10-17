@@ -1,0 +1,18 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,128.77,479.2",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "abc",
+      "height": "6.6556",
+      "label": "<TABLE CELLSPACING=\"10\">\n    <TR><TD SIDES=\"B\">bottom<\/TD><\/TR>\n    <TR><TD SIDES=\"R\">right<\/TD><\/TR>\n    <TR><TD SIDES=\"T\">top<\/TD><\/TR>\n    <TR><TD SIDES=\"L\">left<\/TD><\/TR>\n    <TR><TD SIDES=\"BR\">bottomright<\/TD><\/TR>\n    <TR><TD SIDES=\"RT\">righttop<\/TD><\/TR>\n    <TR><TD SIDES=\"TL\">topleft<\/TD><\/TR>\n    <TR><TD SIDES=\"LB\">leftbottom<\/TD><\/TR>\n    <TR><TD SIDES=\"BRT\">bottomrighttop<\/TD><\/TR>\n    <TR><TD SIDES=\"RTL\">righttopleft<\/TD><\/TR>\n    <TR><TD SIDES=\"TLB\">topleftbottom<\/TD><\/TR>\n    <TR><TD SIDES=\"LBR\">leftbottomright<\/TD><\/TR>\n    <TR><TD SIDES=\"TB\">topbottom<\/TD><\/TR>\n    <TR><TD SIDES=\"LR\">leftright<\/TD><\/TR>\n  <\/TABLE>",
+      "pos": "64.383,239.6",
+      "shape": "none",
+      "width": "1.7884"
+    }
+  ]
+}

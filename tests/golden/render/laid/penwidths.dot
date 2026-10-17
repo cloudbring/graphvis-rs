@@ -1,0 +1,28 @@
+digraph G {
+	graph [bb="0,0,54,195.2"];
+	node [label="\N"];
+	a	[height=0.5,
+		penwidth=0,
+		pos="27,177.2",
+		width=0.75];
+	b	[height=0.5,
+		penwidth=4,
+		pos="27,105.2",
+		shape=box,
+		width=0.75];
+	a -> b	[penwidth=0.2,
+		pos="e,27,124.96 27,159.25 27,151.97 27,143.25 27,135.01"];
+	c	[height=0.05,
+		penwidth=4,
+		pos="27,49.4",
+		shape=point,
+		width=0.05];
+	b -> c	[pos="e,27,52.95 27,85.383 27,78.471 27,70.773 27,64.362"];
+	d	[color=red,
+		height=0.16111,
+		peripheries=2,
+		pos="27,5.8",
+		shape=point,
+		width=0.16111];
+	c -> d	[pos="e,27,11.849 27,45.671 27,41.109 27,31.602 27,23.132"];
+}

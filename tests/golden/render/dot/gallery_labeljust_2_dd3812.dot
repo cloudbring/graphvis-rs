@@ -1,0 +1,40 @@
+digraph {
+	graph [bb="0,0,226,76.8"];
+	node [label="\N"];
+	subgraph cluster_l {
+		graph [bb="0,0,70,76.8",
+			label=l,
+			labeljust=l,
+			lheight=0.23,
+			lp="9.945,64.4",
+			lwidth=0.05
+		];
+		a	[height=0.5,
+			pos="35,26",
+			width=0.75];
+	}
+	subgraph cluster_c {
+		graph [bb="78,0,148,76.8",
+			label=c,
+			labeljust=c,
+			lheight=0.23,
+			lp="113,64.4",
+			lwidth=0.09
+		];
+		b	[height=0.5,
+			pos="113,26",
+			width=0.75];
+	}
+	subgraph cluster_r {
+		graph [bb="156,0,226,76.8",
+			label=r,
+			labeljust=r,
+			lheight=0.23,
+			lp="215.67,64.4",
+			lwidth=0.06
+		];
+		c	[height=0.5,
+			pos="191,26",
+			width=0.75];
+	}
+}

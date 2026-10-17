@@ -1,0 +1,25 @@
+graph 1 4.3316 6.5
+node run 0.98611 2.25 0.75 0.5 run solid ellipse black lightgrey
+node intr 0.375 1.25 0.75 0.5 intr solid ellipse black lightgrey
+node runmem 2.3611 1.25 1.2005 0.5 runmem solid ellipse black lightgrey
+node runbl 0.75 0.25 0.8728 0.5 runbl solid ellipse black lightgrey
+node kernel 2.6806 6.25 0.9768 0.5 kernel solid ellipse black lightgrey
+node zombie 2.6806 5.25 1.0961 0.5 zombie solid ellipse black lightgrey
+node sleep 3.9028 5.25 0.85774 0.5 sleep solid ellipse black lightgrey
+node swap 3.7361 4.25 0.85787 0.5 swap solid ellipse black lightgrey
+node runswap 3.6528 3.25 1.2154 0.5 runswap solid ellipse black lightgrey
+node new 3.6528 2.25 0.75348 0.5 new solid ellipse black lightgrey
+edge run intr 4 0.84744 2.0156 0.74743 1.8564 0.61301 1.6425 0.51313 1.4836 solid black
+edge run runmem 4 1.2383 2.0578 1.4725 1.8922 1.821 1.6458 2.0675 1.4714 solid black
+edge intr runbl 4 0.46578 1.0008 0.52474 0.8479 0.60126 0.6495 0.66006 0.49707 solid black
+edge runbl run 7 0.79529 0.50187 0.82144 0.64567 0.85333 0.83289 0.875 1 0.9196 1.344 0.95206 1.7443 0.96999 1.9939 solid black
+edge kernel runmem 13 2.4358 6.0279 2.2917 5.8919 2.1176 5.7026 2.0139 5.5 1.7579 5 1.75 4.8257 1.75 4.2639 1.75 4.2639 1.75 4.2639 1.75 3.2361 1.75 2.5838 2.0589 1.8621 2.2375 1.4994 solid black
+edge kernel zombie 4 2.6806 5.9958 2.6806 5.8451 2.6806 5.6517 2.6806 5.5014 solid black
+edge kernel sleep 4 2.9337 6.0347 3.1464 5.8656 3.4481 5.6256 3.6582 5.4585 solid black
+edge sleep runmem 7 3.6549 5.0421 3.4972 4.9062 3.3008 4.7117 3.1806 4.5 2.6033 3.4847 2.4271 2.0628 2.3782 1.5035 solid black
+edge sleep swap 4 3.8615 4.9958 3.8357 4.8451 3.8026 4.6517 3.7768 4.5014 solid black
+edge swap runswap 4 3.7156 3.9958 3.7026 3.8451 3.686 3.6517 3.6732 3.5014 solid black
+edge runswap runmem 7 3.4935 3.0051 3.3944 2.8606 3.2651 2.6703 3.1528 2.5 2.924 2.1532 2.6657 1.7469 2.5081 1.4975 solid black
+edge runswap new 4 3.6528 2.9958 3.6528 2.8451 3.6528 2.6517 3.6528 2.5014 solid black
+edge new runmem 4 3.4099 2.0532 3.1921 1.8893 2.8725 1.6487 2.6435 1.4764 solid black
+stop

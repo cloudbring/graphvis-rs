@@ -1,0 +1,5 @@
+graph G {
+layout=sfdp;
+
+  yen [label="&#165;"]
+}

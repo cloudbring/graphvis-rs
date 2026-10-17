@@ -1,0 +1,227 @@
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,141.600],[99.320,141.600],[99.320,0.000]]
+    }
+  ],
+  "bb": "0,0,99.324,141.6",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "⚡",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [65.110,106.800,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [65.110,102.600],
+          "align": "c",
+          "width": 10.500,
+          "text": "⚡"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [19.060,129.000],
+          "align": "c",
+          "width": 38.110,
+          "text": "Sparks"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "65.11,106.8",
+      "width": "0.75",
+      "xlabel": "Sparks",
+      "xlp": "19.055,133.2"
+    },
+    {
+      "_gvid": 1,
+      "name": "🔥",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [65.110,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [65.110,13.800],
+          "align": "c",
+          "width": 14.000,
+          "text": "🔥"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [24.110,40.200],
+          "align": "c",
+          "width": 28.000,
+          "text": "Fires"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "65.11,18",
+      "width": "0.75",
+      "xlabel": "Fires",
+      "xlp": "24.11,44.4"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[65.110,88.650],[65.110,76.960],[65.110,61.190],[65.110,47.620]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[68.610,47.920],[65.110,37.920],[61.610,47.920]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [82.220,58.200],
+          "align": "c",
+          "width": 34.210,
+          "text": "Cause"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [34.000,67.010],
+          "align": "c",
+          "width": 62.220,
+          "text": "Sometimes"
+        }
+      ],
+      "label": "Cause",
+      "lp": "82.217,62.4",
+      "pos": "e,65.11,36.41 65.11,88.651 65.11,76.958 65.11,61.192 65.11,47.618",
+      "xlabel": "Sometimes",
+      "xlp": "34,71.211"
+    }
+  ]
+}

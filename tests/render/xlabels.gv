@@ -1,0 +1,1 @@
+digraph G { forcelabels=true; a [xlabel="ext a"]; b [xlabel="ext b"]; a -> b [xlabel="edge xl"]; }

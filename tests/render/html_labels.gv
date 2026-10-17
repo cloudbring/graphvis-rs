@@ -1,0 +1,11 @@
+digraph html {
+  node [shape=plaintext];
+  a [label=<<B>bold</B> <I>italic</I> <U>under</U> <S>strike</S> x<SUB>2</SUB> y<SUP>3</SUP><BR ALIGN="LEFT"/>left<BR ALIGN="RIGHT"/>right<BR/>center>];
+  b [label=<<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" BGCOLOR="lightgrey">
+    <TR><TD COLSPAN="2" BGCOLOR="yellow"><FONT COLOR="red" POINT-SIZE="18">Title</FONT></TD></TR>
+    <TR><TD PORT="p1" HREF="http://example.com" TOOLTIP="cell tip">one</TD><TD ROWSPAN="2" STYLE="rounded" BGCOLOR="green:blue">two</TD></TR>
+    <TR><TD SIDES="LB" ALIGN="LEFT">three</TD></TR></TABLE>>];
+  c [shape=box, label=<<TABLE STYLE="rounded" BORDER="2" COLOR="blue"><TR><TD>r</TD><TD STYLE="rounded" BORDER="1">d</TD></TR><HR/><TR><TD>s</TD><VR/><TD>t</TD></TR></TABLE>>];
+  d [label=<<TABLE><TR><TD><IMG SRC="missing.png"/></TD><TD><FONT FACE="Helvetica-Bold">face</FONT></TD></TR></TABLE>>];
+  a -> b:p1; b -> c; c -> d [label=<<I>html edge</I>>];
+}

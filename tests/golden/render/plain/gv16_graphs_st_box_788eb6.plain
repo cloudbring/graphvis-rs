@@ -1,0 +1,61 @@
+graph 1 2.097 20.54
+node node13 1.045 19.803 0.79464 0.5 node13 solid box black lightgrey
+node node14 1.045 18.789 0.79464 0.5 node14 solid box black lightgrey
+node node15 1.045 17.775 0.79464 0.5 node15 solid box black lightgrey
+node node22 1.045 16.761 0.79464 0.5 node22 solid box black lightgrey
+node node31 1.045 15.747 0.79464 0.5 node31 solid box black lightgrey
+node node33 1.045 14.733 0.79464 0.5 node33 solid box black lightgrey
+node node37 1.045 13.719 0.79464 0.5 node37 solid box black lightgrey
+node node38 1.045 12.706 0.79464 0.5 node38 solid box black lightgrey
+node node41 1.045 11.692 0.79464 0.5 node41 solid box black lightgrey
+node node47 1.045 10.678 0.79464 0.5 node47 solid box black lightgrey
+node node48 1.045 9.6639 0.79464 0.5 node48 solid box black lightgrey
+node node51 1.045 8.65 0.79464 0.5 node51 solid box black lightgrey
+node node57 1.045 7.6361 0.79464 0.5 node57 solid box black lightgrey
+node node58 1.045 6.6222 0.79464 0.5 node58 solid box black lightgrey
+node node73 1.045 5.6083 0.79464 0.5 node73 solid box black lightgrey
+node node74 1.045 4.5944 0.79464 0.5 node74 solid box black lightgrey
+node node75 1.045 3.5806 0.79464 0.5 node75 solid box black lightgrey
+node node83 1.045 2.5667 0.79464 0.5 node83 solid box black lightgrey
+node node84 1.045 1.5528 0.79464 0.5 node84 solid box black lightgrey
+node node85 1.045 0.53889 0.79464 0.5 node85 solid box black lightgrey
+edge node13 node13 7 0.64768 20.053 0.52268 20.138 0.52268 20.306 1.045 20.306 1.3225 20.306 1.4525 20.258 1.4948 20.201 "tailport=nw headport=ne" 1.045 20.424 solid black
+edge node13 node14 4 1.045 19.55 1.045 19.444 1.045 19.318 1.045 19.199 solid black
+edge node14 node14 7 0.64768 19.039 0.52268 19.124 0.52268 19.292 1.045 19.292 1.4408 19.292 1.5367 19.1 1.5055 18.933 "tailport=nw headport=e" 1.045 19.41 solid black
+edge node14 node15 4 1.045 18.536 1.045 18.431 1.045 18.304 1.045 18.185 solid black
+edge node15 node15 7 0.64768 18.025 0.39768 18.11 0.39768 18.278 1.045 18.278 1.581 18.278 1.6731 17.876 1.547 17.643 "tailport=nw headport=se" 1.045 18.396 solid black
+edge node15 node22 4 1.045 17.522 1.045 17.417 1.045 17.29 1.045 17.171 solid black
+edge node22 node22 7 1.045 17.011 1.17 17.096 1.17 17.264 1.045 17.264 0.97078 17.264 0.94063 17.206 0.95454 17.139 "tailport=n headport=n" 1.045 17.382 solid black
+edge node22 node31 4 1.045 16.508 1.045 16.403 1.045 16.276 1.045 16.157 solid black
+edge node31 node31 7 1.4423 15.997 1.5673 16.082 1.5673 16.25 1.045 16.25 0.76752 16.25 0.63745 16.203 0.59522 16.146 "tailport=ne headport=nw" 1.045 16.368 solid black
+edge node31 node33 4 1.045 15.494 1.045 15.389 1.045 15.263 1.045 15.143 solid black
+edge node33 node33 7 1.4423 14.983 1.5673 15.068 1.5673 15.236 1.4423 15.236 1.3681 15.236 1.3379 15.178 1.3519 15.111 "tailport=ne headport=ne" 1.045 15.354 solid black
+edge node33 node37 4 1.045 14.481 1.045 14.375 1.045 14.249 1.045 14.129 solid black
+edge node37 node37 7 1.4423 13.969 2.097 14.054 2.097 14.222 1.045 14.222 0.079223 14.222 0 13.729 0.49999 13.519 "tailport=ne headport=sw" 1.045 14.34 solid black
+edge node37 node38 4 1.045 13.467 1.045 13.362 1.045 13.235 1.045 13.116 solid black
+edge node38 node38 7 1.4423 12.956 1.6923 13.04 1.6923 13.209 1.045 13.209 0.51906 13.209 0.42043 12.988 0.53604 12.814 "tailport=ne headport=w" 1.045 13.326 solid black
+edge node38 node41 4 1.045 12.453 1.045 12.348 1.045 12.221 1.045 12.102 solid black
+edge node41 node41 7 1.4423 11.692 1.6923 11.859 1.6923 12.195 1.045 12.195 0.5595 12.195 0.43814 12.1 0.51327 12.017 "tailport=e headport=nw" 1.045 12.312 solid black
+edge node41 node47 4 1.045 11.439 1.045 11.334 1.045 11.207 1.045 11.088 solid black
+edge node47 node47 7 1.4423 10.678 2.097 10.846 2.097 11.181 1.045 11.181 0.079223 11.181 0 10.688 0.49999 10.477 "tailport=e headport=sw" 1.045 11.298 solid black
+edge node47 node48 4 1.045 10.425 1.045 10.32 1.045 10.193 1.045 10.074 solid black
+edge node48 node48 7 1.4423 9.6639 1.6923 9.8317 1.6923 10.167 1.045 10.167 0.51906 10.167 0.42043 9.9458 0.53604 9.7726 "tailport=e headport=w" 1.045 10.284 solid black
+edge node48 node51 4 1.045 9.4113 1.045 9.306 1.045 9.1792 1.045 9.0603 solid black
+edge node51 node51 7 1.4423 8.4 2.097 8.5678 2.097 9.1535 1.045 9.1535 0.083333 9.1535 0.00069028 9.0122 0.49363 8.9235 "tailport=se headport=nw" 1.045 9.2701 solid black
+edge node51 node57 4 1.045 8.3974 1.045 8.2921 1.045 8.1653 1.045 8.0464 solid black
+edge node57 node57 7 1.4423 7.3861 2.097 7.5539 2.097 8.1396 1.045 8.1396 0.079223 8.1396 0 7.6461 0.49999 7.4353 "tailport=se headport=sw" 1.045 8.2563 solid black
+edge node57 node58 4 1.045 7.3835 1.045 7.2782 1.045 7.1514 1.045 7.0325 solid black
+edge node58 node58 7 1.4423 6.3722 2.097 6.54 2.097 7.1257 1.045 7.1257 0.079223 7.1257 0 6.8429 0.49999 6.6667 "tailport=se headport=w" 1.045 7.2424 solid black
+edge node58 node73 4 1.045 6.3696 1.045 6.2643 1.045 6.1375 1.045 6.0186 solid black
+edge node73 node73 7 0.64768 5.3583 0.39768 5.5261 0.39768 6.1118 1.045 6.1118 1.5305 6.1118 1.6519 6.0168 1.5767 5.9336 "tailport=sw headport=ne" 1.045 6.2285 solid black
+edge node73 node74 4 1.045 5.3557 1.045 5.2504 1.045 5.1236 1.045 5.0047 solid black
+edge node74 node74 7 0.64768 4.3444 0.27268 4.5122 0.27268 5.0979 1.045 5.0979 1.7087 5.0979 1.802 4.85 1.5772 4.6738 "tailport=sw headport=e" 1.045 5.2146 solid black
+edge node74 node75 4 1.045 4.3418 1.045 4.2365 1.045 4.1097 1.045 3.9908 solid black
+edge node75 node75 7 0.64768 3.3306 0.27268 3.4983 0.27268 4.084 1.045 4.084 1.7148 4.084 1.8037 3.6436 1.5709 3.4172 "tailport=sw headport=se" 1.045 4.2007 solid black
+edge node75 node83 4 1.045 3.3279 1.045 3.2226 1.045 3.0958 1.045 2.9769 solid black
+edge node83 node83 7 0.64768 2.5667 0.52268 2.7344 0.52268 3.0701 1.045 3.0701 1.3225 3.0701 1.4525 3.0225 1.4948 2.9651 "tailport=w headport=ne" 1.045 3.1868 solid black
+edge node83 node84 4 1.045 2.314 1.045 2.2088 1.045 2.0819 1.045 1.9631 solid black
+edge node84 node84 7 0.64768 1.5528 0.39768 1.7206 0.39768 2.0563 1.045 2.0563 1.5709 2.0563 1.6695 1.8347 1.554 1.6615 "tailport=w headport=e" 1.045 2.1729 solid black
+edge node84 node85 4 1.045 1.3002 1.045 1.1948 1.045 1.0681 1.045 0.94915 solid black
+edge node85 node85 7 0.64768 0.53889 0.27268 0.70671 0.27268 1.0424 1.045 1.0424 1.7148 1.0424 1.8037 0.60194 1.5709 0.37551 "tailport=w headport=se" 1.045 1.159 solid black
+stop

@@ -1,0 +1,28 @@
+{
+  "name": "mygraph",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,54,56",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "label_foo",
+      "height": "0.52778",
+      "label": "<foo>foo",
+      "pos": "27,19",
+      "rects": "0,0.5,53.662,37.5",
+      "shape": "record",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 0,
+      "pos": "e,33.466,37.276 20.365,37.276 19.273,47.074 21.451,56 26.916,56 30.075,56 32.136,53.017 33.101,48.606",
+      "tailport": "foo"
+    }
+  ]
+}

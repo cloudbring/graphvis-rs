@@ -52,6 +52,8 @@ gen_dir() {
 gen_dir "$OUT" "$REPO_ROOT"/tests/wild/*.gv "$REPO_ROOT"/tests/fixtures/*.gv
 # Neato corpus: every input sets layout=neato (see scripts/gen-neato-corpus.py).
 gen_dir "$OUT/neato" "$REPO_ROOT"/tests/neato/*.gv
+# Sfdp corpus: every input sets layout=sfdp (see scripts/gen-sfdp-corpus.py).
+gen_dir "$OUT/sfdp" "$REPO_ROOT"/tests/sfdp/*.gv
 # Circo and twopi corpora: every input sets layout=circo|twopi (see scripts/gen-circo-corpus.py, gen-twopi-corpus.py).
 gen_dir "$OUT/circo" "$REPO_ROOT"/tests/circo/*.gv
 gen_dir "$OUT/twopi" "$REPO_ROOT"/tests/twopi/*.gv

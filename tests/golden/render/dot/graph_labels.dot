@@ -1,0 +1,89 @@
+digraph G {
+	graph [bb="0,0,241,289.6",
+		bgcolor=lightyellow,
+		fontcolor=navy,
+		fontname=Helvetica,
+		label="Root label\nsecond line",
+		labeljust=r,
+		labelloc=t,
+		lheight=0.47,
+		lp="205.59,272.8",
+		lwidth=0.98
+	];
+	node [label="\N"];
+	subgraph cluster_0 {
+		graph [bb="0,125.6,142,202.4",
+			fillcolor="lightblue:white",
+			gradientangle=270,
+			label="left bottom",
+			labeljust=l,
+			labelloc=b,
+			lheight=0.23,
+			lp="40.683,138",
+			lwidth=0.91,
+			style=filled
+		];
+		a	[height=0.5,
+			pos="35,176.4",
+			width=0.75];
+		b	[height=0.5,
+			pos="107,176.4",
+			width=0.75];
+	}
+	subgraph cluster_1 {
+		graph [bb="0,0,150,117.6",
+			color=red,
+			label=rounded,
+			lheight=0.23,
+			lp="116.31,105.2",
+			lwidth=0.71,
+			penwidth=2,
+			style="rounded,dashed"
+		];
+		subgraph cluster_2 {
+			graph [bb="72,8,142,84.8",
+				fillcolor="white:gray",
+				label=inner,
+				lheight=0.23,
+				lp="118.43,72.4",
+				lwidth=0.43,
+				style=radial
+			];
+			d	[height=0.5,
+				pos="107,34",
+				width=0.75];
+		}
+		c	[height=0.5,
+			pos="35,34",
+			width=0.75];
+	}
+	subgraph cluster_3 {
+		graph [bb="154,150.4,241,244",
+			fillcolor="red:green:blue",
+			lheight=0.47,
+			lp="197.59,223.2",
+			lwidth=0.98,
+			style=striped
+		];
+		e	[height=0.5,
+			pos="193,176.4",
+			width=0.75];
+	}
+	subgraph cluster_4 {
+		graph [bb="158,8,228,84.8",
+			fillcolor=pink,
+			label=nop,
+			lheight=0.23,
+			lp="208.32,72.4",
+			lwidth=0.32,
+			peripheries=0,
+			style=filled
+		];
+		f	[height=0.5,
+			pos="193,34",
+			width=0.75];
+	}
+	a -> c	[pos="e,35,52.277 35,157.9 35,134.23 35,91.724 35,63.434"];
+	b -> d	[pos="e,107,52.277 107,157.9 107,134.23 107,91.724 107,63.434"];
+	e -> f	[pos="e,193,52.277 193,157.9 193,134.23 193,91.724 193,63.434"];
+}

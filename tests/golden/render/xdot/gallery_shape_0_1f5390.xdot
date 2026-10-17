@@ -1,0 +1,19 @@
+digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 36 233.92 36 233.92 0 ",
+		bb="0,0,233.92,36",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	pentagon	[_draw_="c 7 -#000000 p 5 114.79 23.56 57.4 36 0 23.56 21.92 3.44 92.87 3.44 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 57.4 13.8 0 51.32 8 -pentagon ",
+		height=0.5,
+		pos="57.396,18",
+		shape=pentagon,
+		width=1.5943];
+	hexagon	[_draw_="c 7 -#000000 p 6 233.92 18 208.66 36 158.14 36 132.88 18 158.14 0 208.66 0 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 183.4 13.8 0 47.43 7 -hexagon ",
+		height=0.5,
+		pos="183.4,18",
+		shape=hexagon,
+		width=1.4033];
+}

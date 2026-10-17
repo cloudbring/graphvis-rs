@@ -1,0 +1,50 @@
+{
+  "name": "structs",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,411.97,244",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "struct1",
+      "height": "0.67778",
+      "label": "<TABLE CELLPADDING=\"10\" BORDER=\"0\">\n\t<TR>\n\t    <TD HEIGHT=\"30\" WIDTH=\"90\">a<\/TD>\n\t    <TD>b<\/TD>\n\t    <TD>c<\/TD>\n\t<\/TR>\n    <\/TABLE>",
+      "pos": "180.87,219.6",
+      "shape": "plaintext",
+      "width": "2.3224"
+    },
+    {
+      "_gvid": 1,
+      "name": "struct2",
+      "height": "1.7111",
+      "label": "<TABLE>\n\t<TR>\n\t    <TD COLSPAN=\"3\">elefantel<\/TD>\n\t    <TD ROWSPAN=\"2\" VALIGN=\"bottom\" ALIGN=\"right\">two<\/TD>\n\t<\/TR><TR>\n\t    <TD COLSPAN=\"2\" ROWSPAN=\"2\"><TABLE BGCOLOR=\"grey\">\n\t\t<TR>\n\t\t    <TD>buca<\/TD>\n\t\t<\/TR><TR>\n\t\t    <TD BGCOLOR=\"yellow\">c<\/TD>\n\t\t<\/TR><TR>\n\t\t    <TD>f<\/TD>\n\t\t<\/TR>\n\t    <\/TABLE><\/TD>\n\t    <TD>patratos<\/TD>\n\t<\/TR><TR>\n\t    <TD COLSPAN=\"2\" ALIGN=\"right\">4<\/TD>\n\t<\/TR>\n\t<\/TABLE>\n    ",
+      "pos": "73.873,79.6",
+      "shape": "plaintext",
+      "width": "2.052"
+    },
+    {
+      "_gvid": 2,
+      "name": "struct3",
+      "height": "2.2111",
+      "label": "<TABLE CELLPADDING=\"5\">\n\t<TR>\n\t    <TD ROWSPAN=\"3\">Hello<\/TD>\n\t    <TD ROWSPAN=\"2\" COLSPAN=\"3\"><TABLE BORDER=\"4\">\n\t\t<TR>\n\t\t    <TD COLSPAN=\"3\">b<\/TD>\n\t\t<\/TR><TR>\n\t\t    <TD>a<\/TD>\n\t\t    <TD>dino<\/TD>\n\t\t    <TD>y<\/TD>\n\t\t<\/TR><TR>\n\t\t    <TD COLSPAN=\"3\">rhino<\/TD>\n\t\t<\/TR>\n\t    <\/TABLE><\/TD>\n\t<\/TR><TR>\n\t    <TD COLSPAN=\"2\">climb<\/TD>\n\t    <TD ROWSPAN=\"2\">Up<\/TD>\n\t<\/TR><TR>\n\t    <TD COLSPAN=\"3\">low<\/TD>\n\t<\/TR>\n    <\/TABLE>",
+      "pos": "288.87,79.6",
+      "shape": "plaintext",
+      "width": "3.4194"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,120.7,140.99 162.96,195.5 153.17,182.88 140.48,166.5 127.75,150.09"
+    },
+    {
+      "_gvid": 1,
+      "tail": 0,
+      "head": 2,
+      "pos": "e,227.36,159.2 198.95,195.5 205.17,187.55 212.56,178.11 220.39,168.11"
+    }
+  ]
+}

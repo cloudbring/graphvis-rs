@@ -1,0 +1,11 @@
+digraph shapes {
+  node [style=filled, fillcolor=lightyellow];
+  box; polygon [sides=7, skew=0.3, distortion=0.2]; ellipse; oval; circle; point; egg; triangle; plaintext; plain [label="plain"];
+  diamond; trapezium; parallelogram; house; pentagon; hexagon; septagon; octagon;
+  doublecircle; doubleoctagon; tripleoctagon; invtriangle; invtrapezium; invhouse;
+  Mdiamond; Msquare; Mcircle; rect; rectangle; square; star; none; underline; cylinder;
+  note; tab; folder; box3d; component; promoter; cds; terminator; utr; primersite;
+  restrictionsite; fivepoverhang; threepoverhang; noverhang; assembly; signature;
+  insulator; ribosite; rnastab; proteasesite; proteinstab; rpromoter; rarrow; larrow; lpromoter;
+  rot [shape=box, orientation=30]; reg [shape=hexagon, regular=true];
+}

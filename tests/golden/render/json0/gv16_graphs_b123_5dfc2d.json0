@@ -1,0 +1,27 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,153.79,45.114",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "tester_run_ksh",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "67.894,18",
+      "width": "1.8859"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 0,
+      "headport": "n",
+      "pos": "e,67.894,36.24 85.712,35.819 114.34,26.819 153.79,26.819 153.79,36.03 153.79,44.161 109.16,45.114 79.001,39.033",
+      "tailport": "ne"
+    }
+  ]
+}

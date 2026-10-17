@@ -1,0 +1,8 @@
+digraph G {
+  label="Root label\nsecond line"; labelloc=t; labeljust=r; fontname=Helvetica; fontcolor=navy; bgcolor=lightyellow;
+  subgraph cluster_0 { label="left bottom"; labelloc=b; labeljust=l; style=filled; fillcolor="lightblue:white"; gradientangle=270; a; b; }
+  subgraph cluster_1 { label="rounded"; style="rounded,dashed"; color=red; penwidth=2; c; subgraph cluster_2 { label=inner; style=radial; fillcolor="white:gray"; d; } }
+  subgraph cluster_3 { style=striped; fillcolor="red:green:blue"; e; }
+  subgraph cluster_4 { peripheries=0; style=filled; fillcolor=pink; label=nop; f; }
+  a -> c; b -> d; e -> f;
+}

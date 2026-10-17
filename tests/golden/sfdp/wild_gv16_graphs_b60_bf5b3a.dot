@@ -1,0 +1,15 @@
+digraph G {
+	graph [bb="0,0,584.33,121",
+		charset=latin1,
+		layout=sfdp
+	];
+	node [label="\N"];
+	0	[height=0.5,
+		label=XXXr��������������leXXX,
+		pos="265.86,18",
+		width=7.385];
+	1	[height=0.5,
+		label=XXXrooooooooooooooleXXX,
+		pos="453.66,103",
+		width=3.6295];
+}

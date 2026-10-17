@@ -1,0 +1,49 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,522.49,49.6",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "Triangle",
+      "height": "0.68889",
+      "label": "\\N",
+      "pos": "87.494,24.8",
+      "shape": "polygon",
+      "sides": "3",
+      "width": "2.4304"
+    },
+    {
+      "_gvid": 1,
+      "name": "Rectangle",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "228.49,24.8",
+      "shape": "polygon",
+      "sides": "4",
+      "width": "0.99962"
+    },
+    {
+      "_gvid": 2,
+      "name": "Pentagon",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "340.49,24.8",
+      "shape": "polygon",
+      "sides": "5",
+      "width": "1.613"
+    },
+    {
+      "_gvid": 3,
+      "name": "Hexagon",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "469.49,24.8",
+      "shape": "polygon",
+      "sides": "6",
+      "width": "1.4721"
+    }
+  ]
+}

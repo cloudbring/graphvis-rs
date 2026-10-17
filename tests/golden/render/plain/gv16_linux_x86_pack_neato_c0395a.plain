@@ -1,0 +1,46 @@
+graph 1 13.5 4.5
+node 2 1.625 3.25 0.75 0.5 2 solid ellipse black lightgrey
+node 3 3.125 3.25 0.75 0.5 3 solid ellipse black lightgrey
+node 4 4.125 3.25 0.75 0.5 4 solid ellipse black lightgrey
+node 5 5.125 3.25 0.75 0.5 5 solid ellipse black lightgrey
+node 6 6.125 3.25 0.75 0.5 6 solid ellipse black lightgrey
+node 8 0.375 2.25 0.75 0.5 8 solid ellipse black lightgrey
+node 9 1.375 2.25 0.75 0.5 9 solid ellipse black lightgrey
+node 10 2.375 2.25 0.75 0.5 10 solid ellipse black lightgrey
+node a2 7.125 3.25 0.75 0.5 a2 solid ellipse black lightgrey
+node a3 8.125 3.25 0.75 0.5 a3 solid ellipse black lightgrey
+node a4 9.125 3.25 0.75 0.5 a4 solid ellipse black lightgrey
+node a5 10.125 3.25 0.75 0.5 a5 solid ellipse black lightgrey
+node a6 11.125 3.25 0.75 0.5 a6 solid ellipse black lightgrey
+node a8 6.125 2.25 0.75 0.5 a8 solid ellipse black lightgrey
+node a9 7.125 2.25 0.75 0.5 a9 solid ellipse black lightgrey
+node a10 8.125 2.25 0.75 0.5 a10 solid ellipse black lightgrey
+node 11 3.375 2.25 0.75 0.5 11 solid ellipse black lightgrey
+node 1 4.125 4.25 0.75 0.5 1 solid ellipse black lightgrey
+node 12 3.375 1.25 0.75 0.5 12 solid ellipse black lightgrey
+node 13 3.375 0.25 0.75 0.5 13 solid ellipse black lightgrey
+node a1 9.125 4.25 0.75 0.5 a1 solid ellipse black lightgrey
+node A 12.125 4.25 0.75 0.5 A solid ellipse black lightgrey
+node B 12.125 3.25 0.75 0.5 B solid ellipse black lightgrey
+node C 13.125 4.25 0.75 0.5 C solid ellipse black lightgrey
+edge 2 8 4 1.3899 3.0532 1.1678 2.8806 0.83642 2.6228 0.61331 2.4493 solid black
+edge 2 9 4 1.5644 3.0007 1.5251 2.8479 1.4742 2.6494 1.435 2.4971 solid black
+edge 2 10 4 1.7914 3.0203 1.9157 2.8592 2.0849 2.64 2.209 2.479 solid black
+edge 3 11 4 3.1856 3.0007 3.2249 2.8479 3.2758 2.6494 3.315 2.4971 solid black
+edge a2 a8 4 6.9178 3.0347 6.7461 2.8678 6.5035 2.6318 6.3319 2.4651 solid black
+edge a2 a9 4 7.125 2.9958 7.125 2.8451 7.125 2.6517 7.125 2.5014 solid black
+edge a2 a10 4 7.3322 3.0347 7.5039 2.8678 7.7465 2.6318 7.9181 2.4651 solid black
+edge 11 12 4 3.375 1.9958 3.375 1.8451 3.375 1.6517 3.375 1.5014 solid black
+edge 1 2 4 3.8083 4.1129 3.3287 3.9265 2.4233 3.5743 1.9431 3.3875 solid black
+edge 1 3 4 3.9178 4.0347 3.7461 3.8678 3.5035 3.6318 3.3319 3.4651 solid black
+edge 1 4 4 4.125 3.9958 4.125 3.8451 4.125 3.6517 4.125 3.5014 solid black
+edge 1 5 4 4.3322 4.0347 4.5039 3.8678 4.7465 3.6318 4.9181 3.4651 solid black
+edge 1 6 4 4.4244 4.0906 4.8036 3.9062 5.4529 3.5906 5.83 3.4072 solid black
+edge 12 13 4 3.375 0.99579 3.375 0.84508 3.375 0.65163 3.375 0.50144 solid black
+edge a1 a2 4 8.8256 4.0906 8.4464 3.9062 7.7971 3.5906 7.42 3.4072 solid black
+edge a1 a3 4 8.9178 4.0347 8.7461 3.8678 8.5035 3.6318 8.3319 3.4651 solid black
+edge a1 a4 4 9.125 3.9958 9.125 3.8451 9.125 3.6517 9.125 3.5014 solid black
+edge a1 a5 4 9.3322 4.0347 9.5039 3.8678 9.7465 3.6318 9.9181 3.4651 solid black
+edge a1 a6 4 9.4244 4.0906 9.8036 3.9062 10.453 3.5906 10.83 3.4072 solid black
+edge A B 4 12.125 3.9958 12.125 3.8451 12.125 3.6517 12.125 3.5014 solid black
+stop

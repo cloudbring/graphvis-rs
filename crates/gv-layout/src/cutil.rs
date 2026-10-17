@@ -306,6 +306,54 @@ fn qsort_impl<T: Clone, F: FnMut(&T, &T) -> i32>(
     }
 }
 
+/// `random_small(bound)` (`lib/util/random.c`): uniform in `[0, bound)` from `rand()`.
+fn random_small(r: &mut CRand, bound: i32) -> i32 {
+    debug_assert!(bound > 0);
+    let discard_threshold = RAND_MAX - ((RAND_MAX as u32 + 1) % bound as u32) as i32;
+    loop {
+        let v = r.rand();
+        if v <= discard_threshold {
+            return v % bound;
+        }
+    }
+}
+
+/// `gv_random_u64(bound)` (`lib/util/random.c`).
+fn gv_random_u64(r: &mut CRand, bound: u64) -> u64 {
+    let discard_threshold = u64::MAX - (u64::MAX - bound + 1) % bound;
+    loop {
+        let mut bytes = [0u8; 8];
+        for b in &mut bytes {
+            *b = random_small(r, 256) as u8;
+        }
+        let v = u64::from_le_bytes(bytes);
+        if v <= discard_threshold {
+            return v % bound;
+        }
+    }
+}
+
+/// `gv_random(bound)` (`lib/util/random.c`): uniform in `[0, bound)` from `rand()`.
+pub fn gv_random(r: &mut CRand, bound: usize) -> usize {
+    if bound > RAND_MAX as usize {
+        return gv_random_u64(r, bound as u64) as usize;
+    }
+    random_small(r, bound as i32) as usize
+}
+
+/// `gv_permutation(bound)` (`lib/util/random.c`): Fisher–Yates shuffle of `0..bound`.
+pub fn gv_permutation(r: &mut CRand, bound: usize) -> Vec<usize> {
+    let mut p: Vec<usize> = (0..bound).collect();
+    if bound == 0 {
+        return p;
+    }
+    for i in (1..bound).rev() {
+        let j = gv_random(r, i + 1);
+        p.swap(i, j);
+    }
+    p
+}
+
 /// Mersenne Twister of `lib/neatogen/randomkit.c` (`rk_state`), with
 /// 64-bit `unsigned long` as on macOS/arm64.
 #[derive(Clone)]

@@ -1,0 +1,19 @@
+graph 1 4.9044 2.9472
+node node0 2.73 2.7611 0.90431 0.37222 "<f0> |<f1> G|<f2> " solid record black lightgrey
+node node1 1.855 1.9028 0.88266 0.37222 "<f0> |<f1> E|<f2> " solid record black lightgrey
+node node4 3.605 1.9028 0.89358 0.37222 "<f0> |<f1> R|<f2> " solid record black lightgrey
+node node2 1.0216 1.0444 0.89358 0.37222 "<f0> |<f1> B|<f2> " solid record black lightgrey
+node node3 2.1606 1.0444 0.87203 0.37222 "<f0> |<f1> F|<f2> " solid record black lightgrey
+node node7 0.45216 0.18611 0.90431 0.37222 "<f0> |<f1> A|<f2> " solid record black lightgrey
+node node8 1.605 0.18611 0.89358 0.37222 "<f0> |<f1> C|<f2> " solid record black lightgrey
+node node5 3.2994 1.0444 0.90431 0.37222 "<f0> |<f1> H|<f2> " solid record black lightgrey
+node node6 4.4522 1.0444 0.90431 0.37222 "<f0> |<f1> Y|<f2> " solid record black lightgrey
+edge node0 node1 4 2.4132 2.5819 2.4132 2.3139 2.0517 2.3692 1.9106 2.2274 solid black
+edge node0 node4 4 3.0467 2.5819 3.0467 2.3139 3.4082 2.3692 3.5493 2.2274 solid black
+edge node1 node2 4 1.549 1.7236 1.549 1.4662 1.2141 1.5067 1.078 1.3702 solid black
+edge node1 node3 4 2.1608 1.7236 2.1608 1.5656 2.1607 1.4919 2.1606 1.3826 solid black
+edge node4 node5 4 3.2936 1.7236 3.2936 1.5656 3.2965 1.4919 3.2982 1.3826 solid black
+edge node4 node6 4 3.9163 1.7236 3.9163 1.464 4.2565 1.5075 4.3949 1.371 solid black
+edge node2 node7 4 0.71022 0.86528 0.71022 0.67968 0.56807 0.6319 0.49477 0.51737 solid black
+edge node2 node8 4 1.333 0.86528 1.333 0.67753 1.4828 0.63239 1.56 0.51818 solid black
+stop

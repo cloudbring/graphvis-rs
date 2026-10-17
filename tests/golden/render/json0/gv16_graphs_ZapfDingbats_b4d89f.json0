@@ -1,0 +1,20 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,450.63,91.202",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "35",
+      "fontname": "ZapfDingbats",
+      "height": "1.2667",
+      "label": "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n\t<TR><TD>\"ZapfDingbats\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\"<\/TD><\/TR>\n\t<TR><TD>\"abcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\\nabcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<\/TABLE>",
+      "margin": "0,0",
+      "pos": "225.31,45.601",
+      "shape": "box",
+      "width": "6.2587"
+    }
+  ]
+}

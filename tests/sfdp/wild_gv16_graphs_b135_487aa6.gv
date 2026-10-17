@@ -1,0 +1,9 @@
+digraph ID {
+layout=sfdp;
+
+graph [
+        concentrate = true
+      ];
+A -> B
+B -> A
+}

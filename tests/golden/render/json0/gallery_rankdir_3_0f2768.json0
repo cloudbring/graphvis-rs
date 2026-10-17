@@ -1,0 +1,48 @@
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,234,36",
+  "rankdir": "RL",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "207,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "117,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,144.38,18 179.6,18 172.11,18 163.82,18 155.8,18"
+    },
+    {
+      "_gvid": 1,
+      "tail": 1,
+      "head": 2,
+      "pos": "e,54.384,18 89.597,18 82.114,18 73.817,18 65.801,18"
+    }
+  ]
+}

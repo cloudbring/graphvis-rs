@@ -7,6 +7,9 @@
 
 #![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
+pub mod matrix_ext;
+pub mod quad_tree;
+
 /// `MACHINEACC` (`general.h`).
 pub const MACHINEACC: f64 = 1.0e-16;
 /// `SYMMETRY_EPSILON` (`SparseMatrix.h`).

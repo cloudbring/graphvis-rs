@@ -1,0 +1,60 @@
+digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 202.4 192 202.4 192 0 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 96 4.2 0 64.92 11 -Graph Title ",
+		bb="0,0,192,202.4",
+		label="Graph Title",
+		lheight=0.23,
+		lp="96,8.4",
+		lwidth=0.90,
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_t {
+		graph [_draw_="c 7 -#000000 p 4 0 53.6 0 202.4 82 202.4 82 53.6 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 41 185.8 0 66.49 11 -Cluster Top ",
+			bb="0,53.6,82,202.4",
+			label="Cluster Top",
+			labelloc=t,
+			lheight=0.23,
+			lp="41,190",
+			lwidth=0.92
+		];
+		a	[_draw_="c 7 -#000000 e 41 151.6 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 41 147.4 0 6.21 1 -a ",
+			height=0.5,
+			pos="41,151.6",
+			width=0.75];
+		b	[_draw_="c 7 -#000000 e 41 79.6 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 41 75.4 0 7 1 -b ",
+			height=0.5,
+			pos="41,79.6",
+			width=0.75];
+		a -> b	[_draw_="c 7 -#000000 B 4 41 133.3 41 126.01 41 117.33 41 109.14 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 44.5 109.21 41 99.21 37.5 109.21 ",
+			pos="e,41,97.7 41,133.3 41,126.01 41,117.33 41,109.14"];
+	}
+	subgraph cluster_b {
+		graph [_draw_="c 7 -#000000 p 4 90 28.8 90 177.6 192 177.6 192 28.8 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 141 37 0 85.95 14 -Cluster Bottom ",
+			bb="90,28.8,192,177.6",
+			label="Cluster Bottom",
+			labelloc=b,
+			lheight=0.23,
+			lp="141,41.2",
+			lwidth=1.19
+		];
+		c	[_draw_="c 7 -#000000 e 141 151.6 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 141 147.4 0 6.21 1 -c ",
+			height=0.5,
+			pos="141,151.6",
+			width=0.75];
+		d	[_draw_="c 7 -#000000 e 141 79.6 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 141 75.4 0 7 1 -d ",
+			height=0.5,
+			pos="141,79.6",
+			width=0.75];
+		c -> d	[_draw_="c 7 -#000000 B 4 141 133.3 141 126.01 141 117.33 141 109.14 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 144.5 109.21 141 99.21 137.5 109.21 ",
+			pos="e,141,97.7 141,133.3 141,126.01 141,117.33 141,109.14"];
+	}
+}

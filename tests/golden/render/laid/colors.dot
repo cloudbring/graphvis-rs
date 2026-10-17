@@ -1,0 +1,25 @@
+digraph G {
+	graph [bb="0,0,54,180",
+		bgcolor=transparent
+	];
+	node [label="\N"];
+	a	[color="0.5 0.5 0.5",
+		fillcolor="/accent3/2",
+		height=0.5,
+		pos="27,162",
+		style=filled,
+		width=0.75];
+	b	[color="#aabbcc",
+		fontcolor="#11223344",
+		height=0.5,
+		pos="27,90",
+		width=0.75];
+	a -> b	[color="/set13/3",
+		pos="e,27,108.1 27,143.7 27,136.41 27,127.73 27,119.54"];
+	c	[color=hot_pink,
+		height=0.5,
+		pos="27,18",
+		width=0.75];
+	b -> c	[color="0.1,0.9,0.9",
+		pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
+}

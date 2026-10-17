@@ -1,0 +1,52 @@
+graph 1 5.7218 3.3889
+node struct1 2.5121 3.05 2.3224 0.67778 <<TABLE CELLPADDING="10" BORDER="0">
+	<TR>
+	    <TD HEIGHT="30" WIDTH="90">a</TD>
+	    <TD>b</TD>
+	    <TD>c</TD>
+	</TR>
+    </TABLE>> solid plaintext black lightgrey
+node struct2 1.026 1.1056 2.052 1.7111 <<TABLE>
+	<TR>
+	    <TD COLSPAN="3">elefantel</TD>
+	    <TD ROWSPAN="2" VALIGN="bottom" ALIGN="right">two</TD>
+	</TR><TR>
+	    <TD COLSPAN="2" ROWSPAN="2"><TABLE BGCOLOR="grey">
+		<TR>
+		    <TD>buca</TD>
+		</TR><TR>
+		    <TD BGCOLOR="yellow">c</TD>
+		</TR><TR>
+		    <TD>f</TD>
+		</TR>
+	    </TABLE></TD>
+	    <TD>patratos</TD>
+	</TR><TR>
+	    <TD COLSPAN="2" ALIGN="right">4</TD>
+	</TR>
+	</TABLE>
+    > solid plaintext black lightgrey
+node struct3 4.0121 1.1056 3.4194 2.2111 <<TABLE CELLPADDING="5">
+	<TR>
+	    <TD ROWSPAN="3">Hello</TD>
+	    <TD ROWSPAN="2" COLSPAN="3"><TABLE BORDER="4">
+		<TR>
+		    <TD COLSPAN="3">b</TD>
+		</TR><TR>
+		    <TD>a</TD>
+		    <TD>dino</TD>
+		    <TD>y</TD>
+		</TR><TR>
+		    <TD COLSPAN="3">rhino</TD>
+		</TR>
+	    </TABLE></TD>
+	</TR><TR>
+	    <TD COLSPAN="2">climb</TD>
+	    <TD ROWSPAN="2">Up</TD>
+	</TR><TR>
+	    <TD COLSPAN="3">low</TD>
+	</TR>
+    </TABLE>> solid plaintext black lightgrey
+edge struct1 struct2 4 2.2633 2.7153 2.1274 2.54 1.9511 2.3125 1.7743 2.0846 solid black
+edge struct1 struct3 4 2.7632 2.7153 2.8496 2.6049 2.9522 2.4738 3.061 2.3349 solid black
+stop

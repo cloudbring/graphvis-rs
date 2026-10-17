@@ -1,0 +1,25 @@
+graph 1 2.7778 5.5696
+node a0 0.76389 4.2529 0.75 0.5 a0 filled ellipse white white
+node a1 0.76389 3.2529 0.75 0.5 a1 filled ellipse white white
+node a2 0.76389 2.2529 0.75 0.5 a2 filled ellipse white white
+node a3 0.76389 1.253 0.75 0.5 a3 filled ellipse white white
+node b0 2.2222 4.2529 0.75 0.5 b0 filled ellipse black lightgrey
+node b1 2.25 3.2529 0.75 0.5 b1 filled ellipse black lightgrey
+node b2 2.2917 2.2529 0.75 0.5 b2 filled ellipse black lightgrey
+node b3 2.2222 1.253 0.75 0.5 b3 filled ellipse black lightgrey
+node end 1.4861 0.25149 0.50297 0.50297 end solid Msquare black lightgrey
+node start 1.4861 5.3196 1.0867 0.5 start solid Mdiamond black lightgrey
+edge a0 a1 4 0.76389 3.9987 0.76389 3.8975 0.76389 3.7769 0.76389 3.6632 solid black
+edge a1 a2 4 0.76389 2.9987 0.76389 2.8975 0.76389 2.7769 0.76389 2.6632 solid black
+edge a1 b3 4 0.92553 3.0204 1.1787 2.6781 1.6708 2.0126 1.9706 1.6071 solid black
+edge a2 a3 4 0.76389 1.9987 0.76389 1.8975 0.76389 1.7769 0.76389 1.6632 solid black
+edge a3 a0 10 0.57292 1.4743 0.45888 1.6126 0.32474 1.8051 0.26389 2.0029 0.067944 2.6401 0.067944 2.8657 0.26389 3.5029 0.3081 3.6468 0.391 3.7876 0.47676 3.9071 solid black
+edge a3 end 4 0.92417 1.023 1.0089 0.90869 1.1154 0.76519 1.2127 0.63393 solid black
+edge b0 b1 4 2.229 3.9987 2.2319 3.8975 2.2354 3.7769 2.2386 3.6632 solid black
+edge b1 b2 4 2.2603 2.9987 2.2646 2.8975 2.2699 2.7769 2.2747 2.6632 solid black
+edge b2 a3 4 2.0256 2.0697 1.7868 1.9178 1.4331 1.6926 1.1608 1.5194 solid black
+edge b2 b3 4 2.2744 1.9987 2.2672 1.8975 2.2586 1.7769 2.2506 1.6632 solid black
+edge b3 end 4 2.0589 1.023 1.9725 0.90869 1.864 0.76519 1.7647 0.63393 solid black
+edge start a0 4 1.3603 5.1247 1.2627 4.9844 1.1245 4.7857 1.0057 4.6147 solid black
+edge start b0 4 1.6143 5.1247 1.7137 4.9844 1.8546 4.7857 1.9757 4.6147 solid black
+stop

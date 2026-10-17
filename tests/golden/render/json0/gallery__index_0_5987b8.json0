@@ -1,0 +1,57 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,54,372.13",
+  "fontsize": "24",
+  "nodesep": ".25",
+  "ranksep": "1.5",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "fontsize": "24",
+      "height": "0.72282",
+      "label": "\\N",
+      "pos": "27,346.11",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "fontsize": "24",
+      "height": "0.72282",
+      "label": "\\N",
+      "pos": "27,186.06",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "c",
+      "fontsize": "24",
+      "height": "0.72282",
+      "label": "\\N",
+      "pos": "27,26.022",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "fontsize": "24",
+      "pos": "e,27,212.39 27,319.72 27,293.79 27,253.3 27,223.86",
+      "style": "setlinewidth(3)"
+    },
+    {
+      "_gvid": 1,
+      "tail": 1,
+      "head": 2,
+      "fontsize": "24",
+      "pos": "e,27,52.351 27,159.67 27,133.75 27,93.253 27,63.819",
+      "style": "setlinewidth(3)"
+    }
+  ]
+}

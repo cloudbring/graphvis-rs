@@ -1,0 +1,46 @@
+digraph structs {
+	graph [bb="0,0,661.17,1451.8"];
+	node [label="\N",
+		shape=record
+	];
+	struct1	[height=0.52778,
+		label="<f0> left|<f1> middle|<f2> right",
+		pos="287.1,1432.8",
+		rects="221.11,1414.3,255.76,1451.3 255.76,1414.3,310.65,1451.3 310.65,1414.3,353.09,1451.3",
+		width=1.833];
+	struct2	[height=0.52778,
+		label="<f0> one|<f1> two",
+		pos="52.095,689.4",
+		rects="15.487,670.9,51.7,707.9 51.7,670.9,88.7,707.9",
+		width=1.0169];
+	struct1:f1 -> struct2:f0	[pos="e,33.595,708.4 283.2,1414.3 283.2,1330.5 154.45,1440.3 98.095,1378.3 0,1270.3 31.916,877.78 33.533,719.81"];
+	struct3	[height=19.15,
+		label="hello\nworld\nand  | { Thats the reason | post-menopausal | estrogen } | is\ngiven together with another hormone called\nprogestin: \
+The combination lowers the risk of\nendometrial cancer.\n\nBut the NTP advisers said putting all\nestrogens on the federal list \
+would help\nwomen trying to balance the benefits and\nrisks when choosing hormone therapy.\nPhysicians never discuss any of these \
+risks\nwhen they are prescribing hormone therapy.\nThey only discuss benefits. Listing might\nforce it on the table, Michelle Medinsky, \
+a\ntoxicologist from Durham, N.C., said before\nthe vote.\n\nThe committee of scientists advises the NTP,\na branch of the National \
+Institutes of Health\nthat every two years updates the federal list\nof proven and suspected cancer-causing\nsubstances.\n\nThe \
+NTP typically follows its advisers\nrecommendations, but an officially updated\ncarcinogen list isnt expected until 2002.\n\nThursday, \
+after a daylong debate, the panel\ndeclined to add talc powder to the list,\nsaying there wasnt enough evidence linking\nits use \
+in feminine hygiene products to\novarian cancer. The panel deadlocked over\nwhether to a second type of talc, fibrous\ntalc that \
+some studies have linked to lung\ncancer in talc miners.\n\nOn Wednesday, the panel voted to add\nultraviolet radiation -- those\nsunburn-causing \
+rays long known to cause skin\ncancer -- to the official carcinogen list.\n\nThe panel on Friday continued debating an\nassociation \
+between cancers of the nose and\nsinuses with industrial exposure to wood\ndust.\n\nTalc has long been controversial. When\nstudies \
+first appeared suggesting it migrated\ninto the ovaries to cause tumors, many\nfeminine hygiene products replaced talc with\ncornstarch.\n\nPanelist \
+Medinsky said she had been prepared\nto list talc powder as reasonably believed\nto cause cancer. But after listening to\nhours \
+of industry attacks on the science,\nthe evidence has knocked me out of the\nreasonably category into not list, she\nsaid before \
+the panel voted 7-3 against\nlisting talc.\n\nTalc has long been controversial. When\nstudies first appeared suggesting it migrated\ninto \
+the ovaries to cause tumors, many\nfeminine hygiene products replaced talc with\ncornstarch.\n\nPanelist Medinsky said she had been \
+prepared\nto list talc powder as reasonably believed\nto cause cancer. But after listening to\nhours of industry attacks on the \
+science,\nthe evidence has knocked me out of the\nreasonably category into not list, she\nsaid before the panel voted 7-3 against\nlisting \
+talc.\n\nTalc in one form or the other can be found in\nmany papers, paints, ceramics, food wrappers,\nhard candy, chewing gum, \
+cosmetics and pills.\nMost people are familiar with talc as a loose\npowder used in cosmetics and as a drying\npowder.\nabde |{ \
+b |{c|<here> d|e}| f}| g | h",
+		pos="384.1,689.4",
+		rects="107.03,0.5,155.69,1378.3 155.69,919.49,266.56,1378.3 155.69,460.69,266.56,919.49 155.69,0.892,266.56,460.69 266.56,0.5,547.74,1378.3 \
+547.74,919.49,615.17,1378.3 547.74,460.69,569.95,919.49 569.95,460.69,592.95,919.49 592.95,460.69,615.17,919.49 547.74,0.892,615.17,\
+460.69 615.17,0.5,638.17,1378.3 638.17,0.5,661.17,1378.3",
+		width=7.6964];
+	struct1:f2 -> struct3:here	[pos="e,593.44,816.95 331.87,1414.3 331.87,1365.7 515.41,1414.6 547.74,1378.3 617.52,1299.9 607.52,1005.7 594.29,828.2"];
+}

@@ -1,0 +1,264 @@
+{
+  "name": "inheritance",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,76.000],[232.380,76.000],[232.380,0.000]]
+    }
+  ],
+  "bb": "0,0,232.38,76",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "Node1100",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[167.150,20.000],[51.450,20.000],[51.450,0.000],[167.150,0.000]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 10.000,
+          "face": "doxfont"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ffffff"
+        },
+        {
+          "op": "T",
+          "pt": [109.300,7.000],
+          "align": "c",
+          "width": 99.710,
+          "text": "exotkAF_ViewType.hxx"
+        }
+      ],
+      "color": "black",
+      "fontcolor": "white",
+      "fontname": "doxfont",
+      "fontsize": "10",
+      "height": "0.27778",
+      "label": "exotkAF_ViewType.hxx",
+      "pos": "109.3,10",
+      "shape": "box",
+      "style": "filled",
+      "width": "1.607"
+    },
+    {
+      "_gvid": 1,
+      "name": "Node1101",
+      "URL": "$exotkAF__View_8cxx.html",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[94.600,76.000],[0.000,76.000],[0.000,56.000],[94.600,56.000]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 10.000,
+          "face": "doxfont"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [47.300,63.000],
+          "align": "c",
+          "width": 78.600,
+          "text": "exotkAF_View.cxx"
+        }
+      ],
+      "color": "black",
+      "fontname": "doxfont",
+      "fontsize": "10",
+      "height": "0.27778",
+      "label": "exotkAF_View.cxx",
+      "pos": "47.3,66",
+      "shape": "box",
+      "width": "1.3139"
+    },
+    {
+      "_gvid": 2,
+      "name": "Node1102",
+      "URL": "$exotkAF__ViewPopup_8cxx.html",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[232.380,76.000],[112.220,76.000],[112.220,56.000],[232.380,56.000]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 10.000,
+          "face": "doxfont"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [172.300,63.000],
+          "align": "c",
+          "width": 104.160,
+          "text": "exotkAF_ViewPopup.cxx"
+        }
+      ],
+      "color": "black",
+      "fontname": "doxfont",
+      "fontsize": "10",
+      "height": "0.27778",
+      "label": "exotkAF_ViewPopup.cxx",
+      "pos": "172.3,66",
+      "shape": "box",
+      "width": "1.6689"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 0,
+      "_draw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#191970"
+        },
+        {
+          "op": "b",
+          "points": [[58.100,55.590],[66.900,47.930],[79.550,36.910],[90.070,27.750]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#191970"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#191970"
+        },
+        {
+          "op": "P",
+          "points": [[92.240,30.500],[97.480,21.290],[87.640,25.220]]
+        }
+      ],
+      "color": "midnightblue",
+      "fontname": "doxfont",
+      "fontsize": "10",
+      "pos": "e,98.624,20.298 58.1,55.594 66.901,47.928 79.551,36.911 90.074,27.745",
+      "style": "solid"
+    },
+    {
+      "_gvid": 1,
+      "tail": 2,
+      "head": 0,
+      "_draw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#191970"
+        },
+        {
+          "op": "b",
+          "points": [[161.330,55.590],[152.380,47.930],[139.530,36.910],[128.840,27.750]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#191970"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#191970"
+        },
+        {
+          "op": "P",
+          "points": [[131.170,25.130],[121.300,21.280],[126.620,30.450]]
+        }
+      ],
+      "color": "midnightblue",
+      "fontname": "doxfont",
+      "fontsize": "10",
+      "pos": "e,120.15,20.298 161.33,55.594 152.38,47.928 139.53,36.911 128.84,27.745",
+      "style": "solid"
+    }
+  ]
+}

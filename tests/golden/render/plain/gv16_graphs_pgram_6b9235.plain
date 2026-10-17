@@ -1,0 +1,139 @@
+graph 0.38345 18.255 24.775
+node A 17.855 21.986 0.75 0.5 A solid house black lightgrey
+node C 17.855 21.236 0.75 0.5 C solid house black lightgrey
+node E 17.855 20.486 0.75 0.5 E solid house black lightgrey
+node G 17.855 19.736 0.75 0.5 G solid house black lightgrey
+node I 17.855 18.986 0.75 0.5 I solid house black lightgrey
+node K 17.855 18.236 0.75 0.5 K solid house black lightgrey
+node M 17.855 17.486 0.75 0.5 M solid house black lightgrey
+node O 17.855 16.736 0.75 0.5 O solid house black lightgrey
+node Q 17.855 15.986 0.75 0.5 Q solid house black lightgrey
+node S 17.855 15.236 0.75 0.5 S solid house black lightgrey
+node U 17.855 14.486 0.75 0.5 U solid house black lightgrey
+node W 17.855 13.736 0.75 0.5 W solid house black lightgrey
+node Y 17.855 12.986 0.75 0.5 Y solid house black lightgrey
+node B 17.855 12.236 0.75 0.5 B solid invhouse black lightgrey
+node D 17.855 11.486 0.75 0.5 D solid invhouse black lightgrey
+node F 17.855 10.736 0.75 0.5 F solid invhouse black lightgrey
+node H 17.855 9.9861 0.75 0.5 H solid invhouse black lightgrey
+node J 17.855 9.2361 0.75 0.5 J solid invhouse black lightgrey
+node L 17.855 8.4861 0.75 0.5 L solid invhouse black lightgrey
+node N 17.855 7.7361 0.75 0.5 N solid invhouse black lightgrey
+node P 17.855 6.9861 0.75 0.5 P solid invhouse black lightgrey
+node R 17.855 6.2361 0.75 0.5 R solid invhouse black lightgrey
+node T 17.855 5.4861 0.75 0.5 T solid invhouse black lightgrey
+node V 17.855 4.7361 0.75 0.5 V solid invhouse black lightgrey
+node X 17.855 3.9861 0.75 0.5 X solid invhouse black lightgrey
+node Z 17.855 3.2361 0.75 0.5 Z solid invhouse black lightgrey
+node Parallelogram 9.4238 12.611 4.9116 2.5556 "This is a test\nof a multiline\nlabel in an\nparallelogram with approx\nsquare aspect" solid parallelogram black lightgrey
+node "a ----- long thin parallelogram" 9.4238 14.389 5.3571 0.5 "a ----- long thin parallelogram" solid parallelogram black lightgrey
+node xx 9.4238 15.139 0.80614 0.5 m solid parallelogram black lightgrey
+node yy 9.4238 17.153 0.80614 3.0222 "a\nb\nc\nd\ne\nf" solid parallelogram black lightgrey
+node Octagon 9.4238 10.111 2.7868 1.9559 "This is a test\nof a multiline\nlabel in an\noctagon with approx\nsquare aspect" solid octagon black lightgrey
+node zz 9.4238 19.167 0.80614 0.5 m solid parallelogram black lightgrey
+node qq 9.4238 21.181 0.80614 3.0222 "a\nb\nc\nd\ne\nf" solid parallelogram black lightgrey
+node a 0.63715 24.431 0.85126 0.68889 a solid triangle black lightgrey
+node c 0.63715 23.486 0.85126 0.68889 c solid triangle black lightgrey
+node e 0.63715 22.542 0.85126 0.68889 e solid triangle black lightgrey
+node g 0.63715 21.597 0.88139 0.68889 g solid triangle black lightgrey
+node i 0.63715 20.653 0.7622 0.68889 i solid triangle black lightgrey
+node k 0.63715 19.708 0.88139 0.68889 k solid triangle black lightgrey
+node m 0.63715 18.764 1.0304 0.68889 m solid triangle black lightgrey
+node o 0.63715 17.819 0.88139 0.68889 o solid triangle black lightgrey
+node q 0.63715 16.875 0.88139 0.68889 q solid triangle black lightgrey
+node s 0.63715 15.931 0.82192 0.68889 s solid triangle black lightgrey
+node u 0.63715 14.986 0.88139 0.68889 u solid triangle black lightgrey
+node w 0.63715 14.042 1.0006 0.68889 w solid triangle black lightgrey
+node y 0.63715 13.097 0.88139 0.68889 y solid triangle black lightgrey
+node b 0.63715 12.139 1.1944 0.94444 b solid tripleoctagon black lightgrey
+node d 0.63715 11.167 1.1944 0.94444 d solid tripleoctagon black lightgrey
+node f 0.63715 10.194 1.1944 0.94444 f solid tripleoctagon black lightgrey
+node h 0.63715 9.2222 1.1944 0.94444 h solid tripleoctagon black lightgrey
+node j 0.63715 8.25 1.1944 0.94444 j solid tripleoctagon black lightgrey
+node l 0.63715 7.2778 1.1944 0.94444 l solid tripleoctagon black lightgrey
+node n 0.63715 6.3056 1.1944 0.94444 n solid tripleoctagon black lightgrey
+node p 0.63715 5.3333 1.1944 0.94444 p solid tripleoctagon black lightgrey
+node r 0.63715 4.3611 1.1944 0.94444 r solid tripleoctagon black lightgrey
+node t 0.63715 3.3889 1.1944 0.94444 t solid tripleoctagon black lightgrey
+node v 0.63715 2.4167 1.1944 0.94444 v solid tripleoctagon black lightgrey
+node x 0.63715 1.4444 1.1944 0.94444 x solid tripleoctagon black lightgrey
+node z 0.63715 0.47222 1.1944 0.94444 z solid tripleoctagon black lightgrey
+edge Parallelogram A 4 10.578 13.895 12.552 16.089 16.466 20.442 17.563 21.662 solid black
+edge Parallelogram C 4 10.677 13.893 12.669 15.931 16.444 19.793 17.546 20.92 solid black
+edge Parallelogram E 4 10.797 13.894 12.805 15.769 16.424 19.149 17.527 20.18 solid black
+edge Parallelogram G 4 10.941 13.893 12.954 15.594 16.384 18.493 17.496 19.432 solid black
+edge Parallelogram I 4 11.12 13.894 13.125 15.41 16.333 17.835 17.453 18.682 solid black
+edge Parallelogram K 4 11.348 13.895 13.335 15.221 16.3 17.199 17.412 17.941 solid black
+edge Parallelogram M 4 11.645 13.895 13.587 15.018 16.264 16.566 17.358 17.199 solid black
+edge Parallelogram O 4 11.851 13.799 13.759 14.732 16.265 15.958 17.335 16.482 solid black
+edge Parallelogram Q 4 11.75 13.542 13.666 14.309 16.238 15.339 17.33 15.776 solid black
+edge Parallelogram S 4 11.656 13.306 13.58 13.905 16.219 14.727 17.329 15.072 solid black
+edge Parallelogram U 4 11.568 13.088 13.493 13.516 16.185 14.115 17.319 14.367 solid black
+edge Parallelogram W 4 11.492 12.887 13.42 13.144 16.167 13.511 17.317 13.664 solid black
+edge Parallelogram Y 4 11.417 12.7 13.349 12.786 16.155 12.91 17.318 12.962 solid black
+edge Parallelogram B 4 11.348 12.526 13.281 12.44 16.139 12.312 17.317 12.26 solid black
+edge Parallelogram D 4 11.285 12.363 13.221 12.105 16.132 11.716 17.321 11.557 solid black
+edge Parallelogram F 4 11.222 12.211 13.157 11.781 16.119 11.122 17.321 10.855 solid black
+edge Parallelogram H 4 11.166 12.069 13.102 11.466 16.115 10.528 17.325 10.151 solid black
+edge Parallelogram J 4 11.115 11.934 13.051 11.159 16.112 9.9338 17.33 9.4463 solid black
+edge Parallelogram L 4 11.064 11.808 12.998 10.862 16.104 9.343 17.331 8.7423 solid black
+edge Parallelogram N 4 11.02 11.688 12.964 10.564 16.142 8.7268 17.359 8.0229 solid black
+edge Parallelogram P 4 10.975 11.576 12.945 10.262 16.229 8.0711 17.413 7.2812 solid black
+edge Parallelogram R 4 10.931 11.471 12.918 9.9694 16.296 7.4153 17.453 6.5405 solid black
+edge Parallelogram T 4 10.892 11.37 12.896 9.677 16.365 6.745 17.491 5.7937 solid black
+edge Parallelogram V 4 10.797 11.328 12.805 9.4528 16.424 6.0733 17.527 5.0427 solid black
+edge Parallelogram X 4 10.677 11.329 12.669 9.2917 16.444 5.4293 17.546 4.3022 solid black
+edge Parallelogram Z 4 10.578 11.327 12.552 9.1332 16.466 4.7806 17.563 3.5607 solid black
+edge Parallelogram Octagon 4 11.218 12.198 12.027 11.687 11.943 10.83 10.967 10.39 solid black
+edge Parallelogram Octagon 4 7.0808 11.328 7.0964 10.974 7.3632 10.623 7.8814 10.39 solid black
+edge Parallelogram Octagon 4 7.2682 11.328 7.2813 11.004 7.4884 10.682 7.8893 10.451 solid black
+edge Parallelogram Octagon 4 7.4557 11.328 7.4662 11.044 7.6125 10.762 7.8947 10.541 solid black
+edge Parallelogram Octagon 4 7.6431 11.328 7.6512 11.085 7.749 10.844 7.9364 10.641 solid black
+edge Parallelogram Octagon 4 7.8305 11.328 7.8369 11.116 7.9046 10.905 8.0337 10.719 solid black
+edge Parallelogram Octagon 4 8.018 11.328 8.0228 11.145 8.0681 10.962 8.1539 10.796 solid black
+edge Parallelogram Octagon 4 8.2054 11.328 8.2089 11.177 8.2362 11.026 8.2872 10.885 solid black
+edge Parallelogram Octagon 4 8.3929 11.328 8.3951 11.212 8.4091 11.097 8.435 10.986 solid black
+edge Parallelogram Octagon 4 8.5803 11.328 8.5816 11.25 8.5872 11.172 8.5973 11.095 solid black
+edge Parallelogram Octagon 4 8.7678 11.328 8.7682 11.289 8.7696 11.25 8.7717 11.212 solid black
+edge Parallelogram Octagon 4 8.9552 11.328 8.9554 11.302 8.9559 11.276 8.9567 11.25 solid black
+edge Parallelogram Octagon 4 9.1426 11.328 9.1428 11.302 9.1431 11.276 9.1435 11.25 solid black
+edge Parallelogram Octagon 4 9.3301 11.328 9.3301 11.302 9.3302 11.276 9.3304 11.25 solid black
+edge Parallelogram Octagon 4 9.5175 11.328 9.5175 11.302 9.5174 11.276 9.5172 11.25 solid black
+edge Parallelogram Octagon 4 9.705 11.328 9.7048 11.302 9.7045 11.276 9.7041 11.25 solid black
+edge Parallelogram Octagon 4 9.8924 11.328 9.8922 11.302 9.8917 11.276 9.8909 11.25 solid black
+edge Parallelogram Octagon 4 10.08 11.328 10.079 11.289 10.078 11.25 10.076 11.212 solid black
+edge Parallelogram Octagon 4 10.267 11.328 10.266 11.25 10.26 11.172 10.25 11.095 solid black
+edge Parallelogram Octagon 4 10.455 11.328 10.452 11.212 10.438 11.097 10.413 10.986 solid black
+edge Parallelogram Octagon 4 10.642 11.328 10.639 11.177 10.611 11.026 10.56 10.885 solid black
+edge Parallelogram Octagon 4 10.83 11.328 10.825 11.145 10.779 10.962 10.694 10.796 solid black
+edge Parallelogram Octagon 4 10.989 11.609 11.059 11.306 11 10.983 10.811 10.715 solid black
+edge Parallelogram Octagon 4 11.079 11.847 11.291 11.457 11.235 10.993 10.912 10.642 solid black
+edge Parallelogram Octagon 4 11.144 12 11.532 11.545 11.466 10.937 10.946 10.535 solid black
+edge Parallelogram Octagon 4 11.186 12.114 11.778 11.623 11.703 10.883 10.963 10.454 solid black
+edge a Parallelogram 4 0.76817 24.254 1.6075 23.125 6.2615 16.865 8.3769 14.019 solid black
+edge c Parallelogram 4 0.77872 23.311 1.6337 22.253 6.1432 16.671 8.2881 14.017 solid black
+edge e Parallelogram 4 0.79338 22.365 1.6701 21.374 6.016 16.463 8.1862 14.01 solid black
+edge g Parallelogram 4 0.80872 21.422 1.7022 20.508 5.8652 16.25 8.0604 14.005 solid black
+edge i Parallelogram 4 0.82884 20.477 1.7411 19.642 5.6902 16.028 7.9043 14.002 solid black
+edge k Parallelogram 4 0.85874 19.529 1.8113 18.76 5.6093 15.692 7.8148 13.911 solid black
+edge m Parallelogram 4 0.89064 18.586 1.8845 17.89 5.5682 15.311 7.7575 13.778 solid black
+edge o Parallelogram 4 0.93453 17.643 1.9799 17.024 5.5389 14.914 7.7029 13.631 solid black
+edge q Parallelogram 4 1.0035 16.697 2.1175 16.157 5.5173 14.507 7.6408 13.476 solid black
+edge s Parallelogram 4 1.0375 15.779 2.1719 15.351 5.4615 14.108 7.5676 13.312 solid black
+edge u Parallelogram 4 1.026 14.881 2.1385 14.58 5.3897 13.702 7.505 13.13 solid black
+edge w Parallelogram 4 1.0433 13.976 2.1579 13.794 5.3211 13.279 7.4265 12.936 solid black
+edge y Parallelogram 4 0.95506 13.08 1.9691 13.024 5.187 12.846 7.3511 12.726 solid black
+edge b Parallelogram 4 1.2411 12.171 2.4623 12.237 5.2777 12.388 7.2637 12.495 solid black
+edge d Parallelogram 4 1.2411 11.266 2.4446 11.464 5.1965 11.916 7.177 12.242 solid black
+edge f Parallelogram 4 1.2411 10.361 2.4239 10.686 5.102 11.422 7.0737 11.965 solid black
+edge h Parallelogram 4 1.2137 9.4446 2.3618 9.8874 4.9936 10.902 6.9701 11.665 solid black
+edge j Parallelogram 4 1.167 8.513 2.2667 9.0588 4.8601 10.346 6.8493 11.333 solid black
+edge l Parallelogram 4 1.1221 7.5721 2.2539 8.2591 5.129 10.004 7.1779 11.248 solid black
+edge n Parallelogram 4 1.085 6.6269 2.2496 7.4627 5.4272 9.743 7.5063 11.235 solid black
+edge p Parallelogram 4 1.055 5.6795 2.2396 6.6606 5.6683 9.5005 7.7513 11.226 solid black
+edge r Parallelogram 4 1.026 4.7262 2.2182 5.8456 5.8666 9.2712 7.9411 11.219 solid black
+edge t Parallelogram 4 1.0035 3.7734 2.2009 5.0301 6.0394 9.0589 8.0949 11.216 solid black
+edge v Parallelogram 4 0.98159 2.8163 2.176 4.2021 6.178 8.8452 8.2132 11.207 solid black
+edge x Parallelogram 4 0.96029 1.8551 2.1476 3.364 6.304 8.6462 8.316 11.203 solid black
+edge z Parallelogram 4 0.94472 0.89713 2.128 2.5319 6.4194 8.4605 8.4041 11.202 solid black
+stop

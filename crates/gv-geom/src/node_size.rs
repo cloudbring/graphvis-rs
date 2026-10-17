@@ -540,7 +540,14 @@ pub fn node_font(attrs: &AttrMap) -> (&str, f64) {
 pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     let attrs = &node.attrs;
     let shape_name = late_nnstring(attrs, "shape", "ellipse");
-    let shape = ShapeKind::parse(shape_name);
+    // bind_shape: a `shapefile` (except with epsf) makes the shape `custom`, a user shape
+    // that copies `Shapes[0]` (box).
+    let custom = shape_name != "epsf" && attrs.get("shapefile").is_some_and(|f| !f.is_empty());
+    let shape = if custom {
+        ShapeKind::Box
+    } else {
+        ShapeKind::parse(shape_name)
+    };
     let (init, desc) = shape.shape_desc();
     let nd_width = late_double(attrs, "width", DEFAULT_NODEWIDTH, MIN_NODEWIDTH);
     let nd_height = late_double(attrs, "height", DEFAULT_NODEHEIGHT, MIN_NODEHEIGHT);

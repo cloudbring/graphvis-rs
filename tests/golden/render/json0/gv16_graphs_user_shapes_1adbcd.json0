@@ -1,0 +1,49 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,216,360",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "n",
+      "height": "0.5",
+      "label": "",
+      "pos": "108,270",
+      "shapefile": "graphs\/jcr.gif",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "x",
+      "height": "3",
+      "label": "",
+      "pos": "108,108",
+      "shapefile": "graphs\/jcr.gif",
+      "width": "3"
+    },
+    {
+      "_gvid": 2,
+      "name": "m",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "108,342",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,108,216.43 108,251.57 108,244.95 108,236.81 108,227.8"
+    },
+    {
+      "_gvid": 1,
+      "tail": 2,
+      "head": 0,
+      "pos": "e,108,288.1 108,323.7 108,316.41 108,307.73 108,299.54"
+    }
+  ]
+}

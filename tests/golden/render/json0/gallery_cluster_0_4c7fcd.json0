@@ -1,0 +1,74 @@
+{
+  "name": "cats",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,528.6,52",
+  "_subgraph_cnt": 3,
+  "objects": [
+    {
+      "name": "cluster_big_cats",
+      "bb": "0,0,228,52",
+      "_gvid": 0,
+      "nodes": [
+        3,4
+      ]
+    },
+    {
+      "name": "domestic_cats",
+      "bb": "236,0,435,52",
+      "cluster": "true",
+      "_gvid": 1,
+      "nodes": [
+        5,6
+      ]
+    },
+    {
+      "name": "not_a_cluster",
+      "bb": "0,0,536.6,68",
+      "_gvid": 2,
+      "nodes": [
+        7
+      ]
+    },
+    {
+      "_gvid": 3,
+      "name": "Lion",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "37,26",
+      "width": "0.8132"
+    },
+    {
+      "_gvid": 4,
+      "name": "Snow Leopard",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "152,26",
+      "width": "1.8785"
+    },
+    {
+      "_gvid": 5,
+      "name": "Siamese",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "287,26",
+      "width": "1.2005"
+    },
+    {
+      "_gvid": 6,
+      "name": "Persian",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "388,26",
+      "width": "1.0963"
+    },
+    {
+      "_gvid": 7,
+      "name": "Wildcat",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "487,26",
+      "width": "1.1556"
+    }
+  ]
+}

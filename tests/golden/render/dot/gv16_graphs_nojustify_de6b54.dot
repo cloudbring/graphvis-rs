@@ -1,0 +1,36 @@
+digraph G {
+	graph [bb="0,0,457.5,171.8"];
+	node [label="aaaaaaaaaaaaaa\nddd\l",
+		shape=box
+	];
+	n	[height=0.57778,
+		pos="108,137.6",
+		width=3];
+	m	[height=0.57778,
+		nojustify=true,
+		pos="108,34.2",
+		width=3];
+	n -> m	[pos="e,108,55.192 108,116.57 108,102.26 108,82.74 108,66.404"];
+	b	[height=0.57778,
+		nojustify=true,
+		pos="285,34.2",
+		width=1.4305];
+	l	[height=0.95,
+		label="{aaaaaaaaaaaaaa\n | bbbbbb\nddd\l}",
+		pos="406,137.6",
+		rects="354.5,146.5,457.5,171.3 354.5,104.9,457.5,146.5",
+		shape=record,
+		width=1.4305];
+	p	[height=0.95,
+		label="{aaaaaaaaaaaaaa\n | bbbbbb\nddd\l}",
+		nojustify=true,
+		pos="406,34.2",
+		rects="354.5,43.1,457.5,67.9 354.5,1.4999,457.5,43.1",
+		shape=record,
+		width=1.4305];
+	l -> p	[pos="e,406,67.781 406,103.96 406,96.088 406,87.55 406,79.254"];
+	a	[height=0.57778,
+		pos="285,137.6",
+		width=1.4305];
+	a -> b	[pos="e,285,55.192 285,116.57 285,102.26 285,82.74 285,66.404"];
+}
