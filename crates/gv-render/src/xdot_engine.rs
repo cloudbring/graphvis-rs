@@ -78,7 +78,7 @@ impl XdotEngine {
 
     fn str_(&mut self, j: &Job, pfx: &str, s: &str) {
         let b = self.buf(j);
-        let _ = write!(b, "{pfx}{} -{s} ", s.len());
+        let _ = write!(b, "{pfx}{} -{s} ", gv_core::charset::encode(s).len());
     }
 
     fn color_str(rgba: [u8; 4]) -> String {
@@ -180,7 +180,7 @@ impl XdotEngine {
             xb.push_str(&trim_zeros(format!("{v:.3}")));
             xb.push(' ');
             let cs = Self::color_str(c);
-            let _ = write!(xb, "{} -{cs} ", cs.len());
+            let _ = write!(xb, "{} -{cs} ", gv_core::charset::encode(&cs).len());
         };
         if o.gradient_frac > 0.0 {
             stop(&mut xb, o.gradient_frac, o.fillcolor.rgba());

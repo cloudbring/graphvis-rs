@@ -1,5 +1,6 @@
 //! Core data structures, error types, geometry primitives, and tables for `graphvis-rs`.
 
+pub mod charset;
 pub mod color;
 mod color_table;
 pub mod error;

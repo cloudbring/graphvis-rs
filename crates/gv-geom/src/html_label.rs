@@ -9,6 +9,7 @@
 //! values, known entities) are reproduced, because any error makes C drop the label entirely
 //! (`make_html_label` returns 3 and the label keeps `dimen = (0, 0)`).
 
+use gv_core::charset::{self, Charset};
 use gv_core::font::{
     LINESPACING, LabelSubstContext, estimate_text_size_styled, strdup_and_subst_obj,
 };
@@ -1301,6 +1302,26 @@ impl Parser {
 
 /// `parseHTML`: returns `None` when C would report an error (rv 3).
 pub fn parse_html(text: &str) -> Option<HtmlLabel> {
+    parse_html_cs(text, Charset::Utf8)
+}
+
+/// [`parse_html`] for a graph of charset `cs`. C hands the label's bytes to expat with the
+/// graph's encoding (`charsetToStr`): Latin-1 bytes are decoded to UTF-8, input that is not
+/// valid UTF-8 is a fatal "not well-formed" error, and `BIG-5` is an unknown encoding.
+pub fn parse_html_cs(text: &str, cs: Charset) -> Option<HtmlLabel> {
+    let decoded;
+    let text = match cs {
+        Charset::Big5 => return None,
+        Charset::Utf8 if charset::has_raw(text) => return None,
+        Charset::Utf8 => text,
+        Charset::Latin1 => {
+            decoded = charset::encode(text)
+                .iter()
+                .map(|&b| char::from(b))
+                .collect::<String>();
+            &decoded
+        }
+    };
     let toks = lex(text).ok()?;
     let mut p = Parser {
         toks,
@@ -1931,8 +1952,9 @@ pub fn make_html_label(
     font_size: f64,
     font_color: Option<&str>,
     pencolor: Option<&str>,
+    cs: Charset,
 ) -> HtmlLabelLayout {
-    let Some(mut lbl) = parse_html(text) else {
+    let Some(mut lbl) = parse_html_cs(text, cs) else {
         return HtmlLabelLayout {
             dimen: Point::new(0.0, 0.0),
             label: None,
@@ -2050,7 +2072,7 @@ mod tests {
 
     fn dimen(s: &str) -> Point {
         let obj = LabelSubstContext::for_node("a");
-        make_html_label(s, &obj, "Times-Roman", 14.0, None, None).dimen
+        make_html_label(s, &obj, "Times-Roman", 14.0, None, None, Charset::Utf8).dimen
     }
 
     // Expected values from `dot -Txdot` (Graphviz 16.1.0, LUT estimator).
@@ -2085,7 +2107,15 @@ mod tests {
         //    <text text-anchor="start" x="37.94" y="-14.8" ... font-weight="bold">bold</text>
         // for a box node at (36.2, 18) with width 72.4.
         let obj = LabelSubstContext::for_node("a");
-        let lay = make_html_label("right <B>bold</B>", &obj, "Times-Roman", 14.0, None, None);
+        let lay = make_html_label(
+            "right <B>bold</B>",
+            &obj,
+            "Times-Roman",
+            14.0,
+            None,
+            None,
+            Charset::Utf8,
+        );
         let Some(HtmlLabel::Text(t)) = lay.label else {
             panic!()
         };

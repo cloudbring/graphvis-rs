@@ -330,6 +330,15 @@ pub(crate) fn html_label_layout(
     obj: &LabelSubstContext<'_>,
     font_name: &str,
     font_size: f64,
+    cs: gv_core::charset::Charset,
 ) -> HtmlLabelLayout {
-    make_html_label(html_inner(raw_label), obj, font_name, font_size, None, None)
+    make_html_label(
+        html_inner(raw_label),
+        obj,
+        font_name,
+        font_size,
+        None,
+        None,
+        cs,
+    )
 }

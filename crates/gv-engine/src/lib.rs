@@ -142,7 +142,7 @@ mod tests {
         );
 
         for path in entries {
-            let src = fs::read_to_string(&path).unwrap();
+            let src = gv_core::charset::decode(fs::read(&path).unwrap());
             let svg = render_dot(&src, "dot", "svg")
                 .unwrap_or_else(|e| panic!("Failed rendering SVG for {}: {e}", path.display()));
             assert!(svg.contains("<svg"), "Missing <svg in {}", path.display());

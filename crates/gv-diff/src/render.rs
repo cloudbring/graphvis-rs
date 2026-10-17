@@ -162,10 +162,11 @@ pub fn run_corpus(root: &Path, formats: &[&str], filter: Option<&str>) -> Render
                     let Some((fmt, stem, reference)) = jobs.get(i) else {
                         break;
                     };
-                    let laid = std::fs::read_to_string(laid_dir.join(format!("{stem}.dot")))
+                    let laid = std::fs::read(laid_dir.join(format!("{stem}.dot")))
+                        .map(gv_core::charset::decode)
                         .unwrap_or_default();
                     let refs = std::fs::read(reference).unwrap_or_default();
-                    let refs = String::from_utf8_lossy(&refs);
+                    let refs = gv_core::charset::decode(refs);
                     let report = match render_port(&laid, fmt) {
                         Ok(actual) => compare_output(&refs, &actual, fmt == "svg"),
                         Err(e) => RenderReport {

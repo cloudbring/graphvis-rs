@@ -86,16 +86,24 @@ impl P<'_> {
             self.i += 1;
         }
     }
+    /// The longest UTF-8 prefix of the rest (numbers are ASCII).
+    fn rest(&self) -> &str {
+        let r = &self.s[self.i..];
+        match std::str::from_utf8(r) {
+            Ok(s) => s,
+            Err(e) => std::str::from_utf8(&r[..e.valid_up_to()]).unwrap_or(""),
+        }
+    }
     fn real(&mut self) -> Option<f64> {
-        let rest = std::str::from_utf8(&self.s[self.i..]).ok()?;
+        let rest = self.rest();
         let (v, r) = crate::emit::attrs::strtod(rest)?;
-        self.i = self.s.len() - r.len();
+        self.i += rest.len() - r.len();
         Some(v)
     }
     fn int(&mut self) -> Option<i64> {
-        let rest = std::str::from_utf8(&self.s[self.i..]).ok()?;
+        let rest = self.rest();
         let (v, r) = crate::emit::attrs::strtol(rest)?;
-        self.i = self.s.len() - r.len();
+        self.i += rest.len() - r.len();
         Some(v)
     }
     fn string(&mut self) -> Option<String> {
@@ -126,7 +134,7 @@ impl P<'_> {
             end += 1;
         }
         self.i = end;
-        Some(String::from_utf8_lossy(&self.s[start..end]).into_owned())
+        Some(gv_core::charset::decode_slice(&self.s[start..end]))
     }
     fn polyline(&mut self) -> Option<Vec<(f64, f64)>> {
         let n = self.int()?;
@@ -178,10 +186,9 @@ fn parse_color(s: &str) -> Option<Grad> {
 }
 
 fn parse_xdot(s: &str) -> Vec<Op> {
-    let mut p = P {
-        s: s.as_bytes(),
-        i: 0,
-    };
+    // C parses the bytes; strings come back as raw-byte strings (`gv_core::charset`).
+    let bytes = gv_core::charset::encode(s);
+    let mut p = P { s: &bytes, i: 0 };
     let mut ops = Vec::new();
     loop {
         p.ws();
