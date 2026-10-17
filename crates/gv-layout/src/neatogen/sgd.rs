@@ -6,6 +6,7 @@ use super::stress::is_fixed;
 use super::{INIT_RANDOM, MODEL_SUBSET, NeatoParams};
 use crate::common::types::{LGraph, Sub};
 use crate::cutil::RkState;
+use gv_core::math;
 
 fn extract_adjacency(g: &LGraph<'_>, sub: &Sub, model: i32) -> GraphSgd {
     let n = sub.nodes.len();
@@ -97,7 +98,7 @@ pub fn sgd(g: &mut LGraph<'_>, sub: &Sub, model: i32, p: &NeatoParams) {
     }
     let eta_max = 1.0 / f64::from(w_min);
     let eta_min = p.epsilon / f64::from(w_max);
-    let lambda = (eta_max / eta_min).ln() / (p.max_iter - 1) as f64;
+    let lambda = math::ln(eta_max / eta_min) / (p.max_iter - 1) as f64;
     // initial_positions(G, n)
     let init = super::neatoinit::check_start(g, sub, n, INIT_RANDOM, p);
     if init != super::INIT_REGULAR {
@@ -126,13 +127,13 @@ pub fn sgd(g: &mut LGraph<'_>, sub: &Sub, model: i32, p: &NeatoParams) {
             terms.swap(i, j);
             i -= 1;
         }
-        let eta = eta_max * (-lambda * t as f64).exp();
+        let eta = eta_max * math::exp(-lambda * t as f64);
         for term in &terms {
             let mu = (eta * f64::from(term.w)).min(1.0);
             let (ti, tj) = (term.i as usize, term.j as usize);
             let dx = pos[2 * ti] - pos[2 * tj];
             let dy = pos[2 * ti + 1] - pos[2 * tj + 1];
-            let mag = dx.hypot(dy);
+            let mag = math::hypot(dx, dy);
             let r = (mu * (mag - f64::from(term.d))) / (2.0 * mag);
             let (rx, ry) = (r * dx, r * dy);
             if unfixed[ti] {

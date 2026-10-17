@@ -4,6 +4,7 @@
 use super::attrs::{Attrs, default_line_style};
 use super::job::{EmitState, Emitter, Engine};
 use gv_core::Point;
+use gv_core::math;
 
 const EPSILON: f64 = 0.0001;
 const ARROW_LENGTH: f64 = 10.0;
@@ -172,13 +173,13 @@ fn miter_shape(base_left: Point, pt: Point, base_right: Point, penwidth: f64) ->
     }
     let dxa = pt.x - base_left.x;
     let dya = pt.y - base_left.y;
-    let hypot_a = dxa.hypot(dya);
+    let hypot_a = math::hypot(dxa, dya);
     let cos_alpha = dxa / hypot_a;
     let sin_alpha = dya / hypot_a;
     let alpha = if dya > 0.0 {
-        cos_alpha.acos()
+        math::acos(cos_alpha)
     } else {
-        -cos_alpha.acos()
+        -math::acos(cos_alpha)
     };
     let p1 = p(
         pt.x - penwidth / 2.0 * sin_alpha,
@@ -186,12 +187,12 @@ fn miter_shape(base_left: Point, pt: Point, base_right: Point, penwidth: f64) ->
     );
     let dxb = base_right.x - pt.x;
     let dyb = base_right.y - pt.y;
-    let hypot_b = dxb.hypot(dyb);
+    let hypot_b = math::hypot(dxb, dyb);
     let cos_beta = dxb / hypot_b;
     let beta = if dyb > 0.0 {
-        cos_beta.acos()
+        math::acos(cos_beta)
     } else {
-        -cos_beta.acos()
+        -math::acos(cos_beta)
     };
     let beta_rev = beta - std::f64::consts::PI;
     let theta = beta_rev - alpha
@@ -200,7 +201,7 @@ fn miter_shape(base_left: Point, pt: Point, base_right: Point, penwidth: f64) ->
         } else {
             0.0
         };
-    let normalized_miter_length = 1.0 / (theta / 2.0).sin();
+    let normalized_miter_length = 1.0 / math::sin(theta / 2.0);
     let sin_beta = dyb / hypot_b;
     let p2 = p(
         pt.x + penwidth / 2.0 * -sin_beta,
@@ -210,22 +211,26 @@ fn miter_shape(base_left: Point, pt: Point, base_right: Point, penwidth: f64) ->
         let pbevel = p((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0);
         return [pbevel, p1, p2];
     }
-    let l = penwidth / 2.0 / (theta / 2.0).tan();
+    let l = penwidth / 2.0 / math::tan(theta / 2.0);
     let p3 = p(p1.x + l * cos_alpha, p1.y + l * sin_alpha);
     [p3, p1, p2]
 }
 
 fn angle_of(d: Point) -> f64 {
-    let h = d.x.hypot(d.y);
+    let h = math::hypot(d.x, d.y);
     let c = d.x / h;
-    if d.y > 0.0 { c.acos() } else { -c.acos() }
+    if d.y > 0.0 {
+        math::acos(c)
+    } else {
+        -math::acos(c)
+    }
 }
 
 fn delta_from(shape_pt: Point, tip: Point, phi: f64, cos_phi: f64, sin_phi: f64) -> Point {
     let d = sub(shape_pt, tip);
-    let hyp = d.x.hypot(d.y);
+    let hyp = math::hypot(d.x, d.y);
     let alpha = angle_of(d);
-    let len = hyp * (alpha - phi).cos();
+    let len = hyp * math::cos(alpha - phi);
     p(len * cos_phi, len * sin_phi)
 }
 
@@ -251,13 +256,13 @@ fn normal0(mut pp: Point, u: Point, penwidth: f64, flag: u32, a: &mut [Point; 5]
     let tip = if inv { u } else { p(-u.x, -u.y) };
     let mut delta_tip = p(0.0, 0.0);
     if u.x != 0.0 || u.y != 0.0 {
-        let h = tip.x.hypot(tip.y);
+        let h = math::hypot(tip.x, tip.y);
         let cos_phi = tip.x / h;
         let sin_phi = tip.y / h;
         let phi = if tip.y > 0.0 {
-            cos_phi.acos()
+            math::acos(cos_phi)
         } else {
-            -cos_phi.acos()
+            -math::acos(cos_phi)
         };
         let shape = miter_shape(base_left, tip, base_right, penwidth);
         delta_tip = if flag & ARR_MOD_LEFT != 0 {
@@ -328,13 +333,13 @@ fn crow0(
     let left = flag & ARR_MOD_LEFT != 0;
     let right = flag & ARR_MOD_RIGHT != 0;
     if u.x != 0.0 || u.y != 0.0 {
-        let h = tip.x.hypot(tip.y);
+        let h = math::hypot(tip.x, tip.y);
         let cos_phi = tip.x / h;
         let sin_phi = tip.y / h;
         let phi = if tip.y > 0.0 {
-            cos_phi.acos()
+            math::acos(cos_phi)
         } else {
-            -cos_phi.acos()
+            -math::acos(cos_phi)
         };
         let shape = miter_shape(base_left, tip, base_right, penwidth);
         delta_tip = if (left && inv) || (right && !inv) {
@@ -352,9 +357,9 @@ fn crow0(
             let toe_p = sub(v, u);
             let ts = miter_shape(toe_base_left, toe_p, toe_base_right, penwidth);
             let d = sub(ts[1], toe_p);
-            let hyp = d.x.hypot(d.y);
+            let hyp = math::hypot(d.x, d.y);
             let alpha = angle_of(d);
-            let len = -hyp * (alpha - phi).cos();
+            let len = -hyp * math::cos(alpha - phi);
             delta_base = p(len * cos_phi, len * sin_phi);
         }
     }
@@ -421,7 +426,7 @@ fn diamond0(mut pp: Point, u: Point, penwidth: f64, flag: u32, a: &mut [Point; 5
 
 fn back_delta(u: Point, penwidth: f64) -> Point {
     let tip = p(-u.x, -u.y);
-    let h = tip.x.hypot(tip.y);
+    let h = math::hypot(tip.x, tip.y);
     p(penwidth / 2.0 * (tip.x / h), penwidth / 2.0 * (tip.y / h))
 }
 
@@ -493,11 +498,11 @@ impl<E: Engine> Emitter<'_, E> {
                 let mut q = add(pp, u);
                 let mut m = p(pp.x + u.x * 0.2, pp.y + u.y * 0.2);
                 let mut n = p(pp.x + u.x * 0.6, pp.y + u.y * 0.6);
-                let length = u.x.hypot(u.y);
+                let length = math::hypot(u.x, u.y);
                 let ext = penwidth / 2.0 - 0.2 * length;
                 if length > 0.0 && ext > 0.0 {
                     let tip = p(-u.x, -u.y);
-                    let h = tip.x.hypot(tip.y);
+                    let h = math::hypot(tip.x, tip.y);
                     let delta = p(ext * (tip.x / h), ext * (tip.y / h));
                     pp = sub(pp, delta);
                     m = sub(m, delta);
@@ -552,7 +557,7 @@ impl<E: Engine> Emitter<'_, E> {
                 q
             }
             ARR_TYPE_DOT => {
-                let r = u.x.hypot(u.y) / 2.0;
+                let r = math::hypot(u.x, u.y) / 2.0;
                 let mut pp = pp;
                 let mut delta = p(0.0, 0.0);
                 if u.x != 0.0 || u.y != 0.0 {
@@ -630,7 +635,7 @@ impl<E: Engine> Emitter<'_, E> {
         self.set_style(&default_line_style());
         self.set_penwidth(penwidth);
         let mut u = sub(u, pp);
-        let s = ARROW_LENGTH / (u.x.hypot(u.y) + EPSILON);
+        let s = ARROW_LENGTH / (math::hypot(u.x, u.y) + EPSILON);
         u.x += if u.x >= 0.0 { EPSILON } else { -EPSILON };
         u.y += if u.y >= 0.0 { EPSILON } else { -EPSILON };
         u.x *= s;

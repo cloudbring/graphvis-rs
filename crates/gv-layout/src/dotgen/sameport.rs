@@ -3,6 +3,7 @@
 use super::Dot;
 use super::types::*;
 use gv_core::Point;
+use gv_core::math;
 
 impl Dot<'_> {
     fn attr_declared(&self, name: &str) -> bool {
@@ -55,11 +56,11 @@ impl Dot<'_> {
             };
             let x1 = self.nodes[v].coord.x - self.nodes[u].coord.x;
             let y1 = self.nodes[v].coord.y - self.nodes[u].coord.y;
-            let r = x1.hypot(y1);
+            let r = math::hypot(x1, y1);
             x += x1 / r;
             y += y1 / r;
         }
-        let r = x.hypot(y);
+        let r = math::hypot(x, y);
         x /= r;
         y /= r;
         let nu = &self.nodes[u];

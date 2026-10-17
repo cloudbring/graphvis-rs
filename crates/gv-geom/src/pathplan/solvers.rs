@@ -1,6 +1,8 @@
 //! `lib/pathplan/solvers.c`: real roots of polynomials up to degree 3.
 //! A return value of 4 means "infinitely many roots".
 
+use gv_core::math;
+
 const EPS: f64 = 1e-7;
 
 fn aeq0(x: f64) -> bool {
@@ -24,16 +26,16 @@ pub fn solve3(coeff: &[f64; 4], roots: &mut [f64; 3]) -> usize {
     let rootn;
     if disc < 0.0 {
         let r = 0.5 * q.mul_add(q, -disc).sqrt();
-        let theta = (-disc).sqrt().atan2(-q);
-        let temp = 2.0 * r.cbrt();
-        roots[0] = temp * (theta / 3.0).cos();
-        roots[1] = temp * ((theta + PI + PI) / 3.0).cos();
-        roots[2] = temp * ((theta - PI - PI) / 3.0).cos();
+        let theta = math::atan2((-disc).sqrt(), -q);
+        let temp = 2.0 * math::cbrt(r);
+        roots[0] = temp * math::cos(theta / 3.0);
+        roots[1] = temp * math::cos((theta + PI + PI) / 3.0);
+        roots[2] = temp * math::cos((theta - PI - PI) / 3.0);
         rootn = 3;
     } else {
         let alpha = 0.5 * (disc.sqrt() - q);
         let beta = -q - alpha;
-        roots[0] = alpha.cbrt() + beta.cbrt();
+        roots[0] = math::cbrt(alpha) + math::cbrt(beta);
         if disc > 0.0 {
             rootn = 1;
         } else {

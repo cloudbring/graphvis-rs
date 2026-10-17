@@ -28,6 +28,7 @@ use crate::neatogen::neatosplines::{
 };
 use crate::osage::register_clusters;
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, put_graphs};
+use gv_core::math;
 use gv_core::{AttrMap, BoundingBox, Graph, GraphKind, Point, Result};
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -656,7 +657,7 @@ impl Fdp<'_, '_> {
                 let dy = dg.nodes[m].pos[1] - dg.nodes[n].pos[1];
                 ERec {
                     e,
-                    alpha: dy.atan2(dx),
+                    alpha: math::atan2(dy, dx),
                     dist2: dx.mul_add(dx, dy * dy),
                 }
             })

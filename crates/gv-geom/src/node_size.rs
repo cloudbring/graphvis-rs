@@ -11,6 +11,7 @@
 //! `ND_ht`).
 
 use crate::html_label::HtmlLabel;
+use gv_core::math;
 use std::collections::BTreeSet;
 
 use crate::shapes::{RecordField, ShapeKind, html_label_layout, is_html_label};
@@ -828,11 +829,11 @@ fn star_size(sz0: Point) -> Point {
     let alpha2 = 2.0 * alpha;
     let alpha3 = 3.0 * alpha;
     let alpha4 = 2.0 * alpha2;
-    let rx = sz0.x / (2.0 * alpha.cos());
-    let ry = sz0.y / (alpha.sin() + alpha3.sin());
+    let rx = sz0.x / (2.0 * math::cos(alpha));
+    let ry = sz0.y / (math::sin(alpha) + math::sin(alpha3));
     let r0 = rx.max(ry);
-    let r = r0 * alpha4.sin() * alpha2.cos() / (alpha.cos() * alpha4.cos());
-    Point::new(2.0 * r * alpha.cos(), r * (1.0 + alpha3.sin()))
+    let r = r0 * math::sin(alpha4) * math::cos(alpha2) / (math::cos(alpha) * math::cos(alpha4));
+    Point::new(2.0 * r * math::cos(alpha), r * (1.0 + math::sin(alpha3)))
 }
 
 /// `star_vertices` from `shapes.c`: fills 10 vertices and adjusts `bb` to the star aspect.
@@ -842,21 +843,21 @@ fn star_vertices(vertices: &mut [Point], bb: &mut Point) {
     let alpha3 = 3.0 * alpha;
     let alpha4 = 2.0 * alpha2;
     let mut sz = *bb;
-    let aspect = (1.0 + alpha3.sin()) / (2.0 * alpha.cos());
+    let aspect = (1.0 + math::sin(alpha3)) / (2.0 * math::cos(alpha));
     let a = sz.y / sz.x;
     if a > aspect {
         sz.x = sz.y / aspect;
     } else if a < aspect {
         sz.y = sz.x * aspect;
     }
-    let r = sz.x / (2.0 * alpha.cos());
-    let r0 = r * alpha.cos() * alpha4.cos() / (alpha4.sin() * alpha2.cos());
-    let offset = (r * (1.0 - alpha3.sin())) / 2.0;
+    let r = sz.x / (2.0 * math::cos(alpha));
+    let r0 = r * math::cos(alpha) * math::cos(alpha4) / (math::sin(alpha4) * math::cos(alpha2));
+    let offset = (r * (1.0 - math::sin(alpha3))) / 2.0;
     let mut theta = alpha;
     for i in (0..10).step_by(2) {
-        vertices[i] = Point::new(r * theta.cos(), r * theta.sin() - offset);
+        vertices[i] = Point::new(r * math::cos(theta), r * math::sin(theta) - offset);
         theta += alpha2;
-        vertices[i + 1] = Point::new(r0 * theta.cos(), r0 * theta.sin() - offset);
+        vertices[i + 1] = Point::new(r0 * math::cos(theta), r0 * math::sin(theta) - offset);
         theta += alpha2;
     }
     *bb = sz;
@@ -1018,7 +1019,7 @@ fn poly_init(
             bb.y = temp;
         }
         if sides > 2 {
-            let temp = (PI / sides as f64).cos();
+            let temp = math::cos(PI / sides as f64);
             bb.x /= temp;
             bb.y /= temp;
         }
@@ -1113,21 +1114,21 @@ fn poly_init(
             ymax = bb.y / 2.0;
         } else {
             let sectorangle = 2.0 * PI / sides as f64;
-            let sidelength = (sectorangle / 2.0).sin();
-            let skewdist = (distortion.abs() + skew.abs()).hypot(1.0);
-            let gdistortion = distortion * SQRT2 / (sectorangle / 2.0).cos();
+            let sidelength = math::sin(sectorangle / 2.0);
+            let skewdist = math::hypot(distortion.abs() + skew.abs(), 1.0);
+            let gdistortion = distortion * SQRT2 / math::cos(sectorangle / 2.0);
             let gskew = skew / 2.0;
             let mut angle = (sectorangle - PI) / 2.0;
-            sinx = angle.sin();
-            cosx = angle.cos();
+            sinx = math::sin(angle);
+            cosx = math::cos(angle);
             let mut r = Point::new(0.5 * cosx, 0.5 * sinx);
             xmax = 0.0;
             ymax = 0.0;
             angle += (PI - sectorangle) / 2.0;
             for i in 0..sides {
                 angle += sectorangle;
-                sinx = angle.sin();
-                cosx = angle.cos();
+                sinx = math::sin(angle);
+                cosx = math::cos(angle);
                 // C (clang, -ffp-contract=on) fuses these multiply-adds; see
                 // the `fmadd`s in poly_init of libgvc.
                 r.x = sidelength.mul_add(cosx, r.x);
@@ -1137,10 +1138,10 @@ fn poly_init(
                     r.y,
                 );
                 // RADIANS(orientation) + atan2(..) = (o / 180) * M_PI + atan2(..), fused.
-                let alpha = (orientation / 180.0).mul_add(PI, p.y.atan2(p.x));
-                sinx = alpha.sin();
-                cosx = alpha.cos();
-                let h = p.x.hypot(p.y);
+                let alpha = (orientation / 180.0).mul_add(PI, math::atan2(p.y, p.x));
+                sinx = math::sin(alpha);
+                cosx = math::cos(alpha);
+                let h = math::hypot(p.x, p.y);
                 p.x = h * cosx;
                 p.y = h * sinx;
                 p.x *= bb.x;
@@ -1178,7 +1179,7 @@ fn poly_init(
                     break;
                 }
             }
-            let mut beta = (r.y - q.y).atan2(r.x - q.x);
+            let mut beta = math::atan2(r.y - q.y, r.x - q.x);
             let mut qprev = q;
             for i in 0..sides {
                 q = vertices[i];
@@ -1190,11 +1191,11 @@ fn poly_init(
                         }
                     }
                     let alpha = beta;
-                    beta = (r.y - q.y).atan2(r.x - q.x);
+                    beta = math::atan2(r.y - q.y, r.x - q.x);
                     let gamma = (alpha + PI - beta) / 2.0;
-                    let temp = GAP / gamma.sin();
-                    sinx = (alpha - gamma).sin() * temp;
-                    cosx = (alpha - gamma).cos() * temp;
+                    let temp = GAP / math::sin(gamma);
+                    sinx = math::sin(alpha - gamma) * temp;
+                    cosx = math::cos(alpha - gamma) * temp;
                 }
                 qprev = q;
                 for j in 1..peripheries {

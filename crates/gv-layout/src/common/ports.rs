@@ -6,6 +6,7 @@
 use super::shapes::InsideFn;
 use super::splines::{SplineGraph, bezier_clip};
 use super::types::{LGraph, PortInfo};
+use gv_core::math;
 use gv_core::{BoundingBox, NodeData, Point};
 use std::f64::consts::PI;
 
@@ -306,7 +307,7 @@ pub fn compass_port<S: PortGraph + ?Sized>(
     if p.x == 0.0 && p.y == 0.0 {
         pp.order = (MC_SCALE / 2) as u8;
     } else {
-        let mut angle = p.y.atan2(p.x) + 1.5 * PI;
+        let mut angle = math::atan2(p.y, p.x) + 1.5 * PI;
         if angle >= 2.0 * PI {
             angle -= 2.0 * PI;
         }

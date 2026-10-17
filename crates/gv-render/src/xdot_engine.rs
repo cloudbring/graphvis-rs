@@ -9,6 +9,7 @@ use crate::emit::job::{
 use crate::emit::model::TextSpan;
 use crate::emit::num::{trim_zeros, xdot_num};
 use gv_core::Point;
+use gv_core::math;
 use std::fmt::Write;
 
 /// Index of the buffer an emit state writes to (`xbufs[]`).
@@ -162,8 +163,8 @@ impl XdotEngine {
                 g[0]
             } else {
                 Point::new(
-                    g[0].x + r2 / 4.0 * angle.cos(),
-                    g[0].y + r2 / 4.0 * angle.sin(),
+                    g[0].x + r2 / 4.0 * math::cos(angle),
+                    g[0].y + r2 / 4.0 * math::sin(angle),
                 )
             };
             let r1 = r2 / 4.0;

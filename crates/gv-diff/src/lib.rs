@@ -11,6 +11,7 @@
 
 pub mod render;
 
+use gv_core::math;
 use gv_core::{Graph, GraphKind};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -34,7 +35,7 @@ pub struct Pt {
 
 impl Pt {
     fn dist(self, o: Pt) -> f64 {
-        (self.x - o.x).hypot(self.y - o.y)
+        math::hypot(self.x - o.x, self.y - o.y)
     }
 }
 

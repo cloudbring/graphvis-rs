@@ -1,3 +1,4 @@
+use crate::math;
 use serde::{Deserialize, Serialize};
 
 /// 2D point in Graphviz points (72 points = 1 inch).
@@ -15,13 +16,13 @@ impl Point {
 
     #[inline]
     pub fn dist(self, other: Self) -> f64 {
-        (self.x - other.x).hypot(self.y - other.y)
+        math::hypot(self.x - other.x, self.y - other.y)
     }
 
     /// Safe vector normalization avoiding `NaN` on zero-length vectors (Fixes GV-BUG-006).
     #[inline]
     pub fn normalized_or_zero(self) -> Self {
-        let len = self.x.hypot(self.y);
+        let len = math::hypot(self.x, self.y);
         if len <= 1e-12 {
             Self::new(0.0, 0.0)
         } else {

@@ -10,6 +10,7 @@ use crate::common::utils::map_bool;
 use crate::cutil::{CRand, qsort_by};
 use crate::sfdpgen::post_process::{RelativePositionConstraints, StressMajorizationSmoother};
 use crate::sparse::{Format, MACHINEACC, SparseMatrix, distance};
+use gv_core::math;
 
 /// `call_tri(n, x)`: Delaunay graph plus the diagonal, symmetrized.
 pub fn call_tri(n: usize, x: &[f64]) -> SparseMatrix {
@@ -153,7 +154,7 @@ fn ideal_distance_avoid_overlap(
             let wx = width[i * dim] + width[jj * dim];
             let wy = width[i * dim + 1] + width[jj * dim + 1];
             if dx < MACHINEACC * wx && dy < MACHINEACC * wy {
-                ideal[j] = wx.hypot(wy);
+                ideal[j] = math::hypot(wx, wy);
                 tmax = 2.0;
             } else {
                 let mut t = if dx < MACHINEACC * wx {

@@ -6,6 +6,7 @@ use super::layout::{Comp, DG, with_lgraph};
 use super::tlayout::TState;
 use crate::common::types::P_PIN;
 use crate::neatogen::adjust::{Expand, remove_overlap_as, sep_factor};
+use gv_core::math;
 
 /// Default `overlap` for fdp.
 const DFLT_OVERLAP: &str = "9:prism";
@@ -45,7 +46,7 @@ impl X {
     }
 
     fn rad(&self, dg: &DG, n: usize) -> f64 {
-        self.wd2(dg, n).hypot(self.ht2(dg, n))
+        math::hypot(self.wd2(dg, n), self.ht2(dg, n))
     }
 
     /// `cool(t)`.
@@ -85,7 +86,7 @@ impl X {
         while !(dist > 0.0) {
             xdelta = f64::from(5 - st.crand.rand() % 10);
             ydelta = f64::from(5 - st.crand.rand() % 10);
-            dist = xdelta.hypot(ydelta);
+            dist = math::hypot(xdelta, ydelta);
         }
         let ov = self.overlap(dg, p, q);
         let mut force = if ov {
@@ -119,7 +120,7 @@ impl X {
         }
         let xdelta = dg.nodes[q].pos[0] - dg.nodes[p].pos[0];
         let ydelta = dg.nodes[q].pos[1] - dg.nodes[p].pos[1];
-        let dist = xdelta.hypot(ydelta);
+        let dist = math::hypot(xdelta, ydelta);
         let din = self.rad(dg, p) + self.rad(dg, q);
         let dout = dist - din;
         let force = dout * dout / ((self.p.k + din) * dist);
@@ -151,7 +152,7 @@ impl X {
             for &n1 in &comp.nodes[k + 1..] {
                 let xdelta = dg.nodes[n1].pos[0] - dg.nodes[n].pos[0];
                 let ydelta = dg.nodes[n1].pos[1] - dg.nodes[n].pos[1];
-                let d = (xdelta, ydelta, xdelta.hypot(ydelta));
+                let d = (xdelta, ydelta, math::hypot(xdelta, ydelta));
                 overlaps += i64::from(self.do_rep(st, dg, n, n1, d, x_ov, x_nonov));
             }
             for e in dg.outs(comp, n).collect::<Vec<_>>() {
