@@ -24,6 +24,7 @@ pub mod rawgraph;
 pub mod sgraph;
 pub mod trapezoid;
 
+use crate::cdt::Cdt;
 use crate::common::splines::{SplineGraph, SplineInfo, clip_and_install_info};
 use gv_core::Point;
 use maze::{Cell, M_BOTTOM, M_LEFT, M_RIGHT, M_TOP, MZ_HSCAN, MZ_VSCAN, Maze, mk_maze, update_wts};
@@ -85,10 +86,10 @@ struct Channel {
 }
 
 /// `chanItem`.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct ChanItem {
     v: f64,
-    chans: Vec<Channel>,
+    chans: Cdt<Channel>,
 }
 
 fn fcmp(a: f64, b: f64) -> Ordering {
@@ -118,61 +119,63 @@ fn chancmpid(k1: (f64, f64), k2: (f64, f64)) -> Ordering {
     Ordering::Equal
 }
 
+/// A channel dictionary (`Dt_t*` of `chanItem`s, each with a `Dt_t*` of
+/// channels), with cdt's splay-tree semantics.
+#[derive(Default)]
 struct Chans {
-    items: Vec<ChanItem>,
+    items: Cdt<ChanItem>,
 }
+
+/// (chanItem node, channel node) in a [`Chans`].
+type ChanKey = (usize, usize);
 
 impl Chans {
     /// `addChan(chdict, cp, j)`.
     fn add(&mut self, chp: Channel, j: f64) {
-        let ii = match self.items.binary_search_by(|it| fcmp(it.v, j)) {
-            Ok(i) => i,
-            Err(i) => {
-                self.items.insert(
-                    i,
-                    ChanItem {
-                        v: j,
-                        chans: Vec::new(),
-                    },
-                );
-                i
+        let ii = match self.items.find(&|it: &ChanItem| fcmp(j, it.v)) {
+            Some(i) => i,
+            None => {
+                self.items
+                    .insert(
+                        ChanItem {
+                            v: j,
+                            chans: Cdt::new(),
+                        },
+                        &|it: &ChanItem| fcmp(j, it.v),
+                    )
+                    .0
             }
         };
-        let chans = &mut self.items[ii].chans;
-        if let Err(k) = chans.binary_search_by(|c| chancmpid((c.p1, c.p2), (chp.p1, chp.p2))) {
-            chans.insert(k, chp);
-        }
+        let key = (chp.p1, chp.p2);
+        self.items
+            .get_mut(ii)
+            .chans
+            .insert(chp, &|c: &Channel| chancmpid(key, (c.p1, c.p2)));
     }
 
-    /// `chanSearch(chans, seg)`: (item, channel) indices.
-    fn search(&self, seg: &Segment) -> (usize, usize) {
+    /// `chanSearch(chans, seg)`.
+    fn search(&mut self, seg: &Segment) -> ChanKey {
+        let v = seg.comm_coord;
         let i = self
             .items
-            .binary_search_by(|it| fcmp(it.v, seg.comm_coord))
+            .find(&|it: &ChanItem| fcmp(v, it.v))
             .expect("chanSearch: no channel item");
-        let c = self.items[i]
+        let key = (seg.p1, seg.p2);
+        let c = self
+            .items
+            .get_mut(i)
             .chans
-            .binary_search_by(|c| chancmpid((c.p1, c.p2), (seg.p1, seg.p2)))
+            .find(&|c: &Channel| chancmpid(key, (c.p1, c.p2)))
             .expect("chanSearch: no channel");
         (i, c)
     }
 
-    fn chan(&self, k: (usize, usize)) -> &Channel {
-        &self.items[k.0].chans[k.1]
+    fn chan(&self, k: ChanKey) -> &Channel {
+        self.items.get(k.0).chans.get(k.1)
     }
 
-    fn chan_mut(&mut self, k: (usize, usize)) -> &mut Channel {
-        &mut self.items[k.0].chans[k.1]
-    }
-
-    fn keys(&self) -> Vec<(usize, usize)> {
-        let mut v = Vec::new();
-        for (i, it) in self.items.iter().enumerate() {
-            for j in 0..it.chans.len() {
-                v.push((i, j));
-            }
-        }
-        v
+    fn chan_mut(&mut self, k: ChanKey) -> &mut Channel {
+        self.items.get_mut(k.0).chans.get_mut(k.1)
     }
 }
 
@@ -353,7 +356,7 @@ fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
 
 /// `extractHChans(mp)` / `extractVChans(mp)`.
 fn extract_chans(mp: &mut Maze, horizontal: bool) -> Chans {
-    let mut chans = Chans { items: Vec::new() };
+    let mut chans = Chans::default();
     let (back, fwd, flag) = if horizontal {
         (M_LEFT, M_RIGHT, MZ_HSCAN)
     } else {
@@ -567,17 +570,39 @@ impl Ortho {
         n.map(|i| (r.0, i))
     }
 
-    fn chans_for(&self, s: &Segment) -> &Chans {
-        if s.is_vert {
-            &self.vchans
+    fn chans_mut(&mut self, vert: bool) -> &mut Chans {
+        if vert {
+            &mut self.vchans
         } else {
-            &self.hchans
+            &mut self.hchans
         }
     }
 
-    fn chan_key(&self, r: SegRef) -> (bool, (usize, usize)) {
+    fn chan_key(&mut self, r: SegRef) -> (bool, ChanKey) {
         let s = *self.seg(r);
-        (s.is_vert, self.chans_for(&s).search(&s))
+        (s.is_vert, self.chans_mut(s.is_vert).search(&s))
+    }
+
+    /// The nested `dtflatten`/`dtlink` loop over a channel dictionary. The
+    /// `dtlink` pointers are read after each body, which may have searched
+    /// (and so restored and splayed) the same dictionaries, as in C.
+    fn for_each_chan(
+        &mut self,
+        vert: bool,
+        f: &mut dyn FnMut(&mut Ortho, ChanKey) -> bool,
+    ) -> bool {
+        let mut l1 = self.chans_mut(vert).items.flatten();
+        while let Some(i) = l1 {
+            let mut l2 = self.chans_mut(vert).items.get_mut(i).chans.flatten();
+            while let Some(j) = l2 {
+                if !f(self, (i, j)) {
+                    return false;
+                }
+                l2 = self.chans_for_kind(vert).items.get(i).chans.link(j);
+            }
+            l1 = self.chans_for_kind(vert).items.link(i);
+        }
+        true
     }
 
     fn chan_g(&mut self, k: (bool, (usize, usize))) -> &mut RawGraph {
@@ -733,10 +758,10 @@ impl Ortho {
                 self.seg(prev1).ind_no.unwrap(),
                 self.seg(prev2).ind_no.unwrap(),
             );
-            let nchan = (
-                !s1.is_vert,
-                self.chans_for_kind(!s1.is_vert).search(self.seg(prev1)),
-            );
+            let nchan = (!s1.is_vert, {
+                let p = *self.seg(prev1);
+                self.chans_mut(!s1.is_vert).search(&p)
+            });
             let exists = self.chan_g_ref(chan).edge_exists(a, b);
             let at_p1 = self.seg(prev1).comm_coord == s1.p1;
             let first_bend = if !s1.is_vert { Bend::Up } else { Bend::Left };
@@ -866,20 +891,22 @@ impl Ortho {
     }
 
     /// Debug dump of the channel graphs (`GVDUMP`).
-    fn dump_chans(&self, tag: &str) {
+    fn dump_chans(&mut self, tag: &str) {
         if std::env::var_os("GVDUMP").is_none() {
             return;
         }
         for vert in [false, true] {
-            let chans = self.chans_for_kind(vert);
-            for k in chans.keys() {
+            self.for_each_chan(vert, &mut |o, k| {
+                let chans = o.chans_for_kind(vert);
                 let ch = chans.chan(k);
                 if ch.seg_list.is_empty() {
-                    continue;
+                    return true;
                 }
                 let mut l = format!(
                     "OCG {tag} {:.6} [{:.6} {:.6}]:",
-                    chans.items[k.0].v, ch.p1, ch.p2
+                    chans.items.get(k.0).v,
+                    ch.p1,
+                    ch.p2
                 );
                 for (i, v) in ch.g.vertices.iter().enumerate() {
                     l.push_str(&format!(" {i}->"));
@@ -888,47 +915,44 @@ impl Ortho {
                     }
                 }
                 eprintln!("{l}");
-            }
+                true
+            });
         }
     }
 
     /// `assignTracks(mp)`.
     fn assign_tracks(&mut self) -> bool {
+        // create_graphs
         for vert in [false, true] {
-            let keys = self.chans_for_kind(vert).keys();
-            for k in keys {
-                let n = self.chans_for_kind(vert).chan(k).seg_list.len();
-                self.chan_g((vert, k)).vertices = RawGraph::new(n).vertices;
-            }
+            self.for_each_chan(vert, &mut |o, k| {
+                let ch = o.chans_mut(vert).chan_mut(k);
+                ch.g = RawGraph::new(ch.seg_list.len());
+                true
+            });
         }
+        // add_np_edges
         for vert in [false, true] {
-            for k in self.chans_for_kind(vert).keys() {
-                if !self.chans_for_kind(vert).chan(k).seg_list.is_empty()
-                    && !self.add_edges_in_g(vert, k)
-                {
-                    return false;
-                }
+            let ok = self.for_each_chan(vert, &mut |o, k| {
+                o.chans_for_kind(vert).chan(k).seg_list.is_empty() || o.add_edges_in_g(vert, k)
+            });
+            if !ok {
+                return false;
             }
         }
         self.dump_chans("np");
+        // add_p_edges
         for vert in [false, true] {
-            for k in self.chans_for_kind(vert).keys() {
-                if !self.add_p_edges_chan(vert, k) {
-                    return false;
-                }
+            if !self.for_each_chan(vert, &mut |o, k| o.add_p_edges_chan(vert, k)) {
+                return false;
             }
         }
         self.dump_chans("x");
+        // assignTrackNo
         for vert in [false, true] {
-            for k in self.chans_for_kind(vert).keys() {
-                let chans = if vert {
-                    &mut self.vchans
-                } else {
-                    &mut self.hchans
-                };
-                let ch = chans.chan_mut(k);
+            self.for_each_chan(vert, &mut |o, k| {
+                let ch = o.chans_mut(vert).chan_mut(k);
                 if ch.seg_list.is_empty() {
-                    continue;
+                    return true;
                 }
                 ch.g.top_sort();
                 let orders: Vec<(SegRef, i32)> = ch
@@ -938,26 +962,29 @@ impl Ortho {
                     .map(|(i, &r)| (r, ch.g.vertices[i].topsort_order + 1))
                     .collect();
                 for (r, t) in orders {
-                    self.routes[r.0][r.1].track_no = Some(t);
+                    o.routes[r.0][r.1].track_no = Some(t);
                 }
-            }
+                true
+            });
         }
         true
     }
 
     /// `vtrack(seg, m)`.
-    fn vtrack(&self, r: SegRef) -> f64 {
-        let s = self.seg(r);
-        let chp = self.vchans.chan(self.vchans.search(s));
+    fn vtrack(&mut self, r: SegRef) -> f64 {
+        let s = *self.seg(r);
+        let k = self.vchans.search(&s);
+        let chp = self.vchans.chan(k);
         let f = f64::from(s.track_no.unwrap()) / (chp.seg_list.len() as f64 + 1.0);
         let bb = self.mp.cells[chp.cp].bb;
         f.mul_add(bb.ur.x - bb.ll.x, bb.ll.x)
     }
 
     /// `htrack(seg, m)`.
-    fn htrack(&self, r: SegRef) -> f64 {
-        let s = self.seg(r);
-        let chp = self.hchans.chan(self.hchans.search(s));
+    fn htrack(&mut self, r: SegRef) -> f64 {
+        let s = *self.seg(r);
+        let k = self.hchans.search(&s);
+        let chp = self.hchans.chan(k);
         let f = 1.0 - f64::from(s.track_no.unwrap()) / (chp.seg_list.len() as f64 + 1.0);
         let bb = self.mp.cells[chp.cp].bb;
         let (lo, hi) = (bb.ll.y, bb.ur.y);
@@ -1045,8 +1072,8 @@ pub fn ortho_edges<S: OrthoGraph + ?Sized>(g: &mut S, _use_lbls: bool) -> bool {
     let mut o = Ortho {
         mp,
         routes: Vec::with_capacity(es.len()),
-        hchans: Chans { items: Vec::new() },
-        vchans: Chans { items: Vec::new() },
+        hchans: Chans::default(),
+        vchans: Chans::default(),
     };
     let gstart = o.mp.sg.nnodes;
     let mut pq = Pq::new(o.mp.sg.nnodes + 2);
