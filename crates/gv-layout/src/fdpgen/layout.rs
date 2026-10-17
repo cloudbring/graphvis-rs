@@ -1279,7 +1279,9 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
         Some(c) => {
             let mut w = c.work.clone();
             g.write_back(&mut w);
+            let view = crate::common::cluster_edges::render_view(c, &w, graph);
             crate::common::cluster_edges::undo_cluster_edges(c, &w, graph);
+            graph.render_view = Some(Box::new(view));
         }
         None => g.write_back(graph),
     };

@@ -79,6 +79,11 @@ pub const NO_GRAPH_LABEL_KEY: &str = "\u{1}nolabel";
 /// `common_init_edge` (patchwork's `patchwork_init_edge`): edges have no labels.
 pub const NO_EDGE_INIT_KEY: &str = "\u{1}noedgeinit";
 
+/// Node or edge attribute of a [`Graph::render_view`] object: its cgraph sequence number
+/// (`AGSEQ`), which the renderers print in object ids. Without it the sequence follows the
+/// object's index.
+pub const SEQ_KEY: &str = "\u{1}seq";
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
@@ -107,6 +112,12 @@ pub struct Graph {
     /// tell local declarations from inherited values.
     #[serde(default)]
     pub dicts: Vec<AttrDicts>,
+    /// The graph as renderers that run before `undoClusterEdges` see it: fdp leaves its
+    /// cluster nodes (`__0:cluster`) and cloned cluster edges in the graph it lays out, and
+    /// only the output writers (dot, xdot, json, canon, plain) undo them. `-Tsvg` draws this
+    /// graph when it is set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_view: Option<Box<Graph>>,
 }
 
 /// One declared attribute (`Agsym_t`): its default value and whether a root attribute
@@ -142,6 +153,7 @@ impl Graph {
             html_strings: BTreeSet::new(),
             anon_subgraph_ids: BTreeMap::new(),
             dicts: Vec::new(),
+            render_view: None,
         }
     }
 

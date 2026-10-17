@@ -192,6 +192,24 @@ pub(crate) struct Model<'g> {
     pub has_labels: u32,
 }
 
+impl Model<'_> {
+    /// `AGSEQ(n)`.
+    pub fn node_seq(&self, n: usize) -> usize {
+        seq_of(&self.g.nodes[n].attrs, n)
+    }
+    /// `AGSEQ(e)`.
+    pub fn edge_seq(&self, e: usize) -> usize {
+        seq_of(&self.g.edges[e].attrs, e)
+    }
+}
+
+fn seq_of(attrs: &AttrMap, index: usize) -> usize {
+    attrs
+        .get(gv_core::SEQ_KEY)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(index + 1)
+}
+
 fn parse_point(s: Option<&str>) -> Option<Point> {
     let s = s?;
     let (x, rest) = strtod(s)?;

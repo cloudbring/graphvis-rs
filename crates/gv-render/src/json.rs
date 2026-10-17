@@ -402,7 +402,8 @@ struct W<'g> {
     sub_gid: Vec<usize>,
     children: Vec<Vec<usize>>,
     top: Vec<usize>,
-    node_gid: Vec<usize>,
+    node_gid: Vec<i64>,
+    clust_nodes: &'g [bool],
     edge_gid: Vec<usize>,
 }
 
@@ -504,8 +505,8 @@ impl W<'_> {
                 self.out.push(']');
             }
         }
-        // write_nodes
-        let nodes: Vec<usize> = match sub {
+        // write_nodes: cluster nodes are not written.
+        let mut nodes: Vec<usize> = match sub {
             None => (0..g.nodes.len()).collect(),
             Some(s) => {
                 let mut v: Vec<usize> = g.subgraphs[s].nodes.iter().map(|n| n.0 as usize).collect();
@@ -514,6 +515,7 @@ impl W<'_> {
                 v
             }
         };
+        nodes.retain(|&n| !self.clust_nodes.get(n).copied().unwrap_or(false));
         if nodes.is_empty() {
             if has_subgs && top {
                 self.level -= 1;
@@ -656,7 +658,13 @@ fn edge_attrs_with_ports(g: &Graph) -> Vec<AttrMap> {
 
 /// Writes `g` (with its layout attributes already attached) as JSON. `edge_order` gives the
 /// `agfstnode`/`agfstout` iteration order used to number edges.
-pub(crate) fn write_json(g: &Graph, do_xdot: bool, edge_order: &[usize]) -> String {
+/// `clust_nodes`: the nodes that are `IS_CLUST_NODE` (fdp's cluster-edge endpoints).
+pub(crate) fn write_json(
+    g: &Graph,
+    do_xdot: bool,
+    edge_order: &[usize],
+    clust_nodes: &[bool],
+) -> String {
     let edge_attrs = edge_attrs_with_ports(g);
     let mut gd: BTreeSet<String> = g.graph_attrs.keys().cloned().collect();
     for s in &g.subgraphs {
@@ -709,7 +717,21 @@ pub(crate) fn write_json(g: &Graph, do_xdot: bool, edge_order: &[usize]) -> Stri
         label(s, &mut cnt, &mut sub_gid, &children, g, &mut cl);
     }
     let _ = &mut cluster_gid;
-    let node_gid: Vec<usize> = (0..g.nodes.len()).map(|i| cnt + i).collect();
+    // A cluster node (IS_CLUST_NODE) takes the id of the cluster it names, or -1.
+    let mut ncnt = 0;
+    let node_gid: Vec<i64> = g
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(i, n)| {
+            if clust_nodes.get(i).copied().unwrap_or(false) {
+                cl.get(&n.name).map_or(-1, |&v| v as i64)
+            } else {
+                ncnt += 1;
+                (cnt + ncnt - 1) as i64
+            }
+        })
+        .collect();
     let mut edge_gid = vec![0usize; g.edges.len()];
     for (k, &e) in edge_order.iter().enumerate() {
         edge_gid[e] = k;
@@ -729,6 +751,7 @@ pub(crate) fn write_json(g: &Graph, do_xdot: bool, edge_order: &[usize]) -> Stri
         top,
         node_gid,
         edge_gid,
+        clust_nodes,
     };
     LATIN1.with(|c| c.set(w.latin1));
     w.write_graph(None);

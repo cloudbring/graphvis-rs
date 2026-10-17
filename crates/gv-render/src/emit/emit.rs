@@ -283,8 +283,8 @@ impl<'a, E: Engine> Emitter<'a, E> {
             ObjKind::Cluster(c) => {
                 s.push_str(&format!("clust{}", self.job.m.clusters[c].sub + 1));
             }
-            ObjKind::Node(n) => s.push_str(&format!("node{}", n + 1)),
-            ObjKind::Edge(e) => s.push_str(&format!("edge{}", e + 1)),
+            ObjKind::Node(n) => s.push_str(&format!("node{}", self.job.m.node_seq(n))),
+            ObjKind::Edge(e) => s.push_str(&format!("edge{}", self.job.m.edge_seq(e))),
         }
         s
     }
@@ -1005,7 +1005,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
                         s.push_str(gid);
                         s.push('_');
                     }
-                    s.push_str(&format!("edge{}", e + 1));
+                    s.push_str(&format!("edge{}", m.edge_seq(e)));
                     s
                 }
             };

@@ -91,6 +91,14 @@ fn input_edge_order(g: &Graph) -> Vec<usize> {
     out.into_iter().flatten().collect()
 }
 
+/// `IS_CLUST_NODE(n)` for each node.
+fn clust_nodes(g: &Graph) -> Vec<bool> {
+    g.nodes
+        .iter()
+        .map(|n| n.attrs.contains_key(gv_core::CLUST_NODE_KEY))
+        .collect()
+}
+
 /// Edge iteration order of `agfstnode`/`agfstout` (numbering of `_gvid` in JSON).
 fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
     m.out_edges.iter().flatten().copied().collect()
@@ -227,14 +235,25 @@ pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Re
             graph,
             lname == "xdot_json",
             &input_edge_order(graph),
+            &clust_nodes(graph),
         ));
     }
-    let m = emit::model::Model::build(graph);
+    // Renderers other than dot, xdot, json and canon run before undoClusterEdges.
+    let drawn = match (format, graph.render_view.as_deref()) {
+        (OutputFormat::Svg, Some(v)) => v,
+        _ => graph,
+    };
+    let m = emit::model::Model::build(drawn);
     Ok(match format {
         OutputFormat::Svg => emit::run(&m, svg_engine::SvgEngine::default()).out,
         OutputFormat::Json | OutputFormat::Json0 => {
             let (g, _) = attached(&m, format == OutputFormat::Json, None);
-            json::write_json(&g, format == OutputFormat::Json, &edge_order(&m))
+            json::write_json(
+                &g,
+                format == OutputFormat::Json,
+                &edge_order(&m),
+                &clust_nodes(graph),
+            )
         }
         OutputFormat::Dot | OutputFormat::Xdot => {
             let (mut g, forced) = attached(

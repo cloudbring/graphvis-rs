@@ -19,5 +19,6 @@ pub use font::{
 pub use geom::{BezierSegment, BoundingBox, Point, Spline};
 pub use graph::{
     AttrDicts, AttrMap, AttrSym, CLUST_NODE_KEY, EdgeData, EdgeId, Graph, GraphKind,
-    NO_EDGE_INIT_KEY, NO_GRAPH_LABEL_KEY, NodeData, NodeId, Port, SubgraphData, SubgraphId,
+    NO_EDGE_INIT_KEY, NO_GRAPH_LABEL_KEY, NodeData, NodeId, Port, SEQ_KEY, SubgraphData,
+    SubgraphId,
 };
