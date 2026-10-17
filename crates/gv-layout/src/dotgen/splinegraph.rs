@@ -249,3 +249,21 @@ impl crate::common::ports::PortGraph for Dot<'_> {
         gv_geom::NodeSizeEnv::from_graph(self.input)
     }
 }
+
+impl crate::ortho::OrthoGraph for Dot<'_> {
+    fn ortho_nodes(&self) -> Vec<usize> {
+        self.nodes_of(0)
+    }
+    fn ortho_out_edges(&self, n: usize) -> Vec<usize> {
+        self.out_edges(0, n)
+    }
+    fn ortho_concentrate(&self) -> bool {
+        self.concentrate
+    }
+    fn node_seq(&self, n: usize) -> usize {
+        n
+    }
+    fn xl_name(&self, n: usize) -> String {
+        self.nodes[n].name.clone()
+    }
+}

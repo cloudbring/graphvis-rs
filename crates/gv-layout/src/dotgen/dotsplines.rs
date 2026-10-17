@@ -40,8 +40,8 @@ const GRAPHTYPEMASK: i32 = 192;
 const FUDGE: f64 = 4.0;
 /// `LBL_SPACE`: space between labels, in points.
 const LBL_SPACE: f64 = 6.0;
-/// `lib/ortho` is not ported yet; `splines=ortho` routes as `splines=spline`.
-const ORTHO_PORTED: bool = false;
+/// `splines=ortho` uses the `lib/ortho` port.
+const ORTHO_PORTED: bool = true;
 
 /// `spline_info_t`.
 #[derive(Debug, Clone, Default)]
@@ -1080,8 +1080,12 @@ impl Dot<'_> {
     }
 
     /// `orthoEdges(g, useLbls)` (lib/ortho).
-    fn ortho_edges(&mut self, _use_lbls: bool) -> Result<(), String> {
-        Ok(())
+    fn ortho_edges(&mut self, use_lbls: bool) -> Result<(), String> {
+        if crate::ortho::ortho_edges(self, use_lbls) {
+            Ok(())
+        } else {
+            Err("orthoEdges: cannot build the maze".to_string())
+        }
     }
 
     /// `makeFlatEnd(g, sp, P, n, e, endp, isBegin)`.
