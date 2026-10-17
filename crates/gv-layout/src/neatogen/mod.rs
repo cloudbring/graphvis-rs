@@ -20,6 +20,7 @@ pub mod adjust;
 pub mod bfs;
 pub mod conjgrad;
 pub mod graphdata;
+pub mod legal;
 pub mod linalg;
 pub mod matrix_ops;
 pub mod neatoinit;
