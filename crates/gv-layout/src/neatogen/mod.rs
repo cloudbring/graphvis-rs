@@ -28,6 +28,7 @@ pub mod matrix_ops;
 pub mod neatoinit;
 pub mod neatosplines;
 pub mod overlap;
+pub mod robust;
 pub mod routing;
 pub mod scadjust;
 pub mod sgd;
