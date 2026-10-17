@@ -77,14 +77,8 @@ impl TextLabel {
                 // `make_html_label` after a parse error: `lp->html` is cleared and
                 // `lp->text` stays the unconverted source.
                 None if g.html_failed => shapes_html_inner(raw).to_string(),
-                _ => {
-                    let inner = if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
-                        &raw[1..raw.len() - 1]
-                    } else {
-                        raw
-                    };
-                    gv_core::font::html_entity_utf8(inner)
-                }
+                // HTML text: `lp->text` is the source string, entities not decoded.
+                _ => shapes_html_inner(raw).to_string(),
             };
         }
         if let Some(t) = &g.text {
