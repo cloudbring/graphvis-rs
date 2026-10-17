@@ -1001,7 +1001,9 @@ fn poly_init(
     } else {
         let temp = bb.y * SQRT2;
         if height > temp && valign == 'c' {
-            bb.x *= (1.0 / (1.0 - (bb.y / height) * (bb.y / height))).sqrt();
+            // clang contracts `1. - SQR(r)` into a fused multiply-subtract.
+            let r = bb.y / height;
+            bb.x *= (1.0 / (-r).mul_add(r, 1.0)).sqrt();
         } else {
             bb.x *= SQRT2;
             bb.y = temp;
@@ -1117,10 +1119,16 @@ fn poly_init(
                 angle += sectorangle;
                 sinx = angle.sin();
                 cosx = angle.cos();
-                r.x += sidelength * cosx;
-                r.y += sidelength * sinx;
-                let mut p = Point::new(r.x * (skewdist + r.y * gdistortion) + r.y * gskew, r.y);
-                let alpha = orientation.to_radians() + p.y.atan2(p.x);
+                // C (clang, -ffp-contract=on) fuses these multiply-adds; see
+                // the `fmadd`s in poly_init of libgvc.
+                r.x = sidelength.mul_add(cosx, r.x);
+                r.y = sidelength.mul_add(sinx, r.y);
+                let mut p = Point::new(
+                    r.x.mul_add(r.y.mul_add(gdistortion, skewdist), r.y * gskew),
+                    r.y,
+                );
+                // RADIANS(orientation) + atan2(..) = (o / 180) * M_PI + atan2(..), fused.
+                let alpha = (orientation / 180.0).mul_add(PI, p.y.atan2(p.x));
                 sinx = alpha.sin();
                 cosx = alpha.cos();
                 let h = p.x.hypot(p.y);
