@@ -97,6 +97,10 @@ pub fn twopi_layout(graph: &mut Graph) -> Result<()> {
     }
     if set_root && let Some(c) = ctr {
         let name = graph.nodes[c].name.clone();
+        // agset on the root graph also updates the attribute's default.
+        if let Some(d) = graph.dicts.first_mut() {
+            d.graph.entry("root".to_string()).or_default().defval = name.clone();
+        }
         graph.graph_attrs.insert("root".to_string(), name);
     }
     Ok(())
