@@ -254,7 +254,7 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
 /// `undoClusterEdges(g)`: copy the layout of `work` (after `write_back`)
 /// into the input graph. Deleted cluster-named nodes come back with default
 /// attributes and are marked with [`CLUST_NODE_KEY`]; their edges take the
-/// geometry of the clones. Edges C deleted without a clone get none.
+/// geometry of the clones. Edges C deleted without a clone are removed.
 pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
     for (i, m) in ce.node_map.iter().enumerate() {
         match *m {
@@ -277,8 +277,6 @@ pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
     }
     for (i, m) in ce.edge_map.iter().enumerate() {
         let Some(w) = *m else {
-            graph.edges[i].spline = Default::default();
-            graph.edges[i].label_pos = None;
             continue;
         };
         let src = &work.edges[w];
@@ -293,4 +291,22 @@ pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
         dst.graph_attrs = src.graph_attrs.clone();
     }
     graph.graph_attrs = work.graph_attrs.clone();
+    // Edges of deleted nodes that were not re-attached are gone, as in C.
+    let mut new_id = vec![None; graph.edges.len()];
+    let mut kept = Vec::with_capacity(graph.edges.len());
+    for (i, mut e) in std::mem::take(&mut graph.edges).into_iter().enumerate() {
+        if ce.edge_map[i].is_some() {
+            new_id[i] = Some(kept.len());
+            e.id = EdgeId(kept.len() as u32);
+            kept.push(e);
+        }
+    }
+    graph.edges = kept;
+    for sg in &mut graph.subgraphs {
+        sg.edges = sg
+            .edges
+            .iter()
+            .filter_map(|e| new_id[e.0 as usize].map(|n| EdgeId(n as u32)))
+            .collect();
+    }
 }
