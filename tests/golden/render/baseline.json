@@ -2,28 +2,28 @@
   "formats": {
     "dot": {
       "ER": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "Heawood": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "NaN": {
-        "identical": false,
-        "diff_lines": 80
+        "identical": true,
+        "diff_lines": 0
       },
       "Petersen": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "abstract": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "alf": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "arrows": {
         "identical": false,
@@ -46,12 +46,12 @@
         "diff_lines": 0
       },
       "clust4": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "fsm": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -66,8 +66,8 @@
         "diff_lines": 0
       },
       "gallery_URL_0_e0c403": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_0_5987b8": {
         "identical": true,
@@ -130,24 +130,24 @@
         "diff_lines": 0
       },
       "gallery_bgcolor_0_c2942d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_charset_0_a7337e": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery_class_0_0cdd9d": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_cluster_0_4c7fcd": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_color_1_948ef7": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_colorscheme_0_6a9bbf": {
         "identical": true,
@@ -186,8 +186,8 @@
         "diff_lines": 0
       },
       "gallery_fontname_0_def94c": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_fontsize_0_04755e": {
         "identical": true,
@@ -202,8 +202,8 @@
         "diff_lines": 0
       },
       "gallery_label_0_0b9e2b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_0_227ff7": {
         "identical": true,
@@ -226,8 +226,8 @@
         "diff_lines": 0
       },
       "gallery_labelloc_2_9a74fc": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_3_e30a48": {
         "identical": true,
@@ -278,8 +278,8 @@
         "diff_lines": 0
       },
       "gallery_osage_0_f6bd9e": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_patchwork_0_7dbf8c": {
         "identical": true,
@@ -331,11 +331,11 @@
       },
       "gallery_shapes_0_851a8a": {
         "identical": false,
-        "diff_lines": 6
+        "diff_lines": 13
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
-        "diff_lines": 5
+        "diff_lines": 2
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -366,8 +366,8 @@
         "diff_lines": 0
       },
       "gallery_tooltip_0_8ef710": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_weight_0_ebbbd3": {
         "identical": true,
@@ -394,12 +394,12 @@
         "diff_lines": 0
       },
       "gv16_directed_crazy_982d4d": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_honda-tokoro_13fc7a": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_oldarrows_f70da3": {
         "identical": false,
@@ -407,7 +407,7 @@
       },
       "gv16_directed_polypoly_87bcc9": {
         "identical": false,
-        "diff_lines": 46
+        "diff_lines": 14
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
@@ -415,7 +415,7 @@
       },
       "gv16_directed_sdh_29b016": {
         "identical": false,
-        "diff_lines": 546
+        "diff_lines": 475
       },
       "gv16_directed_switch_2841f8": {
         "identical": false,
@@ -426,16 +426,16 @@
         "diff_lines": 0
       },
       "gv16_dirgraph_apache_aef3b0": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_bsdarch_bca125": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_dirgraph_bsdkernel_287fb7": {
-        "identical": false,
-        "diff_lines": 99
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_linux_6b3653": {
         "identical": true,
@@ -454,28 +454,28 @@
         "diff_lines": 0
       },
       "gv16_graphs_ER_1359e3": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Heawood_771643": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Helvetica_304fe5": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_KW91_66910f": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Latin1_cd0c3d": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_NaN_1dc220": {
-        "identical": false,
-        "diff_lines": 80
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_NewCenturySchlbk_eea47a": {
         "identical": true,
@@ -486,12 +486,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_Petersen_8a008f": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Symbol_af1a2d": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Times_e379da": {
         "identical": true,
@@ -510,12 +510,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_abstract_6153b1": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_alf_5ce4f5": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_arrows_148b6b": {
         "identical": false,
@@ -526,28 +526,28 @@
         "diff_lines": 4
       },
       "gv16_graphs_awilliams_7293a0": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b106_471493": {
-        "identical": false,
-        "diff_lines": 643
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b123_5dfc2d": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b124_4440e1": {
-        "identical": false,
-        "diff_lines": 279
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
         "identical": false,
         "diff_lines": 2
       },
       "gv16_graphs_b143_5416de": {
-        "identical": false,
-        "diff_lines": 875
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b145_794862": {
         "identical": true,
@@ -559,31 +559,31 @@
       },
       "gv16_graphs_b155_4084eb": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 1
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 169
+        "diff_lines": 54
       },
       "gv16_graphs_b22_5c14b4": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b29_d1e4db": {
-        "identical": false,
-        "diff_lines": 980
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b33_bfa8e5": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b34_ca01c7": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b36_87da87": {
-        "identical": false,
-        "diff_lines": 147
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b3_6bcefe": {
         "identical": true,
@@ -595,27 +595,27 @@
       },
       "gv16_graphs_b51_33bcb0": {
         "identical": false,
-        "diff_lines": 183
+        "diff_lines": 6
       },
       "gv16_graphs_b53_19559c": {
-        "identical": false,
-        "diff_lines": 27
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b545_e2e578": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b56_36f937": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b57_957a04": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b58_d34a29": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b60_bf5b3a": {
         "identical": true,
@@ -631,11 +631,11 @@
       },
       "gv16_graphs_b69_4b5b48": {
         "identical": false,
-        "diff_lines": 88
+        "diff_lines": 6
       },
       "gv16_graphs_b71_2eb347": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b73_0b741b": {
         "identical": true,
@@ -654,16 +654,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_b786_a763df": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b79_1c2e40": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b7_ca67b0": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b80_da6b0a": {
         "identical": true,
@@ -678,8 +678,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b94_37f5bc": {
-        "identical": false,
-        "diff_lines": 60
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b993_0b7b4b": {
         "identical": true,
@@ -694,20 +694,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_badvoro_2e8cb8": {
-        "identical": false,
-        "diff_lines": 859
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_big_f9306b": {
-        "identical": false,
-        "diff_lines": 69
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_biglabel_a26de5": {
-        "identical": false,
-        "diff_lines": 27
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_cairo_e5dcb9": {
-        "identical": false,
-        "diff_lines": 109
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_center_a90232": {
         "identical": true,
@@ -730,8 +730,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_clust4_5801a1": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_clust5_8d13c9": {
         "identical": true,
@@ -742,8 +742,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_clustlabel_cf45ca": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_color_ef8767": {
         "identical": true,
@@ -762,8 +762,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_crazy_cfdc7a": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ctext_59a9d8": {
         "identical": true,
@@ -778,20 +778,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_decorate_e9d5a0": {
-        "identical": false,
-        "diff_lines": 49
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_dfa_ea972c": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_dir_f04762": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_dpd_223cb3": {
-        "identical": false,
-        "diff_lines": 40
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_edgeclip_62a9c0": {
         "identical": true,
@@ -802,16 +802,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_fig6_2c8508": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_flatedge_4d5ce8": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_fsm_d6e846": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grammar_882f58": {
         "identical": true,
@@ -830,48 +830,48 @@
         "diff_lines": 0
       },
       "gv16_graphs_grdfillcolor_9b5b1f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_1bd0ce": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 1
       },
       "gv16_graphs_grdlinear_angle_418478": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 1
       },
       "gv16_graphs_grdlinear_node_67d0c8": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_angle_4e0504": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 1
       },
       "gv16_graphs_grdradial_f61057": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 1
       },
       "gv16_graphs_grdradial_node_3c9cf2": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 3
       },
       "gv16_graphs_grdshapes_4ce58c": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_hashtable_4d0f6a": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_honda-tokoro_7f939d": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html2_d5430b": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html_adf928": {
         "identical": true,
@@ -895,7 +895,7 @@
       },
       "gv16_graphs_japanese_16a6f0": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 34
       },
       "gv16_graphs_jcctree_c8e393": {
         "identical": true,
@@ -906,196 +906,196 @@
         "diff_lines": 170
       },
       "gv16_graphs_labelclust-fbc_886274": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbd_eb365d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbl_f9f206": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbr_309dc0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdc_e8f520": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdd_38ecc7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdl_984c4c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdr_c026a3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftc_dabf52": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftd_8b2003": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftl_94ec88": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftr_292290": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbc_f32297": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbd_489e01": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbl_80c974": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbr_89041d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndc_b0cb46": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndd_352622": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndl_0f345d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndr_470ed2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntc_5d8c96": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntd_fbdb88": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntl_fd0964": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntr_c61a73": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbc_125873": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fbd_dc16cf": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fbl_a41807": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fbr_5a5b4f": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fdc_ad3689": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdd_29a015": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdl_db31c2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdr_22ac80": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftc_0ffff4": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ftd_e445c7": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ftl_38cf7d": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ftr_b79416": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbc_843e58": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbd_6fba3c": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbl_d1e12a": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbr_9a14a7": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ndc_64430e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndd_3a11f4": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndl_62f4f0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndr_67b99b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntc_4ae879": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ntd_bcdf9c": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ntl_ce8626": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ntr_de9123": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_layer2_cabcac": {
         "identical": true,
@@ -1107,31 +1107,31 @@
       },
       "gv16_graphs_ldbxtried_9e83ae": {
         "identical": false,
-        "diff_lines": 100
+        "diff_lines": 17
       },
       "gv16_graphs_longflat_780117": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix1_37d385": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix2_844fa2": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix3_09a727": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_mike_7b77a0": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_mode_e09132": {
-        "identical": false,
-        "diff_lines": 21
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_multi_54098b": {
         "identical": true,
@@ -1139,15 +1139,15 @@
       },
       "gv16_graphs_nestedclust_fdfd6a": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 58
       },
       "gv16_graphs_newarrows_769825": {
         "identical": false,
         "diff_lines": 4
       },
       "gv16_graphs_ngk10_4_6aab96": {
-        "identical": false,
-        "diff_lines": 62
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nojustify_de6b54": {
         "identical": true,
@@ -1170,20 +1170,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_p2_99819c": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_p3_1dc10d": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_p4_849964": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_p_9d3f21": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pack_1c2410": {
         "identical": true,
@@ -1191,7 +1191,7 @@
       },
       "gv16_graphs_pgram_6b9235": {
         "identical": false,
-        "diff_lines": 167
+        "diff_lines": 156
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -1202,20 +1202,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_polypoly_c85bf7": {
-        "identical": false,
-        "diff_lines": 40
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ports_9e0b3e": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_proc3d_a79c48": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_process_aff1bb": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ps_09a829": {
         "identical": true,
@@ -1238,8 +1238,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_record2_285709": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_records_9c4c6c": {
         "identical": true,
@@ -1250,8 +1250,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_rowe_75e8b0": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_russian_068fcb": {
         "identical": true,
@@ -1278,16 +1278,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_shells_577909": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sides_b36cb2": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_size_d390e0": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sl_box_556d3b": {
         "identical": true,
@@ -1347,7 +1347,7 @@
       },
       "gv16_graphs_structs_68f492": {
         "identical": false,
-        "diff_lines": 5
+        "diff_lines": 2
       },
       "gv16_graphs_style_e4c38d": {
         "identical": true,
@@ -1366,28 +1366,28 @@
         "diff_lines": 0
       },
       "gv16_graphs_triedds_2395ab": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_trivial_e2e71d": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_try_d09651": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_unix2_957dee": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_unix_2c2bbe": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_url_debf45": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_user_shapes_1adbcd": {
         "identical": true,
@@ -1406,20 +1406,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_viewfile_4ae2af": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_viewport_651d5b": {
-        "identical": false,
-        "diff_lines": 21
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_weight_cba8d7": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_world_6aa0c7": {
-        "identical": false,
-        "diff_lines": 21
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_xlabels_e9f1cf": {
         "identical": true,
@@ -1455,7 +1455,7 @@
       },
       "gv16_infosrc_fixed_5e49db": {
         "identical": false,
-        "diff_lines": 6
+        "diff_lines": 13
       },
       "gv16_infosrc_forward_5a0d3d": {
         "identical": true,
@@ -1470,12 +1470,12 @@
         "diff_lines": 0
       },
       "gv16_infosrc_plugins_1a797f": {
-        "identical": false,
-        "diff_lines": 87
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
         "identical": false,
-        "diff_lines": 5
+        "diff_lines": 2
       },
       "gv16_infosrc_round_5b3b72": {
         "identical": true,
@@ -1498,8 +1498,8 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_dotsplines_dot1_3910e3": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_dotsplines_dot_960493": {
         "identical": true,
@@ -1514,24 +1514,24 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_html2_dot_3ee3fc": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_html_dot_ee4861": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_linux_x86_neatosplines_neato1_448ced": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_neatosplines_neato_c2c6f6": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_nestedclust_dot_b56c31": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 58
       },
       "gv16_linux_x86_ordering_dot1_a6f94e": {
         "identical": true,
@@ -1542,12 +1542,12 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_overlap_neato1_0931d2": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_overlap_neato_30f3d0": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato1_0327de": {
         "identical": true,
@@ -1566,20 +1566,20 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot1_8f7d7d": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot2_810f01": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot_f06bd6": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_record_dot_dd3ea1": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rowcolsep_dot1_2c201c": {
         "identical": true,
@@ -1594,12 +1594,12 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_weight_dot_4dc34b": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_dotsplines_dot1_139c79": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_dotsplines_dot_c07946": {
         "identical": true,
@@ -1610,28 +1610,28 @@
         "diff_lines": 0
       },
       "gv16_nshare_html2_dot_7bea59": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_html_dot_5cceb5": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_nshare_neatosplines_neato1_9c01b5": {
-        "identical": false,
-        "diff_lines": 62
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_neatosplines_neato_7ac8ee": {
-        "identical": false,
-        "diff_lines": 40
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_overlap_neato1_319642": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_overlap_neato_afd9ce": {
-        "identical": false,
-        "diff_lines": 40
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato1_014679": {
         "identical": true,
@@ -1646,28 +1646,28 @@
         "diff_lines": 0
       },
       "gv16_nshare_ports_dot_25dc96": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_radius_dot_732e22": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot1_228ae0": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot2_920cb4": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot_0e4e43": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_record_dot_f557a8": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_shapes_dot_6f8450": {
         "identical": true,
@@ -1678,8 +1678,8 @@
         "diff_lines": 0
       },
       "gv16_nshare_weight_dot_83b5ab": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_prune_test_fad9a1": {
         "identical": true,
@@ -1922,36 +1922,36 @@
         "diff_lines": 0
       },
       "gv16_undirected_ngk10_4_793340": {
-        "identical": false,
-        "diff_lines": 62
+        "identical": true,
+        "diff_lines": 0
       },
       "html": {
         "identical": true,
         "diff_lines": 0
       },
       "html2": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "pack": {
         "identical": true,
         "diff_lines": 0
       },
       "record": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "shapes": {
         "identical": true,
         "diff_lines": 0
       },
       "unix": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_GraphViz-Samples_complex_eae337": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_doc_pspdf_7cc25b": {
         "identical": true,
@@ -1986,16 +1986,16 @@
         "diff_lines": 0
       },
       "wild_graphs_html2_7e5ba7": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_nojustify_9c2ddf": {
         "identical": true,
         "diff_lines": 0
       },
       "wild_graphs_ports_832839": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_records_cbbabd": {
         "identical": true,
@@ -2010,8 +2010,8 @@
         "diff_lines": 0
       },
       "wild_graphs_url_406d88": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_user_shapes_670d68": {
         "identical": true,
@@ -2022,22 +2022,22 @@
         "diff_lines": 0
       },
       "wild_info_html2_166f38": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html3_17dad2": {
         "identical": true,
         "diff_lines": 0
       },
       "world": {
-        "identical": false,
-        "diff_lines": 21
+        "identical": true,
+        "diff_lines": 0
       }
     },
     "json": {
       "ER": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "Heawood": {
         "identical": true,
@@ -2056,8 +2056,8 @@
         "diff_lines": 0
       },
       "arrows": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "clust": {
         "identical": true,
@@ -2084,52 +2084,52 @@
         "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_1_fa640c": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_2_bfc202": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_URL_0_e0c403": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_0_5987b8": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery__index_0_9d5fca": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_1_196a66": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_1_732559": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_2_1abd41": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_2_9e1005": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_3_6d5bbc": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery__index_4_4a9433": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_5_484eae": {
         "identical": true,
@@ -2144,24 +2144,24 @@
         "diff_lines": 0
       },
       "gallery_area_0_6e587d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_arrowsize_0_117a70": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_beautify_0_bd129e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_beautify_1_1cfb90": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_bgcolor_0_c2942d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_charset_0_a7337e": {
         "identical": true,
@@ -2180,48 +2180,48 @@
         "diff_lines": 0
       },
       "gallery_colorscheme_0_6a9bbf": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_colorscheme_1_ba0c2f": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_comment_0_391282": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_compound_0_b613d7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_concentrate_0_0779db": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_constraint_0_664398": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery_decorate_0_b679c9": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_dir_0_be9b32": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_distortion_0_2baf61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_fontname_0_def94c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_fontsize_0_04755e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_height_0_059468": {
         "identical": true,
@@ -2232,56 +2232,56 @@
         "diff_lines": 0
       },
       "gallery_label_0_0b9e2b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_0_227ff7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_1_da45ec": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_2_dd3812": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_0_1a67f9": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_1_2d8bbc": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_2_9a74fc": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_3_e30a48": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_landscape_0_a77769": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_margin_0_43b211": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_margin_1_eae6e9": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_nodesep_0_570ae4": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_nodesep_1_0b397c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_nojustify_0_831c63": {
         "identical": true,
@@ -2300,68 +2300,68 @@
         "diff_lines": 0
       },
       "gallery_orientation_0_2e844d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_orientation_1_f446d3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_osage_0_f6bd9e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_patchwork_0_7dbf8c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_portPos_0_a822d8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_radius_0_24ee36": {
         "identical": false,
         "diff_lines": 66
       },
       "gallery_rankdir_0_6180a1": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rankdir_1_35bb70": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rankdir_2_a53248": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rankdir_3_0f2768": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_regular_0_7ad7bf": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rotate_0_353a3c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_sep_0_fb18d0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_sep_1_32439d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shape_0_1f5390": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 2
       },
       "gallery_shapes_0_851a8a": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
@@ -2372,44 +2372,44 @@
         "diff_lines": 0
       },
       "gallery_sides_0_35a85a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_skew_0_626283": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_start_0_f46321": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_start_1_0d6ca4": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_style_0_31eec7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_style_1_64c67a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_tooltip_0_8ef710": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_weight_0_ebbbd3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_width_0_6a6cda": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_biological_693e87": {
         "identical": true,
@@ -2424,20 +2424,20 @@
         "diff_lines": 0
       },
       "gv16_directed_honda-tokoro_13fc7a": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_oldarrows_f70da3": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_table_ece616": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_apache_aef3b0": {
         "identical": true,
@@ -2448,60 +2448,60 @@
         "diff_lines": 0
       },
       "gv16_graphs_AvantGarde_410edd": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Bookman_a638ec": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ER_1359e3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Heawood_771643": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_Helvetica_304fe5": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_KW91_66910f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Latin1_cd0c3d": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 2
       },
       "gv16_graphs_NewCenturySchlbk_eea47a": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Palatino_170321": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Petersen_8a008f": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_Symbol_af1a2d": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Times_e379da": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ZapfChancery_63a2b5": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ZapfDingbats_b4d89f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_a_921ebf": {
         "identical": true,
@@ -2516,12 +2516,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_arrows_148b6b": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_arrowsize_46ccd8": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b123_5dfc2d": {
         "identical": true,
@@ -2544,8 +2544,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b22_5c14b4": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b33_bfa8e5": {
         "identical": true,
@@ -2553,7 +2553,7 @@
       },
       "gv16_graphs_b34_ca01c7": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 2
       },
       "gv16_graphs_b3_6bcefe": {
         "identical": true,
@@ -2573,15 +2573,15 @@
       },
       "gv16_graphs_b56_36f937": {
         "identical": false,
-        "diff_lines": 24
+        "diff_lines": 10
       },
       "gv16_graphs_b58_d34a29": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b60_bf5b3a": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 2
       },
       "gv16_graphs_b62_a87251": {
         "identical": false,
@@ -2652,8 +2652,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_center_a90232": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_clover_ae8650": {
         "identical": true,
@@ -2684,8 +2684,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_clustlabel_cf45ca": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_color_ef8767": {
         "identical": true,
@@ -2696,8 +2696,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_colorscheme_67ba00": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_compound_7ed9c4": {
         "identical": true,
@@ -2744,20 +2744,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_fig6_2c8508": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_flatedge_4d5ce8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_fsm_d6e846": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_grammar_882f58": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdangles_7f37b4": {
         "identical": false,
@@ -2788,36 +2788,36 @@
         "diff_lines": 0
       },
       "gv16_graphs_honda-tokoro_7f939d": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html2_d5430b": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html_adf928": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_in_05f174": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_inv_inv_d6a35e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_inv_nul_a40710": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_inv_val_6e189e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_japanese_16a6f0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_jcctree_c8e393": {
         "identical": true,
@@ -3024,8 +3024,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_longflat_780117": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix1_37d385": {
         "identical": false,
@@ -3048,12 +3048,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_nestedclust_fdfd6a": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_newarrows_769825": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ngk10_4_6aab96": {
         "identical": true,
@@ -3064,16 +3064,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_nul_inv_40c038": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_nul_d3f49c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_val_01f8af": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ordering_7f8516": {
         "identical": true,
@@ -3096,8 +3096,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pack_1c2410": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -3108,8 +3108,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_ports_9e0b3e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_process_aff1bb": {
         "identical": true,
@@ -3129,11 +3129,11 @@
       },
       "gv16_graphs_radius_60cd83": {
         "identical": false,
-        "diff_lines": 24
+        "diff_lines": 22
       },
       "gv16_graphs_rd_rules_2c3e0a": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_record2_285709": {
         "identical": true,
@@ -3176,12 +3176,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_shells_577909": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sides_b36cb2": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_size_d390e0": {
         "identical": true,
@@ -3204,8 +3204,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_sq_rules_2a7366": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sr_box_4099af": {
         "identical": true,
@@ -3248,8 +3248,8 @@
         "diff_lines": 8
       },
       "gv16_graphs_style_e4c38d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_train11_5e9e4b": {
         "identical": true,
@@ -3257,7 +3257,7 @@
       },
       "gv16_graphs_trapeziumlr_79037b": {
         "identical": false,
-        "diff_lines": 318
+        "diff_lines": 312
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -3284,24 +3284,24 @@
         "diff_lines": 2
       },
       "gv16_graphs_url_debf45": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_user_shapes_1adbcd": {
         "identical": false,
         "diff_lines": 8
       },
       "gv16_graphs_val_inv_7c5cb7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_nul_b2870b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_val_981291": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_viewfile_4ae2af": {
         "identical": true,
@@ -3312,8 +3312,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_world_6aa0c7": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_xlabels_e9f1cf": {
         "identical": true,
@@ -3328,12 +3328,12 @@
         "diff_lines": 0
       },
       "gv16_infosrc_back_d0c9c8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_both_6b7aee": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_colorlist_7282c4": {
         "identical": true,
@@ -3348,20 +3348,20 @@
         "diff_lines": 0
       },
       "gv16_infosrc_fixed_5e49db": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_forward_5a0d3d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_mrecord_3bd329": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_infosrc_nohead_1ab0ea": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
         "identical": false,
@@ -3376,12 +3376,12 @@
         "diff_lines": 0
       },
       "gv16_infosrc_tee_e85da8": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_arrows_dot_1ce23f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_compound_dot_96e185": {
         "identical": true,
@@ -3400,16 +3400,16 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_flatedge_dot_da6b80": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_html2_dot_3ee3fc": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_html_dot_ee4861": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_neatosplines_neato1_448ced": {
         "identical": true,
@@ -3420,8 +3420,8 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_nestedclust_dot_b56c31": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_ordering_dot1_a6f94e": {
         "identical": true,
@@ -3440,20 +3440,20 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato1_0327de": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato2_dc0918": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato_c0395a": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_ports_dot_99eb47": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot1_8f7d7d": {
         "identical": true,
@@ -3496,16 +3496,16 @@
         "diff_lines": 0
       },
       "gv16_nshare_flatedge_dot_efd56c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_html2_dot_7bea59": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_html_dot_5cceb5": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_neatosplines_neato1_9c01b5": {
         "identical": true,
@@ -3524,24 +3524,24 @@
         "diff_lines": 0
       },
       "gv16_nshare_pack_neato1_014679": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato2_10690f": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato_e0a2bb": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_ports_dot_25dc96": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_radius_dot_732e22": {
         "identical": false,
-        "diff_lines": 24
+        "diff_lines": 22
       },
       "gv16_nshare_rankdir_dot1_228ae0": {
         "identical": true,
@@ -3816,16 +3816,16 @@
         "diff_lines": 0
       },
       "html": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "html2": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "pack": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "record": {
         "identical": true,
@@ -3840,24 +3840,24 @@
         "diff_lines": 2
       },
       "wild_GraphViz-Samples_complex_eae337": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_doc_pspdf_7cc25b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_arrows_a4826e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_arrowsize_ccef6e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_b278_ab7732": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_b488_02554a": {
         "identical": true,
@@ -3868,24 +3868,24 @@
         "diff_lines": 0
       },
       "wild_graphs_complex_edges_71191c": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_ctext_0bf48f": {
         "identical": true,
         "diff_lines": 0
       },
       "wild_graphs_html2_7e5ba7": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_nojustify_9c2ddf": {
         "identical": true,
         "diff_lines": 0
       },
       "wild_graphs_ports_832839": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_records_cbbabd": {
         "identical": true,
@@ -3900,34 +3900,34 @@
         "diff_lines": 0
       },
       "wild_graphs_url_406d88": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_user_shapes_670d68": {
         "identical": false,
         "diff_lines": 8
       },
       "wild_info_html1_9b6ede": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html2_166f38": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html3_17dad2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "world": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       }
     },
     "json0": {
       "ER": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "Heawood": {
         "identical": true,
@@ -3950,8 +3950,8 @@
         "diff_lines": 0
       },
       "arrows": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "clust": {
         "identical": true,
@@ -3978,52 +3978,52 @@
         "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_1_fa640c": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_2_bfc202": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_URL_0_e0c403": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_0_5987b8": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery__index_0_9d5fca": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_1_196a66": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_1_732559": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_2_1abd41": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_2_9e1005": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_3_6d5bbc": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery__index_4_4a9433": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_5_484eae": {
         "identical": true,
@@ -4038,24 +4038,24 @@
         "diff_lines": 0
       },
       "gallery_area_0_6e587d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_arrowsize_0_117a70": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_beautify_0_bd129e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_beautify_1_1cfb90": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_bgcolor_0_c2942d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_charset_0_a7337e": {
         "identical": true,
@@ -4074,48 +4074,48 @@
         "diff_lines": 0
       },
       "gallery_colorscheme_0_6a9bbf": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_colorscheme_1_ba0c2f": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_comment_0_391282": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_compound_0_b613d7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_concentrate_0_0779db": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_constraint_0_664398": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery_decorate_0_b679c9": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_dir_0_be9b32": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_distortion_0_2baf61": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_fontname_0_def94c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_fontsize_0_04755e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_height_0_059468": {
         "identical": true,
@@ -4126,56 +4126,56 @@
         "diff_lines": 0
       },
       "gallery_label_0_0b9e2b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_0_227ff7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_1_da45ec": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_2_dd3812": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_0_1a67f9": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_1_2d8bbc": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_2_9a74fc": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_3_e30a48": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_landscape_0_a77769": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_margin_0_43b211": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_margin_1_eae6e9": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_nodesep_0_570ae4": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_nodesep_1_0b397c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_nojustify_0_831c63": {
         "identical": true,
@@ -4194,68 +4194,68 @@
         "diff_lines": 0
       },
       "gallery_orientation_0_2e844d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_orientation_1_f446d3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_osage_0_f6bd9e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_patchwork_0_7dbf8c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_portPos_0_a822d8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_radius_0_24ee36": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery_rankdir_0_6180a1": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rankdir_1_35bb70": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rankdir_2_a53248": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rankdir_3_0f2768": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_regular_0_7ad7bf": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_rotate_0_353a3c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_sep_0_fb18d0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_sep_1_32439d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shape_0_1f5390": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_0_851a8a": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
@@ -4266,44 +4266,44 @@
         "diff_lines": 0
       },
       "gallery_sides_0_35a85a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_skew_0_626283": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_start_0_f46321": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_start_1_0d6ca4": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_style_0_31eec7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_style_1_64c67a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_tooltip_0_8ef710": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_weight_0_ebbbd3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_width_0_6a6cda": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_arrows_54d1cf": {
         "identical": true,
@@ -4322,16 +4322,16 @@
         "diff_lines": 0
       },
       "gv16_directed_honda-tokoro_13fc7a": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_oldarrows_f70da3": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
         "identical": false,
-        "diff_lines": 30
+        "diff_lines": 14
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
@@ -4342,12 +4342,12 @@
         "diff_lines": 262
       },
       "gv16_directed_switch_2841f8": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_table_ece616": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_apache_aef3b0": {
         "identical": true,
@@ -4370,64 +4370,64 @@
         "diff_lines": 0
       },
       "gv16_graphs_AvantGarde_410edd": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Bookman_a638ec": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ER_1359e3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Heawood_771643": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_Helvetica_304fe5": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_KW91_66910f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Latin1_cd0c3d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_NaN_1dc220": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_NewCenturySchlbk_eea47a": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Palatino_170321": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Petersen_8a008f": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_Symbol_af1a2d": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Times_e379da": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ZapfChancery_63a2b5": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ZapfDingbats_b4d89f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_a_921ebf": {
         "identical": true,
@@ -4442,12 +4442,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_arrows_148b6b": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_arrowsize_46ccd8": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_awilliams_7293a0": {
         "identical": true,
@@ -4487,11 +4487,11 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 76
+        "diff_lines": 52
       },
       "gv16_graphs_b22_5c14b4": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b29_d1e4db": {
         "identical": true,
@@ -4502,8 +4502,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b34_ca01c7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b36_87da87": {
         "identical": true,
@@ -4530,20 +4530,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_b56_36f937": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b57_957a04": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b58_d34a29": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b60_bf5b3a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
         "identical": false,
@@ -4555,7 +4555,7 @@
       },
       "gv16_graphs_b69_4b5b48": {
         "identical": false,
-        "diff_lines": 12
+        "diff_lines": 6
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -4634,8 +4634,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_center_a90232": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_clover_ae8650": {
         "identical": true,
@@ -4666,8 +4666,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_clustlabel_cf45ca": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_color_ef8767": {
         "identical": true,
@@ -4678,8 +4678,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_colorscheme_67ba00": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_compound_7ed9c4": {
         "identical": true,
@@ -4726,20 +4726,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_fig6_2c8508": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_flatedge_4d5ce8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_fsm_d6e846": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_grammar_882f58": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdangles_7f37b4": {
         "identical": true,
@@ -4754,28 +4754,28 @@
         "diff_lines": 0
       },
       "gv16_graphs_grdfillcolor_9b5b1f": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_1bd0ce": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_angle_418478": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_node_67d0c8": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_grdradial_angle_4e0504": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_f61057": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_node_3c9cf2": {
         "identical": true,
@@ -4790,36 +4790,36 @@
         "diff_lines": 0
       },
       "gv16_graphs_honda-tokoro_7f939d": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html2_d5430b": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html_adf928": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_in_05f174": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_inv_inv_d6a35e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_inv_nul_a40710": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_inv_val_6e189e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_japanese_16a6f0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_jcctree_c8e393": {
         "identical": true,
@@ -5034,8 +5034,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_longflat_780117": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix1_37d385": {
         "identical": true,
@@ -5062,12 +5062,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_nestedclust_fdfd6a": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_newarrows_769825": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ngk10_4_6aab96": {
         "identical": true,
@@ -5078,16 +5078,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_nul_inv_40c038": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_nul_d3f49c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_val_01f8af": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ordering_7f8516": {
         "identical": true,
@@ -5110,12 +5110,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_pack_1c2410": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
         "identical": false,
-        "diff_lines": 162
+        "diff_lines": 156
       },
       "gv16_graphs_pm2way_85dfc3": {
         "identical": true,
@@ -5126,16 +5126,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_polypoly_c85bf7": {
-        "identical": false,
-        "diff_lines": 20
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ports_9e0b3e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_proc3d_a79c48": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_process_aff1bb": {
         "identical": true,
@@ -5154,12 +5154,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_radius_60cd83": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_rd_rules_2c3e0a": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_record2_285709": {
         "identical": true,
@@ -5202,12 +5202,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_shells_577909": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sides_b36cb2": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_size_d390e0": {
         "identical": true,
@@ -5230,8 +5230,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_sq_rules_2a7366": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sr_box_4099af": {
         "identical": true,
@@ -5274,8 +5274,8 @@
         "diff_lines": 2
       },
       "gv16_graphs_style_e4c38d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_train11_5e9e4b": {
         "identical": true,
@@ -5283,7 +5283,7 @@
       },
       "gv16_graphs_trapeziumlr_79037b": {
         "identical": false,
-        "diff_lines": 110
+        "diff_lines": 104
       },
       "gv16_graphs_tree_5d0c2e": {
         "identical": true,
@@ -5310,24 +5310,24 @@
         "diff_lines": 0
       },
       "gv16_graphs_url_debf45": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_user_shapes_1adbcd": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_val_inv_7c5cb7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_nul_b2870b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_val_981291": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_viewfile_4ae2af": {
         "identical": true,
@@ -5342,8 +5342,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_world_6aa0c7": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_xlabels_e9f1cf": {
         "identical": true,
@@ -5358,12 +5358,12 @@
         "diff_lines": 0
       },
       "gv16_infosrc_back_d0c9c8": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_both_6b7aee": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_colorlist_7282c4": {
         "identical": true,
@@ -5378,24 +5378,24 @@
         "diff_lines": 0
       },
       "gv16_infosrc_fixed_5e49db": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_forward_5a0d3d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_mrecord_3bd329": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_infosrc_nohead_1ab0ea": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_plugins_1a797f": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
         "identical": false,
@@ -5410,12 +5410,12 @@
         "diff_lines": 0
       },
       "gv16_infosrc_tee_e85da8": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_arrows_dot_1ce23f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_compound_dot_96e185": {
         "identical": true,
@@ -5434,16 +5434,16 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_flatedge_dot_da6b80": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_html2_dot_3ee3fc": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_html_dot_ee4861": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_neatosplines_neato1_448ced": {
         "identical": true,
@@ -5454,8 +5454,8 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_nestedclust_dot_b56c31": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_ordering_dot1_a6f94e": {
         "identical": true,
@@ -5474,20 +5474,20 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato1_0327de": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato2_dc0918": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato_c0395a": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_ports_dot_99eb47": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot1_8f7d7d": {
         "identical": true,
@@ -5530,16 +5530,16 @@
         "diff_lines": 0
       },
       "gv16_nshare_flatedge_dot_efd56c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_html2_dot_7bea59": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_html_dot_5cceb5": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_neatosplines_neato1_9c01b5": {
         "identical": true,
@@ -5558,24 +5558,24 @@
         "diff_lines": 0
       },
       "gv16_nshare_pack_neato1_014679": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato2_10690f": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato_e0a2bb": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_ports_dot_25dc96": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_radius_dot_732e22": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot1_228ae0": {
         "identical": true,
@@ -5850,16 +5850,16 @@
         "diff_lines": 0
       },
       "html": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "html2": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "pack": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "record": {
         "identical": true,
@@ -5874,24 +5874,24 @@
         "diff_lines": 0
       },
       "wild_GraphViz-Samples_complex_eae337": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_doc_pspdf_7cc25b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_arrows_a4826e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_arrowsize_ccef6e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_b278_ab7732": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_b488_02554a": {
         "identical": true,
@@ -5902,24 +5902,24 @@
         "diff_lines": 0
       },
       "wild_graphs_complex_edges_71191c": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_ctext_0bf48f": {
         "identical": true,
         "diff_lines": 0
       },
       "wild_graphs_html2_7e5ba7": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_nojustify_9c2ddf": {
         "identical": true,
         "diff_lines": 0
       },
       "wild_graphs_ports_832839": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_records_cbbabd": {
         "identical": true,
@@ -5934,28 +5934,28 @@
         "diff_lines": 0
       },
       "wild_graphs_url_406d88": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_user_shapes_670d68": {
         "identical": true,
         "diff_lines": 0
       },
       "wild_info_html1_9b6ede": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html2_166f38": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html3_17dad2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "world": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       }
     },
     "plain": {
@@ -6480,8 +6480,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b106_471493": {
-        "identical": false,
-        "diff_lines": 71
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b123_5dfc2d": {
         "identical": true,
@@ -6496,8 +6496,8 @@
         "diff_lines": 2
       },
       "gv16_graphs_b143_5416de": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b145_794862": {
         "identical": true,
@@ -6528,8 +6528,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b36_87da87": {
-        "identical": false,
-        "diff_lines": 48
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b3_6bcefe": {
         "identical": true,
@@ -6540,8 +6540,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b51_33bcb0": {
-        "identical": false,
-        "diff_lines": 123
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b53_19559c": {
         "identical": true,
@@ -6640,12 +6640,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_big_f9306b": {
-        "identical": false,
-        "diff_lines": 65
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_biglabel_a26de5": {
-        "identical": false,
-        "diff_lines": 23
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_cairo_e5dcb9": {
         "identical": true,
@@ -6720,8 +6720,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_decorate_e9d5a0": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_dfa_ea972c": {
         "identical": true,
@@ -8498,8 +8498,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b106_471493": {
-        "identical": false,
-        "diff_lines": 71
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b123_5dfc2d": {
         "identical": true,
@@ -8514,8 +8514,8 @@
         "diff_lines": 2
       },
       "gv16_graphs_b143_5416de": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b145_794862": {
         "identical": true,
@@ -8546,8 +8546,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b36_87da87": {
-        "identical": false,
-        "diff_lines": 48
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b3_6bcefe": {
         "identical": true,
@@ -8558,8 +8558,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b51_33bcb0": {
-        "identical": false,
-        "diff_lines": 123
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b53_19559c": {
         "identical": true,
@@ -8658,12 +8658,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_big_f9306b": {
-        "identical": false,
-        "diff_lines": 65
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_biglabel_a26de5": {
-        "identical": false,
-        "diff_lines": 23
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_cairo_e5dcb9": {
         "identical": true,
@@ -8738,8 +8738,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_decorate_e9d5a0": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_dfa_ea972c": {
         "identical": true,
@@ -10524,8 +10524,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b106_471493": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b123_5dfc2d": {
         "identical": true,
@@ -10540,8 +10540,8 @@
         "diff_lines": 4
       },
       "gv16_graphs_b143_5416de": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b145_794862": {
         "identical": true,
@@ -10557,7 +10557,7 @@
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 124
+        "diff_lines": 112
       },
       "gv16_graphs_b22_5c14b4": {
         "identical": true,
@@ -10625,7 +10625,7 @@
       },
       "gv16_graphs_b69_4b5b48": {
         "identical": false,
-        "diff_lines": 15
+        "diff_lines": 12
       },
       "gv16_graphs_b71_2eb347": {
         "identical": true,
@@ -12030,32 +12030,32 @@
     },
     "xdot": {
       "ER": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "Heawood": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "NaN": {
-        "identical": false,
-        "diff_lines": 161
+        "identical": true,
+        "diff_lines": 0
       },
       "Petersen": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "abstract": {
-        "identical": false,
-        "diff_lines": 48
+        "identical": true,
+        "diff_lines": 0
       },
       "alf": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "arrows": {
         "identical": false,
-        "diff_lines": 40
+        "diff_lines": 4
       },
       "clust": {
         "identical": true,
@@ -12074,12 +12074,12 @@
         "diff_lines": 0
       },
       "clust4": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "fsm": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -12094,8 +12094,8 @@
         "diff_lines": 0
       },
       "gallery_URL_0_e0c403": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_0_5987b8": {
         "identical": true,
@@ -12158,24 +12158,24 @@
         "diff_lines": 62
       },
       "gallery_bgcolor_0_c2942d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_charset_0_a7337e": {
         "identical": true,
         "diff_lines": 0
       },
       "gallery_class_0_0cdd9d": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_cluster_0_4c7fcd": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_color_1_948ef7": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_colorscheme_0_6a9bbf": {
         "identical": true,
@@ -12214,8 +12214,8 @@
         "diff_lines": 0
       },
       "gallery_fontname_0_def94c": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_fontsize_0_04755e": {
         "identical": true,
@@ -12230,8 +12230,8 @@
         "diff_lines": 0
       },
       "gallery_label_0_0b9e2b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labeljust_0_227ff7": {
         "identical": true,
@@ -12254,8 +12254,8 @@
         "diff_lines": 0
       },
       "gallery_labelloc_2_9a74fc": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_labelloc_3_e30a48": {
         "identical": true,
@@ -12282,12 +12282,12 @@
         "diff_lines": 0
       },
       "gallery_nojustify_0_831c63": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_nojustify_1_5b2f49": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_oneblock_0_ce4697": {
         "identical": true,
@@ -12306,8 +12306,8 @@
         "diff_lines": 0
       },
       "gallery_osage_0_f6bd9e": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_patchwork_0_7dbf8c": {
         "identical": true,
@@ -12359,11 +12359,11 @@
       },
       "gallery_shapes_0_851a8a": {
         "identical": false,
-        "diff_lines": 6
+        "diff_lines": 17
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
-        "diff_lines": 27
+        "diff_lines": 8
       },
       "gallery_shapes_2_3699ed": {
         "identical": true,
@@ -12394,8 +12394,8 @@
         "diff_lines": 0
       },
       "gallery_tooltip_0_8ef710": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_weight_0_ebbbd3": {
         "identical": true,
@@ -12411,31 +12411,31 @@
       },
       "gv16_directed_arrows_54d1cf": {
         "identical": false,
-        "diff_lines": 161
+        "diff_lines": 4
       },
       "gv16_directed_biological_693e87": {
         "identical": false,
-        "diff_lines": 10
+        "diff_lines": 4
       },
       "gv16_directed_clust_f4945e": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_directed_crazy_982d4d": {
-        "identical": false,
-        "diff_lines": 84
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_honda-tokoro_13fc7a": {
-        "identical": false,
-        "diff_lines": 42
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_oldarrows_f70da3": {
         "identical": false,
-        "diff_lines": 40
+        "diff_lines": 4
       },
       "gv16_directed_polypoly_87bcc9": {
         "identical": false,
-        "diff_lines": 412
+        "diff_lines": 42
       },
       "gv16_directed_psfonttest_9946ca": {
         "identical": true,
@@ -12443,139 +12443,139 @@
       },
       "gv16_directed_sdh_29b016": {
         "identical": false,
-        "diff_lines": 931
+        "diff_lines": 845
       },
       "gv16_directed_switch_2841f8": {
         "identical": false,
-        "diff_lines": 307
+        "diff_lines": 113
       },
       "gv16_directed_table_ece616": {
-        "identical": false,
-        "diff_lines": 27
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_apache_aef3b0": {
-        "identical": false,
-        "diff_lines": 30
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_bsdarch_bca125": {
-        "identical": false,
-        "diff_lines": 108
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_bsdkernel_287fb7": {
-        "identical": false,
-        "diff_lines": 201
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_linux_6b3653": {
-        "identical": false,
-        "diff_lines": 75
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_dirgraph_named_2e8258": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_AvantGarde_410edd": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Bookman_a638ec": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ER_1359e3": {
-        "identical": false,
-        "diff_lines": 15
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Heawood_771643": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Helvetica_304fe5": {
-        "identical": false,
-        "diff_lines": 52
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_KW91_66910f": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Latin1_cd0c3d": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_NaN_1dc220": {
-        "identical": false,
-        "diff_lines": 161
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_NewCenturySchlbk_eea47a": {
-        "identical": false,
-        "diff_lines": 25
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Palatino_170321": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Petersen_8a008f": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Symbol_af1a2d": {
         "identical": false,
-        "diff_lines": 275
+        "diff_lines": 272
       },
       "gv16_graphs_Times_e379da": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ZapfChancery_63a2b5": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ZapfDingbats_b4d89f": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_a_921ebf": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_abstract_6153b1": {
-        "identical": false,
-        "diff_lines": 48
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_alf_5ce4f5": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_arrows_148b6b": {
         "identical": false,
-        "diff_lines": 40
+        "diff_lines": 4
       },
       "gv16_graphs_arrowsize_46ccd8": {
         "identical": false,
-        "diff_lines": 37
+        "diff_lines": 4
       },
       "gv16_graphs_awilliams_7293a0": {
-        "identical": false,
-        "diff_lines": 384
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b106_471493": {
-        "identical": false,
-        "diff_lines": 1665
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b123_5dfc2d": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b124_4440e1": {
-        "identical": false,
-        "diff_lines": 559
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b135_487aa6": {
         "identical": false,
         "diff_lines": 6
       },
       "gv16_graphs_b143_5416de": {
-        "identical": false,
-        "diff_lines": 1943
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b145_794862": {
         "identical": true,
@@ -12587,31 +12587,31 @@
       },
       "gv16_graphs_b155_4084eb": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 1
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
-        "diff_lines": 663
+        "diff_lines": 158
       },
       "gv16_graphs_b22_5c14b4": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b29_d1e4db": {
-        "identical": false,
-        "diff_lines": 2058
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b33_bfa8e5": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b34_ca01c7": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b36_87da87": {
-        "identical": false,
-        "diff_lines": 505
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b3_6bcefe": {
         "identical": true,
@@ -12623,27 +12623,27 @@
       },
       "gv16_graphs_b51_33bcb0": {
         "identical": false,
-        "diff_lines": 753
-      },
-      "gv16_graphs_b53_19559c": {
-        "identical": false,
-        "diff_lines": 39
-      },
-      "gv16_graphs_b545_e2e578": {
-        "identical": false,
-        "diff_lines": 3
-      },
-      "gv16_graphs_b56_36f937": {
-        "identical": false,
         "diff_lines": 6
       },
+      "gv16_graphs_b53_19559c": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "gv16_graphs_b545_e2e578": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "gv16_graphs_b56_36f937": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "gv16_graphs_b57_957a04": {
-        "identical": false,
-        "diff_lines": 141
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b58_d34a29": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b60_bf5b3a": {
         "identical": true,
@@ -12659,19 +12659,19 @@
       },
       "gv16_graphs_b69_4b5b48": {
         "identical": false,
-        "diff_lines": 192
+        "diff_lines": 18
       },
       "gv16_graphs_b71_2eb347": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b73_0b741b": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b73a_dc84ba": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b76_56dd39": {
         "identical": true,
@@ -12682,16 +12682,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_b786_a763df": {
-        "identical": false,
-        "diff_lines": 37
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b79_1c2e40": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b7_ca67b0": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b80_da6b0a": {
         "identical": true,
@@ -12706,8 +12706,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b94_37f5bc": {
-        "identical": false,
-        "diff_lines": 120
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b993_0b7b4b": {
         "identical": true,
@@ -12722,20 +12722,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_badvoro_2e8cb8": {
-        "identical": false,
-        "diff_lines": 3234
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_big_f9306b": {
-        "identical": false,
-        "diff_lines": 253
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_biglabel_a26de5": {
-        "identical": false,
-        "diff_lines": 100
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_cairo_e5dcb9": {
-        "identical": false,
-        "diff_lines": 218
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_center_a90232": {
         "identical": false,
@@ -12758,8 +12758,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_clust4_5801a1": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_clust5_8d13c9": {
         "identical": true,
@@ -12770,16 +12770,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_clustlabel_cf45ca": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_color_ef8767": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_colors_a2b43c": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_colorscheme_67ba00": {
         "identical": true,
@@ -12790,12 +12790,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_crazy_cfdc7a": {
-        "identical": false,
-        "diff_lines": 78
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ctext_59a9d8": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_d_3a4a40": {
         "identical": true,
@@ -12806,20 +12806,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_decorate_e9d5a0": {
-        "identical": false,
-        "diff_lines": 189
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_dfa_ea972c": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_dir_f04762": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_dpd_223cb3": {
-        "identical": false,
-        "diff_lines": 119
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_edgeclip_62a9c0": {
         "identical": true,
@@ -12830,16 +12830,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_fig6_2c8508": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_flatedge_4d5ce8": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_fsm_d6e846": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grammar_882f58": {
         "identical": false,
@@ -12850,80 +12850,80 @@
         "diff_lines": 0
       },
       "gv16_graphs_grdcluster_99a310": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdcolors_0537a2": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdfillcolor_9b5b1f": {
-        "identical": false,
-        "diff_lines": 174
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_1bd0ce": {
         "identical": false,
-        "diff_lines": 175
+        "diff_lines": 1
       },
       "gv16_graphs_grdlinear_angle_418478": {
         "identical": false,
-        "diff_lines": 178
+        "diff_lines": 1
       },
       "gv16_graphs_grdlinear_node_67d0c8": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_angle_4e0504": {
         "identical": false,
-        "diff_lines": 183
+        "diff_lines": 1
       },
       "gv16_graphs_grdradial_f61057": {
         "identical": false,
-        "diff_lines": 181
+        "diff_lines": 1
       },
       "gv16_graphs_grdradial_node_3c9cf2": {
         "identical": false,
-        "diff_lines": 7
+        "diff_lines": 3
       },
       "gv16_graphs_grdshapes_4ce58c": {
-        "identical": false,
-        "diff_lines": 75
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_hashtable_4d0f6a": {
-        "identical": false,
-        "diff_lines": 54
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_honda-tokoro_7f939d": {
-        "identical": false,
-        "diff_lines": 42
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html2_d5430b": {
-        "identical": false,
-        "diff_lines": 35
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_html_adf928": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_in_05f174": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_inv_inv_d6a35e": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_inv_nul_a40710": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 1
       },
       "gv16_graphs_inv_val_6e189e": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_japanese_16a6f0": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 50
       },
       "gv16_graphs_jcctree_c8e393": {
         "identical": true,
@@ -12934,196 +12934,196 @@
         "diff_lines": 512
       },
       "gv16_graphs_labelclust-fbc_886274": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbd_eb365d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbl_f9f206": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fbr_309dc0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdc_e8f520": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdd_38ecc7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdl_984c4c": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-fdr_c026a3": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftc_dabf52": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftd_8b2003": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftl_94ec88": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ftr_292290": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbc_f32297": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbd_489e01": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbl_80c974": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-nbr_89041d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndc_b0cb46": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndd_352622": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndl_0f345d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ndr_470ed2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntc_5d8c96": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntd_fbdb88": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntl_fd0964": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelclust-ntr_c61a73": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbc_125873": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fbd_dc16cf": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fbl_a41807": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fbr_5a5b4f": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-fdc_ad3689": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdd_29a015": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdl_db31c2": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdr_22ac80": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftc_0ffff4": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ftd_e445c7": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ftl_38cf7d": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ftr_b79416": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbc_843e58": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbd_6fba3c": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbl_d1e12a": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-nbr_9a14a7": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ndc_64430e": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndd_3a11f4": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndl_62f4f0": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndr_67b99b": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntc_4ae879": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ntd_bcdf9c": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ntl_ce8626": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_labelroot-ntr_de9123": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 1
       },
       "gv16_graphs_layer2_cabcac": {
         "identical": true,
@@ -13135,31 +13135,31 @@
       },
       "gv16_graphs_ldbxtried_9e83ae": {
         "identical": false,
-        "diff_lines": 183
+        "diff_lines": 17
       },
       "gv16_graphs_longflat_780117": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_lsunix1_37d385": {
         "identical": false,
-        "diff_lines": 26
+        "diff_lines": 2
       },
       "gv16_graphs_lsunix2_844fa2": {
         "identical": false,
-        "diff_lines": 26
+        "diff_lines": 2
       },
       "gv16_graphs_lsunix3_09a727": {
         "identical": false,
-        "diff_lines": 26
+        "diff_lines": 2
       },
       "gv16_graphs_mike_7b77a0": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_mode_e09132": {
-        "identical": false,
-        "diff_lines": 42
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_multi_54098b": {
         "identical": true,
@@ -13167,51 +13167,51 @@
       },
       "gv16_graphs_nestedclust_fdfd6a": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 102
       },
       "gv16_graphs_newarrows_769825": {
         "identical": false,
-        "diff_lines": 40
+        "diff_lines": 4
       },
       "gv16_graphs_ngk10_4_6aab96": {
-        "identical": false,
-        "diff_lines": 179
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nojustify_de6b54": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_inv_40c038": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_nul_d3f49c": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 1
       },
       "gv16_graphs_nul_val_01f8af": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ordering_7f8516": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_p2_99819c": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_p3_1dc10d": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_p4_849964": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_p_9d3f21": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pack_1c2410": {
         "identical": false,
@@ -13219,31 +13219,31 @@
       },
       "gv16_graphs_pgram_6b9235": {
         "identical": false,
-        "diff_lines": 547
+        "diff_lines": 468
       },
       "gv16_graphs_pm2way_85dfc3": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pmpipe_2cd2b2": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_polypoly_c85bf7": {
-        "identical": false,
-        "diff_lines": 434
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ports_9e0b3e": {
-        "identical": false,
-        "diff_lines": 19
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_proc3d_a79c48": {
-        "identical": false,
-        "diff_lines": 42
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_process_aff1bb": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ps_09a829": {
         "identical": true,
@@ -13262,24 +13262,24 @@
         "diff_lines": 4
       },
       "gv16_graphs_rd_rules_2c3e0a": {
-        "identical": false,
-        "diff_lines": 99
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_record2_285709": {
-        "identical": false,
-        "diff_lines": 19
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_records_9c4c6c": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_rowcolsep_5fccbb": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_rowe_75e8b0": {
-        "identical": false,
-        "diff_lines": 72
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_russian_068fcb": {
         "identical": true,
@@ -13302,20 +13302,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_shapes_8249ae": {
-        "identical": false,
-        "diff_lines": 39
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_shells_577909": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sides_b36cb2": {
-        "identical": false,
-        "diff_lines": 16
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_size_d390e0": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sl_box_556d3b": {
         "identical": true,
@@ -13334,8 +13334,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_sq_rules_2a7366": {
-        "identical": false,
-        "diff_lines": 92
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_sr_box_4099af": {
         "identical": true,
@@ -13375,11 +13375,11 @@
       },
       "gv16_graphs_structs_68f492": {
         "identical": false,
-        "diff_lines": 27
+        "diff_lines": 8
       },
       "gv16_graphs_style_e4c38d": {
         "identical": false,
-        "diff_lines": 56
+        "diff_lines": 22
       },
       "gv16_graphs_train11_5e9e4b": {
         "identical": true,
@@ -13390,64 +13390,64 @@
         "diff_lines": 312
       },
       "gv16_graphs_tree_5d0c2e": {
-        "identical": false,
-        "diff_lines": 51
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_triedds_2395ab": {
-        "identical": false,
-        "diff_lines": 78
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_trivial_e2e71d": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_try_d09651": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_unix2_957dee": {
-        "identical": false,
-        "diff_lines": 24
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_unix_2c2bbe": {
         "identical": false,
-        "diff_lines": 26
+        "diff_lines": 2
       },
       "gv16_graphs_url_debf45": {
-        "identical": false,
-        "diff_lines": 5
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_user_shapes_1adbcd": {
         "identical": false,
         "diff_lines": 4
       },
       "gv16_graphs_val_inv_7c5cb7": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_nul_b2870b": {
         "identical": false,
-        "diff_lines": 4
+        "diff_lines": 1
       },
       "gv16_graphs_val_val_981291": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_viewfile_4ae2af": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_viewport_651d5b": {
-        "identical": false,
-        "diff_lines": 42
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_weight_cba8d7": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_world_6aa0c7": {
         "identical": false,
-        "diff_lines": 72
+        "diff_lines": 30
       },
       "gv16_graphs_xlabels_e9f1cf": {
         "identical": true,
@@ -13470,8 +13470,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_colorlist_7282c4": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_constraint_47bcea": {
         "identical": true,
@@ -13483,51 +13483,51 @@
       },
       "gv16_infosrc_fixed_5e49db": {
         "identical": false,
-        "diff_lines": 6
+        "diff_lines": 17
       },
       "gv16_infosrc_forward_5a0d3d": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_infosrc_mrecord_3bd329": {
-        "identical": false,
-        "diff_lines": 7
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_nohead_1ab0ea": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_infosrc_plugins_1a797f": {
-        "identical": false,
-        "diff_lines": 174
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_record_14407c": {
         "identical": false,
-        "diff_lines": 27
+        "diff_lines": 8
       },
       "gv16_infosrc_round_5b3b72": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_sdlshapes_630c5a": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_infosrc_tee_e85da8": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_arrows_dot_1ce23f": {
         "identical": false,
-        "diff_lines": 40
+        "diff_lines": 4
       },
       "gv16_linux_x86_compound_dot_96e185": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_linux_x86_dotsplines_dot1_3910e3": {
-        "identical": false,
-        "diff_lines": 21
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_dotsplines_dot_960493": {
         "identical": true,
@@ -13542,24 +13542,24 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_html2_dot_3ee3fc": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_html_dot_ee4861": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_neatosplines_neato1_448ced": {
-        "identical": false,
-        "diff_lines": 90
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_neatosplines_neato_c2c6f6": {
-        "identical": false,
-        "diff_lines": 123
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_nestedclust_dot_b56c31": {
         "identical": false,
-        "diff_lines": 2
+        "diff_lines": 102
       },
       "gv16_linux_x86_ordering_dot1_a6f94e": {
         "identical": true,
@@ -13570,12 +13570,12 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_overlap_neato1_0931d2": {
-        "identical": false,
-        "diff_lines": 123
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_overlap_neato_30f3d0": {
-        "identical": false,
-        "diff_lines": 123
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato1_0327de": {
         "identical": false,
@@ -13590,24 +13590,24 @@
         "diff_lines": 168
       },
       "gv16_linux_x86_ports_dot_99eb47": {
-        "identical": false,
-        "diff_lines": 16
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot1_8f7d7d": {
-        "identical": false,
-        "diff_lines": 99
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot2_810f01": {
-        "identical": false,
-        "diff_lines": 84
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rankdir_dot_f06bd6": {
-        "identical": false,
-        "diff_lines": 90
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_record_dot_dd3ea1": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_rowcolsep_dot1_2c201c": {
         "identical": true,
@@ -13618,16 +13618,16 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_shapes_dot_ad66b3": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_weight_dot_4dc34b": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_dotsplines_dot1_139c79": {
-        "identical": false,
-        "diff_lines": 21
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_dotsplines_dot_c07946": {
         "identical": true,
@@ -13638,28 +13638,28 @@
         "diff_lines": 0
       },
       "gv16_nshare_html2_dot_7bea59": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_html_dot_5cceb5": {
-        "identical": false,
-        "diff_lines": 19
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_neatosplines_neato1_9c01b5": {
-        "identical": false,
-        "diff_lines": 167
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_neatosplines_neato_7ac8ee": {
-        "identical": false,
-        "diff_lines": 119
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_overlap_neato1_319642": {
-        "identical": false,
-        "diff_lines": 123
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_overlap_neato_afd9ce": {
-        "identical": false,
-        "diff_lines": 119
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato1_014679": {
         "identical": false,
@@ -13674,40 +13674,40 @@
         "diff_lines": 168
       },
       "gv16_nshare_ports_dot_25dc96": {
-        "identical": false,
-        "diff_lines": 19
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_radius_dot_732e22": {
         "identical": false,
         "diff_lines": 4
       },
       "gv16_nshare_rankdir_dot1_228ae0": {
-        "identical": false,
-        "diff_lines": 99
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot2_920cb4": {
-        "identical": false,
-        "diff_lines": 87
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_rankdir_dot_0e4e43": {
         "identical": false,
-        "diff_lines": 87
+        "diff_lines": 4
       },
       "gv16_nshare_record_dot_f557a8": {
         "identical": false,
-        "diff_lines": 30
+        "diff_lines": 2
       },
       "gv16_nshare_shapes_dot_6f8450": {
-        "identical": false,
-        "diff_lines": 39
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_trivial_dot_c950ef": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_nshare_weight_dot_83b5ab": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_prune_test_fad9a1": {
         "identical": true,
@@ -13718,20 +13718,20 @@
         "diff_lines": 0
       },
       "gv16_reference_Mdiamond_83cb97": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_Msquare_5f5c1d": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_assembly_c29157": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_box3d_d47c63": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_box_067195": {
         "identical": true,
@@ -13746,12 +13746,12 @@
         "diff_lines": 0
       },
       "gv16_reference_component_5936ee": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_cylinder_c350ba": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_diamond_ed57d8": {
         "identical": true,
@@ -13763,11 +13763,11 @@
       },
       "gv16_reference_doubleoctagon_e79b27": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 2
       },
       "gv16_reference_egg_e6e3f4": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_ellipse_061277": {
         "identical": true,
@@ -13790,8 +13790,8 @@
         "diff_lines": 0
       },
       "gv16_reference_insulator_412a1e": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_invhouse_9c894c": {
         "identical": true,
@@ -13822,8 +13822,8 @@
         "diff_lines": 0
       },
       "gv16_reference_noverhang_826a05": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_octagon_4c5a77": {
         "identical": true,
@@ -13866,12 +13866,12 @@
         "diff_lines": 0
       },
       "gv16_reference_proteasesite_d8f833": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_proteinstab_1e79d6": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_rarrow_b7bebb": {
         "identical": true,
@@ -13886,16 +13886,16 @@
         "diff_lines": 0
       },
       "gv16_reference_restrictionsite_d06765": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_ribosite_4331d5": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_rnastab_a909f4": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_reference_rpromoter_75d9b3": {
         "identical": true,
@@ -13939,7 +13939,7 @@
       },
       "gv16_reference_tripleoctagon_78323f": {
         "identical": false,
-        "diff_lines": 3
+        "diff_lines": 2
       },
       "gv16_reference_underline_bf8328": {
         "identical": true,
@@ -13950,36 +13950,36 @@
         "diff_lines": 0
       },
       "gv16_undirected_ngk10_4_793340": {
-        "identical": false,
-        "diff_lines": 179
+        "identical": true,
+        "diff_lines": 0
       },
       "html": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "html2": {
-        "identical": false,
-        "diff_lines": 35
+        "identical": true,
+        "diff_lines": 0
       },
       "pack": {
         "identical": false,
         "diff_lines": 168
       },
       "record": {
-        "identical": false,
-        "diff_lines": 28
+        "identical": true,
+        "diff_lines": 0
       },
       "shapes": {
-        "identical": false,
-        "diff_lines": 39
+        "identical": true,
+        "diff_lines": 0
       },
       "unix": {
         "identical": false,
-        "diff_lines": 26
+        "diff_lines": 2
       },
       "wild_GraphViz-Samples_complex_eae337": {
-        "identical": false,
-        "diff_lines": 122
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_doc_pspdf_7cc25b": {
         "identical": true,
@@ -14010,56 +14010,56 @@
         "diff_lines": 70
       },
       "wild_graphs_ctext_0bf48f": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_html2_7e5ba7": {
-        "identical": false,
-        "diff_lines": 35
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_nojustify_9c2ddf": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_ports_832839": {
-        "identical": false,
-        "diff_lines": 19
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_records_cbbabd": {
-        "identical": false,
-        "diff_lines": 33
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_shapes_fac573": {
-        "identical": false,
-        "diff_lines": 39
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_states_835689": {
         "identical": true,
         "diff_lines": 0
       },
       "wild_graphs_url_406d88": {
-        "identical": false,
-        "diff_lines": 5
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_user_shapes_670d68": {
         "identical": false,
         "diff_lines": 4
       },
       "wild_info_html1_9b6ede": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html2_166f38": {
-        "identical": false,
-        "diff_lines": 35
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html3_17dad2": {
-        "identical": false,
-        "diff_lines": 9
+        "identical": true,
+        "diff_lines": 0
       },
       "world": {
         "identical": false,
-        "diff_lines": 72
+        "diff_lines": 30
       }
     }
   }
