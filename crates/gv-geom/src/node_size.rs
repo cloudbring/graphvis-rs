@@ -492,7 +492,7 @@ fn get_pen_color(attrs: &AttrMap) -> Option<&str> {
 /// for HTML text and `<TABLE>` for a table (`make_html_label`).
 fn label_l_text(l: &LabelGeometry, raw: &str, is_record: bool) -> String {
     if is_record {
-        return raw.to_string();
+        return if l.html { html_inner_text(raw) } else { raw }.to_string();
     }
     if let Some(t) = &l.text {
         return t.source.clone();
@@ -603,7 +603,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             dimen: Point::default(),
             space: Point::default(),
             valign: 'c',
-            html: env.is_html(label_str) && is_html_label(label_str, shape),
+            html: env.is_html(label_str),
             html_label: None,
             html_failed: false,
             text: None,
@@ -1672,6 +1672,7 @@ fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
     if let Some(f) = p.parse(lr, true) {
         return f;
     }
+    gv_core::diag::agerrorf(&format!("bad label format {src}\n"));
     let mut p = RecParser {
         src: b"\\N",
         pos: 0,
