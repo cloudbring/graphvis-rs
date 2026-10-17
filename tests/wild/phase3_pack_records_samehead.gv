@@ -1,0 +1,1 @@
+digraph G { pack=true; rankdir=BT; ranksep="1 equally"; nodesep=0.5; node [shape=record]; a [label="<p>x|<q>y"]; a:p -> b; a:q -> c; d -> e [samehead=h1]; f -> e [samehead=h1]; g [shape=box, label="G node"]; }

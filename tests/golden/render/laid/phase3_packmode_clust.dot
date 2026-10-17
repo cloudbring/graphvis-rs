@@ -1,0 +1,68 @@
+digraph G {
+	graph [bb="0,0,378,282.4",
+		label="root label",
+		lheight=0.23,
+		lp="189,12.4",
+		lwidth=0.74,
+		packmode=clust
+	];
+	node [label="\N"];
+	subgraph cluster_x {
+		graph [bb="8,125.6,150,274.4",
+			label=X,
+			lheight=0.23,
+			lp="79,262",
+			lwidth=0.14
+		];
+		a	[height=0.5,
+			pos="43,223.6",
+			width=0.75];
+		b	[height=0.5,
+			pos="43,151.6",
+			width=0.75];
+		a -> b	[pos="e,43,169.7 43,205.3 43,198.01 43,189.33 43,181.14"];
+		c	[height=0.5,
+			pos="115,223.6",
+			width=0.75];
+	}
+	subgraph cluster_y {
+		graph [bb="158,32.8,244,274.4",
+			lheight=0.23,
+			lp="201,262",
+			lwidth=0.74
+		];
+		subgraph cluster_z {
+			graph [bb="166,40.8,236,117.6",
+				label=Z,
+				lheight=0.23,
+				lp="201,105.2",
+				lwidth=0.12
+			];
+			g	[height=0.5,
+				pos="201,66.8",
+				width=0.75];
+		}
+		e	[height=0.5,
+			pos="201,223.6",
+			width=0.75];
+		f	[height=0.5,
+			pos="201,151.6",
+			width=0.75];
+		e -> f	[pos="e,201,169.7 201,205.3 201,198.01 201,189.33 201,181.14"];
+		f -> g	[pos="e,201,85.219 201,133.44 201,122.75 201,108.72 201,96.372"];
+	}
+	d	[height=0.5,
+		pos="43,66.8",
+		width=0.75];
+	b -> d	[pos="e,43,85.219 43,133.44 43,122.75 43,108.72 43,96.372"];
+	h	[height=0.5,
+		pos="279,223.6",
+		width=0.75];
+	i	[height=0.5,
+		pos="279,151.6",
+		width=0.75];
+	h -> i	[pos="e,279,169.7 279,205.3 279,198.01 279,189.33 279,181.14"];
+	j	[height=0.5,
+		pos="351,223.6",
+		width=0.75];
+}

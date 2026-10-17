@@ -1,0 +1,129 @@
+{
+  "name": "G",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,112,292",
+  "pack": "4",
+  "packmode": "array_u",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "s1",
+      "bb": "0,0,112,292",
+      "pack": "4",
+      "packmode": "array_u",
+      "sortv": "3",
+      "_gvid": 0,
+      "nodes": [
+        2,3
+      ],
+      "edges": [
+        0
+      ]
+    },
+    {
+      "name": "s2",
+      "bb": "0,0,112,292",
+      "pack": "4",
+      "packmode": "array_u",
+      "sortv": "1",
+      "_gvid": 1,
+      "nodes": [
+        4,5
+      ],
+      "edges": [
+        1
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,274",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,202",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 4,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "85,274",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 5,
+      "name": "d",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "85,202",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 6,
+      "name": "e",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,90",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 7,
+      "name": "f",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "85,162",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 8,
+      "name": "g",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "85,90",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 9,
+      "name": "h",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "85,18",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 2,
+      "head": 3,
+      "pos": "27,255.7 27,244.85 27,230.92 27,220.1"
+    },
+    {
+      "_gvid": 1,
+      "tail": 4,
+      "head": 5,
+      "pos": "85,255.7 85,244.85 85,230.92 85,220.1"
+    },
+    {
+      "_gvid": 2,
+      "tail": 7,
+      "head": 8,
+      "pos": "85,143.7 85,132.85 85,118.92 85,108.1"
+    },
+    {
+      "_gvid": 3,
+      "tail": 8,
+      "head": 9,
+      "pos": "85,71.697 85,60.846 85,46.917 85,36.104"
+    }
+  ]
+}

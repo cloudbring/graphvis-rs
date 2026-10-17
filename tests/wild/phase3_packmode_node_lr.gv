@@ -1,0 +1,1 @@
+digraph G { packmode="node"; rankdir=LR; a -> b -> c; d -> e [headlabel="h", taillabel="t"]; f -> f; subgraph cluster_q { k -> l; } m -> n [label="long label here"]; }
