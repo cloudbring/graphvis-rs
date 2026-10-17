@@ -629,6 +629,15 @@ impl Fdp<'_, '_> {
             }
         }
         dg.sort_adjacency();
+        if super::trace(3) {
+            let gname = g.map_or(src.name.as_str(), |c| {
+                src.subgraphs[self.tree.subgraph[c]].name.as_str()
+            });
+            eprintln!("DG {gname} nodes={}", dg.nodes.len());
+            for d in &dg.nodes {
+                eprintln!("  {} {}", d.addr, d.name);
+            }
+        }
         Some(dg)
     }
 
@@ -752,6 +761,22 @@ impl Fdp<'_, '_> {
                 2.0 * PI + es[0].alpha
             };
             idx = self.gen_ports(dg, n, &es[k], &mut pp, idx, bnd);
+        }
+        if super::trace(4) {
+            let src = self.rg.src;
+            let nm = |n: usize| src.nodes[n].name.as_str();
+            eprintln!("EC {}", src.subgraphs[self.tree.subgraph[c]].name);
+            for p in &pp {
+                let e = &self.rg.edges[p.e];
+                eprintln!("  {} {} {:?}", nm(e.tail), nm(e.head), p.alpha);
+            }
+            for er in &es {
+                let e = &dg.edges[er.e];
+                eprintln!(
+                    "  er {} {} {:?} {:?}",
+                    dg.nodes[e.t].name, dg.nodes[e.h].name, er.alpha, er.dist2
+                );
+            }
         }
         self.ports[c] = pp;
     }

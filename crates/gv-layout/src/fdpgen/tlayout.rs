@@ -219,6 +219,12 @@ fn do_rep(
     }
     add_disp(dg, q, xdelta, ydelta, force);
     add_disp(dg, p, -xdelta, -ydelta, force);
+    if super::trace(6) {
+        eprintln!(
+            "tr {} {} {:?} {:?} {:?}",
+            dg.nodes[p].name, dg.nodes[q].name, xdelta, ydelta, force
+        );
+    }
 }
 
 /// `DISP(n)[i] += delta * force`, fused as clang compiles it.
@@ -293,6 +299,12 @@ fn apply_attr(st: &mut TState, dg: &mut DG, p: usize, q: usize, e: usize) {
     };
     add_disp(dg, q, -xdelta, -ydelta, force);
     add_disp(dg, p, xdelta, ydelta, force);
+    if super::trace(6) {
+        eprintln!(
+            "ta {} {} {:?} {:?} {:?}",
+            dg.nodes[p].name, dg.nodes[q].name, xdelta, ydelta, force
+        );
+    }
 }
 
 /// `updatePos(g, temp, pp)`.
@@ -543,9 +555,26 @@ pub fn fdp_t_layout(st: &mut TState, dg: &mut DG, comp: &Comp, xpms: &mut XParam
     let ctr = init_positions(st, dg, comp, has_ports);
     if st.t.use_grid {
         let mut grid = Grid::new();
+        let tr = |st: &TState, dg: &DG| {
+            for &n in &comp.nodes {
+                eprintln!("  ti {:?} {:?}", dg.nodes[n].pos[0], dg.nodes[n].pos[1]);
+            }
+            let _ = st;
+        };
+        if super::trace(5) {
+            eprintln!(
+                "TI init Wd={:?} Ht={:?} ctr={:?},{:?} loop={} T0={:?}",
+                st.t.wd, st.t.ht, ctr.x, ctr.y, st.t.loopcnt, st.t.t0
+            );
+            tr(st, dg);
+        }
         for i in 0..st.t.loopcnt {
             let temp = st.cool(i);
             g_adjust(st, dg, comp, temp, has_ports, &mut grid);
+            if super::trace(5) {
+                eprintln!("TI {i} {temp:?}");
+                tr(st, dg);
+            }
         }
     } else {
         for i in 0..st.t.loopcnt {
