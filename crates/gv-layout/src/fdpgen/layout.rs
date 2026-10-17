@@ -52,6 +52,8 @@ pub enum DKind {
 #[derive(Debug, Clone)]
 pub struct DNode {
     pub kind: DKind,
+    /// Model of the node's heap address (see [`NodeHeap`]).
+    pub addr: u64,
     /// Name, for `GVDBG` traces.
     pub name: String,
     /// `ND_pos`, inches.
@@ -71,6 +73,7 @@ impl DNode {
     fn new(kind: DKind) -> Self {
         Self {
             kind,
+            addr: 0,
             name: String::new(),
             pos: [0.0, 0.0],
             width: 0.0,
@@ -117,7 +120,40 @@ pub struct BPort {
     pub alpha: f64,
 }
 
-/// A derived graph (strict, directed; edges run from the older node).
+/// Model of the allocator slots that hold `Agnode_t`s.
+///
+/// cgraph orients derived edges and orders ports by node *address*. macOS
+/// serves these fixed-size blocks from a size class with a LIFO free list:
+/// a derived graph allocated after another was freed gets the freed slots
+/// back in reverse order, then fresh, increasing addresses.
+#[derive(Debug, Clone, Default)]
+pub struct NodeHeap {
+    free: Vec<u64>,
+    next: u64,
+    /// Whether freed slots are reused.
+    pub recycle: bool,
+}
+
+impl NodeHeap {
+    const FRESH: u64 = 1 << 40;
+
+    /// `agalloc` of a node.
+    pub fn alloc(&mut self) -> u64 {
+        self.free.pop().unwrap_or_else(|| {
+            self.next += 1;
+            Self::FRESH + self.next
+        })
+    }
+
+    /// `agfree` of a node.
+    pub fn free(&mut self, addr: u64) {
+        if self.recycle {
+            self.free.push(addr);
+        }
+    }
+}
+
+/// A derived graph (strict, directed; edges run from the lower address).
 #[derive(Debug, Clone, Default)]
 pub struct DG {
     pub uid: u32,
@@ -371,6 +407,7 @@ struct Fdp<'g, 'a> {
     inputscale: f64,
     /// `IS_CLUST_NODE(n)`.
     is_clust: Vec<bool>,
+    heap: NodeHeap,
 }
 
 impl Fdp<'_, '_> {
@@ -475,6 +512,7 @@ impl Fdp<'_, '_> {
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));
+            dn.addr = self.heap.alloc();
             dn.name
                 .clone_from(&src.subgraphs[self.tree.subgraph[c]].name);
             if self.coords_declared {
@@ -506,6 +544,7 @@ impl Fdp<'_, '_> {
             }
             let rn = &self.rg.nodes[n];
             let mut dn = DNode::new(DKind::Real(n));
+            dn.addr = self.heap.alloc();
             dn.name.clone_from(&src.nodes[n].name);
             dn.width = rn.width;
             dn.height = rn.height;
@@ -540,7 +579,7 @@ impl Fdp<'_, '_> {
                 if hd == tl {
                     continue;
                 }
-                let (de, new) = if hd > tl {
+                let (de, new) = if dg.nodes[hd].addr > dg.nodes[tl].addr {
                     dg.edge(tl, hd)
                 } else {
                     dg.edge(hd, tl)
@@ -567,9 +606,14 @@ impl Fdp<'_, '_> {
                     continue;
                 }
                 let mut pn = DNode::new(DKind::Port);
+                pn.addr = self.heap.alloc();
                 pn.name = "_port".to_string();
                 let dn = dg.add_node(pn);
-                let (de, _) = dg.edge(m, dn);
+                let (de, _) = if dg.nodes[dn].addr > dg.nodes[m].addr {
+                    dg.edge(m, dn)
+                } else {
+                    dg.edge(dn, m)
+                };
                 dg.edges[de].dist = self.rg.edges[pp.e].dist;
                 dg.edges[de].factor = self.rg.edges[pp.e].factor;
                 dg.edges[de].reals.push(pp.e);
@@ -659,7 +703,7 @@ impl Fdp<'_, '_> {
         let other = if e.h == n { e.t } else { e.h };
         let mut delta = ((bnd - er.alpha) / cnt as f64).min(ANG);
         let mut angle = er.alpha;
-        let (mut i, inc): (isize, isize) = if n < other {
+        let (mut i, inc): (isize, isize) = if dg.nodes[n].addr < dg.nodes[other].addr {
             (idx as isize, 1)
         } else {
             angle = delta.mul_add((cnt - 1) as f64, angle);
@@ -889,6 +933,10 @@ impl Fdp<'_, '_> {
             }
         }
         self.set_bb(g, bb);
+        // freeDerivedGraph: agclose frees the nodes in sequence order.
+        for dn in &dg.nodes {
+            self.heap.free(dn.addr);
+        }
         Ok(())
     }
 
@@ -1059,6 +1107,11 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
     let src = ce
         .as_ref()
         .map_or_else(|| graph.clone(), |c| c.work.clone());
+    let mut heap = NodeHeap::default();
+    // With cluster edges, C's processClusterEdges frees memory of other
+    // allocator zones that later derived nodes reuse; creation order
+    // matches C there, so no slot is ever recycled.
+    heap.recycle = ce.is_none();
     let is_clust: Vec<bool> = (0..src.nodes.len())
         .map(|n| ce.as_ref().is_some_and(|c| c.is_clust_node(n)))
         .collect();
@@ -1117,6 +1170,7 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
         coords_declared,
         inputscale,
         is_clust,
+        heap,
     };
     let ok = f.layout(None).is_ok();
     if ok {
