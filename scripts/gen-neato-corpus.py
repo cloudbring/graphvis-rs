@@ -404,6 +404,19 @@ def handwritten3():
     c["hw3_hier_disconnected"] = DISCONNECTED % "mode=hier;"
     c["hw3_hier_overlap"] = OVERLAP % "mode=hier; overlap=false;"
     c["hw3_hier_maxiter"] = PETERSEN % "mode=hier; maxiter=3;"
+    # mode=ipsep (stress_majorization_cola)
+    c["hw3_ipsep_petersen"] = PETERSEN % "mode=ipsep;"
+    c["hw3_ipsep_digraph"] = DIGRAPH % "mode=ipsep;"
+    c["hw3_ipsep_overlap"] = OVERLAP % "mode=ipsep; overlap=ipsep;"
+    c["hw3_ipsep_vpsc"] = OVERLAP % "mode=ipsep; overlap=vpsc;"
+    c["hw3_ipsep_diredges"] = DIGRAPH % "mode=ipsep; diredgeconstraints=true;"
+    c["hw3_ipsep_diredges_hier"] = DIGRAPH % "mode=ipsep; diredgeconstraints=hier; levelsgap=0.5;"
+    c["hw3_ipsep_clusters"] = CLUSTERS % "mode=ipsep;"
+    c["hw3_ipsep_clusters_overlap"] = CLUSTERS % "mode=ipsep; overlap=ipsep; node [shape=box];"
+    c["hw3_ipsep_random30"] = randgraph(30, 40, 17, "mode=ipsep; overlap=ipsep; node [shape=box];")
+    c["hw3_ipsep_biglabels"] = BIGLABELS % "mode=ipsep; overlap=ipsep;"
+    c["hw3_ipsep_subset"] = PETERSEN % "mode=ipsep; model=subset;"
+    c["hw3_ipsep_tree_diredges"] = tree(3, "mode=ipsep; diredgeconstraints=true; overlap=ipsep;").replace("graph", "digraph", 1).replace("--", "->")
     return c
 
 

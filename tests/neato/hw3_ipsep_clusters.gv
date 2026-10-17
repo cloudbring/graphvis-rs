@@ -1,0 +1,9 @@
+graph clus {
+layout=neato;
+
+mode=ipsep;
+subgraph cluster_a { a1 -- a2 -- a3 -- a1; }
+subgraph cluster_b { b1 -- b2 -- b3; }
+a1 -- b1;
+c -- a2;
+}

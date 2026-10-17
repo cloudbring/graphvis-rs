@@ -177,6 +177,7 @@ fn majorization(
     model: i32,
     dim: usize,
     p: &NeatoParams,
+    am: &AdjustData,
 ) {
     let init = check_start(
         g,
@@ -197,9 +198,53 @@ fn majorization(
     let (gp, _ne, nodes) = make_graph_data(g, sub, mode, model);
     let mut drand = g.drand;
     let mut crand = g.crand;
-    let rv = if mode == MODE_HIER {
-        let lgap =
-            crate::common::utils::late_double(&g.src.graph_attrs, "levelsgap", 0.0, -f64::MAX);
+    let lgap = crate::common::utils::late_double(&g.src.graph_attrs, "levelsgap", 0.0, -f64::MAX);
+    let rv = if mode == MODE_IPSEP {
+        let mut opt = super::quad_prog_vpsc::IpsepOptions {
+            edge_gap: lgap,
+            nsize: sub
+                .nodes
+                .iter()
+                .map(|&v| (g.nodes[v].width, g.nodes[v].height))
+                .collect(),
+            clusters: super::cola::cluster_map(g, sub),
+            ..Default::default()
+        };
+        let s = g.gattr("diredgeconstraints");
+        opt.diredges = if mapbool(s) {
+            1
+        } else if s.is_some_and(|s| s.len() >= 4 && s[..4].eq_ignore_ascii_case("hier")) {
+            2
+        } else {
+            0
+        };
+        opt.noverlap = match am.mode {
+            super::adjust::AdjustMode::Ipsep => 1,
+            super::adjust::AdjustMode::Vpsc => 2,
+            _ => 0,
+        };
+        let margin = super::adjust::sep_factor(g);
+        opt.gap = if margin.do_add {
+            (2.0 * (margin.x / 72.0), 2.0 * (margin.y / 72.0))
+        } else {
+            let d = 2.0 * (super::adjust::DFLT_MARGIN / 72.0);
+            (d, d)
+        };
+        super::cola::stress_majorization_cola(
+            g,
+            p,
+            &mut drand,
+            &mut crand,
+            &gp,
+            nv,
+            &mut coords,
+            &nodes,
+            dim,
+            model,
+            p.max_iter,
+            &mut opt,
+        )
+    } else if mode == MODE_HIER {
         super::digcola::stress_majorization_with_hierarchy(
             g,
             p,
@@ -244,7 +289,13 @@ fn majorization(
 }
 
 /// `neatoLayout(mg, g, layoutMode, layoutModel, am)`: lay out one component.
-fn neato_layout_component(g: &mut LGraph<'_>, sub: &Sub, layout_mode: i32, model: i32) {
+fn neato_layout_component(
+    g: &mut LGraph<'_>,
+    sub: &Sub,
+    layout_mode: i32,
+    model: i32,
+    am: &AdjustData,
+) {
     let max_iter = match g.gattr("maxiter") {
         Some(s) => atoi(s),
         None if layout_mode == MODE_MAJOR => DFLT_ITERATIONS,
@@ -266,11 +317,11 @@ fn neato_layout_component(g: &mut LGraph<'_>, sub: &Sub, layout_mode: i32, model
         super::sgd::sgd(g, sub, model, &p);
     } else {
         let dim = g.ndim;
-        majorization(g, sub, ng, layout_mode, model, dim, &p);
+        majorization(g, sub, ng, layout_mode, model, dim, &p, am);
     }
 }
 
-fn is_a_cluster(sg: &gv_core::SubgraphData) -> bool {
+pub(crate) fn is_a_cluster(sg: &gv_core::SubgraphData) -> bool {
     sg.name.len() >= 7 && sg.name[..7].eq_ignore_ascii_case("cluster")
         || mapbool(sg.graph_attrs.get("cluster").map(String::as_str))
 }
@@ -475,7 +526,7 @@ fn layout_and_route(
     am: &AdjustData,
     no_translate: bool,
 ) {
-    neato_layout_component(g, sub, layout_mode, model);
+    neato_layout_component(g, sub, layout_mode, model, am);
     remove_overlap_with(g, sub, am);
     if no_translate {
         do_edges(g, sub, is_root);

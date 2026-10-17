@@ -186,22 +186,25 @@ impl CMajEnvVpsc {
     }
 }
 
-/// `initCMajVPSC(n, packedMat, graph, opt, diredges)` for `diredges == 0`
-/// (no directed-edge constraints); levels (DiG-CoLa) and edge constraints
-/// are added by the caller through [`init_cmaj_vpsc_with`].
+/// `initCMajVPSC(n, packedMat, graph, opt, 0)`.
 pub fn init_cmaj_vpsc(n: usize, packed_mat: Option<&[f32]>, opt: &IpsepOptions) -> CMajEnvVpsc {
-    init_cmaj_vpsc_with(n, packed_mat, opt, |_, _| {})
+    let mut crand = crate::cutil::CRand::default();
+    init_cmaj_vpsc_full(n, packed_mat, &[], opt, 0, &mut crand)
+        .expect("no hierarchy without diredges")
 }
 
-/// `initCMajVPSC` with a hook creating the global (`gcs`) constraints and
-/// dummy variables between the variable creation and the cluster
-/// containment constraints, as the `diredges` branches do in C.
-pub fn init_cmaj_vpsc_with(
+/// `initCMajVPSC(n, packedMat, graph, opt, diredges)`: variables, global
+/// constraints (`diredges` 1: one per directed edge; 2: DiG-CoLa levels with
+/// a dummy variable per boundary) and cluster containment constraints.
+/// `None` when the hierarchy cannot be computed (C returns NULL).
+pub fn init_cmaj_vpsc_full(
     n: usize,
     packed_mat: Option<&[f32]>,
+    graph: &[super::graphdata::VtxData],
     opt: &IpsepOptions,
-    gen_global: impl FnOnce(&mut CMajEnvVpsc, usize),
-) -> CMajEnvVpsc {
+    diredges: i32,
+    crand: &mut crate::cutil::CRand,
+) -> Option<CMajEnvVpsc> {
     let mut e = CMajEnvVpsc {
         nldv: 2 * opt.clusters.nclusters(),
         ..Default::default()
@@ -212,12 +215,59 @@ pub fn init_cmaj_vpsc_with(
         let v = e.solver.new_variable(i as i32, 1.0, 1.0);
         e.vs.push(v);
     }
-    gen_global(&mut e, n);
-    e.gm = e.gcs.len();
+    if diredges == 1 {
+        for i in 0..e.nv {
+            let ed = graph[i].edists.as_ref().unwrap();
+            for j in 1..graph[i].nedges() {
+                if ed[j] > 0 {
+                    let v = graph[i].edges[j] as usize;
+                    let c = e.solver.new_constraint(e.vs[i], e.vs[v], opt.edge_gap);
+                    e.gcs.push(c);
+                }
+            }
+        }
+    } else if diredges == 2 {
+        let (ordering, ls, ndv) =
+            super::digcola::compute_hierarchy(crand, graph, e.nv, 1e-2, 1e-1, None).ok()?;
+        e.ndv = ndv;
+        let levels = assign_digcola_levels(&ordering, e.nv, &ls, e.ndv);
+        // create dummy vars (0 weight)
+        for i in 0..e.ndv {
+            let cvar = n + i;
+            let v = e.solver.new_variable(cvar as i32, 1.0, 0.000001);
+            e.vs.push(v);
+        }
+        let halfgap = opt.edge_gap;
+        for i in 0..e.ndv {
+            let cvar = n + i;
+            // outgoing constraints for each var in level below boundary
+            for &nd in &levels[i].nodes {
+                let c = e
+                    .solver
+                    .new_constraint(e.vs[nd as usize], e.vs[cvar], halfgap);
+                e.gcs.push(c);
+            }
+            // incoming constraints for each var in level above boundary
+            for &nd in &levels[i + 1].nodes {
+                let c = e
+                    .solver
+                    .new_constraint(e.vs[cvar], e.vs[nd as usize], halfgap);
+                e.gcs.push(c);
+            }
+        }
+        // constraints between adjacent boundary dummy vars (C loops forever
+        // when there is no boundary)
+        for i in 0..e.ndv.saturating_sub(1) {
+            let c = e.solver.new_constraint(e.vs[n + i], e.vs[n + i + 1], 0.0);
+            e.gcs.push(c);
+        }
+    }
     if opt.clusters.nclusters() > 0 {
         for (i, cl) in opt.clusters.clusters.iter().enumerate() {
             for &j in cl {
-                let v = e.vs[j];
+                let Some(&v) = e.vs.get(j) else {
+                    continue;
+                };
                 let cl = e.vs[e.nv + 2 * i];
                 let cr = e.vs[e.nv + 2 * i + 1];
                 let c1 = e.solver.new_constraint(cl, v, 0.0);
@@ -226,8 +276,8 @@ pub fn init_cmaj_vpsc_with(
                 e.gcs.push(c2);
             }
         }
-        e.gm = e.gcs.len();
     }
+    e.gm = e.gcs.len();
     e.m = 0;
     e.cs.clear();
     if e.gm > 0 {
@@ -243,7 +293,7 @@ pub fn init_cmaj_vpsc_with(
     e.f_array1 = vec![0.0; n];
     e.f_array2 = vec![0.0; n];
     e.f_array3 = vec![0.0; n];
-    e
+    Some(e)
 }
 
 /// `expandbb`/`EXPANDBB` for `boxf`.

@@ -19,6 +19,7 @@
 pub mod adjust;
 pub mod bfs;
 pub mod call_tri;
+pub mod cola;
 pub mod conjgrad;
 pub mod constraint;
 pub mod delaunay;
