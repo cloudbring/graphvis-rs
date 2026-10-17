@@ -219,12 +219,35 @@ fn get_metrics_for_font_variant(
 
 /// `estimate_character_width_canonical` from `lib/common/textspan_lut.c`: width of one byte in
 /// `(units_per_em * 1)` points. Bytes `>= 128` (every byte of a UTF-8 multi-byte sequence) use
-/// the width of `' '`; unknown ASCII widths (`-1`) count as `0`.
+/// the width of `' '`; unknown ASCII widths (`-1`) count as `0`; each case warns once per process.
 #[inline]
 fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) -> u16 {
-    let character = if byte >= 128 { b' ' } else { byte };
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static NON_ASCII_WARNED: AtomicBool = AtomicBool::new(false);
+    static NO_WIDTH_WARNED: AtomicBool = AtomicBool::new(false);
+    let character = if byte >= 128 {
+        if !NON_ASCII_WARNED.swap(true, Ordering::Relaxed) {
+            eprintln!(
+                "Warning: Warning: no value for width of non-ASCII character {byte}. Falling \
+                 back to width of space character"
+            );
+        }
+        b' '
+    } else {
+        byte
+    };
     let width = variant_metrics[usize::from(character)];
-    if width == -1 { 0 } else { width as u16 }
+    if width == -1 {
+        if !NO_WIDTH_WARNED.swap(true, Ordering::Relaxed) {
+            eprintln!(
+                "Warning: Warning: no value for width of ASCII character {character}. Falling \
+                 back to 0"
+            );
+        }
+        0
+    } else {
+        width as u16
+    }
 }
 
 /// `estimate_text_width_1pt` from `lib/common/textspan_lut.c`: width of `text` at 1pt.
@@ -835,6 +858,37 @@ mod tests {
         assert_eq!(html_entity_utf8("&bogus;"), "&bogus;");
         assert_eq!(html_entity_utf8("&#0;x"), "&x");
         assert_eq!(html_entity_utf8("&alpha;"), "\u{3b1}");
+    }
+
+    #[test]
+    fn charset_conversions_run_on_input_bytes() {
+        let raw = |b: &[u8]| charset::decode(b.to_vec());
+        // Latin-1 bytes are converted once; UTF-8 bytes under charset=latin1 twice, as in C.
+        assert_eq!(
+            latin1_to_utf8(&raw(b"caf\xe9 &eacute;")),
+            "caf\u{e9} \u{e9}"
+        );
+        assert_eq!(latin1_to_utf8("\u{e9}"), "\u{c3}\u{a9}");
+        // htmlEntityUTF8 treats a lead byte without continuation bytes as Latin-1.
+        assert_eq!(html_entity_utf8(&raw(b"caf\xe9 x")), "caf\u{e9} x");
+        assert_eq!(html_entity_utf8(&raw(b"\xff")), "\u{ff}");
+        // A 3-byte lead with one continuation byte keeps both, then converts the next one:
+        // the result is not valid UTF-8, like C's.
+        let out = html_entity_utf8(&raw(b"\xe4\xbcz"));
+        assert_eq!(&*charset::encode(&out), b"\xe4\xc2\xbcz");
+        // Width is measured per input byte: one raw byte is one space wide.
+        let w = |t: &str| estimate_text_width_1pt("Times-Roman", t, false, false);
+        assert_eq!(w(&raw(b"\xa4")), w(" "));
+    }
+
+    #[test]
+    fn big5_pairs_bytes_in_make_simple_label() {
+        // E4 B8 AD: E4 takes B8, AD takes the backslash, so "\n" is not a line break.
+        let l = make_simple_label_cs("\u{4e2d}\\nX\\lY", "Times-Roman", 14.0, Charset::Big5);
+        assert_eq!(l.lines.len(), 2);
+        assert_eq!(l.lines[0].text, "\u{4e2d}\\nX");
+        let u = make_simple_label_cs("\u{4e2d}\\nX\\lY", "Times-Roman", 14.0, Charset::Utf8);
+        assert_eq!(u.lines.len(), 3);
     }
 
     #[test]

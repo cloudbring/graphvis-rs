@@ -2084,6 +2084,18 @@ mod tests {
     }
 
     #[test]
+    fn charset_decides_how_label_bytes_are_read() {
+        let raw = gv_core::charset::decode(b"<B>caf\xe9</B>".to_vec());
+        // expat: invalid UTF-8 is not well-formed; BIG-5 is an unknown encoding.
+        assert!(parse_html_cs(&raw, Charset::Utf8).is_none());
+        assert!(parse_html_cs("<B>x</B>", Charset::Big5).is_none());
+        let Some(HtmlLabel::Text(t)) = parse_html_cs(&raw, Charset::Latin1) else {
+            panic!("latin1 label");
+        };
+        assert_eq!(t.spans[0].items[0].text, "caf\u{e9}");
+    }
+
+    #[test]
     fn text_keeps_spaces_and_mixes_fonts() {
         let d = dimen(" abc ");
         assert!((d.x - 26.43).abs() < 0.01, "{d:?}");

@@ -68,11 +68,13 @@ parsed input) matches C on 493 of 508 inputs (454 before).
 - `gv16_graphs_b15`: dynamic record ports (`Run:Normal`) resolve to a different
   side in `closestSide`/`resolvePort` (`crates/gv-layout/src/common/ports.rs`),
   so the routed edges start elsewhere.
-- `-Tplain` of `gv16_graphs_Latin1` and `b60`: C canonicalises labels that grow
-  under `htmlEntityUTF8`/Latin-1 conversion into a buffer sized for the
-  original (`write_plain`), printing garbage or nothing. Four more references
-  (`gallery__index_7`, `Symbol`, `b34`, `b56`) change from run to run and are
-  skipped (`UNSTABLE` in `gv-diff`).
+- `-Tplain` of labels changed by `htmlEntityUTF8`/`latin1ToUTF8` that need no
+  quoting: `canon` in `write_plain` (`lib/common/output.c`) interns the text,
+  `agstrcanon` returns it unquoted and `agstrfree` frees it before it is
+  printed, so C prints whatever the freed memory holds (`gv16_graphs_Latin1`,
+  `b60`; the `charset_*` Latin-1 cases, `gallery__index_7`, `Symbol`, `b34`,
+  `b56` change from run to run and are skipped, `UNSTABLE` in `gv-diff`). The
+  port prints the converted label; the garbage is not emulated.
 - HTML cell `STYLE="dashed"` borders: C's `xdot_style` walks past the end of a
   one-element style list and prints adjacent string literals (undefined
   behaviour); not reproduced.
@@ -81,6 +83,42 @@ parsed input) matches C on 493 of 508 inputs (454 before).
 - The SVG generator comment names graphvis-rs.
 - Gradient and HTML anchor ids are numbered per `render_dot_all` call, like C's
   process-wide statics for a single invocation.
+
+## Charset
+
+C keeps the input's bytes and converts only label text. `gv_core::charset`
+gives the port the same model with `String`s: bytes that are not part of valid
+UTF-8 become the code points `U+10FF00 + byte` (`decode`), and `encode` turns
+them back into bytes. The CLI decodes its input and encodes its output, and
+`gv-diff` reads inputs and C references the same way, so attribute values,
+names, `-Tdot`/`-Tcanon`/`-Txdot` strings, SVG titles and ids, tooltips and
+URLs carry C's bytes (SVG always declares `encoding="UTF-8"`; `gv_xml_escape`
+leaves bytes `>= 0x80` alone, and so does the port).
+
+- `make_label`, HTML fallbacks and tooltips (`preprocessTooltip`) convert with
+  `latin1ToUTF8` (`charset=latin1`) or `htmlEntityUTF8` (else) on the encoded
+  bytes, once, where C does. `htmlEntityUTF8` reproduces C's recovery for
+  invalid UTF-8 (the offending byte is taken as Latin-1, possibly leaving
+  invalid UTF-8, kept as raw bytes) and its once-per-graph warning.
+- Text width is measured per encoded byte, with `textspan_lut.c`'s
+  once-per-process "no value for width" warnings.
+- HTML labels: expat gets the graph's encoding. Latin-1 bytes are decoded to
+  UTF-8, invalid UTF-8 is a fatal error, and `BIG-5` is an unknown encoding,
+  so every Big5 HTML label fails. A failed HTML label is plain text with its
+  unconverted source afterwards (`lp->html` cleared): `-Tplain` quotes it.
+- `charset=big5`: labels convert like UTF-8; `make_simple_label` keeps the byte
+  after a `0xA1..=0xFE` byte with it (so a `\` there is not an escape).
+  Unknown charsets warn `Unsupported charset` and act as UTF-8.
+- `-Txdot` string lengths count bytes; `-Tjson` runs `latin1ToUTF8` over every
+  string of a Latin-1 graph (so label text, already UTF-8, is converted again,
+  as in C) and escapes only `"`, `\`, `/`, `\b`, `\f`, `\n`, `\r`, `\t`; other
+  control characters and bytes are written as is.
+- The charset of the graph being processed is kept per thread
+  (`charset::begin_layout`/`begin_render`, called by `layout_graph_with_options`
+  and `render_graph_named`); `NodeSizeEnv::new` and `-n2` labels use it.
+- Not reproduced: HTML lexer error messages (`Error: not well-formed ...`,
+  `unknown encoding`); input that really contains `U+10FF00..=U+10FFFF` is
+  written out as raw bytes.
 
 ## Debugging aid
 
