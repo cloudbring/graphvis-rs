@@ -11,6 +11,9 @@ use gv_core::{BezierSegment, BoundingBox, Graph, Point, Spline};
 pub struct Output {
     node_pos: Vec<Option<Point>>,
     node_rank: Vec<(i32, i32)>,
+    /// `ND_lw + ND_rw`, which the output and the renderers take as the node width,
+    /// when `translate_drawing` did not reset it (`gv_nodesize` runs for rankdir != TB).
+    node_lwrw: Vec<Option<f64>>,
     phase_attrs: Option<i32>,
     bb: BoundingBox,
     cluster_bb: Vec<(usize, BoundingBox)>,
@@ -32,6 +35,7 @@ impl Output {
             node_rank: (0..n)
                 .map(|i| (d.nodes[i].rank, d.nodes[i].order))
                 .collect(),
+            node_lwrw: vec![None; n],
             phase_attrs: Some(maxphase),
             bb: BoundingBox::new(0.0, 0.0, 0.0, 0.0),
             cluster_bb: Vec::new(),
@@ -48,6 +52,13 @@ impl Output {
         let node_pos = (0..n).map(|i| Some(d.nodes[i].coord)).collect();
         let node_rank = (0..n)
             .map(|i| (d.nodes[i].rank, d.nodes[i].order))
+            .collect();
+        // With splines=curved, dot_splines_ swaps ND_rw and ND_mval twice (resetRW, then
+        // the self-loop restore), so a node with self loops keeps the loop space in
+        // ND_rw and is drawn wider.
+        let tb = d.graphs[0].rankdir & 3 == 0;
+        let node_lwrw = (0..n)
+            .map(|i| tb.then(|| d.nodes[i].lw + d.nodes[i].rw))
             .collect();
         let b = d.graphs[0].bb;
         let bb = BoundingBox::new(b.ll.x, b.ll.y, b.ur.x, b.ur.y);
@@ -131,6 +142,7 @@ impl Output {
         Output {
             node_pos,
             node_rank,
+            node_lwrw,
             phase_attrs: None,
             bb,
             cluster_bb,
@@ -146,6 +158,11 @@ impl Output {
         for (i, p) in self.node_pos.into_iter().enumerate() {
             if let Some(p) = p {
                 graph.nodes[i].pos = p;
+            }
+            if let Some(w) = self.node_lwrw[i]
+                && (w - graph.nodes[i].width * 72.0).abs() > 1e-9
+            {
+                graph.nodes[i].width = w / 72.0;
             }
             let (r, o) = self.node_rank[i];
             graph.nodes[i].rank = r;
