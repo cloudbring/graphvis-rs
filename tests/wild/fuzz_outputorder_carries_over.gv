@@ -1,0 +1,6 @@
+digraph "fuzz 10579" {
+outputorder="edgesfirst";
+}
+digraph second {
+x -> y -> z;
+}

@@ -1,6 +1,6 @@
 {
   "dataset": "graphvis-rs-wild-corpus",
-  "count": 506,
+  "count": 534,
   "sources": [
     "https://gitlab.com/graphviz/graphviz.git (16.1.0 tests/graphs, regression_tests/shapes, graphs/directed, graphs/undirected)",
     "https://gitlab.com/graphviz/graphviz.gitlab.io.git (Official Graphviz Gallery & Attribute Examples)",
@@ -8,7 +8,8 @@
     "https://github.com/gonum/gonum.git (graph/formats/dot/testdata)",
     "https://github.com/pinczakko/GraphViz-Samples.git",
     "hand-written phase-3 cases (phase3_*.gv): dot pack/packmode component packing and neato splines=ortho per component; C 16.1.0 goldens",
-    "charset cases (charset_*.gv): the Latin-1 inputs of the 16.1.0 sources (tests/graphs/b34, b56, b60, Latin1 = graphs/directed/Latin1) as their original bytes, plus hand-written latin1/utf-8/big5/unsupported-charset cases; html_error_plain.gv: HTML labels C rejects; C 16.1.0 goldens"
+    "charset cases (charset_*.gv): the Latin-1 inputs of the 16.1.0 sources (tests/graphs/b34, b56, b60, Latin1 = graphs/directed/Latin1) as their original bytes, plus hand-written latin1/utf-8/big5/unsupported-charset cases; html_error_plain.gv: HTML labels C rejects; C 16.1.0 goldens",
+    "differential fuzzing reproducers (fuzz_*.gv, scripts/fuzz-run.py): minimised inputs where the port differed from C; C 16.1.0 goldens"
   ],
   "files": [
     {
@@ -4508,6 +4509,174 @@
     {
       "file": "html_error_plain.gv",
       "bytes": 67,
+      "c_nodes": 3,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_port_attr_precedence.gv",
+      "bytes": 50,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_color_list_known_name.gv",
+      "bytes": 49,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_xlabel_backslash_l.gv",
+      "bytes": 36,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_headlabel_backslash_l.gv",
+      "bytes": 78,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_html_table_pencolor.gv",
+      "bytes": 226,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_curved_selfloop_width.gv",
+      "bytes": 46,
+      "c_nodes": 1,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_lost_edge_error.gv",
+      "bytes": 89,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_hsv_weighted_list.gv",
+      "bytes": 52,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_html_text_tooltip.gv",
+      "bytes": 63,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_record_html_entities.gv",
+      "bytes": 69,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_record_bad_label.gv",
+      "bytes": 47,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_html_mismatched_tag.gv",
+      "bytes": 40,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_empty_graph_label.gv",
+      "bytes": 17,
+      "c_nodes": 0,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_fixedshape_lr.gv",
+      "bytes": 71,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_flat_adj_ranksep_half.gv",
+      "bytes": 125,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_flat_adj_stale_penwidth.gv",
+      "bytes": 148,
+      "c_nodes": 3,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_sametail_title.gv",
+      "bytes": 91,
+      "c_nodes": 3,
+      "c_edges": 2
+    },
+    {
+      "file": "fuzz_strict_edge_merge.gv",
+      "bytes": 155,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_trailing_syntax_error.gv",
+      "bytes": 29,
+      "c_nodes": 0,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_record_field_sides.gv",
+      "bytes": 73,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_tapered_fma.gv",
+      "bytes": 84,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_cylinder_diagonals_nan.gv",
+      "bytes": 60,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_unknown_shape_port.gv",
+      "bytes": 64,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_flat_adj_quantum.gv",
+      "bytes": 75,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_outputorder_carries_over.gv",
+      "bytes": 83,
+      "c_nodes": 0,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_empty_node_name.gv",
+      "bytes": 26,
+      "c_nodes": 1,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_fixedshape_html_labelloc.gv",
+      "bytes": 167,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_pack_splines_none.gv",
+      "bytes": 77,
       "c_nodes": 3,
       "c_edges": 1
     }

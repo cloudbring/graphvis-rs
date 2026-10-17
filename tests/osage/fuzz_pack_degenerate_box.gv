@@ -1,0 +1,10 @@
+graph "G" {
+layout=osage;
+packmode="graph";
+subgraph "cluster_2" {
+"v15" -- "v5";
+}
+subgraph "cluster6" {
+"v5" [];
+}
+}

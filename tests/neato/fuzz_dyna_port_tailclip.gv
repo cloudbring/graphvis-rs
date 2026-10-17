@@ -1,0 +1,4 @@
+graph "G" {
+layout=neato;
+"n4":"_" -- "n4" [tailclip="false"];
+}

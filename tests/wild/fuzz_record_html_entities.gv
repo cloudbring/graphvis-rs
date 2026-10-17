@@ -1,0 +1,4 @@
+digraph "G" {
+node [shape="record"];
+"n72" [label=<&#945;&beta;>];
+}
