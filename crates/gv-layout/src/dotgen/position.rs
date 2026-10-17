@@ -87,9 +87,13 @@ impl Dot<'_> {
         self.mark_lowclusters(g);
         self.set_ycoords(g);
         if self.concentrate {
-            // C reports "concentrate=true may not work correctly" and gives up
-            // on the layout; keep going with what was merged.
-            let _ = self.dot_concentrate();
+            // C reports the failure and gives up on the layout (doDot returns before
+            // postprocessing, leaving a half-made drawing); the port keeps going with
+            // what was merged.
+            if let Err(msg) = self.dot_concentrate() {
+                gv_core::diag::agerrorf(&format!("{msg}\n"));
+                gv_core::diag::agerr_prev("concentrate=true may not work correctly.\n");
+            }
         }
         self.expand_leaves(g);
         if self.flat_edges(g) {
