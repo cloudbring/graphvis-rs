@@ -531,7 +531,7 @@
       "edges": 0,
       "edges_ok": 0,
       "clusters": 3,
-      "clusters_ok": 2,
+      "clusters_ok": 3,
       "bb_ok": true,
       "node_err": 0.0,
       "edge_err": 0.0,
