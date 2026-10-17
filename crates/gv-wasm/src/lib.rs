@@ -27,6 +27,23 @@ pub fn render(
     gv_engine::render_dot(dot_source, engine, format).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
+/// Renders every graph in a DOT string (a file may hold several), one output string per graph,
+/// like the `dot` command line does for a multi-graph input file.
+#[wasm_bindgen(js_name = renderAll)]
+pub fn render_all(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+) -> std::result::Result<Vec<String>, JsValue> {
+    gv_engine::render_dot_all(
+        dot_source,
+        engine,
+        format,
+        &gv_engine::GlobalAttrs::default(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
 /// Convenience helper to render a DOT graph directly to an SVG string using the specified layout engine.
 #[wasm_bindgen(js_name = renderSvg)]
 pub fn render_svg(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
