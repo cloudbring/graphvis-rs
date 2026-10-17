@@ -7,6 +7,7 @@ pub mod dotgen;
 pub mod fdpgen;
 pub mod force_circular;
 pub mod neatogen;
+pub mod osage;
 pub mod pack;
 pub mod patchwork;
 pub mod sfdpgen;
@@ -66,7 +67,7 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
         LayoutEngine::Sfdp => force_circular::layout_fdp(graph, true),
         LayoutEngine::Twopi => force_circular::layout_twopi(graph),
         LayoutEngine::Circo => force_circular::layout_circo(graph),
-        LayoutEngine::Osage => force_circular::layout_osage(graph),
+        LayoutEngine::Osage => osage::osage_layout(graph),
         LayoutEngine::Patchwork => patchwork::patchwork_layout(graph),
     }
 }
