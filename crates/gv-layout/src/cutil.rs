@@ -27,7 +27,9 @@ const DRAND48_MASK: u64 = (1 << 48) - 1;
 impl Default for Drand48 {
     /// The state before any `srand48` call (`x = 0x1234ABCD330E`).
     fn default() -> Self {
-        Self { x: 0x1234_ABCD_330E }
+        Self {
+            x: 0x1234_ABCD_330E,
+        }
     }
 }
 
@@ -207,7 +209,11 @@ fn heapsort<T: Clone, F: FnMut(&T, &T) -> i32>(v: &mut [T], cmp: &mut F) {
     }
 }
 
-fn qsort_impl<T: Clone, F: FnMut(&T, &T) -> i32>(mut v: &mut [T], cmp: &mut F, mut depth_limit: i32) {
+fn qsort_impl<T: Clone, F: FnMut(&T, &T) -> i32>(
+    mut v: &mut [T],
+    cmp: &mut F,
+    mut depth_limit: i32,
+) {
     loop {
         let n = v.len();
         if depth_limit <= 0 {
@@ -316,7 +322,16 @@ mod tests {
     fn rand_matches_libc() {
         let mut r = CRand::default();
         let got: Vec<i32> = (0..5).map(|_| r.rand()).collect();
-        assert_eq!(got, [16807, 282_475_249, 1_622_650_073, 984_943_658, 1_144_108_930]);
+        assert_eq!(
+            got,
+            [
+                16807,
+                282_475_249,
+                1_622_650_073,
+                984_943_658,
+                1_144_108_930
+            ]
+        );
         r.srand(5);
         assert_eq!(r.rand(), 84035);
     }

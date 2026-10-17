@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod pathplan;
 pub mod shapes;
 pub mod splines;
 

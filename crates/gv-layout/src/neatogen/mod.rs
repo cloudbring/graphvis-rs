@@ -1,0 +1,56 @@
+//! Port of Graphviz `lib/neatogen` (the `neato` layout engine).
+//!
+//! Module ↔ C file map:
+//! - [`neatoinit`] — `neatoinit.c` (`neato_layout` and helpers)
+//! - [`stuff`] — `stuff.c` (graph scan, Kamada–Kawai)
+//! - [`stress`] — `stress.c` (stress majorization) and parts of `kkutils.c`
+//! - [`smart_ini`] — `stress.c` subspace majorization, `embed_graph.c`, `pca.c`
+//! - [`sgd`] — `sgd.c` (stochastic gradient descent)
+//! - [`conjgrad`], [`matrix_ops`], [`bfs`], [`linalg`] — `conjgrad.c`,
+//!   `matrix_ops.c`, `bfs.c` + `dijkstra.c`, `solve.c` + `lu.c` + `matinv.c`
+//! - [`graphdata`] — `vtx_data` and `makeGraphData`
+//! - [`neatosplines`] — `neatosplines.c` and `makeStraightEdge(s)` from `routespl.c`
+//! - [`routing`] — obstacle-avoiding edges (`splines=true|polyline`)
+//! - [`adjust`] — `adjust.c` overlap removal
+
+pub mod adjust;
+pub mod bfs;
+pub mod conjgrad;
+pub mod graphdata;
+pub mod linalg;
+pub mod matrix_ops;
+pub mod neatoinit;
+pub mod neatosplines;
+pub mod overlap;
+pub mod routing;
+pub mod scadjust;
+pub mod sgd;
+pub mod smart_ini;
+pub mod stress;
+pub mod stuff;
+pub mod voronoi;
+
+pub const MODEL_SHORTPATH: i32 = 0;
+pub const MODEL_CIRCUIT: i32 = 1;
+pub const MODEL_SUBSET: i32 = 2;
+pub const MODEL_MDS: i32 = 3;
+
+pub const MODE_KK: i32 = 0;
+pub const MODE_MAJOR: i32 = 1;
+pub const MODE_HIER: i32 = 2;
+pub const MODE_IPSEP: i32 = 3;
+pub const MODE_SGD: i32 = 4;
+
+pub const INIT_SELF: i32 = 0;
+pub const INIT_REGULAR: i32 = 1;
+pub const INIT_RANDOM: i32 = 2;
+
+/// Process-global numeric parameters of neato (`Epsilon`, `Damping`,
+/// `Initial_dist`, `MaxIter`).
+#[derive(Debug, Clone, Default)]
+pub struct NeatoParams {
+    pub epsilon: f64,
+    pub damping: f64,
+    pub initial_dist: f64,
+    pub max_iter: i64,
+}
