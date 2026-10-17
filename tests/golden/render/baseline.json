@@ -29,6 +29,10 @@
         "identical": true,
         "diff_lines": 0
       },
+      "arrows_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "clust": {
         "identical": true,
         "diff_lines": 0
@@ -46,6 +50,18 @@
         "diff_lines": 0
       },
       "clust4": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "colors": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "edge_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fonts_style": {
         "identical": true,
         "diff_lines": 0
       },
@@ -378,6 +394,10 @@
         "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "graph_labels": {
         "identical": true,
         "diff_lines": 0
       },
@@ -1933,7 +1953,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "html_labels": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "labelaligned": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "landscape_size": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "node_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "nodesfirst": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "outputorder": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "pack": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "penwidths": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rankdir_lr": {
         "identical": true,
         "diff_lines": 0
       },
@@ -1941,11 +1993,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "records": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rotate90": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "shapes": {
         "identical": true,
         "diff_lines": 0
       },
+      "shapes_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "size_ratio": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "stylesheet": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "undirected_misc": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "unix": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "urls": {
         "identical": true,
         "diff_lines": 0
       },
@@ -2032,6 +2112,10 @@
       "world": {
         "identical": true,
         "diff_lines": 0
+      },
+      "xlabels": {
+        "identical": true,
+        "diff_lines": 0
       }
     },
     "json": {
@@ -2059,6 +2143,10 @@
         "identical": true,
         "diff_lines": 0
       },
+      "arrows_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "clust": {
         "identical": true,
         "diff_lines": 0
@@ -2076,6 +2164,18 @@
         "diff_lines": 0
       },
       "clust4": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "colors": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "edge_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fonts_style": {
         "identical": true,
         "diff_lines": 0
       },
@@ -2408,6 +2508,10 @@
         "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "graph_labels": {
         "identical": true,
         "diff_lines": 0
       },
@@ -3823,7 +3927,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "html_labels": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "labelaligned": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "landscape_size": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "node_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "nodesfirst": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "outputorder": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "pack": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "penwidths": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rankdir_lr": {
         "identical": true,
         "diff_lines": 0
       },
@@ -3831,13 +3967,41 @@
         "identical": true,
         "diff_lines": 0
       },
+      "records": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rotate90": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "shapes": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "shapes_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "size_ratio": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "stylesheet": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "undirected_misc": {
         "identical": true,
         "diff_lines": 0
       },
       "unix": {
         "identical": false,
         "diff_lines": 2
+      },
+      "urls": {
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_GraphViz-Samples_complex_eae337": {
         "identical": true,
@@ -3920,6 +4084,10 @@
         "diff_lines": 0
       },
       "world": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "xlabels": {
         "identical": true,
         "diff_lines": 0
       }
@@ -3953,6 +4121,10 @@
         "identical": true,
         "diff_lines": 0
       },
+      "arrows_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "clust": {
         "identical": true,
         "diff_lines": 0
@@ -3970,6 +4142,18 @@
         "diff_lines": 0
       },
       "clust4": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "colors": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "edge_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fonts_style": {
         "identical": true,
         "diff_lines": 0
       },
@@ -4302,6 +4486,10 @@
         "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "graph_labels": {
         "identical": true,
         "diff_lines": 0
       },
@@ -5857,7 +6045,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "html_labels": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "labelaligned": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "landscape_size": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "node_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "nodesfirst": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "outputorder": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "pack": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "penwidths": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rankdir_lr": {
         "identical": true,
         "diff_lines": 0
       },
@@ -5865,11 +6085,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "records": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rotate90": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "shapes": {
         "identical": true,
         "diff_lines": 0
       },
+      "shapes_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "size_ratio": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "stylesheet": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "undirected_misc": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "unix": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "urls": {
         "identical": true,
         "diff_lines": 0
       },
@@ -5954,6 +6202,10 @@
         "diff_lines": 0
       },
       "world": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "xlabels": {
         "identical": true,
         "diff_lines": 0
       }
@@ -5987,6 +6239,10 @@
         "identical": true,
         "diff_lines": 0
       },
+      "arrows_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "clust": {
         "identical": true,
         "diff_lines": 0
@@ -6004,6 +6260,18 @@
         "diff_lines": 0
       },
       "clust4": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "colors": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "edge_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fonts_style": {
         "identical": true,
         "diff_lines": 0
       },
@@ -6332,6 +6600,10 @@
         "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "graph_labels": {
         "identical": true,
         "diff_lines": 0
       },
@@ -7875,7 +8147,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "html_labels": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "labelaligned": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "landscape_size": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "node_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "nodesfirst": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "outputorder": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "pack": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "penwidths": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rankdir_lr": {
         "identical": true,
         "diff_lines": 0
       },
@@ -7883,11 +8187,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "records": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rotate90": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "shapes": {
         "identical": true,
         "diff_lines": 0
       },
+      "shapes_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "size_ratio": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "stylesheet": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "undirected_misc": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "unix": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "urls": {
         "identical": true,
         "diff_lines": 0
       },
@@ -7972,6 +8304,10 @@
         "diff_lines": 0
       },
       "world": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "xlabels": {
         "identical": true,
         "diff_lines": 0
       }
@@ -8005,6 +8341,10 @@
         "identical": true,
         "diff_lines": 0
       },
+      "arrows_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "clust": {
         "identical": true,
         "diff_lines": 0
@@ -8022,6 +8362,18 @@
         "diff_lines": 0
       },
       "clust4": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "colors": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "edge_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fonts_style": {
         "identical": true,
         "diff_lines": 0
       },
@@ -8350,6 +8702,10 @@
         "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "graph_labels": {
         "identical": true,
         "diff_lines": 0
       },
@@ -9893,7 +10249,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "html_labels": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "labelaligned": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "landscape_size": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "node_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "nodesfirst": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "outputorder": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "pack": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "penwidths": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rankdir_lr": {
         "identical": true,
         "diff_lines": 0
       },
@@ -9901,11 +10289,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "records": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rotate90": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "shapes": {
         "identical": true,
         "diff_lines": 0
       },
+      "shapes_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "size_ratio": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "stylesheet": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "undirected_misc": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "unix": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "urls": {
         "identical": true,
         "diff_lines": 0
       },
@@ -9992,6 +10408,10 @@
       "world": {
         "identical": true,
         "diff_lines": 0
+      },
+      "xlabels": {
+        "identical": true,
+        "diff_lines": 0
       }
     },
     "svg": {
@@ -10023,6 +10443,10 @@
         "identical": true,
         "diff_lines": 0
       },
+      "arrows_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "clust": {
         "identical": true,
         "diff_lines": 0
@@ -10040,6 +10464,18 @@
         "diff_lines": 0
       },
       "clust4": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "colors": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "edge_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fonts_style": {
         "identical": true,
         "diff_lines": 0
       },
@@ -10372,6 +10808,10 @@
         "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "graph_labels": {
         "identical": true,
         "diff_lines": 0
       },
@@ -11927,7 +12367,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "html_labels": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "labelaligned": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "landscape_size": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "node_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "nodesfirst": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "outputorder": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "pack": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "penwidths": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rankdir_lr": {
         "identical": true,
         "diff_lines": 0
       },
@@ -11935,11 +12407,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "records": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rotate90": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "shapes": {
         "identical": true,
         "diff_lines": 0
       },
+      "shapes_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "size_ratio": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "stylesheet": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "undirected_misc": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "unix": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "urls": {
         "identical": true,
         "diff_lines": 0
       },
@@ -12026,6 +12526,10 @@
       "world": {
         "identical": true,
         "diff_lines": 0
+      },
+      "xlabels": {
+        "identical": true,
+        "diff_lines": 0
       }
     },
     "xdot": {
@@ -12057,6 +12561,10 @@
         "identical": true,
         "diff_lines": 0
       },
+      "arrows_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "clust": {
         "identical": true,
         "diff_lines": 0
@@ -12074,6 +12582,18 @@
         "diff_lines": 0
       },
       "clust4": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "colors": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "edge_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fonts_style": {
         "identical": true,
         "diff_lines": 0
       },
@@ -12406,6 +12926,10 @@
         "diff_lines": 0
       },
       "gallery_xlabel_0_9bab30": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "graph_labels": {
         "identical": true,
         "diff_lines": 0
       },
@@ -13961,7 +14485,39 @@
         "identical": true,
         "diff_lines": 0
       },
+      "html_labels": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "labelaligned": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "landscape_size": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "node_styles": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "nodesfirst": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "outputorder": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "pack": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "penwidths": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rankdir_lr": {
         "identical": true,
         "diff_lines": 0
       },
@@ -13969,13 +14525,41 @@
         "identical": true,
         "diff_lines": 0
       },
+      "records": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "rotate90": {
+        "identical": true,
+        "diff_lines": 0
+      },
       "shapes": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "shapes_all": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "size_ratio": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "stylesheet": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "undirected_misc": {
         "identical": true,
         "diff_lines": 0
       },
       "unix": {
         "identical": false,
         "diff_lines": 2
+      },
+      "urls": {
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_GraphViz-Samples_complex_eae337": {
         "identical": true,
@@ -14058,6 +14642,10 @@
         "diff_lines": 0
       },
       "world": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "xlabels": {
         "identical": true,
         "diff_lines": 0
       }
