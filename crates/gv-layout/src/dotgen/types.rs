@@ -78,14 +78,7 @@ pub type BoxF = gv_core::BoundingBox;
 /// `port` (internal edge endpoint specification), shared with `lib/common`.
 pub type Port = crate::common::types::PortInfo;
 
-/// `Center` in shapes.c: the port of an edge without a port name.
-pub fn port_center() -> Port {
-    Port {
-        theta: -1.0,
-        clip: true,
-        ..Port::default()
-    }
-}
+pub use crate::common::ports::port_center;
 
 /// `textlabel_t` (only the fields layout needs).
 #[derive(Debug, Clone, Default)]

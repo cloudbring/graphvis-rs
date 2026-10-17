@@ -28,55 +28,6 @@ impl Dot<'_> {
         self.input.edge_defaults.contains_key(k)
             || self.input.edges.iter().any(|e| e.attrs.contains_key(k))
     }
-
-    /// `closestSide(n, other, oldport)` (shapes.c).
-    fn closest_side(&self, n: N, other: N, oldport: &Port) -> &'static str {
-        const SIDE_PORT: [&str; 4] = ["s", "e", "n", "w"];
-        let rkd = self.graphs[0].rankdir;
-        let cvt = |p: Point| match rkd {
-            RANKDIR_BT => Point::new(p.x, -p.y),
-            RANKDIR_LR => Point::new(-p.y, p.x),
-            RANKDIR_RL => Point::new(p.y, p.x),
-            _ => p,
-        };
-        let pt = cvt(self.nodes[n].coord);
-        let opt = cvt(self.nodes[other].coord);
-        let sides = oldport.side;
-        if sides == 0 || sides == (TOP | BOTTOM | LEFT | RIGHT) {
-            return "";
-        }
-        let b = if let Some(bp) = oldport.bp {
-            bp
-        } else {
-            let nd = &self.nodes[n];
-            if self.graphs[0].flip() {
-                BoxF::new(-nd.ht / 2.0, -nd.lw, nd.ht / 2.0, nd.lw)
-            } else {
-                BoxF::new(-nd.lw, -nd.ht / 2.0, nd.lw, nd.ht / 2.0)
-            }
-        };
-        let mut rv: Option<&'static str> = None;
-        let mut mind = 0.0;
-        for (i, name) in SIDE_PORT.iter().enumerate() {
-            if sides & (1 << i) == 0 {
-                continue;
-            }
-            let mut p = match i {
-                BOTTOM_IX => Point::new((b.ll.x + b.ur.x) / 2.0, b.ll.y),
-                RIGHT_IX => Point::new(b.ur.x, (b.ll.y + b.ur.y) / 2.0),
-                TOP_IX => Point::new((b.ll.x + b.ur.x) / 2.0, b.ur.y),
-                _ => Point::new(b.ll.x, (b.ll.y + b.ur.y) / 2.0),
-            };
-            p.x += pt.x;
-            p.y += pt.y;
-            let d = (p.x - opt.x) * (p.x - opt.x) + (p.y - opt.y) * (p.y - opt.y);
-            if rv.is_none() || d < mind {
-                mind = d;
-                rv = Some(name);
-            }
-        }
-        rv.unwrap_or("")
-    }
 }
 
 impl SplineGraph for Dot<'_> {
@@ -201,13 +152,7 @@ impl SplineGraph for Dot<'_> {
     }
     /// `resolvePort(n, other, oldport)`.
     fn resolve_port(&self, n: usize, other: usize, old: &Port) -> Port {
-        let compass = self.closest_side(n, other, old);
-        let mut rv = Port {
-            name: old.name.clone(),
-            ..Port::default()
-        };
-        self.compass_port(n, old.bp, &mut rv, compass, old.side, false);
-        rv
+        crate::common::ports::resolve_port(self, n, other, old)
     }
     /// `record_path(n, prt, side, rv, &k)`; polygons (`poly_path`) have none.
     fn pboxfn(&self, n: usize, prt: &Port, side: u8) -> Option<(u8, Vec<BoxF>)> {
@@ -293,5 +238,14 @@ impl crate::common::xlabels::XLabelGraph for Dot<'_> {
     }
     fn xl_forcelabels(&self) -> bool {
         super::utils::map_bool(self.agget(0, "forcelabels"), true)
+    }
+}
+
+impl crate::common::ports::PortGraph for Dot<'_> {
+    fn port_node(&self, n: usize) -> &gv_core::NodeData {
+        &self.input.nodes[self.nodes[n].real.expect("port on a virtual node")]
+    }
+    fn port_env(&self) -> gv_geom::NodeSizeEnv<'_> {
+        gv_geom::NodeSizeEnv::from_graph(self.input)
     }
 }
