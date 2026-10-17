@@ -1,0 +1,3 @@
+graph sm {
+layout=neato;
+ a [shape=triangle]; b [shape=hexagon]; c [shape=star]; d [shape=doublecircle]; e [shape=cylinder]; f [shape=point]; a -- b -- c -- d -- e -- f -- a; a -- d; }

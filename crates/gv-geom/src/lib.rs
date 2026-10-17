@@ -5,6 +5,7 @@
 
 pub mod html_label;
 pub mod node_size;
+pub mod pathplan;
 pub mod shapes;
 pub mod splines;
 
