@@ -1,8 +1,5 @@
 #!/usr/bin/env zsh
-# Local verification & content-addressed CI receipt generator.
-# Runs fmt, clippy, unit tests, and wasm32 target checks once using warm local sccache,
-# then writes .ci-verified.json keyed on the git tree SHA of the source code so GitHub Actions
-# does not wastefully re-run the same compilation and test suite when the tree matches.
+# Local check script: runs the same fmt, clippy, test and wasm32 checks as CI.
 
 set -euo pipefail
 
@@ -23,20 +20,4 @@ echo "==> [3/4] Running workspace tests..."
 echo "==> [4/4] Verifying wasm32-unknown-unknown build..."
 ./scripts/cargo-locked.sh check --target wasm32-unknown-unknown -p gv-wasm
 
-# Compute deterministic hash of all tracked source files (excluding .ci-verified.json)
-SOURCE_HASH=$(git ls-files -s | grep -v '\.ci-verified\.json$' | shasum -a 256 | awk '{print $1}')
-RUSTC_VER=$(rustc --version)
-TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-cat > .ci-verified.json <<EOF
-{
-  "source_hash": "${SOURCE_HASH}",
-  "rustc_version": "${RUSTC_VER}",
-  "targets_verified": ["aarch64-apple-darwin", "wasm32-unknown-unknown"],
-  "verified_at": "${TIMESTAMP}",
-  "sccache_enabled": true
-}
-EOF
-
-echo "==> Verification complete! Wrote .ci-verified.json (source_hash=${SOURCE_HASH})"
-sccache --show-stats | grep -E "Compile requests|Cache hits|Cache misses|Hit rate" || true
+echo "==> Local verification complete."

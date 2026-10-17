@@ -2,9 +2,8 @@ name: CI
 
 on:
   pull_request:
-    branches: ["argon4/**"]
   push:
-    branches: ["argon4/main"]
+    branches: ["master", "opus5.5/**"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,39 +11,14 @@ env:
   SCCACHE_GHA_ENABLED: "true"
 
 jobs:
-  check-receipt:
-    name: Verify Local Receipt / Affected Scope
-    runs-on: ubuntu-latest
-    outputs:
-      verified_locally: ${{ steps.receipt.outputs.verified_locally }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check Content-Addressed Local Verification Receipt
-        id: receipt
-        run: |
-          if [ -f .ci-verified.json ]; then
-            ACTUAL_HASH=$(git ls-files -s | grep -v '\.ci-verified\.json$' | sha256sum | awk '{print $1}')
-            RECORDED_HASH=$(jq -r '.source_hash' .ci-verified.json)
-            echo "Actual source hash:   $ACTUAL_HASH"
-            echo "Recorded source hash: $RECORDED_HASH"
-            if [ "$ACTUAL_HASH" = "$RECORDED_HASH" ]; then
-              echo "verified_locally=true" >> "$GITHUB_OUTPUT"
-              echo "✅ Source tree matches local pre-verified receipt (.ci-verified.json). Skipping duplicate heavy test rebuild!"
-              exit 0
-            fi
-          fi
-          echo "verified_locally=false" >> "$GITHUB_OUTPUT"
-
-  full-verify:
-    name: Full Build, Test & WASM Check (Fallback when unverified locally)
-    needs: check-receipt
-    if: needs.check-receipt.outputs.verified_locally != 'true'
+  verify:
+    name: Format, Clippy, Test & WASM Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown,wasm32-wasip2
+          targets: wasm32-unknown-unknown
           components: rustfmt,clippy
       - name: Run sccache-cache
         uses: Mozilla-Actions/sccache-action@v0.0.7
