@@ -1216,6 +1216,24 @@ pub fn add_edge_labels<S: SplineGraph + ?Sized>(g: &mut S, e: usize) {
     make_port_labels(g, e);
 }
 
+impl crate::ortho::OrthoGraph for LGraph<'_> {
+    fn ortho_nodes(&self) -> Vec<usize> {
+        (0..self.nodes.len()).collect()
+    }
+    fn ortho_out_edges(&self, n: usize) -> Vec<usize> {
+        self.out[n].clone()
+    }
+    fn ortho_concentrate(&self) -> bool {
+        self.concentrate
+    }
+    fn node_seq(&self, n: usize) -> usize {
+        n
+    }
+    fn xl_name(&self, n: usize) -> String {
+        self.src.nodes[n].name.clone()
+    }
+}
+
 impl SplineGraph for LGraph<'_> {
     fn tail(&self, e: usize) -> usize {
         self.edges[e].tail

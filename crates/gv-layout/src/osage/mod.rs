@@ -287,9 +287,20 @@ pub fn osage_layout(graph: &mut Graph) -> Result<()> {
         spline_edges0(&mut g, &root, true, true);
     } else {
         let mut et = g.edge_type;
-        if et != EdgeType::None {
-            if et == EdgeType::Ortho || et == EdgeType::CompoundEdge {
-                // lib/ortho is not ported; fall back as spline_edges0 does.
+        if et == EdgeType::Ortho {
+            crate::neatogen::neatosplines::spline_edges_by(
+                &mut g,
+                &root,
+                et,
+                &mut |lg, sub, pm, et| {
+                    crate::fdpgen::layout::ortho_spline_edges(lg, sub, pm, et);
+                    true
+                },
+            );
+        } else if et != EdgeType::None {
+            if et == EdgeType::CompoundEdge {
+                // compoundEdges needs fdp's cluster hierarchy; C's
+                // spline_edges_ routes it like a polyline.
                 et = EdgeType::Pline;
             }
             spline_edges_main(&mut g, &root, et);
