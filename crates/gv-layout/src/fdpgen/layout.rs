@@ -1107,11 +1107,13 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
     let src = ce
         .as_ref()
         .map_or_else(|| graph.clone(), |c| c.work.clone());
-    let mut heap = NodeHeap::default();
+    let heap = NodeHeap {
+        recycle: ce.is_none(),
+        ..NodeHeap::default()
+    };
     // With cluster edges, C's processClusterEdges frees memory of other
     // allocator zones that later derived nodes reuse; creation order
     // matches C there, so no slot is ever recycled.
-    heap.recycle = ce.is_none();
     let is_clust: Vec<bool> = (0..src.nodes.len())
         .map(|n| ce.as_ref().is_some_and(|c| c.is_clust_node(n)))
         .collect();
