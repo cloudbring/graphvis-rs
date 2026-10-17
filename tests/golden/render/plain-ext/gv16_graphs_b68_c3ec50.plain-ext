@@ -1,0 +1,25 @@
+graph 1 8.75 2.7889
+node task15 3.875 2.5389 0.75 0.5 task15 solid box black lightgrey
+node task16 0.375 1.5389 0.75 0.5 task16 solid box black lightgrey
+node task17 1.375 1.5389 0.75 0.5 task17 solid box black lightgrey
+node task18 2.375 1.5389 0.75 0.5 task18 solid box black lightgrey
+node task19 3.375 1.5389 0.75 0.5 task19 solid box black lightgrey
+node task20 4.375 1.5389 0.75 0.5 task20 solid box black lightgrey
+node task21 5.375 1.5389 0.75 0.5 task21 solid box black lightgrey
+node task95 6.375 1.5389 0.75 0.5 task95 solid box black lightgrey
+node task31 7.375 1.5389 0.75 0.5 task31 solid box black lightgrey
+node task32 6.375 0.53889 0.75 0.5 task32 solid box black lightgrey
+node task33 7.375 0.53889 0.75 0.5 task33 solid box black lightgrey
+node task34 8.375 0.53889 0.75 0.5 task34 solid box black lightgrey
+edge task15 task16 4 3.4938 2.4569 2.9439 2.3533 1.8965 2.136 0.9004 1.7928 solid black
+edge task15 task17 4 3.4951 2.3964 3.1192 2.2668 2.5251 2.0554 1.9017 1.7978 solid black
+edge task15 task18 4 3.5004 2.2822 3.311 2.1594 3.0786 2.0089 2.8743 1.8764 solid black
+edge task15 task19 4 3.7514 2.2847 3.6963 2.1775 3.6301 2.0488 3.5686 1.9293 solid black
+edge task15 task20 4 3.9986 2.2847 4.0537 2.1775 4.1199 2.0488 4.1814 1.9293 solid black
+edge task15 task21 4 4.2496 2.2822 4.439 2.1594 4.6714 2.0089 4.8757 1.8764 solid black
+edge task15 task95 4 4.2549 2.3964 4.6308 2.2668 5.2249 2.0554 5.8483 1.7978 solid black
+edge task15 task31 4 4.2562 2.4569 4.8061 2.3533 5.8535 2.136 6.8496 1.7928 solid black
+edge task31 task32 4 7.1278 1.2847 7.01 1.1702 6.8668 1.0309 6.7371 0.90479 solid black
+edge task31 task33 4 7.375 1.2847 7.375 1.1834 7.375 1.0629 7.375 0.94911 solid black
+edge task31 task34 4 7.6222 1.2847 7.74 1.1702 7.8832 1.0309 8.0129 0.90479 solid black
+stop

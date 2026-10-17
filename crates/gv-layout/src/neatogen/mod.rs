@@ -18,6 +18,7 @@
 
 pub mod adjust;
 pub mod bfs;
+pub mod call_tri;
 pub mod conjgrad;
 pub mod delaunay;
 pub mod graphdata;

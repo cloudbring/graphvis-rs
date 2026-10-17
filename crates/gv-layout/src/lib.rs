@@ -6,6 +6,7 @@ pub mod dot;
 pub mod dotgen;
 pub mod force_circular;
 pub mod neatogen;
+pub mod nop;
 pub mod pack;
 pub mod sfdpgen;
 pub mod sparse;
@@ -22,6 +23,17 @@ pub enum LayoutEngine {
     Circo,
     Osage,
     Patchwork,
+    /// `nop`/`nop1`: neato with `-n1`.
+    Nop1,
+    /// `nop2`: neato with `-n2`.
+    Nop2,
+}
+
+/// Engine options set on the command line.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LayoutOptions {
+    /// `-n[N]`: neato keeps the input positions (`Nop` in C). 0 runs the full layout.
+    pub nop: u8,
 }
 
 impl LayoutEngine {
@@ -35,12 +47,22 @@ impl LayoutEngine {
             "circo" => Ok(Self::Circo),
             "osage" => Ok(Self::Osage),
             "patchwork" => Ok(Self::Patchwork),
+            "nop" | "nop1" => Ok(Self::Nop1),
+            "nop2" => Ok(Self::Nop2),
             other => Err(GraphvizError::UnsupportedEngine(other.to_string())),
         }
     }
 }
 
 pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
+    layout_graph_with_options(graph, engine, LayoutOptions::default())
+}
+
+pub fn layout_graph_with_options(
+    graph: &mut Graph,
+    engine: LayoutEngine,
+    options: LayoutOptions,
+) -> Result<()> {
     let effective_engine = if engine == LayoutEngine::Dot
         && let Some(attr_layout) = graph.graph_attrs.get("layout")
         && let Ok(parsed) = LayoutEngine::parse(attr_layout)
@@ -59,9 +81,12 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
                 dotgen::layout_dot(graph)
             }
         }
+        LayoutEngine::Neato if options.nop > 0 => nop::layout_nop(graph, options.nop),
+        LayoutEngine::Nop1 => nop::layout_nop(graph, 1),
+        LayoutEngine::Nop2 => nop::layout_nop(graph, 2),
         LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph),
-        LayoutEngine::Fdp => force_circular::layout_fdp(graph, false),
-        LayoutEngine::Sfdp => force_circular::layout_fdp(graph, true),
+        LayoutEngine::Fdp => force_circular::layout_fdp(graph),
+        LayoutEngine::Sfdp => sfdpgen::sfdpinit::sfdp_layout(graph),
         LayoutEngine::Twopi => force_circular::layout_twopi(graph),
         LayoutEngine::Circo => force_circular::layout_circo(graph),
         LayoutEngine::Osage => force_circular::layout_osage(graph),

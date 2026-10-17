@@ -1,0 +1,181 @@
+graph 1 2.9553 10.538
+node _box 0.025 0.74043 0.05 0.05 "" solid point black lightgrey
+node box 1.1767 1.3654 0.05 0.05 "" solid point black lightgrey
+node lbox 1.1767 1.1154 0.05 0.05 "" solid point black lightgrey
+node rbox 1.1767 0.86543 0.05 0.05 "" solid point black lightgrey
+node olbox 1.1767 0.61543 0.05 0.05 "" solid point black lightgrey
+node orbox 1.1767 0.36543 0.05 0.05 "" solid point black lightgrey
+node obox 1.1767 0.11544 0.05 0.05 "" solid point black lightgrey
+node boxbox 2.9303 1.3654 0.05 0.05 "" solid point black lightgrey
+node lboxlbox 2.9303 1.1154 0.05 0.05 "" solid point black lightgrey
+node rboxrbox 2.9303 0.86543 0.05 0.05 "" solid point black lightgrey
+node olboxolbox 2.9303 0.61543 0.05 0.05 "" solid point black lightgrey
+node orboxorbox 2.9303 0.36543 0.05 0.05 "" solid point black lightgrey
+node oboxobox 2.9303 0.11544 0.05 0.05 "" solid point black lightgrey
+node _crow 0.025 1.8654 0.05 0.05 "" solid point black lightgrey
+node crow 1.1767 2.1154 0.05 0.05 "" solid point black lightgrey
+node lcrow 1.1767 1.8654 0.05 0.05 "" solid point black lightgrey
+node rcrow 1.1767 1.6154 0.05 0.05 "" solid point black lightgrey
+node crowcrow 2.9303 2.1154 0.05 0.05 "" solid point black lightgrey
+node lcrowlcrow 2.9303 1.8654 0.05 0.05 "" solid point black lightgrey
+node rcrowrcrow 2.9303 1.6154 0.05 0.05 "" solid point black lightgrey
+node _diamond 0.025 2.9904 0.05 0.05 "" solid point black lightgrey
+node diamond 1.1767 3.6154 0.05 0.05 "" solid point black lightgrey
+node ldiamond 1.1767 3.3654 0.05 0.05 "" solid point black lightgrey
+node rdiamond 1.1767 3.1154 0.05 0.05 "" solid point black lightgrey
+node oldiamond 1.1767 2.8654 0.05 0.05 "" solid point black lightgrey
+node ordiamond 1.1767 2.6154 0.05 0.05 "" solid point black lightgrey
+node odiamond 1.1767 2.3654 0.05 0.05 "" solid point black lightgrey
+node diamonddiamond 2.9303 3.6154 0.05 0.05 "" solid point black lightgrey
+node ldiamondldiamond 2.9303 3.3654 0.05 0.05 "" solid point black lightgrey
+node rdiamondrdiamond 2.9303 3.1154 0.05 0.05 "" solid point black lightgrey
+node oldiamondoldiamond 2.9303 2.8654 0.05 0.05 "" solid point black lightgrey
+node ordiamondordiamond 2.9303 2.6154 0.05 0.05 "" solid point black lightgrey
+node odiamondodiamond 2.9303 2.3654 0.05 0.05 "" solid point black lightgrey
+node _dot 0.025 3.9904 0.05 0.05 "" solid point black lightgrey
+node dot 1.1767 4.1154 0.05 0.05 "" solid point black lightgrey
+node odot 1.1767 3.8654 0.05 0.05 "" solid point black lightgrey
+node dotdot 2.9303 4.1154 0.05 0.05 "" solid point black lightgrey
+node odotodot 2.9303 3.8654 0.05 0.05 "" solid point black lightgrey
+node _inv 0.025 4.9904 0.05 0.05 "" solid point black lightgrey
+node inv 1.1767 5.6154 0.05 0.05 "" solid point black lightgrey
+node linv 1.1767 5.3654 0.05 0.05 "" solid point black lightgrey
+node rinv 1.1767 5.1154 0.05 0.05 "" solid point black lightgrey
+node olinv 1.1767 4.8654 0.05 0.05 "" solid point black lightgrey
+node orinv 1.1767 4.6154 0.05 0.05 "" solid point black lightgrey
+node oinv 1.1767 4.3654 0.05 0.05 "" solid point black lightgrey
+node invinv 2.9303 5.6154 0.05 0.05 "" solid point black lightgrey
+node linvlinv 2.9303 5.3654 0.05 0.05 "" solid point black lightgrey
+node rinvrinv 2.9303 5.1154 0.05 0.05 "" solid point black lightgrey
+node olinvolinv 2.9303 4.8654 0.05 0.05 "" solid point black lightgrey
+node orinvorinv 2.9303 4.6154 0.05 0.05 "" solid point black lightgrey
+node oinvoinv 2.9303 4.3654 0.05 0.05 "" solid point black lightgrey
+node _none 0.025 5.8654 0.05 0.05 "" solid point black lightgrey
+node none 1.1767 5.8654 0.05 0.05 "" solid point black lightgrey
+node nonenone 2.9303 5.8654 0.05 0.05 "" solid point black lightgrey
+node _normal 0.025 6.7404 0.05 0.05 "" solid point black lightgrey
+node normal 1.1767 7.3654 0.05 0.05 "" solid point black lightgrey
+node lnormal 1.1767 7.1154 0.05 0.05 "" solid point black lightgrey
+node rnormal 1.1767 6.8654 0.05 0.05 "" solid point black lightgrey
+node olnormal 1.1767 6.6154 0.05 0.05 "" solid point black lightgrey
+node ornormal 1.1767 6.3654 0.05 0.05 "" solid point black lightgrey
+node onormal 1.1767 6.1154 0.05 0.05 "" solid point black lightgrey
+node normalnormal 2.9303 7.3654 0.05 0.05 "" solid point black lightgrey
+node lnormallnormal 2.9303 7.1154 0.05 0.05 "" solid point black lightgrey
+node rnormalrnormal 2.9303 6.8654 0.05 0.05 "" solid point black lightgrey
+node olnormalolnormal 2.9303 6.6154 0.05 0.05 "" solid point black lightgrey
+node ornormalornormal 2.9303 6.3654 0.05 0.05 "" solid point black lightgrey
+node onormalonormal 2.9303 6.1154 0.05 0.05 "" solid point black lightgrey
+node _tee 0.025 7.8654 0.05 0.05 "" solid point black lightgrey
+node tee 1.1767 8.1154 0.05 0.05 "" solid point black lightgrey
+node ltee 1.1767 7.8654 0.05 0.05 "" solid point black lightgrey
+node rtee 1.1767 7.6154 0.05 0.05 "" solid point black lightgrey
+node teetee 2.9303 8.1154 0.05 0.05 "" solid point black lightgrey
+node lteeltee 2.9303 7.8654 0.05 0.05 "" solid point black lightgrey
+node rteertee 2.9303 7.6154 0.05 0.05 "" solid point black lightgrey
+node _vee 0.025 8.6154 0.05 0.05 "" solid point black lightgrey
+node vee 1.1767 8.8654 0.05 0.05 "" solid point black lightgrey
+node lvee 1.1767 8.6154 0.05 0.05 "" solid point black lightgrey
+node rvee 1.1767 8.3654 0.05 0.05 "" solid point black lightgrey
+node veevee 2.9303 8.8654 0.05 0.05 "" solid point black lightgrey
+node lveelvee 2.9303 8.6154 0.05 0.05 "" solid point black lightgrey
+node rveervee 2.9303 8.3654 0.05 0.05 "" solid point black lightgrey
+node _curve 0.025 9.3654 0.05 0.05 "" solid point black lightgrey
+node curve 1.1767 9.6154 0.05 0.05 "" solid point black lightgrey
+node lcurve 1.1767 9.3654 0.05 0.05 "" solid point black lightgrey
+node rcurve 1.1767 9.1154 0.05 0.05 "" solid point black lightgrey
+node curvecurve 2.9303 9.6154 0.05 0.05 "" solid point black lightgrey
+node lcurvelcurve 2.9303 9.3654 0.05 0.05 "" solid point black lightgrey
+node rcurvercurve 2.9303 9.1154 0.05 0.05 "" solid point black lightgrey
+node _icurve 0.025 10.115 0.05 0.05 "" solid point black lightgrey
+node icurve 1.1767 10.365 0.05 0.05 "" solid point black lightgrey
+node licurve 1.1767 10.115 0.05 0.05 "" solid point black lightgrey
+node ricurve 1.1767 9.8654 0.05 0.05 "" solid point black lightgrey
+node icurveicurve 2.9303 10.365 0.05 0.05 "" solid point black lightgrey
+node licurvelicurve 2.9303 10.115 0.05 0.05 "" solid point black lightgrey
+node ricurvericurve 2.9303 9.8654 0.05 0.05 "" solid point black lightgrey
+edge _box box 7 0.042162 0.76729 0.054979 0.85951 0.11078 1.1649 0.3 1.296 0.51047 1.4418 0.82297 1.4243 1.0085 1.3963 box 0.60087 1.4987 solid black
+edge _box lbox 7 0.050313 0.75853 0.082567 0.80783 0.17985 0.94489 0.3 1.0043 0.52426 1.1153 0.81958 1.1292 1.0001 1.1251 lbox 0.60087 1.2082 solid black
+edge _box rbox 7 0.052996 0.743 0.09211 0.75006 0.20529 0.76999 0.3 0.7821 0.54622 0.81361 0.83335 0.83911 1.0065 0.85326 rbox 0.60087 0.92718 solid black
+edge _box olbox 7 0.052233 0.73135 0.089397 0.70664 0.19806 0.63858 0.3 0.61543 0.5436 0.56014 0.83594 0.57687 1.0102 0.59528 olbox 0.60087 0.69876 solid black
+edge _box orbox 7 0.045692 0.7239 0.070036 0.66721 0.15896 0.48004 0.3 0.4071 0.52456 0.29097 0.82749 0.30971 1.0082 0.33606 orbox 0.60087 0.49043 solid black
+edge _box obox 7 0.0407 0.71661 0.049193 0.62354 0.093886 0.28283 0.3 0.14322 0.51142 0 0.8236 0.035109 1.0088 0.074615 obox 0.60087 0.22654 solid black
+edge box boxbox 4 1.2017 1.3654 1.3071 1.3654 2.1446 1.3654 2.6089 1.3654 boxbox 2.0535 1.4487 solid black
+edge lbox lboxlbox 4 1.2017 1.1154 1.3071 1.1154 2.1446 1.1154 2.6089 1.1154 lboxlbox 2.0535 1.1988 solid black
+edge rbox rboxrbox 4 1.2017 0.86543 1.3071 0.86543 2.1446 0.86543 2.6089 0.86543 rboxrbox 2.0535 0.94876 solid black
+edge olbox olboxolbox 4 1.2017 0.61543 1.3071 0.61543 2.1446 0.61543 2.6089 0.61543 olboxolbox 2.0535 0.69876 solid black
+edge orbox orboxorbox 4 1.2017 0.36543 1.3071 0.36543 2.1446 0.36543 2.6089 0.36543 orboxorbox 2.0535 0.44876 solid black
+edge obox oboxobox 4 1.2017 0.11544 1.3071 0.11544 2.1446 0.11544 2.6089 0.11544 oboxobox 2.0535 0.19876 solid black
+edge _crow crow 7 0.051833 1.8769 0.087971 1.9084 0.19425 1.9957 0.3 2.032 0.53724 2.114 0.8315 2.1245 1.0079 2.1219 crow 0.60087 2.2048 solid black
+edge _crow lcrow 4 0.054778 1.8654 0.15808 1.8654 0.73883 1.8654 1.0158 1.8654 lcrow 0.60087 1.9487 solid black
+edge _crow rcrow 7 0.051833 1.8538 0.087971 1.8225 0.19425 1.7352 0.3 1.6987 0.54497 1.6143 0.85076 1.6058 1.0247 1.6093 rcrow 0.60087 1.782 solid black
+edge crow crowcrow 4 1.2017 2.1154 1.3071 2.1154 2.1446 2.1154 2.6089 2.1154 crowcrow 2.0535 2.1987 solid black
+edge lcrow lcrowlcrow 4 1.2017 1.8654 1.3093 1.8654 2.179 1.8654 2.6368 1.8654 lcrowlcrow 2.0535 1.9487 solid black
+edge rcrow rcrowrcrow 4 1.2017 1.6154 1.3093 1.6154 2.179 1.6154 2.6368 1.6154 rcrowrcrow 2.0535 1.6987 solid black
+edge _diamond diamond 7 0.042162 3.0173 0.054979 3.1095 0.11078 3.415 0.3 3.5459 0.40411 3.6182 0.74521 3.6254 0.96607 3.6219 diamond 0.60087 3.7059 solid black
+edge _diamond ldiamond 7 0.050313 3.0086 0.082567 3.0579 0.17985 3.1948 0.3 3.2543 0.50256 3.3545 0.7631 3.3755 0.94464 3.3758 ldiamond 0.60087 3.4582 solid black
+edge _diamond rdiamond 7 0.052996 2.993 0.09211 3.0001 0.20529 3.02 0.3 3.032 0.52186 3.0605 0.77694 3.084 0.95189 3.0987 rdiamond 0.60087 3.1772 solid black
+edge _diamond oldiamond 7 0.052233 2.9813 0.089397 2.9566 0.19806 2.8886 0.3 2.8654 0.51976 2.8155 0.77921 2.8243 0.95581 2.84 oldiamond 0.60087 2.9487 solid black
+edge _diamond ordiamond 7 0.045692 2.9738 0.070036 2.9172 0.15896 2.7301 0.3 2.657 0.50282 2.5522 0.76958 2.5573 0.9525 2.5787 ordiamond 0.60087 2.7404 solid black
+edge _diamond odiamond 7 0.0407 2.9666 0.049193 2.8736 0.093886 2.5329 0.3 2.3932 0.50017 2.2576 0.79068 2.2819 0.97819 2.3184 odiamond 0.60087 2.4765 solid black
+edge diamond diamonddiamond 4 1.2017 3.6154 1.302 3.6154 2.0651 3.6154 2.5389 3.6154 diamonddiamond 2.0535 3.6987 solid black
+edge ldiamond ldiamondldiamond 4 1.2017 3.3654 1.2991 3.3654 2.0207 3.3654 2.4962 3.3654 ldiamondldiamond 2.0535 3.4487 solid black
+edge rdiamond rdiamondrdiamond 4 1.2017 3.1154 1.2991 3.1154 2.0207 3.1154 2.4962 3.1154 rdiamondrdiamond 2.0535 3.1987 solid black
+edge oldiamond oldiamondoldiamond 4 1.2017 2.8654 1.2991 2.8654 2.0207 2.8654 2.4962 2.8654 oldiamondoldiamond 2.0535 2.9487 solid black
+edge ordiamond ordiamondordiamond 4 1.2017 2.6154 1.2991 2.6154 2.0207 2.6154 2.4962 2.6154 ordiamondordiamond 2.0535 2.6987 solid black
+edge odiamond odiamondodiamond 4 1.2017 2.3654 1.302 2.3654 2.0651 2.3654 2.5389 2.3654 odiamondodiamond 2.0535 2.4487 solid black
+edge _dot dot 7 0.052996 3.993 0.09211 4.0001 0.20529 4.02 0.3 4.032 0.55704 4.065 0.85867 4.0913 1.0286 4.1051 dot 0.60087 4.1772 solid black
+edge _dot odot 7 0.052233 3.9813 0.089397 3.9566 0.19806 3.8886 0.3 3.8654 0.55154 3.8083 0.85506 3.828 1.0268 3.847 odot 0.60087 3.9487 solid black
+edge dot dotdot 4 1.2017 4.1154 1.3104 4.1154 2.1965 4.1154 2.6504 4.1154 dotdot 2.0535 4.1987 solid black
+edge odot odotodot 4 1.2017 3.8654 1.3104 3.8654 2.1965 3.8654 2.6504 3.8654 odotodot 2.0535 3.9487 solid black
+edge _inv inv 7 0.042162 5.0173 0.054979 5.1095 0.11078 5.415 0.3 5.5459 0.51047 5.6918 0.82297 5.6743 1.0085 5.6462 inv 0.60087 5.7487 solid black
+edge _inv linv 7 0.050313 5.0086 0.082567 5.0579 0.17985 5.1948 0.3 5.2543 0.5339 5.3701 0.84512 5.3802 1.0228 5.3745 linv 0.60087 5.4582 solid black
+edge _inv rinv 7 0.052996 4.993 0.09211 5.0001 0.20529 5.02 0.3 5.032 0.55704 5.065 0.85867 5.0913 1.0286 5.1051 rinv 0.60087 5.1772 solid black
+edge _inv olinv 7 0.052233 4.9813 0.089397 4.9566 0.19806 4.8886 0.3 4.8654 0.55154 4.8083 0.85506 4.828 1.0268 4.847 olinv 0.60087 4.9487 solid black
+edge _inv orinv 7 0.045692 4.9738 0.070036 4.9172 0.15896 4.7301 0.3 4.657 0.53421 4.5359 0.85368 4.5616 1.0308 4.5895 orinv 0.60087 4.7404 solid black
+edge _inv oinv 7 0.0407 4.9666 0.049193 4.8736 0.093886 4.5329 0.3 4.3932 0.51142 4.25 0.8236 4.2851 1.0088 4.3247 oinv 0.60087 4.4765 solid black
+edge inv invinv 4 1.2017 5.6154 1.3069 5.6154 2.1403 5.6154 2.6053 5.6154 invinv 2.0535 5.6987 solid black
+edge linv linvlinv 4 1.2017 5.3654 1.3104 5.3654 2.1965 5.3654 2.6504 5.3654 linvlinv 2.0535 5.4487 solid black
+edge rinv rinvrinv 4 1.2017 5.1154 1.3104 5.1154 2.1965 5.1154 2.6504 5.1154 rinvrinv 2.0535 5.1987 solid black
+edge olinv olinvolinv 4 1.2017 4.8654 1.3104 4.8654 2.1965 4.8654 2.6504 4.8654 olinvolinv 2.0535 4.9487 solid black
+edge orinv orinvorinv 4 1.2017 4.6154 1.3104 4.6154 2.1965 4.6154 2.6504 4.6154 orinvorinv 2.0535 4.6987 solid black
+edge oinv oinvoinv 4 1.2017 4.3654 1.3069 4.3654 2.1403 4.3654 2.6053 4.3654 oinvoinv 2.0535 4.4487 solid black
+edge _none none 4 0.054778 5.8654 0.18072 5.8654 1.0162 5.8654 1.1459 5.8654 none 0.60087 5.9487 solid black
+edge none nonenone 4 1.2017 5.8654 1.3201 5.8654 2.3607 5.8654 2.7607 5.8654 nonenone 2.0535 5.9487 solid black
+edge _normal normal 7 0.042162 6.7673 0.054979 6.8595 0.11078 7.165 0.3 7.2959 0.506 7.4387 0.80972 7.425 0.99646 7.398 normal 0.60087 7.4987 solid black
+edge _normal lnormal 7 0.050313 6.7586 0.082567 6.8079 0.17985 6.9448 0.3 7.0043 0.52668 7.1165 0.82594 7.1294 1.0059 7.125 lnormal 0.60087 7.2082 solid black
+edge _normal rnormal 7 0.052996 6.743 0.09211 6.7501 0.20529 6.77 0.3 6.782 0.54893 6.814 0.83965 6.8397 1.0121 6.8537 rnormal 0.60087 6.9272 solid black
+edge _normal olnormal 7 0.052233 6.7313 0.089397 6.7066 0.19806 6.6386 0.3 6.6154 0.54624 6.5595 0.84231 6.5772 1.0158 6.5959 olnormal 0.60087 6.6987 solid black
+edge _normal ornormal 7 0.045692 6.7238 0.070036 6.6672 0.15896 6.4801 0.3 6.407 0.52696 6.2897 0.834 6.3101 1.014 6.3369 ornormal 0.60087 6.4904 solid black
+edge _normal onormal 7 0.0407 6.7166 0.049193 6.6236 0.093886 6.2829 0.3 6.1432 0.50692 6.003 0.81036 6.0337 0.99681 6.072 onormal 0.60087 6.2265 solid black
+edge normal normalnormal 4 1.2017 7.3654 1.305 7.3654 2.1107 7.3654 2.58 7.3654 normalnormal 2.0535 7.4487 solid black
+edge lnormal lnormallnormal 4 1.2017 7.1154 1.3079 7.1154 2.1575 7.1154 2.6194 7.1154 lnormallnormal 2.0535 7.1987 solid black
+edge rnormal rnormalrnormal 4 1.2017 6.8654 1.3079 6.8654 2.1575 6.8654 2.6194 6.8654 rnormalrnormal 2.0535 6.9487 solid black
+edge olnormal olnormalolnormal 4 1.2017 6.6154 1.3079 6.6154 2.1575 6.6154 2.6194 6.6154 olnormalolnormal 2.0535 6.6987 solid black
+edge ornormal ornormalornormal 4 1.2017 6.3654 1.3079 6.3654 2.1575 6.3654 2.6194 6.3654 ornormalornormal 2.0535 6.4487 solid black
+edge onormal onormalonormal 4 1.2017 6.1154 1.305 6.1154 2.1107 6.1154 2.58 6.1154 onormalonormal 2.0535 6.1987 solid black
+edge _tee tee 7 0.051833 7.8769 0.087971 7.9084 0.19425 7.9957 0.3 8.032 0.57592 8.1273 0.92897 8.1261 1.0839 8.12 tee 0.60087 8.2048 solid black
+edge _tee ltee 4 0.054778 7.8654 0.16694 7.8654 0.84189 7.8654 1.0799 7.8654 ltee 0.60087 7.9487 solid black
+edge _tee rtee 7 0.051833 7.8538 0.087971 7.8225 0.19425 7.7352 0.3 7.6987 0.57592 7.6036 0.92897 7.6048 1.0839 7.6109 rtee 0.60087 7.782 solid black
+edge tee teetee 4 1.2017 8.1154 1.3201 8.1154 2.3607 8.1154 2.7607 8.1154 teetee 2.0535 8.1987 solid black
+edge ltee lteeltee 4 1.2017 7.8654 1.3201 7.8654 2.3607 7.8654 2.7607 7.8654 lteeltee 2.0535 7.9487 solid black
+edge rtee rteertee 4 1.2017 7.6154 1.3201 7.6154 2.3607 7.6154 2.7607 7.6154 rteertee 2.0535 7.6987 solid black
+edge _vee vee 7 0.051833 8.6269 0.087971 8.6584 0.19425 8.7457 0.3 8.782 0.53208 8.8622 0.81874 8.874 0.99619 8.872 vee 0.60087 8.9548 solid black
+edge _vee lvee 4 0.054778 8.6154 0.1571 8.6154 0.72781 8.6154 1.0078 8.6154 lvee 0.60087 8.6987 solid black
+edge _vee rvee 7 0.051833 8.6038 0.087971 8.5725 0.19425 8.4852 0.3 8.4487 0.53982 8.3661 0.8379 8.3561 1.0136 8.359 rvee 0.60087 8.532 solid black
+edge vee veevee 4 1.2017 8.8654 1.3055 8.8654 2.1192 8.8654 2.5874 8.8654 veevee 2.0535 8.9487 solid black
+edge lvee lveelvee 4 1.2017 8.6154 1.3077 8.6154 2.1532 8.6154 2.616 8.6154 lveelvee 2.0535 8.6987 solid black
+edge rvee rveervee 4 1.2017 8.3654 1.3077 8.3654 2.1532 8.3654 2.616 8.3654 rveervee 2.0535 8.4487 solid black
+edge _curve curve 7 0.051833 9.3769 0.087971 9.4084 0.19425 9.4957 0.3 9.532 0.53724 9.614 0.8315 9.6245 1.0079 9.6219 curve 0.60087 9.7048 solid black
+edge _curve lcurve 4 0.054778 9.3654 0.15661 9.3654 0.72233 9.3654 1.0038 9.3654 lcurve 0.60087 9.4487 solid black
+edge _curve rcurve 7 0.051833 9.3538 0.087971 9.3225 0.19425 9.2352 0.3 9.1987 0.53724 9.1169 0.8315 9.1063 1.0079 9.109 rcurve 0.60087 9.282 solid black
+edge curve curvecurve 4 1.2017 9.6154 1.3071 9.6154 2.1446 9.6154 2.6089 9.6154 curvecurve 2.0535 9.6987 solid black
+edge lcurve lcurvelcurve 4 1.2017 9.3654 1.3071 9.3654 2.1446 9.3654 2.6089 9.3654 lcurvelcurve 2.0535 9.4487 solid black
+edge rcurve rcurvercurve 4 1.2017 9.1154 1.3071 9.1154 2.1446 9.1154 2.6089 9.1154 rcurvercurve 2.0535 9.1987 solid black
+edge _icurve icurve 7 0.051833 10.127 0.087971 10.158 0.19425 10.246 0.3 10.282 0.53724 10.364 0.8315 10.375 1.0079 10.372 icurve 0.60087 10.455 solid black
+edge _icurve licurve 4 0.054778 10.115 0.15661 10.115 0.72233 10.115 1.0038 10.115 licurve 0.60087 10.199 solid black
+edge _icurve ricurve 7 0.051833 10.104 0.087971 10.072 0.19425 9.9852 0.3 9.9487 0.53724 9.8669 0.8315 9.8563 1.0079 9.859 ricurve 0.60087 10.032 solid black
+edge icurve icurveicurve 4 1.2017 10.365 1.3071 10.365 2.1446 10.365 2.6089 10.365 icurveicurve 2.0535 10.449 solid black
+edge licurve licurvelicurve 4 1.2017 10.115 1.3071 10.115 2.1446 10.115 2.6089 10.115 licurvelicurve 2.0535 10.199 solid black
+edge ricurve ricurvericurve 4 1.2017 9.8654 1.3071 9.8654 2.1446 9.8654 2.6089 9.8654 ricurvericurve 2.0535 9.9487 solid black
+stop

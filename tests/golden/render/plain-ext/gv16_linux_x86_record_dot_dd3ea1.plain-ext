@@ -1,0 +1,41 @@
+graph 0.48868 12.278 6.7195
+node Decl 6.8291 0.70279 2.1504 1.4056 "\n\nDecl|{name|access|decl_flags|extern_c_linkage}" solid record black lightgrey
+node Nontype_decl 5.5929 2.1625 1.8699 0.54167 "Nontype_decl|{type}" solid record black lightgrey
+node Defined_decl 2.8985 3.1903 2.0641 0.54167 "Defined_decl|{linkage}" solid record black lightgrey
+node Data_decl 1.1346 4.3056 2.2693 0.54167 "Data_decl|{storage_class}" solid record black lightgrey
+node Function_decl 4.6068 4.3056 2.1724 0.71667 "Function_decl|{formals|defaults}" solid record black lightgrey
+node Data 1.9679 5.4208 1.5565 0.54167 "Data|{initializer}" solid record black lightgrey
+node Defn 2.8985 4.3056 0.75 0.54167 "\N" solid record black lightgrey
+node Function 4.1763 5.4208 1.5247 0.54167 "Function|{body}" solid record black lightgrey
+node Constructor 3.0513 6.4486 2.9175 0.54167 "Constructor|{member_initializers}" solid record black lightgrey
+node Aggregate 7.6624 3.1903 1.032 0.54167 "\N" solid record black lightgrey
+node Type_decl 8.8013 2.1625 1.0428 0.54167 "\N" solid record black lightgrey
+node Class 7.1624 4.3056 0.75 0.54167 "\N" solid record black lightgrey
+node Union 8.1624 4.3056 0.75 0.54167 "\N" solid record black lightgrey
+node Data_member 4.8429 3.1903 1.3236 0.54167 "\N" solid record black lightgrey
+node Enum 8.8013 3.1903 0.75 0.54167 "\N" solid record black lightgrey
+node Enumerator 6.3291 3.1903 1.14 0.54167 "\N" solid record black lightgrey
+node Destructor 5.2874 6.4486 1.0429 0.54167 "\N" solid record black lightgrey
+node Template_type_arg 10.287 3.1903 1.7339 0.54167 "\N" solid record black lightgrey
+node Typedef 11.843 3.1903 0.87002 0.54167 "\N" solid record black lightgrey
+edge Nontype_decl Decl 4 5.8084 1.8992 5.9034 1.789 6.021 1.6528 6.1422 1.5124 solid black
+edge Defined_decl Nontype_decl 4 3.5716 2.9267 3.9361 2.7913 4.3896 2.6231 4.7746 2.4802 solid black
+edge Data_decl Defined_decl 4 1.5393 4.0422 1.7836 3.8915 2.0977 3.6979 2.3624 3.5347 solid black
+edge Function_decl Defined_decl 4 4.0804 3.9565 3.8713 3.8233 3.6313 3.6707 3.4225 3.5377 solid black
+edge Data Data_decl 4 1.7789 5.1602 1.6731 5.0221 1.5391 4.8472 1.4207 4.6928 solid black
+edge Data Defn 4 2.1792 5.1602 2.2985 5.0207 2.4499 4.8438 2.5831 4.6881 solid black
+edge Defn Defined_decl 4 2.8985 4.0449 2.8985 3.9165 2.8985 3.7563 2.8985 3.6102 solid black
+edge Function Function_decl 4 4.2741 5.1602 4.316 5.0542 4.3666 4.9264 4.4154 4.8028 solid black
+edge Function Defn 4 3.8864 5.1602 3.716 5.0153 3.4979 4.8296 3.31 4.6697 solid black
+edge Constructor Function 4 3.3295 6.1875 3.466 6.0661 3.6329 5.9178 3.7824 5.7849 solid black
+edge Aggregate Type_decl 4 7.9439 2.9292 8.0822 2.8078 8.2511 2.6595 8.4025 2.5265 solid black
+edge Type_decl Decl 4 8.4578 1.8992 8.2978 1.7831 8.0979 1.6379 7.8935 1.4896 solid black
+edge Class Aggregate 4 7.2759 4.0449 7.3368 3.9124 7.4134 3.7458 7.4822 3.5961 solid black
+edge Union Aggregate 4 8.0489 4.0449 7.9881 3.9124 7.9116 3.7458 7.8427 3.5961 solid black
+edge Data_member Nontype_decl 4 5.0284 2.9292 5.1141 2.815 5.2175 2.677 5.3125 2.5504 solid black
+edge Enum Type_decl 4 8.8013 2.9292 8.8013 2.8246 8.8013 2.7 8.8013 2.5827 solid black
+edge Enumerator Nontype_decl 4 6.1471 2.9292 6.0631 2.815 5.9614 2.677 5.8684 2.5504 solid black
+edge Destructor Function 4 5.0128 6.1875 4.8792 6.0674 4.7163 5.9207 4.5699 5.7889 solid black
+edge Template_type_arg Type_decl 4 9.9163 2.9267 9.7286 2.8004 9.4985 2.6456 9.296 2.5093 solid black
+edge Typedef Type_decl 7 11.404 2.9774 11.36 2.9595 11.316 2.9421 11.273 2.9264 10.675 2.7052 9.9781 2.4981 9.4771 2.3579 solid black
+stop

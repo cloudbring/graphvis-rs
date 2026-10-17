@@ -1,0 +1,27 @@
+graph 1 3.25 2.2278
+node struct1 1.0764 1.9778 1.6872 0.5 <
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD>left</TD><TD PORT="f1">mid dle</TD><TD PORT="f2">right</TD></TR>
+</TABLE>> solid plaintext black lightgrey
+node struct2 0.49306 0.6139 0.98611 0.5 <
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD PORT="f0">one</TD><TD>two</TD></TR>
+</TABLE>> solid plaintext black lightgrey
+node struct3 2.2431 0.6139 2.0139 1.2278 <
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+  <TR> 
+    <TD ROWSPAN="3">hello<BR/>world</TD>
+    <TD COLSPAN="3">b</TD>
+    <TD ROWSPAN="3">g</TD>
+    <TD ROWSPAN="3">h</TD>
+  </TR>
+  <TR>
+    <TD>c</TD><TD PORT="here">d</TD><TD>e</TD>
+  </TR>
+  <TR>
+    <TD COLSPAN="3">f</TD>
+  </TR>
+</TABLE>> solid plaintext black lightgrey
+edge struct1:f1 struct2:f0 4 1.0223 1.8056 1.0223 1.3101 0.44878 1.3285 0.32779 0.94144 solid black
+edge struct1:f2 struct3:here 4 1.5836 1.8056 1.5836 1.421 1.8664 1.0557 2.0775 0.83665 solid black
+stop

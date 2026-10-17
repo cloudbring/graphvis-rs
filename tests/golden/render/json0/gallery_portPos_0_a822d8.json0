@@ -1,0 +1,35 @@
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,69.273,108",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "node1",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "34.637,90",
+      "width": "0.96213"
+    },
+    {
+      "_gvid": 1,
+      "name": "node2",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "34.637,18",
+      "width": "0.96213"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "headport": "port5:nw",
+      "pos": "e,34.637,36.104 34.637,71.697 34.637,64.407 34.637,55.726 34.637,47.536",
+      "tailport": "port1"
+    }
+  ]
+}

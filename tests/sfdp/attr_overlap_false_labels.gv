@@ -1,0 +1,10 @@
+graph labels {
+layout=sfdp;
+
+overlap=false;
+a -- b [label="ab"];
+b -- c [label="bc", headlabel="h", taillabel="t"];
+c -- a;
+c -- d -- e -- c;
+a [label="node A"]; b [shape=box]; c [shape=diamond];
+}

@@ -1,0 +1,1 @@
+graph G { node [shape=circle, fixedsize=true, width=0.5]; a -- b -- c -- a; d [xlabel=xlab]; c -- d [penwidth=0.5]; e [label="\G \N"]; }

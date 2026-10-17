@@ -1,0 +1,19 @@
+digraph G {
+	graph [bb="0,0,185.5,171.8"];
+	node [label="\N"];
+	c	[height=0.95,
+		label="{Records Example - Long Line\n | Title - Shorter Line\nnojustify=false\l}",
+		nojustify=false,
+		pos="92.752,137.6",
+		rects="0,146.5,185.5,171.3 0,104.9,185.5,146.5",
+		shape=record,
+		width=2.5764];
+	d	[height=0.95,
+		label="{Records Example - Long Line\n | Title - Shorter Line\nnojustify=true\l}",
+		nojustify=true,
+		pos="92.752,34.2",
+		rects="0,43.1,185.5,67.9 0,1.4999,185.5,43.1",
+		shape=record,
+		width=2.5764];
+	c -> d	[pos="e,92.752,67.781 92.752,103.96 92.752,96.088 92.752,87.55 92.752,79.254"];
+}

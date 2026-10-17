@@ -1,0 +1,44 @@
+graph {
+	graph [bb="0,0,234,240",
+		layout=sfdp
+	];
+	node [colorscheme=oranges9,
+		label="\N"
+	];
+	1	[color=1,
+		height=0.5,
+		pos="129,222",
+		width=0.75];
+	2	[color=2,
+		height=0.5,
+		pos="147,156",
+		width=0.75];
+	3	[color=3,
+		height=0.5,
+		pos="153,78",
+		width=0.75];
+	4	[color=4,
+		height=0.5,
+		pos="69,162",
+		width=0.75];
+	5	[color=5,
+		height=0.5,
+		pos="27,36",
+		width=0.75];
+	6	[color=6,
+		height=0.5,
+		pos="207,216",
+		width=0.75];
+	7	[color=7,
+		height=0.5,
+		pos="111,18",
+		width=0.75];
+	8	[color=8,
+		height=0.5,
+		pos="189,18",
+		width=0.75];
+	9	[color=9,
+		height=0.5,
+		pos="75,96",
+		width=0.75];
+}

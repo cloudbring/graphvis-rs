@@ -31,6 +31,29 @@ fn in_circumcircle(p: &[(f64, f64)], t: &Tri, q: (f64, f64)) -> bool {
 /// points, or the chain along x (or y for a vertical line) when all points
 /// are collinear, as C does when GTS returns no edges.
 pub fn delaunay_tri(x: &[f64], y: &[f64]) -> Vec<(usize, usize)> {
+    let edges = delaunay_edges(x, y);
+    if !edges.is_empty() {
+        return edges;
+    }
+    // Collinear: chain the points sorted along x (y for a vertical line).
+    let n = x.len();
+    let mut vs: Vec<usize> = (0..n).collect();
+    let key: &[f64] = if n > 1 && x[0] == x[1] { y } else { x };
+    crate::cutil::qsort_by(&mut vs, |a, b| {
+        if key[*a] < key[*b] {
+            -1
+        } else if key[*a] > key[*b] {
+            1
+        } else {
+            0
+        }
+    });
+    vs.windows(2).map(|w| (w[0], w[1])).collect()
+}
+
+/// Edges `(i, j)` (`i < j`, sorted) of the Delaunay triangulation, empty when
+/// the points are collinear (the edges GTS reports to `delaunay_triangulation`).
+pub fn delaunay_edges(x: &[f64], y: &[f64]) -> Vec<(usize, usize)> {
     let n = x.len();
     let mut pts: Vec<(f64, f64)> = (0..n).map(|i| (x[i], y[i])).collect();
     // Enclosing triangle, like gts_triangle_enclosing(..., 100).
@@ -121,20 +144,52 @@ pub fn delaunay_tri(x: &[f64], y: &[f64]) -> Vec<(usize, usize)> {
             edges.insert((a.min(b), a.max(b)));
         }
     }
-    if !edges.is_empty() {
-        return edges.into_iter().collect();
+    edges.into_iter().collect()
+}
+
+/// `UG_graph(x, y, n)`: the relative neighbourhood graph, as adjacency lists
+/// (without the vertex itself). Edge order follows [`delaunay_edges`], not
+/// GTS's hash-table order.
+pub fn ug_graph(x: &[f64], y: &[f64]) -> Vec<Vec<usize>> {
+    let n = x.len();
+    if n == 2 {
+        return vec![vec![1], vec![0]];
+    } else if n == 1 {
+        return vec![Vec::new()];
     }
-    // Collinear: chain the points sorted along x (y for a vertical line).
-    let mut vs: Vec<usize> = (0..n).collect();
-    let key: &[f64] = if n > 1 && x[0] == x[1] { y } else { x };
-    crate::cutil::qsort_by(&mut vs, |a, b| {
-        if key[*a] < key[*b] {
-            -1
-        } else if key[*a] > key[*b] {
-            1
-        } else {
-            0
+    let mut g: Vec<Vec<usize>> = vec![Vec::new(); n];
+    for (s, d) in delaunay_edges(x, y) {
+        g[s].push(d);
+        g[d].push(s);
+    }
+    for i in 0..n {
+        let (xi, yi) = (x[i], y[i]);
+        let mut j = 0;
+        while j < g[i].len() {
+            let nj = g[i][j];
+            let (xj, yj) = (x[nj], y[nj]);
+            let dist_ij = (xj - xi).mul_add(xj - xi, (yj - yi) * (yj - yi));
+            let mut removed = false;
+            let mut k = 0;
+            while k < g[i].len() && !removed {
+                let nk = g[i][k];
+                let dist_ik = (x[nk] - xi).mul_add(x[nk] - xi, (y[nk] - yi) * (y[nk] - yi));
+                if dist_ik < dist_ij {
+                    let dist_jk = (x[nk] - xj).mul_add(x[nk] - xj, (y[nk] - yj) * (y[nk] - yj));
+                    if dist_jk < dist_ij {
+                        g[i].swap_remove(j);
+                        if let Some(p) = g[nj].iter().position(|&v| v == i) {
+                            g[nj].swap_remove(p);
+                        }
+                        removed = true;
+                    }
+                }
+                k += 1;
+            }
+            if !removed {
+                j += 1;
+            }
         }
-    });
-    vs.windows(2).map(|w| (w[0], w[1])).collect()
+    }
+    g
 }

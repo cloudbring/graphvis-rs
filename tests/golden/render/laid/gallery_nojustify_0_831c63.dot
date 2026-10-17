@@ -1,0 +1,16 @@
+digraph G {
+	graph [bb="0,0,216,119.2"];
+	node [label="\N",
+		shape=box,
+		width=3
+	];
+	a	[height=0.57778,
+		label="The first line is longer\nnojustify=false\l",
+		nojustify=false,
+		pos="108,98.4"];
+	b	[height=0.57778,
+		label="The first line is longer\nnojustify=true\l",
+		nojustify=true,
+		pos="108,20.8"];
+	a -> b	[pos="e,108,41.853 108,77.141 108,69.794 108,61.312 108,53.229"];
+}

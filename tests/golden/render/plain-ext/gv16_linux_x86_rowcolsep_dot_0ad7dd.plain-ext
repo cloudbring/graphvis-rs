@@ -1,0 +1,10 @@
+graph 1 2 1.5
+node aaa 0.375 1.25 0.75 0.5 aaa solid box black lightgrey
+node bbb 0.375 0.25 0.75 0.5 bbb solid box black lightgrey
+node BBB 1.625 0.25 0.75 0.5 BBB solid box black lightgrey
+node AAA 1.625 1.25 0.75 0.5 AAA solid box black lightgrey
+edge aaa bbb 4 0.375 0.99579 0.375 0.89454 0.375 0.77397 0.375 0.66022 solid black
+edge aaa BBB 4 0.68399 0.99579 0.83724 0.8766 1.0249 0.73065 1.1922 0.60053 solid black
+edge AAA bbb 4 1.316 0.99579 1.1628 0.8766 0.97513 0.73065 0.80782 0.60053 solid black
+edge AAA BBB 4 1.625 0.99579 1.625 0.89454 1.625 0.77397 1.625 0.66022 solid black
+stop

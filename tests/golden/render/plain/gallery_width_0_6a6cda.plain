@@ -1,0 +1,5 @@
+graph 1 4.25 0.5
+node d 0.375 0.25 0.75 0.5 d solid ellipse black lightgrey
+node "1in" 1.5 0.25 1 0.5 "1in" solid ellipse black lightgrey
+node "2in" 3.25 0.25 2 0.5 "2in" solid ellipse black lightgrey
+stop

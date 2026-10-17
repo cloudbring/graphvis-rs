@@ -1,0 +1,5 @@
+graph 1 1.9021 2.2635
+node a 1.2664 1.9996 1.2714 0.52778 "<f0> foo | x | <f1> bar" solid record black lightgrey
+node b 0.87747 0.71896 1.1094 1.0611 "a | { <f0> foo | x | <f1> bar } | b" solid record black lightgrey
+edge a:f0 b:f1 10 0.87138 1.7426 0.87138 1.4127 0.45604 1.5443 0.32277 1.2426 0.13599 0.81964 0 0.53333 0.32277 0.20229 0.44395 0.078001 0.67044 0 0.79123 0.053035 solid black
+stop

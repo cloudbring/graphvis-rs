@@ -1,0 +1,8 @@
+graph 1 6.2639 1.6556
+node n5 0.48611 0.85556 0.75 0.5 n5 radial box black antiquewhite:aquamarine
+node n4 1.4861 0.85556 0.75 0.5 n4 radial ellipse black bisque4:blue2
+node n3 2.4028 0.85556 0.57482 0.57482 n3 radial circle black cadetblue1:chocolate1
+node n2 3.3472 0.85556 0.81292 0.5 n2 radial diamond black crimson:cyan4
+node n1 4.5833 0.85556 1.1496 0.68889 n1 radial triangle black deepskyblue2:firebrick
+node n0 5.7778 0.85556 0.75 0.5 n0 radial pentagon black gray24:gray88
+stop

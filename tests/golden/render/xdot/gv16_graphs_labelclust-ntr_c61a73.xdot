@@ -1,0 +1,60 @@
+digraph G {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 177.6 148 177.6 148 0 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 74 4.2 0 61.81 10 -label demo ",
+		bb="0,0,148,177.6",
+		label="label demo",
+		lheight=0.23,
+		lp="74,8.4",
+		lwidth=0.86,
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster0 {
+		graph [_draw_="c 7 -#000000 p 4 0 28.8 0 177.6 70 177.6 70 28.8 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 39.84 161 0 44.32 8 -cluster0 ",
+			bb="0,28.8,70,177.6",
+			label=cluster0,
+			labeljust=right,
+			labelloc=top,
+			lheight=0.23,
+			lp="39.841,165.2",
+			lwidth=0.62
+		];
+		a	[_draw_="c 7 -#000000 e 35 126.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 122.6 0 6.21 1 -a ",
+			height=0.5,
+			pos="35,126.8",
+			width=0.75];
+		b	[_draw_="c 7 -#000000 e 35 54.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 50.6 0 7 1 -b ",
+			height=0.5,
+			pos="35,54.8",
+			width=0.75];
+		a -> b	[_draw_="c 7 -#000000 B 4 35 108.5 35 101.21 35 92.53 35 84.34 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 38.5 84.42 35 74.42 31.5 84.42 ",
+			pos="e,35,72.904 35,108.5 35,101.21 35,92.526 35,84.336"];
+	}
+	subgraph cluster1 {
+		graph [_draw_="c 7 -#000000 p 4 78 28.8 78 177.6 148 177.6 148 28.8 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 113 161 0 44.32 8 -cluster1 ",
+			bb="78,28.8,148,177.6",
+			label=cluster1,
+			lheight=0.23,
+			lp="113,165.2",
+			lwidth=0.62
+		];
+		c	[_draw_="c 7 -#000000 e 113 126.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 113 122.6 0 6.21 1 -c ",
+			height=0.5,
+			pos="113,126.8",
+			width=0.75];
+		d	[_draw_="c 7 -#000000 e 113 54.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 113 50.6 0 7 1 -d ",
+			height=0.5,
+			pos="113,54.8",
+			width=0.75];
+		c -> d	[_draw_="c 7 -#000000 B 4 113 108.5 113 101.21 113 92.53 113 84.34 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 116.5 84.42 113 74.42 109.5 84.42 ",
+			pos="e,113,72.904 113,108.5 113,101.21 113,92.526 113,84.336"];
+	}
+}

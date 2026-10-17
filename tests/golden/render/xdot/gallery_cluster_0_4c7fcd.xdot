@@ -1,0 +1,45 @@
+digraph cats {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 52 528.6 52 528.6 0 ",
+		bb="0,0,528.6,52",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_big_cats {
+		graph [_draw_="c 7 -#000000 p 4 0 0 0 52 228 52 228 0 ",
+			bb="0,0,228,52"
+		];
+		Lion	[_draw_="c 7 -#000000 e 37 26 29.28 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 37 21.8 0 26.44 4 -Lion ",
+			height=0.5,
+			pos="37,26",
+			width=0.8132];
+		"Snow Leopard"	[_draw_="c 7 -#000000 e 152 26 67.63 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 152 21.8 0 82.04 12 -Snow Leopard ",
+			height=0.5,
+			pos="152,26",
+			width=1.8785];
+	}
+	subgraph domestic_cats {
+		graph [_draw_="c 7 -#000000 p 4 236 0 236 52 435 52 435 0 ",
+			bb="236,0,435,52",
+			cluster=true
+		];
+		Siamese	[_draw_="c 7 -#000000 e 287 26 43.22 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 287 21.8 0 46.66 7 -Siamese ",
+			height=0.5,
+			pos="287,26",
+			width=1.2005];
+		Persian	[_draw_="c 7 -#000000 e 388 26 39.47 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 388 21.8 0 41.21 7 -Persian ",
+			height=0.5,
+			pos="388,26",
+			width=1.0963];
+	}
+	subgraph not_a_cluster {
+		Wildcat	[_draw_="c 7 -#000000 e 487 26 41.6 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 487 21.8 0 44.31 7 -Wildcat ",
+			height=0.5,
+			pos="487,26",
+			width=1.1556];
+	}
+}

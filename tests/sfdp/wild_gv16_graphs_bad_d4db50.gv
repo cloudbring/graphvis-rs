@@ -1,0 +1,8 @@
+graph G {
+layout=sfdp;
+
+	Marden--hg;
+	Cannon--ggt;
+	Epstein--kg;
+	Epstein--ldt;
+}

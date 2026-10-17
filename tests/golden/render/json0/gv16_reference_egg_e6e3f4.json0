@@ -1,0 +1,18 @@
+{
+  "name": "G",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,65.151,36",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "height": "0.5",
+      "label": "",
+      "pos": "32.576,18",
+      "shape": "egg",
+      "width": "0.90488"
+    }
+  ]
+}

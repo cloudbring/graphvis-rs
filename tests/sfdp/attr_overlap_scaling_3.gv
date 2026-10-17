@@ -1,0 +1,7 @@
+graph ov {
+layout=sfdp;
+
+overlap=prism; overlap_scaling=3;
+node [shape=box, width=1.2, height=0.6, fixedsize=true];
+a -- b; a -- c; a -- d; a -- e; a -- f; b -- c; d -- e; f -- g; g -- h; h -- a;
+}

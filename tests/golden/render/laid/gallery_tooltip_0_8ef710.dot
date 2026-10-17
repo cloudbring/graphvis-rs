@@ -1,0 +1,30 @@
+digraph {
+	graph [bb="0,0,108,206.4",
+		label="Graph Label",
+		lheight=0.23,
+		lp="54,12.4",
+		lwidth=0.98,
+		tooltip="Graph Tooltip"
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="8,32.8,100,198.4",
+			label="Cluster Label",
+			lheight=0.23,
+			lp="54,186",
+			lwidth=1.05,
+			tooltip="Cluster Tooltip"
+		];
+		Node1	[height=0.5,
+			pos="54,147.6",
+			tooltip="Node1 Tooltip",
+			width=1.0217];
+		Node2	[height=0.5,
+			pos="54,58.8",
+			width=1.0217];
+		Node1 -> Node2	[label="Edge",
+			lp="68.383,103.2",
+			pos="e,54,77.21 54,129.45 54,117.76 54,101.99 54,88.418",
+			tooltip="Edge Tooltip"];
+	}
+}

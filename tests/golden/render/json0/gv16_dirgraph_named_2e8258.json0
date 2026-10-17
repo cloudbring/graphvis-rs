@@ -1,0 +1,366 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,326.46,342.6",
+  "nodesep": ".1",
+  "rankdir": "LR",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "_usr_sbin",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "usr.sbin",
+      "pos": "27,170.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "_usr_sbin_named",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "named",
+      "pos": "117,170.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "_usr_sbin_named_conf",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "conf",
+      "pos": "208.23,333.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "_usr_sbin_named_dig",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "dig",
+      "pos": "208.23,308.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 4,
+      "name": "_usr_sbin_named_dnsquery",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "dnsquery",
+      "pos": "208.23,283.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 5,
+      "name": "_usr_sbin_named_doc",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "doc",
+      "pos": "208.23,258.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 6,
+      "name": "_usr_sbin_named_host",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "host",
+      "pos": "208.23,233.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 7,
+      "name": "_usr_sbin_named_man",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "man",
+      "pos": "208.23,208.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 8,
+      "name": "_usr_sbin_named_named",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "named",
+      "pos": "208.23,183.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 9,
+      "name": "_usr_sbin_named_named_xfer",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "named-xfer",
+      "pos": "208.23,158.8",
+      "shape": "box",
+      "width": "0.78418"
+    },
+    {
+      "_gvid": 10,
+      "name": "_usr_sbin_named_ndc",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "ndc",
+      "pos": "208.23,133.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 11,
+      "name": "_usr_sbin_named_nslookup",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "nslookup",
+      "pos": "208.23,108.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 12,
+      "name": "_usr_sbin_named_reload",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "reload",
+      "pos": "208.23,83.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 13,
+      "name": "_usr_sbin_named_restart",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "restart",
+      "pos": "208.23,58.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 14,
+      "name": "_usr_sbin_named_test",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "test",
+      "pos": "208.23,33.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 15,
+      "name": "_usr_sbin_named_testdomain",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "testdomain",
+      "pos": "208.23,8.8",
+      "shape": "box",
+      "width": "0.76573"
+    },
+    {
+      "_gvid": 16,
+      "name": "_usr_sbin_named_doc_bog",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "bog",
+      "pos": "299.46,283.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 17,
+      "name": "_usr_sbin_named_doc_misc",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "misc",
+      "pos": "299.46,258.8",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 18,
+      "name": "_usr_sbin_named_doc_rfc",
+      "fontname": "Helvetica",
+      "fontsize": "8",
+      "height": "0.24444",
+      "label": "rfc",
+      "pos": "299.46,233.8",
+      "shape": "box",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "54.403,170.8 65.541,170.8 78.48,170.8 89.616,170.8"
+    },
+    {
+      "_gvid": 1,
+      "tail": 1,
+      "head": 2,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "119.41,179.79 123.8,205.13 139.48,278.06 180,320.8 181.3,322.17 182.77,323.41 184.34,324.53"
+    },
+    {
+      "_gvid": 2,
+      "tail": 1,
+      "head": 3,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "120.28,179.88 126.33,202.34 144.79,261.12 180,295.8 181.42,297.2 183.02,298.47 184.71,299.61"
+    },
+    {
+      "_gvid": 3,
+      "tail": 1,
+      "head": 4,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "121.59,180.01 129.47,199.2 150.03,243.95 180,270.8 181.56,272.2 183.3,273.48 185.12,274.64"
+    },
+    {
+      "_gvid": 4,
+      "tail": 1,
+      "head": 5,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "123.5,179.73 133.26,194.97 154.96,226.26 180,245.8 181.73,247.15 183.63,248.41 185.59,249.57"
+    },
+    {
+      "_gvid": 5,
+      "tail": 1,
+      "head": 6,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "127.97,180.07 139.78,190.76 160.34,208.42 180,220.8 182.04,222.08 184.22,223.33 186.44,224.5"
+    },
+    {
+      "_gvid": 6,
+      "tail": 1,
+      "head": 7,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "139.6,180 153.53,185.93 171.57,193.61 185.52,199.55"
+    },
+    {
+      "_gvid": 7,
+      "tail": 1,
+      "head": 8,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "144.29,174.63 155.8,176.31 169.29,178.27 180.82,179.95"
+    },
+    {
+      "_gvid": 8,
+      "tail": 1,
+      "head": 9,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "144.29,167.26 155.39,165.77 168.33,164.03 179.58,162.52"
+    },
+    {
+      "_gvid": 9,
+      "tail": 1,
+      "head": 10,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "140.06,161.65 153.68,156 171.12,148.78 184.81,143.1"
+    },
+    {
+      "_gvid": 10,
+      "tail": 1,
+      "head": 11,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "128.01,161.73 139.85,151.28 160.44,133.99 180,121.8 182.13,120.47 184.43,119.18 186.74,117.97"
+    },
+    {
+      "_gvid": 11,
+      "tail": 1,
+      "head": 12,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "123.85,161.51 133.8,146.31 155.36,115.9 180,96.8 181.74,95.452 183.64,94.196 185.6,93.039"
+    },
+    {
+      "_gvid": 12,
+      "tail": 1,
+      "head": 13,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "121.61,161.69 129.54,142.68 150.19,98.393 180,71.8 181.56,70.405 183.3,69.129 185.13,67.968"
+    },
+    {
+      "_gvid": 13,
+      "tail": 1,
+      "head": 14,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "120.3,161.79 126.4,139.52 144.97,81.201 180,46.8 181.42,45.405 183.02,44.138 184.71,42.992"
+    },
+    {
+      "_gvid": 14,
+      "tail": 1,
+      "head": 15,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "119.49,161.51 124.02,136.01 139.86,64.048 180,21.8 181.3,20.433 182.77,19.193 184.34,18.072"
+    },
+    {
+      "_gvid": 15,
+      "tail": 5,
+      "head": 16,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "235.52,266.17 247.04,269.39 260.52,273.17 272.05,276.4"
+    },
+    {
+      "_gvid": 16,
+      "tail": 5,
+      "head": 17,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "235.52,258.8 247.04,258.8 260.52,258.8 272.05,258.8"
+    },
+    {
+      "_gvid": 17,
+      "tail": 5,
+      "head": 18,
+      "arrowhead": "none",
+      "arrowtail": "none",
+      "pos": "235.52,251.43 247.04,248.21 260.52,244.43 272.05,241.2"
+    }
+  ]
+}

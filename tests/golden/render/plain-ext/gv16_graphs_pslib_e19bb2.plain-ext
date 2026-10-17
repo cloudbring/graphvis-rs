@@ -1,0 +1,77 @@
+graph 1 45.826 1.5
+node sdl_task 0.42979 1.25 0.85958 0.5 sdl_task filled sdl_task red cyan
+node sdl_task2 0.42979 0.25 0.85958 0.5 sdl_task solid sdl_task black lightgrey
+node sdl_input_from_right 2.1519 1.25 1.8857 0.5 sdl_input_from_right filled sdl_input_from_right red cyan
+node sdl_input_from_right2 2.1519 0.25 2.0802 0.5 "sdl_input_from_right    " solid sdl_input_from_right black lightgrey
+node sdl_input_from_left 4.4297 1.25 1.7776 0.5 sdl_input_from_left filled sdl_input_from_left red cyan
+node sdl_input_from_left2 4.4297 0.25 1.972 0.5 "    sdl_input_from_left" solid sdl_input_from_left black lightgrey
+node sdl_priority_input_from_right 7.0686 1.25 2.5662 0.5 sdl_priority_input_from_right filled sdl_priority_input_from_right red cyan
+node sdl_priority_input_from_right2 7.0686 0.25 2.8092 0.5 "sdl_priority_input_from_right     " solid sdl_priority_input_from_right black lightgrey
+node sdl_priority_input_from_left 10.069 1.25 2.458 0.5 sdl_priority_input_from_left filled sdl_priority_input_from_left red cyan
+node sdl_priority_input_from_left2 10.069 0.25 2.7011 0.5 "     sdl_priority_input_from_left" solid sdl_priority_input_from_left black lightgrey
+node sdl_start 12.166 1.25 0.88113 0.5 sdl_start filled sdl_start red cyan
+node sdl_start2 12.166 0.25 1 0.5 "                " solid sdl_start black lightgrey
+node sdl_procedure_start 13.735 1.25 1.7557 0.5 sdl_procedure_start filled sdl_procedure_start red cyan
+node sdl_procedure_start2 13.735 0.25 1 0.5 "                " solid sdl_procedure_start black lightgrey
+node sdl_state 15.318 1.25 0.90268 0.5 sdl_state filled sdl_state red cyan
+node sdl_state2 15.318 0.25 0.99991 0.5 sdl_state2 solid sdl_state black lightgrey
+node sdl_output_to_right 16.999 1.25 1.7562 0.5 sdl_output_to_right filled sdl_output_to_right red cyan
+node sdl_output_to_right2 16.999 0.25 1.8534 0.5 "sdl_output_to_right  " solid sdl_output_to_right black lightgrey
+node sdl_output_to_left 19.054 1.25 1.6481 0.5 sdl_output_to_left filled sdl_output_to_left red cyan
+node sdl_output_to_left2 19.054 0.25 1.7453 0.5 "  sdl_output_to_left" solid sdl_output_to_left black lightgrey
+node sdl_condition 20.915 1.25 1.2808 0.5 sdl_condition filled sdl_condition red cyan
+node sdl_condition2 20.915 0.25 1.4753 0.5 "  sdl_condition  " solid sdl_condition black lightgrey
+node sdl_save 22.443 1.25 0.89186 0.5 sdl_save filled sdl_save red cyan
+node sdl_save2 22.443 0.25 1.0863 0.5 "  sdl_save  " solid sdl_save black lightgrey
+node sdl_stop 23.61 1.25 0.8705 0.5 sdl_stop solid sdl_stop black lightgrey
+node sdl_stop2 23.61 0.25 0.75 0.5 "" solid sdl_stop black lightgrey
+node sdl_return 24.804 1.25 1.0106 0.5 sdl_return filled sdl_return red cyan
+node sdl_return2 24.804 0.25 0.75 0.5 "" solid sdl_return black lightgrey
+node sdl_create 26.068 1.25 1.0103 0.5 sdl_create filled sdl_create red cyan
+node sdl_create2 26.068 0.25 1.1076 0.5 sdl_create2 solid sdl_create black lightgrey
+node sdl_call 27.387 1.25 0.82701 0.5 sdl_call filled sdl_call red cyan
+node sdl_call2 27.387 0.25 1.0215 0.5 "  sdl_call  " solid sdl_call black lightgrey
+node sdl_text 28.61 1.25 0.83793 0.5 sdl_text filled sdl_text red cyan
+node sdl_text2 28.61 0.25 0.93515 0.5 sdl_text2 solid sdl_text black lightgrey
+node sdl_text_extension_from_left 30.637 1.25 2.5119 0.5 sdl_text_extension_from_left filled sdl_text_extension_from_left red cyan
+node sdl_text_extension_from_left2 30.637 0.25 2.6091 0.5 sdl_text_extension_from_left2 solid sdl_text_extension_from_left black lightgrey
+node sdl_text_extension_from_right 33.554 1.25 2.62 0.5 sdl_text_extension_from_right filled sdl_text_extension_from_right red cyan
+node sdl_text_extension_from_right2 33.554 0.25 2.7172 0.5 sdl_text_extension_from_right2 solid sdl_text_extension_from_right black lightgrey
+node sdl_comment_from_left 36.262 1.25 2.1014 0.5 sdl_comment_from_left filled sdl_comment_from_left red cyan
+node sdl_comment_from_left2 36.262 0.25 2.1987 0.5 sdl_comment_from_left2 dashed sdl_comment_from_left black lightgrey
+node sdl_comment_from_right 38.762 1.25 2.2096 0.5 sdl_comment_from_right filled sdl_comment_from_right red cyan
+node sdl_comment_from_right2 38.762 0.25 2.3068 0.5 sdl_comment_from_right2 dashed sdl_comment_from_right black lightgrey
+node sdl_connector 40.874 1.25 1.3129 0.5 sdl_connector filled sdl_connector red cyan
+node sdl_connector2 40.874 0.25 1.4102 0.5 sdl_connector2 solid sdl_connector black lightgrey
+node sdl_set 42.36 1.25 0.76236 0.5 sdl_set filled sdl_set red cyan
+node sdl_set2 42.36 0.25 1.054 0.5 "    sdl_set2" solid sdl_set black lightgrey
+node sdl_reset 43.735 1.25 0.91341 0.5 sdl_reset filled sdl_reset red cyan
+node sdl_reset2 43.735 0.25 1.2051 0.5 "    sdl_reset2" solid sdl_reset black lightgrey
+node sdl_export 45.207 1.25 1.0431 0.5 sdl_export filled sdl_export red cyan
+node sdl_export2 45.207 0.25 1.2375 0.5 "    sdl_export" solid sdl_export black lightgrey
+edge sdl_task sdl_task2 4 0.42979 1.0008 0.42979 0.89686 0.42979 0.77193 0.42979 0.65468 solid black
+edge sdl_input_from_right sdl_input_from_right2 4 2.1519 1.0008 2.1519 0.89686 2.1519 0.77193 2.1519 0.65468 solid black
+edge sdl_input_from_left sdl_input_from_left2 4 4.4297 1.0008 4.4297 0.89686 4.4297 0.77193 4.4297 0.65468 solid black
+edge sdl_priority_input_from_right sdl_priority_input_from_right2 4 7.0686 1.0008 7.0686 0.89686 7.0686 0.77193 7.0686 0.65468 solid black
+edge sdl_priority_input_from_left sdl_priority_input_from_left2 4 10.069 1.0008 10.069 0.89686 10.069 0.77193 10.069 0.65468 solid black
+edge sdl_start sdl_start2 4 12.166 1.0008 12.166 0.89686 12.166 0.77193 12.166 0.65468 solid black
+edge sdl_procedure_start sdl_procedure_start2 4 13.735 1.0008 13.735 0.89686 13.735 0.77193 13.735 0.65468 solid black
+edge sdl_state sdl_state2 4 15.318 1.0008 15.318 0.89686 15.318 0.77193 15.318 0.65468 solid black
+edge sdl_output_to_right sdl_output_to_right2 4 16.999 1.0008 16.999 0.89686 16.999 0.77193 16.999 0.65468 solid black
+edge sdl_output_to_left sdl_output_to_left2 4 19.054 1.0008 19.054 0.89686 19.054 0.77193 19.054 0.65468 solid black
+edge sdl_condition sdl_condition2 4 20.915 1.0008 20.915 0.89686 20.915 0.77193 20.915 0.65468 solid black
+edge sdl_save sdl_save2 4 22.443 1.0008 22.443 0.89686 22.443 0.77193 22.443 0.65468 solid black
+edge sdl_stop sdl_stop2 4 23.61 1.0008 23.61 0.71303 23.61 0.26389 23.61 0.26389 solid black
+edge sdl_return sdl_return2 4 24.804 1.0008 24.804 0.89686 24.804 0.77193 24.804 0.65468 solid black
+edge sdl_create sdl_create2 4 26.068 1.0008 26.068 0.89686 26.068 0.77193 26.068 0.65468 solid black
+edge sdl_call sdl_call2 4 27.387 1.0008 27.387 0.89686 27.387 0.77193 27.387 0.65468 solid black
+edge sdl_text sdl_text2 4 28.61 1.0008 28.61 0.89686 28.61 0.77193 28.61 0.65468 solid black
+edge sdl_text_extension_from_left sdl_text_extension_from_left2 4 30.637 1.0008 30.637 0.89686 30.637 0.77193 30.637 0.65468 solid black
+edge sdl_text_extension_from_right sdl_text_extension_from_right2 4 33.554 1.0008 33.554 0.89686 33.554 0.77193 33.554 0.65468 solid black
+edge sdl_comment_from_left sdl_comment_from_left2 4 36.262 1.0008 36.262 0.89686 36.262 0.77193 36.262 0.65468 solid black
+edge sdl_comment_from_right sdl_comment_from_right2 4 38.762 1.0008 38.762 0.89686 38.762 0.77193 38.762 0.65468 solid black
+edge sdl_connector sdl_connector2 4 40.874 1.0008 40.874 0.89686 40.874 0.77193 40.874 0.65468 solid black
+edge sdl_set sdl_set2 4 42.36 1.0008 42.36 0.89686 42.36 0.77193 42.36 0.65468 solid black
+edge sdl_reset sdl_reset2 4 43.735 1.0008 43.735 0.89686 43.735 0.77193 43.735 0.65468 solid black
+edge sdl_export sdl_export2 4 45.207 1.0008 45.207 0.89686 45.207 0.77193 45.207 0.65468 solid black
+stop

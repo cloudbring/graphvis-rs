@@ -1,0 +1,73 @@
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,450.63,472.8",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "30",
+      "fontname": "Times-Bold",
+      "height": "1.2667",
+      "label": "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n\t<TR><TD>\"Times-Bold\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\"<\/TD><\/TR>\n\t<TR><TD>\"abcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\\nabcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<\/TABLE>",
+      "margin": "0,0",
+      "pos": "225.31,427.2",
+      "shape": "box",
+      "width": "6.2587"
+    },
+    {
+      "_gvid": 1,
+      "name": "31",
+      "fontname": "Times-BoldItalic",
+      "height": "1.2667",
+      "label": "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n\t<TR><TD>\"Times-BoldItalic\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\"<\/TD><\/TR>\n\t<TR><TD>\"abcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\\nabcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<\/TABLE>",
+      "margin": "0,0",
+      "pos": "225.31,300",
+      "shape": "box",
+      "width": "6.2587"
+    },
+    {
+      "_gvid": 2,
+      "name": "32",
+      "fontname": "Times-Italic",
+      "height": "1.2667",
+      "label": "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n\t<TR><TD>\"Times-Italic\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\"<\/TD><\/TR>\n\t<TR><TD>\"abcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\\nabcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<\/TABLE>",
+      "margin": "0,0",
+      "pos": "225.31,172.8",
+      "shape": "box",
+      "width": "6.2587"
+    },
+    {
+      "_gvid": 3,
+      "name": "33",
+      "fontname": "Times-Roman",
+      "height": "1.2667",
+      "label": "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n\t<TR><TD>\"Times-Roman\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\"<\/TD><\/TR>\n\t<TR><TD>\"abcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\\nabcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<\/TABLE>",
+      "margin": "0,0",
+      "pos": "225.31,45.601",
+      "shape": "box",
+      "width": "6.2587"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,225.31,345.95 225.31,381.35 225.31,373.53 225.31,365.31 225.31,357.23"
+    },
+    {
+      "_gvid": 1,
+      "tail": 1,
+      "head": 2,
+      "pos": "e,225.31,218.75 225.31,254.15 225.31,246.33 225.31,238.11 225.31,230.03"
+    },
+    {
+      "_gvid": 2,
+      "tail": 2,
+      "head": 3,
+      "pos": "e,225.31,91.555 225.31,126.95 225.31,119.13 225.31,110.91 225.31,102.83"
+    }
+  ]
+}

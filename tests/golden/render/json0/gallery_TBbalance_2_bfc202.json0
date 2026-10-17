@@ -1,0 +1,87 @@
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "TBbalance": "max",
+  "bb": "0,0,283.49,180",
+  "layout": "neato",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "%3",
+      "TBbalance": "max",
+      "bb": "0,0,283.49,180",
+      "layout": "neato",
+      "rank": "min",
+      "_gvid": 0,
+      "nodes": [
+        2
+      ]
+    },
+    {
+      "name": "%5",
+      "TBbalance": "max",
+      "bb": "0,0,283.49,180",
+      "layout": "neato",
+      "rank": "max",
+      "_gvid": 1,
+      "nodes": [
+        3
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "min",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "37.858,162",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "max",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "37.858,18",
+      "width": "0.76841"
+    },
+    {
+      "_gvid": 4,
+      "name": "middle",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "37.858,90",
+      "width": "1.0516"
+    },
+    {
+      "_gvid": 5,
+      "name": "Floater 1",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "128.86,18",
+      "width": "1.2676"
+    },
+    {
+      "_gvid": 6,
+      "name": "Floater 2",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "237.86,18",
+      "width": "1.2676"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 2,
+      "head": 4,
+      "pos": "e,37.858,108.1 37.858,143.7 37.858,136.41 37.858,127.73 37.858,119.54"
+    },
+    {
+      "_gvid": 1,
+      "tail": 4,
+      "head": 3,
+      "pos": "e,37.858,36.104 37.858,71.697 37.858,64.407 37.858,55.726 37.858,47.536"
+    }
+  ]
+}

@@ -87,3 +87,20 @@ fn version_and_help_exit_successfully() {
     let (out, _, ok) = run(&["-?"], "");
     assert!(ok && out.contains("Usage:"));
 }
+
+#[test]
+fn no_layout_mode_keeps_positions() {
+    let laid = "digraph{a [pos=\"127,118\"]; b [pos=\"127,18\"]; a -> b [pos=\"e,127,36 127,100 127,80 127,60 127,46\"]}";
+    let (out, _, ok) = run(&["-Kneato", "-n2", "-Tdot"], laid);
+    assert!(ok);
+    // translated so the bounding box starts at the origin
+    assert!(out.contains("pos=\"27,118\""), "{out}");
+    assert!(
+        out.contains("pos=\"e,27,36 27,100 27,80 27,60 27,46\""),
+        "{out}"
+    );
+    let (_, err, ok) = run(&["-Kneato", "-n0", "-Tdot"], laid);
+    assert!(!ok && err.contains("Invalid parameter"));
+    let (out, _, ok) = run(&["-Knop2", "-Tplain"], laid);
+    assert!(ok && out.starts_with("graph 1 "), "{out}");
+}

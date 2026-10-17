@@ -1,0 +1,225 @@
+graph 1 6.4079 15.828
+node _sys 0.375 4.7056 0.75 0.24444 sys solid box black lightgrey
+node _sys_arch 1.954 14.331 1.4079 0.24444 "arch (separate diagram)" solid box black lightgrey
+node _sys_adosfs 1.954 14.025 0.75 0.24444 adosfs solid box black lightgrey
+node _sys_compat 1.954 13.719 0.75 0.24444 compat solid box black lightgrey
+node _sys_conf 1.954 10.053 0.75 0.24444 conf solid box black lightgrey
+node _sys_ddb 1.954 9.7472 0.75 0.24444 ddb solid box black lightgrey
+node _sys_dev 1.954 9.4417 0.75 0.24444 dev solid box black lightgrey
+node _sys_gdbscripts 1.954 6.8444 0.75 0.24444 gdbscripts solid box black lightgrey
+node _sys_ipkdb 1.954 6.5389 0.75 0.24444 ipkdb solid box black lightgrey
+node _sys_isofs 1.954 6.2333 0.75 0.24444 isofs solid box black lightgrey
+node _sys_kern 1.954 5.9278 0.75 0.24444 kern solid box black lightgrey
+node _sys_lib 1.954 5.6222 0.75 0.24444 lib solid box black lightgrey
+node _sys_lkm 1.954 5.3167 0.75 0.24444 lkm solid box black lightgrey
+node _sys_miscfs 1.954 4.8583 0.75 0.24444 miscfs solid box black lightgrey
+node _sys_msdosfs 1.954 4.5528 0.75 0.24444 msdosfs solid box black lightgrey
+node _sys_net 1.954 4.2472 0.75 0.24444 net solid box black lightgrey
+node _sys_netatalk 1.954 3.9417 0.75 0.24444 netatalk solid box black lightgrey
+node _sys_netccitt 1.954 3.6361 0.75 0.24444 netccitt solid box black lightgrey
+node _sys_netinet 1.954 3.3306 0.75 0.24444 netinet solid box black lightgrey
+node _sys_netiso 1.954 3.025 0.75 0.24444 netiso solid box black lightgrey
+node _sys_netnatm 1.954 2.7194 0.75 0.24444 netnatm solid box black lightgrey
+node _sys_netns 1.954 2.4139 0.75 0.24444 netns solid box black lightgrey
+node _sys_nfs 1.954 2.1083 0.75 0.24444 nfs solid box black lightgrey
+node _sys_stand 1.954 1.8028 0.75 0.24444 stand solid box black lightgrey
+node _sys_sys 1.954 1.4972 0.75 0.24444 sys solid box black lightgrey
+node _sys_ufs 1.954 1.0389 0.75 0.24444 ufs solid box black lightgrey
+node _sys_vm 1.954 0.73333 0.75 0.24444 vm solid box black lightgrey
+node _sys_compat_common 3.5329 15.706 0.75 0.24444 common solid box black lightgrey
+node _sys_compat_freebsd 3.5329 15.4 0.75 0.24444 freebsd solid box black lightgrey
+node _sys_compat_hpux 3.5329 15.094 0.75 0.24444 hpux solid box black lightgrey
+node _sys_compat_ibcs2 3.5329 14.789 0.75 0.24444 ibcs2 solid box black lightgrey
+node _sys_compat_linux 3.5329 14.483 0.75 0.24444 linux solid box black lightgrey
+node _sys_compat_m68k4k 3.5329 14.178 0.75 0.24444 m68k4k solid box black lightgrey
+node _sys_compat_osf1 3.5329 13.872 0.75 0.24444 osf1 solid box black lightgrey
+node _sys_compat_ossaudio 3.5329 13.567 0.75 0.24444 ossaudio solid box black lightgrey
+node _sys_compat_sunos 3.5329 13.261 0.75 0.24444 sunos solid box black lightgrey
+node _sys_compat_svr4 3.5329 12.956 0.75 0.24444 svr4 solid box black lightgrey
+node _sys_compat_ultrix 3.5329 12.65 0.75 0.24444 ultrix solid box black lightgrey
+node _sys_dev_ata 3.5329 12.344 0.75 0.24444 ata solid box black lightgrey
+node _sys_dev_dec 3.5329 12.039 0.75 0.24444 dec solid box black lightgrey
+node _sys_dev_eisa 3.5329 11.733 0.75 0.24444 eisa solid box black lightgrey
+node _sys_dev_i2c 3.5329 11.428 0.75 0.24444 i2c solid box black lightgrey
+node _sys_dev_ic 3.5329 11.122 0.75 0.24444 ic solid box black lightgrey
+node _sys_dev_isa 3.5329 10.817 0.75 0.24444 isa solid box black lightgrey
+node _sys_dev_isapnp 3.5329 10.511 0.75 0.24444 isapnp solid box black lightgrey
+node _sys_dev_microcode 3.5329 10.206 0.75 0.24444 microcode solid box black lightgrey
+node _sys_dev_mii 3.5329 9.9 0.75 0.24444 mii solid box black lightgrey
+node _sys_dev_ofisa 3.5329 9.5944 0.75 0.24444 ofisa solid box black lightgrey
+node _sys_dev_ofw 3.5329 9.2889 0.75 0.24444 ofw solid box black lightgrey
+node _sys_dev_pci 3.5329 8.9833 0.75 0.24444 pci solid box black lightgrey
+node _sys_dev_pcmcia 3.5329 8.6778 0.75 0.24444 pcmcia solid box black lightgrey
+node _sys_dev_rcons 3.5329 8.3722 0.75 0.24444 rcons solid box black lightgrey
+node _sys_dev_scsipi 3.5329 8.0667 0.75 0.24444 scsipi solid box black lightgrey
+node _sys_dev_sun 3.5329 7.7611 0.75 0.24444 sun solid box black lightgrey
+node _sys_dev_tc 3.5329 7.4556 0.75 0.24444 tc solid box black lightgrey
+node _sys_dev_microcode_aic7xxx 4.7829 10.358 0.75 0.24444 aic7xxx solid box black lightgrey
+node _sys_dev_microcode_isp 4.7829 10.053 0.75 0.24444 isp solid box black lightgrey
+node _sys_isofs_cd9660 3.5329 7.15 0.75 0.24444 cd9660 solid box black lightgrey
+node _sys_lib_libkern 3.5329 6.8444 0.75 0.24444 libkern solid box black lightgrey
+node _sys_lib_libsa 3.5329 6.5389 0.75 0.24444 libsa solid box black lightgrey
+node _sys_lib_libz 3.5329 6.2333 0.75 0.24444 libz solid box black lightgrey
+node _sys_lib_libkern_arch 4.7829 7.2333 0.75 0.24444 arch solid box black lightgrey
+node _sys_lib_libkern_arch_alpha 6.0329 8.6083 0.75 0.24444 alpha solid box black lightgrey
+node _sys_lib_libkern_arch_arm32 6.0329 8.3028 0.75 0.24444 arm32 solid box black lightgrey
+node _sys_lib_libkern_arch_i386 6.0329 7.9972 0.75 0.24444 i386 solid box black lightgrey
+node _sys_lib_libkern_arch_m68k 6.0329 7.6917 0.75 0.24444 m68k solid box black lightgrey
+node _sys_lib_libkern_arch_mips 6.0329 7.3861 0.75 0.24444 mips solid box black lightgrey
+node _sys_lib_libkern_arch_ns32k 6.0329 7.0806 0.75 0.24444 ns32k solid box black lightgrey
+node _sys_lib_libkern_arch_powerpc 6.0329 6.775 0.75 0.24444 powerpc solid box black lightgrey
+node _sys_lib_libkern_arch_sparc 6.0329 6.4694 0.75 0.24444 sparc solid box black lightgrey
+node _sys_lib_libkern_arch_vax 6.0329 6.1639 0.75 0.24444 vax solid box black lightgrey
+node _sys_lkm_compat 3.5329 5.9278 0.75 0.24444 compat solid box black lightgrey
+node _sys_lkm_netinet 3.5329 5.6222 0.75 0.24444 netinet solid box black lightgrey
+node _sys_lkm_vfs 3.5329 5.3167 0.75 0.24444 vfs solid box black lightgrey
+node _sys_lkm_compat_freebsd 4.7829 6.8444 0.75 0.24444 freebsd solid box black lightgrey
+node _sys_lkm_compat_linux 4.7829 6.5389 0.75 0.24444 linux solid box black lightgrey
+node _sys_lkm_compat_sunos 4.7829 6.2333 0.75 0.24444 sunos solid box black lightgrey
+node _sys_lkm_compat_svr4 4.7829 5.9278 0.75 0.24444 svr4 solid box black lightgrey
+node _sys_lkm_netinet_if_ipl 4.7829 5.6222 0.75 0.24444 if_ipl solid box black lightgrey
+node _sys_lkm_vfs_adosfs 4.7829 5.3167 0.75 0.24444 adosfs solid box black lightgrey
+node _sys_lkm_vfs_isofs 4.7829 5.0111 0.75 0.24444 isofs solid box black lightgrey
+node _sys_lkm_vfs_miscfs 4.7829 4.7056 0.75 0.24444 miscfs solid box black lightgrey
+node _sys_lkm_vfs_msdosfs 4.7829 4.4 0.75 0.24444 msdosfs solid box black lightgrey
+node _sys_lkm_vfs_ufs 4.7829 3.2611 0.75 0.24444 ufs solid box black lightgrey
+node _sys_lkm_vfs_isofs_cd9660 6.0329 5.8583 0.75 0.24444 cd9660 solid box black lightgrey
+node _sys_lkm_vfs_miscfs_fdesc 6.0329 5.5528 0.75 0.24444 fdesc solid box black lightgrey
+node _sys_lkm_vfs_miscfs_kernfs 6.0329 5.2472 0.75 0.24444 kernfs solid box black lightgrey
+node _sys_lkm_vfs_miscfs_nullfs 6.0329 4.9417 0.75 0.24444 nullfs solid box black lightgrey
+node _sys_lkm_vfs_miscfs_portal 6.0329 4.6361 0.75 0.24444 portal solid box black lightgrey
+node _sys_lkm_vfs_miscfs_procfs 6.0329 4.3306 0.75 0.24444 procfs solid box black lightgrey
+node _sys_lkm_vfs_miscfs_umapfs 6.0329 4.025 0.75 0.24444 umapfs solid box black lightgrey
+node _sys_lkm_vfs_miscfs_union 6.0329 3.7194 0.75 0.24444 union solid box black lightgrey
+node _sys_lkm_vfs_ufs_ffs 6.0329 3.4139 0.75 0.24444 ffs solid box black lightgrey
+node _sys_lkm_vfs_ufs_lfs 6.0329 3.1083 0.75 0.24444 lfs solid box black lightgrey
+node _sys_lkm_vfs_ufs_mfs 6.0329 2.8028 0.75 0.24444 mfs solid box black lightgrey
+node _sys_miscfs_deadfs 3.5329 5.0111 0.75 0.24444 deadfs solid box black lightgrey
+node _sys_miscfs_fdesc 3.5329 4.7056 0.75 0.24444 fdesc solid box black lightgrey
+node _sys_miscfs_fifofs 3.5329 4.4 0.75 0.24444 fifofs solid box black lightgrey
+node _sys_miscfs_genfs 3.5329 4.0944 0.75 0.24444 genfs solid box black lightgrey
+node _sys_miscfs_kernfs 3.5329 3.7889 0.75 0.24444 kernfs solid box black lightgrey
+node _sys_miscfs_nullfs 3.5329 3.4833 0.75 0.24444 nullfs solid box black lightgrey
+node _sys_miscfs_portal 3.5329 3.1778 0.75 0.24444 portal solid box black lightgrey
+node _sys_miscfs_procfs 3.5329 2.8722 0.75 0.24444 procfs solid box black lightgrey
+node _sys_miscfs_specfs 3.5329 2.5667 0.75 0.24444 specfs solid box black lightgrey
+node _sys_miscfs_umapfs 3.5329 2.2611 0.75 0.24444 umapfs solid box black lightgrey
+node _sys_miscfs_union 3.5329 1.9556 0.75 0.24444 union solid box black lightgrey
+node _sys_netiso_xebec 3.5329 1.65 0.75 0.24444 xebec solid box black lightgrey
+node _sys_ufs_ext2fs 3.5329 1.3444 0.75 0.24444 ext2fs solid box black lightgrey
+node _sys_ufs_ffs 3.5329 1.0389 0.75 0.24444 ffs solid box black lightgrey
+node _sys_ufs_lfs 3.5329 0.73333 0.75 0.24444 lfs solid box black lightgrey
+node _sys_ufs_mfs 3.5329 0.42778 0.75 0.24444 mfs solid box black lightgrey
+node _sys_ufs_ufs 3.5329 0.12222 0.75 0.24444 ufs solid box black lightgrey
+edge _sys _sys_arch 7 0.39183 4.8347 0.41751 5.9135 0.61806 13.404 1.25 14.15 1.2676 14.171 1.2873 14.189 1.3086 14.206 solid black
+edge _sys _sys_adosfs 7 0.39213 4.8306 0.42029 5.8744 0.63724 13.123 1.25 13.844 1.3302 13.939 1.4531 13.988 1.5729 14.011 solid black
+edge _sys _sys_compat 7 0.4071 4.8337 0.49332 5.4383 0.87221 8.064 1.25 10.206 1.4843 11.534 1.8172 13.135 1.9132 13.592 solid black
+edge _sys _sys_conf 7 0.39192 4.8307 0.41168 5.5449 0.54483 9.1 1.25 9.8722 1.3327 9.9628 1.4546 10.01 1.5731 10.034 solid black
+edge _sys _sys_ddb 7 0.3934 4.8324 0.4206 5.5247 0.58458 8.8454 1.25 9.5667 1.3331 9.6568 1.4551 9.7042 1.5736 9.7285 solid black
+edge _sys _sys_dev 4 0.43037 4.8322 0.65057 5.5044 1.6804 8.649 1.8992 9.3168 solid black
+edge _sys _sys_gdbscripts 7 0.40636 4.8335 0.46113 5.1831 0.66225 6.1625 1.25 6.6639 1.3404 6.741 1.4601 6.7857 1.5743 6.8114 solid black
+edge _sys _sys_ipkdb 7 0.41717 4.8315 0.49354 5.1417 0.73396 5.9468 1.25 6.3583 1.342 6.4317 1.4607 6.4754 1.5737 6.5015 solid black
+edge _sys _sys_isofs 7 0.43303 4.8319 0.53349 5.1003 0.80556 5.7294 1.25 6.0528 1.3441 6.1212 1.4622 6.1638 1.5739 6.1901 solid black
+edge _sys _sys_kern 7 0.45814 4.8332 0.58496 5.0546 0.87615 5.5086 1.25 5.7472 1.3471 5.8092 1.4647 5.85 1.5751 5.8768 solid black
+edge _sys _sys_lib 7 0.49874 4.8293 0.65125 4.9935 0.94322 5.2814 1.25 5.4417 1.3499 5.4939 1.466 5.5318 1.574 5.5589 solid black
+edge _sys _sys_lkm 4 0.71407 4.8336 0.97881 4.9379 1.3507 5.0844 1.6153 5.1887 solid black
+edge _sys _sys_miscfs 4 0.7565 4.7418 1.0038 4.7661 1.3284 4.7981 1.5751 4.8224 solid black
+edge _sys _sys_msdosfs 4 0.7565 4.6693 1.0038 4.645 1.3284 4.6131 1.5751 4.5888 solid black
+edge _sys _sys_net 7 0.75624 4.5821 0.90844 4.5322 1.0871 4.4753 1.25 4.4278 1.3546 4.3972 1.4689 4.3664 1.5737 4.339 solid black
+edge _sys _sys_netatalk 7 0.5381 4.5811 0.70275 4.4494 0.98029 4.2444 1.25 4.1222 1.3515 4.0762 1.4669 4.0403 1.5739 4.0129 solid black
+edge _sys _sys_netccitt 7 0.4739 4.5815 0.61313 4.3881 0.90861 4.0161 1.25 3.8167 1.3484 3.7592 1.4651 3.7197 1.5744 3.6928 solid black
+edge _sys _sys_netinet 7 0.44397 4.5786 0.55736 4.3329 0.84097 3.7915 1.25 3.5111 1.345 3.446 1.4621 3.4043 1.5726 3.3778 solid black
+edge _sys _sys_netiso 7 0.42465 4.5783 0.51313 4.2878 0.77054 3.5722 1.25 3.2056 1.3435 3.1342 1.4626 3.0908 1.5754 3.0646 solid black
+edge _sys _sys_netnatm 7 0.4115 4.5781 0.47703 4.2472 0.69863 3.3558 1.25 2.9 1.3407 2.825 1.459 2.7808 1.5721 2.7549 solid black
+edge _sys _sys_netns 7 0.40176 4.5786 0.4459 4.2119 0.6249 3.1424 1.25 2.5944 1.3394 2.5161 1.4587 2.4711 1.5731 2.4454 solid black
+edge _sys _sys_nfs 7 0.39443 4.5782 0.419 4.1774 0.55083 2.9301 1.25 2.2889 1.3385 2.2076 1.459 2.1621 1.5746 2.1368 solid black
+edge _sys _sys_stand 7 0.38856 4.581 0.39447 4.1518 0.47406 2.7211 1.25 1.9833 1.3371 1.9006 1.4572 1.8546 1.5729 1.8294 solid black
+edge _sys _sys_sys 7 0.3839 4.5803 0.37283 4.1208 0.39869 2.5112 1.25 1.6778 1.3367 1.5929 1.4582 1.5465 1.575 1.5217 solid black
+edge _sys _sys_ufs 7 0.38425 4.5783 0.37346 4.0953 0.39775 2.3514 1.25 1.3444 1.3338 1.2454 1.456 1.1773 1.5743 1.131 solid black
+edge _sys _sys_vm 7 0.40011 4.5801 0.45572 3.9863 0.72065 1.4608 1.25 0.91389 1.3344 0.82668 1.4553 0.77979 1.5724 0.75511 solid black
+edge _sys_compat _sys_compat_common 10 2.3354 13.746 2.4511 13.771 2.5713 13.817 2.6579 13.9 3.2035 14.422 2.6694 14.949 3.1579 15.525 3.1743 15.544 3.1931 15.561 3.2135 15.578 solid black
+edge _sys_compat _sys_compat_freebsd 10 2.3324 13.749 2.4479 13.774 2.5686 13.82 2.6579 13.9 3.1243 14.319 2.7375 14.754 3.1579 15.219 3.1767 15.24 3.1985 15.258 3.2218 15.276 solid black
+edge _sys_compat _sys_compat_hpux 10 2.3351 13.756 2.4482 13.782 2.5668 13.826 2.6579 13.9 3.0472 14.218 2.8036 14.558 3.1579 14.914 3.1767 14.933 3.1979 14.95 3.2203 14.965 solid black
+edge _sys_compat _sys_compat_ibcs2 10 2.3357 13.766 2.4463 13.793 2.5633 13.834 2.6579 13.9 2.9747 14.119 2.8657 14.357 3.1579 14.608 3.1803 14.628 3.205 14.646 3.2307 14.661 solid black
+edge _sys_compat _sys_compat_linux 10 2.3329 13.785 2.441 13.812 2.5574 13.849 2.6579 13.9 2.9128 14.029 2.9178 14.149 3.1579 14.303 3.1862 14.321 3.2167 14.339 3.2474 14.356 solid black
+edge _sys_compat _sys_compat_m68k4k 7 2.3342 13.811 2.439 13.839 2.5533 13.869 2.6579 13.9 2.8208 13.947 2.9994 14.004 3.1517 14.054 solid black
+edge _sys_compat _sys_compat_osf1 4 2.3354 13.756 2.5828 13.78 2.9074 13.812 3.154 13.836 solid black
+edge _sys_compat _sys_compat_ossaudio 4 2.3354 13.683 2.5828 13.659 2.9074 13.627 3.154 13.603 solid black
+edge _sys_compat _sys_compat_sunos 4 2.3354 13.611 2.5828 13.538 2.9074 13.442 3.154 13.369 solid black
+edge _sys_compat _sys_compat_svr4 4 2.2275 13.592 2.5139 13.451 2.9719 13.225 3.2586 13.084 solid black
+edge _sys_compat _sys_compat_ultrix 7 2.1194 13.592 2.3397 13.411 2.765 13.073 3.1579 12.831 3.1865 12.813 3.2172 12.796 3.2479 12.779 solid black
+edge _sys_dev _sys_dev_ata 10 2.3333 9.4612 2.4517 9.4857 2.5739 9.5329 2.6579 9.6222 3.4465 10.461 2.4606 11.248 3.1579 12.164 3.1732 12.184 3.1914 12.202 3.2113 12.218 solid black
+edge _sys_dev _sys_dev_dec 10 2.3357 9.4633 2.4528 9.4879 2.5736 9.5349 2.6579 9.6222 3.365 10.355 2.5307 11.056 3.1579 11.858 3.1735 11.878 3.1918 11.896 3.2118 11.912 solid black
+edge _sys_dev _sys_dev_eisa 10 2.334 9.4649 2.451 9.4897 2.5722 9.5363 2.6579 9.6222 3.2839 10.25 2.6004 10.864 3.1579 11.553 3.1738 11.572 3.1924 11.59 3.2125 11.606 solid black
+edge _sys_dev _sys_dev_i2c 10 2.3354 9.4679 2.4511 9.4931 2.5713 9.5392 2.6579 9.6222 3.2035 10.145 2.6694 10.671 3.1579 11.247 3.1743 11.267 3.1931 11.284 3.2135 11.3 solid black
+edge _sys_dev _sys_dev_ic 10 2.3324 9.4711 2.4479 9.4965 2.5686 9.5419 2.6579 9.6222 3.1243 10.042 2.7375 10.476 3.1579 10.942 3.1767 10.962 3.1985 10.981 3.2218 10.998 solid black
+edge _sys_dev _sys_dev_isa 10 2.3351 9.4778 2.4482 9.5039 2.5668 9.5479 2.6579 9.6222 3.0472 9.9399 2.8036 10.28 3.1579 10.636 3.1767 10.655 3.1979 10.672 3.2203 10.688 solid black
+edge _sys_dev _sys_dev_isapnp 10 2.3357 9.4883 2.4463 9.5149 2.5633 9.5567 2.6579 9.6222 2.9747 9.8417 2.8657 10.079 3.1579 10.331 3.1803 10.35 3.205 10.367 3.2307 10.384 solid black
+edge _sys_dev _sys_dev_microcode 10 2.3329 9.5068 2.441 9.534 2.5574 9.5715 2.6579 9.6222 2.9128 9.7507 2.9178 9.8708 3.1579 10.025 3.1862 10.043 3.2167 10.061 3.2474 10.078 solid black
+edge _sys_dev _sys_dev_mii 7 2.3342 9.5335 2.439 9.5608 2.5533 9.5917 2.6579 9.6222 2.8208 9.6697 2.9994 9.7267 3.1517 9.7765 solid black
+edge _sys_dev _sys_dev_ofisa 4 2.3354 9.4779 2.5828 9.5022 2.9074 9.5342 3.154 9.5585 solid black
+edge _sys_dev _sys_dev_ofw 4 2.3354 9.4054 2.5828 9.3811 2.9074 9.3492 3.154 9.3249 solid black
+edge _sys_dev _sys_dev_pci 4 2.3354 9.3331 2.5828 9.26 2.9074 9.164 3.154 9.0911 solid black
+edge _sys_dev _sys_dev_pcmcia 4 2.2275 9.3138 2.5139 9.1728 2.9719 8.9472 3.2586 8.8061 solid black
+edge _sys_dev _sys_dev_rcons 7 2.1194 9.3146 2.3397 9.1331 2.765 8.7951 3.1579 8.5528 3.1865 8.5351 3.2172 8.5178 3.2479 8.5011 solid black
+edge _sys_dev _sys_dev_scsipi 7 2.0714 9.3131 2.2653 9.0783 2.7047 8.5746 3.1579 8.2472 3.184 8.2283 3.2125 8.2104 3.2415 8.1938 solid black
+edge _sys_dev _sys_dev_sun 7 2.0422 9.3138 2.2101 9.0337 2.6443 8.3586 3.1579 7.9417 3.1808 7.9231 3.2058 7.9058 3.2318 7.8897 solid black
+edge _sys_dev _sys_dev_tc 7 2.0222 9.3161 2.1654 8.9975 2.5824 8.1469 3.1579 7.6361 3.1789 7.6175 3.2021 7.6003 3.2264 7.5846 solid black
+edge _sys_isofs _sys_isofs_cd9660 10 2.3349 6.2878 2.4442 6.3146 2.5606 6.3546 2.6579 6.4139 2.9417 6.5867 2.8936 6.7682 3.1579 6.9694 3.1825 6.9882 3.2093 7.0057 3.2368 7.0221 solid black
+edge _sys_lib _sys_lib_libkern 10 2.3358 5.6629 2.4476 5.6892 2.5653 5.7324 2.6579 5.8028 3.0101 6.0707 2.8354 6.3608 3.1579 6.6639 3.1783 6.6831 3.2012 6.7007 3.2253 6.7167 solid black
+edge _sys_lib _sys_lib_libsa 10 2.3349 5.6767 2.4442 5.7035 2.5606 5.7435 2.6579 5.8028 2.9417 5.9756 2.8936 6.1571 3.1579 6.3583 3.1825 6.3771 3.2093 6.3946 3.2368 6.411 solid black
+edge _sys_lib _sys_lib_libz 7 2.334 5.7029 2.44 5.7303 2.5547 5.764 2.6579 5.8028 2.6599 5.8035 3.0085 5.9779 3.2615 6.1044 solid black
+edge _sys_lkm _sys_lkm_compat 7 2.334 5.3974 2.44 5.4247 2.5547 5.4585 2.6579 5.4972 2.6599 5.4979 3.0085 5.6724 3.2615 5.7989 solid black
+edge _sys_lkm _sys_lkm_netinet 4 2.3354 5.389 2.5828 5.4378 2.9074 5.5017 3.154 5.5503 solid black
+edge _sys_lkm _sys_lkm_vfs 4 2.3354 5.3167 2.5828 5.3167 2.9074 5.3167 3.154 5.3167 solid black
+edge _sys_miscfs _sys_miscfs_deadfs 4 2.3354 4.8946 2.5828 4.9189 2.9074 4.9508 3.154 4.9751 solid black
+edge _sys_miscfs _sys_miscfs_fdesc 4 2.3354 4.8221 2.5828 4.7978 2.9074 4.7658 3.154 4.7415 solid black
+edge _sys_miscfs _sys_miscfs_fifofs 7 2.3342 4.7665 2.439 4.7392 2.5533 4.7083 2.6579 4.6778 2.8208 4.6303 2.9994 4.5733 3.1517 4.5235 solid black
+edge _sys_miscfs _sys_miscfs_genfs 10 2.3329 4.7932 2.441 4.766 2.5574 4.7285 2.6579 4.6778 2.9128 4.5493 2.9178 4.4292 3.1579 4.275 3.1862 4.2568 3.2167 4.2392 3.2474 4.2224 solid black
+edge _sys_miscfs _sys_miscfs_kernfs 10 2.3357 4.8117 2.4463 4.7851 2.5633 4.7433 2.6579 4.6778 2.9747 4.4583 2.8657 4.2206 3.1579 3.9694 3.1803 3.9503 3.205 3.9325 3.2307 3.9163 solid black
+edge _sys_miscfs _sys_miscfs_nullfs 10 2.3351 4.8222 2.4482 4.7961 2.5668 4.7521 2.6579 4.6778 3.0472 4.3601 2.8036 4.0201 3.1579 3.6639 3.1767 3.645 3.1979 3.6278 3.2203 3.6121 solid black
+edge _sys_miscfs _sys_miscfs_portal 10 2.3324 4.8289 2.4479 4.8035 2.5686 4.7581 2.6579 4.6778 3.1243 4.2585 2.7375 3.8236 3.1579 3.3583 3.1767 3.3375 3.1985 3.3187 3.2218 3.3021 solid black
+edge _sys_miscfs _sys_miscfs_procfs 10 2.3354 4.8321 2.4511 4.8069 2.5713 4.7608 2.6579 4.6778 3.2035 4.155 2.6694 3.6293 3.1579 3.0528 3.1743 3.0335 3.1931 3.0161 3.2135 3.0004 solid black
+edge _sys_miscfs _sys_miscfs_specfs 10 2.334 4.8351 2.451 4.8103 2.5722 4.7637 2.6579 4.6778 3.2839 4.0503 2.6004 3.4362 3.1579 2.7472 3.1738 2.7276 3.1924 2.71 3.2125 2.694 solid black
+edge _sys_miscfs _sys_miscfs_umapfs 10 2.3357 4.8367 2.4528 4.8121 2.5736 4.7651 2.6579 4.6778 3.365 3.9449 2.5307 3.2439 3.1579 2.4417 3.1735 2.4218 3.1918 2.4039 3.2118 2.3879 solid black
+edge _sys_miscfs _sys_miscfs_union 10 2.3333 4.8388 2.4517 4.8143 2.5739 4.7671 2.6579 4.6778 3.4465 3.839 2.4606 3.0521 3.1579 2.1361 3.1732 2.116 3.1914 2.0981 3.2113 2.0819 solid black
+edge _sys_netiso _sys_netiso_xebec 10 2.3351 2.9889 2.4482 2.9628 2.5668 2.9188 2.6579 2.8444 3.0472 2.5268 2.8036 2.1868 3.1579 1.8306 3.1767 1.8117 3.1979 1.7944 3.2203 1.7787 solid black
+edge _sys_ufs _sys_ufs_ext2fs 4 2.3354 1.1113 2.5828 1.16 2.9074 1.224 3.154 1.2726 solid black
+edge _sys_ufs _sys_ufs_ffs 4 2.3354 1.0389 2.5828 1.0389 2.9074 1.0389 3.154 1.0389 solid black
+edge _sys_ufs _sys_ufs_lfs 4 2.3354 0.96647 2.5828 0.91776 2.9074 0.85382 3.154 0.80522 solid black
+edge _sys_ufs _sys_ufs_mfs 7 2.334 0.95817 2.44 0.93078 2.5547 0.89714 2.6579 0.85833 2.6599 0.85758 3.0085 0.68324 3.2615 0.55667 solid black
+edge _sys_ufs _sys_ufs_ufs 10 2.3349 0.98449 2.4442 0.95757 2.5606 0.91758 2.6579 0.85833 2.9417 0.68557 2.8936 0.50403 3.1579 0.30278 3.1825 0.2841 3.2093 0.2665 3.2368 0.25017 solid black
+edge _sys_dev_microcode _sys_dev_microcode_aic7xxx 4 3.9135 10.251 4.0682 10.271 4.2479 10.293 4.4026 10.312 solid black
+edge _sys_dev_microcode _sys_dev_microcode_isp 4 3.9135 10.16 4.0682 10.14 4.2479 10.118 4.4026 10.099 solid black
+edge _sys_lib_libkern _sys_lib_libkern_arch 4 3.9135 6.9611 4.0682 7.0103 4.2479 7.0675 4.4026 7.1168 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_alpha 7 4.8613 7.3603 4.9867 7.5969 5.284 8.1097 5.6579 8.4278 5.6804 8.4468 5.7051 8.4646 5.731 8.4807 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_arm32 7 4.8969 7.3614 5.0469 7.5471 5.346 7.8936 5.6579 8.1222 5.6828 8.1404 5.7099 8.1578 5.7375 8.1739 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_i386 7 4.9706 7.361 5.1414 7.4842 5.4117 7.6725 5.6579 7.8167 5.6882 7.8343 5.7204 7.8521 5.7526 7.869 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_m68k 4 5.1372 7.361 5.3054 7.424 5.5078 7.4999 5.6761 7.5631 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_mips 4 5.1635 7.2792 5.3182 7.2985 5.4979 7.321 5.6526 7.3403 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_ns32k 4 5.1635 7.1875 5.3182 7.1682 5.4979 7.1457 5.6526 7.1264 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_powerpc 4 5.1372 7.1057 5.3054 7.0426 5.5078 6.9668 5.6761 6.9036 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_sparc 10 4.9961 7.1044 5.0489 7.0699 5.1057 7.0324 5.1579 6.9972 5.3822 6.846 5.4253 6.7881 5.6579 6.65 5.6881 6.6321 5.7203 6.6143 5.7525 6.5974 solid black
+edge _sys_lib_libkern_arch _sys_lib_libkern_arch_vax 10 5.0194 7.1047 5.0674 7.0725 5.1162 7.036 5.1579 6.9972 5.4258 6.7486 5.3761 6.5772 5.6579 6.3444 5.6807 6.3257 5.7056 6.3082 5.7315 6.2922 solid black
+edge _sys_lkm_compat _sys_lkm_compat_freebsd 10 3.8292 6.0557 3.8567 6.0721 3.8833 6.0896 3.9079 6.1083 4.1722 6.3096 4.1436 6.4626 4.4079 6.6639 4.4325 6.6826 4.4593 6.7001 4.4868 6.7165 solid black
+edge _sys_lkm_compat _sys_lkm_compat_linux 4 3.8 6.0544 4.0085 6.1586 4.3025 6.3056 4.5119 6.4103 solid black
+edge _sys_lkm_compat _sys_lkm_compat_sunos 4 3.9135 6.0194 4.0682 6.0582 4.2479 6.1031 4.4026 6.1417 solid black
+edge _sys_lkm_compat _sys_lkm_compat_svr4 4 3.9135 5.9278 4.0682 5.9278 4.2479 5.9278 4.4026 5.9278 solid black
+edge _sys_lkm_netinet _sys_lkm_netinet_if_ipl 4 3.9135 5.6222 4.0682 5.6222 4.2479 5.6222 4.4026 5.6222 solid black
+edge _sys_lkm_vfs _sys_lkm_vfs_adosfs 4 3.9135 5.3167 4.0682 5.3167 4.2479 5.3167 4.4026 5.3167 solid black
+edge _sys_lkm_vfs _sys_lkm_vfs_isofs 4 3.9135 5.225 4.0682 5.1863 4.2479 5.1414 4.4026 5.1028 solid black
+edge _sys_lkm_vfs _sys_lkm_vfs_miscfs 4 3.8 5.19 4.0085 5.0858 4.3025 4.9389 4.5119 4.8342 solid black
+edge _sys_lkm_vfs _sys_lkm_vfs_msdosfs 10 3.8292 5.1887 3.8567 5.1724 3.8833 5.1549 3.9079 5.1361 4.1722 4.9349 4.1436 4.7818 4.4079 4.5806 4.4325 4.5618 4.4593 4.5443 4.4868 4.5279 solid black
+edge _sys_lkm_vfs _sys_lkm_vfs_ufs 7 3.8461 5.1885 3.8685 5.1726 3.8894 5.1553 3.9079 5.1361 4.1707 4.8644 4.5853 3.7668 4.7229 3.3893 solid black
+edge _sys_lkm_vfs_isofs _sys_lkm_vfs_isofs_cd9660 10 5.074 5.1386 5.1032 5.1553 5.1317 5.1731 5.1579 5.1917 5.4107 5.3711 5.4053 5.4983 5.6579 5.6778 5.6842 5.6964 5.7128 5.7142 5.7418 5.7308 solid black
+edge _sys_lkm_vfs_miscfs _sys_lkm_vfs_miscfs_fdesc 10 5.074 4.8331 5.1032 4.8497 5.1317 4.8675 5.1579 4.8861 5.4107 5.0656 5.4053 5.1928 5.6579 5.3722 5.6842 5.3908 5.7128 5.4086 5.7418 5.4253 solid black
+edge _sys_lkm_vfs_miscfs _sys_lkm_vfs_miscfs_kernfs 4 5.0865 4.8339 5.2812 4.9203 5.5371 5.0336 5.7315 5.1197 solid black
+edge _sys_lkm_vfs_miscfs _sys_lkm_vfs_miscfs_nullfs 4 5.1635 4.7764 5.3182 4.8063 5.4979 4.841 5.6526 4.8708 solid black
+edge _sys_lkm_vfs_miscfs _sys_lkm_vfs_miscfs_portal 4 5.1635 4.6847 5.3182 4.676 5.4979 4.6657 5.6526 4.6569 solid black
+edge _sys_lkm_vfs_miscfs _sys_lkm_vfs_miscfs_procfs 4 5.1635 4.5931 5.3182 4.5456 5.4979 4.4904 5.6526 4.4431 solid black
+edge _sys_lkm_vfs_miscfs _sys_lkm_vfs_miscfs_umapfs 10 5.0628 4.5765 5.0951 4.5597 5.1275 4.5424 5.1579 4.525 5.3872 4.3949 5.4286 4.3357 5.6579 4.2056 5.6885 4.1882 5.7208 4.1708 5.7531 4.154 solid black
+edge _sys_lkm_vfs_miscfs _sys_lkm_vfs_miscfs_union 10 5.084 4.5768 5.11 4.5608 5.135 4.5435 5.1579 4.525 5.4346 4.3014 5.3812 4.1236 5.6579 3.9 5.6808 3.8815 5.706 3.8642 5.7319 3.8482 solid black
+edge _sys_lkm_vfs_ufs _sys_lkm_vfs_ufs_ffs 4 5.1635 3.3069 5.3182 3.3262 5.4979 3.3488 5.6526 3.3681 solid black
+edge _sys_lkm_vfs_ufs _sys_lkm_vfs_ufs_lfs 4 5.1635 3.2153 5.3182 3.196 5.4979 3.1735 5.6526 3.1542 solid black
+edge _sys_lkm_vfs_ufs _sys_lkm_vfs_ufs_mfs 4 5.1372 3.1335 5.3054 3.0704 5.5078 2.9946 5.6761 2.9314 solid black
+stop

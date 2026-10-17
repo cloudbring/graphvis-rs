@@ -1,0 +1,32 @@
+{
+  "name": "G",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,974.04,101",
+  "imagepath": "imagepath_test\/imagepath_dir\/",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "height": "1.4028",
+      "label": "<TABLE CELLSPACING=\"2\" CELLPADDING=\"2\" BORDER=\"0\" \nCELLBORDER=\"0\"><TR><TD><TABLE CELLSPACING=\"3\" CELLPADDING=\"1\" BORDER=\"0\" \nCELLBORDER=\"0\">\n<TR><TD ALIGN=\"left\"><FONT POINT-SIZE=\"30.0\" FACE=\"Helvetica-Bold\">image attribute (invalid absolute pathname)<\/FONT><\/TD><\/TR><TR><TD ALIGN=\"left\"><FONT POINT-SIZE=\"30.0\" FACE=\"Helvetica-Bold\">imagepath attribute (valid absolute pathname)<\/FONT><\/TD><\/TR>\n<\/TABLE><\/TD><\/TR><\/TABLE>",
+      "pos": "291.73,50.501",
+      "shape": "plaintext",
+      "width": "8.1037"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "fontname": "Helvetica-Bold",
+      "fontsize": "30",
+      "height": "0.61111",
+      "image": "\/inv_dir\/image.jpg",
+      "label": "no image should be displayed",
+      "labelloc": "b",
+      "pos": "787.73,50.501",
+      "shape": "box",
+      "width": "5.175"
+    }
+  ]
+}

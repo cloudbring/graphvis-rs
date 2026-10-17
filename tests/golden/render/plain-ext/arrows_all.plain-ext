@@ -1,0 +1,83 @@
+graph 1 19.507 1.1889
+node a1 0.20833 1.0167 0.40575 0.34444 a1 solid box black lightgrey
+node b1 0.20833 0.17222 0.41667 0.34444 b1 solid box black lightgrey
+node a2 0.875 1.0167 0.40575 0.34444 a2 solid box black lightgrey
+node b2 0.875 0.17222 0.41667 0.34444 b2 solid box black lightgrey
+node a3 1.5417 1.0167 0.40575 0.34444 a3 solid box black lightgrey
+node b3 1.5417 0.17222 0.41667 0.34444 b3 solid box black lightgrey
+node a4 2.2083 1.0167 0.40575 0.34444 a4 solid box black lightgrey
+node b4 2.2083 0.17222 0.41667 0.34444 b4 solid box black lightgrey
+node a5 2.875 1.0167 0.40575 0.34444 a5 solid box black lightgrey
+node b5 2.875 0.17222 0.41667 0.34444 b5 solid box black lightgrey
+node a6 3.5417 1.0167 0.40575 0.34444 a6 solid box black lightgrey
+node b6 3.5417 0.17222 0.41667 0.34444 b6 solid box black lightgrey
+node a7 4.2083 1.0167 0.40575 0.34444 a7 solid box black lightgrey
+node b7 4.2083 0.17222 0.41667 0.34444 b7 solid box black lightgrey
+node a8 4.875 1.0167 0.40575 0.34444 a8 solid box black lightgrey
+node b8 4.875 0.17222 0.41667 0.34444 b8 solid box black lightgrey
+node a9 5.5417 1.0167 0.40575 0.34444 a9 solid box black lightgrey
+node b9 5.5417 0.17222 0.41667 0.34444 b9 solid box black lightgrey
+node a10 6.2639 1.0167 0.50297 0.34444 a10 solid box black lightgrey
+node b10 6.2639 0.17222 0.51389 0.34444 b10 solid box black lightgrey
+node a11 7.0278 1.0167 0.50297 0.34444 a11 solid box black lightgrey
+node b11 7.0278 0.17222 0.51389 0.34444 b11 solid box black lightgrey
+node a12 7.7917 1.0167 0.50297 0.34444 a12 solid box black lightgrey
+node b12 7.7917 0.17222 0.51389 0.34444 b12 solid box black lightgrey
+node a13 8.5556 1.0167 0.50297 0.34444 a13 solid box black lightgrey
+node b13 8.5556 0.17222 0.51389 0.34444 b13 solid box black lightgrey
+node a14 9.3194 1.0167 0.50297 0.34444 a14 solid box black lightgrey
+node b14 9.3194 0.17222 0.51389 0.34444 b14 solid box black lightgrey
+node a15 10.083 1.0167 0.50297 0.34444 a15 solid box black lightgrey
+node b15 10.083 0.17222 0.51389 0.34444 b15 solid box black lightgrey
+node a16 10.847 1.0167 0.50297 0.34444 a16 solid box black lightgrey
+node b16 10.847 0.17222 0.51389 0.34444 b16 solid box black lightgrey
+node a17 11.611 1.0167 0.50297 0.34444 a17 solid box black lightgrey
+node b17 11.611 0.17222 0.51389 0.34444 b17 solid box black lightgrey
+node a18 12.375 1.0167 0.50297 0.34444 a18 solid box black lightgrey
+node b18 12.375 0.17222 0.51389 0.34444 b18 solid box black lightgrey
+node a19 13.139 1.0167 0.50297 0.34444 a19 solid box black lightgrey
+node b19 13.139 0.17222 0.51389 0.34444 b19 solid box black lightgrey
+node a20 13.903 1.0167 0.50297 0.34444 a20 solid box black lightgrey
+node b20 13.903 0.17222 0.51389 0.34444 b20 solid box black lightgrey
+node a21 14.667 1.0167 0.50297 0.34444 a21 solid box black lightgrey
+node b21 14.667 0.17222 0.51389 0.34444 b21 solid box black lightgrey
+node a22 15.431 1.0167 0.50297 0.34444 a22 solid box black lightgrey
+node b22 15.431 0.17222 0.51389 0.34444 b22 solid box black lightgrey
+node a23 16.194 1.0167 0.50297 0.34444 a23 solid box black lightgrey
+node b23 16.194 0.17222 0.51389 0.34444 b23 solid box black lightgrey
+node a24 16.958 1.0167 0.50297 0.34444 a24 solid box black lightgrey
+node b24 16.958 0.17222 0.51389 0.34444 b24 solid box black lightgrey
+node a25 17.722 1.0167 0.50297 0.34444 a25 solid box black lightgrey
+node b25 17.722 0.17222 0.51389 0.34444 b25 solid box black lightgrey
+node a26 18.486 1.0167 0.50297 0.34444 a26 solid box black lightgrey
+node b26 18.486 0.17222 0.51389 0.34444 b26 solid box black lightgrey
+node a27 19.25 1.0167 0.50297 0.34444 a27 solid box black lightgrey
+node b27 19.25 0.17222 0.51389 0.34444 b27 solid box black lightgrey
+edge a1 b1 4 0.20833 0.83751 0.20833 0.74342 0.20833 0.62226 0.20833 0.51 solid black
+edge a2 b2 4 0.875 0.83751 0.875 0.739 0.875 0.61079 0.875 0.49422 solid black
+edge a3 b3 4 1.5417 0.83751 1.5417 0.73346 1.5417 0.59631 1.5417 0.47469 solid black
+edge a4 b4 4 2.2083 0.83751 2.2083 0.73346 2.2083 0.59631 2.2083 0.47469 solid black
+edge a5 b5 4 2.875 0.83751 2.875 0.739 2.875 0.61079 2.875 0.49422 solid black
+edge a6 b6 4 3.5417 0.83751 3.5417 0.739 3.5417 0.61079 3.5417 0.49422 solid black
+edge a7 b7 4 4.2083 0.83751 4.2083 0.739 4.2083 0.61079 4.2083 0.49422 solid black
+edge a8 b8 4 4.875 0.83751 4.875 0.71686 4.875 0.55168 4.875 0.41786 solid black
+edge a9 b9 4 5.5417 0.83751 5.5417 0.74232 5.5417 0.6194 5.5417 0.50604 solid black
+edge a10 b10 4 6.2639 0.83751 6.2639 0.74896 6.2639 0.63642 6.2639 0.5299 solid black
+edge a11 b11 4 7.0278 0.83751 7.0278 0.74896 7.0278 0.63642 7.0278 0.5299 solid black
+edge a12 b12 4 7.7917 0.83751 7.7917 0.739 7.7917 0.61079 7.7917 0.49422 solid black
+edge a13 b13 4 8.5556 0.83751 8.5556 0.739 8.5556 0.61079 8.5556 0.49422 solid black
+edge a14 b14 4 9.3194 0.83751 9.3194 0.69582 9.3194 0.49275 9.3194 0.35112 solid black
+edge a15 b15 4 10.083 0.83751 10.083 0.73789 10.083 0.60792 10.083 0.49029 solid black
+edge a16 b16 4 10.847 0.83751 10.847 0.73789 10.847 0.60792 10.847 0.49029 solid black
+edge a17 b17 4 11.611 0.83751 11.611 0.74342 11.611 0.62226 11.611 0.51 solid black
+edge a18 b18 4 12.375 0.83751 12.375 0.77442 12.375 0.69915 12.375 0.62256 solid black
+edge a19 b19 4 13.139 0.83751 13.139 0.77442 13.139 0.69915 13.139 0.62256 solid black
+edge a20 b20 4 13.903 0.83751 13.903 0.82201 13.903 0.80578 13.903 0.78899 solid black
+edge a21 b21 4 14.667 0.65869 14.667 0.60875 14.667 0.5575 14.667 0.50803 solid black
+edge a22 b22 4 15.431 0.6786 15.431 0.56632 15.431 0.44517 15.431 0.35112 solid black
+edge a23 b23 4 16.194 0.83751 16.194 0.69582 16.194 0.49275 16.194 0.35112 solid black
+edge a24 b24 4 16.958 0.83751 16.958 0.77442 16.958 0.69915 16.958 0.62256 solid black
+edge a25 b25 4 17.722 0.83751 17.722 0.79324 17.722 0.74296 17.722 0.69044 solid black
+edge a26 b26 4 18.486 0.83751 18.486 0.74564 18.486 0.62794 18.486 0.51794 solid black
+edge a27 b27 4 19.25 0.83751 19.25 0.73789 19.25 0.60792 19.25 0.49029 solid black
+stop

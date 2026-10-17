@@ -1,0 +1,12 @@
+digraph arrows {
+  node [shape=box, width=0.4, height=0.3];
+  a1 -> b1 [arrowhead=normal]; a2 -> b2 [arrowhead=inv]; a3 -> b3 [arrowhead=dot];
+  a4 -> b4 [arrowhead=odot]; a5 -> b5 [arrowhead=box]; a6 -> b6 [arrowhead=obox];
+  a7 -> b7 [arrowhead=crow]; a8 -> b8 [arrowhead=tee]; a9 -> b9 [arrowhead=vee];
+  a10 -> b10 [arrowhead=diamond]; a11 -> b11 [arrowhead=odiamond]; a12 -> b12 [arrowhead=curve];
+  a13 -> b13 [arrowhead=icurve]; a14 -> b14 [arrowhead=none]; a15 -> b15 [arrowhead=lnormal];
+  a16 -> b16 [arrowhead=rnormal]; a17 -> b17 [arrowhead=onormal]; a18 -> b18 [arrowhead=invdot];
+  a19 -> b19 [arrowhead=invodot]; a20 -> b20 [arrowhead=dotnormalvee]; a21 -> b21 [dir=both, arrowtail=diamond];
+  a22 -> b22 [dir=back]; a23 -> b23 [dir=none]; a24 -> b24 [arrowhead=lteeoldiamond];
+  a25 -> b25 [arrowsize=2, penwidth=3]; a26 -> b26 [arrowhead=ecrow, penwidth=5]; a27 -> b27 [arrowhead=rvee];
+}

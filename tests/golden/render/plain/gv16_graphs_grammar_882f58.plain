@@ -1,0 +1,87 @@
+graph 0.81937 9.7636 9.5
+node n1 1.7124 8.25 0.75 0.5 T solid box black lightgrey
+node n4 2.7124 8.25 0.75 0.5 "+" solid box black lightgrey
+node n5 3.7124 8.25 0.75 0.5 T solid box black lightgrey
+node n39 4.7124 8.25 0.75 0.5 "+" solid box black lightgrey
+node n40 5.7124 8.25 0.75 0.5 T solid box black lightgrey
+node n6 2.7124 7.25 0.75 0.5 F solid box black lightgrey
+node n16 3.7124 7.25 0.75 0.5 "*" solid box black lightgrey
+node n17 5.2124 7.25 0.75 0.5 F solid box black lightgrey
+node n7 1.7124 6.25 0.75 0.5 "(" solid box black lightgrey
+node n8 2.7124 6.25 0.75 0.5 E solid box black lightgrey
+node n15 3.7124 6.25 0.75 0.5 ")" solid box black lightgrey
+node n10 1.2124 4.25 0.75 0.5 F solid box black lightgrey
+node n12 2.2124 4.25 0.75 0.5 "*" solid box black lightgrey
+node n13 3.2124 4.25 0.75 0.5 F solid box black lightgrey
+node n18 4.7124 6.25 0.75 0.5 "(" solid box black lightgrey
+node n19 5.7124 6.25 0.75 0.5 E solid box black lightgrey
+node n38 6.7124 6.25 0.75 0.5 ")" solid box black lightgrey
+node n20 5.2124 5.25 0.75 0.5 T solid box black lightgrey
+node n26 6.2124 5.25 0.75 0.5 "+" solid box black lightgrey
+node n27 7.2124 5.25 0.75 0.5 T solid box black lightgrey
+node n21 4.2124 4.25 0.75 0.5 F solid box black lightgrey
+node n23 5.2124 4.25 0.75 0.5 "*" solid box black lightgrey
+node n24 6.2124 4.25 0.75 0.5 F solid box black lightgrey
+node n29 7.2124 3.25 0.75 0.5 "(" solid box black lightgrey
+node n30 8.2124 3.25 0.75 0.5 E solid box black lightgrey
+node n37 9.2124 3.25 0.75 0.5 ")" solid box black lightgrey
+node n32 7.2124 1.25 0.75 0.5 F solid box black lightgrey
+node n34 8.2124 1.25 0.75 0.5 "*" solid box black lightgrey
+node n35 9.2124 1.25 0.75 0.5 F solid box black lightgrey
+node n0 3.7124 9.25 0.75 0.5 E solid box black lightgrey
+node n2 1.1291 7.25 0.75 0.5 F solid box black lightgrey
+node n3 0.54576 6.25 1.0915 0.5 "IDENT : a " solid box black lightgrey
+node n9 2.4624 5.25 0.75 0.5 T solid box black lightgrey
+node n11 1.2124 3.25 1.1024 0.5 "IDENT : b " solid box black lightgrey
+node n14 3.0318 3.25 1.0915 0.5 "IDENT : c " solid box black lightgrey
+node n22 4.379 3.25 1.1024 0.5 "IDENT : d " solid box black lightgrey
+node n25 6.0457 3.25 1.0915 0.5 "IDENT : e " solid box black lightgrey
+node n28 7.4624 4.25 0.75 0.5 F solid box black lightgrey
+node n31 8.2124 2.25 0.75 0.5 T solid box black lightgrey
+node n33 7.2124 0.25 1.0915 0.5 "IDENT : a " solid box black lightgrey
+node n36 9.2124 0.25 1.1024 0.5 "IDENT : b " solid box black lightgrey
+node n41 7.2957 7.25 0.75 0.5 F solid box black lightgrey
+node n42 7.8929 6.25 1.1024 0.5 "IDENT : q " solid box black lightgrey
+edge n1 n2 4 1.5682 7.9958 1.5032 7.8875 1.425 7.7571 1.3527 7.6365 solid black
+edge n5 n6 4 3.4653 7.9958 3.3475 7.8813 3.2043 7.7421 3.0744 7.616 solid black
+edge n5 n16 4 3.7124 7.9958 3.7124 7.8946 3.7124 7.774 3.7124 7.6603 solid black
+edge n5 n17 4 4.0871 7.9933 4.2764 7.8706 4.5087 7.72 4.7131 7.5875 solid black
+edge n40 n41 4 6.0917 8.0032 6.2978 7.8767 6.5556 7.7183 6.7797 7.5808 solid black
+edge n6 n7 4 2.4653 6.9958 2.3475 6.8812 2.2043 6.7421 2.0744 6.616 solid black
+edge n6 n8 4 2.7124 6.9958 2.7124 6.8946 2.7124 6.774 2.7124 6.6603 solid black
+edge n6 n15 4 2.9596 6.9958 3.0774 6.8812 3.2206 6.7421 3.3504 6.616 solid black
+edge n17 n18 4 5.0889 6.9958 5.0337 6.8886 4.9675 6.7599 4.9061 6.6404 solid black
+edge n17 n19 4 5.336 6.9958 5.3911 6.8886 5.4574 6.7599 5.5187 6.6404 solid black
+edge n17 n38 4 5.5871 6.9933 5.7764 6.8706 6.0087 6.72 6.2131 6.5875 solid black
+edge n8 n9 4 2.6507 5.9958 2.6243 5.8933 2.5929 5.7711 2.5633 5.6562 solid black
+edge n10 n11 4 1.2124 3.9958 1.2124 3.8946 1.2124 3.774 1.2124 3.6603 solid black
+edge n13 n14 4 3.1678 3.9958 3.1487 3.8933 3.1261 3.7711 3.1047 3.6562 solid black
+edge n19 n20 4 5.5889 5.9958 5.5337 5.8886 5.4675 5.7599 5.4061 5.6404 solid black
+edge n19 n26 4 5.836 5.9958 5.8911 5.8886 5.9574 5.7599 6.0187 5.6404 solid black
+edge n19 n27 4 6.0871 5.9933 6.2764 5.8706 6.5087 5.72 6.7131 5.5875 solid black
+edge n20 n21 4 4.9653 4.9958 4.8475 4.8812 4.7043 4.7421 4.5744 4.616 solid black
+edge n20 n23 4 5.2124 4.9958 5.2124 4.8946 5.2124 4.774 5.2124 4.6603 solid black
+edge n20 n24 4 5.4596 4.9958 5.5774 4.8812 5.7206 4.7421 5.8504 4.616 solid black
+edge n27 n28 4 7.2742 4.9958 7.3006 4.8933 7.3319 4.7711 7.3615 4.6562 solid black
+edge n21 n22 4 4.2536 3.9958 4.2712 3.8933 4.2921 3.7711 4.3118 3.6562 solid black
+edge n24 n25 4 6.1712 3.9958 6.1536 3.8933 6.1328 3.7711 6.1131 3.6562 solid black
+edge n30 n31 4 8.2124 2.9958 8.2124 2.8946 8.2124 2.774 8.2124 2.6603 solid black
+edge n32 n33 4 7.2124 0.99579 7.2124 0.89454 7.2124 0.77397 7.2124 0.66022 solid black
+edge n35 n36 4 9.2124 0.99579 9.2124 0.89454 9.2124 0.77397 9.2124 0.66022 solid black
+edge n0 n1 4 3.3315 9.051 3.0201 8.8996 2.5767 8.684 2.2326 8.5168 solid black
+edge n0 n4 4 3.4653 8.9958 3.3475 8.8813 3.2043 8.7421 3.0744 8.616 solid black
+edge n0 n5 4 3.7124 8.9958 3.7124 8.8946 3.7124 8.774 3.7124 8.6603 solid black
+edge n0 n39 4 3.9596 8.9958 4.0774 8.8813 4.2206 8.7421 4.3504 8.616 solid black
+edge n0 n40 4 4.0933 9.051 4.4047 8.8996 4.8482 8.684 5.1922 8.5168 solid black
+edge n2 n3 4 0.9849 6.9958 0.91992 6.8875 0.84167 6.7571 0.76933 6.6365 solid black
+edge n9 n10 4 2.1535 4.9958 2.0001 4.8765 1.8125 4.7307 1.6453 4.6006 solid black
+edge n9 n12 4 2.4007 4.9958 2.3743 4.8933 2.3429 4.7711 2.3133 4.6562 solid black
+edge n9 n13 4 2.6478 4.9958 2.7342 4.8839 2.8386 4.7485 2.934 4.6247 solid black
+edge n28 n29 4 7.4007 3.9958 7.3743 3.8933 7.3429 3.7711 7.3133 3.6562 solid black
+edge n28 n30 4 7.6478 3.9958 7.7342 3.8839 7.8386 3.7485 7.934 3.6247 solid black
+edge n28 n37 4 7.8422 4.0251 8.0921 3.8862 8.4225 3.7028 8.6962 3.5507 solid black
+edge n31 n32 4 7.9653 1.9958 7.8475 1.8812 7.7043 1.7421 7.5744 1.616 solid black
+edge n31 n34 4 8.2124 1.9958 8.2124 1.8946 8.2124 1.774 8.2124 1.6603 solid black
+edge n31 n35 4 8.4596 1.9958 8.5774 1.8812 8.7206 1.7421 8.8504 1.616 solid black
+edge n41 n42 4 7.4433 6.9958 7.5099 6.8875 7.59 6.7571 7.664 6.6365 solid black
+stop

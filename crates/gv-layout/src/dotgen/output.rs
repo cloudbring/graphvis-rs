@@ -5,7 +5,6 @@
 
 use super::Dot;
 use super::types::*;
-use crate::common::init::fmt_g5;
 use gv_core::{BezierSegment, BoundingBox, Graph, Point, Spline};
 
 /// Final layout results, detached from the [`Dot`] borrow of the input graph.
@@ -65,7 +64,8 @@ impl Output {
         let mut edges = Vec::new();
         let mut edge_attrs = Vec::new();
         let lp_of = |l: Option<L>| l.filter(|&l| d.labels[l].set).map(|l| d.labels[l].pos);
-        let fmt = |p: Point| format!("{},{}", fmt_g5(p.x), fmt_g5(p.y));
+        // Exact notation, as the renderers expect (`nop.rs`).
+        let fmt = |p: Point| format!("{:?},{:?}", p.x, p.y);
         // attach_attrs_and_arrows: edges without splines (or IGNORED) get no
         // attributes; with splines, lp/head_lp/tail_lp are written whether
         // set or not and xlp only when set.
@@ -169,10 +169,14 @@ impl Output {
             }
         }
         if let Some(lp) = self.graph_lp {
-            graph.graph_attrs.insert("lp".to_string(), lp);
+            graph
+                .graph_attrs
+                .insert(crate::nop::LABEL_POS_KEY.to_string(), lp);
         }
         for (si, lp) in self.cluster_lp {
-            graph.subgraphs[si].graph_attrs.insert("lp".to_string(), lp);
+            graph.subgraphs[si]
+                .graph_attrs
+                .insert(crate::nop::LABEL_POS_KEY.to_string(), lp);
         }
         for (i, xlp) in self.node_xlp.into_iter().enumerate() {
             if let Some(v) = xlp {

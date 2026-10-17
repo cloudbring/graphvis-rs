@@ -1,0 +1,41 @@
+graph 1 8.9167 4.5
+node SPEC 2.9583 4.25 0.75 0.5 SPEC solid plaintext black lightgrey
+node DEF2 2.2639 3.25 0.75 0.5 DEF solid plaintext black lightgrey
+node DEF1 5.0556 3.25 0.75 0.5 DEF solid plaintext black lightgrey
+node ID2 0.76389 2.25 0.75144 0.5 insects solid plaintext black lightgrey
+node SET2 1.7639 2.25 0.75 0.5 SET solid plaintext black lightgrey
+node SC2 2.7639 2.25 0.75 0.5 ";" solid plaintext black lightgrey
+node ID1 4.5556 2.25 0.75 0.5 cities solid plaintext black lightgrey
+node SET1 5.5556 2.25 0.75 0.5 SET solid plaintext black lightgrey
+node SC1 6.5556 2.25 0.75 0.5 ";" solid plaintext black lightgrey
+node OPEN1 3.7639 1.25 0.75 0.5 "{" solid plaintext black lightgrey
+node ELEM1 4.9583 1.25 1.1294 0.5 ELEMENT solid plaintext black lightgrey
+node SC3 6.1528 1.25 0.75 0.5 ";" solid plaintext black lightgrey
+node ELEM2 7.3472 1.25 1.1294 0.5 ELEMENT solid plaintext black lightgrey
+node CLOSE1 8.5417 1.25 0.75 0.5 "}" solid plaintext black lightgrey
+node OPEN2 0.375 1.25 0.75 0.5 "{" solid plaintext black lightgrey
+node ELEM3 1.5694 1.25 1.1294 0.5 ELEMENT solid plaintext black lightgrey
+node CLOSE2 2.7639 1.25 0.75 0.5 "}" solid plaintext black lightgrey
+node ID3 4.9583 0.25 0.84847 0.5 andover solid plaintext black lightgrey
+node ID4 7.3472 0.25 0.75 0.5 boston solid plaintext black lightgrey
+node ID5 1.5694 0.25 0.75 0.5 fly solid plaintext black lightgrey
+edge SPEC DEF2 4 2.7903 4.0007 2.71 3.8885 2.6124 3.7517 2.5229 3.6265 solid black
+edge SPEC DEF1 4 3.3333 4.0624 3.6703 3.9061 4.1682 3.6753 4.5422 3.5019 solid black
+edge DEF2 ID2 4 1.9008 3.0007 1.7074 2.8754 1.4665 2.7193 1.2565 2.5832 solid black
+edge DEF2 SET2 4 2.1429 3.0007 2.0869 2.8921 2.0192 2.7604 1.9565 2.6386 solid black
+edge DEF2 SC2 4 2.3849 3.0007 2.4408 2.8921 2.5086 2.7604 2.5713 2.6386 solid black
+edge DEF1 ID1 4 4.9346 3.0007 4.8786 2.8921 4.8108 2.7604 4.7482 2.6386 solid black
+edge DEF1 SET1 4 5.1765 3.0007 5.2325 2.8921 5.3003 2.7604 5.3629 2.6386 solid black
+edge DEF1 SC1 4 5.4186 3.0007 5.6121 2.8754 5.8529 2.7193 6.0629 2.5832 solid black
+edge SET2 OPEN2 4 1.4276 2.0007 1.2503 1.8765 1.0299 1.7224 0.83667 1.5871 solid black
+edge SET2 ELEM3 4 1.7168 2.0007 1.6958 1.8957 1.6704 1.769 1.6468 1.6507 solid black
+edge SET2 CLOSE2 4 2.006 2.0007 2.1275 1.8825 2.2772 1.7371 2.4113 1.6067 solid black
+edge SET1 OPEN1 4 5.1843 2.0347 4.9212 1.8919 4.565 1.6986 4.2751 1.5413 solid black
+edge SET1 ELEM1 4 5.411 2.0007 5.3428 1.8897 5.2597 1.7546 5.1836 1.6306 solid black
+edge SET1 SC3 4 5.7001 2.0007 5.7683 1.8897 5.8514 1.7546 5.9275 1.6306 solid black
+edge SET1 ELEM2 4 5.9268 2.0347 6.1712 1.9021 6.496 1.7258 6.7733 1.5753 solid black
+edge SET1 CLOSE1 7 5.929 2.0501 5.9713 2.0321 6.014 2.0149 6.0556 2 6.8674 1.7093 7.1543 1.7961 8.0183 1.5025 solid black
+edge ELEM1 ID3 4 4.9583 1.0008 4.9583 0.89686 4.9583 0.77193 4.9583 0.65468 solid black
+edge ELEM2 ID4 4 7.3472 1.0008 7.3472 0.89686 7.3472 0.77193 7.3472 0.65468 solid black
+edge ELEM3 ID5 4 1.5694 1.0008 1.5694 0.89686 1.5694 0.77193 1.5694 0.65468 solid black
+stop

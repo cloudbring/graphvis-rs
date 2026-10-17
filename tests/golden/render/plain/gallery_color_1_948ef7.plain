@@ -1,0 +1,4 @@
+graph 1 1.9722 0.72222
+node a 0.48611 0.36111 0.75 0.5 a solid ellipse red red
+node b 1.4861 0.36111 0.75 0.5 b solid ellipse green green
+stop

@@ -1,0 +1,85 @@
+graph 0.23406 29.907 40.589
+node 0000 0.5451 1.2042 0.75 0.5 M solid polygon black lightgrey
+node 0001 2.5174 1.2042 2.6917 0.5 MMMMMMMMMM solid polygon black lightgrey
+node 0002 4.4896 1.2042 0.75 2.137 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 0003 6.4896 1.2042 2.7593 2.137 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 0010 8.5452 1.2042 0.97222 0.72222 M solid polygon black lightgrey
+node 0011 10.628 1.2042 2.9139 0.72222 MMMMMMMMMM solid polygon black lightgrey
+node 0012 12.712 1.2042 0.97222 2.3592 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 0013 14.822 1.2042 2.9815 2.3592 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 0110 16.961 1.2042 1.0796 0.72222 M solid polygon black lightgrey
+node 0111 19.156 1.2042 3.2838 0.72222 MMMMMMMMMM solid polygon black lightgrey
+node 0112 21.35 1.2042 1.0794 2.36 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 0113 23.586 1.2042 3.3578 2.36 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 3000 0.5451 7.6959 1.0902 0.68889 M solid polygon black lightgrey
+node 3001 4.0313 7.6959 5.3835 0.68889 MMMMMMMMMM solid polygon black lightgrey
+node 3002 7.5313 7.6959 1.1176 4.2741 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 3003 11.101 7.6959 5.5187 4.2741 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 3110 14.794 7.6959 1.6532 0.99316 M solid polygon black lightgrey
+node 3111 19.003 7.6959 7.7721 0.915 MMMMMMMMMM solid polygon black lightgrey
+node 3112 23.156 7.6959 1.3812 5.5867 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 3113 26.906 7.6959 6.0038 4.6143 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 4000 0.5451 15.151 0.75 0.5 M solid polygon black lightgrey
+node 4001 2.1424 15.151 1.9511 0.5 MMMMMMMMMM solid polygon black lightgrey
+node 4002 3.7396 15.151 0.75 1.5111 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 4003 5.3368 15.151 1.9511 1.5111 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 4110 7.0452 15.151 1.1792 0.76488 M solid polygon black lightgrey
+node 4111 10.115 15.151 5.5131 0.72414 MMMMMMMMMM solid polygon black lightgrey
+node 4112 13.142 15.151 1.0199 3.9007 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 4113 15.892 15.151 4.2653 3.3033 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 5000 0.5451 21.034 0.75 0.5 M solid polygon black lightgrey
+node 5001 2.8368 21.034 3.3272 0.5 MMMMMMMMMM solid polygon black lightgrey
+node 5002 5.1285 21.034 0.75 2.6415 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 5003 7.4618 21.034 3.4107 2.6415 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 5110 9.8646 21.034 1.0513 0.74543 M solid polygon black lightgrey
+node 5111 12.448 21.034 4.1545 0.72352 MMMMMMMMMM solid polygon black lightgrey
+node 5112 15.003 21.034 0.97666 3.2175 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 5113 17.461 21.034 3.6968 2.8937 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 6000 0.5451 26.292 0.75 0.5 M solid polygon black lightgrey
+node 6001 2.7257 26.292 3.1081 0.5 MMMMMMMMMM solid polygon black lightgrey
+node 6002 4.9063 26.292 0.75 2.4676 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 6003 7.1285 26.292 3.1862 2.4676 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 6110 9.4063 26.292 0.97222 0.73515 M solid polygon black lightgrey
+node 6111 11.698 26.292 3.3304 0.72308 MMMMMMMMMM solid polygon black lightgrey
+node 6112 13.989 26.292 0.97222 2.8871 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 6113 16.322 26.292 3.4084 2.7062 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 7000 0.5451 31.267 0.75 0.5 M solid polygon black lightgrey
+node 7001 2.6702 31.267 2.9876 0.5 MMMMMMMMMM solid polygon black lightgrey
+node 7002 4.7952 31.267 0.75 2.3719 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 7003 6.9479 31.267 3.0626 2.3719 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 7110 9.1702 31.267 1.0098 0.73339 M solid polygon black lightgrey
+node 7111 11.49 31.267 3.5085 0.72299 MMMMMMMMMM solid polygon black lightgrey
+node 7112 13.795 31.267 0.97445 2.762 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 7113 16.072 31.267 3.3149 2.6085 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 8000 0.5451 36.086 0.75 0.5 M solid polygon black lightgrey
+node 8001 2.6285 36.086 2.9135 0.5 MMMMMMMMMM solid polygon black lightgrey
+node 8002 4.7118 36.086 0.75 2.3131 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 8003 6.8368 36.086 2.9867 2.3131 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 8110 9.0174 36.086 1.01 0.73094 M solid polygon black lightgrey
+node 8111 11.309 36.086 3.4693 0.72285 MMMMMMMMMM solid polygon black lightgrey
+node 8112 13.587 36.086 0.97435 2.6668 "M\nM\nM\nM\nM\nM" solid polygon black lightgrey
+node 8113 15.822 36.086 3.2385 2.5466 "MMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM\nMMMMMMMMMM" solid polygon black lightgrey
+node 9000 0.5451 39.772 0.83468 0.80214 M solid polygon black lightgrey
+node 9001 1.6702 39.772 1.1773 1.1773 M solid polygon black lightgrey
+node 9002 2.7813 39.772 0.80214 0.83468 M solid polygon black lightgrey
+node 9003 3.8924 39.772 1.1773 1.1773 M solid polygon black lightgrey
+node 9004 5.0174 39.772 0.83468 0.80214 M solid polygon black lightgrey
+node 9005 6.1424 39.772 1.1773 1.1773 M solid polygon black lightgrey
+node 9006 7.2535 39.772 0.80214 0.83468 M solid polygon black lightgrey
+node 9007 8.3646 39.772 1.1773 1.1773 M solid polygon black lightgrey
+node 9010 9.559 39.772 1.1251 1.0556 M solid polygon black lightgrey
+node 9011 10.851 39.772 1.6013 1.6013 M solid polygon black lightgrey
+node 9012 12.115 39.772 1.0556 1.1251 M solid polygon black lightgrey
+node 9013 13.378 39.772 1.6013 1.6013 M solid polygon black lightgrey
+node 9014 14.669 39.772 1.1251 1.0556 M solid polygon black lightgrey
+node 9015 15.961 39.772 1.6013 1.6013 M solid polygon black lightgrey
+node 9016 17.225 39.772 1.0556 1.1251 M solid polygon black lightgrey
+node 9017 18.489 39.772 1.6013 1.6013 M solid polygon black lightgrey
+edge 3000 0000 4 0.5451 7.5223 0.5451 6.6654 0.5451 2.8783 0.5451 1.6156 solid black
+edge 4000 3000 4 0.5451 14.895 0.5451 13.819 0.5451 9.6581 0.5451 8.2024 solid black
+edge 5000 4000 4 0.5451 20.831 0.5451 19.985 0.5451 16.721 0.5451 15.562 solid black
+edge 6000 5000 4 0.5451 26.039 0.5451 25.197 0.5451 22.492 0.5451 21.449 solid black
+edge 7000 6000 4 0.5451 31.041 0.5451 30.264 0.5451 27.705 0.5451 26.702 solid black
+edge 8000 7000 4 0.5451 35.834 0.5451 35.05 0.5451 32.652 0.5451 31.682 solid black
+edge 9000 8000 4 0.5451 39.367 0.5451 38.66 0.5451 37.211 0.5451 36.499 solid black
+stop

@@ -1,0 +1,9 @@
+digraph structs {
+	graph [bb="0,0,135.48,38"];
+	node [label="\N"];
+	struct1	[height=0.52778,
+		label="<f0> left|<f1> mid\ dle|<f2> right",
+		pos="67.741,19",
+		shape=Mrecord,
+		width=1.8817];
+}

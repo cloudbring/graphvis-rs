@@ -1,0 +1,4157 @@
+{
+  "name": "unix",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,1202.240],[1447.050,1202.240],[1447.050,0.000]]
+    }
+  ],
+  "_ldraw_": 
+  [
+    {
+      "op": "F",
+      "size": 36.000,
+      "face": "Helvetica-Oblique"
+    },
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#000000"
+    },
+    {
+      "op": "T",
+      "pt": [722.390,54.000],
+      "align": "c",
+      "width": 343.880,
+      "text": "Object Oriented Graphs"
+    },
+    {
+      "op": "F",
+      "size": 36.000,
+      "face": "Helvetica-Oblique"
+    },
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#000000"
+    },
+    {
+      "op": "T",
+      "pt": [722.390,10.800],
+      "align": "c",
+      "width": 336.970,
+      "text": "Stephen North, 3\/19\/93"
+    }
+  ],
+  "bb": "0,0,1447.1,1202.2",
+  "fontname": "Helvetica-Oblique",
+  "fontsize": "36",
+  "label": "\\n\\n\\n\\nObject Oriented Graphs\\nStephen North, 3\/19\/93",
+  "lheight": "3.59",
+  "lp": "722.39,129.2",
+  "lwidth": "4.78",
+  "size": "6,6",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "5th Edition",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ee8262"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ee8262"
+        },
+        {
+          "op": "P",
+          "points": [[903.290,1174.330],[918.810,1193.700],[869.830,1202.240],[758.270,1193.100],[668.530,1174.940],[674.780,1160.600],[753.090,1153.960],[827.320,1152.760],[870.050,1158.560]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [804.880,1169.600],
+          "align": "c",
+          "width": 62.610,
+          "text": "5th Edition"
+        }
+      ],
+      "color": "salmon2",
+      "distortion": "0.936354",
+      "fontname": "Helvetica-Outline",
+      "height": "0.7899",
+      "label": "\\N",
+      "orientation": "28",
+      "pos": "804.88,1173.8",
+      "shape": "polygon",
+      "sides": "9",
+      "skew": "-0.126818",
+      "style": "filled",
+      "width": "3.7877"
+    },
+    {
+      "_gvid": 1,
+      "name": "6th Edition",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#00bfff"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#00bfff"
+        },
+        {
+          "op": "P",
+          "points": [[855.200,1108.060],[708.560,1116.660],[516.760,1096.430],[559.630,1075.830],[739.280,1082.010]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [675.880,1091.600],
+          "align": "c",
+          "width": 62.610,
+          "text": "6th Edition"
+        }
+      ],
+      "color": "deepskyblue",
+      "distortion": "0.238792",
+      "fontname": "Helvetica-Outline",
+      "height": "0.57958",
+      "label": "\\N",
+      "orientation": "11",
+      "pos": "675.88,1095.8",
+      "shape": "polygon",
+      "sides": "5",
+      "skew": "0.995935",
+      "style": "filled",
+      "width": "4.9811"
+    },
+    {
+      "_gvid": 2,
+      "name": "PWB 1.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#eeb422"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#eeb422"
+        },
+        {
+          "op": "P",
+          "points": [[1046.080,1114.090],[1005.730,1113.920],[971.250,1103.010],[962.850,1087.740],[985.580,1077.320],[1026.150,1077.870],[1060.620,1088.780],[1068.820,1103.670]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1015.880,1091.600],
+          "align": "c",
+          "width": 51.340,
+          "text": "PWB 1.0"
+        }
+      ],
+      "color": "goldenrod2",
+      "distortion": "0.019636",
+      "fontname": "Helvetica-Outline",
+      "height": "0.51329",
+      "label": "\\N",
+      "orientation": "79",
+      "pos": "1015.9,1095.8",
+      "shape": "polygon",
+      "sides": "8",
+      "skew": "-0.440424",
+      "style": "filled",
+      "width": "1.4733"
+    },
+    {
+      "_gvid": 3,
+      "name": "LSX",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#eec591"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#eec591"
+        },
+        {
+          "op": "P",
+          "points": [[968.920,1010.150],[947.130,1020.580],[906.500,1026.220],[874.840,1025.880],[853.500,1017.500],[838.990,1002.790],[846.890,990.070],[890.030,988.020],[945.160,997.090]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [896.880,1004.500],
+          "align": "c",
+          "width": 26.450,
+          "text": "LSX"
+        }
+      ],
+      "color": "burlywood2",
+      "distortion": "-0.698271",
+      "fontname": "Helvetica-Outline",
+      "height": "0.57455",
+      "label": "\\N",
+      "orientation": "22",
+      "pos": "896.88,1008.7",
+      "shape": "polygon",
+      "sides": "9",
+      "skew": "-0.195492",
+      "style": "filled",
+      "width": "2.001"
+    },
+    {
+      "_gvid": 4,
+      "name": "1 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ffd700"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ffd700"
+        },
+        {
+          "op": "P",
+          "points": [[267.200,1014.050],[253.910,1029.600],[207.290,1027.940],[169.400,1011.790],[175.730,994.780],[211.460,987.600],[247.200,995.130]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [218.880,1004.500],
+          "align": "c",
+          "width": 37.730,
+          "text": "1 BSD"
+        }
+      ],
+      "color": "gold1",
+      "distortion": "0.265084",
+      "fontname": "Helvetica-Outline",
+      "height": "0.58608",
+      "label": "\\N",
+      "orientation": "26",
+      "pos": "218.88,1008.7",
+      "shape": "polygon",
+      "sides": "7",
+      "skew": "0.403659",
+      "style": "filled",
+      "width": "1.3745"
+    },
+    {
+      "_gvid": 5,
+      "name": "Mini Unix",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#adff2f"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#adff2f"
+        },
+        {
+          "op": "P",
+          "points": [[639.360,1026.700],[520.990,1025.300],[551.280,990.730],[663.910,992.060]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [593.880,1004.500],
+          "align": "c",
+          "width": 58.730,
+          "text": "Mini Unix"
+        }
+      ],
+      "color": "greenyellow",
+      "distortion": "0.039386",
+      "fontname": "Helvetica-Outline",
+      "height": "0.5",
+      "label": "\\N",
+      "orientation": "2",
+      "pos": "593.88,1008.7",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "-0.461120",
+      "style": "filled",
+      "width": "2.0249"
+    },
+    {
+      "_gvid": 6,
+      "name": "Wollongong",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#8fbc8f"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#8fbc8f"
+        },
+        {
+          "op": "P",
+          "points": [[772.790,1029.180],[689.260,1016.880],[700.570,993.280],[795.600,993.240],[831.200,1010.930]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [757.880,1004.500],
+          "align": "c",
+          "width": 69.990,
+          "text": "Wollongong"
+        }
+      ],
+      "color": "darkseagreen",
+      "distortion": "0.228564",
+      "fontname": "Helvetica-Outline",
+      "height": "0.56882",
+      "label": "\\N",
+      "orientation": "63",
+      "pos": "757.88,1008.7",
+      "shape": "polygon",
+      "sides": "5",
+      "skew": "-0.062846",
+      "style": "filled",
+      "width": "2.0366"
+    },
+    {
+      "_gvid": 7,
+      "name": "Interdata",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#1e90ff"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#1e90ff"
+        },
+        {
+          "op": "P",
+          "points": [[431.510,1044.380],[326.990,994.560],[443.760,986.130],[493.270,1009.720]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [423.880,1004.500],
+          "align": "c",
+          "width": 49.750,
+          "text": "Interdata"
+        }
+      ],
+      "color": "dodgerblue1",
+      "distortion": "0.624013",
+      "fontname": "Helvetica-Outline",
+      "height": "0.99124",
+      "label": "\\N",
+      "orientation": "56",
+      "pos": "423.88,1008.7",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "0.101396",
+      "style": "filled",
+      "width": "2.6914"
+    },
+    {
+      "_gvid": 8,
+      "name": "PWB 1.2",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#00ffff"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#00ffff"
+        },
+        {
+          "op": "P",
+          "points": [[1036.950,1060.320],[990.370,1053.530],[960.690,999.900],[972.570,952.900],[1019.380,960.990],[1062.530,999.190],[1068.690,1034.060]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1015.880,1004.500],
+          "align": "c",
+          "width": 51.340,
+          "text": "PWB 1.2"
+        }
+      ],
+      "color": "cyan",
+      "distortion": "0.640971",
+      "fontname": "Helvetica-Outline",
+      "height": "1.55",
+      "label": "\\N",
+      "orientation": "84",
+      "pos": "1015.9,1008.7",
+      "shape": "polygon",
+      "sides": "7",
+      "skew": "-0.768455",
+      "style": "filled",
+      "width": "1.5331"
+    },
+    {
+      "_gvid": 9,
+      "name": "USG 1.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#0000ff"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#0000ff"
+        },
+        {
+          "op": "P",
+          "points": [[1221.090,1043.700],[1049.510,1000.550],[1183.370,986.450],[1253.570,1004.100]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1176.880,1004.500],
+          "align": "c",
+          "width": 49.010,
+          "text": "USG 1.0"
+        }
+      ],
+      "color": "blue",
+      "distortion": "0.758942",
+      "fontname": "Helvetica-Outline",
+      "height": "0.9722",
+      "label": "\\N",
+      "orientation": "42",
+      "pos": "1176.9,1008.7",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "0.039886",
+      "style": "filled",
+      "width": "3.5381"
+    },
+    {
+      "_gvid": 10,
+      "name": "2 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ffebcd"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ffebcd"
+        },
+        {
+          "op": "P",
+          "points": [[170.380,577.870],[134.690,577.180],[115.740,563.910],[127.780,547.930],[161.700,541.150],[192.010,548.850],[195.890,565.290]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [156.880,556.110],
+          "align": "c",
+          "width": 37.730,
+          "text": "2 BSD"
+        }
+      ],
+      "color": "blanchedalmond",
+      "distortion": "-0.010661",
+      "fontname": "Helvetica-Outline",
+      "height": "0.53232",
+      "label": "\\N",
+      "orientation": "84",
+      "pos": "156.88,560.31",
+      "shape": "polygon",
+      "sides": "7",
+      "skew": "0.179249",
+      "style": "filled",
+      "width": "1.1428"
+    },
+    {
+      "_gvid": 11,
+      "name": "Unix\/TS 3.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#eed2ee"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#eed2ee"
+        },
+        {
+          "op": "P",
+          "points": [[1111.810,751.190],[1059.610,767.480],[917.140,755.840],[767.850,723.090],[745.330,698.540],[862.780,696.560],[1005.250,708.200],[1089.300,726.630]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [944.880,724.240],
+          "align": "c",
+          "width": 69.230,
+          "text": "Unix\/TS 3.0"
+        }
+      ],
+      "color": "thistle2",
+      "distortion": "0.731383",
+      "fontname": "Helvetica-Outline",
+      "height": "1.0844",
+      "label": "\\N",
+      "orientation": "43",
+      "pos": "944.88,728.44",
+      "shape": "polygon",
+      "sides": "8",
+      "skew": "-0.824612",
+      "style": "filled",
+      "width": "5.5431"
+    },
+    {
+      "_gvid": 12,
+      "name": "PWB 2.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#a2cd5a"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#a2cd5a"
+        },
+        {
+          "op": "P",
+          "points": [[977.180,931.690],[869.720,935.730],[722.640,912.380],[742.590,894.450],[879.830,895.140],[967.350,909.040]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [859.880,908.870],
+          "align": "c",
+          "width": 51.340,
+          "text": "PWB 2.0"
+        }
+      ],
+      "color": "darkolivegreen3",
+      "distortion": "0.592100",
+      "fontname": "Helvetica-Outline",
+      "height": "0.6294",
+      "label": "\\N",
+      "orientation": "34",
+      "pos": "859.88,913.07",
+      "shape": "polygon",
+      "sides": "6",
+      "skew": "-0.719269",
+      "style": "filled",
+      "width": "3.8122"
+    },
+    {
+      "_gvid": 13,
+      "name": "7th Edition",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#d2691e"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#d2691e"
+        },
+        {
+          "op": "P",
+          "points": [[473.330,923.060],[452.670,937.610],[421.020,942.800],[387.870,934.410],[366.870,916.510],[369.260,898.660],[395.100,888.530],[431.940,887.770],[463.110,894.460],[477.690,906.900]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [423.880,908.870],
+          "align": "c",
+          "width": 62.610,
+          "text": "7th Edition"
+        }
+      ],
+      "color": "chocolate",
+      "distortion": "0.298417",
+      "fontname": "Helvetica-Outline",
+      "height": "0.82574",
+      "label": "\\N",
+      "orientation": "65",
+      "pos": "423.88,913.07",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "0.310367",
+      "style": "filled",
+      "width": "1.5837"
+    },
+    {
+      "_gvid": 14,
+      "name": "TS 4.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#dc143c"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#dc143c"
+        },
+        {
+          "op": "P",
+          "points": [[1143.990,592.150],[1106.990,599.320],[1038.640,591.590],[974.930,576.610],[936.410,558.320],[925.580,537.870],[942.780,521.300],[991.340,519.620],[1062.610,538.190],[1125.590,568.120]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1024.880,556.110],
+          "align": "c",
+          "width": 37.340,
+          "text": "TS 4.0"
+        }
+      ],
+      "color": "crimson",
+      "distortion": "-0.641701",
+      "fontname": "Helvetica-Outline",
+      "height": "1.1302",
+      "label": "\\N",
+      "orientation": "50",
+      "pos": "1024.9,560.31",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "-0.952502",
+      "style": "filled",
+      "width": "3.3084"
+    },
+    {
+      "_gvid": 15,
+      "name": "8th Edition",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#00c5cd"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#00c5cd"
+        },
+        {
+          "op": "P",
+          "points": [[716.620,492.500],[636.120,468.940],[691.570,421.470],[923.230,489.250]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [741.880,463.840],
+          "align": "c",
+          "width": 62.610,
+          "text": "8th Edition"
+        }
+      ],
+      "color": "turquoise3",
+      "distortion": "-0.997093",
+      "fontname": "Helvetica-Outline",
+      "height": "1.2937",
+      "label": "\\N",
+      "orientation": "50",
+      "pos": "741.88,468.04",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "-0.061117",
+      "style": "filled",
+      "width": "5.0373"
+    },
+    {
+      "_gvid": 16,
+      "name": "32V",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#4f94cd"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#4f94cd"
+        },
+        {
+          "op": "P",
+          "points": [[705.840,826.440],[710.740,846.680],[626.580,842.970],[544.150,822.150],[552.960,803.930],[606.730,796.190],[655.200,803.330]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [628.880,816.040],
+          "align": "c",
+          "width": 24.110,
+          "text": "32V"
+        }
+      ],
+      "color": "steelblue3",
+      "distortion": "0.878516",
+      "fontname": "Helvetica-Outline",
+      "height": "0.73443",
+      "label": "\\N",
+      "orientation": "19",
+      "pos": "628.88,820.24",
+      "shape": "polygon",
+      "sides": "7",
+      "skew": "0.592905",
+      "style": "filled",
+      "width": "2.3539"
+    },
+    {
+      "_gvid": 17,
+      "name": "V7M",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000080"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000080"
+        },
+        {
+          "op": "P",
+          "points": [[185.770,737.980],[174.510,753.210],[132.070,758.980],[90.610,757.930],[59.880,748.600],[31.900,728.580],[11.260,703.670],[21.800,688.210],[75.440,692.970],[145.600,714.260]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [92.880,724.240],
+          "align": "c",
+          "width": 29.560,
+          "text": "V7M"
+        }
+      ],
+      "color": "navy",
+      "distortion": "-0.960249",
+      "fontname": "Helvetica-Outline",
+      "height": "1.1174",
+      "label": "\\N",
+      "orientation": "32",
+      "pos": "92.884,728.44",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "0.460424",
+      "style": "filled",
+      "width": "2.5801"
+    },
+    {
+      "_gvid": 18,
+      "name": "Ultrix-11",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#698b69"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#698b69"
+        },
+        {
+          "op": "P",
+          "points": [[245.120,367.000],[247.520,378.540],[214.530,388.310],[173.680,393.330],[134.860,391.400],[94.470,382.330],[62.250,369.300],[65.410,358.040],[117.660,353.590],[193.350,357.360]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [154.880,369.720],
+          "align": "c",
+          "width": 52.100,
+          "text": "Ultrix-11"
+        }
+      ],
+      "color": "darkseagreen4",
+      "distortion": "-0.633186",
+      "fontname": "Helvetica-Outline",
+      "height": "0.56473",
+      "label": "\\N",
+      "orientation": "10",
+      "pos": "154.88,373.92",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "0.333125",
+      "style": "filled",
+      "width": "2.5732"
+    },
+    {
+      "_gvid": 19,
+      "name": "Xenix",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ff7f50"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ff7f50"
+        },
+        {
+          "op": "P",
+          "points": [[370.340,843.930],[325.020,846.170],[271.940,835.560],[242.190,818.310],[245.140,799.850],[279.050,791.000],[332.130,801.610],[373.280,825.480]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [304.880,816.040],
+          "align": "c",
+          "width": 34.210,
+          "text": "Xenix"
+        }
+      ],
+      "color": "coral",
+      "distortion": "-0.337997",
+      "fontname": "Helvetica-Outline",
+      "height": "0.81227",
+      "label": "\\N",
+      "orientation": "52",
+      "pos": "304.88,820.24",
+      "shape": "polygon",
+      "sides": "8",
+      "skew": "-0.760726",
+      "style": "filled",
+      "width": "1.8999"
+    },
+    {
+      "_gvid": 20,
+      "name": "UniPlus+",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#a2cd5a"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#a2cd5a"
+        },
+        {
+          "op": "P",
+          "points": [[590.690,839.990],[533.600,854.710],[389.430,835.470],[303.580,804.760],[377.550,793.710],[502.390,799.070],[570.950,813.960]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [466.880,816.040],
+          "align": "c",
+          "width": 53.020,
+          "text": "UniPlus+"
+        }
+      ],
+      "color": "darkolivegreen3",
+      "distortion": "0.788483",
+      "fontname": "Helvetica-Outline",
+      "height": "0.95756",
+      "label": "\\N",
+      "orientation": "39",
+      "pos": "466.88,820.24",
+      "shape": "polygon",
+      "sides": "7",
+      "skew": "-0.526284",
+      "style": "filled",
+      "width": "4.5363"
+    },
+    {
+      "_gvid": 21,
+      "name": "9th Edition",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#cd5b45"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#cd5b45"
+        },
+        {
+          "op": "P",
+          "points": [[842.470,392.330],[802.900,405.360],[752.650,392.960],[732.700,366.220],[761.210,347.030],[812.170,347.310],[846.100,366.220]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [792.880,369.720],
+          "align": "c",
+          "width": 62.610,
+          "text": "9th Edition"
+        }
+      ],
+      "color": "coral3",
+      "distortion": "0.138690",
+      "fontname": "Helvetica-Outline",
+      "height": "0.8734",
+      "label": "\\N",
+      "orientation": "55",
+      "pos": "792.88,373.92",
+      "shape": "polygon",
+      "sides": "7",
+      "skew": "0.554049",
+      "style": "filled",
+      "width": "1.6718"
+    },
+    {
+      "_gvid": 22,
+      "name": "3 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#fffacd"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#fffacd"
+        },
+        {
+          "op": "P",
+          "points": [[636.170,724.320],[635.380,735.760],[609.570,744.410],[564.010,746.440],[517.850,741.280],[494.410,731.530],[504.390,721.120],[539.390,713.500],[581.440,711.070],[616.240,714.960]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [569.880,724.240],
+          "align": "c",
+          "width": 37.730,
+          "text": "3 BSD"
+        }
+      ],
+      "color": "lemonchiffon",
+      "distortion": "0.251820",
+      "fontname": "Helvetica-Outline",
+      "height": "0.5",
+      "label": "\\N",
+      "orientation": "18",
+      "pos": "569.88,728.44",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "-0.530618",
+      "style": "filled",
+      "width": "2.0964"
+    },
+    {
+      "_gvid": 23,
+      "name": "2.8 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#b0e2ff"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#b0e2ff"
+        },
+        {
+          "op": "P",
+          "points": [[320.590,487.150],[259.740,469.910],[313.380,445.580],[397.830,469.510]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [322.880,463.840],
+          "align": "c",
+          "width": 48.230,
+          "text": "2.8 BSD"
+        }
+      ],
+      "color": "lightskyblue1",
+      "distortion": "-0.239422",
+      "fontname": "Helvetica-Outline",
+      "height": "0.62375",
+      "label": "\\N",
+      "orientation": "44",
+      "pos": "322.88,468.04",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "0.053841",
+      "style": "filled",
+      "width": "2.0819"
+    },
+    {
+      "_gvid": 24,
+      "name": "2.9 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#76eec6"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#76eec6"
+        },
+        {
+          "op": "P",
+          "points": [[285.520,397.430],[239.560,352.840],[336.640,327.500],[429.820,417.910]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [322.880,369.720],
+          "align": "c",
+          "width": 48.230,
+          "text": "2.9 BSD"
+        }
+      ],
+      "color": "aquamarine2",
+      "distortion": "-0.843381",
+      "fontname": "Helvetica-Outline",
+      "height": "1.2893",
+      "label": "\\N",
+      "orientation": "70",
+      "pos": "322.88,373.92",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "-0.601395",
+      "style": "filled",
+      "width": "2.9704"
+    },
+    {
+      "_gvid": 25,
+      "name": "4 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ff7f00"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ff7f00"
+        },
+        {
+          "op": "P",
+          "points": [[610.420,659.110],[536.490,663.590],[497.650,641.620],[523.060,619.760],[641.800,638.180]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [561.880,640.250],
+          "align": "c",
+          "width": 37.730,
+          "text": "4 BSD"
+        }
+      ],
+      "color": "darkorange1",
+      "distortion": "-0.772300",
+      "fontname": "Helvetica-Outline",
+      "height": "0.68588",
+      "label": "\\N",
+      "orientation": "24",
+      "pos": "561.88,644.45",
+      "shape": "polygon",
+      "sides": "5",
+      "skew": "-0.028475",
+      "style": "filled",
+      "width": "2.2199"
+    },
+    {
+      "_gvid": 26,
+      "name": "4.1 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ffffe0"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ffffe0"
+        },
+        {
+          "op": "P",
+          "points": [[568.470,586.400],[487.610,564.840],[515.300,531.020],[620.160,558.970]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [547.880,556.110],
+          "align": "c",
+          "width": 48.230,
+          "text": "4.1 BSD"
+        }
+      ],
+      "color": "lightyellow1",
+      "distortion": "-0.226170",
+      "fontname": "Helvetica-Outline",
+      "height": "0.81358",
+      "label": "\\N",
+      "orientation": "38",
+      "pos": "547.88,560.31",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "0.504053",
+      "style": "filled",
+      "width": "2.0076"
+    },
+    {
+      "_gvid": 27,
+      "name": "4.2 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#68228b"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#68228b"
+        },
+        {
+          "op": "P",
+          "points": [[677.330,505.330],[629.230,512.490],[539.370,502.670],[457.780,486.010],[409.620,466.440],[393.870,443.530],[410.540,423.590],[468.970,420.630],[562.570,442.170],[649.570,477.540]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [519.880,463.840],
+          "align": "c",
+          "width": 48.230,
+          "text": "4.2 BSD"
+        }
+      ],
+      "color": "darkorchid4",
+      "distortion": "-0.807349",
+      "fontname": "Helvetica-Outline",
+      "height": "1.3168",
+      "label": "\\N",
+      "orientation": "50",
+      "pos": "519.88,468.04",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "-0.908842",
+      "style": "filled",
+      "width": "4.3734"
+    },
+    {
+      "_gvid": 28,
+      "name": "4.3 BSD",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#eee9bf"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#eee9bf"
+        },
+        {
+          "op": "P",
+          "points": [[707.580,393.660],[685.390,412.570],[656.520,416.710],[632.120,404.810],[621.460,381.290],[628.460,354.770],[650.380,335.270],[678.990,330.540],[703.490,342.670],[714.470,366.910]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [667.880,369.720],
+          "align": "c",
+          "width": 48.230,
+          "text": "4.3 BSD"
+        }
+      ],
+      "color": "lemonchiffon2",
+      "distortion": "-0.030619",
+      "fontname": "Helvetica-Outline",
+      "height": "1.205",
+      "label": "\\N",
+      "orientation": "76",
+      "pos": "667.88,373.92",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "0.985021",
+      "style": "filled",
+      "width": "1.2941"
+    },
+    {
+      "_gvid": 29,
+      "name": "Ultrix-32",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#cd9b1d"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#cd9b1d"
+        },
+        {
+          "op": "P",
+          "points": [[554.470,393.490],[443.790,383.660],[416.800,349.510],[636.480,369.020]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [512.880,369.720],
+          "align": "c",
+          "width": 52.100,
+          "text": "Ultrix-32"
+        }
+      ],
+      "color": "goldenrod3",
+      "distortion": "-0.644209",
+      "fontname": "Helvetica-Outline",
+      "height": "0.67798",
+      "label": "\\N",
+      "orientation": "21",
+      "pos": "512.88,373.92",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "0.307836",
+      "style": "filled",
+      "width": "3.4333"
+    },
+    {
+      "_gvid": 30,
+      "name": "CB Unix 1",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#b22222"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#b22222"
+        },
+        {
+          "op": "P",
+          "points": [[1301.540,924.620],[1284.480,942.470],[1237.610,947.480],[1188.060,939.060],[1151.060,918.470],[1135.980,892.700],[1155.060,875.530],[1209.120,878.270],[1271.060,899.030]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1214.880,908.870],
+          "align": "c",
+          "width": 60.680,
+          "text": "CB Unix 1"
+        }
+      ],
+      "color": "firebrick",
+      "distortion": "-0.348692",
+      "fontname": "Helvetica-Outline",
+      "height": "1.0428",
+      "label": "\\N",
+      "orientation": "42",
+      "pos": "1214.9,913.07",
+      "shape": "polygon",
+      "sides": "9",
+      "skew": "0.767058",
+      "style": "filled",
+      "width": "2.407"
+    },
+    {
+      "_gvid": 31,
+      "name": "USG 2.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#458b00"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#458b00"
+        },
+        {
+          "op": "P",
+          "points": [[1025.050,955.040],[959.480,869.690],[1086.170,891.210],[1120.840,936.340]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1047.880,908.870],
+          "align": "c",
+          "width": 49.010,
+          "text": "USG 2.0"
+        }
+      ],
+      "color": "chartreuse4",
+      "distortion": "0.748625",
+      "fontname": "Helvetica-Outline",
+      "height": "1.2049",
+      "label": "\\N",
+      "orientation": "74",
+      "pos": "1047.9,913.07",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "-0.647656",
+      "style": "filled",
+      "width": "2.4558"
+    },
+    {
+      "_gvid": 32,
+      "name": "CB Unix 2",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#adff2f"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#adff2f"
+        },
+        {
+          "op": "P",
+          "points": [[1404.950,818.340],[1417.630,835.730],[1394.880,847.190],[1324.340,844.850],[1241.010,830.940],[1202.720,815.110],[1232.140,804.750],[1296.990,800.320],[1351.450,799.970],[1382.740,805.200]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1324.880,816.040],
+          "align": "c",
+          "width": 60.680,
+          "text": "CB Unix 2"
+        }
+      ],
+      "color": "greenyellow",
+      "distortion": "0.851818",
+      "fontname": "Helvetica-Outline",
+      "height": "0.74875",
+      "label": "\\N",
+      "orientation": "32",
+      "pos": "1324.9,820.24",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "-0.020120",
+      "style": "filled",
+      "width": "3.3936"
+    },
+    {
+      "_gvid": 33,
+      "name": "USG 3.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#eed5b7"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#eed5b7"
+        },
+        {
+          "op": "P",
+          "points": [[948.060,849.570],[861.700,824.080],[884.020,773.880],[1085.760,833.420]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [944.880,816.040],
+          "align": "c",
+          "width": 49.010,
+          "text": "USG 3.0"
+        }
+      ],
+      "color": "bisque2",
+      "distortion": "-0.848455",
+      "fontname": "Helvetica-Outline",
+      "height": "1.2878",
+      "label": "\\N",
+      "orientation": "44",
+      "pos": "944.88,820.24",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "0.267152",
+      "style": "filled",
+      "width": "3.9132"
+    },
+    {
+      "_gvid": 34,
+      "name": "CB Unix 3",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#8b7d6b"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#8b7d6b"
+        },
+        {
+          "op": "P",
+          "points": [[1336.140,726.180],[1368.850,747.260],[1352.310,761.150],[1264.530,758.420],[1149.860,741.690],[1087.060,722.450],[1110.920,709.620],[1184.040,703.990],[1250.200,703.560],[1294.940,710.090]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1239.880,724.240],
+          "align": "c",
+          "width": 60.680,
+          "text": "CB Unix 3"
+        }
+      ],
+      "color": "bisque4",
+      "distortion": "0.992237",
+      "fontname": "Helvetica-Outline",
+      "height": "0.90855",
+      "label": "\\N",
+      "orientation": "29",
+      "pos": "1239.9,728.44",
+      "shape": "polygon",
+      "sides": "10",
+      "skew": "0.256102",
+      "style": "filled",
+      "width": "4.2451"
+    },
+    {
+      "_gvid": 35,
+      "name": "Unix\/TS++",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#eed5d2"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#eed5d2"
+        },
+        {
+          "op": "P",
+          "points": [[1236.240,651.680],[1191.300,666.420],[1059.000,657.080],[1031.530,637.220],[1106.420,624.600],[1178.830,629.710]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1133.880,640.250],
+          "align": "c",
+          "width": 64.020,
+          "text": "Unix\/TS++"
+        }
+      ],
+      "color": "mistyrose2",
+      "distortion": "0.545461",
+      "fontname": "Helvetica-Outline",
+      "height": "0.61024",
+      "label": "\\N",
+      "orientation": "16",
+      "pos": "1133.9,644.45",
+      "shape": "polygon",
+      "sides": "6",
+      "skew": "0.313589",
+      "style": "filled",
+      "width": "2.8431"
+    },
+    {
+      "_gvid": 36,
+      "name": "PDP-11 Sys V",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#98f5ff"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#98f5ff"
+        },
+        {
+          "op": "P",
+          "points": [[1396.070,649.710],[1368.490,661.410],[1316.400,665.710],[1268.760,661.580],[1240.840,649.430],[1238.650,633.430],[1267.820,622.070],[1323.320,622.510],[1377.610,634.210]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1310.880,640.250],
+          "align": "c",
+          "width": 81.690,
+          "text": "PDP-11 Sys V"
+        }
+      ],
+      "color": "cadetblue1",
+      "distortion": "-0.267769",
+      "fontname": "Helvetica-Outline",
+      "height": "0.6217",
+      "label": "\\N",
+      "orientation": "40",
+      "pos": "1310.9,644.45",
+      "shape": "polygon",
+      "sides": "9",
+      "skew": "0.271226",
+      "style": "filled",
+      "width": "2.3664"
+    },
+    {
+      "_gvid": 37,
+      "name": "Unix\/TS 1.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ff4500"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ff4500"
+        },
+        {
+          "op": "P",
+          "points": [[1100.620,841.410],[1057.750,807.160],[1188.360,804.830],[1216.810,827.560]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1140.880,816.040],
+          "align": "c",
+          "width": 69.230,
+          "text": "Unix\/TS 1.0"
+        }
+      ],
+      "color": "orangered",
+      "distortion": "0.305594",
+      "fontname": "Helvetica-Outline",
+      "height": "0.58797",
+      "label": "\\N",
+      "orientation": "75",
+      "pos": "1140.9,820.24",
+      "shape": "polygon",
+      "sides": "4",
+      "skew": "0.070516",
+      "style": "filled",
+      "width": "2.3094"
+    },
+    {
+      "_gvid": 38,
+      "name": "System V.0",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ff7f00"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ff7f00"
+        },
+        {
+          "op": "P",
+          "points": [[1133.790,470.040],[1103.640,481.110],[1036.400,486.040],[963.080,482.460],[918.690,472.140],[924.670,459.980],[977.780,451.620],[1052.330,450.870],[1113.590,458.100]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1024.880,463.840],
+          "align": "c",
+          "width": 65.340,
+          "text": "System V.0"
+        }
+      ],
+      "color": "darkorange1",
+      "distortion": "0.021556",
+      "fontname": "Helvetica-Outline",
+      "height": "0.5",
+      "label": "\\N",
+      "orientation": "26",
+      "pos": "1024.9,468.04",
+      "shape": "polygon",
+      "sides": "9",
+      "skew": "-0.729938",
+      "style": "filled",
+      "width": "3.0251"
+    },
+    {
+      "_gvid": 39,
+      "name": "System V.2",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#6e8b3d"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#6e8b3d"
+        },
+        {
+          "op": "P",
+          "points": [[1175.730,395.470],[1066.120,403.730],[853.760,373.390],[874.040,352.370],[1045.170,352.900],[1134.500,365.660]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1024.880,369.720],
+          "align": "c",
+          "width": 65.340,
+          "text": "System V.2"
+        }
+      ],
+      "color": "darkolivegreen4",
+      "distortion": "0.985153",
+      "fontname": "Helvetica-Outline",
+      "height": "0.82808",
+      "label": "\\N",
+      "orientation": "33",
+      "pos": "1024.9,373.92",
+      "shape": "polygon",
+      "sides": "6",
+      "skew": "-0.399752",
+      "style": "filled",
+      "width": "4.7536"
+    },
+    {
+      "_gvid": 40,
+      "name": "System V.3",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#cae1ff"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#cae1ff"
+        },
+        {
+          "op": "P",
+          "points": [[1096.900,311.180],[1013.510,307.560],[956.650,296.280],[951.170,277.040],[983.240,255.530],[1054.660,260.660],[1118.070,291.710]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Helvetica-Outline"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [1024.880,281.510],
+          "align": "c",
+          "width": 65.340,
+          "text": "System V.3"
+        }
+      ],
+      "color": "lightsteelblue1",
+      "distortion": "-0.687574",
+      "fontname": "Helvetica-Outline",
+      "height": "0.8383",
+      "label": "\\N",
+      "orientation": "58",
+      "pos": "1024.9,285.71",
+      "shape": "polygon",
+      "sides": "7",
+      "skew": "-0.180116",
+      "style": "filled",
+      "width": "2.5884"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[778.770,1157.400],[760.680,1146.700],[736.250,1132.300],[715.730,1120.300]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[717.700,1117.400],[707.320,1115.280],[714.110,1123.410]]
+        }
+      ],
+      "pos": "e,706.02,1114.5 778.77,1157.4 760.68,1146.7 736.25,1132.3 715.73,1120.3"
+    },
+    {
+      "_gvid": 1,
+      "tail": 0,
+      "head": 2,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[840.200,1160.100],[877.430,1146.600],[936.020,1125.500],[975.180,1111.400]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[976.240,1114.740],[984.500,1108.100],[973.900,1108.140]]
+        }
+      ],
+      "pos": "e,985.92,1107.6 840.2,1160.1 877.43,1146.6 936.02,1125.5 975.18,1111.4"
+    },
+    {
+      "_gvid": 2,
+      "tail": 1,
+      "head": 3,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[717.050,1083.300],[750.670,1073.400],[799.110,1058.000],[839.880,1040.400],[848.760,1036.600],[858.110,1031.800],[866.600,1027.300]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[868.110,1030.470],[875.140,1022.540],[864.700,1024.350]]
+        }
+      ],
+      "pos": "e,876.46,1021.8 717.05,1083.3 750.67,1073.4 799.11,1058 839.88,1040.4 848.76,1036.6 858.11,1031.8 866.6,1027.3"
+    },
+    {
+      "_gvid": 3,
+      "tail": 1,
+      "head": 4,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[594.750,1084.100],[525.610,1074.400],[423.770,1058.900],[335.880,1040.400],[313.600,1035.700],[289.210,1029.500],[268.480,1023.900]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[269.430,1020.530],[258.850,1021.210],[267.540,1027.270]]
+        }
+      ],
+      "pos": "e,257.39,1020.8 594.75,1084.1 525.61,1074.4 423.77,1058.9 335.88,1040.4 313.6,1035.7 289.21,1029.5 268.48,1023.9"
+    },
+    {
+      "_gvid": 4,
+      "tail": 1,
+      "head": 5,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[661.600,1080.000],[649.630,1067.500],[632.280,1049.500],[618.140,1034.900]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[620.760,1032.570],[611.300,1027.790],[615.720,1037.420]]
+        }
+      ],
+      "pos": "e,610.25,1026.7 661.6,1080 649.63,1067.5 632.28,1049.5 618.14,1034.9"
+    },
+    {
+      "_gvid": 5,
+      "tail": 1,
+      "head": 6,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[688.690,1081.500],[701.310,1068.400],[720.830,1048.100],[735.920,1032.500]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[738.340,1035.030],[742.740,1025.390],[733.290,1030.190]]
+        }
+      ],
+      "pos": "e,743.78,1024.3 688.69,1081.5 701.31,1068.4 720.83,1048.1 735.92,1032.5"
+    },
+    {
+      "_gvid": 6,
+      "tail": 1,
+      "head": 7,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[624.110,1077.800],[591.800,1067.200],[549.370,1053.100],[511.880,1040.400],[497.350,1035.500],[481.510,1030.000],[467.330,1025.000]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[468.880,1021.830],[458.280,1021.800],[466.550,1028.430]]
+        }
+      ],
+      "pos": "e,456.85,1021.3 624.11,1077.8 591.8,1067.2 549.37,1053.1 511.88,1040.4 497.35,1035.5 481.51,1030 467.33,1025"
+    },
+    {
+      "_gvid": 7,
+      "tail": 2,
+      "head": 8,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1015.880,1077.600],[1015.880,1069.000],[1015.880,1058.300],[1015.880,1048.000]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1019.380,1048.110],[1015.880,1038.110],[1012.380,1048.110]]
+        }
+      ],
+      "pos": "e,1015.9,1036.6 1015.9,1077.6 1015.9,1069 1015.9,1058.3 1015.9,1048"
+    },
+    {
+      "_gvid": 8,
+      "tail": 2,
+      "head": 9,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1039.680,1082.200],[1067.880,1067.300],[1114.980,1042.400],[1145.980,1026.000]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1147.320,1029.250],[1154.540,1021.500],[1144.060,1023.060]]
+        }
+      ],
+      "pos": "e,1155.9,1020.8 1039.7,1082.2 1067.9,1067.3 1115,1042.4 1146,1026"
+    },
+    {
+      "_gvid": 9,
+      "tail": 4,
+      "head": 10,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[212.260,988.920],[201.140,955.590],[179.880,883.750],[179.880,821.240],[179.880,821.240],[179.880,821.240],[179.880,727.440],[179.880,677.910],[169.720,620.850],[162.910,588.140]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[166.420,587.770],[160.890,578.730],[159.570,589.240]]
+        }
+      ],
+      "pos": "e,160.57,577.25 212.26,988.92 201.14,955.59 179.88,883.75 179.88,821.24 179.88,821.24 179.88,821.24 179.88,727.44 179.88,677.91 169.72,620.85 162.91,588.14"
+    },
+    {
+      "_gvid": 10,
+      "tail": 7,
+      "head": 11,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[447.090,995.420],[497.270,968.830],[619.610,903.950],[721.880,849.130],[769.510,823.590],[781.260,816.910],[828.880,791.350],[855.040,777.310],[884.570,761.550],[907.280,749.450]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[908.690,752.670],[915.870,744.880],[905.400,746.490]]
+        }
+      ],
+      "pos": "e,917.2,744.17 447.09,995.42 497.27,968.83 619.61,903.95 721.88,849.13 769.51,823.59 781.26,816.91 828.88,791.35 855.04,777.31 884.57,761.55 907.28,749.45"
+    },
+    {
+      "_gvid": 11,
+      "tail": 7,
+      "head": 12,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[450.830,996.800],[468.040,990.210],[490.980,982.130],[511.880,977.010],[620.070,950.550],[650.800,963.540],[759.880,941.010],[777.930,937.280],[797.570,932.220],[814.620,927.490]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[815.290,930.940],[823.960,924.850],[813.380,924.200]]
+        }
+      ],
+      "pos": "e,825.41,924.44 450.83,996.8 468.04,990.21 490.98,982.13 511.88,977.01 620.07,950.55 650.8,963.54 759.88,941.01 777.93,937.28 797.57,932.22 814.62,927.49"
+    },
+    {
+      "_gvid": 12,
+      "tail": 7,
+      "head": 13,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[423.880,993.480],[423.880,981.330],[423.880,963.370],[423.880,947.600]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[427.380,947.610],[423.880,937.610],[420.380,947.610]]
+        }
+      ],
+      "pos": "e,423.88,936.1 423.88,993.48 423.88,981.33 423.88,963.37 423.88,947.6"
+    },
+    {
+      "_gvid": 17,
+      "tail": 11,
+      "head": 14,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[952.410,711.810],[966.160,683.240],[995.500,622.310],[1012.330,587.370]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1015.480,588.910],[1016.660,578.380],[1009.170,585.880]]
+        }
+      ],
+      "pos": "e,1017.3,577.02 952.41,711.81 966.16,683.24 995.5,622.31 1012.3,587.37"
+    },
+    {
+      "_gvid": 18,
+      "tail": 12,
+      "head": 11,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[851.440,896.450],[839.650,872.290],[821.690,825.100],[840.880,791.350],[852.830,770.330],[875.040,755.700],[895.890,745.960]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[897.120,749.240],[904.900,742.040],[894.330,742.820]]
+        }
+      ],
+      "pos": "e,906.28,741.44 851.44,896.45 839.65,872.29 821.69,825.1 840.88,791.35 852.83,770.33 875.04,755.7 895.89,745.96"
+    },
+    {
+      "_gvid": 19,
+      "tail": 13,
+      "head": 15,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[469.910,902.520],[543.800,887.000],[681.370,857.220],[688.880,849.130],[725.490,809.630],[707.880,783.300],[707.880,729.440],[707.880,729.440],[707.880,729.440],[707.880,643.450],[707.880,589.360],[723.830,527.550],[733.880,493.970]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[737.120,495.350],[736.710,484.770],[730.430,493.300]]
+        }
+      ],
+      "pos": "e,737.15,483.32 469.91,902.52 543.8,887 681.37,857.22 688.88,849.13 725.49,809.63 707.88,783.3 707.88,729.44 707.88,729.44 707.88,729.44 707.88,643.45 707.88,589.36 723.83,527.55 733.88,493.97"
+    },
+    {
+      "_gvid": 20,
+      "tail": 13,
+      "head": 16,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[458.270,897.440],[487.710,884.830],[531.210,866.060],[568.880,849.130],[577.670,845.180],[587.140,840.820],[595.900,836.750]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[597.200,840.010],[604.780,832.610],[594.240,833.660]]
+        }
+      ],
+      "pos": "e,606.15,831.97 458.27,897.44 487.71,884.83 531.21,866.06 568.88,849.13 577.67,845.18 587.14,840.82 595.9,836.75"
+    },
+    {
+      "_gvid": 21,
+      "tail": 13,
+      "head": 17,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[368.570,903.470],[323.900,894.750],[260.660,878.270],[211.880,849.130],[172.050,825.340],[135.970,785.190],[114.240,758.020]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[117.030,755.900],[108.100,750.190],[111.520,760.220]]
+        }
+      ],
+      "pos": "e,107.17,749 368.57,903.47 323.9,894.75 260.66,878.27 211.88,849.13 172.05,825.34 135.97,785.19 114.24,758.02"
+    },
+    {
+      "_gvid": 22,
+      "tail": 13,
+      "head": 18,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[368.100,907.320],[327.730,900.810],[275.150,885.430],[244.880,849.130],[210.390,807.760],[225.880,783.300],[225.880,729.440],[225.880,729.440],[225.880,729.440],[225.880,559.310],[225.880,499.990],[193.480,436.670],[172.460,401.830]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[175.640,400.310],[167.400,393.660],[169.690,404.000]]
+        }
+      ],
+      "pos": "e,166.6,392.37 368.1,907.32 327.73,900.81 275.15,885.43 244.88,849.13 210.39,807.76 225.88,783.3 225.88,729.44 225.88,729.44 225.88,729.44 225.88,559.31 225.88,499.99 193.48,436.67 172.46,401.83"
+    },
+    {
+      "_gvid": 23,
+      "tail": 13,
+      "head": 19,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[399.510,893.470],[382.100,880.180],[358.430,862.110],[339.120,847.370]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[341.320,844.640],[331.250,841.360],[337.070,850.210]]
+        }
+      ],
+      "pos": "e,330.04,840.44 399.51,893.47 382.1,880.18 358.43,862.11 339.12,847.37"
+    },
+    {
+      "_gvid": 24,
+      "tail": 13,
+      "head": 20,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[432.790,893.250],[438.980,880.160],[447.330,862.530],[454.210,847.990]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[457.370,849.500],[458.490,838.970],[451.040,846.510]]
+        }
+      ],
+      "pos": "e,459.13,837.6 432.79,893.25 438.98,880.16 447.33,862.53 454.21,847.99"
+    },
+    {
+      "_gvid": 26,
+      "tail": 15,
+      "head": 21,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[751.000,450.570],[758.120,437.700],[768.200,419.490],[776.690,404.160]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[779.740,405.880],[781.520,395.430],[773.620,402.490]]
+        }
+      ],
+      "pos": "e,782.25,394.11 751,450.57 758.12,437.7 768.2,419.49 776.69,404.16"
+    },
+    {
+      "_gvid": 27,
+      "tail": 16,
+      "head": 22,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[616.370,800.200],[607.740,787.060],[596.160,769.450],[586.730,755.080]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[589.850,753.440],[581.430,747.010],[584.000,757.290]]
+        }
+      ],
+      "pos": "e,580.59,745.75 616.37,800.2 607.74,787.06 596.16,769.45 586.73,755.08"
+    },
+    {
+      "_gvid": 28,
+      "tail": 17,
+      "head": 18,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[92.860,707.970],[93.140,672.780],[95.190,596.400],[106.880,533.250],[115.640,485.960],[133.480,432.800],[144.770,401.680]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[147.920,403.270],[148.080,392.680],[141.350,400.860]]
+        }
+      ],
+      "pos": "e,148.6,391.26 92.863,707.97 93.141,672.78 95.186,596.4 106.88,533.25 115.64,485.96 133.48,432.8 144.77,401.68"
+    },
+    {
+      "_gvid": 16,
+      "tail": 10,
+      "head": 23,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[181.020,546.180],[210.470,530.160],[260.300,503.070],[292.380,485.620]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[293.680,488.900],[300.800,481.040],[290.340,482.750]]
+        }
+      ],
+      "pos": "e,302.12,480.32 181.02,546.18 210.47,530.16 260.3,503.07 292.38,485.62"
+    },
+    {
+      "_gvid": 30,
+      "tail": 23,
+      "head": 18,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[299.520,454.230],[271.900,439.080],[225.560,413.670],[192.780,395.700]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[194.860,392.850],[184.410,391.110],[191.500,398.990]]
+        }
+      ],
+      "pos": "e,183.08,390.38 299.52,454.23 271.9,439.08 225.56,413.67 192.78,395.7"
+    },
+    {
+      "_gvid": 31,
+      "tail": 23,
+      "head": 24,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[322.880,450.140],[322.880,437.190],[322.880,419.010],[322.880,403.770]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[326.380,403.840],[322.880,393.840],[319.380,403.840]]
+        }
+      ],
+      "pos": "e,322.88,392.33 322.88,450.14 322.88,437.19 322.88,419.01 322.88,403.77"
+    },
+    {
+      "_gvid": 29,
+      "tail": 22,
+      "head": 25,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[568.340,711.640],[567.220,700.160],[565.680,684.390],[564.380,671.130]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[567.880,670.960],[563.430,661.350],[560.920,671.640]]
+        }
+      ],
+      "pos": "e,563.28,659.84 568.34,711.64 567.22,700.16 565.68,684.39 564.38,671.13"
+    },
+    {
+      "_gvid": 32,
+      "tail": 25,
+      "head": 26,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[559.180,627.620],[557.290,616.550],[554.730,601.490],[552.520,588.530]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[556.010,588.140],[550.880,578.870],[549.110,589.320]]
+        }
+      ],
+      "pos": "e,550.62,577.38 559.18,627.62 557.29,616.55 554.73,601.49 552.52,588.53"
+    },
+    {
+      "_gvid": 33,
+      "tail": 26,
+      "head": 15,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[570.510,548.780],[603.750,533.310],[666.090,504.300],[705.720,485.860]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[707.050,489.100],[714.640,481.720],[704.100,482.760]]
+        }
+      ],
+      "pos": "e,716.01,481.08 570.51,548.78 603.75,533.31 666.09,504.3 705.72,485.86"
+    },
+    {
+      "_gvid": 34,
+      "tail": 26,
+      "head": 23,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[510.220,544.200],[468.190,527.340],[400.650,500.240],[359.180,483.600]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[360.710,480.440],[350.130,479.960],[358.110,486.940]]
+        }
+      ],
+      "pos": "e,348.72,479.4 510.22,544.2 468.19,527.34 400.65,500.24 359.18,483.6"
+    },
+    {
+      "_gvid": 35,
+      "tail": 26,
+      "head": 27,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[542.740,542.750],[539.010,530.700],[533.840,514.040],[529.360,499.600]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[532.720,498.590],[526.410,490.080],[526.030,500.660]]
+        }
+      ],
+      "pos": "e,525.96,488.63 542.74,542.75 539.01,530.7 533.84,514.04 529.36,499.6"
+    },
+    {
+      "_gvid": 36,
+      "tail": 27,
+      "head": 28,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[543.990,452.030],[565.990,438.330],[599.020,417.780],[625.440,401.330]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[627.290,404.300],[633.930,396.050],[623.590,398.360]]
+        }
+      ],
+      "pos": "e,635.21,395.25 543.99,452.03 565.99,438.33 599.02,417.78 625.44,401.33"
+    },
+    {
+      "_gvid": 37,
+      "tail": 27,
+      "head": 29,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[518.220,445.210],[517.180,431.460],[515.830,413.690],[514.740,399.460]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[518.240,399.270],[514.000,389.560],[511.260,399.790]]
+        }
+      ],
+      "pos": "e,513.88,388.05 518.22,445.21 517.18,431.46 515.83,413.69 514.74,399.46"
+    },
+    {
+      "_gvid": 13,
+      "tail": 8,
+      "head": 12,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[972.010,981.370],[949.350,967.770],[921.890,951.290],[899.820,938.050]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[901.780,935.140],[891.400,932.990],[898.170,941.140]]
+        }
+      ],
+      "pos": "e,890.1,932.21 972.01,981.37 949.35,967.77 921.89,951.29 899.82,938.05"
+    },
+    {
+      "_gvid": 14,
+      "tail": 9,
+      "head": 30,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1182.980,992.660],[1188.280,979.560],[1196.180,960.160],[1202.780,943.920]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1206.010,945.280],[1206.520,934.690],[1199.520,942.650]]
+        }
+      ],
+      "pos": "e,1207.1,933.29 1183,992.66 1188.3,979.56 1196.2,960.16 1202.8,943.92"
+    },
+    {
+      "_gvid": 15,
+      "tail": 9,
+      "head": 31,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1158.980,994.690],[1139.580,980.600],[1108.080,957.790],[1083.680,940.020]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1085.980,937.360],[1075.810,934.370],[1081.900,943.050]]
+        }
+      ],
+      "pos": "e,1074.6,933.49 1159,994.69 1139.6,980.6 1108.1,957.79 1083.7,940.02"
+    },
+    {
+      "_gvid": 38,
+      "tail": 30,
+      "head": 32,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1234.780,895.620],[1252.180,881.230],[1277.680,860.190],[1297.080,844.150]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1299.180,846.960],[1304.710,837.920],[1294.750,841.530]]
+        }
+      ],
+      "pos": "e,1305.9,836.96 1234.8,895.62 1252.2,881.23 1277.7,860.19 1297.1,844.15"
+    },
+    {
+      "_gvid": 39,
+      "tail": 31,
+      "head": 33,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1024.510,891.460],[1008.780,877.590],[988.010,859.270],[971.620,844.820]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[973.990,842.240],[964.170,838.250],[969.360,847.490]]
+        }
+      ],
+      "pos": "e,963.03,837.25 1024.5,891.46 1008.8,877.59 988.01,859.27 971.62,844.82"
+    },
+    {
+      "_gvid": 40,
+      "tail": 32,
+      "head": 34,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1310.080,803.600],[1298.580,791.500],[1282.380,774.380],[1268.480,759.640]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1271.040,757.250],[1261.630,752.400],[1265.960,762.070]]
+        }
+      ],
+      "pos": "e,1260.6,751.3 1310.1,803.6 1298.6,791.5 1282.4,774.38 1268.5,759.64"
+    },
+    {
+      "_gvid": 43,
+      "tail": 34,
+      "head": 35,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1217.180,709.850],[1201.980,698.100],[1181.780,682.490],[1165.080,669.580]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1167.440,666.980],[1157.380,663.650],[1163.170,672.530]]
+        }
+      ],
+      "pos": "e,1156.2,662.73 1217.2,709.85 1202,698.1 1181.8,682.49 1165.1,669.58"
+    },
+    {
+      "_gvid": 44,
+      "tail": 34,
+      "head": 36,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1253.880,711.240],[1263.880,699.720],[1277.480,684.000],[1288.880,670.820]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1291.480,673.170],[1295.390,663.320],[1286.190,668.580]]
+        }
+      ],
+      "pos": "e,1296.4,662.18 1253.9,711.24 1263.9,699.72 1277.5,684 1288.9,670.82"
+    },
+    {
+      "_gvid": 42,
+      "tail": 34,
+      "head": 14,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1153.180,720.110],[1114.480,712.340],[1071.380,696.720],[1043.880,665.540],[1025.840,645.070],[1022.320,613.330],[1022.560,590.250]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1026.060,590.400],[1022.940,580.270],[1019.070,590.130]]
+        }
+      ],
+      "pos": "e,1023,578.76 1153.2,720.11 1114.5,712.34 1071.4,696.72 1043.9,665.54 1025.8,645.07 1022.3,613.33 1022.6,590.25"
+    },
+    {
+      "_gvid": 45,
+      "tail": 35,
+      "head": 14,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1110.980,626.230],[1097.580,616.090],[1080.180,602.970],[1064.480,591.180]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1066.870,588.600],[1056.790,585.340],[1062.640,594.180]]
+        }
+      ],
+      "pos": "e,1055.6,584.43 1111,626.23 1097.6,616.09 1080.2,602.97 1064.5,591.18"
+    },
+    {
+      "_gvid": 41,
+      "tail": 33,
+      "head": 11,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[944.880,802.350],[944.880,790.520],[944.880,774.380],[944.880,760.280]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[948.380,760.580],[944.880,750.580],[941.380,760.580]]
+        }
+      ],
+      "pos": "e,944.88,749.07 944.88,802.35 944.88,790.52 944.88,774.38 944.88,760.28"
+    },
+    {
+      "_gvid": 46,
+      "tail": 37,
+      "head": 11,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1114.080,806.940],[1087.180,794.660],[1044.980,775.310],[1009.430,759.020]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1011.050,755.910],[1000.500,754.920],[1008.130,762.270]]
+        }
+      ],
+      "pos": "e,999.12,754.29 1114.1,806.94 1087.2,794.66 1045,775.31 1009.4,759.02"
+    },
+    {
+      "_gvid": 25,
+      "tail": 14,
+      "head": 38,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1024.880,538.820],[1024.880,526.430],[1024.880,510.460],[1024.880,496.930]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1028.380,497.320],[1024.880,487.320],[1021.380,497.320]]
+        }
+      ],
+      "pos": "e,1024.9,485.81 1024.9,538.82 1024.9,526.43 1024.9,510.46 1024.9,496.93"
+    },
+    {
+      "_gvid": 47,
+      "tail": 38,
+      "head": 39,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1024.880,450.990],[1024.880,438.090],[1024.880,419.630],[1024.880,404.130]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1028.380,404.500],[1024.880,394.500],[1021.380,404.500]]
+        }
+      ],
+      "pos": "e,1024.9,392.99 1024.9,450.99 1024.9,438.09 1024.9,419.63 1024.9,404.13"
+    },
+    {
+      "_gvid": 48,
+      "tail": 39,
+      "head": 40,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[1024.880,357.110],[1024.880,345.180],[1024.880,328.520],[1024.880,314.400]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[1028.380,314.810],[1024.880,304.810],[1021.380,314.810]]
+        }
+      ],
+      "pos": "e,1024.9,303.3 1024.9,357.11 1024.9,345.18 1024.9,328.52 1024.9,314.4"
+    }
+  ]
+}

@@ -3,6 +3,8 @@
 //! nested subgraphs and clusters.
 
 use crate::lexer::{Lexer, Token, TokenKind};
+type AttrMap2 = std::collections::BTreeMap<String, gv_core::AttrSym>;
+
 use gv_core::{
     AttrMap, BoundingBox, EdgeId, Graph, GraphKind, GraphvizError, NodeId, Port, Result,
     SubgraphData, SubgraphId,
@@ -39,6 +41,18 @@ pub struct Parser {
     graph: Graph,
     scope_stack: Vec<SubgraphId>,
     globals: GlobalAttrs,
+    /// cgraph's id counter for anonymous objects (`ctr` in `idmap`).
+    anon_ctr: u64,
+    /// Parent of each subgraph (`None`: the root graph).
+    sub_parent: Vec<Option<usize>>,
+}
+
+/// Which dictionary of a graph an attribute belongs to.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DictKind {
+    Graph,
+    Node,
+    Edge,
 }
 
 impl Parser {
@@ -51,6 +65,8 @@ impl Parser {
             graph: Graph::new("", GraphKind::Undirected, false),
             scope_stack: Vec::new(),
             globals: globals.clone(),
+            anon_ctr: 1,
+            sub_parent: Vec::new(),
         })
     }
 
@@ -242,15 +258,41 @@ impl Parser {
             String::new()
         };
 
+        self.anon_ctr = if name.is_empty() { 3 } else { 1 };
         self.graph = Graph::new(name, kind, strict);
         self.graph.graph_attrs.extend(self.globals.graph.clone());
         self.graph.node_defaults.extend(self.globals.node.clone());
         self.graph.edge_defaults.extend(self.globals.edge.clone());
+        self.sub_parent.clear();
+        self.graph.dicts = vec![gv_core::AttrDicts::default()];
+        // gvContext declares the node label on cgraph's ProtoGraph, which every root copies.
+        self.graph.dicts[0].node.insert(
+            "label".to_string(),
+            gv_core::AttrSym {
+                defval: "\\N".to_string(),
+                print: false,
+            },
+        );
+        // Command-line defaults come from cgraph's ProtoGraph dictionaries.
+        for (kind, map) in [
+            (DictKind::Graph, self.globals.graph.clone()),
+            (DictKind::Node, self.globals.node.clone()),
+            (DictKind::Edge, self.globals.edge.clone()),
+        ] {
+            for (k, v) in map {
+                self.dict_mut(0, kind).insert(
+                    k,
+                    gv_core::AttrSym {
+                        defval: v,
+                        print: false,
+                    },
+                );
+            }
+        }
 
         self.expect(&TokenKind::LBrace)?;
         self.parse_stmt_list()?;
         self.expect(&TokenKind::RBrace)?;
-
         // Consume optional trailing semicolons
         while self.peek().kind == TokenKind::Semi {
             self.advance();
@@ -299,6 +341,7 @@ impl Parser {
                     let key = self.parse_atom()?;
                     self.expect(&TokenKind::Equals)?;
                     let val = self.parse_value_or_port_atom()?;
+                    self.attr_stmt(DictKind::Graph, &key, &val);
                     self.current_graph_attrs_mut().insert(key, val);
                     return Ok(());
                 }
@@ -338,6 +381,14 @@ impl Parser {
         }
 
         let attrs = self.parse_opt_attr_list()?;
+        let kind = match attr_tok.kind {
+            TokenKind::Graph => DictKind::Graph,
+            TokenKind::Node => DictKind::Node,
+            _ => DictKind::Edge,
+        };
+        for (k, v) in &attrs {
+            self.attr_stmt(kind, k, v);
+        }
         match attr_tok.kind {
             TokenKind::Graph => self.current_graph_attrs_mut().extend(attrs),
             TokenKind::Node => self.current_node_defaults_mut().extend(attrs),
@@ -406,6 +457,11 @@ impl Parser {
             }
 
             let edge_attrs = self.parse_opt_attr_list()?;
+            for k in edge_attrs.keys() {
+                if k != "key" {
+                    self.bind_attr(DictKind::Edge, k);
+                }
+            }
             for pair in chain.windows(2) {
                 let tails = &pair[0];
                 let heads = &pair[1];
@@ -423,6 +479,11 @@ impl Parser {
             }
         } else {
             let attrs = self.parse_opt_attr_list()?;
+            if matches!(first, SimpleItem::Nodes(_)) {
+                for k in attrs.keys() {
+                    self.bind_attr(DictKind::Node, k);
+                }
+            }
             if let SimpleItem::Nodes(nodes) = first
                 && !attrs.is_empty()
             {
@@ -540,11 +601,18 @@ impl Parser {
         }
 
         let id = SubgraphId(self.graph.subgraphs.len() as u32);
+        if name.is_empty() {
+            self.graph.anon_subgraph_ids.insert(id.0, self.anon_ctr);
+            self.anon_ctr += 2;
+        }
         let is_cluster = name.to_ascii_lowercase().starts_with("cluster");
         let graph_attrs = self.current_graph_attrs().clone();
         let node_defaults = self.current_node_defaults().clone();
         let edge_defaults = self.current_edge_defaults().clone();
 
+        self.sub_parent
+            .push(self.scope_stack.last().map(|p| p.0 as usize));
+        self.graph.dicts.push(gv_core::AttrDicts::default());
         if let Some(&parent_id) = self.scope_stack.last() {
             let parent_subgraphs = &mut self.graph.subgraphs[parent_id.0 as usize].subgraphs;
             if !parent_subgraphs.contains(&id) {
@@ -566,6 +634,104 @@ impl Parser {
         });
 
         id
+    }
+
+    /// Dictionary index of the graph in scope (0: root).
+    fn scope_dict(&self) -> usize {
+        self.scope_stack.last().map_or(0, |s| s.0 as usize + 1)
+    }
+
+    fn dict_mut(&mut self, gi: usize, kind: DictKind) -> &mut AttrMap2 {
+        let d = &mut self.graph.dicts[gi];
+        match kind {
+            DictKind::Graph => &mut d.graph,
+            DictKind::Node => &mut d.node,
+            DictKind::Edge => &mut d.edge,
+        }
+    }
+
+    fn dict(&self, gi: usize, kind: DictKind) -> &AttrMap2 {
+        let d = &self.graph.dicts[gi];
+        match kind {
+            DictKind::Graph => &d.graph,
+            DictKind::Node => &d.node,
+            DictKind::Edge => &d.edge,
+        }
+    }
+
+    /// Dictionary lookup through the view path up to the root (`agdictsym`).
+    fn lookup_view(&self, gi: usize, kind: DictKind, name: &str) -> bool {
+        let mut cur = Some(gi);
+        while let Some(g) = cur {
+            if self.dict(g, kind).contains_key(name) {
+                return true;
+            }
+            cur = if g == 0 {
+                None
+            } else {
+                Some(self.sub_parent[g - 1].map_or(0, |p| p + 1))
+            };
+        }
+        false
+    }
+
+    /// `bindattrs`: an attribute unknown in scope is declared on the root with default "".
+    fn bind_attr(&mut self, kind: DictKind, name: &str) {
+        let gi = self.scope_dict();
+        if !self.lookup_view(gi, kind, name) {
+            self.dict_mut(0, kind)
+                .insert(name.to_string(), gv_core::AttrSym::default());
+        }
+    }
+
+    /// `attrstmt` + `setattr`: a default set in the current scope.
+    fn attr_stmt(&mut self, kind: DictKind, name: &str, value: &str) {
+        self.bind_attr(kind, name);
+        let gi = self.scope_dict();
+        if self.dict(gi, kind).contains_key(name) {
+            if kind == DictKind::Graph {
+                // unviewsubgraphsattr: direct children without a local value keep theirs.
+                let children: Vec<usize> = if gi == 0 {
+                    (0..self.sub_parent.len())
+                        .filter(|&i| self.sub_parent[i].is_none())
+                        .collect()
+                } else {
+                    self.graph.subgraphs[gi - 1]
+                        .subgraphs
+                        .iter()
+                        .map(|c| c.0 as usize)
+                        .collect()
+                };
+                for c in children {
+                    if !self.graph.dicts[c + 1].graph.contains_key(name) {
+                        let v = self.graph.subgraphs[c]
+                            .graph_attrs
+                            .get(name)
+                            .cloned()
+                            .unwrap_or_default();
+                        self.graph.dicts[c + 1].graph.insert(
+                            name.to_string(),
+                            gv_core::AttrSym {
+                                defval: v,
+                                print: false,
+                            },
+                        );
+                    }
+                }
+            }
+            self.dict_mut(gi, kind).get_mut(name).unwrap().defval = value.to_string();
+        } else {
+            self.dict_mut(gi, kind).insert(
+                name.to_string(),
+                gv_core::AttrSym {
+                    defval: value.to_string(),
+                    print: false,
+                },
+            );
+        }
+        if gi == 0 {
+            self.dict_mut(0, kind).get_mut(name).unwrap().print = true;
+        }
     }
 
     fn ensure_scoped_node(&mut self, name: &str) -> NodeId {
@@ -604,7 +770,11 @@ impl Parser {
             head_port = parse_port_str(hp);
         }
 
+        let before = self.graph.edges.len();
         let edge_id = self.graph.add_edge(tail, head, merged_attrs.clone());
+        if self.graph.edges.len() > before {
+            self.anon_ctr += 2;
+        }
         if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
             if tail_port != Port::default() {
                 edge.tail_port = tail_port;

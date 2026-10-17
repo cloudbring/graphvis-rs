@@ -1,0 +1,9 @@
+graph 1 1.75 2.02
+node b 0.375 0.25 0.75 0.5 b solid ellipse black lightgrey
+node c 1.375 0.25 0.75 0.5 c solid ellipse black lightgrey
+node yourvirtualnode 0.875 1.01 0.02 0.02 "" solid circle black lightgrey
+node a 0.875 1.77 0.75 0.5 a solid ellipse black lightgrey
+edge yourvirtualnode b 4 0.87357 0.99789 0.85896 0.97639 0.73524 0.79424 0.61471 0.61679 solid black
+edge yourvirtualnode c 4 0.87643 0.99789 0.89104 0.97639 1.0148 0.79424 1.1353 0.61679 solid black
+edge a yourvirtualnode 4 0.875 1.5151 0.875 1.3138 0.875 1.0548 0.875 1.0232 solid black
+stop
