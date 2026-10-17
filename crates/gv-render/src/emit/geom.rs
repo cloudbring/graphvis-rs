@@ -229,3 +229,108 @@ pub(crate) fn taper(list: &[Point], dir: TaperDir, initwid: f64) -> Vec<Point> {
     left.extend(right);
     left
 }
+
+/// `ellipticWedge` (`lib/common/ellipse.c`): a closed Bézier path from the centre around
+/// the arc from `angle0` to `angle1` and back.
+pub(crate) fn elliptic_wedge(ctr: Point, a: f64, b: f64, lambda1: f64, lambda2: f64) -> Vec<Point> {
+    use std::f64::consts::PI;
+    let twopi = 2.0 * PI;
+    let eta1 = (lambda1.sin() / b).atan2(lambda1.cos() / a);
+    let mut eta2 = (lambda2.sin() / b).atan2(lambda2.cos() / a);
+    eta2 -= twopi * ((eta2 - eta1) / twopi).floor();
+    if lambda2 - lambda1 > PI && eta2 - eta1 < PI {
+        eta2 += twopi;
+    }
+    const LOW: [[[f64; 4]; 4]; 2] = [
+        [
+            [3.85268, -21.229, -0.330434, 0.0127842],
+            [-1.61486, 0.706564, 0.225945, 0.263682],
+            [-0.910164, 0.388383, 0.00551445, 0.00671814],
+            [-0.630184, 0.192402, 0.0098871, 0.0102527],
+        ],
+        [
+            [-0.162211, 9.94329, 0.13723, 0.0124084],
+            [-0.253135, 0.00187735, 0.0230286, 0.01264],
+            [-0.0695069, -0.0437594, 0.0120636, 0.0163087],
+            [-0.0328856, -0.00926032, -0.00173573, 0.00527385],
+        ],
+    ];
+    const HIGH: [[[f64; 4]; 4]; 2] = [
+        [
+            [0.0899116, -19.2349, -4.11711, 0.183362],
+            [0.138148, -1.45804, 1.32044, 1.38474],
+            [0.230903, -0.450262, 0.219963, 0.414038],
+            [0.0590565, -0.101062, 0.0430592, 0.0204699],
+        ],
+        [
+            [0.0164649, 9.89394, 0.0919496, 0.00760802],
+            [0.0191603, -0.0322058, 0.0134667, -0.0825018],
+            [0.0156192, -0.017535, 0.00326508, -0.228157],
+            [-0.0236752, 0.0405821, -0.0173086, 0.176187],
+        ],
+    ];
+    const SAFETY: [f64; 4] = [0.001, 4.98, 0.207, 0.0067];
+    let rf = |x: f64, c: &[f64; 4]| (x * (x * c[0] + c[1]) + c[2]) / (x + c[3]);
+    let estimate = |eta_a: f64, eta_b: f64| {
+        let eta = 0.5 * (eta_a + eta_b);
+        let x = b / a;
+        let d_eta = eta_b - eta_a;
+        let (cos2, cos4, cos6) = ((2.0 * eta).cos(), (4.0 * eta).cos(), (6.0 * eta).cos());
+        let c = if x < 0.25 { &LOW } else { &HIGH };
+        let c0 = rf(x, &c[0][0])
+            + cos2 * rf(x, &c[0][1])
+            + cos4 * rf(x, &c[0][2])
+            + cos6 * rf(x, &c[0][3]);
+        let c1 = rf(x, &c[1][0])
+            + cos2 * rf(x, &c[1][1])
+            + cos4 * rf(x, &c[1][2])
+            + cos6 * rf(x, &c[1][3]);
+        rf(x, &SAFETY) * a * (c0 + c1 * d_eta).exp()
+    };
+    let mut found = false;
+    let mut n: i32 = 1;
+    while !found && n < 1024 {
+        let diff = (eta2 - eta1) / f64::from(n);
+        if diff <= 0.5 * PI {
+            let mut eta_one = eta1;
+            found = true;
+            let mut i = 0;
+            while found && i < n {
+                let eta_a = eta_one;
+                eta_one += diff;
+                found = estimate(eta_a, eta_one) <= 0.00001;
+                i += 1;
+            }
+        }
+        n <<= 1;
+    }
+    let d_eta = (eta2 - eta1) / f64::from(n);
+    let mut eta_b = eta1;
+    let (mut xb, mut yb) = (ctr.x + a * eta_b.cos(), ctr.y + b * eta_b.sin());
+    let (mut xbd, mut ybd) = (-a * eta_b.sin(), b * eta_b.cos());
+    let mut path = vec![ctr];
+    let line_to = |path: &mut Vec<Point>, x: f64, y: f64| {
+        let c = *path.last().unwrap();
+        path.push(c);
+        path.push(Point::new(x, y));
+        path.push(Point::new(x, y));
+    };
+    line_to(&mut path, xb, yb);
+    let t = (0.5 * d_eta).tan();
+    let alpha = d_eta.sin() * ((4.0 + 3.0 * t * t).sqrt() - 1.0) / 3.0;
+    for _ in 0..n {
+        let (xa, ya, xad, yad) = (xb, yb, xbd, ybd);
+        eta_b += d_eta;
+        let (c, s) = (eta_b.cos(), eta_b.sin());
+        xb = ctr.x + a * c;
+        yb = ctr.y + b * s;
+        xbd = -a * s;
+        ybd = b * c;
+        path.push(Point::new(xa + alpha * xad, ya + alpha * yad));
+        path.push(Point::new(xb - alpha * xbd, yb - alpha * ybd));
+        path.push(Point::new(xb, yb));
+    }
+    let p0 = path[0];
+    line_to(&mut path, p0.x, p0.y);
+    path
+}

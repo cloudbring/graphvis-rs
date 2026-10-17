@@ -1051,8 +1051,22 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 }
             }
             let n = ed.bz.len();
+            let is_ortho = m.root_attrs().get("splines") == Some("ortho");
+            let mut want_rounded = styles.is_some_and(|s| s.iter().any(|i| i.name == "rounded"));
+            let mut radius = 0.0;
+            if let Some(r) = a.nonempty("radius") {
+                radius = super::attrs::atof(r);
+                want_rounded = radius > 0.0;
+            }
+            if want_rounded && radius == 0.0 {
+                radius = (penwidth * 8.0).max(12.0);
+            }
             for bz in &ed.bz {
-                self.bezier(&bz.list, 0);
+                if is_ortho && want_rounded && radius > 0.0 {
+                    self.ortho_rounded(&bz.list, radius, color);
+                } else {
+                    self.bezier(&bz.list, 0);
+                }
                 if bz.sflag != 0 {
                     self.arrow_gen(
                         EmitState::TDraw,
@@ -1266,5 +1280,138 @@ impl<'a, E: Engine> Emitter<'a, E> {
             }
         }
         false
+    }
+}
+
+/// An orthogonal corner of an edge (`corner_info_t`).
+struct Corner {
+    idx: usize,
+    trunc_prev: Point,
+    trunc_next: Point,
+    center: Point,
+    angle1: f64,
+    angle2: f64,
+}
+
+fn find_ortho_corners(pts: &[Point], radius: f64) -> Vec<Corner> {
+    use std::f64::consts::PI;
+    const TOL: f64 = 0.1;
+    const DT: f64 = 0.01;
+    let n = pts.len();
+    let mut corners: Vec<Corner> = Vec::new();
+    for i in 0..n {
+        let prev = (0..i)
+            .rev()
+            .find(|&j| (pts[j].x - pts[i].x).hypot(pts[j].y - pts[i].y) > DT);
+        let next = (i + 1..n).find(|&j| (pts[j].x - pts[i].x).hypot(pts[j].y - pts[i].y) > DT);
+        let (Some(pi), Some(ni)) = (prev, next) else {
+            continue;
+        };
+        let (prev, curr, next) = (pts[pi], pts[i], pts[ni]);
+        let (mut dx1, mut dy1) = (curr.x - prev.x, curr.y - prev.y);
+        let (mut dx2, mut dy2) = (next.x - curr.x, next.y - curr.y);
+        let s1h = dy1.abs() < TOL && dx1.abs() > TOL;
+        let s1v = dx1.abs() < TOL && dy1.abs() > TOL;
+        let s2h = dy2.abs() < TOL && dx2.abs() > TOL;
+        let s2v = dx2.abs() < TOL && dy2.abs() > TOL;
+        if !((s1h && s2v) || (s1v && s2h)) {
+            continue;
+        }
+        if corners
+            .iter()
+            .any(|c| (curr.x - pts[c.idx].x).hypot(curr.y - pts[c.idx].y) < DT)
+        {
+            continue;
+        }
+        let l1 = dx1.hypot(dy1);
+        let l2 = dx2.hypot(dy2);
+        dx1 /= l1;
+        dy1 /= l1;
+        dx2 /= l2;
+        dy2 /= l2;
+        let (cx, cy, a1, a2) = if s1h && s2v {
+            if dx1 > 0.0 && dy2 < 0.0 {
+                (curr.x - radius, curr.y - radius, 0.0, PI / 2.0)
+            } else if dx1 > 0.0 && dy2 > 0.0 {
+                (curr.x - radius, curr.y + radius, -PI / 2.0, 0.0)
+            } else if dx1 < 0.0 && dy2 < 0.0 {
+                (curr.x + radius, curr.y - radius, PI / 2.0, PI)
+            } else {
+                (curr.x + radius, curr.y + radius, PI, 3.0 * PI / 2.0)
+            }
+        } else if dy1 < 0.0 && dx2 > 0.0 {
+            (curr.x + radius, curr.y + radius, PI, 3.0 * PI / 2.0)
+        } else if dy1 < 0.0 && dx2 < 0.0 {
+            (curr.x - radius, curr.y + radius, 3.0 * PI / 2.0, 2.0 * PI)
+        } else if dy1 > 0.0 && dx2 > 0.0 {
+            (curr.x + radius, curr.y - radius, PI / 2.0, PI)
+        } else {
+            (curr.x - radius, curr.y - radius, 0.0, PI / 2.0)
+        };
+        corners.push(Corner {
+            idx: i,
+            trunc_prev: Point::new(curr.x - dx1 * radius, curr.y - dy1 * radius),
+            trunc_next: Point::new(curr.x + dx2 * radius, curr.y + dy2 * radius),
+            center: Point::new(cx, cy),
+            angle1: a1,
+            angle2: a2,
+        });
+    }
+    corners.sort_by_key(|c| c.idx);
+    corners
+}
+
+impl<E: Engine> Emitter<'_, E> {
+    /// The rounded-corner rendering of an orthogonal edge in `emit_edge_graphics`.
+    fn ortho_rounded(&mut self, pts: &[Point], radius: f64, color: &str) {
+        let corners = find_ortho_corners(pts, radius);
+        if corners.is_empty() {
+            self.bezier(pts, 0);
+            return;
+        }
+        let at_corner = |p: Point| {
+            corners
+                .iter()
+                .any(|c| (p.x - pts[c.idx].x).hypot(p.y - pts[c.idx].y) < 0.01)
+        };
+        let mut start_idx = 0;
+        let mut start_pt = pts[0];
+        for c in 0..=corners.len() {
+            let (end_idx, end_pt) = if c < corners.len() {
+                (corners[c].idx, corners[c].trunc_prev)
+            } else {
+                (pts.len() - 1, pts[pts.len() - 1])
+            };
+            let mut seg = vec![start_pt];
+            for p in pts.iter().take(end_idx).skip(start_idx + 1) {
+                if !at_corner(*p) {
+                    seg.push(*p);
+                }
+            }
+            seg.push(end_pt);
+            self.polyline(&seg);
+            if c < corners.len() {
+                let mut next = corners[c].idx + 1;
+                while next < pts.len() && at_corner(pts[next]) {
+                    next += 1;
+                }
+                start_idx = next;
+                start_pt = corners[c].trunc_next;
+            }
+        }
+        for c in &corners {
+            let w = super::geom::elliptic_wedge(c.center, radius, radius, c.angle1, c.angle2);
+            if w.len() > 4 {
+                let (s, e) = (3, w.len() - 4);
+                if e >= s && e - s + 1 >= 2 {
+                    self.set_pencolor(if color.is_empty() {
+                        DEFAULT_COLOR
+                    } else {
+                        color
+                    });
+                    self.polyline(&w[s..=e]);
+                }
+            }
+        }
     }
 }

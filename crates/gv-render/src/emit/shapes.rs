@@ -271,7 +271,8 @@ impl<E: Engine> Emitter<'_, E> {
             }
             if sides <= 2 {
                 if style.wedged && j == 0 && fillcolor.contains(':') {
-                    // wedgedEllipse is not ported; fall back to a plain fill
+                    let fc = fillcolor.clone();
+                    self.wedged_ellipse(&af, &fc);
                     filled = 0;
                 }
                 self.ellipse([af[0], af[1]], filled);
@@ -300,6 +301,39 @@ impl<E: Engine> Emitter<'_, E> {
         self.emit_label(EmitState::NLabel, &label);
         if do_map {
             self.end_anchor();
+        }
+    }
+
+    /// `wedgedEllipse`.
+    fn wedged_ellipse(&mut self, pf: &[Point], clrs: &str) {
+        let Ok((segs, _)) = super::emit::parse_segs(clrs) else {
+            return;
+        };
+        let ctr = Point::new((pf[0].x + pf[1].x) / 2.0, (pf[0].y + pf[1].y) / 2.0);
+        let semi = Point::new(pf[1].x - ctr.x, pf[1].y - ctr.y);
+        let save = self.job.obj().penwidth;
+        if save > 0.5 {
+            self.set_penwidth(0.5);
+        }
+        let mut angle0 = 0.0;
+        let n = segs.len();
+        for (i, s) in segs.iter().enumerate() {
+            let Some(c) = &s.color else { break };
+            if s.t <= 0.0 {
+                continue;
+            }
+            self.set_fillcolor(c);
+            let angle1 = if i + 1 == n {
+                2.0 * std::f64::consts::PI
+            } else {
+                angle0 + 2.0 * std::f64::consts::PI * s.t
+            };
+            let pp = super::geom::elliptic_wedge(ctr, semi.x, semi.y, angle0, angle1);
+            self.bezier(&pp, 1);
+            angle0 = angle1;
+        }
+        if save > 0.5 {
+            self.set_penwidth(save);
         }
     }
 
