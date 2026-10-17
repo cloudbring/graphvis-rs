@@ -454,6 +454,14 @@ impl NodeGeometry {
     }
 }
 
+fn html_inner_text(raw: &str) -> &str {
+    if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
+        &raw[1..raw.len() - 1]
+    } else {
+        raw
+    }
+}
+
 /// `aghtmlstr`: the parser keeps an HTML string's `<`...`>` delimiters, so an HTML label is a
 /// value whose first `<` is closed by its final `>`.
 pub fn is_html_value(label: &str) -> bool {
@@ -579,6 +587,175 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
         ShapeInit::Record => record_init(node, label_str, &obj, env, &mut geom),
     }
     geom
+}
+
+/// `GD_label_pos` flags (`lib/common/const.h`).
+pub const LABEL_AT_BOTTOM: u8 = 0;
+pub const LABEL_AT_TOP: u8 = 1;
+pub const LABEL_AT_LEFT: u8 = 2;
+pub const LABEL_AT_RIGHT: u8 = 4;
+
+/// Index into `GD_border` (`BOTTOM_IX`, `RIGHT_IX`, `TOP_IX`, `LEFT_IX`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BorderSide {
+    Bottom = 0,
+    Right = 1,
+    Top = 2,
+    Left = 3,
+}
+
+/// Graph or cluster label (`do_graph_label` in `lib/common/input.c`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GraphLabelGeometry {
+    /// `GD_label`: `dimen` is what `-Tdot` prints as `lwidth`/`lheight` (in inches, `%.2f`).
+    pub label: LabelGeometry,
+    /// `GD_label_pos` (`LABEL_AT_*` flags).
+    pub pos_flag: u8,
+    /// Clusters only: the `GD_border` entry reserved for the label (`dimen` + `PAD`, swapped
+    /// when the root graph is flipped).
+    pub border: Option<(BorderSide, Point)>,
+}
+
+/// `do_graph_label`: the label of the root graph (`is_root`) or of a cluster named `name`.
+/// `attrs` are the graph's effective attributes; `flip` is `GD_flip(root)` (`rankdir` LR/RL in
+/// dot). Returns `None` when there is no (non-empty) label.
+pub fn graph_label_geometry(
+    name: &str,
+    attrs: &AttrMap,
+    is_root: bool,
+    flip: bool,
+    charset_latin1: bool,
+) -> Option<GraphLabelGeometry> {
+    let s = attrs.get("label").filter(|s| !s.is_empty())?;
+    let obj = LabelSubstContext {
+        graph_name: name,
+        ..LabelSubstContext::default()
+    };
+    let label = make_label(
+        s,
+        is_html_value(s),
+        &obj,
+        late_nnstring(attrs, "fontname", DEFAULT_FONT_NAME),
+        late_double(attrs, "fontsize", DEFAULT_FONT_SIZE, MIN_FONT_SIZE),
+        charset_latin1,
+    );
+    let pos = attrs.get("labelloc").and_then(|p| p.bytes().next());
+    let mut pos_flag = if is_root {
+        if pos == Some(b't') {
+            LABEL_AT_TOP
+        } else {
+            LABEL_AT_BOTTOM
+        }
+    } else if pos == Some(b'b') {
+        LABEL_AT_BOTTOM
+    } else {
+        LABEL_AT_TOP
+    };
+    match attrs.get("labeljust").and_then(|p| p.bytes().next()) {
+        Some(b'l') => pos_flag |= LABEL_AT_LEFT,
+        Some(b'r') => pos_flag |= LABEL_AT_RIGHT,
+        _ => {}
+    }
+    let border = (!is_root).then(|| {
+        let d = Point::new(label.dimen.x + 16.0, label.dimen.y + 8.0);
+        let top = pos_flag & LABEL_AT_TOP != 0;
+        if flip {
+            (
+                if top {
+                    BorderSide::Right
+                } else {
+                    BorderSide::Left
+                },
+                Point::new(d.y, d.x),
+            )
+        } else {
+            (
+                if top {
+                    BorderSide::Top
+                } else {
+                    BorderSide::Bottom
+                },
+                d,
+            )
+        }
+    });
+    Some(GraphLabelGeometry {
+        label,
+        pos_flag,
+        border,
+    })
+}
+
+/// Edge labels made by `common_init_edge` (`lib/common/utils.c`).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct EdgeLabelGeometry {
+    /// `ED_label` (`label`, font `fontname`/`fontsize`).
+    pub label: Option<LabelGeometry>,
+    /// `ED_xlabel`.
+    pub xlabel: Option<LabelGeometry>,
+    /// `ED_head_label` / `ED_tail_label` (`labelfontname`/`labelfontsize`, defaulting to the
+    /// edge font).
+    pub head_label: Option<LabelGeometry>,
+    pub tail_label: Option<LabelGeometry>,
+    /// `ED_label_ontop` (`labelfloat`).
+    pub label_float: bool,
+}
+
+/// `common_init_edge`: sizes the labels of an edge with effective attributes `attrs`
+/// between nodes `tail_name` and `head_name` of root graph `env.graph_name`.
+pub fn edge_label_geometry(
+    attrs: &AttrMap,
+    tail_name: &str,
+    head_name: &str,
+    directed: bool,
+    env: &NodeSizeEnv<'_>,
+) -> EdgeLabelGeometry {
+    let fontsize = late_double(attrs, "fontsize", DEFAULT_FONT_SIZE, MIN_FONT_SIZE);
+    let fontname = late_nnstring(attrs, "fontname", DEFAULT_FONT_NAME);
+    let lfontsize = late_double(attrs, "labelfontsize", fontsize, MIN_FONT_SIZE);
+    let lfontname = late_nnstring(attrs, "labelfontname", fontname);
+    // Ports are bound after the labels are made, so `\E` never shows them.
+    let mut obj = LabelSubstContext {
+        graph_name: env.graph_name,
+        tail_name,
+        head_name,
+        is_edge: true,
+        is_directed: directed,
+        ..LabelSubstContext::default()
+    };
+    let mk = |key: &str, obj: &LabelSubstContext<'_>, name: &str, size: f64| {
+        attrs
+            .get(key)
+            .filter(|s| !s.is_empty())
+            .map(|s| make_label(s, is_html_value(s), obj, name, size, env.charset_latin1))
+    };
+    let label = mk("label", &obj, fontname, fontsize);
+    // Later labels see `\L` = the main label's `lp->text`.
+    let ltext = match (&label, attrs.get("label")) {
+        (Some(l), _) if l.text.is_some() => l
+            .text
+            .as_ref()
+            .map(|t| t.source.clone())
+            .unwrap_or_default(),
+        (Some(l), Some(raw)) if l.html => {
+            if matches!(l.html_label.as_deref(), Some(HtmlLabel::Table(_))) {
+                "<TABLE>".to_string()
+            } else {
+                html_inner_text(raw).to_string()
+            }
+        }
+        _ => String::new(),
+    };
+    obj.label_text = &ltext;
+    EdgeLabelGeometry {
+        xlabel: mk("xlabel", &obj, fontname, fontsize),
+        head_label: mk("headlabel", &obj, lfontname, lfontsize),
+        tail_label: mk("taillabel", &obj, lfontname, lfontsize),
+        label,
+        label_float: mapbool(Some(
+            attrs.get("labelfloat").map_or("false", String::as_str),
+        )),
+    }
 }
 
 /// Sizes every node of `graph` (sets `NodeData::width`/`height` to `ND_width`/`ND_height`),
@@ -1522,6 +1699,44 @@ mod tests {
         assert_eq!(f.flds[0].text.as_deref(), Some("a  b  c"));
         let f = parse_record_label("", false, true);
         assert_eq!(f.flds[0].text.as_deref(), Some(" "));
+    }
+
+    // `dot -Txdot` 16.1.0 on: digraph G { label="My Graph\nline2"; fontsize=20;
+    //   subgraph cluster_x { label=<<B>Bold</B> x>; a }
+    //   a -> b [label="e\E" fontsize=10 headlabel="h" labelfontsize=8] }
+    #[test]
+    fn graph_and_cluster_labels() {
+        let mut a = AttrMap::new();
+        a.insert("label".into(), "My Graph\\nline2".into());
+        a.insert("fontsize".into(), "20".into());
+        let g = graph_label_geometry("G", &a, true, false, false).unwrap();
+        assert_eq!(format!("{:.2}", g.label.dimen.x / 72.0), "1.15");
+        assert_eq!(format!("{:.2}", g.label.dimen.y / 72.0), "0.67");
+        assert_eq!(g.pos_flag, LABEL_AT_BOTTOM);
+        assert!(g.border.is_none());
+        a.insert("label".into(), "<<B>Bold</B> x>".into());
+        let c = graph_label_geometry("cluster_x", &a, false, false, false).unwrap();
+        assert!((c.label.dimen.x - (40.02 + 15.0)).abs() < 0.01);
+        assert!((c.label.dimen.y - 24.0).abs() < 1e-9);
+        assert_eq!(c.pos_flag, LABEL_AT_TOP);
+        let (side, d) = c.border.unwrap();
+        assert_eq!(side, BorderSide::Top);
+        assert!((d.y - 32.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn edge_labels() {
+        let mut a = AttrMap::new();
+        a.insert("label".into(), "e\\E".into());
+        a.insert("fontsize".into(), "10".into());
+        a.insert("headlabel".into(), "h".into());
+        a.insert("labelfontsize".into(), "8".into());
+        let e = edge_label_geometry(&a, "a", "b", true, &NodeSizeEnv::new("G"));
+        let l = e.label.unwrap();
+        assert_eq!(l.text.as_ref().unwrap().lines[0].text, "ea->b");
+        assert!((l.dimen.x - 22.85).abs() < 0.01);
+        assert!((e.head_label.unwrap().dimen.x - 4.0).abs() < 1e-9);
+        assert!(e.tail_label.is_none());
     }
 
     #[test]

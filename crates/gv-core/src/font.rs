@@ -81,6 +81,10 @@ pub struct TextLabelLayout {
     pub font_name: String,
     /// Font size in points used for measurement.
     pub font_size: f64,
+    /// The label text after object-escape substitution and entity conversion (C's
+    /// `lp->text`), still containing the `\\n`/`\\l`/`\\r` line escapes.
+    #[serde(default)]
+    pub source: String,
 }
 
 /// Context for Graphviz object-based escape sequence substitution (`\N`, `\G`, `\T`, `\H`, `\E`, `\L`).
@@ -587,7 +591,9 @@ pub fn make_text_label(
     } else {
         html_entity_utf8(&substituted)
     };
-    make_simple_label(&converted, font_name, font_size)
+    let mut layout = make_simple_label(&converted, font_name, font_size);
+    layout.source = converted;
+    layout
 }
 
 /// Returns `true` if a graph's `charset` attribute selects Latin-1 (`findCharset` in
