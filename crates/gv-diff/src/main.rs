@@ -21,7 +21,12 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Mutex;
 
+mod e2e;
+
 fn main() -> ExitCode {
+    if std::env::args().nth(1).as_deref() == Some("e2e") {
+        return e2e::main(std::env::args().skip(2).collect());
+    }
     if std::env::args().nth(1).as_deref() == Some("render") {
         return render_main(std::env::args().skip(2).collect());
     }

@@ -71,6 +71,10 @@ pub struct SubgraphData {
 /// renderers neither draw it nor give it layout attributes.
 pub const CLUST_NODE_KEY: &str = "\u{1}clustnode";
 
+/// Subgraph attribute set by a layout that registers a cluster without making its label
+/// (`GD_label` stays NULL, e.g. patchwork's `mkClusters`): renderers neither draw nor size it.
+pub const NO_GRAPH_LABEL_KEY: &str = "\u{1}nolabel";
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
