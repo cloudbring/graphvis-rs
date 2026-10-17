@@ -1,0 +1,5 @@
+graph 1 2.4074 1.5
+node néud 1.2037 1.25 1.2968 0.5 "cafÃ© here" solid ellipse black lightgrey
+node b 1.2037 0.25 2.4074 0.5 "ok Ã© and äÂ¼z and Ã¸x" solid ellipse black lightgrey
+edge néud b 4 1.2037 0.99579 1.2037 0.89454 1.2037 0.77397 1.2037 0.66022 solid black
+stop

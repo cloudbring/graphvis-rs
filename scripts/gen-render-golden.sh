@@ -41,7 +41,7 @@ for f in "$REPO_ROOT"/tests/wild/*.gv "$REPO_ROOT"/tests/fixtures/*.gv "$REPO_RO
   laid="$OUT/laid/$stem.dot"
   # Rewrite any `layout` attribute to neato: it overrides the -K engine, and -n2
   # applies only to neato.
-  dot -Tdot "$f" 2>/dev/null | sed -E 's/(^|[[:space:],[])layout=[A-Za-z0-9_]+/\1layout=neato/' > "$laid" || true
+  dot -Tdot "$f" 2>/dev/null | LC_ALL=C sed -E 's/(^|[[:space:],[])layout=[A-Za-z0-9_]+/\1layout=neato/' > "$laid" || true
   if [ ! -s "$laid" ]; then
     rm -f "$laid"
     continue

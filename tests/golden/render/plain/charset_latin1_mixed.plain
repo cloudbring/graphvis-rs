@@ -1,0 +1,5 @@
+graph 1 1.6026 2.3639
+node b 0.68972 0.4625 0.75 0.71667 "{r�c|<p>�}" solid record black lightgrey
+node a 0.68972 2.1139 1.3794 0.5 "Ã©tÃ© & a" solid ellipse black lightgrey
+edge a b 4 0.83829 1.8635 1.1047 1.4208 1.6026 0.49607 1.2299 0.31969  1.1339 1.4972 solid black
+stop

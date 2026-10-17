@@ -1,0 +1,5 @@
+digraph G {
+ "néud" [label="café here"]
+ b [label="ok Ã© and ä¼z and øx"]
+ "néud" -> b
+}

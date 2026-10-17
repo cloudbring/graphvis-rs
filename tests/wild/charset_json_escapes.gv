@@ -1,0 +1,4 @@
+digraph G {
+ a [label="tab	herectl \"q\" /sl"]
+ "é" -> a [label="&amp;&lt;x&gt;"]
+}
