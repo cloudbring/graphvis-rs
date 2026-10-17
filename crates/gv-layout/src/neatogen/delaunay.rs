@@ -127,6 +127,14 @@ pub fn delaunay_tri(x: &[f64], y: &[f64]) -> Vec<(usize, usize)> {
     // Collinear: chain the points sorted along x (y for a vertical line).
     let mut vs: Vec<usize> = (0..n).collect();
     let key: &[f64] = if n > 1 && x[0] == x[1] { y } else { x };
-    vs.sort_by(|a, b| key[*a].total_cmp(&key[*b]));
+    crate::cutil::qsort_by(&mut vs, |a, b| {
+        if key[*a] < key[*b] {
+            -1
+        } else if key[*a] > key[*b] {
+            1
+        } else {
+            0
+        }
+    });
     vs.windows(2).map(|w| (w[0], w[1])).collect()
 }

@@ -710,8 +710,17 @@ pub fn array_rects(gs: &[BoundingBox], pinfo: &PackInfo) -> Vec<Point> {
         .collect();
     let mut sinfo: Vec<usize> = (0..ng).collect();
     if let Some(vals) = &pinfo.vals {
-        // gv_sort is a stable merge sort over user values.
-        sinfo.sort_by_key(|&i| vals[info[i].2]);
+        // gv_sort is qsort with a context argument.
+        qsort_by(&mut sinfo, |a, b| {
+            let (x, y) = (vals[info[*a].2], vals[info[*b].2]);
+            if x > y {
+                1
+            } else if x < y {
+                -1
+            } else {
+                0
+            }
+        });
     } else if pinfo.flags & PK_INPUT_ORDER == 0 {
         qsort_by(&mut sinfo, |a, b| {
             let da = info[*a].1 + info[*a].0;

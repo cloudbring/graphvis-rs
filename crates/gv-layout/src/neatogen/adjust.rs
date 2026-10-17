@@ -331,3 +331,19 @@ pub fn remove_overlap_with(g: &mut LGraph<'_>, sub: &Sub, am: &AdjustData) -> bo
     };
     nret || ret
 }
+
+/// `removeOverlapAs(G, flag)`: remove overlaps using an explicit `overlap` value.
+pub fn remove_overlap_as(g: &mut LGraph<'_>, sub: &Sub, flag: Option<&str>) -> bool {
+    if sub.nodes.len() < 2 {
+        return false;
+    }
+    let am = get_adjust_mode(g, flag.unwrap_or(""));
+    remove_overlap_with(g, sub, &am)
+}
+
+/// `adjustNodes(G)`: remove overlaps according to the graph's `overlap` attribute
+/// (used by twopi and circo).
+pub fn adjust_nodes(g: &mut LGraph<'_>, sub: &Sub) -> bool {
+    let flag = g.gattr("overlap");
+    remove_overlap_as(g, sub, flag)
+}
