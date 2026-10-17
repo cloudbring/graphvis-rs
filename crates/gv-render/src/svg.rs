@@ -281,29 +281,28 @@ fn format_paint_and_opacity(
         .map(first_color_token)
         .filter(|s| !s.is_empty())
         .unwrap_or(default_name);
-    if raw.eq_ignore_ascii_case("transparent")
-        || raw.eq_ignore_ascii_case("none")
-        || raw.eq_ignore_ascii_case("invis")
-    {
-        return ("none".to_string(), None);
-    }
-    if let Some(rgba) = resolve_color_with_scheme(raw, colorscheme) {
-        if rgba.is_transparent() {
+    // `gvrender_resolve_color`: names the SVG renderer knows are written through unchanged,
+    // whatever the colorscheme; anything else goes through `colorxlate`.
+    if is_svg_known_color(raw) {
+        if raw.eq_ignore_ascii_case("transparent") {
             return ("none".to_string(), None);
         }
-        let hex = if is_svg_known_color(raw) && colorscheme.is_none() {
-            raw.to_ascii_lowercase()
-        } else {
-            rgba.to_hex_rgb()
-        };
-        let opacity = if rgba.a < 255 {
-            Some(f64::from(rgba.a) / 255.0)
-        } else {
-            None
-        };
-        (hex, opacity)
-    } else {
-        (default_name.to_string(), None)
+        return (raw.to_string(), None);
+    }
+    match resolve_color_with_scheme(raw, colorscheme) {
+        Some(rgba) if rgba.is_transparent() => ("none".to_string(), None),
+        Some(rgba) => {
+            let opacity = if rgba.a < 255 {
+                Some(f64::from(rgba.a) / 255.0)
+            } else {
+                None
+            };
+            (rgba.to_hex_rgb(), opacity)
+        }
+        None => {
+            gv_core::warn_unknown_color(raw);
+            ("#000000".to_string(), None)
+        }
     }
 }
 
@@ -3158,5 +3157,25 @@ fn emit_text_label(
         out.push_str("</text>\n");
 
         py -= line.height;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_paint_and_opacity;
+
+    #[test]
+    fn paint_follows_gvrender_resolve_color() {
+        let paint = |s, scheme| format_paint_and_opacity(Some(s), "lightgrey", scheme).0;
+        assert_eq!(paint("/blues9/5", None), "#6baed6");
+        assert_eq!(paint("5", Some("blues9")), "#6baed6");
+        assert_eq!(paint("Red", None), "Red");
+        assert_eq!(paint("red", Some("blues9")), "red");
+        assert_eq!(paint("transparent", None), "none");
+        assert_eq!(paint("nosuchcolor", None), "#000000");
+        assert_eq!(
+            format_paint_and_opacity(None, "lightgrey", None).0,
+            "lightgrey"
+        );
     }
 }
