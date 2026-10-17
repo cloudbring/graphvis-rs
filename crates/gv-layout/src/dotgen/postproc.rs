@@ -36,6 +36,33 @@ impl Dot<'_> {
         }
     }
 
+    /// `map_edge(e)`.
+    fn map_edge(&mut self, e: E, rankdir: i32, offset: Point) {
+        let Some(mut s) = self.edges[e].spl.take() else {
+            return;
+        };
+        for bz in &mut s {
+            for p in &mut bz.list {
+                *p = self.map_point(*p, rankdir, offset);
+            }
+            if bz.sflag != 0 {
+                bz.sp = self.map_point(bz.sp, rankdir, offset);
+            }
+            if bz.eflag != 0 {
+                bz.ep = self.map_point(bz.ep, rankdir, offset);
+            }
+        }
+        self.edges[e].spl = Some(s);
+        let ed = &self.edges[e];
+        for l in [ed.label, ed.xlabel, ed.head_label, ed.tail_label]
+            .into_iter()
+            .flatten()
+        {
+            self.labels[l].pos = self.map_point(self.labels[l].pos, rankdir, offset);
+        }
+    }
+
+    /// `translate_drawing(g)`.
     fn translate_drawing(&mut self, rankdir: i32, offset: Point) {
         let shift = offset.x != 0.0 || offset.y != 0.0;
         if !shift && rankdir == 0 {
@@ -43,33 +70,13 @@ impl Dot<'_> {
         }
         for n in self.nodes_of(0) {
             self.nodes[n].coord = self.map_point(self.nodes[n].coord, rankdir, offset);
-        }
-        for e in 0..self.spl.len() {
-            if let Some(spl) = self.spl[e].take() {
-                let mut s = spl;
-                for bz in &mut s {
-                    for p in &mut bz.list {
-                        *p = self.map_point(*p, rankdir, offset);
-                    }
-                    if let Some(sp) = bz.sp {
-                        bz.sp = Some(self.map_point(sp, rankdir, offset));
-                    }
-                    if let Some(ep) = bz.ep {
-                        bz.ep = Some(self.map_point(ep, rankdir, offset));
-                    }
-                }
-                self.spl[e] = Some(s);
-            }
-            for l in [
-                self.edges[e].label,
-                self.edges[e].head_label,
-                self.edges[e].tail_label,
-                self.edges[e].xlabel,
-            ]
-            .into_iter()
-            .flatten()
-            {
+            if let Some(l) = self.nodes[n].xlabel {
                 self.labels[l].pos = self.map_point(self.labels[l].pos, rankdir, offset);
+            }
+            if self.splines_done {
+                for e in self.out_edges(0, n) {
+                    self.map_edge(e, rankdir, offset);
+                }
             }
         }
         self.translate_bb(0, rankdir, offset);
@@ -164,6 +171,7 @@ impl Dot<'_> {
         } else {
             self.place_graph_label(g);
         }
+        self.add_xlabels();
         let mut dimen = Point::new(0.0, 0.0);
         if let Some(l) = self.graphs[g].label
             && !self.labels[l].set
@@ -214,6 +222,17 @@ impl Dot<'_> {
         {
             self.place_root_label(dimen);
         }
+    }
+
+    /// `addXLabels(gp)`, gated on `GD_has_labels` and `EdgeLabelsDone` as in C.
+    fn add_xlabels(&mut self) {
+        let hl = self.graphs[0].has_labels;
+        if hl & (NODE_XLABEL | EDGE_XLABEL | TAIL_LABEL | HEAD_LABEL) == 0
+            && (hl & EDGE_LABEL == 0 || self.splines_done)
+        {
+            return;
+        }
+        crate::common::xlabels::add_xlabels(self);
     }
 
     /// `removeFill`: delete the newrank fill nodes before splines.

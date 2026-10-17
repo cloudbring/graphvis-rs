@@ -290,15 +290,41 @@ impl<'g> Model<'g> {
         for (ei, e) in g.edges.iter().enumerate() {
             out_edges[e.tail.0 as usize].push(ei);
             let a = Attrs(&e.attrs);
-            let (stype, etype) = arrow_flags(a, directed);
+            let (mut stype, mut etype) = arrow_flags(a, directed);
+            // concentrate=true merges the arrowheads of an opposing edge into
+            // this one (`ED_conc_opp_flag` in arrow_flags); the layout only
+            // records that an end has an arrow, so take its type from there.
+            let has_s = e.spline.segments.iter().any(|s| s.start_arrow.is_some());
+            let has_e = e.spline.segments.iter().any(|s| s.end_arrow.is_some());
+            if (has_s && stype == 0) || (has_e && etype == 0) {
+                let opp = g
+                    .edges
+                    .iter()
+                    .find(|o| o.tail == e.head && o.head == e.tail)
+                    .map(|o| arrow_flags(Attrs(&o.attrs), directed));
+                if let Some((os, oe)) = opp {
+                    stype |= oe;
+                    etype |= os;
+                }
+            }
             let bz = e
                 .spline
                 .segments
                 .iter()
                 .map(|s| Bz {
                     list: s.points.clone(),
-                    sflag: if s.start_arrow.is_some() { stype } else { 0 },
-                    eflag: if s.end_arrow.is_some() { etype } else { 0 },
+                    // An end the layout swapped (`swapEnds`, e.g. flat edges
+                    // routed backwards) carries the other end's arrow type.
+                    sflag: match (s.start_arrow.is_some(), stype) {
+                        (false, _) => 0,
+                        (true, 0) => etype,
+                        (true, t) => t,
+                    },
+                    eflag: match (s.end_arrow.is_some(), etype) {
+                        (false, _) => 0,
+                        (true, 0) => stype,
+                        (true, t) => t,
+                    },
                     sp: s.start_arrow.unwrap_or_default(),
                     ep: s.end_arrow.unwrap_or_default(),
                 })

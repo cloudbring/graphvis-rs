@@ -86,7 +86,11 @@ impl Dot<'_> {
         }
         self.mark_lowclusters(g);
         self.set_ycoords(g);
-        // Concentrate: dot_concentrate (conc.c) is phase 3.
+        if self.concentrate {
+            // C reports "concentrate=true may not work correctly" and gives up
+            // on the layout; keep going with what was merged.
+            let _ = self.dot_concentrate();
+        }
         self.expand_leaves(g);
         if self.flat_edges(g) {
             self.set_ycoords(g);
