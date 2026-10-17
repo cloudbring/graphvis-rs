@@ -1,0 +1,9 @@
+graph {
+	graph [bb="0,0,23,24.8",
+		label=x,
+		lheight=0.23,
+		lp="11.5,12.4",
+		lwidth=0.10
+	];
+	node [label="\N"];
+}

@@ -1,0 +1,9 @@
+digraph G {
+	graph [bb="0,0,68.538,36"];
+	node [label="\N"];
+	n14	[URL="a.html",
+		height=0.5,
+		label=<&amp; &lt; &gt;>,
+		pos="34.269,18",
+		width=0.95191];
+}

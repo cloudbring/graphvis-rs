@@ -1,0 +1,16 @@
+strict digraph G {
+	graph [bb="0,0,69,128.17"];
+	node [label="\N"];
+	edge [label="Ünïcödé\rπ\rעברית\n"];
+	n6	[height=0.5,
+		pos="42,106.8",
+		width=0.75];
+	n13	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	n6:nw -> n13	[arrowsize=1.93,
+		label=Start,
+		lp="32.422,62.4",
+		pos="e,23.169,36.189 26.983,122.82 5.8353,143.96 12.11,94.08 19.142,56.362",
+		samehead=sh1];
+}

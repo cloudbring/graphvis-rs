@@ -1,0 +1,10 @@
+graph G {
+	graph [bb="0,0,54,37"];
+	node [label="\N"];
+	r1	[height=0.51389,
+		label="{a|b",
+		pos="27,18.5",
+		rects="0,0.5,53.662,36.5",
+		shape=record,
+		width=0.75];
+}

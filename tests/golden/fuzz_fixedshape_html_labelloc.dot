@@ -1,0 +1,10 @@
+graph G {
+	graph [bb="0,0,68.89,53.6"];
+	node [label="\N"];
+	n12	[fixedsize=shape,
+		height=0.74444,
+		label=<<TABLE BGCOLOR="white" STYLE="rounded"><TR><TD>1<BR/>2</TD><TD>αβ</TD><TD><I>i</I></TD></TR></TABLE>>,
+		labelloc=t,
+		pos="34.445,26.8",
+		width=0.9568];
+}

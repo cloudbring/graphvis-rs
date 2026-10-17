@@ -1,0 +1,9 @@
+digraph G {
+	graph [bb="0,0,86.267,91.641"];
+	node [label="\N"];
+	"strict"	[color=gray,
+		height=1.2728,
+		label=<<TABLE CELLPADDING="2" ALIGN="CENTER"><TR><TD WIDTH="31" HEIGHT="26"><B>b</B></TD></TR><TR><TD PORT="h0" ROWSPAN="2" BGCOLOR="red"><I>i</I></TD></TR><TR><TD></TD></TR></TABLE>>,
+		pos="43.134,45.821",
+		width=1.1982];
+}
