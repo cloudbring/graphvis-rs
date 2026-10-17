@@ -191,7 +191,7 @@ pub(crate) fn parse_style(s: &str) -> Vec<StyleItem> {
         match b[i] {
             b'(' => {
                 if in_parens {
-                    eprintln!("Error: nesting not allowed in style: {s}");
+                    gv_core::diag::agerrorf(&format!("nesting not allowed in style: {s}\n"));
                     return Vec::new();
                 }
                 in_parens = true;
@@ -199,7 +199,7 @@ pub(crate) fn parse_style(s: &str) -> Vec<StyleItem> {
             }
             b')' => {
                 if !in_parens {
-                    eprintln!("Error: unmatched ')' in style: {s}");
+                    gv_core::diag::agerrorf(&format!("unmatched ')' in style: {s}\n"));
                     return Vec::new();
                 }
                 in_parens = false;
@@ -229,7 +229,7 @@ pub(crate) fn parse_style(s: &str) -> Vec<StyleItem> {
         }
     }
     if in_parens {
-        eprintln!("Error: unmatched '(' in style: {s}");
+        gv_core::diag::agerrorf(&format!("unmatched '(' in style: {s}\n"));
         return Vec::new();
     }
     out

@@ -539,6 +539,16 @@ impl Fdp<'_, '_> {
                 continue;
             }
             if self.parent[n].is_some() && self.parent[n] != self.gparent(g) {
+                let gname = |g: Option<usize>| match g {
+                    None => self.rg.src.name.as_str(),
+                    Some(c) => self.rg.src.subgraphs[self.tree.subgraph[c]].name.as_str(),
+                };
+                gv_core::diag::agerrorf(&format!(
+                    "node \"{}\" is contained in two non-comparable clusters \"{}\" and \"{}\"\n",
+                    self.rg.src.nodes[n].name,
+                    gname(g),
+                    gname(self.parent[n].unwrap())
+                ));
                 return None;
             }
             self.parent[n] = Some(g);

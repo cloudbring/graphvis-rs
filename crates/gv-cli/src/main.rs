@@ -272,7 +272,9 @@ fn main() -> ExitCode {
     if let Some(w) = shared_out.as_mut() {
         let _ = w.flush();
     }
-    if failed {
+    // dot's main returns `graphviz_errors + agerrors()`: an error reported during layout
+    // or rendering fails the run even though the output was written.
+    if failed || gv_core::diag::error_count() > 0 {
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS

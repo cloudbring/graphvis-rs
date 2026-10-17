@@ -110,6 +110,11 @@ fn finddqsplit(dq: &Deque, pnl: &Pnl, p: usize) -> usize {
     dq.apex
 }
 
+/// `prerror(msg)` of `shortest.c`, with the C line number it reports.
+fn prerror(line: u32, msg: &str) {
+    eprintln!("lib/pathplan/shortest.c:{line}: {msg}");
+}
+
 /// `Pshortestpath(polyp, eps, &output)`: `Err` when an endpoint is outside
 /// the polygon or triangulation fails.
 pub fn pshortestpath(
@@ -183,7 +188,8 @@ pub fn pshortestpath(
                 }
             }
             if !found {
-                // "triangulation failed": C keeps the triangles found so far.
+                // C keeps the triangles found so far.
+                prerror(333, "triangulation failed");
                 break;
             }
         } else {
@@ -214,13 +220,20 @@ pub fn pshortestpath(
             }
         }
     }
-    let ftrii = (0..tris.len())
-        .find(|&t| pointintri(&tris, &pnl, t, eps[0]))
-        .ok_or(super::PathplanError)?;
-    let ltrii = (0..tris.len())
-        .find(|&t| pointintri(&tris, &pnl, t, eps[1]))
-        .ok_or(super::PathplanError)?;
-    if !marktripath(&mut tris, ftrii, ltrii) || ftrii == ltrii {
+    let Some(ftrii) = (0..tris.len()).find(|&t| pointintri(&tris, &pnl, t, eps[0])) else {
+        prerror(182, "source point not in any triangle");
+        return Err(super::PathplanError);
+    };
+    let Some(ltrii) = (0..tris.len()).find(|&t| pointintri(&tris, &pnl, t, eps[1])) else {
+        prerror(193, "destination point not in any triangle");
+        return Err(super::PathplanError);
+    };
+    if !marktripath(&mut tris, ftrii, ltrii) {
+        // a straight line is better than failing
+        prerror(203, "cannot find triangle path");
+        return Ok(vec![eps[0], eps[1]]);
+    }
+    if ftrii == ltrii {
         return Ok(vec![eps[0], eps[1]]);
     }
     let e0 = pnll;

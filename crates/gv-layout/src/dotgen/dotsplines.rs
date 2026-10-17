@@ -1143,11 +1143,12 @@ impl Dot<'_> {
 
     fn route(&self, p: &mut Path, spline: bool) -> Option<Vec<Point>> {
         let real = orig_edge(self, p.data);
-        let is_loop = self.edges[real].tail == self.edges[real].head;
+        let (t, h) = (self.edges[real].tail, self.edges[real].head);
+        let loop_head = (t == h).then(|| self.nodes[h].name.as_str());
         if spline {
-            routesplines(p, is_loop)
+            routesplines(p, loop_head)
         } else {
-            routepolylines(p, is_loop)
+            routepolylines(p, loop_head)
         }
     }
 

@@ -2,6 +2,7 @@
 
 pub mod color;
 mod color_table;
+pub mod diag;
 pub mod error;
 pub mod font;
 pub mod geom;
