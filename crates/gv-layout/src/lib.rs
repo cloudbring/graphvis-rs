@@ -4,9 +4,11 @@ pub mod common;
 pub mod cutil;
 pub mod dot;
 pub mod dotgen;
+pub mod fdpgen;
 pub mod force_circular;
 pub mod neatogen;
 pub mod pack;
+pub mod patchwork;
 pub mod sfdpgen;
 pub mod sparse;
 
@@ -65,7 +67,7 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
         LayoutEngine::Twopi => force_circular::layout_twopi(graph),
         LayoutEngine::Circo => force_circular::layout_circo(graph),
         LayoutEngine::Osage => force_circular::layout_osage(graph),
-        LayoutEngine::Patchwork => force_circular::layout_patchwork(graph),
+        LayoutEngine::Patchwork => patchwork::patchwork_layout(graph),
     }
 }
 
@@ -236,8 +238,11 @@ mod tests {
                 assert!(node.pos.x.is_finite() && node.pos.y.is_finite());
                 assert!(node.pos.x >= 0.0 && node.pos.y >= 0.0);
             }
-            for edge in &g.edges {
-                assert!(!edge.spline.segments.is_empty());
+            // patchwork draws no edges, as in C.
+            if engine != LayoutEngine::Patchwork {
+                for edge in &g.edges {
+                    assert!(!edge.spline.segments.is_empty());
+                }
             }
         }
     }

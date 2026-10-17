@@ -430,8 +430,12 @@ pub(crate) fn build_positioned_graph(graph: &Graph, xdot: bool) -> Graph {
             label_text: &label_text_owned,
         };
 
+        // C prints `lp` only for a placed label; an edge the layout neither
+        // routed nor labelled (osage/patchwork, splines=none) has none.
+        let label_placed = edge.label_pos.is_some() || !edge.spline.segments.is_empty();
         if let Some(e_label) = edge.attrs.get("label").cloned()
             && !e_label.is_empty()
+            && label_placed
         {
             let lp = edge.label_pos.unwrap_or_else(|| {
                 spline
