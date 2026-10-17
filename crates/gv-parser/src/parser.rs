@@ -795,6 +795,17 @@ impl Parser {
         let mut merged_attrs = self.current_edge_defaults().clone();
         merged_attrs.extend(edge_attrs.clone());
 
+        // agedge on a strict graph returns the existing edge, to which applyattrs adds
+        // only this statement's attributes (the defaults applied when it was made).
+        let undirected = self.graph.kind == gv_core::GraphKind::Undirected;
+        let exists = self.graph.strict
+            && self.graph.edges.iter().any(|e| {
+                (e.tail == tail && e.head == head)
+                    || (undirected && e.tail == head && e.head == tail)
+            });
+        if exists {
+            merged_attrs = edge_attrs.clone();
+        }
         let before = self.graph.edges.len();
         let edge_id = self.graph.add_edge(tail, head, merged_attrs.clone());
         let is_new = self.graph.edges.len() > before;
