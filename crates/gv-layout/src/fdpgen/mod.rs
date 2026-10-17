@@ -13,7 +13,12 @@
 //! `patchwork`, which carry copies of the same C function.
 
 // Faithful ports of numeric C loops index several arrays in lockstep.
-#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+#![allow(
+    clippy::needless_range_loop,
+    clippy::too_many_arguments,
+    // `!(dist > 0.0)` also catches NaN, as in C.
+    clippy::neg_cmp_op_on_partial_ord
+)]
 
 pub mod comp;
 pub mod fdpinit;

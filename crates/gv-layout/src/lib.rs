@@ -88,7 +88,7 @@ pub fn layout_graph_with_options(
         LayoutEngine::Nop1 => nop::layout_nop(graph, 1),
         LayoutEngine::Nop2 => nop::layout_nop(graph, 2),
         LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph),
-        LayoutEngine::Fdp => force_circular::layout_fdp(graph),
+        LayoutEngine::Fdp => fdpgen::layout::fdp_layout(graph),
         LayoutEngine::Sfdp => sfdpgen::sfdpinit::sfdp_layout(graph),
         LayoutEngine::Twopi => force_circular::layout_twopi(graph),
         LayoutEngine::Circo => force_circular::layout_circo(graph),

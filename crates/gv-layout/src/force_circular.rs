@@ -1,17 +1,16 @@
 #![allow(clippy::needless_range_loop)]
 //! Non-hierarchical Graphviz layout engines ported from Graphviz 16.1.0:
 //! - `neato`: Kamada-Kawai spring / stress majorization (`lib/neatogen/stress.c`)
-//! - `fdp`: Fruchterman-Reingold force-directed layout (`lib/fdpgen/layout.c`)
 //! - `twopi`: Radial concentric-ring BFS tree layout (`lib/twopigen/circle.c`)
 //! - `circo`: Circular biconnected/DFS cycle layout (`lib/circogen/circular.c`)
 
 use crate::dot::{
     compute_cluster_bounding_boxes, node_bounding_box, normalize_graph_coordinates, parse_attr_f64,
 };
-use gv_core::{BoundingBox, Graph, Point, Result, SubgraphId};
+use gv_core::{BoundingBox, Graph, Point, Result};
 use gv_geom::splines::route_edge_spline;
 use std::collections::{BTreeMap, VecDeque};
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::TAU;
 
 const POINTS_PER_INCH: f64 = 72.0;
 
@@ -310,144 +309,6 @@ pub fn layout_neato(graph: &mut Graph) -> Result<()> {
         remove_node_overlaps(graph, 4.0);
     }
 
-    compute_cluster_bounding_boxes(graph);
-    route_all_non_hierarchical_splines(graph);
-    normalize_graph_coordinates(graph);
-    Ok(())
-}
-
-// ============================================================================
-// 2. Fdp & Sfdp: Spring-Electrical Force-Directed Layout (`lib/fdpgen/layout.c`)
-// ============================================================================
-
-pub fn layout_fdp(graph: &mut Graph) -> Result<()> {
-    if !init_non_hierarchical_nodes(graph) {
-        return Ok(());
-    }
-    let n = graph.nodes.len();
-    if n == 1 {
-        graph.nodes[0].pos = Point::new(0.0, 0.0);
-        compute_cluster_bounding_boxes(graph);
-        route_all_non_hierarchical_splines(graph);
-        normalize_graph_coordinates(graph);
-        return Ok(());
-    }
-
-    let default_k = 1.0;
-    let k_in = parse_attr_f64(&graph.graph_attrs, "K", default_k).max(0.1);
-    let avg_diam_pt: f64 = graph
-        .nodes
-        .iter()
-        .map(|nd| nd.width.max(nd.height) * POINTS_PER_INCH)
-        .sum::<f64>()
-        / (n as f64);
-    let k_pt = (k_in * POINTS_PER_INCH).max(avg_diam_pt + 20.0);
-
-    // Deterministic golden-angle spiral initialization so no two nodes start collinear or coincident.
-    let golden_angle = PI * (3.0 - 5.0f64.sqrt());
-    for (i, node) in graph.nodes.iter_mut().enumerate() {
-        let r = k_pt * 0.75 * ((i + 1) as f64).sqrt();
-        let theta = (i as f64) * golden_angle;
-        node.pos = Point::new(r * theta.cos(), r * theta.sin());
-    }
-
-    // Identify cluster membership for cluster cohesion forces in `fdp`.
-    let mut node_cluster: Vec<Option<SubgraphId>> = vec![None; n];
-    for subg in &graph.subgraphs {
-        if subg.is_cluster {
-            for &nid in &subg.nodes {
-                node_cluster[nid.0 as usize] = Some(subg.id);
-            }
-        }
-    }
-
-    let iterations = 120usize;
-    let initial_temp = k_pt * (n as f64).sqrt().max(1.5);
-    let mut disp = vec![Point::new(0.0, 0.0); n];
-
-    for step in 0..iterations {
-        let temp = initial_temp * (1.0 - (step as f64) / (iterations as f64)).max(0.02);
-        disp.fill(Point::new(0.0, 0.0));
-
-        // Repulsive forces between all node pairs: $f_r(d) = K^2 / d$.
-        for i in 0..n {
-            for j in (i + 1)..n {
-                let diff = Point::new(
-                    graph.nodes[i].pos.x - graph.nodes[j].pos.x,
-                    graph.nodes[i].pos.y - graph.nodes[j].pos.y,
-                );
-                let dist = diff.x.hypot(diff.y).max(1.0);
-                let dir = diff.normalized_or_zero();
-                let force = (k_pt * k_pt) / dist;
-                disp[i].x += dir.x * force;
-                disp[i].y += dir.y * force;
-                disp[j].x -= dir.x * force;
-                disp[j].y -= dir.y * force;
-            }
-        }
-
-        // Attractive forces along edges: $f_a(d) = w \cdot d^2 / K$.
-        for edge in &graph.edges {
-            let u = edge.tail.0 as usize;
-            let v = edge.head.0 as usize;
-            if u == v {
-                continue;
-            }
-            let weight = parse_attr_f64(&edge.attrs, "weight", 1.0).max(0.1);
-            let diff = Point::new(
-                graph.nodes[u].pos.x - graph.nodes[v].pos.x,
-                graph.nodes[u].pos.y - graph.nodes[v].pos.y,
-            );
-            let dist = diff.x.hypot(diff.y).max(1.0);
-            let dir = diff.normalized_or_zero();
-            let force = weight * (dist * dist) / k_pt;
-            disp[u].x -= dir.x * force;
-            disp[u].y -= dir.y * force;
-            disp[v].x += dir.x * force;
-            disp[v].y += dir.y * force;
-        }
-
-        // Cluster cohesion: gently pull nodes in the same cluster toward their cluster centroid.
-        for subg in &graph.subgraphs {
-            if !subg.is_cluster || subg.nodes.len() <= 1 {
-                continue;
-            }
-            let mut cx = 0.0;
-            let mut cy = 0.0;
-            for &nid in &subg.nodes {
-                cx += graph.nodes[nid.0 as usize].pos.x;
-                cy += graph.nodes[nid.0 as usize].pos.y;
-            }
-            cx /= subg.nodes.len() as f64;
-            cy /= subg.nodes.len() as f64;
-            for &nid in &subg.nodes {
-                let idx = nid.0 as usize;
-                if node_cluster[idx] == Some(subg.id) {
-                    disp[idx].x += (cx - graph.nodes[idx].pos.x) * 0.25;
-                    disp[idx].y += (cy - graph.nodes[idx].pos.y) * 0.25;
-                }
-            }
-        }
-
-        // Weak gravity toward origin to keep disconnected components compact.
-        for i in 0..n {
-            disp[i].x -= graph.nodes[i].pos.x * 0.03;
-            disp[i].y -= graph.nodes[i].pos.y * 0.03;
-        }
-
-        // Apply temperature-clamped displacements.
-        for i in 0..n {
-            let d_len = disp[i].x.hypot(disp[i].y);
-            if d_len > 1e-9 {
-                let step_len = d_len.min(temp);
-                let dir = disp[i].normalized_or_zero();
-                graph.nodes[i].pos.x += dir.x * step_len;
-                graph.nodes[i].pos.y += dir.y * step_len;
-            }
-        }
-    }
-
-    remove_node_overlaps(graph, 6.0);
     compute_cluster_bounding_boxes(graph);
     route_all_non_hierarchical_splines(graph);
     normalize_graph_coordinates(graph);
