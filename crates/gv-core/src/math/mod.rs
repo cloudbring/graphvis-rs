@@ -25,6 +25,35 @@ mod trace {
 /// feature forces it on macOS, to check the portable code against the corpus natively.
 pub const PORTABLE: bool = cfg!(any(not(target_vendor = "apple"), feature = "portable-math"));
 
+/// Which libm this build computes with. The corpus ratchets keep one baseline per profile:
+/// `Apple` results are C's bit for bit, `Portable` ones document the gap to C (see
+/// `docs/porting/libm.md`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Profile {
+    /// The system libm on Apple targets, the one C Graphviz uses there.
+    Apple,
+    /// [`portable`]: identical on every target (Linux, wasm32, macOS with `portable-math`).
+    Portable,
+}
+
+impl Profile {
+    /// Lower-case name, as used in baseline file names (`baseline.portable.json`).
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Profile::Apple => "apple",
+            Profile::Portable => "portable",
+        }
+    }
+}
+
+/// The math profile of this build.
+pub const PROFILE: Profile = if PORTABLE {
+    Profile::Portable
+} else {
+    Profile::Apple
+};
+
 /// C `hypot(x, y)`.
 #[inline]
 #[must_use]

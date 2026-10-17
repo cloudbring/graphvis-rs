@@ -2,7 +2,9 @@
 //! further from C Graphviz than the patchwork baseline.
 //!
 //! Refresh the baseline after an improvement with
-//! `cargo run --release -p gv-diff -- --golden tests/golden/patchwork --baseline tests/golden/patchwork-baseline.json --update tests/patchwork`.
+//! `cargo run --release -p gv-diff -- --golden tests/golden/patchwork --baseline tests/golden/patchwork-baseline.json --update tests/patchwork`. Add
+//! `--features gv-core/portable-math` to refresh the portable baseline (`*.portable.json`), which
+//! gv-diff selects on every portable-math build (Linux, wasm32, or macOS with the feature).
 
 use std::process::Command;
 

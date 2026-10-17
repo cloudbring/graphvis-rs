@@ -7,8 +7,12 @@
 //! Only hashes of C's output are stored (`tests/golden/e2e.json`), written by
 //! `gv-diff e2e --generate` with the pango-free C build (`GVBINDIR`, see
 //! `scripts/gen-golden.sh`). Inputs whose C output changes between two runs are recorded
-//! as unstable and skipped. The baseline (`tests/golden/e2e-baseline.json`) lists the files
-//! that match; a file in it that stops matching fails the check.
+//! as unstable and skipped. The baseline (`tests/golden/e2e-baseline.json`, or
+//! `e2e-baseline.portable.json` for the portable math profile) lists the files that match; a
+//! file in it that stops matching fails the check.
+//!
+//! `--hashes FILE` also writes the hash of every output (matching C or not), to compare two
+//! builds bit for bit.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -162,12 +166,14 @@ pub fn main(args: Vec<String>) -> ExitCode {
     let mut baseline_path = PathBuf::from("tests/golden/e2e-baseline.json");
     let (mut generate, mut update, mut list) = (false, false, false);
     let mut filter: Option<String> = None;
+    let mut hashes_path: Option<PathBuf> = None;
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--generate" => generate = true,
             "--update" => update = true,
             "--list" => list = true,
+            "--hashes" => hashes_path = Some(it.next().expect("--hashes FILE").into()),
             "--golden" => golden_path = it.next().expect("--golden FILE").into(),
             "--baseline" => baseline_path = it.next().expect("--baseline FILE").into(),
             "--filter" => filter = it.next(),
@@ -177,6 +183,7 @@ pub fn main(args: Vec<String>) -> ExitCode {
             }
         }
     }
+    let baseline_path = gv_diff::profile_baseline(&baseline_path);
     let mut items = inputs(Path::new("."));
     if let Some(f) = &filter {
         items.retain(|(k, _)| k.contains(f.as_str()));
@@ -250,6 +257,14 @@ pub fn main(args: Vec<String>) -> ExitCode {
         golden.unstable.len()
     );
 
+    if let Some(p) = &hashes_path {
+        // Every output's hash, matching C or not: compares two builds (e.g. Linux against
+        // macOS with `portable-math`) more finely than the identical set does.
+        let json = serde_json::to_string_pretty(&results).expect("serialize hashes");
+        std::fs::write(p, json + "\n").expect("write hashes");
+        println!("hashes written: {}", p.display());
+    }
+    crate::print_profile(&baseline_path);
     if update {
         let b = E2eBaseline { identical };
         let json = serde_json::to_string_pretty(&b).expect("serialize");
