@@ -60,8 +60,8 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
             }
         }
         LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph),
-        LayoutEngine::Fdp => force_circular::layout_fdp(graph, false),
-        LayoutEngine::Sfdp => force_circular::layout_fdp(graph, true),
+        LayoutEngine::Fdp => force_circular::layout_fdp(graph),
+        LayoutEngine::Sfdp => sfdpgen::sfdpinit::sfdp_layout(graph),
         LayoutEngine::Twopi => force_circular::layout_twopi(graph),
         LayoutEngine::Circo => force_circular::layout_circo(graph),
         LayoutEngine::Osage => force_circular::layout_osage(graph),

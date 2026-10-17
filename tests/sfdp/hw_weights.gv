@@ -1,0 +1,7 @@
+graph w {
+layout=sfdp;
+
+
+a -- b [weight=5]; b -- c [weight=0.5]; c -- d; d -- a [weight=3];
+a -- e; e -- f [weight=2]; f -- b;
+}

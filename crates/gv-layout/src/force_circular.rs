@@ -1,7 +1,7 @@
 #![allow(clippy::needless_range_loop)]
 //! Non-hierarchical Graphviz layout engines ported from Graphviz 16.1.0:
 //! - `neato`: Kamada-Kawai spring / stress majorization (`lib/neatogen/stress.c`)
-//! - `fdp` & `sfdp`: Fruchterman-Reingold / spring-electrical force-directed layout (`lib/fdpgen/layout.c`)
+//! - `fdp`: Fruchterman-Reingold force-directed layout (`lib/fdpgen/layout.c`)
 //! - `twopi`: Radial concentric-ring BFS tree layout (`lib/twopigen/circle.c`)
 //! - `circo`: Circular biconnected/DFS cycle layout (`lib/circogen/circular.c`)
 //! - `osage`: Clustered recursive array/grid packing layout (`lib/osage/osageinit.c`)
@@ -322,7 +322,7 @@ pub fn layout_neato(graph: &mut Graph) -> Result<()> {
 // 2. Fdp & Sfdp: Spring-Electrical Force-Directed Layout (`lib/fdpgen/layout.c`)
 // ============================================================================
 
-pub fn layout_fdp(graph: &mut Graph, is_sfdp: bool) -> Result<()> {
+pub fn layout_fdp(graph: &mut Graph) -> Result<()> {
     if !init_non_hierarchical_nodes(graph) {
         return Ok(());
     }
@@ -335,7 +335,7 @@ pub fn layout_fdp(graph: &mut Graph, is_sfdp: bool) -> Result<()> {
         return Ok(());
     }
 
-    let default_k = if is_sfdp { 0.8 } else { 1.0 };
+    let default_k = 1.0;
     let k_in = parse_attr_f64(&graph.graph_attrs, "K", default_k).max(0.1);
     let avg_diam_pt: f64 = graph
         .nodes
@@ -363,7 +363,7 @@ pub fn layout_fdp(graph: &mut Graph, is_sfdp: bool) -> Result<()> {
         }
     }
 
-    let iterations = if is_sfdp { 160usize } else { 120usize };
+    let iterations = 120usize;
     let initial_temp = k_pt * (n as f64).sqrt().max(1.5);
     let mut disp = vec![Point::new(0.0, 0.0); n];
 

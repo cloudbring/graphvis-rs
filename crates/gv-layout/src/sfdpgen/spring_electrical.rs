@@ -12,7 +12,9 @@ use super::post_process::post_process_smoothing;
 use crate::cutil::CRand;
 use crate::neatogen::overlap::remove_overlap;
 use crate::sparse::quad_tree::{QuadTree, Supernodes};
-use crate::sparse::{MINDIST, SparseMatrix, distance, distance_cropped, drand, from_coordinate_arrays};
+use crate::sparse::{
+    MINDIST, SparseMatrix, distance, distance_cropped, drand, from_coordinate_arrays,
+};
 
 /// `ERROR_NOT_SQUARE_MATRIX`.
 pub const ERROR_NOT_SQUARE_MATRIX: i32 = -100;
@@ -459,7 +461,8 @@ fn repulsive_supernodes(
     for j in 0..sn.len() {
         let dist = sn.distances[j].max(MINDIST);
         for k in 0..dim {
-            f[k] += sn.wgts[j] * kp * (x[i * dim + k] - sn.center[j * dim + k]) / dist.powf(1.0 - p);
+            f[k] +=
+                sn.wgts[j] * kp * (x[i * dim + k] - sn.center[j * dim + k]) / dist.powf(1.0 - p);
         }
     }
 }
@@ -606,7 +609,11 @@ pub fn spring_electrical_spring_embedding(
                 }
                 let dist = distance_cropped(x, dim, i, c);
                 for k in 0..dim {
-                    let t = 0.2 * crk * (x[i * dim + k] - x[c * dim + k]) * (dist - dv[j]) * (dist - dv[j])
+                    let t = 0.2
+                        * crk
+                        * (x[i * dim + k] - x[c * dim + k])
+                        * (dist - dv[j])
+                        * (dist - dv[j])
                         / dist;
                     if dist < dv[j] {
                         f[k] += t;
@@ -749,6 +756,8 @@ fn pcp_rotate(n: usize, dim: usize, x: &mut [f64]) {
 
 /// `rotate(n, dim, x, angle)`: rotate by `angle` degrees about the centroid.
 fn rotate(n: usize, dim: usize, x: &mut [f64], angle: f64) {
+    // C's truncated pi.
+    #[allow(clippy::approx_constant)]
     let radian = 3.14159 / 180.0;
     let mut center = [0.0f64; 2];
     for i in 0..n {

@@ -133,7 +133,7 @@ impl QuadTree {
     fn new_in_quadrant(&mut self, center: &[f64], width: f64, mut i: usize) -> usize {
         let mut c = center.to_vec();
         for ck in c.iter_mut() {
-            if i % 2 == 0 {
+            if i.is_multiple_of(2) {
                 *ck -= width;
             } else {
                 *ck += width;

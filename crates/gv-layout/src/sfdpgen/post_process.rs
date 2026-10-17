@@ -331,7 +331,9 @@ pub fn stress_majorization_smoother2_new(
                     mask[kl] = i + m;
                     let dist = match ideal_dist_scheme {
                         IDEAL_GRAPH_DIST => 2.0,
-                        IDEAL_AVG_DIST => (2.0f64.mul_add(avg_dist[k], avg_dist[i]) + avg_dist[kl]) * 0.5,
+                        IDEAL_AVG_DIST => {
+                            (2.0f64.mul_add(avg_dist[k], avg_dist[i]) + avg_dist[kl]) * 0.5
+                        }
                         _ => distance_cropped(x, dim, i, kl).powf(0.4),
                     };
                     jw.push(kl as i32);

@@ -1,0 +1,13 @@
+graph two {
+	graph [bb="0,0,243.62,36",
+		layout=sfdp
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	b	[height=0.5,
+		pos="216.62,18",
+		width=0.75];
+	a -- b	[pos="54.168,18 90.112,18 153.12,18 189.19,18"];
+}

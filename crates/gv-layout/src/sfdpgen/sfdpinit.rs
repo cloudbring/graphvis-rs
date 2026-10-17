@@ -9,7 +9,9 @@ use super::spring_electrical::*;
 use crate::common::postproc::gv_postprocess;
 use crate::common::types::*;
 use crate::common::utils::{compute_bb, late_double, late_int, map_bool, mapbool};
-use crate::neatogen::adjust::{AdjustMode, DFLT_MARGIN, graph_adjust_mode, remove_overlap_with, sep_factor};
+use crate::neatogen::adjust::{
+    AdjustMode, DFLT_MARGIN, graph_adjust_mode, remove_overlap_with, sep_factor,
+};
 use crate::neatogen::neatoinit::{CL_OFFSET, set_seed};
 use crate::neatogen::neatosplines::spline_edges;
 use crate::neatogen::overlap::{get_sizes, make_matrix};
@@ -21,7 +23,12 @@ use gv_core::{Graph, Result};
 const ELS: &str = "|edgelabel|";
 
 /// `sfdpLayout(g, ctrl, pad)`: lay out one connected component.
-fn sfdp_layout_component(g: &mut LGraph<'_>, sub: &Sub, ctrl: &mut SpringElectricalControl, pad: (f64, f64)) {
+fn sfdp_layout_component(
+    g: &mut LGraph<'_>,
+    sub: &Sub,
+    ctrl: &mut SpringElectricalControl,
+    pad: (f64, f64),
+) {
     let ndim = g.ndim;
     let mut a = make_matrix(g, sub);
     let mut edge_label_nodes = Vec::new();
@@ -127,14 +134,16 @@ fn tune_control(g: &LGraph<'_>, ctrl: &mut SpringElectricalControl) {
     }
     ctrl.random_seed = seed as i32;
     ctrl.k = late_double(attrs, "K", -1.0, 0.0);
-    ctrl.p = -1.0 * late_double(attrs, "repulsiveforce", -AUTOP, 0.0);
-    ctrl.multilevels = late_int(attrs, "levels", i64::from(i32::MAX), 0).min(i64::from(i32::MAX)) as i32;
+    ctrl.p = -late_double(attrs, "repulsiveforce", -AUTOP, 0.0);
+    ctrl.multilevels =
+        late_int(attrs, "levels", i64::from(i32::MAX), 0).min(i64::from(i32::MAX)) as i32;
     ctrl.smoothing = late_smooth(g.gattr("smoothing"), SMOOTHING_NONE);
     ctrl.tscheme = late_quadtree_scheme(g.gattr("quadtree"), QUAD_TREE_NORMAL);
     ctrl.beautify_leaves = mapbool(g.gattr("beautify"));
     ctrl.do_shrinking = map_bool(g.gattr("overlap_shrink"), true);
     ctrl.rotation = late_double(attrs, "rotation", 0.0, -f64::MAX);
-    ctrl.edge_labeling_scheme = late_int(attrs, "label_scheme", 0, 0).min(i64::from(i32::MAX)) as i32;
+    ctrl.edge_labeling_scheme =
+        late_int(attrs, "label_scheme", 0, 0).min(i64::from(i32::MAX)) as i32;
     if ctrl.edge_labeling_scheme > 4 {
         eprintln!(
             "Warning: label_scheme = {} > 4 : ignoring",
