@@ -1,0 +1,6 @@
+digraph {
+    "pentagon1" [shape="pentagon"];
+    "pentagon2" [shape="pentagon" regular=true]
+    "hexagon1" [shape="hexagon"];
+    "hexagon2" [shape="hexagon" regular=true];
+}

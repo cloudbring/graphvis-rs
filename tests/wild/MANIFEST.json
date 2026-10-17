@@ -1,0 +1,4405 @@
+{
+  "dataset": "graphvis-rs-wild-corpus",
+  "count": 488,
+  "sources": [
+    "https://gitlab.com/graphviz/graphviz.git (16.1.0 tests/graphs, regression_tests/shapes, graphs/directed, graphs/undirected)",
+    "https://gitlab.com/graphviz/graphviz.gitlab.io.git (Official Graphviz Gallery & Attribute Examples)",
+    "https://github.com/pydot/pydot.git (test/graphs)",
+    "https://github.com/gonum/gonum.git (graph/formats/dot/testdata)",
+    "https://github.com/pinczakko/GraphViz-Samples.git"
+  ],
+  "files": [
+    {
+      "file": "gallery_TBbalance_0_6d7295.gv",
+      "bytes": 150,
+      "c_nodes": 5,
+      "c_edges": 2,
+      "node_size_similarity": 0.9975,
+      "bb_similarity": 0.9999,
+      "norm_pos_similarity": 0.9992
+    },
+    {
+      "file": "gallery_TBbalance_1_fa640c.gv",
+      "bytes": 170,
+      "c_nodes": 5,
+      "c_edges": 2,
+      "node_size_similarity": 0.9975,
+      "bb_similarity": 0.8262,
+      "norm_pos_similarity": 0.6961
+    },
+    {
+      "file": "gallery_TBbalance_2_bfc202.gv",
+      "bytes": 170,
+      "c_nodes": 5,
+      "c_edges": 2,
+      "node_size_similarity": 0.9975,
+      "bb_similarity": 0.8262,
+      "norm_pos_similarity": 0.8316
+    },
+    {
+      "file": "gallery_URL_0_e0c403.gv",
+      "bytes": 744,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9962,
+      "bb_similarity": 0.9739,
+      "norm_pos_similarity": 0.9936
+    },
+    {
+      "file": "gallery__index_0_5987b8.gv",
+      "bytes": 157,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9857,
+      "bb_similarity": 0.9967,
+      "norm_pos_similarity": 0.9992
+    },
+    {
+      "file": "gallery__index_0_9d5fca.gv",
+      "bytes": 32,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery__index_1_196a66.gv",
+      "bytes": 47,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery__index_1_732559.gv",
+      "bytes": 61,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9727,
+      "norm_pos_similarity": 0.5026
+    },
+    {
+      "file": "gallery__index_2_1abd41.gv",
+      "bytes": 144,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9981,
+      "norm_pos_similarity": 0.9997
+    },
+    {
+      "file": "gallery__index_2_9e1005.gv",
+      "bytes": 40,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery__index_3_6d5bbc.gv",
+      "bytes": 83,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery__index_4_4a9433.gv",
+      "bytes": 265,
+      "c_nodes": 7,
+      "c_edges": 10,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery__index_5_484eae.gv",
+      "bytes": 185,
+      "c_nodes": 6,
+      "c_edges": 5,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery__index_6_23a294.gv",
+      "bytes": 31,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery__index_7_fe2a40.gv",
+      "bytes": 35,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_area_0_6e587d.gv",
+      "bytes": 265,
+      "c_nodes": 6,
+      "c_edges": 0,
+      "node_size_similarity": 0.5239,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.5635
+    },
+    {
+      "file": "gallery_arrowsize_0_117a70.gv",
+      "bytes": 122,
+      "c_nodes": 5,
+      "c_edges": 4,
+      "node_size_similarity": 0.9992,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_beautify_0_bd129e.gv",
+      "bytes": 86,
+      "c_nodes": 7,
+      "c_edges": 6,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.5834,
+      "norm_pos_similarity": 0.5691
+    },
+    {
+      "file": "gallery_beautify_1_1cfb90.gv",
+      "bytes": 87,
+      "c_nodes": 7,
+      "c_edges": 6,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.5322,
+      "norm_pos_similarity": 0.5409
+    },
+    {
+      "file": "gallery_bgcolor_0_c2942d.gv",
+      "bytes": 266,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9976,
+      "bb_similarity": 0.975,
+      "norm_pos_similarity": 0.9936
+    },
+    {
+      "file": "gallery_charset_0_a7337e.gv",
+      "bytes": 51,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.9758,
+      "bb_similarity": 0.9836,
+      "norm_pos_similarity": 0.9981
+    },
+    {
+      "file": "gallery_class_0_0cdd9d.gv",
+      "bytes": 180,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9964,
+      "bb_similarity": 0.9953,
+      "norm_pos_similarity": 0.9999
+    },
+    {
+      "file": "gallery_cluster_0_4c7fcd.gv",
+      "bytes": 467,
+      "c_nodes": 5,
+      "c_edges": 0,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.9979,
+      "norm_pos_similarity": 0.9977
+    },
+    {
+      "file": "gallery_color_1_948ef7.gv",
+      "bytes": 107,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_colorscheme_0_6a9bbf.gv",
+      "bytes": 199,
+      "c_nodes": 9,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_colorscheme_1_ba0c2f.gv",
+      "bytes": 198,
+      "c_nodes": 9,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_comment_0_391282.gv",
+      "bytes": 125,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_compound_0_b613d7.gv",
+      "bytes": 390,
+      "c_nodes": 8,
+      "c_edges": 4,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9472,
+      "norm_pos_similarity": 0.9887
+    },
+    {
+      "file": "gallery_concentrate_0_0779db.gv",
+      "bytes": 78,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.998,
+      "norm_pos_similarity": 0.9357
+    },
+    {
+      "file": "gallery_constraint_0_664398.gv",
+      "bytes": 63,
+      "c_nodes": 3,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.6701
+    },
+    {
+      "file": "gallery_decorate_0_b679c9.gv",
+      "bytes": 121,
+      "c_nodes": 2,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9763,
+      "norm_pos_similarity": 0.9905
+    },
+    {
+      "file": "gallery_dir_0_be9b32.gv",
+      "bytes": 87,
+      "c_nodes": 8,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_distortion_0_2baf61.gv",
+      "bytes": 115,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9969,
+      "norm_pos_similarity": 0.9995
+    },
+    {
+      "file": "gallery_fontname_0_def94c.gv",
+      "bytes": 241,
+      "c_nodes": 1,
+      "c_edges": 1,
+      "node_size_similarity": 0.9841,
+      "bb_similarity": 0.8877,
+      "norm_pos_similarity": 0.8648
+    },
+    {
+      "file": "gallery_fontsize_0_04755e.gv",
+      "bytes": 248,
+      "c_nodes": 1,
+      "c_edges": 1,
+      "node_size_similarity": 0.9684,
+      "bb_similarity": 0.9647,
+      "norm_pos_similarity": 0.9293
+    },
+    {
+      "file": "gallery_height_0_059468.gv",
+      "bytes": 64,
+      "c_nodes": 3,
+      "c_edges": 0,
+      "node_size_similarity": 0.9986,
+      "bb_similarity": 0.9993,
+      "norm_pos_similarity": 0.9995
+    },
+    {
+      "file": "gallery_imap_0_765fcd.gv",
+      "bytes": 179,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.9954,
+      "bb_similarity": 0.9947,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_label_0_0b9e2b.gv",
+      "bytes": 334,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9962,
+      "bb_similarity": 0.9739,
+      "norm_pos_similarity": 0.9936
+    },
+    {
+      "file": "gallery_labeljust_0_227ff7.gv",
+      "bytes": 42,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.986,
+      "norm_pos_similarity": 0.9939
+    },
+    {
+      "file": "gallery_labeljust_1_da45ec.gv",
+      "bytes": 42,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.986,
+      "norm_pos_similarity": 0.9939
+    },
+    {
+      "file": "gallery_labeljust_2_dd3812.gv",
+      "bytes": 201,
+      "c_nodes": 3,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.98,
+      "norm_pos_similarity": 0.9892
+    },
+    {
+      "file": "gallery_labelloc_0_1a67f9.gv",
+      "bytes": 52,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9936,
+      "norm_pos_similarity": 0.9955
+    },
+    {
+      "file": "gallery_labelloc_1_2d8bbc.gv",
+      "bytes": 52,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9936,
+      "norm_pos_similarity": 0.9955
+    },
+    {
+      "file": "gallery_labelloc_2_9a74fc.gv",
+      "bytes": 195,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9351,
+      "norm_pos_similarity": 0.9776
+    },
+    {
+      "file": "gallery_labelloc_3_e30a48.gv",
+      "bytes": 63,
+      "c_nodes": 3,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_landscape_0_a77769.gv",
+      "bytes": 38,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_margin_0_43b211.gv",
+      "bytes": 172,
+      "c_nodes": 3,
+      "c_edges": 0,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9969,
+      "norm_pos_similarity": 0.9999
+    },
+    {
+      "file": "gallery_margin_1_eae6e9.gv",
+      "bytes": 215,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_nodesep_0_570ae4.gv",
+      "bytes": 54,
+      "c_nodes": 3,
+      "c_edges": 0,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9989,
+      "norm_pos_similarity": 0.9995
+    },
+    {
+      "file": "gallery_nodesep_1_0b397c.gv",
+      "bytes": 54,
+      "c_nodes": 3,
+      "c_edges": 0,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9991,
+      "norm_pos_similarity": 0.9996
+    },
+    {
+      "file": "gallery_nojustify_0_831c63.gv",
+      "bytes": 196,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9958,
+      "norm_pos_similarity": 0.999
+    },
+    {
+      "file": "gallery_nojustify_1_5b2f49.gv",
+      "bytes": 254,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.9784,
+      "bb_similarity": 0.984,
+      "norm_pos_similarity": 0.9985
+    },
+    {
+      "file": "gallery_oneblock_0_ce4697.gv",
+      "bytes": 188,
+      "c_nodes": 9,
+      "c_edges": 10,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.7109,
+      "norm_pos_similarity": 0.5785
+    },
+    {
+      "file": "gallery_oneblock_1_2ab788.gv",
+      "bytes": 187,
+      "c_nodes": 9,
+      "c_edges": 10,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.8233,
+      "norm_pos_similarity": 0.5442
+    },
+    {
+      "file": "gallery_orientation_0_2e844d.gv",
+      "bytes": 365,
+      "c_nodes": 8,
+      "c_edges": 8,
+      "node_size_similarity": 0.999,
+      "bb_similarity": 0.8658,
+      "norm_pos_similarity": 0.7679
+    },
+    {
+      "file": "gallery_orientation_1_f446d3.gv",
+      "bytes": 37,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_osage_0_f6bd9e.gv",
+      "bytes": 294,
+      "c_nodes": 16,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.8324,
+      "norm_pos_similarity": 0.9251
+    },
+    {
+      "file": "gallery_patchwork_0_7dbf8c.gv",
+      "bytes": 255,
+      "c_nodes": 6,
+      "c_edges": 0,
+      "node_size_similarity": 0.5239,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.5635
+    },
+    {
+      "file": "gallery_portPos_0_a822d8.gv",
+      "bytes": 45,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9011,
+      "norm_pos_similarity": 0.9321
+    },
+    {
+      "file": "gallery_radius_0_24ee36.gv",
+      "bytes": 393,
+      "c_nodes": 5,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9566,
+      "norm_pos_similarity": 0.9645
+    },
+    {
+      "file": "gallery_rankdir_0_6180a1.gv",
+      "bytes": 46,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_rankdir_1_35bb70.gv",
+      "bytes": 46,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_rankdir_2_a53248.gv",
+      "bytes": 46,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_rankdir_3_0f2768.gv",
+      "bytes": 46,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_regular_0_7ad7bf.gv",
+      "bytes": 177,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9918,
+      "bb_similarity": 0.9904,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "gallery_rotate_0_353a3c.gv",
+      "bytes": 33,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_sep_0_fb18d0.gv",
+      "bytes": 83,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.8412,
+      "norm_pos_similarity": 0.7365
+    },
+    {
+      "file": "gallery_sep_1_32439d.gv",
+      "bytes": 83,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.4112,
+      "norm_pos_similarity": 0.6911
+    },
+    {
+      "file": "gallery_shape_0_1f5390.gv",
+      "bytes": 80,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.995,
+      "bb_similarity": 0.9955,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "gallery_shapes_0_851a8a.gv",
+      "bytes": 251,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 0.9955,
+      "bb_similarity": 0.9939,
+      "norm_pos_similarity": 0.6575
+    },
+    {
+      "file": "gallery_shapes_1_91cd61.gv",
+      "bytes": 274,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9771,
+      "bb_similarity": 0.9804,
+      "norm_pos_similarity": 0.9984
+    },
+    {
+      "file": "gallery_shapes_2_3699ed.gv",
+      "bytes": 147,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_sides_0_35a85a.gv",
+      "bytes": 154,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9901,
+      "bb_similarity": 0.9846,
+      "norm_pos_similarity": 0.9996
+    },
+    {
+      "file": "gallery_skew_0_626283.gv",
+      "bytes": 99,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9944,
+      "bb_similarity": 0.994,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "gallery_start_0_f46321.gv",
+      "bytes": 74,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9473,
+      "norm_pos_similarity": 0.7316
+    },
+    {
+      "file": "gallery_start_1_0d6ca4.gv",
+      "bytes": 74,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.6836,
+      "norm_pos_similarity": 0.599
+    },
+    {
+      "file": "gallery_style_0_31eec7.gv",
+      "bytes": 44,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_style_1_64c67a.gv",
+      "bytes": 64,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_tooltip_0_8ef710.gv",
+      "bytes": 236,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.996,
+      "bb_similarity": 0.9773,
+      "norm_pos_similarity": 0.9949
+    },
+    {
+      "file": "gallery_weight_0_ebbbd3.gv",
+      "bytes": 70,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_width_0_6a6cda.gv",
+      "bytes": 64,
+      "c_nodes": 3,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gallery_xlabel_0_9bab30.gv",
+      "bytes": 115,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.9758,
+      "bb_similarity": 0.7077,
+      "norm_pos_similarity": 0.8769
+    },
+    {
+      "file": "gv16_directed_arrows_54d1cf.gv",
+      "bytes": 4766,
+      "c_nodes": 95,
+      "c_edges": 84,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9704,
+      "norm_pos_similarity": 0.5935
+    },
+    {
+      "file": "gv16_directed_biological_693e87.gv",
+      "bytes": 1360,
+      "c_nodes": 16,
+      "c_edges": 18,
+      "node_size_similarity": 0.9957,
+      "bb_similarity": 0.9451,
+      "norm_pos_similarity": 0.7837
+    },
+    {
+      "file": "gv16_directed_clust_f4945e.gv",
+      "bytes": 255,
+      "c_nodes": 8,
+      "c_edges": 9,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.983,
+      "norm_pos_similarity": 0.9605
+    },
+    {
+      "file": "gv16_directed_crazy_982d4d.gv",
+      "bytes": 5572,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9897,
+      "bb_similarity": 0.9778,
+      "norm_pos_similarity": 0.8896
+    },
+    {
+      "file": "gv16_directed_honda-tokoro_13fc7a.gv",
+      "bytes": 3090,
+      "c_nodes": 24,
+      "c_edges": 40,
+      "node_size_similarity": 0.9754,
+      "bb_similarity": 0.943,
+      "norm_pos_similarity": 0.9463
+    },
+    {
+      "file": "gv16_directed_oldarrows_f70da3.gv",
+      "bytes": 1998,
+      "c_nodes": 35,
+      "c_edges": 34,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9388,
+      "norm_pos_similarity": 0.9768
+    },
+    {
+      "file": "gv16_directed_polypoly_87bcc9.gv",
+      "bytes": 5155,
+      "c_nodes": 76,
+      "c_edges": 7,
+      "node_size_similarity": 0.9756,
+      "bb_similarity": 0.6283,
+      "norm_pos_similarity": 0.7805
+    },
+    {
+      "file": "gv16_directed_psfonttest_9946ca.gv",
+      "bytes": 2634,
+      "c_nodes": 35,
+      "c_edges": 26,
+      "node_size_similarity": 0.9804,
+      "bb_similarity": 0.9988,
+      "norm_pos_similarity": 0.6013
+    },
+    {
+      "file": "gv16_directed_sdh_29b016.gv",
+      "bytes": 5428,
+      "c_nodes": 75,
+      "c_edges": 131,
+      "node_size_similarity": 0.9957,
+      "bb_similarity": 0.8685,
+      "norm_pos_similarity": 0.8657
+    },
+    {
+      "file": "gv16_directed_switch_2841f8.gv",
+      "bytes": 1344,
+      "c_nodes": 64,
+      "c_edges": 80,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9967,
+      "norm_pos_similarity": 0.9999
+    },
+    {
+      "file": "gv16_directed_table_ece616.gv",
+      "bytes": 1127,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9525,
+      "bb_similarity": 0.9525,
+      "norm_pos_similarity": 0.6878
+    },
+    {
+      "file": "gv16_dirgraph_apache_aef3b0.gv",
+      "bytes": 4584,
+      "c_nodes": 43,
+      "c_edges": 42,
+      "node_size_similarity": 0.9999,
+      "bb_similarity": 0.9863,
+      "norm_pos_similarity": 0.9927
+    },
+    {
+      "file": "gv16_dirgraph_bsdarch_bca125.gv",
+      "bytes": 30782,
+      "c_nodes": 326,
+      "c_edges": 325,
+      "node_size_similarity": 0.9528,
+      "bb_similarity": 0.9244,
+      "norm_pos_similarity": 0.9607
+    },
+    {
+      "file": "gv16_dirgraph_bsdkernel_287fb7.gv",
+      "bytes": 7803,
+      "c_nodes": 112,
+      "c_edges": 111,
+      "node_size_similarity": 0.9999,
+      "bb_similarity": 0.9634,
+      "norm_pos_similarity": 0.9362
+    },
+    {
+      "file": "gv16_dirgraph_linux_6b3653.gv",
+      "bytes": 21860,
+      "c_nodes": 196,
+      "c_edges": 195,
+      "node_size_similarity": 0.9528,
+      "bb_similarity": 0.9846,
+      "norm_pos_similarity": 0.9916
+    },
+    {
+      "file": "gv16_dirgraph_named_2e8258.gv",
+      "bytes": 1804,
+      "c_nodes": 19,
+      "c_edges": 18,
+      "node_size_similarity": 0.9996,
+      "bb_similarity": 0.9981,
+      "norm_pos_similarity": 0.9996
+    },
+    {
+      "file": "gv16_graphs_AvantGarde_410edd.gv",
+      "bytes": 1484,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9489,
+      "bb_similarity": 0.9685,
+      "norm_pos_similarity": 0.9994
+    },
+    {
+      "file": "gv16_graphs_Bookman_a638ec.gv",
+      "bytes": 1454,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.957,
+      "bb_similarity": 0.9458,
+      "norm_pos_similarity": 0.9997
+    },
+    {
+      "file": "gv16_graphs_ER_1359e3.gv",
+      "bytes": 650,
+      "c_nodes": 12,
+      "c_edges": 12,
+      "node_size_similarity": 0.9956,
+      "bb_similarity": 0.9821,
+      "norm_pos_similarity": 0.9279
+    },
+    {
+      "file": "gv16_graphs_Heawood_771643.gv",
+      "bytes": 790,
+      "c_nodes": 14,
+      "c_edges": 21,
+      "node_size_similarity": 0.9905,
+      "bb_similarity": 0.9519,
+      "norm_pos_similarity": 0.7594
+    },
+    {
+      "file": "gv16_graphs_Helvetica_304fe5.gv",
+      "bytes": 2966,
+      "c_nodes": 8,
+      "c_edges": 7,
+      "node_size_similarity": 0.9636,
+      "bb_similarity": 0.9713,
+      "norm_pos_similarity": 0.9997
+    },
+    {
+      "file": "gv16_graphs_KW91_66910f.gv",
+      "bytes": 416,
+      "c_nodes": 10,
+      "c_edges": 12,
+      "node_size_similarity": 0.996,
+      "bb_similarity": 0.665,
+      "norm_pos_similarity": 0.6985
+    },
+    {
+      "file": "gv16_graphs_Latin1_cd0c3d.gv",
+      "bytes": 153,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.6008,
+      "bb_similarity": 0.6008,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_NaN_1dc220.gv",
+      "bytes": 2672,
+      "c_nodes": 76,
+      "c_edges": 121,
+      "node_size_similarity": 0.9961,
+      "bb_similarity": 0.9404,
+      "norm_pos_similarity": 0.7948
+    },
+    {
+      "file": "gv16_graphs_NewCenturySchlbk_eea47a.gv",
+      "bytes": 1526,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.974,
+      "bb_similarity": 0.9793,
+      "norm_pos_similarity": 0.9997
+    },
+    {
+      "file": "gv16_graphs_Palatino_170321.gv",
+      "bytes": 1462,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9676,
+      "bb_similarity": 0.9769,
+      "norm_pos_similarity": 0.9997
+    },
+    {
+      "file": "gv16_graphs_Petersen_8a008f.gv",
+      "bytes": 904,
+      "c_nodes": 10,
+      "c_edges": 15,
+      "node_size_similarity": 0.9895,
+      "bb_similarity": 0.9826,
+      "norm_pos_similarity": 0.709
+    },
+    {
+      "file": "gv16_graphs_Symbol_af1a2d.gv",
+      "bytes": 923,
+      "c_nodes": 15,
+      "c_edges": 14,
+      "node_size_similarity": 0.9373,
+      "bb_similarity": 0.9053,
+      "norm_pos_similarity": 0.93
+    },
+    {
+      "file": "gv16_graphs_Times_e379da.gv",
+      "bytes": 1437,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.974,
+      "bb_similarity": 0.9793,
+      "norm_pos_similarity": 0.9997
+    },
+    {
+      "file": "gv16_graphs_ZapfChancery_63a2b5.gv",
+      "bytes": 386,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9725,
+      "bb_similarity": 0.973,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_ZapfDingbats_b4d89f.gv",
+      "bytes": 360,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.896,
+      "bb_similarity": 0.9063,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_a_921ebf.gv",
+      "bytes": 49,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.916,
+      "norm_pos_similarity": 0.9955
+    },
+    {
+      "file": "gv16_graphs_abstract_6153b1.gv",
+      "bytes": 770,
+      "c_nodes": 47,
+      "c_edges": 68,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9725,
+      "norm_pos_similarity": 0.8183
+    },
+    {
+      "file": "gv16_graphs_alf_5ce4f5.gv",
+      "bytes": 958,
+      "c_nodes": 19,
+      "c_edges": 20,
+      "node_size_similarity": 0.9758,
+      "bb_similarity": 0.9803,
+      "norm_pos_similarity": 0.9902
+    },
+    {
+      "file": "gv16_graphs_arrows_148b6b.gv",
+      "bytes": 2029,
+      "c_nodes": 35,
+      "c_edges": 34,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9388,
+      "norm_pos_similarity": 0.9768
+    },
+    {
+      "file": "gv16_graphs_arrowsize_46ccd8.gv",
+      "bytes": 2039,
+      "c_nodes": 35,
+      "c_edges": 34,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9016,
+      "norm_pos_similarity": 0.9528
+    },
+    {
+      "file": "gv16_graphs_awilliams_7293a0.gv",
+      "bytes": 7305,
+      "c_nodes": 87,
+      "c_edges": 97,
+      "node_size_similarity": 0.9846,
+      "bb_similarity": 0.9628,
+      "norm_pos_similarity": 0.9767
+    },
+    {
+      "file": "gv16_graphs_b106_471493.gv",
+      "bytes": 48934,
+      "c_nodes": 104,
+      "c_edges": 230,
+      "node_size_similarity": 0.9717,
+      "bb_similarity": 0.9088,
+      "norm_pos_similarity": 0.8795
+    },
+    {
+      "file": "gv16_graphs_b123_5dfc2d.gv",
+      "bytes": 58,
+      "c_nodes": 1,
+      "c_edges": 1,
+      "node_size_similarity": 0.9934,
+      "bb_similarity": 0.9074,
+      "norm_pos_similarity": 0.9388
+    },
+    {
+      "file": "gv16_graphs_b124_4440e1.gv",
+      "bytes": 10284,
+      "c_nodes": 79,
+      "c_edges": 281,
+      "node_size_similarity": 0.9881,
+      "bb_similarity": 0.9699,
+      "norm_pos_similarity": 0.7206
+    },
+    {
+      "file": "gv16_graphs_b135_487aa6.gv",
+      "bytes": 73,
+      "c_nodes": 2,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b143_5416de.gv",
+      "bytes": 62056,
+      "c_nodes": 135,
+      "c_edges": 366,
+      "node_size_similarity": 0.9744,
+      "bb_similarity": 0.9469,
+      "norm_pos_similarity": 0.6433
+    },
+    {
+      "file": "gv16_graphs_b145_794862.gv",
+      "bytes": 255,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 0.9924,
+      "bb_similarity": 0.9853,
+      "norm_pos_similarity": 0.9977
+    },
+    {
+      "file": "gv16_graphs_b146_78b32c.gv",
+      "bytes": 104,
+      "c_nodes": 1,
+      "c_edges": 1,
+      "node_size_similarity": 0.9865,
+      "bb_similarity": 0.6993,
+      "norm_pos_similarity": 0.8527
+    },
+    {
+      "file": "gv16_graphs_b155_4084eb.gv",
+      "bytes": 542,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9943,
+      "bb_similarity": 0.9647,
+      "norm_pos_similarity": 0.9927
+    },
+    {
+      "file": "gv16_graphs_b15_8c212e.gv",
+      "bytes": 8774,
+      "c_nodes": 36,
+      "c_edges": 180,
+      "node_size_similarity": 0.9774,
+      "bb_similarity": 0.6882,
+      "norm_pos_similarity": 0.6059
+    },
+    {
+      "file": "gv16_graphs_b22_5c14b4.gv",
+      "bytes": 487,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9938,
+      "bb_similarity": 0.9858,
+      "norm_pos_similarity": 0.5688
+    },
+    {
+      "file": "gv16_graphs_b29_d1e4db.gv",
+      "bytes": 62931,
+      "c_nodes": 110,
+      "c_edges": 386,
+      "node_size_similarity": 0.9579,
+      "bb_similarity": 0.9685,
+      "norm_pos_similarity": 0.8257
+    },
+    {
+      "file": "gv16_graphs_b33_bfa8e5.gv",
+      "bytes": 132,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9962,
+      "bb_similarity": 0.9818,
+      "norm_pos_similarity": 0.9918
+    },
+    {
+      "file": "gv16_graphs_b34_ca01c7.gv",
+      "bytes": 816,
+      "c_nodes": 9,
+      "c_edges": 8,
+      "node_size_similarity": 0.963,
+      "bb_similarity": 0.9637,
+      "norm_pos_similarity": 0.9894
+    },
+    {
+      "file": "gv16_graphs_b36_87da87.gv",
+      "bytes": 10388,
+      "c_nodes": 21,
+      "c_edges": 20,
+      "node_size_similarity": 0.9746,
+      "bb_similarity": 0.9481,
+      "norm_pos_similarity": 0.9572
+    },
+    {
+      "file": "gv16_graphs_b3_6bcefe.gv",
+      "bytes": 754,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9754,
+      "bb_similarity": 0.9771,
+      "norm_pos_similarity": 0.9995
+    },
+    {
+      "file": "gv16_graphs_b491_1ee3f2.gv",
+      "bytes": 112,
+      "c_nodes": 3,
+      "c_edges": 3,
+      "node_size_similarity": 0.9879,
+      "bb_similarity": 0.986,
+      "norm_pos_similarity": 0.9978
+    },
+    {
+      "file": "gv16_graphs_b51_33bcb0.gv",
+      "bytes": 19886,
+      "c_nodes": 60,
+      "c_edges": 72,
+      "node_size_similarity": 0.9907,
+      "bb_similarity": 0.3551,
+      "norm_pos_similarity": 0.5665
+    },
+    {
+      "file": "gv16_graphs_b53_19559c.gv",
+      "bytes": 2288,
+      "c_nodes": 17,
+      "c_edges": 18,
+      "node_size_similarity": 0.9824,
+      "bb_similarity": 0.938,
+      "norm_pos_similarity": 0.6967
+    },
+    {
+      "file": "gv16_graphs_b545_e2e578.gv",
+      "bytes": 104,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.9855,
+      "norm_pos_similarity": 0.9978
+    },
+    {
+      "file": "gv16_graphs_b56_36f937.gv",
+      "bytes": 1443,
+      "c_nodes": 17,
+      "c_edges": 14,
+      "node_size_similarity": 0.9502,
+      "bb_similarity": 0.9399,
+      "norm_pos_similarity": 0.6088
+    },
+    {
+      "file": "gv16_graphs_b57_957a04.gv",
+      "bytes": 8473,
+      "c_nodes": 52,
+      "c_edges": 55,
+      "node_size_similarity": 0.9397,
+      "bb_similarity": 0.9487,
+      "norm_pos_similarity": 0.9717
+    },
+    {
+      "file": "gv16_graphs_b58_d34a29.gv",
+      "bytes": 193,
+      "c_nodes": 8,
+      "c_edges": 8,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.777
+    },
+    {
+      "file": "gv16_graphs_b60_bf5b3a.gv",
+      "bytes": 140,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.8387,
+      "bb_similarity": 0.7965,
+      "norm_pos_similarity": 0.9159
+    },
+    {
+      "file": "gv16_graphs_b62_a87251.gv",
+      "bytes": 122,
+      "c_nodes": 2,
+      "c_edges": 2,
+      "node_size_similarity": 0.9952,
+      "bb_similarity": 0.9952,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b68_c3ec50.gv",
+      "bytes": 596,
+      "c_nodes": 12,
+      "c_edges": 11,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9958,
+      "norm_pos_similarity": 0.9968
+    },
+    {
+      "file": "gv16_graphs_b69_4b5b48.gv",
+      "bytes": 33032,
+      "c_nodes": 103,
+      "c_edges": 140,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.9483,
+      "norm_pos_similarity": 0.6316
+    },
+    {
+      "file": "gv16_graphs_b71_2eb347.gv",
+      "bytes": 2749,
+      "c_nodes": 64,
+      "c_edges": 71,
+      "node_size_similarity": 0.9955,
+      "bb_similarity": 0.8591,
+      "norm_pos_similarity": 0.7033
+    },
+    {
+      "file": "gv16_graphs_b73_0b741b.gv",
+      "bytes": 123,
+      "c_nodes": 1,
+      "c_edges": 1,
+      "node_size_similarity": 0.9865,
+      "bb_similarity": 0.9865,
+      "norm_pos_similarity": 0.8232
+    },
+    {
+      "file": "gv16_graphs_b73a_dc84ba.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 1,
+      "node_size_similarity": 0.981,
+      "bb_similarity": 0.9822,
+      "norm_pos_similarity": 0.9994
+    },
+    {
+      "file": "gv16_graphs_b76_56dd39.gv",
+      "bytes": 68,
+      "c_nodes": 1,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b77_1fb1a6.gv",
+      "bytes": 52,
+      "c_nodes": 6,
+      "c_edges": 5,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b786_a763df.gv",
+      "bytes": 668,
+      "c_nodes": 11,
+      "c_edges": 10,
+      "node_size_similarity": 0.9852,
+      "bb_similarity": 0.9924,
+      "norm_pos_similarity": 0.9995
+    },
+    {
+      "file": "gv16_graphs_b79_1c2e40.gv",
+      "bytes": 82,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b7_ca67b0.gv",
+      "bytes": 221,
+      "c_nodes": 6,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b80_da6b0a.gv",
+      "bytes": 81,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b80a_6c3555.gv",
+      "bytes": 71,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b85_39c878.gv",
+      "bytes": 668,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9631,
+      "bb_similarity": 0.971,
+      "norm_pos_similarity": 0.9977
+    },
+    {
+      "file": "gv16_graphs_b94_37f5bc.gv",
+      "bytes": 10504,
+      "c_nodes": 10,
+      "c_edges": 60,
+      "node_size_similarity": 0.9925,
+      "bb_similarity": 0.6306,
+      "norm_pos_similarity": 0.8178
+    },
+    {
+      "file": "gv16_graphs_b993_0b7b4b.gv",
+      "bytes": 118,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9995,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_b_0b1ec3.gv",
+      "bytes": 339,
+      "c_nodes": 4,
+      "c_edges": 6,
+      "node_size_similarity": 0.9983,
+      "bb_similarity": 0.9601,
+      "norm_pos_similarity": 0.9404
+    },
+    {
+      "file": "gv16_graphs_bad_d4db50.gv",
+      "bytes": 68,
+      "c_nodes": 7,
+      "c_edges": 4,
+      "node_size_similarity": 0.9984,
+      "bb_similarity": 0.9998,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "gv16_graphs_badvoro_2e8cb8.gv",
+      "bytes": 33948,
+      "c_nodes": 1235,
+      "c_edges": 1616,
+      "node_size_similarity": 0.996,
+      "bb_similarity": 0.9704,
+      "norm_pos_similarity": 0.6974
+    },
+    {
+      "file": "gv16_graphs_big_f9306b.gv",
+      "bytes": 9230,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9774,
+      "bb_similarity": 0.986,
+      "norm_pos_similarity": 0.9937
+    },
+    {
+      "file": "gv16_graphs_biglabel_a26de5.gv",
+      "bytes": 3245,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9775,
+      "bb_similarity": 0.9797,
+      "norm_pos_similarity": 0.9995
+    },
+    {
+      "file": "gv16_graphs_cairo_e5dcb9.gv",
+      "bytes": 5866,
+      "c_nodes": 14,
+      "c_edges": 71,
+      "node_size_similarity": 0.8286,
+      "bb_similarity": 0.9466,
+      "norm_pos_similarity": 0.87
+    },
+    {
+      "file": "gv16_graphs_center_a90232.gv",
+      "bytes": 42,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_clover_ae8650.gv",
+      "bytes": 69,
+      "c_nodes": 7,
+      "c_edges": 9,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9645,
+      "norm_pos_similarity": 0.9606
+    },
+    {
+      "file": "gv16_graphs_clust1_0a1c5e.gv",
+      "bytes": 146,
+      "c_nodes": 9,
+      "c_edges": 10,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9322,
+      "norm_pos_similarity": 0.9719
+    },
+    {
+      "file": "gv16_graphs_clust2_9dec58.gv",
+      "bytes": 146,
+      "c_nodes": 9,
+      "c_edges": 10,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.9353
+    },
+    {
+      "file": "gv16_graphs_clust3_cd0a52.gv",
+      "bytes": 146,
+      "c_nodes": 9,
+      "c_edges": 10,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9454,
+      "norm_pos_similarity": 0.9138
+    },
+    {
+      "file": "gv16_graphs_clust4_5801a1.gv",
+      "bytes": 401,
+      "c_nodes": 10,
+      "c_edges": 13,
+      "node_size_similarity": 0.9992,
+      "bb_similarity": 0.9778,
+      "norm_pos_similarity": 0.9417
+    },
+    {
+      "file": "gv16_graphs_clust5_8d13c9.gv",
+      "bytes": 238,
+      "c_nodes": 12,
+      "c_edges": 13,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9842,
+      "norm_pos_similarity": 0.8959
+    },
+    {
+      "file": "gv16_graphs_clust_1c9e26.gv",
+      "bytes": 256,
+      "c_nodes": 8,
+      "c_edges": 9,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.983,
+      "norm_pos_similarity": 0.9605
+    },
+    {
+      "file": "gv16_graphs_clustlabel_cf45ca.gv",
+      "bytes": 78,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9888,
+      "norm_pos_similarity": 0.9934
+    },
+    {
+      "file": "gv16_graphs_color_ef8767.gv",
+      "bytes": 270,
+      "c_nodes": 6,
+      "c_edges": 1,
+      "node_size_similarity": 0.9977,
+      "bb_similarity": 0.9966,
+      "norm_pos_similarity": 0.9987
+    },
+    {
+      "file": "gv16_graphs_colors_a2b43c.gv",
+      "bytes": 376,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9584,
+      "bb_similarity": 0.9592,
+      "norm_pos_similarity": 0.9966
+    },
+    {
+      "file": "gv16_graphs_colorscheme_67ba00.gv",
+      "bytes": 290,
+      "c_nodes": 8,
+      "c_edges": 0,
+      "node_size_similarity": 0.9991,
+      "bb_similarity": 0.9987,
+      "norm_pos_similarity": 0.9991
+    },
+    {
+      "file": "gv16_graphs_compound_7ed9c4.gv",
+      "bytes": 286,
+      "c_nodes": 8,
+      "c_edges": 9,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9907,
+      "norm_pos_similarity": 0.9953
+    },
+    {
+      "file": "gv16_graphs_crazy_cfdc7a.gv",
+      "bytes": 5556,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9706,
+      "bb_similarity": 0.9603,
+      "norm_pos_similarity": 0.8902
+    },
+    {
+      "file": "gv16_graphs_ctext_59a9d8.gv",
+      "bytes": 425,
+      "c_nodes": 8,
+      "c_edges": 6,
+      "node_size_similarity": 0.9947,
+      "bb_similarity": 0.9877,
+      "norm_pos_similarity": 0.9962
+    },
+    {
+      "file": "gv16_graphs_d_3a4a40.gv",
+      "bytes": 165,
+      "c_nodes": 8,
+      "c_edges": 11,
+      "node_size_similarity": 0.998,
+      "bb_similarity": 0.8544,
+      "norm_pos_similarity": 0.8788
+    },
+    {
+      "file": "gv16_graphs_dd_16f96b.gv",
+      "bytes": 1053,
+      "c_nodes": 7,
+      "c_edges": 10,
+      "node_size_similarity": 0.9984,
+      "bb_similarity": 0.9436,
+      "norm_pos_similarity": 0.6331
+    },
+    {
+      "file": "gv16_graphs_decorate_e9d5a0.gv",
+      "bytes": 7561,
+      "c_nodes": 15,
+      "c_edges": 27,
+      "node_size_similarity": 0.9959,
+      "bb_similarity": 0.9368,
+      "norm_pos_similarity": 0.7761
+    },
+    {
+      "file": "gv16_graphs_dfa_ea972c.gv",
+      "bytes": 959,
+      "c_nodes": 10,
+      "c_edges": 20,
+      "node_size_similarity": 0.9941,
+      "bb_similarity": 0.9919,
+      "norm_pos_similarity": 0.9877
+    },
+    {
+      "file": "gv16_graphs_dir_f04762.gv",
+      "bytes": 113,
+      "c_nodes": 6,
+      "c_edges": 5,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_dpd_223cb3.gv",
+      "bytes": 1357,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8949,
+      "norm_pos_similarity": 0.8806
+    },
+    {
+      "file": "gv16_graphs_edgeclip_62a9c0.gv",
+      "bytes": 129,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_fdp_8f3263.gv",
+      "bytes": 183,
+      "c_nodes": 9,
+      "c_edges": 6,
+      "node_size_similarity": 0.9989,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.9115
+    },
+    {
+      "file": "gv16_graphs_fig6_2c8508.gv",
+      "bytes": 835,
+      "c_nodes": 48,
+      "c_edges": 69,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9418,
+      "norm_pos_similarity": 0.8111
+    },
+    {
+      "file": "gv16_graphs_flatedge_4d5ce8.gv",
+      "bytes": 330,
+      "c_nodes": 6,
+      "c_edges": 6,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.9822,
+      "norm_pos_similarity": 0.7827
+    },
+    {
+      "file": "gv16_graphs_fsm_d6e846.gv",
+      "bytes": 605,
+      "c_nodes": 9,
+      "c_edges": 14,
+      "node_size_similarity": 0.9934,
+      "bb_similarity": 0.9719,
+      "norm_pos_similarity": 0.9557
+    },
+    {
+      "file": "gv16_graphs_grammar_882f58.gv",
+      "bytes": 1302,
+      "c_nodes": 43,
+      "c_edges": 42,
+      "node_size_similarity": 0.9978,
+      "bb_similarity": 0.9827,
+      "norm_pos_similarity": 0.9742
+    },
+    {
+      "file": "gv16_graphs_grdangles_7f37b4.gv",
+      "bytes": 1076,
+      "c_nodes": 18,
+      "c_edges": 1,
+      "node_size_similarity": 0.9928,
+      "bb_similarity": 0.9694,
+      "norm_pos_similarity": 0.9927
+    },
+    {
+      "file": "gv16_graphs_grdcluster_99a310.gv",
+      "bytes": 497,
+      "c_nodes": 6,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_grdcolors_0537a2.gv",
+      "bytes": 1704,
+      "c_nodes": 24,
+      "c_edges": 3,
+      "node_size_similarity": 0.9975,
+      "bb_similarity": 0.9463,
+      "norm_pos_similarity": 0.9941
+    },
+    {
+      "file": "gv16_graphs_grdfillcolor_9b5b1f.gv",
+      "bytes": 4074,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.9915,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_grdlinear_1bd0ce.gv",
+      "bytes": 4070,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.9884,
+      "norm_pos_similarity": 0.9991
+    },
+    {
+      "file": "gv16_graphs_grdlinear_angle_418478.gv",
+      "bytes": 5757,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.9884,
+      "norm_pos_similarity": 0.9991
+    },
+    {
+      "file": "gv16_graphs_grdlinear_node_67d0c8.gv",
+      "bytes": 523,
+      "c_nodes": 6,
+      "c_edges": 0,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.9754,
+      "norm_pos_similarity": 0.9943
+    },
+    {
+      "file": "gv16_graphs_grdradial_angle_4e0504.gv",
+      "bytes": 6917,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.9884,
+      "norm_pos_similarity": 0.9991
+    },
+    {
+      "file": "gv16_graphs_grdradial_f61057.gv",
+      "bytes": 5369,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.9884,
+      "norm_pos_similarity": 0.9991
+    },
+    {
+      "file": "gv16_graphs_grdradial_node_3c9cf2.gv",
+      "bytes": 519,
+      "c_nodes": 6,
+      "c_edges": 0,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.9754,
+      "norm_pos_similarity": 0.9943
+    },
+    {
+      "file": "gv16_graphs_grdshapes_4ce58c.gv",
+      "bytes": 1201,
+      "c_nodes": 32,
+      "c_edges": 29,
+      "node_size_similarity": 0.9977,
+      "bb_similarity": 0.9972,
+      "norm_pos_similarity": 0.9885
+    },
+    {
+      "file": "gv16_graphs_hashtable_4d0f6a.gv",
+      "bytes": 629,
+      "c_nodes": 8,
+      "c_edges": 7,
+      "node_size_similarity": 0.9719,
+      "bb_similarity": 0.9162,
+      "norm_pos_similarity": 0.94
+    },
+    {
+      "file": "gv16_graphs_honda-tokoro_7f939d.gv",
+      "bytes": 2820,
+      "c_nodes": 24,
+      "c_edges": 40,
+      "node_size_similarity": 0.9754,
+      "bb_similarity": 0.943,
+      "norm_pos_similarity": 0.9463
+    },
+    {
+      "file": "gv16_graphs_html2_d5430b.gv",
+      "bytes": 1413,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9801,
+      "bb_similarity": 0.9172,
+      "norm_pos_similarity": 0.9718
+    },
+    {
+      "file": "gv16_graphs_html_adf928.gv",
+      "bytes": 737,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9817,
+      "bb_similarity": 0.9818,
+      "norm_pos_similarity": 0.9986
+    },
+    {
+      "file": "gv16_graphs_in_05f174.gv",
+      "bytes": 55,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.5959
+    },
+    {
+      "file": "gv16_graphs_inv_inv_d6a35e.gv",
+      "bytes": 617,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9308,
+      "bb_similarity": 0.942,
+      "norm_pos_similarity": 0.9999
+    },
+    {
+      "file": "gv16_graphs_inv_nul_a40710.gv",
+      "bytes": 587,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9308,
+      "bb_similarity": 0.9418,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_inv_val_6e189e.gv",
+      "bytes": 635,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.931,
+      "bb_similarity": 0.942,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_japanese_16a6f0.gv",
+      "bytes": 789,
+      "c_nodes": 7,
+      "c_edges": 8,
+      "node_size_similarity": 0.6529,
+      "bb_similarity": 0.7358,
+      "norm_pos_similarity": 0.7558
+    },
+    {
+      "file": "gv16_graphs_jcctree_c8e393.gv",
+      "bytes": 778,
+      "c_nodes": 20,
+      "c_edges": 19,
+      "node_size_similarity": 0.9978,
+      "bb_similarity": 0.9953,
+      "norm_pos_similarity": 0.9766
+    },
+    {
+      "file": "gv16_graphs_jsort_590c20.gv",
+      "bytes": 6189,
+      "c_nodes": 61,
+      "c_edges": 85,
+      "node_size_similarity": 0.9968,
+      "bb_similarity": 0.7138,
+      "norm_pos_similarity": 0.7365
+    },
+    {
+      "file": "gv16_graphs_labelclust-fbc_886274.gv",
+      "bytes": 249,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelclust-fbd_eb365d.gv",
+      "bytes": 225,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelclust-fbl_f9f206.gv",
+      "bytes": 247,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelclust-fbr_309dc0.gv",
+      "bytes": 248,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelclust-fdc_e8f520.gv",
+      "bytes": 226,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-fdd_38ecc7.gv",
+      "bytes": 202,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-fdl_984c4c.gv",
+      "bytes": 224,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-fdr_c026a3.gv",
+      "bytes": 225,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-ftc_dabf52.gv",
+      "bytes": 246,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-ftd_8b2003.gv",
+      "bytes": 222,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-ftl_94ec88.gv",
+      "bytes": 244,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-ftr_292290.gv",
+      "bytes": 245,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7279
+    },
+    {
+      "file": "gv16_graphs_labelclust-nbc_f32297.gv",
+      "bytes": 233,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelclust-nbd_489e01.gv",
+      "bytes": 209,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelclust-nbl_80c974.gv",
+      "bytes": 231,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelclust-nbr_89041d.gv",
+      "bytes": 232,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelclust-ndc_b0cb46.gv",
+      "bytes": 210,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelclust-ndd_352622.gv",
+      "bytes": 186,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelclust-ndl_0f345d.gv",
+      "bytes": 208,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelclust-ndr_470ed2.gv",
+      "bytes": 209,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelclust-ntc_5d8c96.gv",
+      "bytes": 230,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelclust-ntd_fbdb88.gv",
+      "bytes": 206,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelclust-ntl_fd0964.gv",
+      "bytes": 228,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelclust-ntr_c61a73.gv",
+      "bytes": 229,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9857,
+      "norm_pos_similarity": 0.9945
+    },
+    {
+      "file": "gv16_graphs_labelroot-fbc_125873.gv",
+      "bytes": 286,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-fbd_dc16cf.gv",
+      "bytes": 264,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-fbl_a41807.gv",
+      "bytes": 284,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-fbr_5a5b4f.gv",
+      "bytes": 285,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-fdc_ad3689.gv",
+      "bytes": 265,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-fdd_29a015.gv",
+      "bytes": 243,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-fdl_db31c2.gv",
+      "bytes": 263,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-fdr_22ac80.gv",
+      "bytes": 264,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7684
+    },
+    {
+      "file": "gv16_graphs_labelroot-ftc_0ffff4.gv",
+      "bytes": 283,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7669
+    },
+    {
+      "file": "gv16_graphs_labelroot-ftd_e445c7.gv",
+      "bytes": 261,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7669
+    },
+    {
+      "file": "gv16_graphs_labelroot-ftl_38cf7d.gv",
+      "bytes": 281,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7669
+    },
+    {
+      "file": "gv16_graphs_labelroot-ftr_b79416.gv",
+      "bytes": 282,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9237,
+      "norm_pos_similarity": 0.7669
+    },
+    {
+      "file": "gv16_graphs_labelroot-nbc_843e58.gv",
+      "bytes": 270,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-nbd_6fba3c.gv",
+      "bytes": 248,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-nbl_d1e12a.gv",
+      "bytes": 268,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-nbr_9a14a7.gv",
+      "bytes": 269,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-ndc_64430e.gv",
+      "bytes": 249,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-ndd_3a11f4.gv",
+      "bytes": 227,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-ndl_62f4f0.gv",
+      "bytes": 247,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-ndr_67b99b.gv",
+      "bytes": 248,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9585
+    },
+    {
+      "file": "gv16_graphs_labelroot-ntc_4ae879.gv",
+      "bytes": 267,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9515
+    },
+    {
+      "file": "gv16_graphs_labelroot-ntd_bcdf9c.gv",
+      "bytes": 245,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9515
+    },
+    {
+      "file": "gv16_graphs_labelroot-ntl_ce8626.gv",
+      "bytes": 265,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9515
+    },
+    {
+      "file": "gv16_graphs_labelroot-ntr_de9123.gv",
+      "bytes": 266,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.93,
+      "norm_pos_similarity": 0.9515
+    },
+    {
+      "file": "gv16_graphs_layer2_cabcac.gv",
+      "bytes": 272,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9987,
+      "norm_pos_similarity": 0.9996
+    },
+    {
+      "file": "gv16_graphs_layer_e184db.gv",
+      "bytes": 258,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.9987,
+      "norm_pos_similarity": 0.9996
+    },
+    {
+      "file": "gv16_graphs_ldbxtried_9e83ae.gv",
+      "bytes": 5155,
+      "c_nodes": 30,
+      "c_edges": 70,
+      "node_size_similarity": 0.9868,
+      "bb_similarity": 0.9293,
+      "norm_pos_similarity": 0.7768
+    },
+    {
+      "file": "gv16_graphs_longflat_780117.gv",
+      "bytes": 86,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9132,
+      "norm_pos_similarity": 0.9764
+    },
+    {
+      "file": "gv16_graphs_lsunix1_37d385.gv",
+      "bytes": 1456,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.9984,
+      "norm_pos_similarity": 0.8877
+    },
+    {
+      "file": "gv16_graphs_lsunix2_844fa2.gv",
+      "bytes": 1456,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.9984,
+      "norm_pos_similarity": 0.8877
+    },
+    {
+      "file": "gv16_graphs_lsunix3_09a727.gv",
+      "bytes": 1465,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.9984,
+      "norm_pos_similarity": 0.8877
+    },
+    {
+      "file": "gv16_graphs_mike_7b77a0.gv",
+      "bytes": 381,
+      "c_nodes": 33,
+      "c_edges": 39,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9754,
+      "norm_pos_similarity": 0.7833
+    },
+    {
+      "file": "gv16_graphs_mode_e09132.gv",
+      "bytes": 14907,
+      "c_nodes": 213,
+      "c_edges": 269,
+      "node_size_similarity": 0.994,
+      "bb_similarity": 0.7301,
+      "norm_pos_similarity": 0.7172
+    },
+    {
+      "file": "gv16_graphs_multi_54098b.gv",
+      "bytes": 47,
+      "c_nodes": 0,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_nestedclust_fdfd6a.gv",
+      "bytes": 207,
+      "c_nodes": 7,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9902,
+      "norm_pos_similarity": 0.9057
+    },
+    {
+      "file": "gv16_graphs_newarrows_769825.gv",
+      "bytes": 2045,
+      "c_nodes": 35,
+      "c_edges": 34,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9388,
+      "norm_pos_similarity": 0.9768
+    },
+    {
+      "file": "gv16_graphs_ngk10_4_6aab96.gv",
+      "bytes": 1718,
+      "c_nodes": 50,
+      "c_edges": 100,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.8471,
+      "norm_pos_similarity": 0.6784
+    },
+    {
+      "file": "gv16_graphs_nojustify_de6b54.gv",
+      "bytes": 298,
+      "c_nodes": 6,
+      "c_edges": 3,
+      "node_size_similarity": 0.9863,
+      "bb_similarity": 0.9881,
+      "norm_pos_similarity": 0.8483
+    },
+    {
+      "file": "gv16_graphs_nul_inv_40c038.gv",
+      "bytes": 619,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.932,
+      "bb_similarity": 0.9432,
+      "norm_pos_similarity": 0.9996
+    },
+    {
+      "file": "gv16_graphs_nul_nul_d3f49c.gv",
+      "bytes": 575,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9316,
+      "bb_similarity": 0.9427,
+      "norm_pos_similarity": 0.9999
+    },
+    {
+      "file": "gv16_graphs_nul_val_01f8af.gv",
+      "bytes": 658,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9318,
+      "bb_similarity": 0.9429,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "gv16_graphs_ordering_7f8516.gv",
+      "bytes": 161,
+      "c_nodes": 11,
+      "c_edges": 16,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.9815
+    },
+    {
+      "file": "gv16_graphs_p2_99819c.gv",
+      "bytes": 256,
+      "c_nodes": 10,
+      "c_edges": 13,
+      "node_size_similarity": 0.9973,
+      "bb_similarity": 0.9666,
+      "norm_pos_similarity": 0.8602
+    },
+    {
+      "file": "gv16_graphs_p3_1dc10d.gv",
+      "bytes": 248,
+      "c_nodes": 11,
+      "c_edges": 14,
+      "node_size_similarity": 0.9975,
+      "bb_similarity": 0.9786,
+      "norm_pos_similarity": 0.9373
+    },
+    {
+      "file": "gv16_graphs_p4_849964.gv",
+      "bytes": 309,
+      "c_nodes": 17,
+      "c_edges": 21,
+      "node_size_similarity": 0.9984,
+      "bb_similarity": 0.9621,
+      "norm_pos_similarity": 0.924
+    },
+    {
+      "file": "gv16_graphs_p_9d3f21.gv",
+      "bytes": 259,
+      "c_nodes": 10,
+      "c_edges": 13,
+      "node_size_similarity": 0.9973,
+      "bb_similarity": 0.9934,
+      "norm_pos_similarity": 0.7082
+    },
+    {
+      "file": "gv16_graphs_pack_1c2410.gv",
+      "bytes": 131,
+      "c_nodes": 24,
+      "c_edges": 20,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_pgram_6b9235.gv",
+      "bytes": 2614,
+      "c_nodes": 59,
+      "c_edges": 78,
+      "node_size_similarity": 0.9911,
+      "bb_similarity": 0.7846,
+      "norm_pos_similarity": 0.8294
+    },
+    {
+      "file": "gv16_graphs_pm2way_85dfc3.gv",
+      "bytes": 2020,
+      "c_nodes": 8,
+      "c_edges": 9,
+      "node_size_similarity": 0.9826,
+      "bb_similarity": 0.9882,
+      "norm_pos_similarity": 0.9948
+    },
+    {
+      "file": "gv16_graphs_pmpipe_2cd2b2.gv",
+      "bytes": 3499,
+      "c_nodes": 13,
+      "c_edges": 18,
+      "node_size_similarity": 0.9813,
+      "bb_similarity": 0.996,
+      "norm_pos_similarity": 0.9674
+    },
+    {
+      "file": "gv16_graphs_polypoly_c85bf7.gv",
+      "bytes": 6617,
+      "c_nodes": 100,
+      "c_edges": 8,
+      "node_size_similarity": 0.9777,
+      "bb_similarity": 0.775,
+      "norm_pos_similarity": 0.8389
+    },
+    {
+      "file": "gv16_graphs_ports_9e0b3e.gv",
+      "bytes": 677,
+      "c_nodes": 12,
+      "c_edges": 20,
+      "node_size_similarity": 0.9949,
+      "bb_similarity": 0.962,
+      "norm_pos_similarity": 0.8363
+    },
+    {
+      "file": "gv16_graphs_proc3d_a79c48.gv",
+      "bytes": 6121,
+      "c_nodes": 51,
+      "c_edges": 51,
+      "node_size_similarity": 0.9871,
+      "bb_similarity": 0.9233,
+      "norm_pos_similarity": 0.9728
+    },
+    {
+      "file": "gv16_graphs_process_aff1bb.gv",
+      "bytes": 234,
+      "c_nodes": 10,
+      "c_edges": 13,
+      "node_size_similarity": 0.9973,
+      "bb_similarity": 0.9762,
+      "norm_pos_similarity": 0.9137
+    },
+    {
+      "file": "gv16_graphs_ps_09a829.gv",
+      "bytes": 55,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_ps_user_shapes_ae8048.gv",
+      "bytes": 29,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_pslib_e19bb2.gv",
+      "bytes": 5900,
+      "c_nodes": 50,
+      "c_edges": 25,
+      "node_size_similarity": 0.8225,
+      "bb_similarity": 0.8792,
+      "norm_pos_similarity": 0.9992
+    },
+    {
+      "file": "gv16_graphs_radius_60cd83.gv",
+      "bytes": 74,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_rd_rules_2c3e0a.gv",
+      "bytes": 2042,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9879,
+      "bb_similarity": 0.8572,
+      "norm_pos_similarity": 0.9657
+    },
+    {
+      "file": "gv16_graphs_record2_285709.gv",
+      "bytes": 155,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.977,
+      "bb_similarity": 0.9045,
+      "norm_pos_similarity": 0.9473
+    },
+    {
+      "file": "gv16_graphs_records_9c4c6c.gv",
+      "bytes": 417,
+      "c_nodes": 7,
+      "c_edges": 7,
+      "node_size_similarity": 0.9828,
+      "bb_similarity": 0.9807,
+      "norm_pos_similarity": 0.9977
+    },
+    {
+      "file": "gv16_graphs_rowcolsep_5fccbb.gv",
+      "bytes": 86,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_rowe_75e8b0.gv",
+      "bytes": 765,
+      "c_nodes": 43,
+      "c_edges": 68,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.8916,
+      "norm_pos_similarity": 0.73
+    },
+    {
+      "file": "gv16_graphs_russian_068fcb.gv",
+      "bytes": 518,
+      "c_nodes": 11,
+      "c_edges": 7,
+      "node_size_similarity": 0.7735,
+      "bb_similarity": 0.7869,
+      "norm_pos_similarity": 0.9975
+    },
+    {
+      "file": "gv16_graphs_sb_box_6b0db2.gv",
+      "bytes": 241,
+      "c_nodes": 2,
+      "c_edges": 3,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.7443,
+      "norm_pos_similarity": 0.8472
+    },
+    {
+      "file": "gv16_graphs_sb_box_dbl_993680.gv",
+      "bytes": 397,
+      "c_nodes": 2,
+      "c_edges": 5,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.7605,
+      "norm_pos_similarity": 0.8083
+    },
+    {
+      "file": "gv16_graphs_sb_circle_2dee89.gv",
+      "bytes": 244,
+      "c_nodes": 2,
+      "c_edges": 3,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.8343,
+      "norm_pos_similarity": 0.8754
+    },
+    {
+      "file": "gv16_graphs_sb_circle_dbl_0d8687.gv",
+      "bytes": 400,
+      "c_nodes": 2,
+      "c_edges": 5,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.8482,
+      "norm_pos_similarity": 0.8356
+    },
+    {
+      "file": "gv16_graphs_shapes_8249ae.gv",
+      "bytes": 840,
+      "c_nodes": 33,
+      "c_edges": 28,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.9975,
+      "norm_pos_similarity": 0.9988
+    },
+    {
+      "file": "gv16_graphs_shells_577909.gv",
+      "bytes": 1102,
+      "c_nodes": 29,
+      "c_edges": 38,
+      "node_size_similarity": 0.9985,
+      "bb_similarity": 0.9861,
+      "norm_pos_similarity": 0.8914
+    },
+    {
+      "file": "gv16_graphs_sides_b36cb2.gv",
+      "bytes": 679,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9827,
+      "bb_similarity": 0.9829,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_size_d390e0.gv",
+      "bytes": 1706,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9961,
+      "bb_similarity": 0.9837,
+      "norm_pos_similarity": 0.8817
+    },
+    {
+      "file": "gv16_graphs_sl_box_556d3b.gv",
+      "bytes": 2156,
+      "c_nodes": 21,
+      "c_edges": 41,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.7058,
+      "norm_pos_similarity": 0.6058
+    },
+    {
+      "file": "gv16_graphs_sl_box_dbl_8fb6b3.gv",
+      "bytes": 3792,
+      "c_nodes": 21,
+      "c_edges": 62,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.6405,
+      "norm_pos_similarity": 0.5401
+    },
+    {
+      "file": "gv16_graphs_sl_circle_919ed2.gv",
+      "bytes": 2159,
+      "c_nodes": 21,
+      "c_edges": 41,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.7299,
+      "norm_pos_similarity": 0.6556
+    },
+    {
+      "file": "gv16_graphs_sl_circle_dbl_1e46ae.gv",
+      "bytes": 3795,
+      "c_nodes": 21,
+      "c_edges": 62,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.6609,
+      "norm_pos_similarity": 0.5845
+    },
+    {
+      "file": "gv16_graphs_sq_rules_2a7366.gv",
+      "bytes": 1978,
+      "c_nodes": 4,
+      "c_edges": 0,
+      "node_size_similarity": 0.9881,
+      "bb_similarity": 0.8608,
+      "norm_pos_similarity": 0.9674
+    },
+    {
+      "file": "gv16_graphs_sr_box_4099af.gv",
+      "bytes": 2149,
+      "c_nodes": 21,
+      "c_edges": 41,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.713,
+      "norm_pos_similarity": 0.876
+    },
+    {
+      "file": "gv16_graphs_sr_box_dbl_f46a36.gv",
+      "bytes": 3777,
+      "c_nodes": 21,
+      "c_edges": 62,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.6383,
+      "norm_pos_similarity": 0.8645
+    },
+    {
+      "file": "gv16_graphs_sr_circle_3ae58e.gv",
+      "bytes": 2152,
+      "c_nodes": 21,
+      "c_edges": 41,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.7349,
+      "norm_pos_similarity": 0.8723
+    },
+    {
+      "file": "gv16_graphs_sr_circle_dbl_13315a.gv",
+      "bytes": 3780,
+      "c_nodes": 21,
+      "c_edges": 62,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.6565,
+      "norm_pos_similarity": 0.8526
+    },
+    {
+      "file": "gv16_graphs_st_box_788eb6.gv",
+      "bytes": 2068,
+      "c_nodes": 20,
+      "c_edges": 39,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.8192,
+      "norm_pos_similarity": 0.8666
+    },
+    {
+      "file": "gv16_graphs_st_box_dbl_75fdb1.gv",
+      "bytes": 3640,
+      "c_nodes": 20,
+      "c_edges": 59,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.8649,
+      "norm_pos_similarity": 0.8371
+    },
+    {
+      "file": "gv16_graphs_st_circle_dbl_c79e49.gv",
+      "bytes": 3643,
+      "c_nodes": 20,
+      "c_edges": 59,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.8786,
+      "norm_pos_similarity": 0.8653
+    },
+    {
+      "file": "gv16_graphs_st_circle_fc42e3.gv",
+      "bytes": 2071,
+      "c_nodes": 20,
+      "c_edges": 39,
+      "node_size_similarity": 0.9912,
+      "bb_similarity": 0.8394,
+      "norm_pos_similarity": 0.8937
+    },
+    {
+      "file": "gv16_graphs_states_86b5f7.gv",
+      "bytes": 492,
+      "c_nodes": 4,
+      "c_edges": 5,
+      "node_size_similarity": 0.9971,
+      "bb_similarity": 0.9836,
+      "norm_pos_similarity": 0.647
+    },
+    {
+      "file": "gv16_graphs_structs_68f492.gv",
+      "bytes": 307,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9767,
+      "bb_similarity": 0.9804,
+      "norm_pos_similarity": 0.9983
+    },
+    {
+      "file": "gv16_graphs_style_e4c38d.gv",
+      "bytes": 983,
+      "c_nodes": 22,
+      "c_edges": 16,
+      "node_size_similarity": 0.9994,
+      "bb_similarity": 0.9724,
+      "norm_pos_similarity": 0.9555
+    },
+    {
+      "file": "gv16_graphs_train11_5e9e4b.gv",
+      "bytes": 777,
+      "c_nodes": 11,
+      "c_edges": 25,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9476,
+      "norm_pos_similarity": 0.6073
+    },
+    {
+      "file": "gv16_graphs_trapeziumlr_79037b.gv",
+      "bytes": 1484,
+      "c_nodes": 53,
+      "c_edges": 52,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.6331,
+      "norm_pos_similarity": 0.8667
+    },
+    {
+      "file": "gv16_graphs_tree_5d0c2e.gv",
+      "bytes": 588,
+      "c_nodes": 9,
+      "c_edges": 8,
+      "node_size_similarity": 0.9693,
+      "bb_similarity": 0.9273,
+      "norm_pos_similarity": 0.6827
+    },
+    {
+      "file": "gv16_graphs_triedds_2395ab.gv",
+      "bytes": 1610,
+      "c_nodes": 13,
+      "c_edges": 17,
+      "node_size_similarity": 0.9952,
+      "bb_similarity": 0.9096,
+      "norm_pos_similarity": 0.741
+    },
+    {
+      "file": "gv16_graphs_trivial_e2e71d.gv",
+      "bytes": 16,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_try_d09651.gv",
+      "bytes": 163,
+      "c_nodes": 7,
+      "c_edges": 8,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9024,
+      "norm_pos_similarity": 0.6447
+    },
+    {
+      "file": "gv16_graphs_unix2_957dee.gv",
+      "bytes": 1719,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9961,
+      "bb_similarity": 0.9837,
+      "norm_pos_similarity": 0.8817
+    },
+    {
+      "file": "gv16_graphs_unix_2c2bbe.gv",
+      "bytes": 1433,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.9984,
+      "norm_pos_similarity": 0.8877
+    },
+    {
+      "file": "gv16_graphs_url_debf45.gv",
+      "bytes": 1242,
+      "c_nodes": 9,
+      "c_edges": 6,
+      "node_size_similarity": 0.9959,
+      "bb_similarity": 0.9425,
+      "norm_pos_similarity": 0.8786
+    },
+    {
+      "file": "gv16_graphs_user_shapes_1adbcd.gv",
+      "bytes": 133,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_graphs_val_inv_7c5cb7.gv",
+      "bytes": 659,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9316,
+      "bb_similarity": 0.9428,
+      "norm_pos_similarity": 0.9997
+    },
+    {
+      "file": "gv16_graphs_val_nul_b2870b.gv",
+      "bytes": 629,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9317,
+      "bb_similarity": 0.943,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "gv16_graphs_val_val_981291.gv",
+      "bytes": 677,
+      "c_nodes": 2,
+      "c_edges": 0,
+      "node_size_similarity": 0.9318,
+      "bb_similarity": 0.9428,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "gv16_graphs_viewfile_4ae2af.gv",
+      "bytes": 1767,
+      "c_nodes": 27,
+      "c_edges": 34,
+      "node_size_similarity": 0.9972,
+      "bb_similarity": 0.9792,
+      "norm_pos_similarity": 0.8039
+    },
+    {
+      "file": "gv16_graphs_viewport_651d5b.gv",
+      "bytes": 37292,
+      "c_nodes": 213,
+      "c_edges": 269,
+      "node_size_similarity": 0.9999,
+      "bb_similarity": 0.7371,
+      "norm_pos_similarity": 0.7175
+    },
+    {
+      "file": "gv16_graphs_weight_cba8d7.gv",
+      "bytes": 1720,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9961,
+      "bb_similarity": 0.953,
+      "norm_pos_similarity": 0.8906
+    },
+    {
+      "file": "gv16_graphs_world_6aa0c7.gv",
+      "bytes": 980,
+      "c_nodes": 48,
+      "c_edges": 69,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9676,
+      "norm_pos_similarity": 0.8781
+    },
+    {
+      "file": "gv16_graphs_xlabels_e9f1cf.gv",
+      "bytes": 402,
+      "c_nodes": 7,
+      "c_edges": 6,
+      "node_size_similarity": 0.9938,
+      "bb_similarity": 0.9454,
+      "norm_pos_similarity": 0.9683
+    },
+    {
+      "file": "gv16_gui_attr_widgets_d978d6.gv",
+      "bytes": 2732,
+      "c_nodes": 0,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_gui_template_b7dd0f.gv",
+      "bytes": 1571,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_back_d0c9c8.gv",
+      "bytes": 40,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_both_6b7aee.gv",
+      "bytes": 40,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_colorlist_7282c4.gv",
+      "bytes": 99,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_constraint_47bcea.gv",
+      "bytes": 91,
+      "c_nodes": 3,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.6701
+    },
+    {
+      "file": "gv16_infosrc_fill_d2cf80.gv",
+      "bytes": 146,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_fixed_5e49db.gv",
+      "bytes": 230,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 0.9955,
+      "bb_similarity": 0.9939,
+      "norm_pos_similarity": 0.6575
+    },
+    {
+      "file": "gv16_infosrc_forward_5a0d3d.gv",
+      "bytes": 30,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_mrecord_3bd329.gv",
+      "bytes": 92,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9791,
+      "bb_similarity": 0.9792,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_nohead_1ab0ea.gv",
+      "bytes": 40,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_infosrc_plugins_1a797f.gv",
+      "bytes": 11343,
+      "c_nodes": 120,
+      "c_edges": 163,
+      "node_size_similarity": 0.9984,
+      "bb_similarity": 0.9143,
+      "norm_pos_similarity": 0.89
+    },
+    {
+      "file": "gv16_infosrc_record_14407c.gv",
+      "bytes": 313,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9771,
+      "bb_similarity": 0.9804,
+      "norm_pos_similarity": 0.9984
+    },
+    {
+      "file": "gv16_infosrc_round_5b3b72.gv",
+      "bytes": 209,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9926,
+      "bb_similarity": 0.9824,
+      "norm_pos_similarity": 0.9993
+    },
+    {
+      "file": "gv16_infosrc_sdlshapes_630c5a.gv",
+      "bytes": 3557,
+      "c_nodes": 50,
+      "c_edges": 41,
+      "node_size_similarity": 0.9932,
+      "bb_similarity": 0.9916,
+      "norm_pos_similarity": 0.603
+    },
+    {
+      "file": "gv16_infosrc_tee_e85da8.gv",
+      "bytes": 506,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_linux_x86_arrows_dot_1ce23f.gv",
+      "bytes": 7235,
+      "c_nodes": 35,
+      "c_edges": 34,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9388,
+      "norm_pos_similarity": 0.9768
+    },
+    {
+      "file": "gv16_linux_x86_compound_dot_96e185.gv",
+      "bytes": 1496,
+      "c_nodes": 8,
+      "c_edges": 9,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9907,
+      "norm_pos_similarity": 0.9953
+    },
+    {
+      "file": "gv16_linux_x86_dotsplines_dot1_3910e3.gv",
+      "bytes": 9206,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9961,
+      "bb_similarity": 0.997,
+      "norm_pos_similarity": 0.894
+    },
+    {
+      "file": "gv16_linux_x86_dotsplines_dot_960493.gv",
+      "bytes": 8741,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9961,
+      "bb_similarity": 0.997,
+      "norm_pos_similarity": 0.894
+    },
+    {
+      "file": "gv16_linux_x86_edgeclip_dot_17e57b.gv",
+      "bytes": 599,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_linux_x86_flatedge_dot_da6b80.gv",
+      "bytes": 1177,
+      "c_nodes": 6,
+      "c_edges": 6,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.9822,
+      "norm_pos_similarity": 0.9929
+    },
+    {
+      "file": "gv16_linux_x86_html2_dot_3ee3fc.gv",
+      "bytes": 1945,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9868,
+      "bb_similarity": 0.9249,
+      "norm_pos_similarity": 0.9717
+    },
+    {
+      "file": "gv16_linux_x86_html_dot_ee4861.gv",
+      "bytes": 1057,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9922,
+      "bb_similarity": 0.991,
+      "norm_pos_similarity": 0.9986
+    },
+    {
+      "file": "gv16_linux_x86_neatosplines_neato1_448ced.gv",
+      "bytes": 12061,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8942,
+      "norm_pos_similarity": 0.8441
+    },
+    {
+      "file": "gv16_linux_x86_neatosplines_neato_c2c6f6.gv",
+      "bytes": 11690,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8978,
+      "norm_pos_similarity": 0.8465
+    },
+    {
+      "file": "gv16_linux_x86_nestedclust_dot_b56c31.gv",
+      "bytes": 907,
+      "c_nodes": 7,
+      "c_edges": 3,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.9948
+    },
+    {
+      "file": "gv16_linux_x86_ordering_dot1_a6f94e.gv",
+      "bytes": 2042,
+      "c_nodes": 11,
+      "c_edges": 16,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.9236
+    },
+    {
+      "file": "gv16_linux_x86_ordering_dot_5035a8.gv",
+      "bytes": 2097,
+      "c_nodes": 11,
+      "c_edges": 16,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.9236
+    },
+    {
+      "file": "gv16_linux_x86_overlap_neato1_0931d2.gv",
+      "bytes": 10554,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8978,
+      "norm_pos_similarity": 0.8465
+    },
+    {
+      "file": "gv16_linux_x86_overlap_neato_30f3d0.gv",
+      "bytes": 10562,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8978,
+      "norm_pos_similarity": 0.8465
+    },
+    {
+      "file": "gv16_linux_x86_pack_neato1_0327de.gv",
+      "bytes": 2881,
+      "c_nodes": 24,
+      "c_edges": 20,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.7299,
+      "norm_pos_similarity": 0.7733
+    },
+    {
+      "file": "gv16_linux_x86_pack_neato2_dc0918.gv",
+      "bytes": 2890,
+      "c_nodes": 24,
+      "c_edges": 20,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.7394,
+      "norm_pos_similarity": 0.7912
+    },
+    {
+      "file": "gv16_linux_x86_pack_neato_c0395a.gv",
+      "bytes": 2867,
+      "c_nodes": 24,
+      "c_edges": 20,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_linux_x86_ports_dot_99eb47.gv",
+      "bytes": 3470,
+      "c_nodes": 12,
+      "c_edges": 20,
+      "node_size_similarity": 0.9963,
+      "bb_similarity": 0.958,
+      "norm_pos_similarity": 0.8364
+    },
+    {
+      "file": "gv16_linux_x86_rankdir_dot1_8f7d7d.gv",
+      "bytes": 12673,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9993,
+      "bb_similarity": 0.9965,
+      "norm_pos_similarity": 0.8851
+    },
+    {
+      "file": "gv16_linux_x86_rankdir_dot2_810f01.gv",
+      "bytes": 12815,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9993,
+      "bb_similarity": 0.983,
+      "norm_pos_similarity": 0.911
+    },
+    {
+      "file": "gv16_linux_x86_rankdir_dot_f06bd6.gv",
+      "bytes": 12792,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9993,
+      "bb_similarity": 0.9827,
+      "norm_pos_similarity": 0.9111
+    },
+    {
+      "file": "gv16_linux_x86_record_dot_dd3ea1.gv",
+      "bytes": 4541,
+      "c_nodes": 19,
+      "c_edges": 20,
+      "node_size_similarity": 0.9798,
+      "bb_similarity": 0.9881,
+      "norm_pos_similarity": 0.9901
+    },
+    {
+      "file": "gv16_linux_x86_rowcolsep_dot1_2c201c.gv",
+      "bytes": 619,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_linux_x86_rowcolsep_dot_0ad7dd.gv",
+      "bytes": 622,
+      "c_nodes": 4,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_linux_x86_shapes_dot_ad66b3.gv",
+      "bytes": 4861,
+      "c_nodes": 33,
+      "c_edges": 28,
+      "node_size_similarity": 0.9991,
+      "bb_similarity": 0.9963,
+      "norm_pos_similarity": 0.9992
+    },
+    {
+      "file": "gv16_linux_x86_weight_dot_4dc34b.gv",
+      "bytes": 9278,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9961,
+      "bb_similarity": 0.9997,
+      "norm_pos_similarity": 0.8995
+    },
+    {
+      "file": "gv16_nshare_dotsplines_dot1_139c79.gv",
+      "bytes": 9332,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.997,
+      "norm_pos_similarity": 0.894
+    },
+    {
+      "file": "gv16_nshare_dotsplines_dot_c07946.gv",
+      "bytes": 8836,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.997,
+      "norm_pos_similarity": 0.894
+    },
+    {
+      "file": "gv16_nshare_flatedge_dot_efd56c.gv",
+      "bytes": 1182,
+      "c_nodes": 6,
+      "c_edges": 6,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.9822,
+      "norm_pos_similarity": 0.9929
+    },
+    {
+      "file": "gv16_nshare_html2_dot_7bea59.gv",
+      "bytes": 1946,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9859,
+      "bb_similarity": 0.9254,
+      "norm_pos_similarity": 0.9717
+    },
+    {
+      "file": "gv16_nshare_html_dot_5cceb5.gv",
+      "bytes": 1058,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9923,
+      "bb_similarity": 0.9953,
+      "norm_pos_similarity": 0.9987
+    },
+    {
+      "file": "gv16_nshare_neatosplines_neato1_9c01b5.gv",
+      "bytes": 12051,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8949,
+      "norm_pos_similarity": 0.8806
+    },
+    {
+      "file": "gv16_nshare_neatosplines_neato_7ac8ee.gv",
+      "bytes": 11700,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8949,
+      "norm_pos_similarity": 0.8806
+    },
+    {
+      "file": "gv16_nshare_overlap_neato1_319642.gv",
+      "bytes": 10511,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8978,
+      "norm_pos_similarity": 0.8465
+    },
+    {
+      "file": "gv16_nshare_overlap_neato_afd9ce.gv",
+      "bytes": 10566,
+      "c_nodes": 36,
+      "c_edges": 108,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.8949,
+      "norm_pos_similarity": 0.8806
+    },
+    {
+      "file": "gv16_nshare_pack_neato1_014679.gv",
+      "bytes": 2884,
+      "c_nodes": 24,
+      "c_edges": 20,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.7299,
+      "norm_pos_similarity": 0.7733
+    },
+    {
+      "file": "gv16_nshare_pack_neato2_10690f.gv",
+      "bytes": 2894,
+      "c_nodes": 24,
+      "c_edges": 20,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.7394,
+      "norm_pos_similarity": 0.7912
+    },
+    {
+      "file": "gv16_nshare_pack_neato_e0a2bb.gv",
+      "bytes": 2870,
+      "c_nodes": 24,
+      "c_edges": 20,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_nshare_ports_dot_25dc96.gv",
+      "bytes": 3493,
+      "c_nodes": 12,
+      "c_edges": 20,
+      "node_size_similarity": 0.997,
+      "bb_similarity": 0.958,
+      "norm_pos_similarity": 0.8355
+    },
+    {
+      "file": "gv16_nshare_radius_dot_732e22.gv",
+      "bytes": 418,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_nshare_rankdir_dot1_228ae0.gv",
+      "bytes": 12675,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9994,
+      "bb_similarity": 0.9968,
+      "norm_pos_similarity": 0.8851
+    },
+    {
+      "file": "gv16_nshare_rankdir_dot2_920cb4.gv",
+      "bytes": 12795,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9994,
+      "bb_similarity": 0.9829,
+      "norm_pos_similarity": 0.911
+    },
+    {
+      "file": "gv16_nshare_rankdir_dot_0e4e43.gv",
+      "bytes": 12803,
+      "c_nodes": 41,
+      "c_edges": 49,
+      "node_size_similarity": 0.9994,
+      "bb_similarity": 0.9826,
+      "norm_pos_similarity": 0.9111
+    },
+    {
+      "file": "gv16_nshare_record_dot_f557a8.gv",
+      "bytes": 4632,
+      "c_nodes": 19,
+      "c_edges": 20,
+      "node_size_similarity": 0.9834,
+      "bb_similarity": 0.992,
+      "norm_pos_similarity": 0.9901
+    },
+    {
+      "file": "gv16_nshare_shapes_dot_6f8450.gv",
+      "bytes": 4692,
+      "c_nodes": 33,
+      "c_edges": 28,
+      "node_size_similarity": 0.9985,
+      "bb_similarity": 0.9974,
+      "norm_pos_similarity": 0.9989
+    },
+    {
+      "file": "gv16_nshare_trivial_dot_c950ef.gv",
+      "bytes": 105,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_nshare_weight_dot_83b5ab.gv",
+      "bytes": 9391,
+      "c_nodes": 47,
+      "c_edges": 55,
+      "node_size_similarity": 0.9965,
+      "bb_similarity": 0.9997,
+      "norm_pos_similarity": 0.8995
+    },
+    {
+      "file": "gv16_prune_test_fad9a1.gv",
+      "bytes": 56,
+      "c_nodes": 5,
+      "c_edges": 4,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_Mcircle_70f23e.gv",
+      "bytes": 131,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_Mdiamond_83cb97.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_Msquare_5f5c1d.gv",
+      "bytes": 131,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_assembly_c29157.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_box3d_d47c63.gv",
+      "bytes": 130,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_box_067195.gv",
+      "bytes": 128,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_cds_1f5c36.gv",
+      "bytes": 128,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_circle_a0afc2.gv",
+      "bytes": 130,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_component_5936ee.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_cylinder_c350ba.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_diamond_ed57d8.gv",
+      "bytes": 132,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_doublecircle_07fb56.gv",
+      "bytes": 144,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_doubleoctagon_e79b27.gv",
+      "bytes": 145,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9889,
+      "bb_similarity": 0.9891,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_egg_e6e3f4.gv",
+      "bytes": 139,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_ellipse_061277.gv",
+      "bytes": 132,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_fivepoverhang_922a87.gv",
+      "bytes": 138,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_folder_9cc84a.gv",
+      "bytes": 131,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_hexagon_3f076f.gv",
+      "bytes": 132,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_house_706568.gv",
+      "bytes": 130,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_insulator_412a1e.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_invhouse_9c894c.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_invtrapezium_163d4c.gv",
+      "bytes": 137,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_invtriangle_d71dd8.gv",
+      "bytes": 136,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_larrow_47693b.gv",
+      "bytes": 131,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_lpromoter_163508.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_none_485947.gv",
+      "bytes": 129,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_note_1af846.gv",
+      "bytes": 129,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_noverhang_826a05.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_octagon_4c5a77.gv",
+      "bytes": 132,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_oval_434672.gv",
+      "bytes": 129,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_parallelogram_2a5c0e.gv",
+      "bytes": 149,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_pentagon_95d6f0.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_plain_01c80e.gv",
+      "bytes": 121,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_plaintext_6d0f7c.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_point_40f5e0.gv",
+      "bytes": 135,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_polygon_888428.gv",
+      "bytes": 132,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_primersite_7fb232.gv",
+      "bytes": 135,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_promoter_b4907d.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_proteasesite_d8f833.gv",
+      "bytes": 137,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_proteinstab_1e79d6.gv",
+      "bytes": 136,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_rarrow_b7bebb.gv",
+      "bytes": 131,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_rect_6afa0b.gv",
+      "bytes": 129,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_rectangle_52360d.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_restrictionsite_d06765.gv",
+      "bytes": 140,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_ribosite_4331d5.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_rnastab_a909f4.gv",
+      "bytes": 132,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_rpromoter_75d9b3.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_septagon_ae4c42.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_signature_8f660a.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_square_08f5d8.gv",
+      "bytes": 130,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_star_0efa24.gv",
+      "bytes": 141,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_tab_51eccc.gv",
+      "bytes": 128,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_terminator_70368d.gv",
+      "bytes": 135,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_threepoverhang_c3969b.gv",
+      "bytes": 139,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_trapezium_9f1616.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_triangle_616c95.gv",
+      "bytes": 133,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_tripleoctagon_78323f.gv",
+      "bytes": 145,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.9826,
+      "bb_similarity": 0.9829,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_underline_bf8328.gv",
+      "bytes": 134,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_reference_utr_d5d07c.gv",
+      "bytes": 128,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "gv16_undirected_ngk10_4_793340.gv",
+      "bytes": 1754,
+      "c_nodes": 50,
+      "c_edges": 100,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.8471,
+      "norm_pos_similarity": 0.6784
+    },
+    {
+      "file": "wild_GraphViz-Samples_complex_eae337.gv",
+      "bytes": 3597,
+      "c_nodes": 21,
+      "c_edges": 21,
+      "node_size_similarity": 0.9736,
+      "bb_similarity": 0.9754,
+      "norm_pos_similarity": 0.688
+    },
+    {
+      "file": "wild_doc_pspdf_7cc25b.gv",
+      "bytes": 1350,
+      "c_nodes": 27,
+      "c_edges": 28,
+      "node_size_similarity": 0.9932,
+      "bb_similarity": 0.987,
+      "norm_pos_similarity": 0.993
+    },
+    {
+      "file": "wild_graphs_arrows_a4826e.gv",
+      "bytes": 2117,
+      "c_nodes": 35,
+      "c_edges": 34,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9266,
+      "norm_pos_similarity": 0.9748
+    },
+    {
+      "file": "wild_graphs_arrowsize_ccef6e.gv",
+      "bytes": 2093,
+      "c_nodes": 35,
+      "c_edges": 34,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 0.9266,
+      "norm_pos_similarity": 0.9748
+    },
+    {
+      "file": "wild_graphs_b278_ab7732.gv",
+      "bytes": 134,
+      "c_nodes": 2,
+      "c_edges": 1,
+      "node_size_similarity": 0.9924,
+      "bb_similarity": 0.9918,
+      "norm_pos_similarity": 0.9998
+    },
+    {
+      "file": "wild_graphs_b488_02554a.gv",
+      "bytes": 409,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 0.996,
+      "bb_similarity": 0.9972,
+      "norm_pos_similarity": 0.9985
+    },
+    {
+      "file": "wild_graphs_b993_80226a.gv",
+      "bytes": 118,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9995,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "wild_graphs_complex_edges_71191c.gv",
+      "bytes": 106,
+      "c_nodes": 8,
+      "c_edges": 8,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 0.9057
+    },
+    {
+      "file": "wild_graphs_ctext_0bf48f.gv",
+      "bytes": 427,
+      "c_nodes": 8,
+      "c_edges": 6,
+      "node_size_similarity": 0.9947,
+      "bb_similarity": 0.9877,
+      "norm_pos_similarity": 0.9962
+    },
+    {
+      "file": "wild_graphs_html2_7e5ba7.gv",
+      "bytes": 1162,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9801,
+      "bb_similarity": 0.9172,
+      "norm_pos_similarity": 0.9718
+    },
+    {
+      "file": "wild_graphs_nojustify_9c2ddf.gv",
+      "bytes": 268,
+      "c_nodes": 4,
+      "c_edges": 2,
+      "node_size_similarity": 0.9869,
+      "bb_similarity": 0.9904,
+      "norm_pos_similarity": 0.9974
+    },
+    {
+      "file": "wild_graphs_ports_832839.gv",
+      "bytes": 739,
+      "c_nodes": 12,
+      "c_edges": 20,
+      "node_size_similarity": 0.9949,
+      "bb_similarity": 0.962,
+      "norm_pos_similarity": 0.8363
+    },
+    {
+      "file": "wild_graphs_records_cbbabd.gv",
+      "bytes": 415,
+      "c_nodes": 7,
+      "c_edges": 7,
+      "node_size_similarity": 0.9828,
+      "bb_similarity": 0.9807,
+      "norm_pos_similarity": 0.9977
+    },
+    {
+      "file": "wild_graphs_shapes_fac573.gv",
+      "bytes": 816,
+      "c_nodes": 32,
+      "c_edges": 27,
+      "node_size_similarity": 0.9982,
+      "bb_similarity": 0.9975,
+      "norm_pos_similarity": 0.9988
+    },
+    {
+      "file": "wild_graphs_states_835689.gv",
+      "bytes": 493,
+      "c_nodes": 4,
+      "c_edges": 5,
+      "node_size_similarity": 0.9971,
+      "bb_similarity": 0.9836,
+      "norm_pos_similarity": 0.647
+    },
+    {
+      "file": "wild_graphs_url_406d88.gv",
+      "bytes": 1248,
+      "c_nodes": 9,
+      "c_edges": 6,
+      "node_size_similarity": 0.9959,
+      "bb_similarity": 0.9425,
+      "norm_pos_similarity": 0.8786
+    },
+    {
+      "file": "wild_graphs_user_shapes_670d68.gv",
+      "bytes": 119,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 1.0,
+      "bb_similarity": 1.0,
+      "norm_pos_similarity": 1.0
+    },
+    {
+      "file": "wild_info_html1_9b6ede.gv",
+      "bytes": 736,
+      "c_nodes": 3,
+      "c_edges": 2,
+      "node_size_similarity": 0.9817,
+      "bb_similarity": 0.9818,
+      "norm_pos_similarity": 0.9986
+    },
+    {
+      "file": "wild_info_html2_166f38.gv",
+      "bytes": 1175,
+      "c_nodes": 4,
+      "c_edges": 3,
+      "node_size_similarity": 0.9801,
+      "bb_similarity": 0.9172,
+      "norm_pos_similarity": 0.9718
+    },
+    {
+      "file": "wild_info_html3_17dad2.gv",
+      "bytes": 584,
+      "c_nodes": 1,
+      "c_edges": 0,
+      "node_size_similarity": 0.98,
+      "bb_similarity": 0.9804,
+      "norm_pos_similarity": 1.0
+    }
+  ]
+}

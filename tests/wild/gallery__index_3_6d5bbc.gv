@@ -1,0 +1,5 @@
+digraph G {
+  node001 [label = "A"]
+  node002 [label = "A"]
+  node001 -> node002
+}

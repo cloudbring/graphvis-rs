@@ -1,0 +1,5 @@
+digraph G {
+  "default"
+  "1in" [height=1]
+  "2in" [height=2]
+}

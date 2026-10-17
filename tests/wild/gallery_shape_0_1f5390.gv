@@ -1,0 +1,4 @@
+digraph {
+    "pentagon" [shape="pentagon"];
+    "hexagon" [shape="hexagon"];
+}

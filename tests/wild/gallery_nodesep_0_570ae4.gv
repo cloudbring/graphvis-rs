@@ -1,0 +1,4 @@
+digraph {
+    nodesep=0.1;
+    node1; node2; node3;
+}
