@@ -13,9 +13,10 @@
 //! usable `pos` are routed as straight lines.
 //!
 //! Results are stored on the graph: `NodeData::pos`, `EdgeData::spline`, `EdgeData::label_pos`,
-//! `SubgraphData::bb` and `Graph::bb`. Positions of the other labels (graph and cluster `lp`,
-//! node `xlp`, edge `xlp`, `head_lp`, `tail_lp`) are written back to those attributes in Rust's
-//! shortest round-trip notation, so renderers read the exact values.
+//! `SubgraphData::bb` and `Graph::bb`. Positions of node `xlp` and edge `xlp`, `head_lp`,
+//! `tail_lp` labels are written back to those attributes in Rust's shortest round-trip
+//! notation, so renderers read the exact values; graph and cluster label positions go to
+//! [`LABEL_POS_KEY`].
 
 use gv_core::font::{DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext};
 use gv_core::{
@@ -24,6 +25,10 @@ use gv_core::{
 };
 
 const POINTS_PER_INCH: f64 = 72.0;
+
+/// Graph attribute holding a graph or cluster label position computed by the layout, in
+/// exact notation. Renderers prefer it to `lp`; output writers never print it.
+pub const LABEL_POS_KEY: &str = "\u{1}lp";
 /// `PAD` in `const.h`: horizontal and vertical label padding.
 const LABEL_PAD_X: f64 = 16.0;
 const LABEL_PAD_Y: f64 = 8.0;
@@ -888,16 +893,18 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
 
     // Store the results.
     graph.bb = bb;
+    // Graph and cluster label positions go to a private key: `lp` itself keeps the parsed
+    // value, which subgraphs inherited when they were opened.
     if let Some((l, _, _)) = root_label {
         graph
             .graph_attrs
-            .insert("lp".to_string(), exact_point(l.pos));
+            .insert(LABEL_POS_KEY.to_string(), exact_point(l.pos));
     }
     for c in &clusters {
         if let Some(l) = c.label {
             graph.subgraphs[c.id.0 as usize]
                 .graph_attrs
-                .insert("lp".to_string(), exact_point(l.pos));
+                .insert(LABEL_POS_KEY.to_string(), exact_point(l.pos));
         }
     }
     for (ni, xl) in node_xl.iter().enumerate() {

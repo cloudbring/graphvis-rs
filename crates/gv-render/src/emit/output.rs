@@ -37,6 +37,10 @@ fn record_rects(f: &RecordField, c: Point, out: &mut String) {
 /// edge has start or end arrows.
 pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<String>>) {
     let mut g = m.g.clone();
+    g.graph_attrs.remove(super::model::LABEL_POS_KEY);
+    for sg in &mut g.subgraphs {
+        sg.graph_attrs.remove(super::model::LABEL_POS_KEY);
+    }
     let (mut s_arrows, mut e_arrows) = (false, false);
     for (i, n) in m.nodes.iter().enumerate() {
         let a = &mut g.nodes[i].attrs;

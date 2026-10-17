@@ -165,6 +165,9 @@ pub(crate) struct RCluster<'g> {
     pub nodes: Vec<usize>,
 }
 
+/// Private attribute with a layout-computed graph or cluster label position (exact).
+pub(crate) const LABEL_POS_KEY: &str = "\u{1}lp";
+
 /// `GD_has_labels` bits.
 pub(crate) const EDGE_LABEL: u32 = 1 << 0;
 pub(crate) const HEAD_LABEL: u32 = 1 << 1;
@@ -403,23 +406,25 @@ impl<'g> Model<'g> {
                                 a.get("label").unwrap_or(""),
                                 a.late_nnstring("fontcolor", "black"),
                             );
-                            l.pos = parse_point(a.get("lp")).unwrap_or_else(|| {
-                                let d = gl.border.map_or(Point::default(), |b| b.1);
-                                let bb = s.bb;
-                                let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
-                                    bb.ur.y - d.y / 2.0
-                                } else {
-                                    bb.ll.y + d.y / 2.0
-                                };
-                                let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
-                                    bb.ur.x - d.x / 2.0
-                                } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
-                                    bb.ll.x + d.x / 2.0
-                                } else {
-                                    (bb.ll.x + bb.ur.x) / 2.0
-                                };
-                                Point::new(x, y)
-                            });
+                            l.pos = parse_point(a.get(LABEL_POS_KEY))
+                                .or_else(|| parse_point(a.get("lp")))
+                                .unwrap_or_else(|| {
+                                    let d = gl.border.map_or(Point::default(), |b| b.1);
+                                    let bb = s.bb;
+                                    let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
+                                        bb.ur.y - d.y / 2.0
+                                    } else {
+                                        bb.ll.y + d.y / 2.0
+                                    };
+                                    let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
+                                        bb.ur.x - d.x / 2.0
+                                    } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
+                                        bb.ll.x + d.x / 2.0
+                                    } else {
+                                        (bb.ll.x + bb.ur.x) / 2.0
+                                    };
+                                    Point::new(x, y)
+                                });
                             l.set = true;
                             l
                         });
@@ -468,23 +473,25 @@ impl<'g> Model<'g> {
                     ga.get("label").unwrap_or(""),
                     ga.late_nnstring("fontcolor", "black"),
                 );
-                l.pos = parse_point(ga.get("lp")).unwrap_or_else(|| {
-                    // place_root_label
-                    let d = Point::new(gl.label.dimen.x + 16.0, gl.label.dimen.y + 8.0);
-                    let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
-                        bb.ur.x - d.x / 2.0
-                    } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
-                        bb.ll.x + d.x / 2.0
-                    } else {
-                        (bb.ll.x + bb.ur.x) / 2.0
-                    };
-                    let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
-                        bb.ur.y - d.y / 2.0
-                    } else {
-                        bb.ll.y + d.y / 2.0
-                    };
-                    Point::new(x, y)
-                });
+                l.pos = parse_point(ga.get(LABEL_POS_KEY))
+                    .or_else(|| parse_point(ga.get("lp")))
+                    .unwrap_or_else(|| {
+                        // place_root_label
+                        let d = Point::new(gl.label.dimen.x + 16.0, gl.label.dimen.y + 8.0);
+                        let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
+                            bb.ur.x - d.x / 2.0
+                        } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
+                            bb.ll.x + d.x / 2.0
+                        } else {
+                            (bb.ll.x + bb.ur.x) / 2.0
+                        };
+                        let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
+                            bb.ur.y - d.y / 2.0
+                        } else {
+                            bb.ll.y + d.y / 2.0
+                        };
+                        Point::new(x, y)
+                    });
                 l.set = true;
                 l
             });
