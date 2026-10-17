@@ -6,6 +6,7 @@ pub mod error;
 pub mod font;
 pub mod geom;
 pub mod graph;
+pub mod math;
 
 pub use color::{
     RgbaColor, format_svg_color, resolve_color, resolve_color_with_scheme, warn_unknown_color,

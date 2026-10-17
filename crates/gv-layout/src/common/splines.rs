@@ -15,6 +15,7 @@ use super::routespl::{Path, PathEnd};
 use super::shapes::{InsideCtx, NodeShape};
 use super::types::{Bezier, EdgeType, LGraph, PortInfo, TextLabel};
 use super::utils::late_double;
+use gv_core::math;
 use gv_core::{AttrMap, BoundingBox, Point};
 
 /// `Bezier(V, t, Left, Right)`: de Casteljau evaluation and subdivision.
@@ -440,10 +441,10 @@ pub fn conc_slope<S: SplineGraph + ?Sized>(g: &S, n: usize) -> f64 {
     let c = g.coord(n);
     let x1 = c.x - s_in / ins.len() as f64;
     let y1 = c.y - g.coord(g.tail(ins[0])).y;
-    let m_in = y1.atan2(x1);
+    let m_in = math::atan2(y1, x1);
     let x2 = s_out / outs.len() as f64 - c.x;
     let y2 = g.coord(g.head(outs[0])).y - c.y;
-    let m_out = y2.atan2(x2);
+    let m_out = math::atan2(y2, x2);
     (m_in + m_out) / 2.0
 }
 
@@ -1188,9 +1189,12 @@ pub fn place_portlabel<S: SplineGraph + ?Sized>(g: &mut S, e: usize, head_p: boo
     };
     // atan2(..) + RADIANS(a), with RADIANS(d) = d/180.0 * M_PI fused into the sum
     let angle =
-        (angle_attr / 180.0).mul_add(std::f64::consts::PI, (pf.y - pe.y).atan2(pf.x - pe.x));
+        (angle_attr / 180.0).mul_add(std::f64::consts::PI, math::atan2(pf.y - pe.y, pf.x - pe.x));
     let d = PORT_LABEL_DISTANCE * dist_attr;
-    let pos = Point::new(d.mul_add(angle.cos(), pe.x), d.mul_add(angle.sin(), pe.y));
+    let pos = Point::new(
+        d.mul_add(math::cos(angle), pe.x),
+        d.mul_add(math::sin(angle), pe.y),
+    );
     let k = if head_p {
         LabelKind::Head
     } else {

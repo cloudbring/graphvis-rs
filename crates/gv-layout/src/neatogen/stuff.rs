@@ -9,6 +9,7 @@ use super::stress::has_pos;
 use super::{INIT_RANDOM, INIT_REGULAR, INIT_SELF, MODE_KK, MODE_SGD, NeatoParams};
 use crate::common::types::{LGraph, P_SET, Sub};
 use crate::common::utils::parse_leading_f64;
+use gv_core::math;
 
 /// KK working arrays (`GD_dist`, `GD_spring`, `GD_sum_t`, `GD_t`).
 pub struct KkState {
@@ -208,7 +209,7 @@ fn d2e(g: &LGraph<'_>, kk: &KkState, ng: usize, n: usize, m: &mut [f64]) {
             t[k] = vn[k] - vi[k];
             sq = t[k].mul_add(t[k], sq);
         }
-        let scale = 1.0 / sq.powf(1.5);
+        let scale = 1.0 / math::powf(sq, 1.5);
         let kni = kk.spring[n][i];
         let dni = kk.dist[n][i];
         for k in 0..ndim {

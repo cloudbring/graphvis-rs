@@ -9,6 +9,7 @@
 //! then shrinks each box to the horizontal extent the spline actually uses,
 //! so later edges can use the space (`recover_slack` in dot).
 
+use gv_core::math;
 use gv_core::{BoundingBox, Point};
 use gv_geom::pathplan::{Pedge, make_polyline, proutespline, pshortestpath};
 
@@ -287,10 +288,10 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
             .collect();
         let mut evs = [Point::default(); 2];
         if pp.start.constrained {
-            evs[0] = Point::new(pp.start.theta.cos(), pp.start.theta.sin());
+            evs[0] = Point::new(math::cos(pp.start.theta), math::sin(pp.start.theta));
         }
         if pp.end.constrained {
-            evs[1] = Point::new(-pp.end.theta.cos(), -pp.end.theta.sin());
+            evs[1] = Point::new(-math::cos(pp.end.theta), -math::sin(pp.end.theta));
         }
         match proutespline(&edges, &pl, evs) {
             Ok(s) => s,
@@ -506,7 +507,7 @@ pub fn bend(spl: &mut [Point; 4], centroid: Point) {
     let r = dist / 5.0;
     let vx = centroid.x - midpt.x;
     let vy = centroid.y - midpt.y;
-    let mag_v = vx.hypot(vy);
+    let mag_v = math::hypot(vx, vy);
     if mag_v == 0.0 {
         return;
     }
@@ -551,7 +552,7 @@ pub fn make_straight_edges<S: super::splines::SplineGraph + ?Sized>(
         Point::new(0.0, 0.0)
     } else {
         let perp = Point::new(dumb[0].y - dumb[3].y, dumb[3].x - dumb[0].x);
-        let l_perp = perp.x.hypot(perp.y);
+        let l_perp = math::hypot(perp.x, perp.y);
         let xstep = nodesep;
         let dx = (xstep * (e_cnt as i64 - 1) / 2) as f64;
         dumb[1].x = dumb[0].x + dx * perp.x / l_perp;

@@ -12,6 +12,7 @@ use crate::common::shapes::InsideFn;
 use crate::common::splines::{add_edge_labels, clip_and_install};
 use crate::common::types::{EdgeType, LGraph, Sub};
 use gv_core::Point;
+use gv_core::math;
 use gv_geom::pathplan::{
     POLYID_NONE, Pedge, Vconfig, in_poly, make_polyline, pobsopen, pobspath, proutespline,
 };
@@ -39,8 +40,8 @@ fn circumscribed_corner(a: f64, b: f64, i: usize, nsides: usize) -> Point {
     use std::f64::consts::PI;
     let angle0 = 2.0 * PI * (i as f64 - 0.5) / nsides as f64;
     let angle1 = 2.0 * PI * (i as f64 + 0.5) / nsides as f64;
-    let p0 = Point::new(a * angle0.cos(), b * angle0.sin());
-    let p1 = Point::new(a * angle1.cos(), b * angle1.sin());
+    let p0 = Point::new(a * math::cos(angle0), b * math::sin(angle0));
+    let p1 = Point::new(a * math::cos(angle1), b * math::sin(angle1));
     let m0 = ellipse_tangent_slope(a, b, p0);
     let m1 = ellipse_tangent_slope(a, b, p1);
     line_intersection(p0, m0, p1, m1)
@@ -82,7 +83,7 @@ pub fn make_obstacle(g: &LGraph<'_>, n: usize, pmargin: &Expand) -> Option<Vec<P
                             };
                             Point::new(v.x + xm, v.y + ym)
                         } else {
-                            let h = v.x.hypot(v.y);
+                            let h = math::hypot(v.x, v.y);
                             Point::new(v.x * (1.0 + pmargin.x / h), v.y * (1.0 + pmargin.y / h))
                         }
                     } else {

@@ -6,6 +6,7 @@ use super::trapezoid::{
     SegmentT, Trap, construct_trapezoids, equal_to, fp_equal, greater_than, is_valid_trap,
 };
 use crate::cutil::Drand48;
+use gv_core::math;
 use gv_core::{BoundingBox, Point};
 
 const TR_FROM_UP: i32 = 1;
@@ -126,8 +127,8 @@ fn get_angle(vp0: Point, vpnext: Point, vp1: Point) -> f64 {
     let v1 = Point::new(vp1.x - vp0.x, vp1.y - vp0.y);
     let dot = v0.x.mul_add(v1.x, v0.y * v1.y);
     let cross_sine = v0.x.mul_add(v1.y, -(v1.x * v0.y));
-    let l0 = v0.x.hypot(v0.y);
-    let l1 = v1.x.hypot(v1.y);
+    let l0 = math::hypot(v0.x, v0.y);
+    let l1 = math::hypot(v1.x, v1.y);
     if cross_sine >= 0.0 {
         dot / l0 / l1
     } else {

@@ -4,6 +4,7 @@
 
 use crate::common::types::{LGraph, Sub};
 use crate::common::utils::parse_f64_rest;
+use gv_core::math;
 use std::collections::VecDeque;
 
 const DEF_RANKSEP: f64 = 1.00;
@@ -260,8 +261,8 @@ fn set_absolute_pos(g: &mut LGraph<'_>, sg: &Sub, r: &RData, maxrank: u64) {
     let ranksep = get_rankseps(g, maxrank);
     for &n in &sg.nodes {
         let hyp = ranksep[r.d[n].n_steps_to_center as usize];
-        g.nodes[n].pos[0] = hyp * r.d[n].theta.cos();
-        g.nodes[n].pos[1] = hyp * r.d[n].theta.sin();
+        g.nodes[n].pos[0] = hyp * math::cos(r.d[n].theta);
+        g.nodes[n].pos[1] = hyp * math::sin(r.d[n].theta);
     }
 }
 

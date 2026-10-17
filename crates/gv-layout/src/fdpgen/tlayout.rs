@@ -9,6 +9,7 @@ use super::xlayout::XParams;
 use crate::common::types::{P_FIX, P_SET};
 use crate::common::utils::{late_double, late_int, parse_leading_int};
 use crate::cutil::{CRand, Drand48};
+use gv_core::math;
 use gv_core::{AttrMap, Point};
 use std::f64::consts::PI;
 
@@ -204,7 +205,7 @@ fn do_rep(
     while !(dist > 0.0) {
         xdelta = f64::from(5 - st.rand() % 10);
         ydelta = f64::from(5 - st.rand() % 10);
-        dist = xdelta.hypot(ydelta);
+        dist = math::hypot(xdelta, ydelta);
     }
     let k = st.t.k;
     let mut force = if dist > st.d.mlimit {
@@ -238,7 +239,7 @@ fn add_disp(dg: &mut DG, n: usize, xdelta: f64, ydelta: f64, force: f64) {
 fn apply_rep(st: &mut TState, dg: &mut DG, p: usize, q: usize) {
     let xdelta = dg.nodes[q].pos[0] - dg.nodes[p].pos[0];
     let ydelta = dg.nodes[q].pos[1] - dg.nodes[p].pos[1];
-    do_rep(st, dg, p, q, xdelta, ydelta, xdelta.hypot(ydelta));
+    do_rep(st, dg, p, q, xdelta, ydelta, math::hypot(xdelta, ydelta));
 }
 
 /// `doNeighbor(grid, i, j, nodes)`.
@@ -249,7 +250,7 @@ fn do_neighbor(st: &mut TState, dg: &mut DG, grid: &Grid, i: i32, j: i32, nodes:
         for &q in &qs {
             let xdelta = dg.nodes[q].pos[0] - dg.nodes[p].pos[0];
             let ydelta = dg.nodes[q].pos[1] - dg.nodes[p].pos[1];
-            let dist = xdelta.hypot(ydelta);
+            let dist = math::hypot(xdelta, ydelta);
             if dist < st.t.cell {
                 do_rep(st, dg, p, q, xdelta, ydelta, dist);
             }
@@ -454,9 +455,9 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
             st.t.wd = width / 2.0;
             st.t.ht = height / 2.0;
         }
-        let alpha = st.t.ht.atan2(st.t.wd);
-        st.t.wd /= alpha.cos();
-        st.t.ht /= alpha.sin();
+        let alpha = math::atan2(st.t.ht, st.t.wd);
+        st.t.wd /= math::cos(alpha);
+        st.t.ht /= math::sin(alpha);
     } else {
         ctr = Point::new(0.0, 0.0);
     }
@@ -474,8 +475,8 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
         for i in 0..dg.ports.len() {
             let (np, alpha) = (dg.ports[i].n, dg.ports[i].alpha);
             let nd = &mut dg.nodes[np];
-            nd.pos[0] = wd.mul_add(alpha.cos(), ctr.x);
-            nd.pos[1] = ht.mul_add(alpha.sin(), ctr.y);
+            nd.pos[0] = wd.mul_add(math::cos(alpha), ctr.x);
+            nd.pos[1] = ht.mul_add(math::sin(alpha), ctr.y);
             nd.pinned = P_SET;
         }
         for &np in &comp.nodes {
@@ -517,7 +518,10 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
                 } else {
                     let angle = PI * 2.0 * st.drand.drand48();
                     let radius = 0.9 * st.drand.drand48();
-                    dg.nodes[np].pos = [radius * wd * angle.cos(), radius * ht * angle.sin()];
+                    dg.nodes[np].pos = [
+                        radius * wd * math::cos(angle),
+                        radius * ht * math::sin(angle),
+                    ];
                 }
                 dg.nodes[np].pinned = P_SET;
             }

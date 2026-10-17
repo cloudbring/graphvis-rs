@@ -5,6 +5,7 @@ use super::edgelist::{add_edge, init_edgelist, remove_edge};
 use super::graph::CGraph;
 use super::nodelist::{append_nodelist, insert_nodelist, realign_nodelist, reverse_append};
 use crate::cutil::qsort_by;
+use gv_core::math;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
@@ -465,7 +466,7 @@ pub fn layout_block(c: &mut Circ, g: &CGraph, sn: usize, min_dist: f64) -> Vec<u
         c.nd[n].position = k as i32;
         c.nd[n].psi = 0.0;
         let theta = k as f64 * (2.0 * PI / n_len as f64);
-        c.pos[n] = [radius * theta.cos(), radius * theta.sin()];
+        c.pos[n] = [radius * math::cos(theta), radius * math::sin(theta)];
     }
 
     let b = &mut c.blocks[sn];

@@ -9,6 +9,7 @@ use crate::common::shapes::InsideFn;
 use crate::common::types::{LGraph, Sub};
 use crate::cutil::qsort_by;
 use gv_core::Point;
+use gv_core::math;
 
 const LE: usize = 0;
 const RE: usize = 1;
@@ -65,8 +66,8 @@ fn gen_round(g: &LGraph<'_>, n: usize, xm: f64, ym: f64) -> Vec<Point> {
         .map(|i| {
             let a = i as f64 / sides as f64 * std::f64::consts::PI * 2.0;
             Point::new(
-                (nd.width / 2.0 + xm) * a.cos(),
-                (nd.height / 2.0 + ym) * a.sin(),
+                (nd.width / 2.0 + xm) * math::cos(a),
+                (nd.height / 2.0 + ym) * math::sin(a),
             )
         })
         .collect()
@@ -136,7 +137,7 @@ fn make_poly(g: &LGraph<'_>, n: usize, xm: f64, ym: f64, add: bool) -> Poly {
                     } else {
                         (0..sides)
                             .map(|i| {
-                                let h = v[i].x.hypot(v[i].y);
+                                let h = math::hypot(v[i].x, v[i].y);
                                 Point::new(
                                     v[i].x * (1.0 + xm / h) / 72.0,
                                     v[i].y * (1.0 + ym / h) / 72.0,
@@ -802,7 +803,7 @@ impl Vor<'_> {
 
     fn ngdist(&self, s: usize, t: usize) -> f64 {
         let (a, b) = (self.sites[s].coord, self.sites[t].coord);
-        (a.x - b.x).hypot(a.y - b.y)
+        math::hypot(a.x - b.x, a.y - b.y)
     }
 
     /// `voronoi(nextsite, context)` over the sorted node sites.

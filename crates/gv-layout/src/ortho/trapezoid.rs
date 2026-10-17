@@ -2,6 +2,7 @@
 //! trapezoidation of a set of polygons.
 
 use gv_core::Point;
+use gv_core::math;
 
 pub const C_EPS: f64 = 1.0e-7;
 
@@ -605,7 +606,7 @@ fn math_logstar_n(n: i32) -> i32 {
     let mut i = 0;
     let mut v = f64::from(n);
     while v >= 1.0 {
-        v = v.log2();
+        v = math::log2(v);
         i += 1;
     }
     i - 1
@@ -614,7 +615,7 @@ fn math_logstar_n(n: i32) -> i32 {
 fn math_n(n: i32, h: i32) -> i32 {
     let mut v = f64::from(n);
     for _ in 0..h {
-        v = v.log2();
+        v = math::log2(v);
     }
     (f64::from(n) / v).ceil() as i32
 }

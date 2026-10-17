@@ -7,6 +7,7 @@ use super::emit::{DEFAULT_COLOR, DEFAULT_FILL, find_stop_color};
 use super::job::{EmitState, Emitter, Engine, FILL, GRADIENT, RGRADIENT};
 use super::model::TextLabel;
 use gv_core::Point;
+use gv_core::math;
 use gv_geom::shapes::{RecordField, ShapeKind};
 
 /// `graphviz_polygon_style_t.shape` values.
@@ -465,13 +466,13 @@ impl<E: Engine> Emitter<'_, E> {
         for seg in 0..sides {
             let p0 = af[seg];
             let p1 = if seg + 1 < sides { af[seg + 1] } else { af[0] };
-            let d = (p1.x - p0.x).hypot(p1.y - p0.y);
+            let d = math::hypot(p1.x - p0.x, p1.y - p0.y);
             rbconst = rbconst.min(d / 3.0);
         }
         for seg in 0..sides {
             let p0 = af[seg];
             let p1 = if seg + 1 < sides { af[seg + 1] } else { af[0] };
-            let d = (p1.x - p0.x).hypot(p1.y - p0.y);
+            let d = math::hypot(p1.x - p0.x, p1.y - p0.y);
             let mut t = rbconst / d;
             if matches!(style.shape, CornerShape::Box3d | CornerShape::Component) {
                 t /= 3.0;

@@ -25,6 +25,7 @@ use super::robust::{incircle, orient2d};
 use crate::common::splines::{add_edge_labels, clip_and_install};
 use crate::common::types::{EdgeType, LGraph, Sub};
 use gv_core::Point;
+use gv_core::math;
 use gv_geom::pathplan::visibility::{area2, wind};
 use gv_geom::pathplan::{Pedge, make_polyline, proutespline, shortest::pshortestpath};
 use std::collections::{HashMap, HashSet};
@@ -791,9 +792,10 @@ fn mk_ctrl_pts(
 ) -> Option<Vec<Point>> {
     let idx = ctrl_pt_idx(v, &trip.poly)?;
     let mut ps = vec![Point::default(); mult];
-    let theta = ((nxt.y - v.y).atan2(nxt.x - v.x) + (prev.y - v.y).atan2(prev.x - v.x)) / 2.0;
-    let mut sin_theta = theta.sin();
-    let mut cos_theta = theta.cos();
+    let theta =
+        (math::atan2(nxt.y - v.y, nxt.x - v.x) + math::atan2(prev.y - v.y, prev.x - v.x)) / 2.0;
+    let mut sin_theta = math::sin(theta);
+    let mut cos_theta = math::cos(theta);
     let mut w = Point::new(
         100.0f64.mul_add(cos_theta, v.x),
         100.0f64.mul_add(sin_theta, v.y),
@@ -961,7 +963,7 @@ fn tweak_end(poly: &[Point], s: usize, q: Point) -> Point {
     };
     if eqpt(q, nxt) || eqpt(q, prv) {
         let m = Point::new((nxt.x + prv.x) / 2.0 - p.x, (nxt.y + prv.y) / 2.0 - p.y);
-        let d = m.x.hypot(m.y);
+        let d = math::hypot(m.x, m.y);
         p.x += 0.1 * m.x / d;
         p.y += 0.1 * m.y / d;
     }

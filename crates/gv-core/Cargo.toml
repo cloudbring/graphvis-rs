@@ -6,6 +6,10 @@ license.workspace = true
 repository.workspace = true
 description = "Core graph arena, attributes, font metrics LUT, color tables, and primitives for graphvis-rs"
 
+[features]
+# Logs the arguments of every `math` call to `$GV_MATH_TRACE/` (see docs/porting/libm.md).
+math-trace = []
+
 [dependencies]
 serde.workspace = true
 thiserror.workspace = true
