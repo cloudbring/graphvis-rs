@@ -1,0 +1,273 @@
+{
+  "name": "structs",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,48.800],[280.020,48.800],[280.020,0.000]]
+    }
+  ],
+  "bb": "0,0,280.02,48.8",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "struct1",
+      "_ldraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[8.000,4.000],[8.000,44.800],[272.010,44.800],[272.010,4.000]]
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[11.000,7.000],[11.000,41.800],[48.490,41.800],[48.490,7.000]]
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [14.000,18.800],
+          "align": "l",
+          "width": 31.490,
+          "text": "line 1"
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#fffffe00"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#0000ff"
+        },
+        {
+          "op": "P",
+          "points": [[50.490,7.000],[50.490,41.800],[84.490,41.800],[84.490,7.000]]
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[50.490,7.000],[50.490,41.800],[84.490,41.800],[84.490,7.000]]
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ffffff"
+        },
+        {
+          "op": "T",
+          "pt": [53.490,18.800],
+          "align": "l",
+          "width": 27.990,
+          "text": "line2"
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#fffffe00"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#c0c0c0"
+        },
+        {
+          "op": "P",
+          "points": [[86.490,7.000],[86.490,41.800],[140.470,41.800],[140.470,7.000]]
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[86.490,7.000],[86.490,41.800],[140.470,41.800],[140.470,7.000]]
+        },
+        {
+          "op": "F",
+          "size": 24.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [89.490,14.800],
+          "align": "l",
+          "width": 47.990,
+          "text": "line3"
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#fffffe00"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ffff00"
+        },
+        {
+          "op": "P",
+          "points": [[142.470,7.000],[142.470,41.800],[196.460,41.800],[196.460,7.000]]
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[142.470,7.000],[142.470,41.800],[196.460,41.800],[196.460,7.000]]
+        },
+        {
+          "op": "F",
+          "size": 24.000,
+          "face": "ambrosia"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [145.470,14.800],
+          "align": "l",
+          "width": 47.990,
+          "text": "line4"
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[198.460,7.000],[198.460,41.800],[269.010,41.800],[269.010,7.000]]
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#00ff00"
+        },
+        {
+          "op": "T",
+          "pt": [201.460,18.800],
+          "align": "l",
+          "width": 36.550,
+          "text": "Mixed"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#ff0000"
+        },
+        {
+          "op": "T",
+          "pt": [238.010,18.800],
+          "align": "l",
+          "width": 28.000,
+          "text": "fonts"
+        }
+      ],
+      "height": "0.67778",
+      "label": "<TABLE>\n\t\t\t<TR>\n        <TD>line 1<\/TD>\n        <TD BGCOLOR=\"blue\"><FONT COLOR=\"white\">line2<\/FONT><\/TD>\n        <TD BGCOLOR=\"gray\"><FONT POINT-SIZE=\"24.0\">line3<\/FONT><\/TD>\n        <TD BGCOLOR=\"yellow\"><FONT POINT-SIZE=\"24.0\" FACE=\"ambrosia\">line4<\/FONT><\/TD>\n        <TD>\n          <TABLE CELLPADDING=\"0\" BORDER=\"0\" CELLSPACING=\"0\">\n\t\t\t\t\t\t<TR>\n\t\t\t\t\t\t\t<TD><FONT COLOR=\"green\">Mixed<\/FONT><\/TD>\n\t\t\t\t\t\t\t<TD><FONT COLOR=\"red\">fonts<\/FONT><\/TD>\n\t\t\t\t\t\t<\/TR>\n          <\/TABLE>\n        <\/TD>\n      <\/TR>\n    <\/TABLE>",
+      "pos": "140.01,24.4",
+      "shape": "plaintext",
+      "width": "3.8891"
+    }
+  ]
+}

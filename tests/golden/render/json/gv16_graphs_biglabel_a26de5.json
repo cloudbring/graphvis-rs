@@ -1,0 +1,1825 @@
+{
+  "name": "structs",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,1451.800],[661.170,1451.800],[661.170,0.000]]
+    }
+  ],
+  "bb": "0,0,661.17,1451.8",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "struct1",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[221.110,1414.300],[221.110,1451.300],[353.090,1451.300],[353.090,1414.300]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[255.760,1414.300],[255.760,1451.300]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[310.650,1414.300],[310.650,1451.300]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [238.440,1428.600],
+          "align": "c",
+          "width": 18.660,
+          "text": "left"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [283.200,1428.600],
+          "align": "c",
+          "width": 38.880,
+          "text": "middle"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [331.870,1428.600],
+          "align": "c",
+          "width": 26.440,
+          "text": "right"
+        }
+      ],
+      "height": "0.52778",
+      "label": "<f0> left|<f1> middle|<f2> right",
+      "pos": "287.1,1432.8",
+      "rects": "221.11,1414.3,255.76,1451.3 255.76,1414.3,310.65,1451.3 310.65,1414.3,353.09,1451.3",
+      "shape": "record",
+      "width": "1.833"
+    },
+    {
+      "_gvid": 1,
+      "name": "struct2",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[15.490,670.900],[15.490,707.900],[88.700,707.900],[88.700,670.900]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[51.700,670.900],[51.700,707.900]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [33.590,685.200],
+          "align": "c",
+          "width": 20.210,
+          "text": "one"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [70.200,685.200],
+          "align": "c",
+          "width": 21.000,
+          "text": "two"
+        }
+      ],
+      "height": "0.52778",
+      "label": "<f0> one|<f1> two",
+      "pos": "52.095,689.4",
+      "rects": "15.487,670.9,51.7,707.9 51.7,670.9,88.7,707.9",
+      "shape": "record",
+      "width": "1.0169"
+    },
+    {
+      "_gvid": 2,
+      "name": "struct3",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[107.030,0.500],[107.030,1378.290],[661.170,1378.290],[661.170,0.500]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[155.690,0.500],[155.690,1378.290]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[155.690,919.490],[266.560,919.490]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[155.690,460.690],[266.560,460.690]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[266.560,0.500],[266.560,1378.290]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[547.740,0.500],[547.740,1378.290]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[547.740,919.490],[615.170,919.490]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[569.950,460.690],[569.950,919.490]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[592.950,460.690],[592.950,919.490]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[547.740,460.690],[615.170,460.690]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[615.170,0.500],[615.170,1378.290]]
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "L",
+          "points": [[638.170,0.500],[638.170,1378.290]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [131.360,702.000],
+          "align": "c",
+          "width": 27.990,
+          "text": "hello"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [131.360,685.200],
+          "align": "c",
+          "width": 32.660,
+          "text": "world"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [131.360,668.400],
+          "align": "c",
+          "width": 20.210,
+          "text": "and"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [211.120,1144.690],
+          "align": "c",
+          "width": 91.750,
+          "text": "Thats the reason"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [211.120,685.890],
+          "align": "c",
+          "width": 94.870,
+          "text": "post-menopausal"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [211.120,226.590],
+          "align": "c",
+          "width": 47.430,
+          "text": "estrogen"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1361.200],
+          "align": "c",
+          "width": 9.340,
+          "text": "is"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1344.400],
+          "align": "c",
+          "width": 244.530,
+          "text": "given together with another hormone called"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1327.600],
+          "align": "c",
+          "width": 255.830,
+          "text": "progestin: The combination lowers the risk of"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1310.800],
+          "align": "c",
+          "width": 110.380,
+          "text": "endometrial cancer."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1278.000],
+          "align": "c",
+          "width": 206.870,
+          "text": "But the NTP advisers said putting all"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1261.200],
+          "align": "c",
+          "width": 220.060,
+          "text": "estrogens on the federal list would help"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1244.400],
+          "align": "c",
+          "width": 230.920,
+          "text": "women trying to balance the benefits and"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1227.600],
+          "align": "c",
+          "width": 216.570,
+          "text": "risks when choosing hormone therapy."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1210.800],
+          "align": "c",
+          "width": 239.520,
+          "text": "Physicians never discuss any of these risks"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1194.000],
+          "align": "c",
+          "width": 247.240,
+          "text": "when they are prescribing hormone therapy."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1177.200],
+          "align": "c",
+          "width": 231.760,
+          "text": "They only discuss benefits. Listing might"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1160.400],
+          "align": "c",
+          "width": 238.310,
+          "text": "force it on the table, Michelle Medinsky, a"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1143.600],
+          "align": "c",
+          "width": 248.450,
+          "text": "toxicologist from Durham, N.C., said before"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1126.800],
+          "align": "c",
+          "width": 48.210,
+          "text": "the vote."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1094.000],
+          "align": "c",
+          "width": 253.110,
+          "text": "The committee of scientists advises the NTP,"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1077.200],
+          "align": "c",
+          "width": 246.090,
+          "text": "a branch of the National Institutes of Health"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1060.400],
+          "align": "c",
+          "width": 242.960,
+          "text": "that every two years updates the federal list"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1043.600],
+          "align": "c",
+          "width": 223.120,
+          "text": "of proven and suspected cancer-causing"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,1026.800],
+          "align": "c",
+          "width": 63.380,
+          "text": "substances."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,994.000],
+          "align": "c",
+          "width": 215.800,
+          "text": "The NTP typically follows its advisers"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,977.200],
+          "align": "c",
+          "width": 243.760,
+          "text": "recommendations, but an officially updated"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,960.400],
+          "align": "c",
+          "width": 223.170,
+          "text": "carcinogen list isnt expected until 2002."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,927.600],
+          "align": "c",
+          "width": 241.790,
+          "text": "Thursday, after a daylong debate, the panel"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,910.800],
+          "align": "c",
+          "width": 213.830,
+          "text": "declined to add talc powder to the list,"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,894.000],
+          "align": "c",
+          "width": 245.320,
+          "text": "saying there wasnt enough evidence linking"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,877.200],
+          "align": "c",
+          "width": 216.960,
+          "text": "its use in feminine hygiene products to"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,860.400],
+          "align": "c",
+          "width": 240.200,
+          "text": "ovarian cancer. The panel deadlocked over"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,843.600],
+          "align": "c",
+          "width": 224.700,
+          "text": "whether to a second type of talc, fibrous"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,826.800],
+          "align": "c",
+          "width": 231.340,
+          "text": "talc that some studies have linked to lung"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,810.000],
+          "align": "c",
+          "width": 119.720,
+          "text": "cancer in talc miners."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,777.200],
+          "align": "c",
+          "width": 216.540,
+          "text": "On Wednesday, the panel voted to add"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,760.400],
+          "align": "c",
+          "width": 156.670,
+          "text": "ultraviolet radiation -- those"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,743.600],
+          "align": "c",
+          "width": 265.180,
+          "text": "sunburn-causing rays long known to cause skin"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,726.800],
+          "align": "c",
+          "width": 217.280,
+          "text": "cancer -- to the official carcinogen list."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,694.000],
+          "align": "c",
+          "width": 240.260,
+          "text": "The panel on Friday continued debating an"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,677.200],
+          "align": "c",
+          "width": 246.460,
+          "text": "association between cancers of the nose and"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,660.400],
+          "align": "c",
+          "width": 228.260,
+          "text": "sinuses with industrial exposure to wood"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,643.600],
+          "align": "c",
+          "width": 26.840,
+          "text": "dust."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,610.800],
+          "align": "c",
+          "width": 222.360,
+          "text": "Talc has long been controversial. When"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,594.000],
+          "align": "c",
+          "width": 246.890,
+          "text": "studies first appeared suggesting it migrated"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,577.200],
+          "align": "c",
+          "width": 215.780,
+          "text": "into the ovaries to cause tumors, many"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,560.400],
+          "align": "c",
+          "width": 252.290,
+          "text": "feminine hygiene products replaced talc with"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,543.600],
+          "align": "c",
+          "width": 61.800,
+          "text": "cornstarch."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,510.800],
+          "align": "c",
+          "width": 258.150,
+          "text": "Panelist Medinsky said she had been prepared"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,494.000],
+          "align": "c",
+          "width": 230.920,
+          "text": "to list talc powder as reasonably believed"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,477.200],
+          "align": "c",
+          "width": 207.980,
+          "text": "to cause cancer. But after listening to"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,460.400],
+          "align": "c",
+          "width": 224.330,
+          "text": "hours of industry attacks on the science,"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,443.600],
+          "align": "c",
+          "width": 221.200,
+          "text": "the evidence has knocked me out of the"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,426.800],
+          "align": "c",
+          "width": 205.280,
+          "text": "reasonably category into not list, she"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,410.000],
+          "align": "c",
+          "width": 216.150,
+          "text": "said before the panel voted 7-3 against"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,393.200],
+          "align": "c",
+          "width": 62.210,
+          "text": "listing talc."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,360.400],
+          "align": "c",
+          "width": 222.360,
+          "text": "Talc has long been controversial. When"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,343.600],
+          "align": "c",
+          "width": 246.890,
+          "text": "studies first appeared suggesting it migrated"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,326.800],
+          "align": "c",
+          "width": 215.780,
+          "text": "into the ovaries to cause tumors, many"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,310.000],
+          "align": "c",
+          "width": 252.290,
+          "text": "feminine hygiene products replaced talc with"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,293.200],
+          "align": "c",
+          "width": 61.800,
+          "text": "cornstarch."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,260.400],
+          "align": "c",
+          "width": 258.150,
+          "text": "Panelist Medinsky said she had been prepared"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,243.600],
+          "align": "c",
+          "width": 230.920,
+          "text": "to list talc powder as reasonably believed"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,226.800],
+          "align": "c",
+          "width": 207.980,
+          "text": "to cause cancer. But after listening to"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,210.000],
+          "align": "c",
+          "width": 224.330,
+          "text": "hours of industry attacks on the science,"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,193.200],
+          "align": "c",
+          "width": 221.200,
+          "text": "the evidence has knocked me out of the"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,176.400],
+          "align": "c",
+          "width": 205.280,
+          "text": "reasonably category into not list, she"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,159.600],
+          "align": "c",
+          "width": 216.150,
+          "text": "said before the panel voted 7-3 against"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,142.800],
+          "align": "c",
+          "width": 62.210,
+          "text": "listing talc."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,110.000],
+          "align": "c",
+          "width": 251.910,
+          "text": "Talc in one form or the other can be found in"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,93.200],
+          "align": "c",
+          "width": 259.300,
+          "text": "many papers, paints, ceramics, food wrappers,"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,76.400],
+          "align": "c",
+          "width": 261.660,
+          "text": "hard candy, chewing gum, cosmetics and pills."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,59.600],
+          "align": "c",
+          "width": 248.030,
+          "text": "Most people are familiar with talc as a loose"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,42.800],
+          "align": "c",
+          "width": 232.890,
+          "text": "powder used in cosmetics and as a drying"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,26.000],
+          "align": "c",
+          "width": 45.490,
+          "text": "powder."
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [407.150,9.200],
+          "align": "c",
+          "width": 26.430,
+          "text": "abde"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [581.450,1144.690],
+          "align": "c",
+          "width": 7.000,
+          "text": "b"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [558.850,685.890],
+          "align": "c",
+          "width": 6.210,
+          "text": "c"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [581.450,685.890],
+          "align": "c",
+          "width": 7.000,
+          "text": "d"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [604.060,685.890],
+          "align": "c",
+          "width": 6.210,
+          "text": "e"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [581.450,226.590],
+          "align": "c",
+          "width": 4.660,
+          "text": "f"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [626.670,685.200],
+          "align": "c",
+          "width": 7.000,
+          "text": "g"
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [649.670,685.200],
+          "align": "c",
+          "width": 7.000,
+          "text": "h"
+        }
+      ],
+      "height": "19.15",
+      "label": "hello\\nworld\\nand  | { Thats the reason | post-menopausal | estrogen } | is\\ngiven together with another hormone called\\nprogestin: The combination lowers the risk of\\nendometrial cancer.\\n\\nBut the NTP advisers said putting all\\nestrogens on the federal list would help\\nwomen trying to balance the benefits and\\nrisks when choosing hormone therapy.\\nPhysicians never discuss any of these risks\\nwhen they are prescribing hormone therapy.\\nThey only discuss benefits. Listing might\\nforce it on the table, Michelle Medinsky, a\\ntoxicologist from Durham, N.C., said before\\nthe vote.\\n\\nThe committee of scientists advises the NTP,\\na branch of the National Institutes of Health\\nthat every two years updates the federal list\\nof proven and suspected cancer-causing\\nsubstances.\\n\\nThe NTP typically follows its advisers\\nrecommendations, but an officially updated\\ncarcinogen list isnt expected until 2002.\\n\\nThursday, after a daylong debate, the panel\\ndeclined to add talc powder to the list,\\nsaying there wasnt enough evidence linking\\nits use in feminine hygiene products to\\novarian cancer. The panel deadlocked over\\nwhether to a second type of talc, fibrous\\ntalc that some studies have linked to lung\\ncancer in talc miners.\\n\\nOn Wednesday, the panel voted to add\\nultraviolet radiation -- those\\nsunburn-causing rays long known to cause skin\\ncancer -- to the official carcinogen list.\\n\\nThe panel on Friday continued debating an\\nassociation between cancers of the nose and\\nsinuses with industrial exposure to wood\\ndust.\\n\\nTalc has long been controversial. When\\nstudies first appeared suggesting it migrated\\ninto the ovaries to cause tumors, many\\nfeminine hygiene products replaced talc with\\ncornstarch.\\n\\nPanelist Medinsky said she had been prepared\\nto list talc powder as reasonably believed\\nto cause cancer. But after listening to\\nhours of industry attacks on the science,\\nthe evidence has knocked me out of the\\nreasonably category into not list, she\\nsaid before the panel voted 7-3 against\\nlisting talc.\\n\\nTalc has long been controversial. When\\nstudies first appeared suggesting it migrated\\ninto the ovaries to cause tumors, many\\nfeminine hygiene products replaced talc with\\ncornstarch.\\n\\nPanelist Medinsky said she had been prepared\\nto list talc powder as reasonably believed\\nto cause cancer. But after listening to\\nhours of industry attacks on the science,\\nthe evidence has knocked me out of the\\nreasonably category into not list, she\\nsaid before the panel voted 7-3 against\\nlisting talc.\\n\\nTalc in one form or the other can be found in\\nmany papers, paints, ceramics, food wrappers,\\nhard candy, chewing gum, cosmetics and pills.\\nMost people are familiar with talc as a loose\\npowder used in cosmetics and as a drying\\npowder.\\nabde |{ b |{c|<here> d|e}| f}| g | h",
+      "pos": "384.1,689.4",
+      "rects": "107.03,0.5,155.69,1378.3 155.69,919.49,266.56,1378.3 155.69,460.69,266.56,919.49 155.69,0.892,266.56,460.69 266.56,0.5,547.74,1378.3 547.74,919.49,615.17,1378.3 547.74,460.69,569.95,919.49 569.95,460.69,592.95,919.49 592.95,460.69,615.17,919.49 547.74,0.892,615.17,460.69 615.17,0.5,638.17,1378.3 638.17,0.5,661.17,1378.3",
+      "shape": "record",
+      "width": "7.6964"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[283.200,1414.300],[283.200,1330.500],[154.450,1440.300],[98.090,1378.300],[0.000,1270.300],[31.920,877.780],[33.530,719.810]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[37.030,719.930],[33.590,709.910],[30.030,719.890]]
+        }
+      ],
+      "headport": "f0",
+      "pos": "e,33.595,708.4 283.2,1414.3 283.2,1330.5 154.45,1440.3 98.095,1378.3 0,1270.3 31.916,877.78 33.533,719.81",
+      "tailport": "f1"
+    },
+    {
+      "_gvid": 1,
+      "tail": 0,
+      "head": 2,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[331.870,1414.300],[331.870,1365.700],[515.410,1414.600],[547.740,1378.300],[617.520,1299.900],[607.520,1005.700],[594.290,828.200]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[597.800,828.160],[593.550,818.460],[590.820,828.690]]
+        }
+      ],
+      "headport": "here",
+      "pos": "e,593.44,816.95 331.87,1414.3 331.87,1365.7 515.41,1414.6 547.74,1378.3 617.52,1299.9 607.52,1005.7 594.29,828.2",
+      "tailport": "f2"
+    }
+  ]
+}

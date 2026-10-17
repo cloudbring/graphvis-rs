@@ -1,0 +1,8 @@
+graph 1 22.415 1.4028
+node a 4.0519 0.7014 8.1037 1.4028 <<TABLE CELLSPACING="2" CELLPADDING="2" BORDER="0" 
+CELLBORDER="0"><TR><TD><TABLE CELLSPACING="3" CELLPADDING="1" BORDER="0" 
+CELLBORDER="0">
+<TR><TD ALIGN="left"><FONT POINT-SIZE="30.0" FACE="Helvetica-Bold">image attribute (null)</FONT></TD></TR><TR><TD ALIGN="left"><FONT POINT-SIZE="30.0" FACE="Helvetica-Bold">imagepath attribute (valid absolute pathname)</FONT></TD></TR>
+</TABLE></TD></TR></TABLE>> solid plaintext black lightgrey
+node b 15.385 0.7014 14.061 0.61111 "image from imagepath attribute directory or working directory should be displayed" solid box black lightgrey
+stop

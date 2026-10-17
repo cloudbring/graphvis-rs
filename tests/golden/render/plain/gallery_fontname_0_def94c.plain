@@ -1,0 +1,4 @@
+graph 1 1.8472 1.4667
+node Arial 0.52778 0.76111 0.8432 0.5 Arial solid ellipse black lightgrey
+edge Arial Arial 7 0.92099 0.8545 1.073 0.85864 1.1994 0.82751 1.1994 0.76111 1.1994 0.71961 1.15 0.69189 1.0759 0.67794 Impact 1.4693 0.76111 solid black
+stop

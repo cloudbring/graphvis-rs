@@ -1,0 +1,71 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,126,108",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "ab",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,90",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "cd",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "CD",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "AB",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,90",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"
+    },
+    {
+      "_gvid": 1,
+      "tail": 0,
+      "head": 2,
+      "pos": "e,84.082,33.504 27,89 27,89 54.803,61.969 75.855,41.502",
+      "tailclip": "false"
+    },
+    {
+      "_gvid": 2,
+      "tail": 3,
+      "head": 1,
+      "headclip": "false",
+      "pos": "e,27,19 99,89 99,89 53.726,44.984 34.98,26.759",
+      "tailclip": "false"
+    },
+    {
+      "_gvid": 3,
+      "tail": 3,
+      "head": 2,
+      "headclip": "false",
+      "pos": "e,99,19 99,71.697 99,58.741 99,41.395 99,30.208"
+    }
+  ]
+}

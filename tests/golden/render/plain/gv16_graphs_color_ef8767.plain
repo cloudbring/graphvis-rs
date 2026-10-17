@@ -1,0 +1,9 @@
+graph 1 4.8084 1.5
+node abc 0.375 1.25 0.75 0.5 abc filled ellipse green green
+node def 0.375 0.25 0.75 0.5 def filled ellipse 0.2,0.8,0.8 0.2,0.8,0.8
+node ghi 1.375 1.25 0.75 0.5 ghi filled ellipse #FF0000 #FF0000
+node kl 2.375 1.25 0.75 0.5 kl filled ellipse #FF00007F #FF00007F
+node mno 3.3889 1.25 0.78347 0.5 mno filled ellipse yellow yellow
+node pqr 4.4167 1.25 0.78347 0.5 mno filled ellipse yellow yellow
+edge abc def 4 0.375 0.99579 0.375 0.89454 0.375 0.77397 0.375 0.66022 solid red:blue:#00FF00
+stop

@@ -1,0 +1,27 @@
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,233.92,36",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "pentagon",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "57.396,18",
+      "shape": "pentagon",
+      "width": "1.5943"
+    },
+    {
+      "_gvid": 1,
+      "name": "hexagon",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "183.4,18",
+      "shape": "hexagon",
+      "width": "1.4033"
+    }
+  ]
+}

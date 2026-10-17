@@ -6,6 +6,14 @@
 //!
 //! Exits non-zero when the total score or the number of exactly matching files drops
 //! below the baseline. `--update` rewrites the baseline with the current results.
+//!
+//! ```text
+//! gv-diff render [--root DIR] [--baseline FILE] [--update] [--filter SUBSTR]
+//!                [--format FMT[,FMT...]] [--worst N]
+//! ```
+//!
+//! Render fidelity: compares the port's `-n2` renderings of the C layouts in
+//! `tests/golden/render/laid` with C's (see `gv_diff::render`).
 
 use gv_diff::{Baseline, FileReport, compare_file};
 use std::collections::BTreeMap;
@@ -14,6 +22,9 @@ use std::process::ExitCode;
 use std::sync::Mutex;
 
 fn main() -> ExitCode {
+    if std::env::args().nth(1).as_deref() == Some("render") {
+        return render_main(std::env::args().skip(2).collect());
+    }
     let mut golden = PathBuf::from("tests/golden");
     let mut baseline_path: Option<PathBuf> = None;
     let mut update = false;
@@ -222,5 +233,93 @@ fn check_against(base: &Baseline, cur: &Baseline, filtered: bool) -> ExitCode {
             println!("note: results beat the baseline; refresh it with --update");
         }
         ExitCode::SUCCESS
+    }
+}
+
+fn render_main(args: Vec<String>) -> ExitCode {
+    use gv_diff::render::{FORMATS, RenderBaseline, check, print_summary, run_corpus};
+    let mut root = PathBuf::from("tests/golden/render");
+    let mut baseline_path: Option<PathBuf> = None;
+    let mut update = false;
+    let mut filter: Option<String> = None;
+    let mut formats: Vec<String> = Vec::new();
+    let mut worst = 0usize;
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--root" => root = it.next().expect("--root DIR").into(),
+            "--baseline" => baseline_path = Some(it.next().expect("--baseline FILE").into()),
+            "--update" => update = true,
+            "--filter" => filter = it.next(),
+            "--format" => formats.extend(
+                it.next()
+                    .expect("--format FMT")
+                    .split(',')
+                    .map(str::to_string),
+            ),
+            "--worst" => worst = it.next().and_then(|s| s.parse().ok()).unwrap_or(10),
+            other => {
+                eprintln!("unknown argument {other}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+    let fmts: Vec<&str> = if formats.is_empty() {
+        FORMATS.to_vec()
+    } else {
+        formats.iter().map(String::as_str).collect()
+    };
+    let cur = run_corpus(&root, &fmts, filter.as_deref());
+    let base: Option<RenderBaseline> = baseline_path
+        .as_ref()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|s| serde_json::from_str(&s).expect("parse render baseline"));
+    print_summary(&cur, base.as_ref());
+    if worst > 0 {
+        for (fmt, files) in &cur.formats {
+            let mut v: Vec<_> = files.iter().filter(|(_, r)| !r.identical).collect();
+            v.sort_by_key(|(name, r)| (r.diff_lines, (*name).clone()));
+            println!("\n{fmt}: closest non-identical files");
+            for (name, r) in v.iter().take(worst) {
+                println!(
+                    "  {:>6}  {name}{}",
+                    r.diff_lines,
+                    r.error
+                        .as_deref()
+                        .map(|e| format!("  [{e}]"))
+                        .unwrap_or_default()
+                );
+            }
+        }
+    }
+    let Some(bpath) = baseline_path else {
+        return ExitCode::SUCCESS;
+    };
+    if update {
+        let mut merged = base.unwrap_or_default();
+        for (fmt, files) in cur.formats {
+            let entry = merged.formats.entry(fmt).or_default();
+            if filter.is_none() {
+                entry.clear();
+            }
+            entry.extend(files);
+        }
+        let json = serde_json::to_string_pretty(&merged).expect("serialize render baseline");
+        std::fs::write(&bpath, json + "\n").expect("write render baseline");
+        println!("render baseline updated: {}", bpath.display());
+        return ExitCode::SUCCESS;
+    }
+    let Some(base) = base else {
+        println!(
+            "no render baseline at {}; run with --update",
+            bpath.display()
+        );
+        return ExitCode::FAILURE;
+    };
+    if check(&base, &cur) {
+        ExitCode::SUCCESS
+    } else {
+        println!("FAIL: render fidelity dropped below the baseline");
+        ExitCode::FAILURE
     }
 }

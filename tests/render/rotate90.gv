@@ -1,0 +1,1 @@
+digraph G { rotate=90; a -> b -> c; a [label="rotated"]; }

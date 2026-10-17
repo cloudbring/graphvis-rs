@@ -1,0 +1,532 @@
+{
+  "name": "states",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,811.46,1248.6",
+  "compound": "true",
+  "fontname": "Arial",
+  "fontsize": "9",
+  "label": "",
+  "labelloc": "t",
+  "nodesep": "0.4",
+  "ranksep": "0.4",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "clustere3ffa58211d69e3db000538bf02fa1d0",
+      "bb": "93.927,0,785.93,1248.6",
+      "compound": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "DriveCom Z",
+      "labelloc": "t",
+      "lheight": "0.15",
+      "lp": "439.93,1239.2",
+      "lwidth": "0.67",
+      "nodesep": "0.4",
+      "ranksep": "0.4",
+      "_gvid": 0,
+      "subgraphs": [
+        1
+      ],
+      "nodes": [
+        2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+      ],
+      "edges": [
+        0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,20,22,21,24,23,1,17,18,19,25,26
+      ]
+    },
+    {
+      "name": "clustere3ffa77611d69e3db000538bf02fa1d0",
+      "bb": "101.93,131,527.93,1221.8",
+      "compound": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "Active",
+      "labelloc": "t",
+      "lheight": "0.15",
+      "lp": "314.93,1212.4",
+      "lwidth": "0.34",
+      "nodesep": "0.4",
+      "ranksep": "0.4",
+      "_gvid": 1,
+      "nodes": [
+        2,3,4,5,6,7,8,9,10,11,12
+      ],
+      "edges": [
+        0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "Ie3ffa77611d69e3db000538bf02fa1d0",
+      "color": "black",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.2",
+      "label": "",
+      "pos": "451.93,1187.8",
+      "shape": "circle",
+      "style": "filled",
+      "width": "0.2"
+    },
+    {
+      "_gvid": 3,
+      "name": "Se3ffa84b11d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Undefined",
+      "pos": "352.93,1048",
+      "shape": "box",
+      "width": "0.79211"
+    },
+    {
+      "_gvid": 4,
+      "name": "Se3ffa60811d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Wait Switch On Inhibit",
+      "pos": "173.93,951.4",
+      "shape": "box",
+      "width": "1.4449"
+    },
+    {
+      "_gvid": 5,
+      "name": "Se3ffa87211d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Switch On Inhibit",
+      "pos": "171.93,863.8",
+      "shape": "box",
+      "width": "1.1601"
+    },
+    {
+      "_gvid": 6,
+      "name": "Se3ffa65611d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Wait Ready To Switch On",
+      "pos": "169.93,743.8",
+      "shape": "box",
+      "width": "1.6533"
+    },
+    {
+      "_gvid": 7,
+      "name": "Se3ffa61c11d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Ready To Switch On",
+      "pos": "169.93,667",
+      "shape": "box",
+      "width": "1.3685"
+    },
+    {
+      "_gvid": 8,
+      "name": "Se3ffa53211d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Wait Switched On",
+      "pos": "166.93,568.6",
+      "shape": "box",
+      "width": "1.2156"
+    },
+    {
+      "_gvid": 9,
+      "name": "Se3ffa8ac11d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Switched On",
+      "pos": "166.93,491.8",
+      "shape": "box",
+      "width": "0.9309"
+    },
+    {
+      "_gvid": 10,
+      "name": "Se3ffa83711d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Wait Operation Enabled",
+      "pos": "166.93,393.4",
+      "shape": "box",
+      "width": "1.5494"
+    },
+    {
+      "_gvid": 11,
+      "name": "Se3ffa81011d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Operation Enabled",
+      "pos": "155.93,291.4",
+      "shape": "box",
+      "width": "1.2646"
+    },
+    {
+      "_gvid": 12,
+      "name": "Se3ffa8d311d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Quick Stop Active",
+      "pos": "296.93,157",
+      "shape": "box",
+      "width": "1.2087"
+    },
+    {
+      "_gvid": 13,
+      "name": "Ie3ffa58211d69e3db000538bf02fa1d0",
+      "color": "black",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.2",
+      "label": "",
+      "pos": "564.93,291.4",
+      "shape": "circle",
+      "style": "filled",
+      "width": "0.2"
+    },
+    {
+      "_gvid": 14,
+      "name": "Se3ffa4bf11d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Idle",
+      "pos": "563.93,157",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 15,
+      "name": "Se3ffa7b011d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Disabled",
+      "pos": "582.93,26",
+      "shape": "box",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 16,
+      "name": "Se3ffa90d11d69e3db000538bf02fa1d0",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "height": "0.5",
+      "label": "Malfunction",
+      "pos": "566.93,1048",
+      "shape": "box",
+      "width": "0.86144"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 2,
+      "head": 3,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "",
+      "pos": "e,355.94,1066.3 444.84,1185.6 434.2,1183.3 414.04,1177.8 401.93,1165.6 377.73,1141.3 364.82,1103.3 358.43,1077.3"
+    },
+    {
+      "_gvid": 2,
+      "tail": 3,
+      "head": 4,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "Out_QuickStop = true;",
+      "lp": "221.28,989.8",
+      "pos": "e,170.68,969.89 324.01,1047.9 283.86,1047.3 212.17,1039.7 176.63,995.2 173.4,991.16 171.73,986.17 171,981.04"
+    },
+    {
+      "_gvid": 3,
+      "tail": 4,
+      "head": 4,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "After(timeout_Response)\\nLogError(L'Servo response timeout');\\nmessage = L'Servo response timeout';",
+      "lp": "331.32,951.4",
+      "pos": "e,226.13,944.21 226.13,958.59 242.27,958.45 254.94,956.05 254.94,951.4 254.94,947.91 247.81,945.69 237.44,944.74"
+    },
+    {
+      "_gvid": 4,
+      "tail": 4,
+      "head": 5,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "In_QuickStop\\nServo_Res_Disable = true;",
+      "lp": "130.02,907.6",
+      "pos": "e,129.89,872.31 121.43,945.48 104.17,941.07 86.712,933.01 76.121,918.4 60.827,897.3 89.19,883.45 118.94,875.13"
+    },
+    {
+      "_gvid": 5,
+      "tail": 5,
+      "head": 6,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_Init.isAvailable() || Cmd_Enable\\nsig_Cmd_Init.get();\\nOut_DisableVoltage = true;\\nOut_QuickStop = true;\\nServo_Res_Disable = false;",
+      "lp": "98.053,803.8",
+      "pos": "e,110.05,749.48 129.8,860.07 88.398,856.41 29.407,848.23 15.179,830.8 0,812.21 0.0235,795.41 15.179,776.8 26.043,763.46 63.408,755.51 98.698,750.87"
+    },
+    {
+      "_gvid": 6,
+      "tail": 6,
+      "head": 6,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "After(timeout_Response)\\nLogError(L'Servo response timeout');\\nmessage = L'Servo response timeout';",
+      "lp": "334.83,743.8",
+      "pos": "e,229.91,736.65 229.91,750.95 246.12,750.57 258.44,748.19 258.44,743.8 258.44,740.51 251.51,738.35 241.21,737.31"
+    },
+    {
+      "_gvid": 7,
+      "tail": 6,
+      "head": 7,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "In_ReadyToSwitchOn",
+      "lp": "136.15,705.4",
+      "pos": "e,120.36,678.5 110.03,729.12 94.2,722.48 83.661,713.04 92.384,700 96.95,693.18 103.27,687.81 110.34,683.58"
+    },
+    {
+      "_gvid": 8,
+      "tail": 7,
+      "head": 8,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_Init.isAvailable() || Cmd_Enable\\nsig_Cmd_Init.get();\\nOut_SwitchOn = true;",
+      "lp": "96.053,617.8",
+      "pos": "e,122.94,572.69 120.35,662.58 79.633,658.62 26.573,650.4 13.179,634 4.0715,622.85 4.0928,612.77 13.179,601.6 25.587,586.34 72.834,578.12 111.71,573.85"
+    },
+    {
+      "_gvid": 9,
+      "tail": 8,
+      "head": 8,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "After(timeout_Response)\\nLogError(L'Servo response timeout');\\nmessage = L'Servo response timeout';",
+      "lp": "316.07,568.6",
+      "pos": "e,210.97,561.41 210.97,575.79 226.79,575.95 239.69,573.55 239.69,568.6 239.69,564.93 232.58,562.66 222.45,561.8"
+    },
+    {
+      "_gvid": 10,
+      "tail": 8,
+      "head": 9,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "In_SwitchedOn",
+      "lp": "146.41,530.2",
+      "pos": "e,133,506.11 129.08,550.29 123.79,546.23 119.08,541.36 115.89,535.6 110.95,526.66 115.49,518.8 123.56,512.33"
+    },
+    {
+      "_gvid": 11,
+      "tail": 9,
+      "head": 10,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_Init.isAvailable() || Cmd_Enable\\nsig_Cmd_Init.get();\\nOut_EnableOperation = true;",
+      "lp": "94.053,442.6",
+      "pos": "e,110.79,398.57 133.18,488.73 92.091,485.41 26.269,477.31 11.179,458.8 2.0785,447.64 2.0785,437.56 11.179,426.4 22.561,412.44 62.812,404.4 99.541,399.87"
+    },
+    {
+      "_gvid": 12,
+      "tail": 10,
+      "head": 10,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "After(timeout_Response)\\nLogError(L'Servo response timeout');\\nmessage = L'Servo response timeout';",
+      "lp": "328.09,393.4",
+      "pos": "e,223.18,385.22 223.18,401.58 239.28,401.26 251.7,398.53 251.7,393.4 251.7,389.55 244.72,387.05 234.43,385.91"
+    },
+    {
+      "_gvid": 13,
+      "tail": 10,
+      "head": 11,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "In_OperationEnabled\\nServo_Res_Enable = true;",
+      "lp": "119.02,349.6",
+      "pos": "e,110.15,306.88 110.74,387.34 93.652,382.85 76.63,374.77 66.111,360.4 51.378,340.27 73.63,323.31 99.666,311.37"
+    },
+    {
+      "_gvid": 14,
+      "tail": 11,
+      "head": 11,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_QuickStop.isAvailable()\\nsig_Cmd_QuickStop.get();\\nOut_QuickStop = false;",
+      "lp": "297.23,291.4",
+      "pos": "e,201.77,285.95 201.77,296.85 217.64,296.91 230.45,295.09 230.45,291.4 230.45,288.66 223.39,286.95 213.27,286.27"
+    },
+    {
+      "_gvid": 15,
+      "tail": 11,
+      "head": 11,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "!Cmd_Enable && Servo_Res_Enable\\nServo_Res_Enable = false;\\nOut_SwitchOn = false;\\nOut_DisableVoltage = false;\\nOut_QuickStop = false;\\nOut_EnableOperation = false;",
+      "lp": "438.55,291.4",
+      "pos": "e,201.52,283.35 201.52,299.45 264.84,305.08 364.01,302.4 364.01,291.4 364.01,281.05 276.12,278.06 212.99,282.44"
+    },
+    {
+      "_gvid": 16,
+      "tail": 11,
+      "head": 12,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "!In_QuickStop\\nServo_Res_Enable = false;",
+      "lp": "142.27,217",
+      "pos": "e,253.14,158.27 116.77,272.94 105.27,265.73 94.051,256.16 87.609,244 76.375,222.79 71.973,208.21 87.609,190 107.12,167.28 186.56,160.52 241.76,158.6"
+    },
+    {
+      "_gvid": 20,
+      "tail": 13,
+      "head": 14,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "Out_RFGInhibit=true;\\nOut_SwitchOn = false;\\nOut_DisableVoltage = false;\\nOut_QuickStop = false;\\nOut_EnableOperation = false;",
+      "lp": "622.51,217",
+      "pos": "e,563.4,175.27 564.58,283.79 564.14,274.8 563.38,258.19 563.1,244 562.62,220 562.79,214 563.1,190 563.11,188.81 563.13,187.59 563.15,186.35"
+    },
+    {
+      "_gvid": 22,
+      "tail": 14,
+      "head": 15,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "!In_QuickStop &&\\n!In_ReadyToSwitchOn &&\\n!In_SwitchedOn &&\\n!In_OperationEnabled\\n\\nServo_Res_Disable = true;",
+      "lp": "631.73,91",
+      "pos": "e,580.4,44.122 566.49,138.6 569.64,117.23 575.02,80.684 578.76,55.26"
+    },
+    {
+      "_gvid": 21,
+      "tail": 14,
+      "head": 2,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_Init.isAvailable() || Cmd_Enable\\nsig_Cmd_Init.get();",
+      "lhead": "clustere3ffa77611d69e3db000538bf02fa1d0",
+      "lp": "525.05,667",
+      "pos": "e,527.92,458.53 591.34,161.37 623.41,165.95 673.59,175.28 684.93,190 699.57,209.02 692.87,221.35 684.93,244 682.1,252.06 677.78,251.98 672.93,259 613.94,344.38 570.63,394.35 534.18,448.99"
+    },
+    {
+      "_gvid": 24,
+      "tail": 15,
+      "head": 14,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "In_QuickStop ||\\nIn_ReadyToSwitchOn ||\\nIn_SwitchedOn ||\\nIn_OperationEnabled\\n\\nServo_Res_Disable = false;",
+      "lp": "506.27,91",
+      "pos": "e,546.04,138.74 555.71,29.668 520.86,33.712 463.44,42.704 450.62,59 433.03,81.353 431.5,101.94 450.62,123 462.97,136.61 515.91,124.05 532.93,131 534.08,131.47 535.22,132 536.35,132.57"
+    },
+    {
+      "_gvid": 23,
+      "tail": 15,
+      "head": 2,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_Init.isAvailable() || Cmd_Enable\\nsig_Cmd_Init.get();\\nServo_Res_Disable = true;",
+      "lhead": "clustere3ffa77611d69e3db000538bf02fa1d0",
+      "lp": "728.58,617.8",
+      "pos": "e,527.92,764.96 610.41,26.511 636.11,27.712 673.25,34.055 691.93,59 741.2,124.82 699.38,162.12 691.93,244 673.85,442.46 696.03,504.81 610.93,685 592.91,723.14 564.64,742.54 537.47,759.17"
+    },
+    {
+      "_gvid": 1,
+      "tail": 2,
+      "head": 16,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "In_Malfunction\\n\/*1state_SwitchOnInhibit = false;\\n1state_ReadyToSwitchOn = false;\\n1state_SwitchedOn = false;\\n1state_OperationEnabled = false;\\n1state_QuickStopActive = false;*\/",
+      "lp": "688.07,1133.2",
+      "ltail": "clustere3ffa77611d69e3db000538bf02fa1d0",
+      "pos": "e,585.96,1066.2 527.92,1185.8 562.44,1183.5 598,1178.1 608.93,1165.6 627.88,1143.9 618.55,1127.9 608.93,1100.8 605.59,1091.4 599.73,1082.4 593.43,1074.7"
+    },
+    {
+      "_gvid": 17,
+      "tail": 11,
+      "head": 14,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "!In_OperationEnabled\\nServo_Res_Enable = false;",
+      "lp": "501.27,217",
+      "pos": "e,536.77,173.53 180.59,272.99 188.44,267.98 197.31,262.85 205.93,259 307.53,213.63 338.15,214.9 446.61,190 481,182.11 493.77,186.77 526.07,177.04"
+    },
+    {
+      "_gvid": 18,
+      "tail": 12,
+      "head": 14,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "!In_ReadyToSwitchOn &&\\n!In_SwitchedOn &&\\n!In_OperationEnabled",
+      "lp": "438.68,137.8",
+      "pos": "e,536.61,140.1 334.3,138.57 349.99,131.81 368.68,124.98 386.41,121.6 409.23,117.25 468.31,116.4 490.96,121.6 503.02,124.37 515.4,129.41 526.46,134.84"
+    },
+    {
+      "_gvid": 19,
+      "tail": 12,
+      "head": 14,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_Init.isAvailable() || !Cmd_Enable\\nsig_Cmd_Init.get();\\nOut_SwitchOn = false;\\nOut_DisableVoltage = false;\\nOut_QuickStop = false;\\nOut_EnableOperation = false;",
+      "lp": "438.68,192.4",
+      "pos": "e,536.45,157 340.72,157 391.97,157 476.06,157 525.08,157"
+    },
+    {
+      "_gvid": 25,
+      "tail": 16,
+      "head": 2,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "!In_Malfunction\\nOut_ResetMalfunction = false;",
+      "lhead": "clustere3ffa77611d69e3db000538bf02fa1d0",
+      "lp": "541.52,1133.2",
+      "pos": "e,527.92,1088 553.83,1066.3 549.52,1071.3 544.36,1076.6 537.25,1081.8"
+    },
+    {
+      "_gvid": 26,
+      "tail": 16,
+      "head": 16,
+      "decorate": "true",
+      "fontname": "Arial",
+      "fontsize": "9",
+      "label": "sig_Cmd_ResetMalfunction.isAvailable()\\nsig_Cmd_ResetMalfunction.get();\\nOut_ResetMalfunction = true;\\nOut_SwitchOn = false;\\nOut_DisableVoltage = false;\\nOut_EnableOperation = false;\\nOut_QuickStop = false;",
+      "lp": "707.72,1048",
+      "pos": "e,598.42,1037.4 598.42,1058.6 613.57,1060 626.94,1056.4 626.94,1048 626.94,1041.8 619.73,1038.3 609.9,1037.3"
+    }
+  ]
+}

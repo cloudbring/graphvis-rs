@@ -1,0 +1,49 @@
+graph 1 11.27 17.342
+node Ie3ffa77611d69e3db000538bf02fa1d0 6.2768 16.497 0.2 0.2 "" filled circle black black
+node Se3ffa84b11d69e3db000538bf02fa1d0 4.9018 14.556 0.79211 0.5 Undefined solid box black lightgrey
+node Se3ffa60811d69e3db000538bf02fa1d0 2.4157 13.214 1.4449 0.5 "Wait Switch On Inhibit" solid box black lightgrey
+node Se3ffa87211d69e3db000538bf02fa1d0 2.3879 11.997 1.1601 0.5 "Switch On Inhibit" solid box black lightgrey
+node Se3ffa65611d69e3db000538bf02fa1d0 2.3602 10.331 1.6533 0.5 "Wait Ready To Switch On" solid box black lightgrey
+node Se3ffa61c11d69e3db000538bf02fa1d0 2.3602 9.2639 1.3685 0.5 "Ready To Switch On" solid box black lightgrey
+node Se3ffa53211d69e3db000538bf02fa1d0 2.3185 7.8972 1.2156 0.5 "Wait Switched On" solid box black lightgrey
+node Se3ffa8ac11d69e3db000538bf02fa1d0 2.3185 6.8306 0.9309 0.5 "Switched On" solid box black lightgrey
+node Se3ffa83711d69e3db000538bf02fa1d0 2.3185 5.4639 1.5494 0.5 "Wait Operation Enabled" solid box black lightgrey
+node Se3ffa81011d69e3db000538bf02fa1d0 2.1657 4.0472 1.2646 0.5 "Operation Enabled" solid box black lightgrey
+node Se3ffa8d311d69e3db000538bf02fa1d0 4.1241 2.1806 1.2087 0.5 "Quick Stop Active" solid box black lightgrey
+node Ie3ffa58211d69e3db000538bf02fa1d0 7.8463 4.0472 0.2 0.2 "" filled circle black black
+node Se3ffa4bf11d69e3db000538bf02fa1d0 7.8324 2.1806 0.75 0.5 Idle solid box black lightgrey
+node Se3ffa7b011d69e3db000538bf02fa1d0 8.0963 0.36111 0.75 0.5 Disabled solid box black lightgrey
+node Se3ffa90d11d69e3db000538bf02fa1d0 7.8741 14.556 0.86144 0.5 Malfunction solid box black lightgrey
+edge Ie3ffa77611d69e3db000538bf02fa1d0 Se3ffa84b11d69e3db000538bf02fa1d0 7 6.1784 16.467 6.0306 16.435 5.7506 16.358 5.5824 16.189 5.2463 15.851 5.067 15.324 4.9782 14.962 solid black
+edge Ie3ffa77611d69e3db000538bf02fa1d0 Se3ffa90d11d69e3db000538bf02fa1d0 10 7.3323 16.469 7.8117 16.438 8.3056 16.362 8.4574 16.189 8.7206 15.888 8.591 15.665 8.4574 15.289 8.411 15.158 8.3296 15.033 8.2421 14.926 "In_Malfunction\n/*1state_SwitchOnInhibit = false;\n1state_ReadyToSwitchOn = false;\n1state_SwitchedOn = false;\n1state_OperationEnabled = \
+false;\n1state_QuickStopActive = false;*/" 9.5566 15.739 solid black
+edge Se3ffa84b11d69e3db000538bf02fa1d0 Se3ffa60811d69e3db000538bf02fa1d0 7 4.5002 14.554 3.9425 14.546 2.9468 14.44 2.4532 13.822 2.4084 13.766 2.3852 13.697 2.375 13.626 "Out_QuickStop = true;" 3.0734 13.747 solid black
+edge Se3ffa60811d69e3db000538bf02fa1d0 Se3ffa60811d69e3db000538bf02fa1d0 7 3.1407 13.314 3.3649 13.312 3.5409 13.278 3.5409 13.214 3.5409 13.165 3.4418 13.135 3.2978 13.121 "After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';" 4.6017 13.214 solid black
+edge Se3ffa60811d69e3db000538bf02fa1d0 Se3ffa87211d69e3db000538bf02fa1d0 7 1.6866 13.132 1.4468 13.07 1.2043 12.958 1.0572 12.756 0.84482 12.462 1.2388 12.27 1.652 12.155 "In_QuickStop\nServo_Res_Disable = true;" 1.8059 12.606 solid black
+edge Se3ffa87211d69e3db000538bf02fa1d0 Se3ffa65611d69e3db000538bf02fa1d0 10 1.8028 11.945 1.2278 11.895 0.40843 11.781 0.21082 11.539 0 11.281 0.00032639 11.047 0.21082 10.789 0.36171 10.604 0.88067 10.493 1.3708 10.429 "sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_DisableVoltage = true;\nOut_QuickStop = true;\nServo_Res_Disable = \
+false;" 1.3618 11.164 solid black
+edge Se3ffa65611d69e3db000538bf02fa1d0 Se3ffa65611d69e3db000538bf02fa1d0 7 3.1932 10.43 3.4184 10.425 3.5895 10.392 3.5895 10.331 3.5895 10.285 3.4932 10.255 3.3502 10.24 "After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';" 4.6504 10.331 solid black
+edge Se3ffa65611d69e3db000538bf02fa1d0 Se3ffa61c11d69e3db000538bf02fa1d0 7 1.5282 10.127 1.3083 10.034 1.162 9.9033 1.2831 9.7222 1.3465 9.6275 1.4342 9.5529 1.5325 9.4942 In_ReadyToSwitchOn 1.891 9.7972 solid black
+edge Se3ffa61c11d69e3db000538bf02fa1d0 Se3ffa53211d69e3db000538bf02fa1d0 10 1.6716 9.2025 1.106 9.1475 0.36907 9.0333 0.18304 8.8056 0.056548 8.6507 0.056844 8.5107 0.18304 8.3556 0.35537 8.1436 1.0116 8.0294 1.5516 7.9701 "sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_SwitchOn = true;" 1.3341 8.5806 solid black
+edge Se3ffa53211d69e3db000538bf02fa1d0 Se3ffa53211d69e3db000538bf02fa1d0 7 2.9302 7.9971 3.1499 7.9993 3.3291 7.966 3.3291 7.8972 3.3291 7.8462 3.2303 7.8147 3.0896 7.8028 "After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';" 4.3899 7.8972 solid black
+edge Se3ffa53211d69e3db000538bf02fa1d0 Se3ffa8ac11d69e3db000538bf02fa1d0 7 1.7928 7.6429 1.7193 7.5865 1.6539 7.5189 1.6096 7.4389 1.541 7.3147 1.6041 7.2056 1.7161 7.1157 In_SwitchedOn 2.0335 7.3639 solid black
+edge Se3ffa8ac11d69e3db000538bf02fa1d0 Se3ffa83711d69e3db000538bf02fa1d0 10 1.8497 6.7879 1.279 6.7418 0.36485 6.6293 0.15526 6.3722 0.028868 6.2172 0.028868 6.0772 0.15526 5.9222 0.31335 5.7283 0.87239 5.6167 1.3825 5.5537 "sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_EnableOperation = true;" 1.3063 6.1472 solid black
+edge Se3ffa83711d69e3db000538bf02fa1d0 Se3ffa83711d69e3db000538bf02fa1d0 7 3.0997 5.5775 3.3234 5.5731 3.4959 5.5351 3.4959 5.4639 3.4959 5.4104 3.3989 5.3757 3.256 5.3599 "After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';" 4.5568 5.4639 solid black
+edge Se3ffa83711d69e3db000538bf02fa1d0 Se3ffa81011d69e3db000538bf02fa1d0 7 1.5381 5.3797 1.3007 5.3174 1.0643 5.2051 0.91821 5.0056 0.71358 4.726 1.0226 4.4904 1.3843 4.3246 "In_OperationEnabled\nServo_Res_Enable = true;" 1.6531 4.8556 solid black
+edge Se3ffa81011d69e3db000538bf02fa1d0 Se3ffa81011d69e3db000538bf02fa1d0 7 2.8024 4.1229 3.0228 4.1238 3.2007 4.0985 3.2007 4.0472 3.2007 4.0092 3.1027 3.9854 2.9621 3.976 "sig_Cmd_QuickStop.isAvailable()\nsig_Cmd_QuickStop.get();\nOut_QuickStop = false;" 4.1282 4.0472 solid black
+edge Se3ffa81011d69e3db000538bf02fa1d0 Se3ffa81011d69e3db000538bf02fa1d0 7 2.7989 4.159 3.6784 4.2372 5.0557 4.2 5.0557 4.0472 5.0557 3.9035 3.835 3.8619 2.9582 3.9228 "!Cmd_Enable && Servo_Res_Enable\nServo_Res_Enable = false;\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = \
+false;\nOut_EnableOperation = false;" 6.091 4.0472 solid black
+edge Se3ffa81011d69e3db000538bf02fa1d0 Se3ffa8d311d69e3db000538bf02fa1d0 10 1.6218 3.7908 1.4621 3.6907 1.3063 3.5578 1.2168 3.3889 1.0608 3.0943 0.99963 2.8918 1.2168 2.6389 1.4878 2.3233 2.5911 2.2294 3.3578 2.2028 "!In_QuickStop\nServo_Res_Enable = false;" 1.976 3.0139 solid black
+edge Se3ffa81011d69e3db000538bf02fa1d0 Se3ffa4bf11d69e3db000538bf02fa1d0 10 2.5082 3.7915 2.6172 3.7219 2.7404 3.6507 2.8602 3.5972 4.2713 2.9671 4.6966 2.9847 6.2029 2.6389 6.6806 2.5293 6.8579 2.594 7.3066 2.4589 "!In_OperationEnabled\nServo_Res_Enable = false;" 6.9621 3.0139 solid black
+edge Se3ffa8d311d69e3db000538bf02fa1d0 Se3ffa4bf11d69e3db000538bf02fa1d0 10 4.6431 1.9246 4.861 1.8307 5.1206 1.7358 5.3668 1.6889 5.6838 1.6285 6.5043 1.6167 6.8189 1.6889 6.9864 1.7274 7.1584 1.7974 7.312 1.8728 "!In_ReadyToSwitchOn &&\n!In_SwitchedOn &&\n!In_OperationEnabled" 6.0928 1.9139 solid black
+edge Se3ffa8d311d69e3db000538bf02fa1d0 Se3ffa4bf11d69e3db000538bf02fa1d0 4 4.7323 2.1806 5.4441 2.1806 6.612 2.1806 7.2928 2.1806 "sig_Cmd_Init.isAvailable() || !Cmd_Enable\nsig_Cmd_Init.get();\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = \
+false;\nOut_EnableOperation = false;" 6.0928 2.6722 solid black
+edge Ie3ffa58211d69e3db000538bf02fa1d0 Se3ffa4bf11d69e3db000538bf02fa1d0 10 7.8414 3.9415 7.8353 3.8167 7.8248 3.586 7.8209 3.3889 7.8142 3.0556 7.8166 2.9722 7.8209 2.6389 7.821 2.6224 7.8213 2.6054 7.8216 2.5882 "Out_RFGInhibit=true;\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = false;\nOut_EnableOperation = false;" 8.646 3.0139 solid black
+edge Se3ffa4bf11d69e3db000538bf02fa1d0 Ie3ffa77611d69e3db000538bf02fa1d0 13 8.2131 2.2412 8.6585 2.3049 9.3554 2.4344 9.5129 2.6389 9.7163 2.9031 9.6232 3.0743 9.5129 3.3889 9.4736 3.5008 9.4136 3.4997 9.3463 3.5972 8.527 4.7831 7.9254 5.4771 7.4192 6.236 "sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();" 7.2924 9.2639 solid black
+edge Se3ffa4bf11d69e3db000538bf02fa1d0 Se3ffa7b011d69e3db000538bf02fa1d0 4 7.8679 1.925 7.9117 1.6282 7.9864 1.1206 8.0384 0.7675 "!In_QuickStop &&\n!In_ReadyToSwitchOn &&\n!In_SwitchedOn &&\n!In_OperationEnabled\n\nServo_Res_Disable = true;" 8.7741 1.2639 solid black
+edge Se3ffa7b011d69e3db000538bf02fa1d0 Ie3ffa77611d69e3db000538bf02fa1d0 13 8.4779 0.36821 8.8349 0.38489 9.3507 0.47299 9.6102 0.81944 10.294 1.7336 9.7136 2.2517 9.6102 3.3889 9.3591 6.1453 9.6671 7.0112 8.4852 9.5139 8.2349 10.044 7.8423 10.313 7.4649 10.544 "sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nServo_Res_Disable = true;" 10.119 8.5806 solid black
+edge Se3ffa7b011d69e3db000538bf02fa1d0 Se3ffa4bf11d69e3db000538bf02fa1d0 13 7.7182 0.41206 7.2342 0.46822 6.4367 0.59311 6.2586 0.81944 6.0143 1.1299 5.9931 1.4158 6.2586 1.7083 6.4302 1.8974 7.1654 1.7229 7.4018 1.8194 7.4178 1.826 7.4336 1.8333 7.4493 1.8412 "In_QuickStop ||\nIn_ReadyToSwitchOn ||\nIn_SwitchedOn ||\nIn_OperationEnabled\n\nServo_Res_Disable = false;" 7.0316 1.2639 solid black
+edge Se3ffa90d11d69e3db000538bf02fa1d0 Ie3ffa77611d69e3db000538bf02fa1d0 4 7.6921 14.81 7.6323 14.879 7.5606 14.953 7.4618 15.025 "!In_Malfunction\nOut_ResetMalfunction = false;" 7.5211 15.739 solid black
+edge Se3ffa90d11d69e3db000538bf02fa1d0 Se3ffa90d11d69e3db000538bf02fa1d0 7 8.3114 14.703 8.5218 14.722 8.7075 14.672 8.7075 14.556 8.7075 14.469 8.6074 14.421 8.4709 14.407 "sig_Cmd_ResetMalfunction.isAvailable()\nsig_Cmd_ResetMalfunction.get();\nOut_ResetMalfunction = true;\nOut_SwitchOn = false;\nOut_\
+DisableVoltage = false;\nOut_EnableOperation = false;\nOut_QuickStop = false;" 9.8295 14.556 solid black
+stop

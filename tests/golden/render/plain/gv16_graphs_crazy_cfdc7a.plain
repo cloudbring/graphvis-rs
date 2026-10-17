@@ -1,0 +1,92 @@
+graph 0.29027 20.67 16.698
+node "5th Edition" 11.421 16.303 3.9587 0.7899 "5th Edition" filled polygon salmon2 salmon2
+node "6th Edition" 9.5876 15.219 5.2058 0.57958 "6th Edition" filled polygon deepskyblue deepskyblue
+node "PWB 1.0" 14.408 15.219 1.5588 0.51329 "PWB 1.0" filled polygon goldenrod2 goldenrod2
+node LSX 12.713 14.01 2.0017 0.57455 LSX filled polygon burlywood2 burlywood2
+node "1 BSD" 3.0043 14.01 1.4443 0.58608 "1 BSD" filled polygon gold1 gold1
+node "Mini Unix" 8.4348 14.01 1.9934 0.5 "Mini Unix" filled polygon greenyellow greenyellow
+node Wollongong 10.74 14.01 2.1301 0.56882 Wollongong filled polygon darkseagreen darkseagreen
+node Interdata 6.0043 14.01 2.9172 0.99124 Interdata filled polygon dodgerblue1 dodgerblue1
+node "PWB 1.2" 14.408 14.01 1.622 1.55 "PWB 1.2" filled polygon cyan cyan
+node "USG 1.0" 16.783 14.01 3.7929 0.9722 "USG 1.0" filled polygon blue blue
+node "2 BSD" 2.171 7.7821 1.2008 0.53232 "2 BSD" filled polygon blanchedalmond blanchedalmond
+node "Unix/TS 3.0" 13.421 10.117 5.7975 1.0844 "Unix/TS 3.0" filled polygon thistle2 thistle2
+node "PWB 2.0" 12.185 12.682 4.0332 0.6294 "PWB 2.0" filled polygon darkolivegreen3 darkolivegreen3
+node "7th Edition" 6.0043 12.682 1.6552 0.82574 "7th Edition" filled polygon chocolate chocolate
+node "TS 4.0" 14.588 7.7821 3.5506 1.1302 "TS 4.0" filled polygon crimson crimson
+node "8th Edition" 10.588 6.5006 5.2646 1.2937 "8th Edition" filled polygon turquoise3 turquoise3
+node "32V" 8.8932 11.392 2.4007 0.73443 "32V" filled polygon steelblue3 steelblue3
+node V7M 1.2682 10.117 2.5363 1.1174 V7M filled polygon navy navy
+node "Ultrix-11" 2.171 5.1933 2.5738 0.56473 "Ultrix-11" filled polygon darkseagreen4 darkseagreen4
+node Xenix 4.2543 11.392 1.9304 0.81227 Xenix filled polygon coral coral
+node "UniPlus+" 6.5737 11.392 4.7595 0.95756 "UniPlus+" filled polygon darkolivegreen3 darkolivegreen3
+node "9th Edition" 11.268 5.1933 1.7472 0.8734 "9th Edition" filled polygon coral3 coral3
+node "3 BSD" 8.046 10.117 2.2027 0.5 "3 BSD" filled polygon lemonchiffon lemonchiffon
+node "2.8 BSD" 4.5598 6.5006 2.2085 0.62375 "2.8 BSD" filled polygon lightskyblue1 lightskyblue1
+node "2.9 BSD" 4.5598 5.1933 3.1509 1.2893 "2.9 BSD" filled polygon aquamarine2 aquamarine2
+node "4 BSD" 7.9487 8.9507 2.3325 0.68588 "4 BSD" filled polygon darkorange1 darkorange1
+node "4.1 BSD" 7.7543 7.7821 2.1296 0.81358 "4.1 BSD" filled polygon lightyellow1 lightyellow1
+node "4.2 BSD" 7.3654 6.5006 4.6393 1.3168 "4.2 BSD" filled polygon darkorchid4 darkorchid4
+node "4.3 BSD" 9.4626 5.1933 1.3727 1.205 "4.3 BSD" filled polygon lemonchiffon2 lemonchiffon2
+node "Ultrix-32" 7.2682 5.1933 3.434 0.67798 "Ultrix-32" filled polygon goldenrod3 goldenrod3
+node "CB Unix 1" 17.297 12.682 2.4805 1.0428 "CB Unix 1" filled polygon firebrick firebrick
+node "USG 2.0" 14.894 12.682 2.6327 1.2049 "USG 2.0" filled polygon chartreuse4 chartreuse4
+node "CB Unix 2" 18.922 11.392 3.4973 0.74875 "CB Unix 2" filled polygon greenyellow greenyellow
+node "USG 3.0" 13.421 11.392 4.1951 1.2878 "USG 3.0" filled polygon bisque2 bisque2
+node "CB Unix 3" 17.672 10.117 4.3749 0.90855 "CB Unix 3" filled polygon bisque4 bisque4
+node "Unix/TS++" 16.13 8.9507 2.9184 0.61024 "Unix/TS++" filled polygon mistyrose2 mistyrose2
+node "PDP-11 Sys V" 18.699 8.9507 2.5549 0.6217 "PDP-11 Sys V" filled polygon cadetblue1 cadetblue1
+node "Unix/TS 1.0" 16.283 11.392 2.4154 0.58797 "Unix/TS 1.0" filled polygon orangered orangered
+node "System V.0" 14.588 6.5006 3.2573 0.5 "System V.0" filled polygon darkorange1 darkorange1
+node "System V.2" 14.588 5.1933 5.1183 0.82808 "System V.2" filled polygon darkolivegreen4 darkolivegreen4
+node "System V.3" 14.588 3.9682 2.787 0.8383 "System V.3" filled polygon lightsteelblue1 lightsteelblue1
+edge "5th Edition" "6th Edition" 4 11.05 16.075 10.793 15.926 10.446 15.726 10.154 15.56 solid black
+edge "5th Edition" "PWB 1.0" 4 11.921 16.112 12.446 15.926 13.271 15.635 13.825 15.439 solid black
+edge "6th Edition" LSX 7 10.187 15.046 10.669 14.911 11.357 14.699 11.935 14.45 12.054 14.399 12.179 14.335 12.294 14.272 solid black
+edge "6th Edition" "1 BSD" 7 8.4116 15.056 7.4179 14.921 5.9593 14.706 4.6987 14.45 4.3747 14.385 4.0194 14.297 3.7182 14.219 solid black
+edge "6th Edition" "Mini Unix" 4 9.3868 15 9.2186 14.826 8.9747 14.576 8.776 14.374 solid black
+edge "6th Edition" Wollongong 4 9.7729 15.015 9.9511 14.833 10.224 14.553 10.435 14.337 solid black
+edge "6th Edition" Interdata 4 8.8797 14.972 8.2296 14.757 7.2746 14.443 6.6462 14.235 solid black
+edge "PWB 1.0" "PWB 1.2" 4 14.408 14.967 14.408 14.847 14.408 14.699 14.408 14.556 solid black
+edge "PWB 1.0" "USG 1.0" 4 14.758 15.031 15.174 14.824 15.872 14.476 16.328 14.249 solid black
+edge "1 BSD" "2 BSD" 10 2.9147 13.735 2.7641 13.272 2.4765 12.273 2.4765 11.406 2.4765 11.406 2.4765 11.406 2.4765 10.103 2.4765 9.416 2.3416 8.6233 2.2511 8.1687 solid black
+edge Interdata "Unix/TS 3.0" 7 6.344 13.818 7.5719 13.173 11.71 11 11.727 10.991 12.11 10.793 12.543 10.573 12.876 10.405 solid black
+edge Interdata "PWB 2.0" 10 6.4108 13.843 6.666 13.753 7.0035 13.642 7.3098 13.57 8.804 13.219 9.2219 13.372 10.727 13.07 10.988 13.017 11.274 12.947 11.522 12.881 solid black
+edge Interdata "7th Edition" 4 6.0043 13.798 6.0043 13.63 6.0043 13.38 6.0043 13.161 solid black
+edge "PWB 1.2" "PWB 2.0" 4 13.764 13.62 13.446 13.434 13.066 13.211 12.758 13.031 solid black
+edge "USG 1.0" "CB Unix 1" 4 16.865 13.787 16.935 13.606 17.041 13.339 17.13 13.114 solid black
+edge "USG 1.0" "USG 2.0" 4 16.519 13.815 16.235 13.619 15.774 13.302 15.416 13.055 solid black
+edge "2 BSD" "2.8 BSD" 4 2.5235 7.5832 2.9473 7.3607 3.6593 6.9871 4.1191 6.7457 solid black
+edge "Unix/TS 3.0" "TS 4.0" 4 13.531 9.8862 13.732 9.4878 14.163 8.636 14.408 8.1517 solid black
+edge "PWB 2.0" "Unix/TS 3.0" 7 12.063 12.456 11.89 12.121 11.619 11.46 11.893 10.991 12.069 10.691 12.392 10.487 12.696 10.354 solid black
+edge "7th Edition" "8th Edition" 13 6.6522 12.526 7.7078 12.293 9.6872 11.851 9.7404 11.793 10.25 11.246 10.004 10.879 10.004 10.131 10.004 10.131 10.004 10.131 10.004 8.9368 10.004 8.1783 10.278 7.3225 10.45 6.8585 solid black
+edge "7th Edition" "32V" 7 6.4925 12.462 6.9071 12.287 7.5171 12.027 8.046 11.793 8.17 11.738 8.3037 11.678 8.4275 11.621 solid black
+edge "7th Edition" V7M 7 5.2055 12.55 4.5658 12.43 3.6628 12.202 2.9626 11.793 2.3965 11.463 1.8799 10.902 1.5697 10.524 solid black
+edge "7th Edition" "Ultrix-11" 13 5.1939 12.609 4.6125 12.523 3.8576 12.311 3.421 11.793 2.9385 11.222 3.1571 10.879 3.1571 10.131 3.1571 10.131 3.1571 10.131 3.1571 7.7682 3.1571 6.9443 2.7071 6.0649 2.4151 5.581 solid black
+edge "7th Edition" Xenix 4 5.646 12.409 5.3887 12.224 5.0386 11.972 4.7539 11.766 solid black
+edge "7th Edition" "UniPlus+" 4 6.1223 12.406 6.2037 12.226 6.3135 11.983 6.4043 11.782 solid black
+edge "TS 4.0" "System V.0" 4 14.588 7.4836 14.588 7.3115 14.588 7.0897 14.588 6.9018 solid black
+edge "8th Edition" "9th Edition" 4 10.712 6.2519 10.807 6.0738 10.94 5.8243 11.052 5.6139 solid black
+edge "32V" "3 BSD" 4 8.7135 11.114 8.5896 10.931 8.4235 10.687 8.2879 10.487 solid black
+edge V7M "Ultrix-11" 7 1.264 9.8286 1.2616 9.3376 1.2789 8.2792 1.4487 7.4062 1.5772 6.7457 1.8465 6.0086 2.0176 5.5775 solid black
+edge "3 BSD" "4 BSD" 4 8.0272 9.8839 8.0136 9.7244 7.9948 9.5054 7.9791 9.3212 solid black
+edge "2.8 BSD" "Ultrix-11" 4 4.2226 6.306 3.8287 6.095 3.1718 5.7432 2.7075 5.4946 solid black
+edge "2.8 BSD" "2.9 BSD" 4 4.5598 6.2519 4.5598 6.0721 4.5598 5.8196 4.5598 5.6079 solid black
+edge "4 BSD" "4.1 BSD" 4 7.9112 8.7169 7.885 8.5632 7.8494 8.354 7.8187 8.174 solid black
+edge "4.1 BSD" "8th Edition" 4 8.0848 7.6219 8.5736 7.4056 9.4936 6.9985 10.072 6.7426 solid black
+edge "4.1 BSD" "2.8 BSD" 4 7.2051 7.5526 6.6075 7.3181 5.6591 6.9458 5.0751 6.7167 solid black
+edge "4.1 BSD" "4.2 BSD" 4 7.6829 7.5382 7.6311 7.3708 7.5593 7.1394 7.4971 6.9389 solid black
+edge "4.2 BSD" "4.3 BSD" 4 7.7116 6.2753 8.0236 6.0851 8.4889 5.8012 8.8614 5.5739 solid black
+edge "4.2 BSD" "Ultrix-32" 4 7.3423 6.1835 7.3279 5.9925 7.3091 5.7457 7.294 5.5481 solid black
+edge "CB Unix 1" "CB Unix 2" 4 17.587 12.442 17.847 12.241 18.228 11.943 18.519 11.719 solid black
+edge "USG 2.0" "USG 3.0" 4 14.559 12.381 14.332 12.187 14.032 11.93 13.797 11.728 solid black
+edge "CB Unix 2" "CB Unix 3" 4 18.703 11.161 18.533 10.992 18.292 10.751 18.085 10.545 solid black
+edge "USG 3.0" "Unix/TS 3.0" 4 13.421 11.144 13.421 10.979 13.421 10.755 13.421 10.559 solid black
+edge "CB Unix 3" "TS 4.0" 7 16.41 10.01 15.856 9.9031 15.245 9.685 14.852 9.2436 14.599 8.9606 14.551 8.5194 14.555 8.1985 solid black
+edge "CB Unix 3" "Unix/TS++" 4 17.34 9.859 17.12 9.6969 16.83 9.4819 16.588 9.3035 solid black
+edge "CB Unix 3" "PDP-11 Sys V" 4 17.874 9.8783 18.02 9.7168 18.219 9.4958 18.385 9.3117 solid black
+edge "Unix/TS++" "TS 4.0" 4 15.806 8.6976 15.615 8.5557 15.366 8.3717 15.144 8.2071 solid black
+edge "Unix/TS 1.0" "Unix/TS 3.0" 4 15.89 11.208 15.498 11.037 14.881 10.768 14.362 10.541 solid black
+edge "System V.0" "System V.2" 4 14.588 6.2637 14.588 6.0846 14.588 5.8282 14.588 5.6129 solid black
+edge "System V.2" "System V.3" 4 14.588 4.9599 14.588 4.7942 14.588 4.5628 14.588 4.3667 solid black
+stop

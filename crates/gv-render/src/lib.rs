@@ -2,13 +2,48 @@
 
 #![forbid(unsafe_code)]
 
-pub mod dot_out;
+mod agwrite;
+pub mod emit;
 pub mod json;
-pub mod svg;
+mod svg_engine;
+mod xdot_engine;
 
-pub use dot_out::{render_dot_positioned, render_plain};
-pub use json::render_json;
-pub use svg::render_svg;
+/// Renders `-Tdot` (`xdot == false`) or `-Txdot`.
+pub fn render_dot_positioned(graph: &Graph, xdot: bool) -> String {
+    render_graph(
+        graph,
+        if xdot {
+            OutputFormat::Xdot
+        } else {
+            OutputFormat::Dot
+        },
+    )
+    .unwrap_or_default()
+}
+
+/// Renders `-Tplain`.
+pub fn render_plain(graph: &Graph) -> String {
+    render_graph(graph, OutputFormat::Plain).unwrap_or_default()
+}
+
+/// Renders `-Tjson` (`json0 == false`) or `-Tjson0`.
+pub fn render_json(graph: &Graph, json0: bool) -> Result<String> {
+    render_graph(
+        graph,
+        if json0 {
+            OutputFormat::Json0
+        } else {
+            OutputFormat::Json
+        },
+    )
+}
+pub use emit::reset_render_state;
+
+/// Renders `graph` as SVG (`-Tsvg`).
+pub fn render_svg(graph: &Graph) -> String {
+    let m = emit::model::Model::build(graph);
+    emit::run(&m, svg_engine::SvgEngine::default()).out
+}
 
 use gv_core::{Graph, GraphvizError, Result};
 use gv_parser::write_canon;
@@ -31,7 +66,8 @@ impl OutputFormat {
             "json" => Ok(Self::Json),
             "json0" => Ok(Self::Json0),
             "dot" | "gv" => Ok(Self::Dot),
-            "xdot" | "xdot1.2" | "xdot1.4" | "xdot_json" => Ok(Self::Xdot),
+            "xdot" | "xdot1.2" | "xdot1.4" => Ok(Self::Xdot),
+            "dot_json" | "xdot_json" => Ok(Self::Json),
             "canon" => Ok(Self::Canon),
             "plain" | "plain-ext" => Ok(Self::Plain),
             other => Err(GraphvizError::UnsupportedFormat(other.to_string())),
@@ -40,15 +76,201 @@ impl OutputFormat {
 }
 
 pub fn render_graph(graph: &Graph, format: OutputFormat) -> Result<String> {
-    match format {
-        OutputFormat::Svg => Ok(render_svg(graph)),
-        OutputFormat::Json => render_json(graph, false),
-        OutputFormat::Json0 => render_json(graph, true),
-        OutputFormat::Dot => Ok(render_dot_positioned(graph, false)),
-        OutputFormat::Xdot => Ok(render_dot_positioned(graph, true)),
-        OutputFormat::Canon => Ok(write_canon(graph)),
-        OutputFormat::Plain => Ok(render_plain(graph)),
+    render_graph_named(graph, format, "")
+}
+
+/// `agfstnode`/`agfstout` edge order of an unlaid graph.
+fn input_edge_order(g: &Graph) -> Vec<usize> {
+    let mut out = vec![Vec::new(); g.nodes.len()];
+    for (i, e) in g.edges.iter().enumerate() {
+        out[e.tail.0 as usize].push(i);
     }
+    for l in &mut out {
+        l.sort_by_key(|&e| (g.edges[e].head.0, e));
+    }
+    out.into_iter().flatten().collect()
+}
+
+/// Edge iteration order of `agfstnode`/`agfstout` (numbering of `_gvid` in JSON).
+fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
+    m.out_edges.iter().flatten().copied().collect()
+}
+
+/// The graph with layout attributes and, for xdot, draw operations attached.
+fn attached(
+    m: &emit::model::Model<'_>,
+    xdot: bool,
+    fixed_xdot: Option<&str>,
+) -> (Graph, Vec<std::collections::BTreeSet<String>>) {
+    let (mut g, _, _, mut forced) = emit::output::attach_attrs(m);
+    if xdot {
+        let eng = xdot_engine::XdotEngine::new(m.root_attrs().get("xdotversion"), fixed_xdot);
+        let eng = emit::run(m, eng);
+        for (kind, name, value) in eng.sets {
+            let attrs = match kind {
+                emit::job::ObjKind::Root => &mut g.graph_attrs,
+                emit::job::ObjKind::Cluster(c) => &mut g.subgraphs[m.clusters[c].sub].graph_attrs,
+                emit::job::ObjKind::Node(n) => &mut g.nodes[n].attrs,
+                emit::job::ObjKind::Edge(e) => &mut g.edges[e].attrs,
+            };
+            if let emit::job::ObjKind::Cluster(c) = kind {
+                forced[m.clusters[c].sub].insert(name.to_string());
+            }
+            attrs.insert(name.to_string(), value);
+        }
+    }
+    (g, forced)
+}
+
+/// Private graph attribute the no-layout engine sets (`gv_layout::nop`).
+const NOP_KEY: &str = "\u{1}nop";
+
+/// Records the attributes the layout and renderers set in cgraph's dictionaries:
+/// `safe_dcl` for node and edge attributes, and graph values as local symbols (`agxset`).
+fn sync_dicts(g: &mut Graph, orig: &Graph) {
+    use gv_core::AttrSym;
+    let set_graph = |d: &mut std::collections::BTreeMap<String, AttrSym>,
+                     now: &gv_core::AttrMap,
+                     before: &gv_core::AttrMap| {
+        for (k, v) in now {
+            if before.get(k) != Some(v) {
+                d.entry(k.clone()).or_default().defval = v.clone();
+            }
+        }
+    };
+    let (root_now, root_before) = (g.graph_attrs.clone(), &orig.graph_attrs);
+    // safe_dcl declares graph attributes on the root before setting them.
+    for k in root_now.keys() {
+        if !root_before.contains_key(k) {
+            g.dicts[0].graph.entry(k.clone()).or_default();
+        }
+    }
+    set_graph(&mut g.dicts[0].graph, &root_now, root_before);
+    for i in 0..g.subgraphs.len() {
+        let now = g.subgraphs[i].graph_attrs.clone();
+        for k in now.keys() {
+            if !orig.subgraphs[i].graph_attrs.contains_key(k) {
+                g.dicts[0].graph.entry(k.clone()).or_default();
+            }
+        }
+        set_graph(
+            &mut g.dicts[i + 1].graph,
+            &now,
+            &orig.subgraphs[i].graph_attrs,
+        );
+    }
+    let mut node_keys = std::collections::BTreeSet::new();
+    for n in &g.nodes {
+        node_keys.extend(n.attrs.keys().cloned());
+    }
+    for k in node_keys {
+        if !g.dicts.iter().any(|d| d.node.contains_key(&k)) {
+            g.dicts[0].node.insert(k, AttrSym::default());
+        }
+    }
+    let mut edge_keys = std::collections::BTreeSet::new();
+    for e in &g.edges {
+        edge_keys.extend(e.attrs.keys().cloned());
+    }
+    for k in edge_keys {
+        if !g.dicts.iter().any(|d| d.edge.contains_key(&k)) {
+            g.dicts[0].edge.insert(k, AttrSym::default());
+        }
+    }
+}
+
+/// dot's `mark_lowclusters`: an edge whose ends both lie in a cluster belongs to it and its
+/// ancestors.
+fn low_cluster_edges(graph: &Graph) -> Vec<std::collections::BTreeSet<usize>> {
+    let n = graph.subgraphs.len();
+    let mut parent: Vec<Option<usize>> = vec![None; n];
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        for c in &sg.subgraphs {
+            parent[c.0 as usize] = Some(i);
+        }
+    }
+    let mut sets = vec![std::collections::BTreeSet::new(); n];
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        if !sg.is_cluster {
+            continue;
+        }
+        let members: std::collections::BTreeSet<u32> = sg.nodes.iter().map(|x| x.0).collect();
+        for (ei, e) in graph.edges.iter().enumerate() {
+            if members.contains(&e.tail.0) && members.contains(&e.head.0) {
+                let mut cur = Some(i);
+                while let Some(c) = cur {
+                    sets[c].insert(ei);
+                    cur = parent[c];
+                }
+            }
+        }
+    }
+    sets
+}
+
+/// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
+pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Result<String> {
+    if format == OutputFormat::Canon {
+        if graph.dicts.len() == graph.subgraphs.len() + 1 {
+            return Ok(agwrite::agwrite(graph, &[]));
+        }
+        return Ok(write_canon(graph));
+    }
+    let lname = name.to_ascii_lowercase();
+    if lname == "dot_json" || lname == "xdot_json" {
+        // No layout: the parsed graph, with any `_draw_` attributes expanded for xdot_json.
+        return Ok(json::write_json(
+            graph,
+            lname == "xdot_json",
+            &input_edge_order(graph),
+        ));
+    }
+    let m = emit::model::Model::build(graph);
+    Ok(match format {
+        OutputFormat::Svg => emit::run(&m, svg_engine::SvgEngine::default()).out,
+        OutputFormat::Json | OutputFormat::Json0 => {
+            let (g, _) = attached(&m, format == OutputFormat::Json, None);
+            json::write_json(&g, format == OutputFormat::Json, &edge_order(&m))
+        }
+        OutputFormat::Dot | OutputFormat::Xdot => {
+            let (mut g, forced) = attached(
+                &m,
+                format == OutputFormat::Xdot,
+                match lname.as_str() {
+                    "xdot1.2" => Some("1.2"),
+                    "xdot1.4" => Some("1.4"),
+                    _ => None,
+                },
+            );
+            if g.dicts.len() == g.subgraphs.len() + 1 {
+                sync_dicts(&mut g, graph);
+                let extra = if graph.graph_attrs.contains_key(NOP_KEY) {
+                    Vec::new()
+                } else {
+                    low_cluster_edges(graph)
+                };
+                agwrite::agwrite(&g, &extra)
+            } else {
+                emit::output::propagate_inherited(&mut g, graph, &forced);
+                gv_parser::write_canon_forced(&g, &forced)
+            }
+        }
+        OutputFormat::Plain => {
+            let zoom = emit::job::Job::new(
+                &m,
+                emit::job::Features {
+                    flags: 0,
+                    default_pad: 0.0,
+                    knowncolors: &[],
+                    rgba: false,
+                },
+                0,
+            )
+            .zoom;
+            emit::output::write_plain(&m, zoom, name.eq_ignore_ascii_case("plain-ext"))
+        }
+        OutputFormat::Canon => unreachable!(),
+    })
 }
 
 #[cfg(test)]

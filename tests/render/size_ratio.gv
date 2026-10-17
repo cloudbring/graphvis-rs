@@ -1,0 +1,1 @@
+digraph G { size="3,3!"; ratio=fill; pad=0.5; a -> b; a -> c; b -> d; }

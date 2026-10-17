@@ -1,0 +1,252 @@
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,292.45,540",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "%3",
+      "bb": "0,0,292.45,540",
+      "_gvid": 0,
+      "nodes": [
+        2,3,4,5,6,7,8
+      ],
+      "edges": [
+        0,1,2,3,4,5
+      ]
+    },
+    {
+      "name": "%17",
+      "bb": "0,0,292.45,540",
+      "_gvid": 1,
+      "nodes": [
+        9,10,11,12,13,14,15
+      ],
+      "edges": [
+        6,7,8,9,10,11
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "a",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "for all: &forall;",
+      "pos": "93.4,450",
+      "width": "1.2973"
+    },
+    {
+      "_gvid": 3,
+      "name": "b",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "part: &part;",
+      "pos": "93.4,378",
+      "width": "1.0664"
+    },
+    {
+      "_gvid": 4,
+      "name": "c",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "exists: &exist;",
+      "pos": "90.4,306",
+      "width": "1.2604"
+    },
+    {
+      "_gvid": 5,
+      "name": "d",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "empty: &empty;",
+      "pos": "85.4,234",
+      "width": "1.3198"
+    },
+    {
+      "_gvid": 6,
+      "name": "e",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "nabla: &nabla;",
+      "pos": "78.4,162",
+      "width": "1.2302"
+    },
+    {
+      "_gvid": 7,
+      "name": "f",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "isin: &isin;",
+      "pos": "75.4,90",
+      "width": "1.0369"
+    },
+    {
+      "_gvid": 8,
+      "name": "g",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "notin: &notin;",
+      "pos": "75.4,18",
+      "width": "1.2008"
+    },
+    {
+      "_gvid": 9,
+      "name": "i",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "ni: &ni;",
+      "pos": "189.41,450",
+      "width": "0.858"
+    },
+    {
+      "_gvid": 10,
+      "name": "j",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "prod: &prod;",
+      "pos": "191.41,378",
+      "width": "1.141"
+    },
+    {
+      "_gvid": 11,
+      "name": "k",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "sum: &sum;",
+      "pos": "196.41,306",
+      "width": "1.0965"
+    },
+    {
+      "_gvid": 12,
+      "name": "l",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "lowast: &lowast;",
+      "pos": "203.41,234",
+      "width": "1.3497"
+    },
+    {
+      "_gvid": 13,
+      "name": "m",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "square root: &radic;",
+      "pos": "209.41,162",
+      "width": "1.8486"
+    },
+    {
+      "_gvid": 14,
+      "name": "n",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "proportional to: &prop;",
+      "pos": "211.41,90",
+      "width": "2.2511"
+    },
+    {
+      "_gvid": 15,
+      "name": "o",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "infinity&infin;",
+      "pos": "211.41,18",
+      "width": "1.2976"
+    },
+    {
+      "_gvid": 16,
+      "name": "greek",
+      "fontname": "Symbol",
+      "height": "0.5",
+      "label": "&alpha;&beta;&gamma;&delta;&epsilon;&zeta;&eta;&theta;&iota;&kappa;&lambda;&mu;&nu;&xi;&omicron;&pi;&rho;&sigmaf;&sigma;&tau;&upsilon;&phi;&chi;&psi;&omega;&upsih;&piv;",
+      "pos": "141.41,522",
+      "width": "3.9279"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 2,
+      "head": 3,
+      "pos": "e,93.4,396.1 93.4,431.7 93.4,424.41 93.4,415.73 93.4,407.54"
+    },
+    {
+      "_gvid": 1,
+      "tail": 3,
+      "head": 4,
+      "pos": "e,91.133,324.1 92.659,359.7 92.346,352.41 91.974,343.73 91.623,335.54"
+    },
+    {
+      "_gvid": 2,
+      "tail": 4,
+      "head": 5,
+      "pos": "e,86.622,252.1 89.164,287.7 88.644,280.41 88.024,271.73 87.439,263.54"
+    },
+    {
+      "_gvid": 3,
+      "tail": 5,
+      "head": 6,
+      "pos": "e,80.111,180.1 83.67,215.7 82.941,208.41 82.073,199.73 81.254,191.54"
+    },
+    {
+      "_gvid": 4,
+      "tail": 6,
+      "head": 7,
+      "pos": "e,76.133,108.1 77.659,143.7 77.346,136.41 76.974,127.73 76.623,119.54"
+    },
+    {
+      "_gvid": 5,
+      "tail": 7,
+      "head": 8,
+      "pos": "e,75.4,36.104 75.4,71.697 75.4,64.407 75.4,55.726 75.4,47.536"
+    },
+    {
+      "_gvid": 6,
+      "tail": 9,
+      "head": 10,
+      "pos": "e,190.92,396.1 189.9,431.7 190.11,424.41 190.36,415.73 190.59,407.54"
+    },
+    {
+      "_gvid": 7,
+      "tail": 10,
+      "head": 11,
+      "pos": "e,195.18,324.1 192.64,359.7 193.16,352.41 193.78,343.73 194.37,335.54"
+    },
+    {
+      "_gvid": 8,
+      "tail": 11,
+      "head": 12,
+      "pos": "e,201.69,252.1 198.14,287.7 198.86,280.41 199.73,271.73 200.55,263.54"
+    },
+    {
+      "_gvid": 9,
+      "tail": 12,
+      "head": 13,
+      "pos": "e,207.94,180.1 204.89,215.7 205.51,208.41 206.26,199.73 206.96,191.54"
+    },
+    {
+      "_gvid": 10,
+      "tail": 13,
+      "head": 14,
+      "pos": "e,210.92,108.1 209.9,143.7 210.11,136.41 210.36,127.73 210.59,119.54"
+    },
+    {
+      "_gvid": 11,
+      "tail": 14,
+      "head": 15,
+      "pos": "e,211.41,36.104 211.41,71.697 211.41,64.407 211.41,55.726 211.41,47.536"
+    },
+    {
+      "_gvid": 12,
+      "tail": 16,
+      "head": 2,
+      "pos": "e,104.8,467.62 129.54,503.7 123.99,495.61 117.28,485.81 111.14,476.87"
+    },
+    {
+      "_gvid": 13,
+      "tail": 16,
+      "head": 9,
+      "pos": "e,178.33,467.14 153.27,503.7 158.9,495.49 165.73,485.52 171.94,476.48"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+digraph styles {
+  a [style=filled, fillcolor=lightblue];
+  b [style="filled,rounded", shape=box, fillcolor="#ff000080"];
+  c [style=dashed]; d [style=dotted, penwidth=2]; e [style=bold]; f [style=invis];
+  g [style=diagonals, shape=box]; h [style="rounded,dashed", shape=box];
+  i [peripheries=3, shape=box]; j [peripheries=2]; k [shape=doublecircle];
+  l [style=filled, fillcolor="red:blue"]; m [style=radial, fillcolor="yellow:green"];
+  n [style=filled, fillcolor="red:blue", gradientangle=90, shape=box];
+  o [style=radial, fillcolor="white:black", gradientangle=45, shape=box];
+  p [style=striped, shape=box, fillcolor="red:green;0.25:blue"];
+  q [style=wedged, fillcolor="red;0.3:green:blue"];
+  r [color=transparent, style=filled, fillcolor="#00ff0040"];
+  s [fontcolor=red, fontname=Helvetica, fontsize=20]; t [fontname="Courier-Bold"];
+  u [colorscheme=blues9, style=filled, fillcolor=5, color=9];
+  v [shape=box, style="filled,diagonals", fillcolor=orange];
+  a -> b -> c -> d; e -> g -> h; i -> j -> k; l -> m -> n -> o; p -> q; r -> s -> t -> u -> v;
+}

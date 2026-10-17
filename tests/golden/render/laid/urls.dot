@@ -1,0 +1,53 @@
+digraph urls {
+	graph [URL="http://graph.example",
+		bb="0,0,86,238.6",
+		class=gc,
+		id=gid,
+		tooltip="graph tip"
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [URL="http://c.example",
+			bb="8,153.8,78,230.6",
+			class=cc,
+			label=Cluster,
+			lheight=0.23,
+			lp="43,218.2",
+			lwidth=0.56,
+			target=_blank,
+			tooltip=ctip
+		];
+		a	[URL="http://a.example/\N",
+			class="n1 n2",
+			height=0.5,
+			id=nodea,
+			pos="43,179.8",
+			target=_top,
+			tooltip="a\ntip",
+			width=0.75];
+	}
+	b	[comment="a comment",
+		height=0.5,
+		href="http://b.example",
+		pos="43,91",
+		width=0.75];
+	a -> b	[URL="http://e.example",
+		edgetooltip=etip,
+		headURL="http://h.example",
+		head_lp="37.945,117.81",
+		headlabel=H,
+		id=e1,
+		label=lab,
+		labelURL="http://l.example",
+		lp="51.552,135.4",
+		pos="e,43,109.41 43,161.65 43,149.96 43,134.19 43,120.62",
+		tail_lp="38.724,153.25",
+		taillabel=T,
+		tailtooltip=tt];
+	c	[height=0.5,
+		pos="43,18",
+		width=0.75];
+	b -> c	[class=ec,
+		pos="e,43,36.029 43,72.813 43,65.226 43,56.101 43,47.539",
+		tooltip="only tip"];
+}

@@ -1,0 +1,113 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,36.000],[352.940,36.000],[352.940,0.000]]
+    }
+  ],
+  "bb": "0,0,352.94,36",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "LargeBottom",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[145.490,36.000],[46.010,36.000],[0.000,0.000],[191.500,0.000]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [95.750,13.800],
+          "align": "c",
+          "width": 74.650,
+          "text": "LargeBottom"
+        }
+      ],
+      "distortion": "-.5",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "95.749,18",
+      "shape": "polygon",
+      "sides": "4",
+      "width": "2.6597"
+    },
+    {
+      "_gvid": 1,
+      "name": "LargeTop",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[352.940,36.000],[202.550,36.000],[238.680,0.000],[316.810,0.000]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [277.740,13.800],
+          "align": "c",
+          "width": 55.190,
+          "text": "LargeTop"
+        }
+      ],
+      "distortion": ".5",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "277.74,18",
+      "shape": "polygon",
+      "sides": "4",
+      "width": "2.0888"
+    }
+  ]
+}

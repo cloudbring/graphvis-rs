@@ -1,0 +1,182 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,356,253.6",
+  "label": "",
+  "layout": "neato",
+  "_subgraph_cnt": 3,
+  "objects": [
+    {
+      "name": "cluster_0",
+      "bb": "0,40,298,253.6",
+      "label": "composite cluster",
+      "layout": "neato",
+      "lheight": "0.23",
+      "lp": "149,241.2",
+      "lwidth": "1.37",
+      "_gvid": 0,
+      "subgraphs": [
+        1,
+2
+      ],
+      "nodes": [
+        3,4,5,6,7,8,9,10,11,12,13,14,15
+      ]
+    },
+    {
+      "name": "cluster_1",
+      "bb": "2,82,176,226.8",
+      "label": "the first cluster",
+      "layout": "neato",
+      "lheight": "0.23",
+      "lp": "89,214.4",
+      "lwidth": "1.17",
+      "_gvid": 1,
+      "nodes": [
+        3,4,5,6,7,8,9
+      ]
+    },
+    {
+      "name": "cluster_2",
+      "bb": "180,94,296,215.6",
+      "label": "the second\\ncluster",
+      "layout": "neato",
+      "lheight": "0.47",
+      "lp": "238,194.8",
+      "lwidth": "0.83",
+      "_gvid": 2,
+      "nodes": [
+        10,11,12,13
+      ]
+    },
+    {
+      "_gvid": 3,
+      "name": "C",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "31,182",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 4,
+      "name": "L",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "89,182",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 5,
+      "name": "U",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "147,182",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 6,
+      "name": "S",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "31,142",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 7,
+      "name": "T",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "89,142",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 8,
+      "name": "E",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "147,142",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 9,
+      "name": "R",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "31,102",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 10,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "209,154",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 11,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "267,154",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 12,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "209,114",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 13,
+      "name": "d",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "267,114",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 14,
+      "name": "1",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "89,60",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 15,
+      "name": "2",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "238,60",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 16,
+      "name": "3",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "329,147",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 17,
+      "name": "4",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "149,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 18,
+      "name": "5",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "329,18",
+      "width": "0.75"
+    }
+  ]
+}

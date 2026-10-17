@@ -1,0 +1,69 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,824,105.6",
+  "label": "Vincent van Gogh Paintings",
+  "lheight": "0.23",
+  "lp": "412,8.4",
+  "lwidth": "2.20",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "cluster_self_portraits",
+      "bb": "0,28.8,514,105.6",
+      "label": "Self-portraits",
+      "lheight": "0.23",
+      "lp": "257,93.2",
+      "lwidth": "1.03",
+      "_gvid": 0,
+      "nodes": [
+        2,3
+      ]
+    },
+    {
+      "name": "cluster_flowers",
+      "bb": "522,28.8,824,105.6",
+      "label": "Flowers",
+      "lheight": "0.23",
+      "lp": "673,93.2",
+      "lwidth": "0.63",
+      "_gvid": 1,
+      "nodes": [
+        4,5
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "spwgfh",
+      "height": "0.5",
+      "label": "Self-Portrait with Grey Felt Hat",
+      "pos": "142,54.8",
+      "width": "3.7186"
+    },
+    {
+      "_gvid": 3,
+      "name": "spaap",
+      "height": "0.5",
+      "label": "Self-Portrait as a Painter",
+      "pos": "400,54.8",
+      "width": "2.9361"
+    },
+    {
+      "_gvid": 4,
+      "name": "sf",
+      "height": "0.5",
+      "label": "Sunflowers",
+      "pos": "585,54.8",
+      "width": "1.5285"
+    },
+    {
+      "_gvid": 5,
+      "name": "ab",
+      "height": "0.5",
+      "label": "Almond Blossom",
+      "pos": "737,54.8",
+      "width": "2.192"
+    }
+  ]
+}

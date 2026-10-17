@@ -1,0 +1,60 @@
+digraph G {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 190.8 160 190.8 160 0 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 80 4.2 0 61.81 10 -label demo ",
+		bb="0,0,160,190.8",
+		label="label demo",
+		lheight=0.23,
+		lp="80,8.4",
+		lwidth=0.86,
+		rankdir=LR,
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster0 {
+		graph [_draw_="c 7 -#000000 p 4 0 28.8 0 105.8 160 105.8 160 28.8 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 80 89.2 0 44.32 8 -cluster0 ",
+			bb="0,28.8,160,105.8",
+			label=cluster0,
+			labeljust=center,
+			lheight=0.23,
+			lp="80,93.4",
+			lwidth=0.62
+		];
+		a	[_draw_="c 7 -#000000 e 35 54.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 50.6 0 6.21 1 -a ",
+			height=0.5,
+			pos="35,54.8",
+			width=0.75];
+		b	[_draw_="c 7 -#000000 e 125 54.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 125 50.6 0 7 1 -b ",
+			height=0.5,
+			pos="125,54.8",
+			width=0.75];
+		a -> b	[_draw_="c 7 -#000000 B 4 62.4 54.8 69.89 54.8 78.18 54.8 86.2 54.8 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 86.11 58.3 96.11 54.8 86.11 51.3 ",
+			pos="e,97.62,54.8 62.403,54.8 69.886,54.8 78.183,54.8 86.199,54.8"];
+	}
+	subgraph cluster1 {
+		graph [_draw_="c 7 -#000000 p 4 0 113.8 0 190.8 160 190.8 160 113.8 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 80 174.2 0 44.32 8 -cluster1 ",
+			bb="0,113.8,160,190.8",
+			label=cluster1,
+			lheight=0.23,
+			lp="80,178.4",
+			lwidth=0.62
+		];
+		c	[_draw_="c 7 -#000000 e 35 139.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 135.6 0 6.21 1 -c ",
+			height=0.5,
+			pos="35,139.8",
+			width=0.75];
+		d	[_draw_="c 7 -#000000 e 125 139.8 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 125 135.6 0 7 1 -d ",
+			height=0.5,
+			pos="125,139.8",
+			width=0.75];
+		c -> d	[_draw_="c 7 -#000000 B 4 62.4 139.8 69.89 139.8 78.18 139.8 86.2 139.8 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 86.11 143.3 96.11 139.8 86.11 136.3 ",
+			pos="e,97.62,139.8 62.403,139.8 69.886,139.8 78.183,139.8 86.199,139.8"];
+	}
+}

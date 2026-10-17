@@ -1,0 +1,71 @@
+graph 1 12.5 4.5
+node a 0.25 4.25 0.5 0.5 "" solid circle black lightgrey
+node Z 6.25 2.25 0.5 0.5 "" solid circle black lightgrey
+node b 1 4.25 0.5 0.5 "" solid circle black lightgrey
+node c 1.75 4.25 0.5 0.5 "" solid circle black lightgrey
+node d 2.5 4.25 0.5 0.5 "" solid circle black lightgrey
+node e 3.25 4.25 0.5 0.5 "" solid circle black lightgrey
+node f 4 4.25 0.5 0.5 "" solid circle black lightgrey
+node g 4.75 4.25 0.5 0.5 "" solid circle black lightgrey
+node h 5.5 4.25 0.5 0.5 "" solid circle black lightgrey
+node i 6.25 4.25 0.5 0.5 "" solid circle black lightgrey
+node j 7 4.25 0.5 0.5 "" solid circle black lightgrey
+node k 7.75 4.25 0.5 0.5 "" solid circle black lightgrey
+node l 8.5 4.25 0.5 0.5 "" solid circle black lightgrey
+node m 9.25 4.25 0.5 0.5 "" solid circle black lightgrey
+node n 10 4.25 0.5 0.5 "" solid circle black lightgrey
+node o 10.75 4.25 0.5 0.5 "" solid circle black lightgrey
+node p 11.5 4.25 0.5 0.5 "" solid circle black lightgrey
+node q 12.25 4.25 0.5 0.5 "" solid circle black lightgrey
+node A 0.25 0.25 0.5 0.5 "" solid circle black lightgrey
+node B 1 0.25 0.5 0.5 "" solid circle black lightgrey
+node C 1.75 0.25 0.5 0.5 "" solid circle black lightgrey
+node D 2.5 0.25 0.5 0.5 "" solid circle black lightgrey
+node E 3.25 0.25 0.5 0.5 "" solid circle black lightgrey
+node F 4 0.25 0.5 0.5 "" solid circle black lightgrey
+node G 4.75 0.25 0.5 0.5 "" solid circle black lightgrey
+node H 5.5 0.25 0.5 0.5 "" solid circle black lightgrey
+node I 6.25 0.25 0.5 0.5 "" solid circle black lightgrey
+node J 7 0.25 0.5 0.5 "" solid circle black lightgrey
+node K 7.75 0.25 0.5 0.5 "" solid circle black lightgrey
+node L 8.5 0.25 0.5 0.5 "" solid circle black lightgrey
+node M 9.25 0.25 0.5 0.5 "" solid circle black lightgrey
+node N 10 0.25 0.5 0.5 "" solid circle black lightgrey
+node O 10.75 0.25 0.5 0.5 "" solid circle black lightgrey
+node P 11.5 0.25 0.5 0.5 "" solid circle black lightgrey
+node Q 12.25 0.25 0.5 0.5 "" solid circle black lightgrey
+edge a Z 7 0.45011 4.0944 0.50499 4.06 0.56574 4.0258 0.625 4 2.9964 2.969 6.25 2.5139 6.25 2.5139 solid black
+edge Z A 7 6.25 1.9861 6.25 1.9861 2.9964 1.531 0.625 0.5 0.56574 0.47424 0.50499 0.43996 0.45011 0.40553 solid black
+edge Z B 7 6.25 1.9861 6.25 1.9861 3.435 1.4419 1.375 0.5 1.3621 0.49412 1.3492 0.48788 1.3362 0.48133 solid black
+edge Z C 7 6.25 1.9861 6.25 1.9861 3.8764 1.3544 2.125 0.5 2.1086 0.49203 2.0921 0.48353 2.0757 0.47464 solid black
+edge Z D 7 6.25 1.9861 6.25 1.9861 4.3224 1.269 2.875 0.5 2.8542 0.4889 2.8328 0.47706 2.8115 0.46482 solid black
+edge Z E 7 6.25 1.9861 6.25 1.9861 4.7758 1.1876 3.625 0.5 3.6047 0.48786 3.5839 0.47524 3.5629 0.46242 solid black
+edge Z F 4 6.25 1.9861 6.25 1.9861 5.06 1.0752 4.4108 0.57836 solid black
+edge Z G 4 6.25 1.9861 6.25 1.9861 5.5272 1.1563 5.0851 0.64865 solid black
+edge Z H 4 6.25 1.9861 6.25 1.9861 5.8765 1.1284 5.6567 0.62353 solid black
+edge Z I 4 6.25 1.9861 6.25 1.9861 6.25 1.1498 6.25 0.64276 solid black
+edge Z J 4 6.25 1.9861 6.25 1.9861 6.6203 1.1357 6.8406 0.63006 solid black
+edge Z K 4 6.25 1.9861 6.25 1.9861 7.0664 1.0488 7.4946 0.55714 solid black
+edge Z L 4 6.25 1.9861 6.25 1.9861 7.536 1.0017 8.1636 0.52142 solid black
+edge Z M 7 6.25 1.9861 6.25 1.9861 7.7242 1.1876 8.875 0.5 8.8801 0.49697 8.8851 0.4939 8.8903 0.49081 solid black
+edge Z N 7 6.25 1.9861 6.25 1.9861 8.1776 1.269 9.625 0.5 9.6407 0.49168 9.6565 0.48293 9.6725 0.47392 solid black
+edge Z O 7 6.25 1.9861 6.25 1.9861 8.6236 1.3544 10.375 0.5 10.391 0.49203 10.408 0.48353 10.424 0.47464 solid black
+edge Z P 7 6.25 1.9861 6.25 1.9861 9.065 1.4419 11.125 0.5 11.164 0.48236 11.203 0.46138 11.241 0.43929 solid black
+edge Z Q 7 6.25 1.9861 6.25 1.9861 9.5036 1.531 11.875 0.5 11.892 0.49275 11.908 0.48483 11.925 0.47643 solid black
+edge b Z 7 1.3362 4.0186 1.3492 4.0121 1.3621 4.0058 1.375 4 3.435 3.0581 6.25 2.5139 6.25 2.5139 solid black
+edge c Z 7 2.0757 4.0254 2.0921 4.0165 2.1086 4.0079 2.125 4 3.8764 3.1457 6.25 2.5139 6.25 2.5139 solid black
+edge d Z 7 2.8115 4.0351 2.8328 4.0229 2.8542 4.0111 2.875 4 4.3224 3.231 6.25 2.5139 6.25 2.5139 solid black
+edge e Z 7 3.5629 4.0376 3.5839 4.0247 3.6047 4.0121 3.625 4 4.7758 3.3124 6.25 2.5139 6.25 2.5139 solid black
+edge f Z 4 4.4108 3.9217 5.06 3.4247 6.25 2.5139 6.25 2.5139 solid black
+edge g Z 4 5.0851 3.8514 5.5272 3.3438 6.25 2.5139 6.25 2.5139 solid black
+edge h Z 4 5.6567 3.8765 5.8765 3.3717 6.25 2.5139 6.25 2.5139 solid black
+edge i Z 4 6.25 3.8572 6.25 3.3501 6.25 2.5139 6.25 2.5139 solid black
+edge j Z 4 6.8406 3.87 6.6203 3.3643 6.25 2.5139 6.25 2.5139 solid black
+edge k Z 4 7.4946 3.9429 7.0664 3.4512 6.25 2.5139 6.25 2.5139 solid black
+edge l Z 4 8.1636 3.9786 7.536 3.4982 6.25 2.5139 6.25 2.5139 solid black
+edge m Z 7 8.8903 4.0092 8.8851 4.0061 8.8801 4.0031 8.875 4 7.7242 3.3124 6.25 2.5139 6.25 2.5139 solid black
+edge n Z 7 9.6725 4.0261 9.6565 4.0171 9.6407 4.0083 9.625 4 8.1776 3.231 6.25 2.5139 6.25 2.5139 solid black
+edge o Z 7 10.424 4.0254 10.408 4.0165 10.391 4.0079 10.375 4 8.6236 3.1457 6.25 2.5139 6.25 2.5139 solid black
+edge p Z 7 11.241 4.0607 11.203 4.0386 11.164 4.0176 11.125 4 9.065 3.0581 6.25 2.5139 6.25 2.5139 solid black
+edge q Z 7 11.925 4.0236 11.908 4.0151 11.892 4.0072 11.875 4 9.5036 2.969 6.25 2.5139 6.25 2.5139 solid black
+stop

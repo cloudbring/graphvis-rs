@@ -1,0 +1,7 @@
+graph 1 1.3422 3.0806
+node eeeee 0.74494 1.4861 1.1944 0.94444 eeeee filled box yellow yellow
+node ee 0.74494 0.36111 0.75 0.5 ee filled box black lightgrey
+node ddddddd 0.74494 2.8306 0.90278 0.5 ddddddd filled box orange blue
+edge eeeee ee 4 0.74494 1.119 0.74494 1.0079 0.74494 0.88447 0.74494 0.77061 solid black
+edge ddddddd eeeee 4 0.74494 2.5751 0.74494 2.4174 0.74494 2.2054 0.74494 2.0114 flue 0.89609 2.2139 solid lightblue
+stop

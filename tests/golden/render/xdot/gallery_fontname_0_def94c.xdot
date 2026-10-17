@@ -1,0 +1,37 @@
+digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 105.6 133 105.6 133 0 ",
+		_ldraw_="F 14 13 -Comic Sans MS c 7 -#000000 T 66.5 4.2 0 91.01 13 -Comic Sans MS ",
+		bb="0,0,133,105.6",
+		fontname="Comic Sans MS",
+		label="Comic Sans MS",
+		lheight=0.23,
+		lp="66.5,8.4",
+		lwidth=1.26,
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [_draw_="c 7 -#000000 p 4 0 28.8 0 105.6 133 105.6 133 28.8 ",
+			_ldraw_="F 14 11 -Courier New c 7 -#000000 T 66.5 89 0 92.42 11 -Courier New ",
+			bb="0,28.8,133,105.6",
+			fontname="Courier New",
+			label="Courier New",
+			lheight=0.23,
+			lp="66.5,93.2",
+			lwidth=1.28
+		];
+		Arial	[_draw_="c 7 -#000000 e 38 54.8 30.36 18 ",
+			_ldraw_="F 14 5 -Arial c 7 -#000000 T 38 50.6 0 28.01 5 -Arial ",
+			fontname=Arial,
+			height=0.5,
+			pos="38,54.8",
+			width=0.8432];
+		Arial -> Arial	[_draw_="c 7 -#000000 B 7 66.31 61.52 77.26 61.82 86.36 59.58 86.36 54.8 86.36 51.81 82.8 49.82 77.46 48.81 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 78.03 45.34 67.82 48.18 77.57 52.33 ",
+			_ldraw_="F 14 6 -Impact c 7 -#000000 T 105.79 50.6 0 38.87 6 -Impact ",
+			fontname=Impact,
+			label=Impact,
+			lp="105.79,54.8",
+			pos="e,66.311,48.076 66.311,61.524 77.257,61.822 86.355,59.581 86.355,54.8 86.355,51.812 82.801,49.816 77.463,48.812"];
+	}
+}

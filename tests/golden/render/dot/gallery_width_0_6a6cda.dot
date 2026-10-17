@@ -1,0 +1,13 @@
+digraph {
+	graph [bb="0,0,306,36"];
+	node [label="\N"];
+	d	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	"1in"	[height=0.5,
+		pos="108,18",
+		width=1];
+	"2in"	[height=0.5,
+		pos="234,18",
+		width=2];
+}

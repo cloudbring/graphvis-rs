@@ -1,0 +1,15 @@
+graph 1 4.0563 3.2
+node all 2.1115 2.7167 0.94057 0.5 "All items" filled box lightblue lightblue
+node t1 1.6115 1.4833 0.75 0.5 "Part 1" filled box lightblue lightblue
+node t2 2.6393 1.4833 0.75 0.5 "Part 2" filled box lightblue lightblue
+node p1 0.58369 0.25 0.7785 0.5 "pPart 1" filled box lightblue lightblue
+node p2 1.6115 0.25 0.7785 0.5 "pPart 2" filled box lightblue lightblue
+node p3 2.6393 0.25 0.7785 0.5 "pPart 3" filled box lightblue lightblue
+node p4 3.6671 0.25 0.7785 0.5 "pPart 4" filled box lightblue lightblue
+edge all t1 4 2.0126 2.4646 1.944 2.2989 1.8508 2.0743 1.7717 1.8833 "75%" 2.0844 2.1 solid black
+edge all t2 4 2.2157 2.4646 2.2883 2.2989 2.3865 2.0743 2.4703 1.8833 solid black
+edge t1 p1 4 1.4085 1.2313 1.2602 1.0574 1.0566 0.81865 0.88888 0.62186 "20%" 1.3678 0.86667 solid black
+edge t1 p2 4 1.6115 1.2313 1.6115 1.0689 1.6115 0.84989 1.6115 0.66136 solid black
+edge t2 p3 4 2.6393 1.2313 2.6393 1.0689 2.6393 0.84989 2.6393 0.66136 solid black
+edge t2 p4 4 2.8424 1.2313 2.9906 1.0574 3.194 0.81865 3.3618 0.62186 solid black
+stop

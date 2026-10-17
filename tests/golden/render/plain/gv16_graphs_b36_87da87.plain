@@ -1,0 +1,65 @@
+graph 0.26344 32.265 23.06
+node "\<base-output\>" 8.2058 18.092 3.8787 7.95 "{ \<base-output\> | { Ivars | Public } | { { output-name | output-title } | { active? | aseek-end-sequence | aseek-got-one-right | \
+aseek-got-one-wrong | aseek-start-msg | create-link | destroy-link | done-init-supervisors | get-name | get-title | initialize | \
+initialize-coderack | print@level | ready-to-guess-about-to-submit | reset | seek-declares-guess | shutdown | start-init-environment | \
+start-init-supervisors | update-views | workspace-seeded } } }" solid record black black
+node "\<graphics-output\>" 3.0114 10.172 6.0227 6.9167 "{ \<graphics-output\> | { Ivars | Protected | Public } | { { active | conceptnet-view | diagram-view | lastrendered-sequence | output-name | \
+output-title | seektext-view | sequence | workspace-view } | { place-windows } | { active? | aseek-end-sequence | aseek-got-one-right | \
+aseek-got-one-wrong | aseek-start-msg | create-link | destroy-link | get-name | get-title | get-workspace-view | initialize | pop-sequence | \
+ready-to-guess-about-to-submit | reset | seek-declares-guess | shutdown | update-views | workspace-seeded } } }" solid record black black
+node "\<text-output\>" 8.2058 10.172 3.8787 4.85 "{ \<text-output\> | { Ivars | Public } | { { output-name | output-title } | { active? | aseek-end-sequence | aseek-got-one-right | \
+aseek-got-one-wrong | aseek-start-msg | done-init-supervisors | get-name | get-title | print@level | ready-to-guess-about-to-submit | \
+seek-declares-guess | start-init-supervisors } } }" solid record black black
+node "\<dangler\>" 12.053 18.092 2.0536 2.7833 "{ \<dangler\> | { Ivars | Public } | { { children | name | parent | position } | { get-children | get-name | get-parent | get-position | \
+set-name! | set-position! } } }" solid record black black
+node "\<replace-dangler\>" 11.275 10.172 1.7619 1.75 "{ \<replace-dangler\> | { Ivars | Public } | { { by } | { gen-descriptor | init | run } } }" solid record black black
+node "\<doubler-dangler\>" 13.4 10.172 1.9994 1.75 "{ \<doubler-dangler\> | { Ivars | Public } | { { result | spent } | { gen-descriptor | init | run } } }" solid record black black
+node "\<seek-diagram\>" 15.469 18.092 4.284 7.2611 "{ \<seek-diagram\> | { Ivars | Protected | Public } | { { descriptor | diagram | dotgraph | dotoutput | graph | origdescriptor } | { \
+eval-dangler | eval-descriptor } | { destroy | eval-dangler | eval-descriptor | gen-dotgraph | get-descriptor | get-diagram | get-dotgraph | \
+get-dotoutput | get-graph | get-range | init | node-ref | print | reset | run! | runn! | stringify | update-descriptor | update-graph } } }" solid record black black
+node "\<diagram-node\>" 20.108 18.092 4.4891 5.8833 "{ \<diagram-node\> | { Ivars | Protected | Public } | { { children | current-danglers | danglers | in-run | name | output-tag | \
+parent | position | title | unique-name } | { run-danglers } | { add-danglers! | gen-descriptor | gen-dotgraph | gen-node-descriptor | \
+get-children | get-danglers | get-name | get-parent | get-position | get-title | get-unique-name | init | reset | run! | set-position! } } }" solid record black black
+node "\<countup-node\>" 15.581 10.172 1.8699 1.75 "{ \<countup-node\> | { Ivars | Public } | { { curnum | firsttime | spent } | { init | run-node! } } }" solid record black black
+node "\<constant-node\>" 17.969 10.172 2.4206 1.75 "{ \<constant-node\> | { Ivars | Public } | { { num | spent } | { gen-node-descriptor | init | run-node! } } }" solid record black black
+node "\<repeat-node\>" 20.108 10.172 1.3592 1.4056 "{ \<repeat-node\> | { Public } | { { init | run-node! } } }" solid record black black
+node "\<cycle-node\>" 22.275 10.172 2.4635 1.75 "{ \<cycle-node\> | { Ivars | Public } | { { current-children | spent } | { init | reset | run-node! } } }" solid record black black
+node "\<tuple-node\>" 24.983 10.172 2.4635 1.75 "{ \<tuple-node\> | { Ivars | Public } | { { current-children } | { init | reset | run-node! } } }" solid record black black
+node "\<dot-thread\>" 23.789 18.092 2.3682 3.1278 "{ \<dot-thread\> | { Ivars | Public } | { { gifbuffer | inp | outp | prcss } | { close | init-file | init-gif | init-plain | process-str | \
+process-str-\>gif | send-str } } }" solid record black black
+node "\<seekstructure\>" 27.622 10.172 2.3237 4.85 "{ \<seekstructure\> | { Ivars | Public } | { { flex-info | happiness | name | salience } | { get-flex-info | get-happiness | get-name | \
+get-salience | get-type | init | set-flex-info! | set-happiness! | set-name! | set-salience! | stringify | type? } } }" solid record black black
+node "\<link\>" 25.456 3.1139 2.2149 4.1611 "{ \<link\> | { Ivars | Public } | { { directed? | from | to } | { get-directed? | get-from | get-to | get-type | init | set-directed?! | \
+set-from! | set-to! | stringify | type? } } }" solid record black black
+node "\<group\>" 27.9 3.1139 2.1825 3.8167 "{ \<group\> | { Ivars | Public } | { { from | items | ordered? | to } | { get-directed? | get-from | get-to | init | set-directed?! | \
+set-from! | set-to! | stringify | type? } } }" solid record black black
+node "\<seekobject\>" 27.622 18.092 2.561 5.5389 "{ \<seekobject\> | { Ivars | Public } | { { groups-in | links-from | links-to | output-tag | serialization | tags } | { get-groups-in | \
+get-links-from | get-links-to | get-output-tag | get-type | init | marshal | print | set-groups-in! | set-links-from! | set-links-to! | \
+set-output-tag! | stringify | type? } } }" solid record black black
+node "\<numentry\>" 30.65 10.172 3.2308 4.1611 "{ \<numentry\> | { Ivars | Public } | { { number | numspace-links | salience } | { get-number | get-numspace-links | get-salience | \
+get-type | init | set-number! | set-numspace-links! | set-salience! | stringify | type? } } }" solid record black black
+node "\<seqentry\>" 30.65 3.1139 2.2262 6.2278 "{ \<seqentry\> | { Ivars | Public } | { { ghost? | happiness | left | pos | right } | { get-ghost? | get-left | get-length | get-pos | \
+get-right | get-sequence | get-tags | get-type | init | set-ghost?! | set-left! | set-pos! | set-right! | set-tags! | stringify | \
+type? } } }" solid record black black
+node "\<base\>" 17.789 22.81 1.0858 0.5 "\<base\>" solid ellipse black black
+edge "\<base-output\>" "\<graphics-output\>" 4 6.2605 15.122 5.9657 14.675 5.6587 14.208 5.3565 13.749 solid black
+edge "\<base-output\>" "\<text-output\>" 4 8.2058 14.126 8.2058 13.656 8.2058 13.186 8.2058 12.743 solid black
+edge "\<dangler\>" "\<replace-dangler\>" 4 11.918 16.708 11.763 15.135 11.512 12.593 11.374 11.193 solid black
+edge "\<dangler\>" "\<doubler-dangler\>" 4 12.287 16.708 12.555 15.135 12.989 12.593 13.228 11.193 solid black
+edge "\<diagram-node\>" "\<countup-node\>" 10 18.64 15.16 18.372 14.782 18.069 14.424 17.733 14.124 17.333 13.767 16.99 14.026 16.636 13.624 16.042 12.947 15.782 11.942 15.669 11.193 solid black
+edge "\<diagram-node\>" "\<constant-node\>" 4 19.318 15.161 18.94 13.765 18.511 12.183 18.24 11.185 solid black
+edge "\<diagram-node\>" "\<repeat-node\>" 4 20.108 15.161 20.108 13.687 20.108 12.007 20.108 11.024 solid black
+edge "\<diagram-node\>" "\<cycle-node\>" 4 20.91 15.161 21.293 13.765 21.728 12.183 22.001 11.185 solid black
+edge "\<diagram-node\>" "\<tuple-node\>" 10 21.568 15.16 21.837 14.781 22.143 14.422 22.483 14.124 22.904 13.756 23.249 14.025 23.636 13.624 24.281 12.956 24.628 11.944 24.807 11.191 solid black
+edge "\<seekstructure\>" "\<link\>" 4 26.883 7.7585 26.64 6.9735 26.374 6.1057 26.136 5.3356 solid black
+edge "\<seekstructure\>" "\<group\>" 4 27.717 7.7585 27.75 6.9158 27.787 5.9776 27.819 5.1674 solid black
+edge "\<seekobject\>" "\<seekstructure\>" 4 27.622 15.335 27.622 14.494 27.622 13.573 27.622 12.746 solid black
+edge "\<seekobject\>" "\<numentry\>" 4 28.675 15.335 29.044 14.371 29.454 13.303 29.806 12.389 solid black
+edge "\<numentry\>" "\<seqentry\>" 4 30.65 8.1011 30.65 7.5599 30.65 6.9626 30.65 6.3753 solid black
+edge "\<base\>" "\<base-output\>" 7 17.24 22.796 15.804 22.786 11.967 22.699 10.9 22.06 10.674 21.924 10.462 21.761 10.265 21.581 solid black
+edge "\<base\>" "\<dangler\>" 7 17.246 22.779 16.164 22.736 13.797 22.582 13.206 22.06 12.519 21.454 12.231 20.465 12.115 19.628 solid black
+edge "\<base\>" "\<seek-diagram\>" 4 17.674 22.564 17.592 22.396 17.469 22.15 17.325 21.857 solid black
+edge "\<base\>" "\<diagram-node\>" 4 17.904 22.564 18.046 22.276 18.304 21.754 18.594 21.167 solid black
+edge "\<base\>" "\<dot-thread\>" 7 18.332 22.781 19.431 22.738 21.865 22.585 22.483 22.06 23.143 21.5 23.471 20.601 23.633 19.801 solid black
+edge "\<base\>" "\<seekobject\>" 7 18.333 22.801 19.829 22.807 23.962 22.756 25.094 22.06 25.54 21.786 25.921 21.401 26.242 20.978 solid black
+stop

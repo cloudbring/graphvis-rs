@@ -1,0 +1,150 @@
+{
+  "name": "grafo",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,420.2,207.2",
+  "charset": "latin1",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "0",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "seres",
+      "pos": "243.82,194.8",
+      "shape": "box",
+      "width": "0.73947"
+    },
+    {
+      "_gvid": 1,
+      "name": "1",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "vivos",
+      "pos": "191.82,134",
+      "shape": "box",
+      "width": "0.72504"
+    },
+    {
+      "_gvid": 2,
+      "name": "6",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "inertes",
+      "pos": "296.82,134",
+      "shape": "box",
+      "width": "0.89119"
+    },
+    {
+      "_gvid": 3,
+      "name": "2",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "animales",
+      "pos": "100.82,73.2",
+      "shape": "box",
+      "width": "1.0918"
+    },
+    {
+      "_gvid": 4,
+      "name": "5",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "plantas",
+      "pos": "191.82,73.2",
+      "shape": "box",
+      "width": "0.93126"
+    },
+    {
+      "_gvid": 5,
+      "name": "3",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "pensantes",
+      "pos": "43.817,12.4",
+      "shape": "box",
+      "width": "1.2171"
+    },
+    {
+      "_gvid": 6,
+      "name": "4",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "nopensantes",
+      "pos": "157.82,12.4",
+      "shape": "box",
+      "width": "1.4582"
+    },
+    {
+      "_gvid": 7,
+      "name": "7",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "montaï¿½as",
+      "pos": "296.82,73.2",
+      "shape": "box",
+      "width": "1.4741"
+    },
+    {
+      "_gvid": 8,
+      "name": "8",
+      "fontname": "verdana",
+      "height": "0.34444",
+      "label": "lagos",
+      "pos": "393.82,73.2",
+      "shape": "box",
+      "width": "0.73283"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "pos": "e,202.32,146.88 233.29,181.9 226.6,174.33 217.75,164.32 209.94,155.5"
+    },
+    {
+      "_gvid": 1,
+      "tail": 0,
+      "head": 2,
+      "pos": "e,286.11,146.88 254.54,181.9 261.44,174.25 270.58,164.11 278.59,155.22"
+    },
+    {
+      "_gvid": 2,
+      "tail": 1,
+      "head": 3,
+      "pos": "e,119.2,86.081 173.4,121.1 160.57,112.81 143.23,101.61 128.71,92.225"
+    },
+    {
+      "_gvid": 3,
+      "tail": 1,
+      "head": 4,
+      "pos": "e,191.82,86.081 191.82,121.1 191.82,114.33 191.82,105.6 191.82,97.52"
+    },
+    {
+      "_gvid": 6,
+      "tail": 3,
+      "head": 5,
+      "pos": "e,55.335,25.281 89.282,60.301 81.788,52.57 71.833,42.301 63.149,33.343"
+    },
+    {
+      "_gvid": 7,
+      "tail": 3,
+      "head": 6,
+      "pos": "e,146.3,25.281 112.35,60.301 119.85,52.57 129.8,42.301 138.48,33.343"
+    },
+    {
+      "_gvid": 4,
+      "tail": 2,
+      "head": 7,
+      "pos": "e,296.82,86.081 296.82,121.1 296.82,114.33 296.82,105.6 296.82,97.52"
+    },
+    {
+      "_gvid": 5,
+      "tail": 2,
+      "head": 8,
+      "pos": "e,374.22,86.081 316.45,121.1 330.25,112.73 348.96,101.39 364.53,91.955"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+graph 1 4.0617 7.5
+node a 1.2972 6.25 1.2973 0.5 "for all: ∀" solid ellipse black lightgrey
+node b 1.2972 5.25 1.0664 0.5 "part: ∂" solid ellipse black lightgrey
+node c 1.2556 4.25 1.2604 0.5 "exists: ∃" solid ellipse black lightgrey
+node d 1.1861 3.25 1.3198 0.5 "empty: ∅" solid ellipse black lightgrey
+node e 1.0889 2.25 1.2302 0.5 "nabla: ∇" solid ellipse black lightgrey
+node f 1.0472 1.25 1.0369 0.5 "isin: ∈" solid ellipse black lightgrey
+node g 1.0472 0.25 1.2008 0.5 "notin: ∉" solid ellipse black lightgrey
+node i 2.6306 6.25 0.858 0.5 "ni: ∋" solid ellipse black lightgrey
+node j 2.6584 5.25 1.141 0.5 "prod: ∏" solid ellipse black lightgrey
+node k 2.7279 4.25 1.0965 0.5 "sum: ∑" solid ellipse black lightgrey
+node l 2.8251 3.25 1.3497 0.5 "lowast: ∗" solid ellipse black lightgrey
+node m 2.9084 2.25 1.8486 0.5 "square root: √" solid ellipse black lightgrey
+node n 2.9362 1.25 2.2511 0.5 "proportional to: ∝" solid ellipse black lightgrey
+node o 2.9362 0.25 1.2976 0.5 2 solid ellipse black lightgrey
+node greek 1.964 7.25 3.9279 0.5  solid ellipse black lightgrey
+edge a b 4 1.2972 5.9958 1.2972 5.8946 1.2972 5.774 1.2972 5.6603 solid black
+edge b c 4 1.2869 4.9958 1.2826 4.8946 1.2774 4.774 1.2725 4.6603 solid black
+edge c d 4 1.2384 3.9958 1.2312 3.8946 1.2226 3.774 1.2144 3.6603 solid black
+edge d e 4 1.1621 2.9958 1.152 2.8946 1.1399 2.774 1.1285 2.6603 solid black
+edge e f 4 1.0786 1.9958 1.0743 1.8946 1.0691 1.774 1.0642 1.6603 solid black
+edge f g 4 1.0472 0.99579 1.0472 0.89454 1.0472 0.77397 1.0472 0.66022 solid black
+edge i j 4 2.6374 5.9958 2.6404 5.8946 2.6438 5.774 2.647 5.6603 solid black
+edge j k 4 2.6755 4.9958 2.6827 4.8946 2.6913 4.774 2.6995 4.6603 solid black
+edge k l 4 2.7519 3.9958 2.7619 3.8946 2.774 3.774 2.7854 3.6603 solid black
+edge l m 4 2.8456 2.9958 2.8542 2.8946 2.8647 2.774 2.8744 2.6603 solid black
+edge m n 4 2.9152 1.9958 2.9181 1.8946 2.9216 1.774 2.9248 1.6603 solid black
+edge n o 4 2.9362 0.99579 2.9362 0.89454 2.9362 0.77397 2.9362 0.66022 solid black
+edge greek a 4 1.7991 6.9958 1.722 6.8835 1.6288 6.7474 1.5435 6.6232 solid black
+edge greek i 4 2.1287 6.9958 2.2069 6.8818 2.3017 6.7433 2.388 6.6178 solid black
+stop

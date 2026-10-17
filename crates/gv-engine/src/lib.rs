@@ -1,16 +1,22 @@
 //! High-level Graphviz orchestration engine (`gv-engine`).
 
 pub use gv_core::{Graph, GraphvizError, Result};
-pub use gv_layout::{LayoutEngine, layout_graph};
+pub use gv_layout::{LayoutEngine, LayoutOptions, layout_graph, layout_graph_with_options};
 pub use gv_parser::{GlobalAttrs, parse_dot, parse_dot_all};
-pub use gv_render::{OutputFormat, render_graph};
+pub use gv_render::{OutputFormat, render_graph, render_graph_named};
 
 /// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
 /// first graph in `dot_source`.
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
     let output_format = OutputFormat::parse(format)?;
     let graph = parse_dot(dot_source)?;
-    render_parsed(graph, engine, output_format)
+    render_parsed(
+        graph,
+        engine,
+        output_format,
+        format,
+        LayoutOptions::default(),
+    )
 }
 
 /// Renders every graph in `dot_source`, applying `globals` (`-G`/`-N`/`-E`) before each graph body.
@@ -20,23 +26,48 @@ pub fn render_dot_all(
     format: &str,
     globals: &GlobalAttrs,
 ) -> Result<Vec<String>> {
+    render_dot_all_with_options(
+        dot_source,
+        engine,
+        format,
+        globals,
+        LayoutOptions::default(),
+    )
+}
+
+/// [`render_dot_all`] with engine options such as `-n` (keep input positions).
+pub fn render_dot_all_with_options(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+    globals: &GlobalAttrs,
+    options: LayoutOptions,
+) -> Result<Vec<String>> {
     let output_format = OutputFormat::parse(format)?;
+    gv_render::reset_render_state();
     parse_dot_all(dot_source, globals)?
         .into_iter()
-        .map(|graph| render_parsed(graph, engine, output_format))
+        .map(|graph| render_parsed(graph, engine, output_format, format, options))
         .collect()
 }
 
-fn render_parsed(mut graph: Graph, engine: &str, output_format: OutputFormat) -> Result<String> {
+fn render_parsed(
+    mut graph: Graph,
+    engine: &str,
+    output_format: OutputFormat,
+    format_name: &str,
+    options: LayoutOptions,
+) -> Result<String> {
     // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
     let layout_engine = match graph.graph_attrs.get("layout") {
         Some(name) if !name.trim().is_empty() => LayoutEngine::parse(name.trim())?,
         _ => LayoutEngine::parse(engine)?,
     };
-    if output_format != OutputFormat::Canon {
-        layout_graph(&mut graph, layout_engine)?;
+    let lname = format_name.to_ascii_lowercase();
+    if output_format != OutputFormat::Canon && lname != "dot_json" && lname != "xdot_json" {
+        layout_graph_with_options(&mut graph, layout_engine, options)?;
     }
-    render_graph(&graph, output_format)
+    render_graph_named(&graph, output_format, format_name)
 }
 
 #[cfg(test)]

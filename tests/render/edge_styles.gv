@@ -1,0 +1,8 @@
+digraph es {
+  a -> b [style=dashed, color=red]; a -> c [style=dotted, penwidth=2];
+  b -> d [style=bold, color="blue:red"]; c -> d [color="green;0.3:orange"];
+  d -> e [style=tapered, penwidth=7]; d -> f [color="red:green:blue"];
+  e -> g [label="edge label", fontcolor=purple]; f -> g [headlabel=head, taillabel=tail, labelfontcolor=gray];
+  g -> h [xlabel=xl]; g -> h [label=multi, decorate=true];
+  h -> i [color="#0000ff80", penwidth=3]; i -> i [label=loop];
+}

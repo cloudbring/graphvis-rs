@@ -1,0 +1,84 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,447.42,302.12",
+  "rankdir": "LR",
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "%1",
+      "bb": "0,0,447.42,284.72",
+      "rank": "same",
+      "rankdir": "LR",
+      "_gvid": 0,
+      "nodes": [
+        1,2
+      ]
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "height": "2.4199",
+      "label": "\n<TABLE BGCOLOR=\"bisque\">\n  <TR><TD COLSPAN=\"3\">elephant<\/TD> \n      <TD ROWSPAN=\"2\" BGCOLOR=\"chartreuse\" \n          VALIGN=\"bottom\" ALIGN=\"right\">two<\/TD> <\/TR>\n  <TR><TD COLSPAN=\"2\" ROWSPAN=\"2\">\n        <TABLE BGCOLOR=\"grey\">\n          <TR> <TD>corn<\/TD> <\/TR> \n          <TR> <TD BGCOLOR=\"yellow\">c<\/TD> <\/TR> \n          <TR> <TD>f<\/TD> <\/TR> \n        <\/TABLE> <\/TD>\n      <TD BGCOLOR=\"white\">penguin<\/TD> \n  <\/TR> \n  <TR> <TD COLSPAN=\"2\" BORDER=\"4\" ALIGN=\"right\" PORT=\"there\">4<\/TD> <\/TR>\n<\/TABLE>",
+      "pos": "343.49,104.51",
+      "shape": "ellipse",
+      "style": "filled",
+      "width": "2.8869"
+    },
+    {
+      "_gvid": 2,
+      "name": "c",
+      "height": "0.81111",
+      "label": "long line 1<BR\/>line 2<BR ALIGN=\"LEFT\"\/>line 3<BR ALIGN=\"RIGHT\"\/>",
+      "pos": "343.49,256.51",
+      "shape": "plaintext",
+      "width": "1.0539"
+    },
+    {
+      "_gvid": 3,
+      "name": "a",
+      "height": "0.5",
+      "label": "\n<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n  <TR><TD ROWSPAN=\"3\" BGCOLOR=\"yellow\">class<\/TD><\/TR>\n  <TR><TD PORT=\"here\" BGCOLOR=\"lightblue\">qualifier<\/TD><\/TR>\n<\/TABLE>",
+      "pos": "51.318,72.511",
+      "shape": "plaintext",
+      "width": "1.4255"
+    },
+    {
+      "_gvid": 4,
+      "name": "d",
+      "height": "0.68889",
+      "label": "\\N",
+      "pos": "51.318,256.51",
+      "shape": "triangle",
+      "width": "0.88139"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 1,
+      "tail": 3,
+      "head": 1,
+      "arrowtail": "diamond",
+      "headport": "there",
+      "label": "",
+      "pos": "e,365.92,48.911 95.636,72.511 151.69,72.511 337.13,0 362.93,38.252",
+      "tailport": "here"
+    },
+    {
+      "_gvid": 0,
+      "tail": 2,
+      "head": 1,
+      "label": "",
+      "pos": "e,343.49,192.09 343.49,227.31 343.49,219.34 343.49,211.36 343.49,203.38"
+    },
+    {
+      "_gvid": 2,
+      "tail": 4,
+      "head": 2,
+      "label": "\n<TABLE>\n  <TR><TD BGCOLOR=\"red\" WIDTH=\"10\"> <\/TD>\n      <TD>Edge labels<BR\/>also<\/TD>\n      <TD BGCOLOR=\"blue\" WIDTH=\"10\"> <\/TD>\n  <\/TR>\n<\/TABLE>",
+      "lp": "171.1,279.31",
+      "pos": "e,305.76,256.51 72.722,256.51 118.38,256.51 229.85,256.51 294.3,256.51"
+    }
+  ]
+}
