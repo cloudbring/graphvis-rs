@@ -1,0 +1,6 @@
+graph loops {
+layout=sfdp;
+
+
+a -- a; a -- b; a -- b; b -- c; c -- c [label="self"]; c -- d; d -- a;
+}

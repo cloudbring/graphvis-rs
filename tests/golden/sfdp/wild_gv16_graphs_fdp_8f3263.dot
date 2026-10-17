@@ -1,0 +1,45 @@
+graph G {
+	graph [bb="0,0,816.13,172",
+		layout=sfdp
+	];
+	node [label="\N"];
+	subgraph clusterA {
+		subgraph clusterC {
+			C	[height=0.5,
+				pos="27,18",
+				width=0.75];
+			D	[height=0.5,
+				pos="178.58,18",
+				width=0.75];
+			C -- D	[pos="54.449,18 81.92,18 123.93,18 151.33,18"];
+		}
+		a	[height=0.5,
+			pos="248,154",
+			width=0.75];
+		b	[height=0.5,
+			pos="437.62,154",
+			width=0.75];
+		a -- b	[pos="275.17,154 311.11,154 374.12,154 410.19,154"];
+	}
+	subgraph clusterB {
+		d	[height=0.5,
+			pos="341.62,18",
+			width=0.75];
+		f	[height=0.5,
+			pos="496.33,18",
+			width=0.75];
+		d -- f	[pos="368.92,18 397.11,18 440.85,18 469.04,18"];
+	}
+	e	[height=0.5,
+		pos="350,103",
+		width=0.75];
+	clusterB	[height=0.5,
+		pos="562.27,103",
+		width=1.2005];
+	e -- clusterB	[pos="377.32,103 413.15,103 476.44,103 518.87,103"];
+	d -- D	[pos="314.33,18 284.23,18 236.09,18 205.95,18"];
+	clusterC	[height=0.5,
+		pos="772.91,103",
+		width=1.2005];
+	clusterC -- clusterB	[pos="729.27,103 693.12,103 642,103 605.86,103"];
+}

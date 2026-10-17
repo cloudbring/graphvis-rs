@@ -52,6 +52,8 @@ gen_dir() {
 gen_dir "$OUT" "$REPO_ROOT"/tests/wild/*.gv "$REPO_ROOT"/tests/fixtures/*.gv
 # Neato corpus: every input sets layout=neato (see scripts/gen-neato-corpus.py).
 gen_dir "$OUT/neato" "$REPO_ROOT"/tests/neato/*.gv
+# Sfdp corpus: every input sets layout=sfdp (see scripts/gen-sfdp-corpus.py).
+gen_dir "$OUT/sfdp" "$REPO_ROOT"/tests/sfdp/*.gv
 # fdp, osage and patchwork corpora (scripts/gen-<engine>-corpus.py).
 gen_dir "$OUT/fdp" "$REPO_ROOT"/tests/fdp/*.gv
 gen_dir "$OUT/osage" "$REPO_ROOT"/tests/osage/*.gv

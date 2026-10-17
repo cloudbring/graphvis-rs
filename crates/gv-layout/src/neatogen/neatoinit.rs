@@ -100,7 +100,7 @@ fn neato_model(g: &LGraph<'_>) -> i32 {
 }
 
 /// `setSeed(G, dflt, &seed)`.
-fn set_seed(g: &LGraph<'_>, dflt: i32, seed: &mut i64) -> i32 {
+pub fn set_seed(g: &LGraph<'_>, dflt: i32, seed: &mut i64) -> i32 {
     let Some(p) = g.gattr("start").filter(|s| !s.is_empty()) else {
         return dflt;
     };

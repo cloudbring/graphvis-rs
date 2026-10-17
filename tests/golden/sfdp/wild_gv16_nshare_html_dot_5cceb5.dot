@@ -1,0 +1,42 @@
+digraph structs {
+	graph [bb="0,0,710.96,88.4",
+		layout=sfdp
+	];
+	node [label="\N",
+		shape=plaintext
+	];
+	struct1	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD>left</TD><TD PORT="f1">mid dle</TD><TD PORT="f2">right</TD></TR>
+</TABLE>>,
+		pos="337.56,44.2",
+		width=1.6872];
+	struct2	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD PORT="f0">one</TD><TD>two</TD></TR>
+</TABLE>>,
+		pos="35.5,44.2",
+		width=0.98611];
+	struct1:f1 -> struct2:f0	[pos="e,22,32.8 333.67,55.6 333.67,55.6 89.692,37.752 33.462,33.639"];
+	struct3	[height=1.2278,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+  <TR> 
+    <TD ROWSPAN="3">hello<BR/>world</TD>
+    <TD COLSPAN="3">b</TD>
+    <TD ROWSPAN="3">g</TD>
+    <TD ROWSPAN="3">h</TD>
+  </TR>
+  <TR>
+    <TD>c</TD><TD PORT="here">d</TD><TD>e</TD>
+  </TR>
+  <TR>
+    <TD COLSPAN="3">f</TD>
+  </TR>
+</TABLE>>,
+		pos="638.46,44.2",
+		width=2.0139];
+	struct1:f2 -> struct3:here	[pos="e,634.39,44.2 390.3,44.2 390.3,44.2 563.41,44.2 622.95,44.2"];
+}
