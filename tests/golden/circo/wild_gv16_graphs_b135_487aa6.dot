@@ -1,0 +1,15 @@
+digraph ID {
+	graph [bb="0,0,180,36",
+		concentrate=true,
+		layout=circo
+	];
+	node [label="\N"];
+	A	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	B	[height=0.5,
+		pos="153,18",
+		width=0.75];
+	A -> B	[pos="e,125.71,18 54.34,18 71.925,18 95.036,18 114.47,18"];
+	B -> A;
+}

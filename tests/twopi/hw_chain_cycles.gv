@@ -1,0 +1,10 @@
+graph cc {
+layout=twopi;
+
+
+a0 -- a1 -- a2 -- a3 -- a0;
+a2 -- b0 -- b1 -- b2 -- b0;
+b2 -- c0 -- c1 -- c2 -- c3 -- c4 -- c0;
+c3 -- d0;
+d0 -- e0 -- e1 -- e2 -- d0;
+}

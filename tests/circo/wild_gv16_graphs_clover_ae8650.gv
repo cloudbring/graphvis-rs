@@ -1,0 +1,7 @@
+graph G {
+layout=circo;
+
+  a -- b -- c -- a
+  a -- B -- C -- a
+  a -- 1 -- 2 -- a
+}

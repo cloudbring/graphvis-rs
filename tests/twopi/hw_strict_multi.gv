@@ -1,0 +1,3 @@
+strict graph sm {
+layout=twopi;
+ a -- b; a -- b; b -- c; c -- a; }

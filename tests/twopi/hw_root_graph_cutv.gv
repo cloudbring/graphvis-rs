@@ -1,0 +1,10 @@
+graph cutv {
+layout=twopi;
+
+root=c2;
+hub -- a1 -- a2 -- a3 -- hub;
+hub -- b1 -- b2 -- hub;
+hub -- c1 -- c2 -- c3 -- c4 -- hub;
+hub -- d1;
+hub -- e1 -- e2;
+}

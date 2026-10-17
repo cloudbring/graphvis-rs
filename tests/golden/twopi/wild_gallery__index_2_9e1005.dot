@@ -1,0 +1,15 @@
+graph {
+	graph [bb="0,0,126,36",
+		layout=twopi
+	];
+	node [label="\N"];
+	B	[height=0.5,
+		pos="99,18",
+		width=0.75];
+	A	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	B -- A	[pos="71.78,18 66.045,18 59.994,18 54.259,18",
+		tail_lp="62.838,26.4",
+		taillabel=tail];
+}
