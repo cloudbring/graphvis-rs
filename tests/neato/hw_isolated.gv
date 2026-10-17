@@ -1,0 +1,3 @@
+graph iso {
+layout=neato;
+ a; b; c; d; }

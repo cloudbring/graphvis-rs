@@ -1,0 +1,8 @@
+graph wheel {
+layout=neato;
+
+splines=true;
+node [shape=box];
+hub -- r1; hub -- r2; hub -- r3; hub -- r4; hub -- r5; hub -- r6;
+r1 -- r2 -- r3 -- r4 -- r5 -- r6 -- r1;
+}
