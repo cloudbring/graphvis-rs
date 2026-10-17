@@ -93,6 +93,10 @@ pub const SEQ_KEY: &str = "\u{1}seq";
 /// input `bb`, which C prints, but renderers do not draw it.
 pub const UNREGISTERED_CLUSTER_KEY: &str = "\u{1}unregclust";
 
+/// Subgraph attribute set by a layout on a cluster it registered in `GD_clust` but never
+/// positioned (fdp stopping on a layout error): renderers draw it with its empty box.
+pub const REGISTERED_CLUSTER_KEY: &str = "\u{1}regclust";
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {

@@ -451,7 +451,8 @@ impl<'g> Model<'g> {
         ) {
             let s = &g.subgraphs[sid];
             if is_a_cluster(&s.name, &s.graph_attrs)
-                && s.bb != BoundingBox::default()
+                && (s.bb != BoundingBox::default()
+                    || s.graph_attrs.contains_key(gv_core::REGISTERED_CLUSTER_KEY))
                 && !s
                     .graph_attrs
                     .contains_key(gv_core::UNREGISTERED_CLUSTER_KEY)
