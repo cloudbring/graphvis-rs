@@ -29,7 +29,7 @@ pub fn find_ccomp(dg: &DG) -> (Vec<Comp>, bool) {
     let mut marks = vec![false; n];
     let mut comps = Vec::new();
     let mut first: Option<(Vec<usize>, bool)> = None;
-    if !dg.ports.is_empty() {
+    if dg.has_ports {
         let mut v = Vec::new();
         for p in &dg.ports {
             if marks[p.n] {

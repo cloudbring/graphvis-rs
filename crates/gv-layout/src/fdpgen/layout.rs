@@ -12,6 +12,7 @@
 //! cgraph orders derived nodes and edges by address; the port uses creation
 //! order, which is what consecutive allocations give in practice.
 
+use super::clusteredges::{COMPOUND_EDGE_TYPE, Hier, compound_edges};
 use super::comp::find_ccomp;
 use super::fdpinit::{get_inputscale, init_edges, initial_positions};
 use super::tlayout::{TState, fdp_init_params, fdp_t_layout};
@@ -22,7 +23,9 @@ use crate::common::shapes::NodeShape;
 use crate::common::types::*;
 use crate::common::utils::{compute_bb, late_int};
 use crate::cutil::{CRand, qsort_by};
-use crate::neatogen::neatosplines::{neato_set_aspect, spline_edges_main};
+use crate::neatogen::neatosplines::{
+    neato_set_aspect, spline_edges_by, spline_edges_main, spline_edges_route,
+};
 use crate::osage::register_clusters;
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, put_graphs};
 use gv_core::{AttrMap, BoundingBox, Graph, GraphKind, Point, Result};
@@ -123,6 +126,9 @@ pub struct DG {
     pub out: Vec<Vec<usize>>,
     pub inn: Vec<Vec<usize>>,
     pub ports: Vec<DPort>,
+    /// `PORTS(dg) != NULL`: the graph had ports, even if none hooks to a
+    /// derived node.
+    pub has_ports: bool,
     /// `overlap`, `sep` and `K` copied from the original graph (`copyAttr`).
     pub attrs: AttrMap,
     emap: HashMap<(usize, usize), usize>,
@@ -552,6 +558,7 @@ impl Fdp<'_, '_> {
         }
 
         if let Some(c) = g {
+            dg.has_ports = !self.ports[c].is_empty();
             for pp in self.ports[c].clone() {
                 let Some((u, m)) = self.dnode[pp.n] else {
                     continue;
@@ -992,19 +999,57 @@ impl Fdp<'_, '_> {
 }
 
 /// `fdpSplines(g)`.
-fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool) {
+fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool, hier: &Hier<'_>) {
     let mut et = g.edge_type;
-    if et > EdgeType::Ortho && has_clust_edge {
-        // "splines and cluster edges not supported - using line segments"
-        et = EdgeType::Line;
-    }
     let root = g.root_sub();
-    if et == EdgeType::Ortho || et == EdgeType::CompoundEdge {
-        // lib/ortho and compoundEdges are not ported; fall back as
-        // spline_edges0 does.
-        et = EdgeType::Pline;
+    let mut done = false;
+    if et > EdgeType::Ortho {
+        let mut try_failed = false;
+        if et == EdgeType::CompoundEdge {
+            let ok = spline_edges_by(g, &root, COMPOUND_EDGE_TYPE, &mut |lg, sub, pm, _| {
+                compound_edges(lg, sub, hier, pm)
+            });
+            if ok {
+                done = true;
+            } else {
+                try_failed = true;
+            }
+        }
+        if try_failed || et != EdgeType::CompoundEdge {
+            if has_clust_edge {
+                // "splines and cluster edges not supported - using line segments"
+                et = EdgeType::Line;
+            } else {
+                // With Nop = 2 after a failed compoundEdges, edges that
+                // already have splines are kept.
+                let keep = try_failed;
+                spline_edges_by(g, &root, et, &mut |lg, sub, pm, et| {
+                    if keep {
+                        for e in 0..lg.edges.len() {
+                            if lg.edges[e].spl.is_some() {
+                                lg.edges[e].count = 0;
+                            }
+                        }
+                    }
+                    let et = if et == EdgeType::CompoundEdge {
+                        EdgeType::Pline
+                    } else {
+                        et
+                    };
+                    spline_edges_route(lg, sub, pm, et);
+                    true
+                });
+                done = true;
+            }
+        }
     }
-    spline_edges_main(g, &root, et);
+    if !done {
+        if et == EdgeType::Ortho {
+            // lib/ortho is not ported; fall back as spline_edges0 does.
+            et = EdgeType::Pline;
+        }
+        spline_edges_main(g, &root, et);
+    }
 }
 
 /// `fdp_layout(g)`.
@@ -1094,6 +1139,10 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
     // setBB
     let root_bb = f.root_bb;
     let gbb = f.gbb.clone();
+    let parent: Vec<Option<usize>> = f.parent.iter().map(|p| p.flatten()).collect();
+    let is_clust = f.is_clust.clone();
+    let tree = f.tree.clone();
+    let members = f.members.clone();
     let sc = |b: BoundingBox| {
         BoundingBox::new(72.0 * b.ll.x, 72.0 * b.ll.y, 72.0 * b.ur.x, 72.0 * b.ur.y)
     };
@@ -1105,7 +1154,13 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
     let root = g.root_sub();
     neato_set_aspect(&mut g, &root, true);
     if g.edge_type != EdgeType::None {
-        fdp_splines(&mut g, ce.is_some());
+        let hier = Hier {
+            tree: &tree,
+            parent: &parent,
+            is_clust: &is_clust,
+            members: &members,
+        };
+        fdp_splines(&mut g, ce.is_some(), &hier);
     }
     gv_postprocess(&mut g, false);
     finish(&g, graph);
