@@ -60,23 +60,12 @@ fn trim_trailing_zeros(s: &str) -> String {
 
 /// Formats an edge spline into Graphviz `pos` attribute syntax (`"e,ex,ey x0,y0 x1,y1 ..."`).
 pub(crate) fn format_edge_pos(graph: &Graph, edge: &EdgeData) -> String {
-    let fallback;
-    let spline = if edge.spline.segments.is_empty() {
-        let p_tail = graph
-            .nodes
-            .get(edge.tail.0 as usize)
-            .map(|n| n.pos)
-            .unwrap_or_default();
-        let p_head = graph
-            .nodes
-            .get(edge.head.0 as usize)
-            .map(|n| n.pos)
-            .unwrap_or_default();
-        fallback = straight_spline(p_tail, p_head);
-        &fallback
-    } else {
-        &edge.spline
-    };
+    // An edge without a spline has no `pos`, as in C (e.g. the non-leader
+    // edges of `concentrate=true` in neato).
+    if edge.spline.segments.is_empty() {
+        return String::new();
+    }
+    let spline = &edge.spline;
 
     let (mut want_s, mut want_e) = edge_arrow_directions(graph, edge);
     // `arrowhead=none` / `arrowtail=none` leave no arrow (`arrow_match_name`).
