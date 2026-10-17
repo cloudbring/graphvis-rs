@@ -52,6 +52,9 @@ pub struct NodeShape {
     /// `option.fixedshape` (`fixedsize=shape`): the inside test uses the
     /// polygon's own bounding box (`polyBB`) instead of the node size.
     pub fixedshape: bool,
+    /// `ND_shape_info(n)->b` of a record (`record_inside` without a port box);
+    /// `ND_height` is one point larger (`record_init`'s rounding kluge).
+    pub record_bb: Option<gv_core::BoundingBox>,
 }
 
 /// Static shape description (`polygon_t` initialisers and the `Shapes[]` table).
@@ -429,6 +432,7 @@ impl NodeShape {
                 .attrs
                 .get("fixedsize")
                 .is_some_and(|v| v.eq_ignore_ascii_case("shape")),
+            record_bb: None,
         };
         match desc.inside {
             InsideFn::Record | InsideFn::Epsf => {
@@ -569,6 +573,7 @@ impl NodeShape {
     pub fn apply_geometry(&mut self, geom: &gv_geom::node_size::NodeGeometry) {
         self.outline_width = geom.outline_width * 72.0;
         self.outline_height = geom.outline_height * 72.0;
+        self.record_bb = geom.record.as_ref().map(|r| r.bbox);
         if let Some(p) = &geom.polygon {
             self.sides = p.sides;
             self.peripheries = p.peripheries;
@@ -635,12 +640,15 @@ impl NodeShape {
                 pr.x.hypot(pr.y) <= radius
             }
             InsideFn::Record => {
-                let mut b = ctx.bp.unwrap_or(gv_core::BoundingBox::new(
-                    -self.width / 2.0,
-                    -self.height / 2.0,
-                    self.width / 2.0,
-                    self.height / 2.0,
-                ));
+                let mut b = ctx
+                    .bp
+                    .or(self.record_bb)
+                    .unwrap_or(gv_core::BoundingBox::new(
+                        -self.width / 2.0,
+                        -self.height / 2.0,
+                        self.width / 2.0,
+                        self.height / 2.0,
+                    ));
                 let e = self.penwidth / 2.0;
                 b.ll.x -= e;
                 b.ll.y -= e;
