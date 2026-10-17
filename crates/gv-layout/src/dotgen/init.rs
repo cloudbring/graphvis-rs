@@ -16,23 +16,7 @@ pub fn pad(d: Point) -> Point {
     Point::new(d.x + 4.0 * GAP, d.y + 2.0 * GAP)
 }
 
-pub fn cwrotatepf(p: Point, cwrot: i32) -> Point {
-    match cwrot {
-        90 => Point::new(p.y, -p.x),
-        180 => Point::new(p.x, -p.y),
-        270 => Point::new(p.y, p.x),
-        _ => p,
-    }
-}
-
-pub fn ccwrotatepf(p: Point, ccwrot: i32) -> Point {
-    match ccwrot {
-        90 => Point::new(-p.y, p.x),
-        180 => Point::new(p.x, -p.y),
-        270 => Point::new(p.y, p.x),
-        _ => p,
-    }
-}
+pub use crate::common::ports::{ccwrotatepf, cwrotatepf};
 
 impl<'a> Dot<'a> {
     /// Builds the arenas from the (already node-sized) input graph.

@@ -612,15 +612,7 @@ fn same_side(p0: Point, p1: Point, l0: Point, l1: Point) -> bool {
     s0 == s1
 }
 
-/// `ccwrotatepf` for multiples of 90 degrees.
-pub fn ccwrotatepf(p: Point, ccwrot: i32) -> Point {
-    match ccwrot.rem_euclid(360) {
-        90 => Point::new(-p.y, p.x),
-        180 => Point::new(p.x, -p.y),
-        270 => Point::new(p.y, p.x),
-        _ => p,
-    }
-}
+pub use super::ports::ccwrotatepf;
 
 fn inside_box(p: Point, b: &gv_core::BoundingBox) -> bool {
     b.ll.x <= p.x && p.x <= b.ur.x && b.ll.y <= p.y && p.y <= b.ur.y
