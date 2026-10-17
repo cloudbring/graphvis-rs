@@ -235,6 +235,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             ObjKind::Node(n) => LabelSubstContext {
                 graph_name: &m.g.name,
                 node_name: m.nodes[n].name,
+                is_node: true,
                 label_text: &m.nodes[n].label.text,
                 ..Default::default()
             },

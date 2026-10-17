@@ -394,6 +394,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             let ctx = LabelSubstContext {
                 graph_name: &graph.name,
                 node_name: &node.name,
+                is_node: true,
                 ..Default::default()
             };
             let mut l = Lbl {

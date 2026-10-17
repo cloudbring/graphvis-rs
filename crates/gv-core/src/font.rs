@@ -103,6 +103,8 @@ pub struct LabelSubstContext<'a> {
     /// `getPenColor(obj)` (`pencolor`, else `color`), which an HTML label's outermost
     /// table without a `COLOR` takes (`make_html_label`).
     pub pen_color: Option<&'a str>,
+    /// The object is a node (its name may be empty).
+    pub is_node: bool,
 }
 
 impl<'a> LabelSubstContext<'a> {
@@ -120,6 +122,7 @@ impl<'a> LabelSubstContext<'a> {
             head_port: None,
             label_text: "",
             pen_color: None,
+            is_node: true,
         }
     }
 }
@@ -512,7 +515,7 @@ impl LabelSubstContext<'_> {
     fn obj_kind(&self) -> SubstObjKind {
         if self.is_edge {
             SubstObjKind::Edge
-        } else if !self.node_name.is_empty() {
+        } else if self.is_node || !self.node_name.is_empty() {
             SubstObjKind::Node
         } else {
             SubstObjKind::Graph
@@ -835,6 +838,7 @@ mod tests {
             head_port: None,
             label_text: "",
             pen_color: None,
+            is_node: false,
         };
         let layout = measure_multiline_label_with_context(
             "\\G: \\T -> \\H (\\E)",
