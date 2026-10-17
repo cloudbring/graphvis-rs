@@ -7,6 +7,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Overrides the macOS sccache path in .cargo/config.toml.
   RUSTC_WRAPPER: sccache
   SCCACHE_GHA_ENABLED: "true"
 
@@ -27,9 +28,61 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+      # Linux uses the portable math profile, so the corpus ratchets
+      # (crates/gv-diff/tests/*_fidelity.rs) check tests/golden/*.portable.json.
       - name: Run Workspace Tests
         run: cargo test --workspace
       - name: Check WASM Target
         run: cargo check --target wasm32-unknown-unknown -p gv-wasm
+      - name: sccache stats
+        run: sccache --show-stats
+
+  wasm-e2e:
+    name: WASM end-to-end (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Run sccache-cache
+        uses: Mozilla-Actions/sccache-action@v0.0.7
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # wasm-bindgen-cli must match the wasm-bindgen crate in Cargo.lock exactly.
+      - name: Read wasm-bindgen version from Cargo.lock
+        id: wb
+        run: |
+          v=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Cache wasm-bindgen-cli
+        id: wb-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-${{ runner.os }}-${{ steps.wb.outputs.version }}
+      - name: Install wasm-bindgen-cli
+        if: steps.wb-cache.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version "${{ steps.wb.outputs.version }}" --locked
+      - name: Check wasm-bindgen-cli version
+        run: wasm-bindgen --version | grep -Fx "wasm-bindgen ${{ steps.wb.outputs.version }}"
+      - name: Build the wasm package
+        run: |
+          cargo build --release --target wasm32-unknown-unknown -p gv-wasm
+          wasm-bindgen --target nodejs --out-dir "$RUNNER_TEMP/gvwasm/pkg" \
+            target/wasm32-unknown-unknown/release/gv_wasm.wasm
+      # Fails if a file of tests/golden/e2e-baseline.portable.json stops matching C.
+      - name: Run wasm e2e against the portable baseline
+        run: node scripts/wasm-e2e.mjs --pkg "$RUNNER_TEMP/gvwasm/pkg" --hashes "$RUNNER_TEMP/wasm-hashes.json"
+      # wasm32 and Linux both use the portable math profile and must agree on every output,
+      # matching C or not.
+      - name: Compare wasm output with native Linux output
+        run: |
+          cargo build --release -p gv-diff
+          target/release/gv-diff e2e --hashes "$RUNNER_TEMP/native-hashes.json"
+          cmp "$RUNNER_TEMP/native-hashes.json" "$RUNNER_TEMP/wasm-hashes.json"
       - name: sccache stats
         run: sccache --show-stats
