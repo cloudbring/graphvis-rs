@@ -417,6 +417,10 @@ def handwritten3():
     c["hw3_ipsep_biglabels"] = BIGLABELS % "mode=ipsep; overlap=ipsep;"
     c["hw3_ipsep_subset"] = PETERSEN % "mode=ipsep; model=subset;"
     c["hw3_ipsep_tree_diredges"] = tree(3, "mode=ipsep; diredgeconstraints=true; overlap=ipsep;").replace("graph", "digraph", 1).replace("--", "->")
+    # dynamic record ports (Run:Normal) through neato's port resolution
+    b15 = (ROOT / "tests" / "wild" / "gv16_graphs_b15_8c212e.gv").read_text(encoding="utf-8")
+    c["hw3_ports_b15"] = b15
+    c["hw3_ports_b15_splines"] = HEADER.sub(lambda m: m.group(0) + "\nsplines=true;", b15, count=1)
     return c
 
 
