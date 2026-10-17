@@ -280,15 +280,16 @@ impl CComp {
         let mut edges = Vec::new();
         let mut elocal = vec![usize::MAX; root.edges.len()];
         for (ei, e) in root.edges.iter().enumerate() {
-            let t = local[e.tail.0 as usize];
-            if t == usize::MAX {
+            // graphviz_node_induce: both ends in the component.
+            let (t, h) = (local[e.tail.0 as usize], local[e.head.0 as usize]);
+            if t == usize::MAX || h == usize::MAX {
                 continue;
             }
             let mut ed = e.clone();
             elocal[ei] = edges.len();
             ed.id = EdgeId(edges.len() as u32);
             ed.tail = NodeId(t as u32);
-            ed.head = NodeId(local[e.head.0 as usize] as u32);
+            ed.head = NodeId(h as u32);
             graph.edges.push(ed);
             edges.push(ei);
         }

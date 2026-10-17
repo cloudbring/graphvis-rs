@@ -23,11 +23,11 @@ use crate::pack::{
 };
 use gv_core::{BoundingBox, Graph, Point};
 
-/// One packed component: its nodes and top-level clusters in the root's
-/// [`Dot`], and `GD_bb` of the component subgraph.
+/// One packed component: its nodes, top-level clusters (indices of
+/// [`PClust`]s) and `GD_bb` of the component subgraph.
 struct CompInfo {
     nodes: Vec<N>,
-    clusters: Vec<G>,
+    clusters: Vec<usize>,
     bb: BoundingBox,
 }
 
@@ -76,6 +76,9 @@ impl<'a> Dot<'a> {
         g.rankdir = r.rankdir;
         g.nodesep = r.nodesep;
         g.ranksep = r.ranksep;
+        // `GD_has_labels(g->root)`: the root's flags so far (its own label and
+        // the components initialised before this one).
+        g.has_labels = r.has_labels;
         c.cl_type = root.cl_type;
         c.concentrate = root.concentrate;
         c
@@ -87,21 +90,61 @@ impl<'a> Dot<'a> {
         Some(self.labels.len() - 1)
     }
 
-    /// Copies a laid-out component's node, edge and cluster records into the
-    /// root (they are shared objects in C). Returns the component info and
-    /// each node's `ND_clust`.
+    /// Copies a laid-out component's node and edge records into the root
+    /// (they are shared objects in C) and its cluster records into `pcl` (the
+    /// component's own cluster subgraphs). Fills each node's `ND_clust`.
     fn absorb(
         &mut self,
         c: &Dot<'_>,
         cg: &CompGraph,
         ci: usize,
         clust_of_sub: &[Option<G>],
+        pcl: &mut Vec<PClust>,
         nclust: &mut [Option<PkClust>],
     ) -> CompInfo {
-        let map_g = |lg: G| -> G {
+        // The component's cluster tree.
+        fn copy_cluster(
+            root: &mut Dot<'_>,
+            c: &Dot<'_>,
+            cg: &CompGraph,
+            lg: G,
+            clust_of_sub: &[Option<G>],
+            pcl: &mut Vec<PClust>,
+            local: &mut std::collections::HashMap<G, usize>,
+        ) -> usize {
             let si = c.graphs[lg].sub_index.expect("cluster of the component");
-            clust_of_sub[cg.subgraphs[si]].expect("original cluster")
-        };
+            let orig = clust_of_sub[cg.subgraphs[si]].expect("original cluster");
+            let label = root.copy_label(c, c.graphs[lg].label);
+            let me = pcl.len();
+            let s = &c.graphs[lg];
+            pcl.push(PClust {
+                orig,
+                bb: s.bb,
+                label,
+                label_pos: s.label_pos,
+                border: s.border,
+                kids: Vec::new(),
+                nodes: c
+                    .nodes_of(lg)
+                    .into_iter()
+                    .filter_map(|n| c.nodes[n].real.map(|r| cg.nodes[r]))
+                    .collect(),
+            });
+            local.insert(lg, me);
+            let kids: Vec<usize> = c.graphs[lg]
+                .clust
+                .iter()
+                .map(|&k| copy_cluster(root, c, cg, k, clust_of_sub, pcl, local))
+                .collect();
+            pcl[me].kids = kids;
+            me
+        }
+        let mut local = std::collections::HashMap::new();
+        let clusters = c.graphs[0]
+            .clust
+            .iter()
+            .map(|&k| copy_cluster(self, c, cg, k, clust_of_sub, pcl, &mut local))
+            .collect();
         for (li, &ri) in cg.nodes.iter().enumerate() {
             let s = &c.nodes[li];
             let label = self.copy_label(c, s.label);
@@ -122,12 +165,9 @@ impl<'a> Dot<'a> {
             d.is_record = s.is_record;
             d.shape = s.shape.clone();
             d.rec_fields = s.rec_fields.clone();
-            nclust[ri] = s.clust.map(|g| {
-                if g == 0 {
-                    PkClust::Graph(ci)
-                } else {
-                    PkClust::Clust(map_g(g))
-                }
+            nclust[ri] = s.clust.map(|g| match local.get(&g) {
+                Some(&k) => PkClust::Clust(k),
+                None => PkClust::Graph(ci),
             });
         }
         for (le, &re) in cg.edges.iter().enumerate() {
@@ -152,30 +192,6 @@ impl<'a> Dot<'a> {
             d.count = s.count;
             d.spl = s.spl.clone();
         }
-        // copyCluster: the cluster tree with boxes, borders and labels.
-        fn copy_cluster(root: &mut Dot<'_>, c: &Dot<'_>, lg: G, map_g: &dyn Fn(G) -> G) -> G {
-            let rg = map_g(lg);
-            let label = root.copy_label(c, c.graphs[lg].label);
-            let kids: Vec<G> = c.graphs[lg]
-                .clust
-                .iter()
-                .map(|&k| copy_cluster(root, c, k, map_g))
-                .collect();
-            let s = &c.graphs[lg];
-            let d = &mut root.graphs[rg];
-            d.bb = s.bb;
-            d.label_pos = s.label_pos;
-            d.border = s.border;
-            d.label = label;
-            d.clust = kids;
-            d.bound = true;
-            rg
-        }
-        let clusters = c.graphs[0]
-            .clust
-            .iter()
-            .map(|&k| copy_cluster(self, c, k, &map_g))
-            .collect();
         self.graphs[0].has_labels |= c.graphs[0].has_labels;
         let b = c.graphs[0].bb;
         CompInfo {
@@ -184,6 +200,37 @@ impl<'a> Dot<'a> {
             bb: BoundingBox::new(b.ll.x, b.ll.y, b.ur.x, b.ur.y),
         }
     }
+
+    /// `copyCluster(scl, cl)`: a component cluster's record onto the original.
+    fn copy_cluster_info(&mut self, pcl: &[PClust], k: usize) -> G {
+        let kids: Vec<G> = pcl[k]
+            .kids
+            .iter()
+            .map(|&j| self.copy_cluster_info(pcl, j))
+            .collect();
+        let p = &pcl[k];
+        let d = &mut self.graphs[p.orig];
+        d.bb = p.bb;
+        d.label_pos = p.label_pos;
+        d.border = p.border;
+        d.label = p.label;
+        d.clust = kids;
+        d.bound = true;
+        p.orig
+    }
+}
+
+/// A cluster subgraph of a component (`projectG`'s clone), with the
+/// `Agraphinfo_t` fields packing uses; `copyClusterInfo` moves them to `orig`.
+struct PClust {
+    orig: G,
+    bb: BoxF,
+    label: Option<L>,
+    label_pos: u8,
+    border: [Point; 4],
+    kids: Vec<usize>,
+    /// Root node indices.
+    nodes: Vec<N>,
 }
 
 /// [`PackGraph`] over the root's [`Dot`] after the components were absorbed.
@@ -193,6 +240,7 @@ struct DotPack<'d, 'a> {
     /// `ND_pos` (inches), set by `attachPos`.
     pos: Vec<Point>,
     nclust: Vec<Option<PkClust>>,
+    pcl: Vec<PClust>,
 }
 
 impl DotPack<'_, '_> {
@@ -238,7 +286,7 @@ impl DotPack<'_, '_> {
             }
         }
         for &c in clusters {
-            expandbb(&mut bb, &Self::bb_of(d.graphs[c].bb));
+            expandbb(&mut bb, &Self::bb_of(self.pcl[c].bb));
         }
         Some(bb)
     }
@@ -252,11 +300,15 @@ impl PackGraph for DotPack<'_, '_> {
         if let Some(bb) = self.compute_bb(&self.comps[i].nodes, &self.comps[i].clusters) {
             self.comps[i].bb = bb;
         }
+        if std::env::var_os("GVDUMP").is_some() {
+            let b = self.comps[i].bb;
+            eprintln!("bb[_cc_{i}] {} {} {} {}", b.ll.x, b.ll.y, b.ur.x, b.ur.y);
+        }
     }
     fn pk_graph_bb(&self, g: PkGraph) -> BoundingBox {
         match g {
             PkGraph::Comp(i) => self.comps[i].bb,
-            PkGraph::Clust(c) => Self::bb_of(self.d.graphs[c].bb),
+            PkGraph::Clust(c) => Self::bb_of(self.pcl[c].bb),
         }
     }
     fn pk_nodes(&self, i: usize) -> Vec<usize> {
@@ -265,11 +317,11 @@ impl PackGraph for DotPack<'_, '_> {
     fn pk_clusters(&self, g: PkGraph) -> Vec<usize> {
         match g {
             PkGraph::Comp(i) => self.comps[i].clusters.clone(),
-            PkGraph::Clust(c) => self.d.graphs[c].clust.clone(),
+            PkGraph::Clust(c) => self.pcl[c].kids.clone(),
         }
     }
     fn pk_cluster_nodes(&self, c: usize) -> Vec<usize> {
-        self.d.nodes_of(c)
+        self.pcl[c].nodes.clone()
     }
     fn pk_node_clust(&self, n: usize) -> Option<PkClust> {
         self.nclust[n]
@@ -329,7 +381,7 @@ impl PackGraph for DotPack<'_, '_> {
                 bb.ur.y += dy;
             }
             PkGraph::Clust(c) => {
-                let gi = &mut self.d.graphs[c];
+                let gi = &mut self.pcl[c];
                 gi.bb.ll.x += dx;
                 gi.bb.ur.x += dx;
                 gi.bb.ll.y += dy;
@@ -365,12 +417,21 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         }
     }
     let mut nclust: Vec<Option<PkClust>> = vec![None; d.nodes.len()];
+    let mut pcl: Vec<PClust> = Vec::new();
     let mut comps = Vec::with_capacity(ccs.len());
     for (ci, cc) in ccs.iter().enumerate() {
         let cg = cc.to_graph(graph);
+        if std::env::var_os("GVDUMP").is_some() {
+            eprintln!(
+                "CC {ci}: {} nodes {} edges {} subgraphs",
+                cg.nodes.len(),
+                cg.edges.len(),
+                cg.subgraphs.len()
+            );
+        }
         let mut c = Dot::new_component(&cg.graph, graph, d);
         c.dot_layout()?;
-        comps.push(d.absorb(&c, &cg, ci, &clust_of_sub, &mut nclust));
+        comps.push(d.absorb(&c, &cg, ci, &clust_of_sub, &mut pcl, &mut nclust));
     }
     if (1..=3).contains(&maxphase) {
         return Ok(());
@@ -386,6 +447,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         comps,
         pos,
         nclust,
+        pcl,
     };
     // packSubgraphs
     if pack_graphs_in(&mut pk, &pinfo) {
@@ -393,7 +455,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         let mut bb = pk.compute_bb(&all, &[]).unwrap_or_default();
         for c in &pk.comps {
             for &k in &c.clusters {
-                expandbb(&mut bb, &DotPack::bb_of(pk.d.graphs[k].bb));
+                expandbb(&mut bb, &DotPack::bb_of(pk.pcl[k].bb));
             }
         }
         pk.d.graphs[0].bb = BoxF {
@@ -406,7 +468,12 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         pk.d.nodes[n].coord = Point::new(72.0 * pk.pos[n].x, 72.0 * pk.pos[n].y);
     }
     // copyClusterInfo
-    let clust: Vec<G> = pk.comps.iter().flat_map(|c| c.clusters.clone()).collect();
+    let mut clust: Vec<G> = Vec::new();
+    for c in &pk.comps {
+        for &k in &c.clusters {
+            clust.push(pk.d.copy_cluster_info(&pk.pcl, k));
+        }
+    }
     let d = pk.d;
     d.graphs[0].clust = clust;
     // The root never had setEdgeType: EDGE_TYPE(root) is EDGETYPE_NONE.
