@@ -35,6 +35,7 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
     }
     if graph.nodes.is_empty() && tree.root.is_empty() {
         graph.bb = Default::default();
+        crate::nop::labels_at_origin(graph);
         return Ok(());
     }
     let res = patchwork_layout_tree(graph, &tree);

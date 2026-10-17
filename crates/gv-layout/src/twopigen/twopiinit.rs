@@ -18,6 +18,7 @@ fn find_root_node(g: &LGraph<'_>, nodes: &[usize]) -> Option<usize> {
 /// `twopi_layout(g)`.
 pub fn twopi_layout(graph: &mut Graph) -> Result<()> {
     if graph.nodes.is_empty() {
+        crate::nop::labels_at_origin(graph);
         return Ok(());
     }
     let src = graph.clone();

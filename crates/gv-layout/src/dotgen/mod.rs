@@ -33,7 +33,7 @@ pub mod splinegraph;
 pub mod types;
 pub mod utils;
 
-use gv_core::{BoundingBox, Graph, Result};
+use gv_core::{Graph, Result};
 use types::*;
 
 /// All dot layout state: arenas mirroring the cgraph objects and their
@@ -234,20 +234,19 @@ impl<'a> Dot<'a> {
 /// Lays out `graph` with the dotgen port.
 pub fn layout_dot(graph: &mut Graph) -> Result<()> {
     gv_geom::size_graph_nodes(graph);
-    if graph.nodes.is_empty() {
-        graph.bb = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
-        return Ok(());
-    }
     let result = {
         let mut d = Dot::new(graph);
         d.graph_init();
         let maxphase = utils::late_int(d.agget(0, "phase"), -1, 1);
-        pack::do_dot(&mut d, graph, maxphase).map_err(|message| {
-            gv_core::GraphvizError::LayoutError {
-                stage: "dot",
-                message,
-            }
-        })?;
+        // dot_layout: doDot only when there are nodes; dotneato_postprocess always.
+        if !graph.nodes.is_empty() {
+            pack::do_dot(&mut d, graph, maxphase).map_err(|message| {
+                gv_core::GraphvizError::LayoutError {
+                    stage: "dot",
+                    message,
+                }
+            })?;
+        }
         if (1..=3).contains(&maxphase) {
             output::Output::phase(&d, maxphase)
         } else {

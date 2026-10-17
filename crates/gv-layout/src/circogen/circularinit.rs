@@ -149,6 +149,7 @@ fn circo_layout_main(g: &mut LGraph<'_>) {
 /// `circo_layout(g)`.
 pub fn circo_layout(graph: &mut Graph) -> Result<()> {
     if graph.nodes.is_empty() {
+        crate::nop::labels_at_origin(graph);
         return Ok(());
     }
     let src = graph.clone();
