@@ -1,0 +1,3 @@
+graph pcmp {
+layout=neato;
+ node [shape=box]; a:n -- b:s; b:e -- c:w; c:ne -- a:sw; a:e -- a:w; }

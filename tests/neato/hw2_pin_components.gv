@@ -1,0 +1,7 @@
+graph pc {
+layout=neato;
+
+a [pos="0,0!"]; b [pos="1,1!"]; a -- b;
+c -- d -- e -- c;
+f -- g;
+}

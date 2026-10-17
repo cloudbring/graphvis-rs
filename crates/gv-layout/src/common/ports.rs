@@ -238,9 +238,26 @@ fn resolve_port(g: &LGraph<'_>, n: usize, s: &str) -> PortInfo {
             let field = geom
                 .record
                 .as_ref()
-                .and_then(|rec| rec.find_port(portname).map(|f| f.bbox));
+                .and_then(|rec| rec.find_port(portname).map(|f| (f.bbox, rec.bbox)));
             match field {
-                Some(fb) => compass_port(g, n, Some(fb), compass.unwrap_or("_"), all, false).0,
+                Some((fb, rb)) => {
+                    // f->sides: the sides of the record box the field lies on.
+                    let eq = |a: f64, b: f64| (a - b).abs() < 1e-6;
+                    let mut sides = 0u8;
+                    if eq(fb.ll.y, rb.ll.y) {
+                        sides |= BOTTOM;
+                    }
+                    if eq(fb.ur.x, rb.ur.x) {
+                        sides |= RIGHT;
+                    }
+                    if eq(fb.ur.y, rb.ur.y) {
+                        sides |= TOP;
+                    }
+                    if eq(fb.ll.x, rb.ll.x) {
+                        sides |= LEFT;
+                    }
+                    compass_port(g, n, Some(fb), compass.unwrap_or("_"), sides, false).0
+                }
                 None => {
                     let whole = BoundingBox::new(-nd.lw, -nd.ht / 2.0, nd.rw, nd.ht / 2.0);
                     compass_port(g, n, Some(whole), portname, all, false).0
