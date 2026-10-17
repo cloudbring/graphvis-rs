@@ -15,6 +15,13 @@
 // Faithful ports of numeric C loops index several arrays in lockstep.
 #![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
+pub mod comp;
+pub mod fdpinit;
+pub mod grid;
+pub mod layout;
+pub mod tlayout;
+pub mod xlayout;
+
 use crate::common::utils::mapbool;
 use gv_core::{Graph, SubgraphData};
 
