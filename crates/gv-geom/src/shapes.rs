@@ -2,9 +2,10 @@
 //! and ray-to-boundary intersection ported from Graphviz 16.1.0 (`lib/common/shapes.c`
 //! and `lib/common/htmltable.c`).
 
+use crate::node_size::{LabelGeometry, NodeSizeEnv, node_geometry};
 use gv_core::font::{
     DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LINESPACING, LabelSubstContext, TextJustify,
-    estimate_text_size_styled, measure_multiline_label_with_context, substitute_object_escapes,
+    estimate_text_size_styled, substitute_object_escapes,
 };
 use gv_core::{BoundingBox, NodeData, Point, Port};
 use std::f64::consts::{FRAC_PI_2, PI, SQRT_2};
@@ -106,13 +107,14 @@ pub enum ShapeKind {
 impl ShapeKind {
     /// Parses a Graphviz shape name into a [`ShapeKind`].
     ///
-    /// Unrecognized shapes fall back to [`ShapeKind::Ellipse`] (Graphviz default node shape).
+    /// Matches `bind_shape` in `shapes.c`: names are case-sensitive, an empty name is the
+    /// default `ellipse`, and unrecognized names fall back to `Shapes[0]` (`box`).
     pub fn parse(name: &str) -> Self {
-        let trimmed = name.trim();
-        if trimmed.is_empty() {
+        if name.is_empty() {
+            // `late_nnstring(n, N_shape, DEFAULT_NODESHAPE)`
             return Self::Ellipse;
         }
-        match trimmed {
+        match name {
             "box" | "rect" | "rectangle" => Self::Box,
             "polygon" => Self::Polygon,
             "ellipse" | "oval" => Self::Ellipse,
@@ -171,67 +173,8 @@ impl ShapeKind {
             "lpromoter" => Self::Lpromoter,
             "rarrow" => Self::Rarrow,
             "larrow" => Self::Larrow,
-            other => match other.to_ascii_lowercase().as_str() {
-                "box" | "rect" | "rectangle" => Self::Box,
-                "polygon" => Self::Polygon,
-                "ellipse" | "oval" => Self::Ellipse,
-                "circle" => Self::Circle,
-                "doublecircle" => Self::DoubleCircle,
-                "mcircle" => Self::Mcircle,
-                "point" => Self::Point,
-                "egg" => Self::Egg,
-                "triangle" => Self::Triangle,
-                "invtriangle" => Self::InvTriangle,
-                "plaintext" => Self::Plaintext,
-                "plain" => Self::Plain,
-                "none" => Self::None,
-                "diamond" => Self::Diamond,
-                "mdiamond" => Self::Mdiamond,
-                "trapezium" => Self::Trapezium,
-                "invtrapezium" => Self::InvTrapezium,
-                "parallelogram" => Self::Parallelogram,
-                "house" => Self::House,
-                "invhouse" => Self::InvHouse,
-                "pentagon" => Self::Pentagon,
-                "hexagon" => Self::Hexagon,
-                "septagon" => Self::Septagon,
-                "octagon" => Self::Octagon,
-                "doubleoctagon" => Self::DoubleOctagon,
-                "tripleoctagon" => Self::TripleOctagon,
-                "square" => Self::Square,
-                "msquare" => Self::Msquare,
-                "record" => Self::Record,
-                "mrecord" => Self::Mrecord,
-                "cylinder" => Self::Cylinder,
-                "note" => Self::Note,
-                "tab" => Self::Tab,
-                "folder" => Self::Folder,
-                "box3d" => Self::Box3d,
-                "component" => Self::Component,
-                "underline" => Self::Underline,
-                "cds" => Self::Cds,
-                "star" => Self::Star,
-                "promoter" => Self::Promoter,
-                "terminator" => Self::Terminator,
-                "utr" => Self::Utr,
-                "insulator" => Self::Insulator,
-                "ribosite" => Self::Ribosite,
-                "rnastab" => Self::Rnastab,
-                "proteasesite" => Self::Proteasesite,
-                "proteinstab" => Self::Proteinstab,
-                "primersite" => Self::Primersite,
-                "restrictionsite" => Self::Restrictionsite,
-                "fivepoverhang" => Self::Fivepoverhang,
-                "threepoverhang" => Self::Threepoverhang,
-                "noverhang" => Self::Noverhang,
-                "assembly" => Self::Assembly,
-                "signature" => Self::Signature,
-                "rpromoter" => Self::Rpromoter,
-                "lpromoter" => Self::Lpromoter,
-                "rarrow" => Self::Rarrow,
-                "larrow" => Self::Larrow,
-                _ => Self::Ellipse,
-            },
+            // `bind_shape`: unknown names (and wrong case) get `Shapes[0]`, i.e. `box`.
+            _ => Self::Box,
         }
     }
 
@@ -346,6 +289,8 @@ pub struct RecordField {
     pub children: Vec<RecordField>,
     /// `true` if `children` are arranged horizontally (`left-to-right`), `false` if vertically (`top-to-bottom`).
     pub horizontal: bool,
+    /// Label of a leaf field (`fp->lp`): `dimen` and the justification `space`.
+    pub label: Option<LabelGeometry>,
 }
 
 impl RecordField {
@@ -569,336 +514,10 @@ pub fn compute_node_dimensions(node: &mut NodeData, graph_name: &str) {
 
 /// Computes `node.width` and `node.height` (in inches) with an explicit `rankdir` (`"TB"`, `"LR"`, `"BT"`, `"RL"`).
 pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &str, rankdir: &str) {
-    let shape = ShapeKind::from_node(node);
-
-    // 1. Special case: `shape=point` (`point_init` in `shapes.c`).
-    if shape == ShapeKind::Point {
-        let w_attr = node
-            .attrs
-            .get("width")
-            .and_then(|s| parse_f64_strip_units(s));
-        let h_attr = node
-            .attrs
-            .get("height")
-            .and_then(|s| parse_f64_strip_units(s));
-        let base_in = match (w_attr, h_attr) {
-            (Some(w), Some(h)) => w.min(h),
-            (Some(w), None) => w,
-            (None, Some(h)) => h,
-            (None, None) => DEF_POINT_SIZE,
-        };
-        let base_in = if base_in > 0.0 {
-            base_in.max(MIN_POINT_SIZE)
-        } else {
-            0.0
-        };
-        let peripheries = node
-            .attrs
-            .get("peripheries")
-            .and_then(|s| s.trim().parse::<usize>().ok())
-            .unwrap_or(1);
-        let mut sz_pts = base_in * POINTS_PER_INCH;
-        if peripheries > 1 {
-            sz_pts += 2.0 * ((peripheries - 1) as f64) * PERIPHERY_GAP_PTS;
-        }
-        let final_in = if sz_pts > 0.0 {
-            (sz_pts / POINTS_PER_INCH).max(MIN_POINT_SIZE)
-        } else {
-            0.0
-        };
-        node.width = final_in;
-        node.height = final_in;
-        return;
-    }
-
-    // 2. Parse common font, margin, and size attributes.
-    let font_name = node
-        .attrs
-        .get("fontname")
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .unwrap_or(DEFAULT_FONT_NAME)
-        .to_string();
-    let font_size = node
-        .attrs
-        .get("fontsize")
-        .and_then(|s| parse_f64_strip_units(s))
-        .unwrap_or(DEFAULT_FONT_SIZE)
-        .max(1.0);
-    let (margin_x, margin_y) = parse_node_margin(node.attrs.get("margin").map(String::as_str));
-
-    let min_allowed_w = if shape == ShapeKind::Plain {
-        0.0
-    } else {
-        MIN_NODE_WIDTH
-    };
-    let min_allowed_h = if shape == ShapeKind::Plain {
-        0.0
-    } else {
-        MIN_NODE_HEIGHT
-    };
-    let explicit_w = node
-        .attrs
-        .get("width")
-        .and_then(|s| parse_f64_strip_units(s))
-        .map(|w| w.max(min_allowed_w));
-    let explicit_h = node
-        .attrs
-        .get("height")
-        .and_then(|s| parse_f64_strip_units(s))
-        .map(|h| h.max(min_allowed_h));
-
-    let default_w = if node.width > 0.0 {
-        node.width
-    } else {
-        DEFAULT_NODE_WIDTH
-    };
-    let default_h = if node.height > 0.0 {
-        node.height
-    } else {
-        DEFAULT_NODE_HEIGHT
-    };
-
-    let regular = shape.is_regular_by_default()
-        || parse_graphviz_bool(node.attrs.get("regular").map(String::as_str), false);
-
-    let (mut min_w_pts, mut min_h_pts) = if shape == ShapeKind::Plain {
-        (
-            explicit_w.unwrap_or(0.0) * POINTS_PER_INCH,
-            explicit_h.unwrap_or(0.0) * POINTS_PER_INCH,
-        )
-    } else if regular {
-        let user_max = explicit_w.unwrap_or(0.0).max(explicit_h.unwrap_or(0.0));
-        if user_max > 0.0 {
-            let pts = user_max * POINTS_PER_INCH;
-            (pts, pts)
-        } else {
-            let pts = default_w.min(default_h) * POINTS_PER_INCH;
-            (pts, pts)
-        }
-    } else {
-        (
-            explicit_w.unwrap_or(default_w) * POINTS_PER_INCH,
-            explicit_h.unwrap_or(default_h) * POINTS_PER_INCH,
-        )
-    };
-
-    let fixed_str = node.attrs.get("fixedsize").map_or("false", |s| s.trim());
-    let is_fixed_shape = fixed_str.eq_ignore_ascii_case("shape");
-    let is_fixed = is_fixed_shape || parse_graphviz_bool(Some(fixed_str), false);
-
-    let raw_label = node
-        .attrs
-        .get("label")
-        .map_or("\\N", |s| s.as_str())
-        .to_string();
-
-    // 3. Record / Mrecord shapes (`record_init` in `shapes.c`).
-    if shape.is_record() && !is_html_label(&raw_label, shape) {
-        let rec = layout_record_internal(
-            &raw_label, &node.name, graph_name, &font_name, font_size, margin_x, margin_y,
-            min_w_pts, min_h_pts, is_fixed, rankdir,
-        );
-        let w_pts = rec.bbox.width();
-        let h_pts = rec.bbox.height();
-        node.width = (w_pts / POINTS_PER_INCH).max(MIN_NODE_WIDTH);
-        node.height = (h_pts / POINTS_PER_INCH).max(MIN_NODE_HEIGHT);
-        return;
-    }
-
-    // 4. Measure label dimensions (HTML table/text vs plain multiline text).
-    // In C Graphviz (`make_label` / `make_simple_label`), plain text labels are stored in
-    // integer points (`dimen.x = (int)w`, `dimen.y = (int)h`), and HTML table labels
-    // with `shape=plaintext` have `PAD` skipped when `<TABLE>` is the root.
-    let is_html = is_html_label(&raw_label, shape);
-    let mut dimen = if is_html {
-        measure_html_label_dimen(&raw_label, &node.name, graph_name, &font_name, font_size)
-    } else {
-        let ctx = LabelSubstContext {
-            node_name: &node.name,
-            graph_name,
-            tail_name: "",
-            head_name: "",
-            is_edge: false,
-            is_directed: true,
-            tail_port: None,
-            head_port: None,
-            label_text: "",
-        };
-        let layout = measure_multiline_label_with_context(&raw_label, &ctx, &font_name, font_size);
-        Point::new(layout.width, layout.height)
-    };
-
-    // Add padding around non-empty label (`poly_init` in `shapes.c`).
-    if (dimen.x > 0.0 || dimen.y > 0.0) && shape != ShapeKind::Plain {
-        dimen.x += 2.0 * margin_x * POINTS_PER_INCH;
-        dimen.y += 2.0 * margin_y * POINTS_PER_INCH;
-    }
-
-    // Quantization if `quantum` is set on the node.
-    if let Some(q) = node
-        .attrs
-        .get("quantum")
-        .and_then(|s| parse_f64_strip_units(s))
-        && q > 0.0
-    {
-        let q_pts = q * POINTS_PER_INCH;
-        dimen.x = (dimen.x / q_pts).ceil() * q_pts;
-        dimen.y = (dimen.y / q_pts).ceil() * q_pts;
-    }
-
-    let mut sides = shape.default_sides();
-    let mut orientation = shape.default_orientation()
-        + node
-            .attrs
-            .get("orientation")
-            .and_then(|s| parse_f64_strip_units(s))
-            .unwrap_or(0.0);
-    let mut skew = shape.default_skew();
-    let mut distortion = shape.default_distortion();
-    if sides == 0 {
-        sides = node
-            .attrs
-            .get("sides")
-            .and_then(|s| s.trim().parse::<usize>().ok())
-            .unwrap_or(4);
-        skew = node
-            .attrs
-            .get("skew")
-            .and_then(|s| parse_f64_strip_units(s))
-            .unwrap_or(0.0);
-        distortion = node
-            .attrs
-            .get("distortion")
-            .and_then(|s| parse_f64_strip_units(s))
-            .unwrap_or(0.0);
-    }
-    if sides <= 2 && (distortion.abs() > 1e-9 || skew.abs() > 1e-9) {
-        sides = 120;
-    }
-
-    let peripheries = node
-        .attrs
-        .get("peripheries")
-        .and_then(|s| s.trim().parse::<usize>().ok())
-        .unwrap_or_else(|| shape.default_peripheries());
-
-    let valign = node
-        .attrs
-        .get("labelloc")
-        .and_then(|s| s.trim().chars().next())
-        .map(|c| c.to_ascii_lowercase())
-        .filter(|&c| c == 't' || c == 'b')
-        .unwrap_or('c');
-
-    let is_box = sides == 4
-        && (orientation.rem_euclid(90.0)).abs() < 0.5
-        && distortion.abs() <= 1e-9
-        && skew.abs() <= 1e-9
-        && !matches!(shape, ShapeKind::Cylinder | ShapeKind::Star);
-
-    let mut bb = dimen;
-    if is_box {
-        // Exact fit for axis-aligned rectangular shapes.
-    } else if shape == ShapeKind::Cylinder {
-        bb.y *= 1.375;
-    } else if shape == ShapeKind::Star {
-        bb = star_size(bb);
-    } else {
-        let temp = bb.y * SQRT_2;
-        if min_h_pts > temp && valign == 'c' && min_h_pts > 0.0 {
-            let ratio = bb.y / min_h_pts;
-            bb.x *= (1.0 / (1.0 - ratio * ratio)).sqrt();
-        } else {
-            bb.x *= SQRT_2;
-            bb.y = temp;
-        }
-        if sides > 2 {
-            let cos_factor = (PI / (sides as f64)).cos();
-            if cos_factor.abs() > 1e-9 {
-                bb.x /= cos_factor;
-                bb.y /= cos_factor;
-            }
-        }
-    }
-
-    if is_fixed {
-        bb.x = min_w_pts;
-        bb.y = min_h_pts;
-    } else {
-        bb.x = bb.x.max(min_w_pts);
-        bb.y = bb.y.max(min_h_pts);
-        min_w_pts = bb.x;
-        min_h_pts = bb.y;
-    }
-
-    if regular {
-        let m = bb.x.max(bb.y);
-        bb.x = m;
-        bb.y = m;
-        min_w_pts = m;
-        min_h_pts = m;
-    }
-
-    if sides < 3 {
-        if peripheries > 1 {
-            let extra = 2.0 * ((peripheries - 1) as f64) * PERIPHERY_GAP_PTS;
-            bb.x += extra;
-            bb.y += extra;
-        }
-    } else {
-        // Polygon vertex generation & periphery expansion matching `poly_init`.
-        let (mut xmax, mut ymax) = if shape == ShapeKind::Star {
-            let sz = star_adjusted_bb(bb);
-            (sz.x / 2.0, sz.y / 2.0)
-        } else if shape == ShapeKind::Cylinder || is_box {
-            (bb.x / 2.0, bb.y / 2.0)
-        } else {
-            orientation %= 360.0;
-            let (_, xm, ym) =
-                compute_raw_polygon_vertices(sides, orientation, distortion, skew, bb.x, bb.y);
-            (xm, ym)
-        };
-        xmax *= 2.0;
-        ymax *= 2.0;
-        bb.x = min_w_pts.max(xmax);
-        bb.y = min_h_pts.max(ymax);
-
-        if peripheries > 1 {
-            let cos_pi_n = (PI / (sides.max(3) as f64)).cos().max(0.2);
-            let extra = 2.0 * ((peripheries - 1) as f64) * PERIPHERY_GAP_PTS / cos_pi_n;
-            bb.x += extra;
-            bb.y += extra;
-        }
-    }
-
-    if is_fixed_shape {
-        bb.x = bb.x.max(dimen.x);
-        bb.y = bb.y.max(dimen.y);
-    }
-
-    node.width = (bb.x / POINTS_PER_INCH).max(if shape == ShapeKind::Plain {
-        0.0
-    } else {
-        MIN_NODE_WIDTH
-    });
-    node.height = (bb.y / POINTS_PER_INCH).max(if shape == ShapeKind::Plain {
-        0.0
-    } else {
-        MIN_NODE_HEIGHT
-    });
-}
-
-fn star_size(sz0: Point) -> Point {
-    let alpha = PI / 10.0;
-    let alpha2 = 2.0 * alpha;
-    let alpha3 = 3.0 * alpha;
-    let alpha4 = 4.0 * alpha;
-    let rx = sz0.x / (2.0 * alpha.cos());
-    let ry = sz0.y / (alpha.sin() + alpha3.sin());
-    let r0 = rx.max(ry);
-    let r = r0 * alpha4.sin() * alpha2.cos() / (alpha.cos() * alpha4.cos());
-    Point::new(2.0 * r * alpha.cos(), r * (1.0 + alpha3.sin()))
+    let env = NodeSizeEnv::with_rankdir(graph_name, rankdir);
+    let geom = node_geometry(node, &env);
+    node.width = geom.width;
+    node.height = geom.height;
 }
 
 fn star_adjusted_bb(mut sz: Point) -> Point {
@@ -1060,347 +679,11 @@ pub fn shape_polygon_vertices(node: &NodeData) -> Vec<Point> {
     verts
 }
 
-/// Parses and lays out a `record` / `Mrecord` label for `node`, returning the root [`RecordField`]
-/// with all nested field bounding boxes in points relative to `node.pos`.
+/// Parses and lays out a `record` / `Mrecord` label for `node` (`record_init` in `shapes.c`),
+/// returning the root [`RecordField`] with all field boxes in points relative to the node centre.
 pub fn record_layout(node: &NodeData, graph_name: &str, rankdir: &str) -> Option<RecordField> {
-    let shape = ShapeKind::from_node(node);
-    let raw_label = node.attrs.get("label").map_or("\\N", |s| s.as_str());
-    if !shape.is_record() || is_html_label(raw_label, shape) {
-        return None;
-    }
-    let font_name = node
-        .attrs
-        .get("fontname")
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .unwrap_or(DEFAULT_FONT_NAME);
-    let font_size = node
-        .attrs
-        .get("fontsize")
-        .and_then(|s| parse_f64_strip_units(s))
-        .unwrap_or(DEFAULT_FONT_SIZE)
-        .max(1.0);
-    let (margin_x, margin_y) = parse_node_margin(node.attrs.get("margin").map(String::as_str));
-    let w_pts = (node.width * POINTS_PER_INCH).max(MIN_NODE_WIDTH * POINTS_PER_INCH);
-    let h_pts = (node.height * POINTS_PER_INCH).max(MIN_NODE_HEIGHT * POINTS_PER_INCH);
-    let is_fixed = parse_graphviz_bool(node.attrs.get("fixedsize").map(String::as_str), false);
-
-    Some(layout_record_internal(
-        raw_label, &node.name, graph_name, font_name, font_size, margin_x, margin_y, w_pts, h_pts,
-        is_fixed, rankdir,
-    ))
-}
-
-#[allow(clippy::too_many_arguments)]
-fn layout_record_internal(
-    raw_label: &str,
-    node_name: &str,
-    graph_name: &str,
-    font_name: &str,
-    font_size: f64,
-    margin_x: f64,
-    margin_y: f64,
-    min_w_pts: f64,
-    min_h_pts: f64,
-    is_fixed: bool,
-    rankdir: &str,
-) -> RecordField {
-    // In Graphviz `record_init`: `flip = !GD_realflip(agraphof(n))`.
-    // For TB / BT, top-level record fields run horizontally (LR = true).
-    // For LR / RL, top-level record fields run vertically (LR = false).
-    let top_lr = !matches!(rankdir.trim().to_ascii_uppercase().as_str(), "LR" | "RL");
-    let chars: Vec<char> = raw_label.chars().collect();
-    let mut pos = 0usize;
-
-    let mut root = parse_record_fields(&chars, &mut pos, top_lr, true).unwrap_or_else(|| {
-        let fallback: Vec<char> = "\\N".chars().collect();
-        let mut p = 0;
-        parse_record_fields(&fallback, &mut p, top_lr, true).unwrap_or(RecordField {
-            port: None,
-            text: node_name.to_string(),
-            bbox: BoundingBox::default(),
-            children: Vec::new(),
-            horizontal: top_lr,
-        })
-    });
-
-    let ctx = LabelSubstContext {
-        node_name,
-        graph_name,
-        tail_name: "",
-        head_name: "",
-        is_edge: false,
-        is_directed: true,
-        tail_port: None,
-        head_port: None,
-        label_text: "",
-    };
-
-    let natural_size = size_record_field(&mut root, &ctx, font_name, font_size, margin_x, margin_y);
-    let target_w = if is_fixed {
-        min_w_pts
-    } else {
-        natural_size.x.max(min_w_pts)
-    };
-    let target_h = if is_fixed {
-        min_h_pts
-    } else {
-        natural_size.y.max(min_h_pts)
-    };
-
-    resize_record_field(&mut root, Point::new(target_w, target_h));
-    position_record_field(&mut root, Point::new(-target_w / 2.0, target_h / 2.0));
-    root
-}
-
-fn is_record_ctrl(c: char) -> bool {
-    matches!(c, '{' | '}' | '|' | '<' | '>')
-}
-
-fn parse_record_fields(
-    chars: &[char],
-    pos: &mut usize,
-    lr: bool,
-    is_root: bool,
-) -> Option<RecordField> {
-    let mut children = Vec::new();
-    let mut has_text = false;
-    let mut has_port = false;
-    let mut has_table = false;
-    let mut in_text = false;
-    let mut in_port = false;
-    let mut text_buf = String::new();
-    let mut port_buf = String::new();
-    let mut tmp_port: Option<String> = None;
-    let mut nested_field: Option<RecordField> = None;
-
-    loop {
-        if *pos < chars.len() && (chars[*pos] as u32) < 32 && chars[*pos] != '\n' {
-            *pos += 1;
-            continue;
-        }
-        let ch = if *pos < chars.len() {
-            Some(chars[*pos])
-        } else {
-            None
-        };
-
-        match ch {
-            Some('<') => {
-                if has_table || has_port {
-                    return None;
-                }
-                has_port = true;
-                in_port = true;
-                port_buf.clear();
-                *pos += 1;
-            }
-            Some('>') => {
-                if !in_port {
-                    return None;
-                }
-                let trimmed_port = port_buf.trim_end_matches(' ').to_string();
-                tmp_port = Some(trimmed_port);
-                in_port = false;
-                *pos += 1;
-            }
-            Some('{') => {
-                *pos += 1;
-                if in_port || in_text || has_table || has_port || has_text || *pos >= chars.len() {
-                    return None;
-                }
-                has_table = true;
-                let sub = parse_record_fields(chars, pos, !lr, false)?;
-                nested_field = Some(sub);
-            }
-            Some('}') | Some('|') | None => {
-                if (ch.is_none() && !is_root) || in_port {
-                    return None;
-                }
-                if let Some(mut sub) = nested_field.take() {
-                    if tmp_port.is_some() {
-                        sub.port = tmp_port.take();
-                    }
-                    children.push(sub);
-                } else {
-                    if !has_text {
-                        text_buf.push(' ');
-                    } else if text_buf.len() > 1 && text_buf.ends_with(' ') {
-                        text_buf.pop();
-                    }
-                    children.push(RecordField {
-                        port: tmp_port.take(),
-                        text: std::mem::take(&mut text_buf),
-                        bbox: BoundingBox::default(),
-                        children: Vec::new(),
-                        horizontal: true,
-                    });
-                }
-
-                if let Some(c) = ch {
-                    *pos += 1;
-                    if c == '}' {
-                        return Some(RecordField {
-                            port: None,
-                            text: String::new(),
-                            bbox: BoundingBox::default(),
-                            children,
-                            horizontal: lr,
-                        });
-                    }
-                    has_text = false;
-                    has_port = false;
-                    has_table = false;
-                    in_text = false;
-                    in_port = false;
-                    text_buf.clear();
-                } else {
-                    break;
-                }
-            }
-            Some('\\') => {
-                let mut is_hard_space = false;
-                if *pos + 1 < chars.len() {
-                    let next = chars[*pos + 1];
-                    if is_record_ctrl(next) {
-                        // Escaped control character: consume `\` and emit `next` literally.
-                    } else if next == ' ' {
-                        is_hard_space = true;
-                    } else {
-                        text_buf.push('\\');
-                        in_text = true;
-                        has_text = true;
-                    }
-                    *pos += 1;
-                }
-                if *pos < chars.len() {
-                    let cur = chars[*pos];
-                    if has_table && cur != ' ' {
-                        return None;
-                    }
-                    if !in_text && !in_port && (cur != ' ' || is_hard_space) {
-                        in_text = true;
-                        has_text = true;
-                    }
-                    if in_text {
-                        text_buf.push(cur);
-                    } else if in_port {
-                        port_buf.push(cur);
-                    }
-                    *pos += 1;
-                }
-            }
-            Some(cur) => {
-                if has_table && cur != ' ' {
-                    return None;
-                }
-                if !in_text && !in_port && cur != ' ' {
-                    in_text = true;
-                    has_text = true;
-                }
-                if in_text {
-                    if !(cur == ' ' && text_buf.ends_with(' ')) {
-                        text_buf.push(cur);
-                    }
-                } else if in_port
-                    && !(cur == ' ' && (port_buf.is_empty() || port_buf.ends_with(' ')))
-                {
-                    port_buf.push(cur);
-                }
-                *pos += 1;
-            }
-        }
-    }
-
-    Some(RecordField {
-        port: None,
-        text: String::new(),
-        bbox: BoundingBox::default(),
-        children,
-        horizontal: lr,
-    })
-}
-
-fn size_record_field(
-    field: &mut RecordField,
-    ctx: &LabelSubstContext<'_>,
-    font_name: &str,
-    font_size: f64,
-    margin_x: f64,
-    margin_y: f64,
-) -> Point {
-    let size = if field.children.is_empty() {
-        let layout = measure_multiline_label_with_context(&field.text, ctx, font_name, font_size);
-        let mut w = layout.width;
-        // In C Graphviz (`record_size` / `make_simple_label`), plain text height is truncated
-        // to integer points before adding `2 * margin_y`.
-        let mut h = layout.height.floor();
-        if w > 0.0 || h > 0.0 {
-            w += 2.0 * margin_x * POINTS_PER_INCH;
-            h += 2.0 * margin_y * POINTS_PER_INCH;
-        }
-        Point::new(w, h)
-    } else {
-        let mut w = 0.0_f64;
-        let mut h = 0.0_f64;
-        for child in &mut field.children {
-            let cs = size_record_field(child, ctx, font_name, font_size, margin_x, margin_y);
-            if field.horizontal {
-                w += cs.x;
-                h = h.max(cs.y);
-            } else {
-                h += cs.y;
-                w = w.max(cs.x);
-            }
-        }
-        Point::new(w, h)
-    };
-    field.bbox = BoundingBox::new(0.0, 0.0, size.x, size.y);
-    size
-}
-
-fn resize_record_field(field: &mut RecordField, new_sz: Point) {
-    let cur_w = field.bbox.width();
-    let cur_h = field.bbox.height();
-    let dx = new_sz.x - cur_w;
-    let dy = new_sz.y - cur_h;
-    field.bbox = BoundingBox::new(0.0, 0.0, new_sz.x, new_sz.y);
-
-    let n = field.children.len();
-    if n > 0 {
-        let inc = if field.horizontal {
-            dx / (n as f64)
-        } else {
-            dy / (n as f64)
-        };
-        let is_horiz = field.horizontal;
-        for (i, child) in field.children.iter_mut().enumerate() {
-            let amt = (((i + 1) as f64) * inc).trunc() - ((i as f64) * inc).trunc();
-            let child_sz = if is_horiz {
-                Point::new((child.bbox.width() + amt).max(0.0), new_sz.y)
-            } else {
-                Point::new(new_sz.x, (child.bbox.height() + amt).max(0.0))
-            };
-            resize_record_field(child, child_sz);
-        }
-    }
-}
-
-fn position_record_field(field: &mut RecordField, mut ul: Point) {
-    let w = field.bbox.width();
-    let h = field.bbox.height();
-    field.bbox = BoundingBox::new(ul.x, ul.y - h, ul.x + w, ul.y);
-    let is_horiz = field.horizontal;
-    for child in &mut field.children {
-        let cw = child.bbox.width();
-        let ch = child.bbox.height();
-        position_record_field(child, ul);
-        if is_horiz {
-            ul.x += cw;
-        } else {
-            ul.y -= ch;
-        }
-    }
+    let env = NodeSizeEnv::with_rankdir(graph_name, rankdir);
+    node_geometry(node, &env).record
 }
 
 // ============================================================================
@@ -1427,6 +710,22 @@ pub fn html_table_layout(node: &NodeData, graph_name: &str) -> Option<HtmlTable>
         .unwrap_or(DEFAULT_FONT_SIZE)
         .max(1.0);
     parse_html_table(raw_label, &node.name, graph_name, font_name, font_size)
+}
+
+/// Size (`dimen`) of an HTML-like label `<...>` for `make_label`.
+pub(crate) fn html_label_dimen(
+    raw_label: &str,
+    obj: &LabelSubstContext<'_>,
+    font_name: &str,
+    font_size: f64,
+) -> Point {
+    measure_html_label_dimen(
+        raw_label,
+        obj.node_name,
+        obj.graph_name,
+        font_name,
+        font_size,
+    )
 }
 
 fn measure_html_label_dimen(

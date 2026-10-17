@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod node_size;
 pub mod shapes;
 pub mod splines;
 

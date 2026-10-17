@@ -28,10 +28,7 @@ use gv_core::{
         measure_multiline_label_with_context,
     },
 };
-use gv_geom::{
-    ShapeKind, compute_node_dimensions_with_rankdir, is_html_label, parse_html_table,
-    resolve_port_offset, route_edge_spline,
-};
+use gv_geom::{ShapeKind, is_html_label, parse_html_table, resolve_port_offset, route_edge_spline};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 const POINTS_PER_INCH: f64 = 72.0;
@@ -108,10 +105,7 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
     let rankdir = RankDir::parse(graph.graph_attrs.get("rankdir").map(String::as_str));
 
     // Stage 0: Size all nodes using gv-geom shapes & font metrics with rankdir context.
-    let graph_name = graph.name.clone();
-    for node in &mut graph.nodes {
-        compute_node_dimensions_with_rankdir(node, &graph_name, rankdir.as_str());
-    }
+    gv_geom::node_size::size_graph_nodes(graph);
 
     if graph.nodes.is_empty() {
         graph.bb = BoundingBox::new(0.0, 0.0, 0.0, 0.0);

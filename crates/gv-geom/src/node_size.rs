@@ -1,0 +1,1529 @@
+//! Exact node sizing, ported function by function from Graphviz 16.1.0 `lib/common/shapes.c`
+//! (`poly_init`, `point_init`, `record_init`, `parse_reclbl`, `size_reclbl`, `resize_reclbl`,
+//! `pos_reclbl`, `star_size`, `star_vertices`, `cylinder_size`, `cylinder_vertices`,
+//! `userSize`, `bind_shape`), `lib/common/utils.c` (`common_init_node`, `late_*`, `mapbool`,
+//! `gv_nodesize`) and the label part of `lib/common/labels.c` (`make_label`).
+//!
+//! Entry point: [`node_geometry`], which returns everything C stores on a node after
+//! `common_init_node` + the shape `initfn`: `ND_width`/`ND_height` (inches), the outline size,
+//! the label geometry (`ND_label->dimen`, `space`, `valign`), the polygon description and, for
+//! records, the field tree. [`NodeGeometry::nodesize`] mirrors `gv_nodesize` (`ND_lw`, `ND_rw`,
+//! `ND_ht`).
+
+use crate::shapes::{RecordField, ShapeKind, html_label_dimen, is_html_label};
+use gv_core::font::{
+    DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext, MIN_FONT_SIZE, TextLabelLayout,
+    charset_is_latin1, make_text_label,
+};
+use gv_core::{AttrMap, BoundingBox, Graph, NodeData, Point};
+use std::f64::consts::PI;
+
+/// `GAP` from `lib/common/const.h`: whitespace in points between peripheries.
+const GAP: f64 = 4.0;
+/// `DEFAULT_NODEWIDTH`.
+const DEFAULT_NODEWIDTH: f64 = 0.75;
+/// `MIN_NODEWIDTH`.
+const MIN_NODEWIDTH: f64 = 0.01;
+/// `DEFAULT_NODEHEIGHT`.
+const DEFAULT_NODEHEIGHT: f64 = 0.5;
+/// `MIN_NODEHEIGHT`.
+const MIN_NODEHEIGHT: f64 = 0.02;
+/// `DEFAULT_NODEPENWIDTH`.
+const DEFAULT_NODEPENWIDTH: f64 = 1.0;
+/// `MIN_NODEPENWIDTH`.
+const MIN_NODEPENWIDTH: f64 = 0.0;
+/// `DEF_POINT` (inches) from `shapes.c`.
+const DEF_POINT: f64 = 0.05;
+/// `MIN_POINT` (inches) from `shapes.c`.
+const MIN_POINT: f64 = 0.0003;
+/// `SQRT2` from `lib/common/arith.h`.
+const SQRT2: f64 = std::f64::consts::SQRT_2;
+
+#[inline]
+fn inch2ps(x: f64) -> f64 {
+    x * 72.0
+}
+
+#[inline]
+fn ps2inch(x: f64) -> f64 {
+    x / 72.0
+}
+
+// ---------------------------------------------------------------------------------------------
+// C attribute helpers (`lib/common/utils.c`)
+// ---------------------------------------------------------------------------------------------
+
+/// C `strtod` on a prefix of `s`: returns the parsed value and the number of bytes consumed
+/// (`0` if no conversion could be performed).
+pub fn strtod_prefix(s: &str) -> (f64, usize) {
+    let b = s.as_bytes();
+    let mut i = 0;
+    while i < b.len() && matches!(b[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+        i += 1;
+    }
+    let rest = &s[i..];
+    let lower: String = rest
+        .chars()
+        .take(8)
+        .collect::<String>()
+        .to_ascii_lowercase();
+    if lower.starts_with("inf") {
+        let n = if lower.starts_with("infinity") { 8 } else { 3 };
+        let neg = start < b.len() && b[start] == b'-';
+        return (
+            if neg {
+                f64::NEG_INFINITY
+            } else {
+                f64::INFINITY
+            },
+            i + n,
+        );
+    }
+    if lower.starts_with("nan") {
+        return (f64::NAN, i + 3);
+    }
+    let mut digits = 0;
+    while i < b.len() && b[i].is_ascii_digit() {
+        i += 1;
+        digits += 1;
+    }
+    if i < b.len() && b[i] == b'.' {
+        i += 1;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+            digits += 1;
+        }
+    }
+    if digits == 0 {
+        return (0.0, 0);
+    }
+    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+        let mut j = i + 1;
+        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
+            j += 1;
+        }
+        if j < b.len() && b[j].is_ascii_digit() {
+            while j < b.len() && b[j].is_ascii_digit() {
+                j += 1;
+            }
+            i = j;
+        }
+    }
+    (s[start..i].parse::<f64>().unwrap_or(0.0), i)
+}
+
+/// C `strtol(p, &endp, 10)` prefix parse: `(value, consumed)`.
+fn strtol_prefix(s: &str) -> (i64, usize) {
+    let b = s.as_bytes();
+    let mut i = 0;
+    while i < b.len() && matches!(b[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let mut neg = false;
+    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+        neg = b[i] == b'-';
+        i += 1;
+    }
+    let ds = i;
+    let mut v: i64 = 0;
+    while i < b.len() && b[i].is_ascii_digit() {
+        v = v.saturating_mul(10).saturating_add(i64::from(b[i] - b'0'));
+        i += 1;
+    }
+    if i == ds {
+        return (0, 0);
+    }
+    (if neg { -v } else { v }, i)
+}
+
+/// `late_double` from `lib/common/utils.c`.
+pub fn late_double(attrs: &AttrMap, key: &str, default: f64, minimum: f64) -> f64 {
+    let Some(p) = attrs.get(key).filter(|p| !p.is_empty()) else {
+        return default;
+    };
+    let (rv, used) = strtod_prefix(p);
+    if used == 0 {
+        return default;
+    }
+    if rv < minimum { minimum } else { rv }
+}
+
+/// `late_int` from `lib/common/utils.c`.
+pub fn late_int(attrs: &AttrMap, key: &str, default: i32, minimum: i32) -> i32 {
+    let Some(p) = attrs.get(key).filter(|p| !p.is_empty()) else {
+        return default;
+    };
+    let (rv, used) = strtol_prefix(p);
+    if used == 0 || rv > i64::from(i32::MAX) {
+        return default;
+    }
+    if rv < i64::from(minimum) {
+        minimum
+    } else {
+        rv as i32
+    }
+}
+
+/// `late_nnstring` from `lib/common/utils.c`.
+pub fn late_nnstring<'a>(attrs: &'a AttrMap, key: &str, default: &'a str) -> &'a str {
+    attrs
+        .get(key)
+        .map(String::as_str)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(default)
+}
+
+/// `mapBool` from `lib/common/utils.c`.
+pub fn map_bool(p: Option<&str>, default: bool) -> bool {
+    let Some(p) = p.filter(|p| !p.is_empty()) else {
+        return default;
+    };
+    if p.eq_ignore_ascii_case("false") || p.eq_ignore_ascii_case("no") {
+        return false;
+    }
+    if p.eq_ignore_ascii_case("true") || p.eq_ignore_ascii_case("yes") {
+        return true;
+    }
+    if p.as_bytes()[0].is_ascii_digit() {
+        // atoi
+        return strtol_prefix(p).0 != 0;
+    }
+    default
+}
+
+/// `mapbool` from `lib/common/utils.c`.
+pub fn mapbool(p: Option<&str>) -> bool {
+    map_bool(p, false)
+}
+
+/// `sscanf(p, "%lf,%lf", &x, &y)`: returns the number of conversions and the values.
+fn sscanf_two_doubles(p: &str) -> (i32, f64, f64) {
+    let (x, used) = strtod_prefix(p);
+    if used == 0 {
+        return (if p.trim().is_empty() { -1 } else { 0 }, 0.0, 0.0);
+    }
+    let rest = &p[used..];
+    let Some(rest) = rest.strip_prefix(',') else {
+        return (1, x, 0.0);
+    };
+    let (y, used2) = strtod_prefix(rest);
+    if used2 == 0 {
+        return (1, x, 0.0);
+    }
+    (2, x, y)
+}
+
+// ---------------------------------------------------------------------------------------------
+// Shape descriptors (`Shapes[]`, `polygon_t p_*` in shapes.c)
+// ---------------------------------------------------------------------------------------------
+
+/// Which shape `initfn` C runs for a node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShapeInit {
+    /// `poly_init` (all polygon shapes, `star`, `cylinder`).
+    Poly,
+    /// `point_init`.
+    Point,
+    /// `record_init` (`record`, `Mrecord`).
+    Record,
+    /// `epsf_init`.
+    Epsf,
+}
+
+/// Built-in polygon description (`polygon_t`) of a shape.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PolygonDesc {
+    pub regular: bool,
+    pub peripheries: usize,
+    pub sides: usize,
+    pub orientation: f64,
+    pub distortion: f64,
+    pub skew: f64,
+}
+
+const fn pd(regular: bool, peripheries: usize, sides: usize) -> PolygonDesc {
+    PolygonDesc {
+        regular,
+        peripheries,
+        sides,
+        orientation: 0.0,
+        distortion: 0.0,
+        skew: 0.0,
+    }
+}
+
+impl ShapeKind {
+    /// `bind_shape` + `polygon_t` lookup: which init function C runs and the built-in polygon
+    /// parameters (`None` for records/epsf).
+    pub fn shape_desc(self) -> (ShapeInit, Option<PolygonDesc>) {
+        use ShapeKind as S;
+        let p = match self {
+            S::Record | S::Mrecord => return (ShapeInit::Record, None),
+            S::Point => return (ShapeInit::Point, Some(pd(true, 1, 1))),
+            S::Polygon => pd(false, 1, 0),
+            S::Ellipse => pd(false, 1, 1),
+            S::Circle => pd(true, 1, 1),
+            S::Egg => PolygonDesc {
+                distortion: -0.3,
+                ..pd(false, 1, 1)
+            },
+            S::Triangle => pd(false, 1, 3),
+            S::Plaintext | S::None | S::Plain => pd(false, 0, 4),
+            S::Diamond | S::Mdiamond => PolygonDesc {
+                orientation: 45.0,
+                ..pd(false, 1, 4)
+            },
+            S::Trapezium => PolygonDesc {
+                distortion: -0.4,
+                ..pd(false, 1, 4)
+            },
+            S::Parallelogram => PolygonDesc {
+                skew: 0.6,
+                ..pd(false, 1, 4)
+            },
+            S::House => PolygonDesc {
+                distortion: -0.64,
+                ..pd(false, 1, 5)
+            },
+            S::Pentagon => pd(false, 1, 5),
+            S::Hexagon => pd(false, 1, 6),
+            S::Septagon => pd(false, 1, 7),
+            S::Octagon => pd(false, 1, 8),
+            S::Cylinder => pd(false, 1, 19),
+            S::Square | S::Msquare => pd(true, 1, 4),
+            S::DoubleCircle => pd(true, 2, 1),
+            S::Mcircle => pd(true, 1, 1),
+            S::DoubleOctagon => pd(false, 2, 8),
+            S::TripleOctagon => pd(false, 3, 8),
+            S::InvTriangle => PolygonDesc {
+                orientation: 180.0,
+                ..pd(false, 1, 3)
+            },
+            S::InvTrapezium => PolygonDesc {
+                orientation: 180.0,
+                distortion: -0.4,
+                ..pd(false, 1, 4)
+            },
+            S::InvHouse => PolygonDesc {
+                orientation: 180.0,
+                distortion: -0.64,
+                ..pd(false, 1, 5)
+            },
+            S::Star => pd(false, 1, 10),
+            // box and every 4-sided styled shape (note, tab, folder, box3d, component,
+            // underline and the SBOL shapes)
+            _ => pd(false, 1, 4),
+        };
+        (ShapeInit::Poly, Some(p))
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------------------------
+
+/// Graph-level inputs that affect node sizing.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NodeSizeEnv<'a> {
+    /// Root graph name (for `\G`).
+    pub graph_name: &'a str,
+    /// `GD_realflip`: `rankdir` is `LR` or `RL` (records lay out their fields transposed).
+    pub realflip: bool,
+    /// Graph `quantum` in inches (`GD_drawing(g)->quantum`), `0` if unset.
+    pub quantum: f64,
+    /// Graph `charset` is Latin-1 (`GD_charset(g) == CHAR_LATIN1`).
+    pub charset_latin1: bool,
+}
+
+impl<'a> NodeSizeEnv<'a> {
+    /// Environment with defaults (TB, no quantum, UTF-8).
+    pub const fn new(graph_name: &'a str) -> Self {
+        Self {
+            graph_name,
+            realflip: false,
+            quantum: 0.0,
+            charset_latin1: false,
+        }
+    }
+
+    /// Environment from an explicit `rankdir` string.
+    pub fn with_rankdir(graph_name: &'a str, rankdir: &str) -> Self {
+        Self {
+            realflip: rankdir_is_flipped(rankdir),
+            ..Self::new(graph_name)
+        }
+    }
+
+    /// Reads `rankdir`, `quantum` and `charset` from the root graph attributes
+    /// (`graph_init` / `init_ugraph` in `lib/common/input.c`).
+    pub fn from_graph(graph: &'a Graph) -> Self {
+        Self::from_graph_attrs(&graph.name, &graph.graph_attrs)
+    }
+
+    /// Like [`Self::from_graph`] but from a name and an attribute map.
+    pub fn from_graph_attrs(graph_name: &'a str, attrs: &AttrMap) -> Self {
+        Self {
+            graph_name,
+            realflip: rankdir_is_flipped(attrs.get("rankdir").map_or("", String::as_str)),
+            quantum: late_double(attrs, "quantum", 0.0, 0.0),
+            charset_latin1: charset_is_latin1(attrs.get("charset").map(String::as_str)),
+        }
+    }
+}
+
+/// `rankdir` parsing in `graph_init`: only exact `LR`/`BT`/`RL` are recognised;
+/// returns `true` for `LR` and `RL` (`GD_realflip`).
+pub fn rankdir_is_flipped(rankdir: &str) -> bool {
+    matches!(rankdir, "LR" | "RL")
+}
+
+/// Label geometry of a node (`textlabel_t` fields relevant to layout).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct LabelGeometry {
+    /// `dimen`: label size in points, without node margins.
+    pub dimen: Point,
+    /// `space`: room available to the label inside the node, in points.
+    pub space: Point,
+    /// `valign`: `'t'`, `'b'` or `'c'`.
+    pub valign: char,
+    /// `true` for HTML-like labels.
+    pub html: bool,
+    /// Measured lines of a plain-text label (`u.txt.span`); `None` for HTML and records.
+    pub text: Option<TextLabelLayout>,
+    /// `fontname`, `fontsize` used for the label.
+    pub font_name: String,
+    pub font_size: f64,
+}
+
+/// Shape geometry produced by `poly_init`/`point_init` (`polygon_t`).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct PolygonGeometry {
+    pub regular: bool,
+    pub peripheries: usize,
+    pub sides: usize,
+    pub orientation: f64,
+    pub distortion: f64,
+    pub skew: f64,
+    /// `option.fixedshape` (`fixedsize=shape`).
+    pub fixedshape: bool,
+    /// `sides * outp` vertices in points relative to the node centre: periphery `j` occupies
+    /// `vertices[j * sides .. (j + 1) * sides]`; the last ring (if present) is the outline at
+    /// half the pen width.
+    pub vertices: Vec<Point>,
+}
+
+/// Everything C computes for a node before layout.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeGeometry {
+    pub shape: ShapeKind,
+    /// `ND_width`, `ND_height` in inches.
+    pub width: f64,
+    pub height: f64,
+    /// `ND_outline_width`, `ND_outline_height` in inches (outermost periphery + pen width).
+    pub outline_width: f64,
+    pub outline_height: f64,
+    /// `ND_label`.
+    pub label: LabelGeometry,
+    /// `ND_xlabel` dimen (points), if the node has a non-empty `xlabel`.
+    pub xlabel: Option<LabelGeometry>,
+    /// `ND_shape_info` for polygon and point shapes.
+    pub polygon: Option<PolygonGeometry>,
+    /// `ND_shape_info` for records: field tree positioned around `(0, 0)`.
+    pub record: Option<RecordField>,
+}
+
+impl NodeGeometry {
+    /// `gv_nodesize`: `(ND_lw, ND_rw, ND_ht)` in points. `flip` is `GD_flip(g)` (rankdir
+    /// `LR`/`RL` in dot).
+    pub fn nodesize(&self, flip: bool) -> (f64, f64, f64) {
+        if flip {
+            let w = inch2ps(self.height);
+            (w / 2.0, w / 2.0, inch2ps(self.width))
+        } else {
+            let w = inch2ps(self.width);
+            (w / 2.0, w / 2.0, inch2ps(self.height))
+        }
+    }
+}
+
+/// `aghtmlstr`: the parser keeps an HTML string's `<`...`>` delimiters, so an HTML label is a
+/// value whose first `<` is closed by its final `>`.
+pub fn is_html_value(label: &str) -> bool {
+    is_html_label(label, ShapeKind::Box)
+}
+
+/// `make_label` for the plain-text and HTML cases: returns the label geometry with
+/// `space = dimen`. `obj` describes the owning object for escape substitution; `is_html` is
+/// `aghtmlstr(str)` (use [`is_html_value`] for attribute values). An HTML label is given with
+/// its `<`...`>` delimiters.
+pub fn make_label(
+    label: &str,
+    is_html: bool,
+    obj: &LabelSubstContext<'_>,
+    font_name: &str,
+    font_size: f64,
+    charset_latin1: bool,
+) -> LabelGeometry {
+    // disregard HTML intent for empty string labels
+    let html = is_html && !label.is_empty();
+    if html {
+        let dimen = html_label_dimen(label, obj, font_name, font_size);
+        return LabelGeometry {
+            dimen,
+            space: dimen,
+            valign: 'c',
+            html: true,
+            text: None,
+            font_name: font_name.to_string(),
+            font_size,
+        };
+    }
+    let layout = make_text_label(label, obj, font_name, font_size, charset_latin1);
+    let dimen = Point::new(layout.width, layout.height);
+    LabelGeometry {
+        dimen,
+        space: dimen,
+        valign: 'c',
+        html: false,
+        text: Some(layout),
+        font_name: font_name.to_string(),
+        font_size,
+    }
+}
+
+/// Font of a node label (`common_init_node`): `(fontname, fontsize)`.
+pub fn node_font(attrs: &AttrMap) -> (&str, f64) {
+    (
+        late_nnstring(attrs, "fontname", DEFAULT_FONT_NAME),
+        late_double(attrs, "fontsize", DEFAULT_FONT_SIZE, MIN_FONT_SIZE),
+    )
+}
+
+/// `common_init_node` + shape `initfn`: the exact size and label geometry of `node`.
+pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
+    let attrs = &node.attrs;
+    let shape_name = late_nnstring(attrs, "shape", "ellipse");
+    let shape = ShapeKind::parse(shape_name);
+    let (init, desc) = shape.shape_desc();
+    let nd_width = late_double(attrs, "width", DEFAULT_NODEWIDTH, MIN_NODEWIDTH);
+    let nd_height = late_double(attrs, "height", DEFAULT_NODEHEIGHT, MIN_NODEHEIGHT);
+    let (font_name, font_size) = node_font(attrs);
+    let label_str = attrs.get("label").map_or("\\N", String::as_str);
+    let obj = LabelSubstContext::for_node(&node.name);
+    let obj = LabelSubstContext {
+        graph_name: env.graph_name,
+        ..obj
+    };
+
+    let label = if init == ShapeInit::Record {
+        // `make_label(..., is_record = true, ...)` stores the raw text; fields are labelled by
+        // `parse_reclbl`.
+        LabelGeometry {
+            dimen: Point::default(),
+            space: Point::default(),
+            valign: 'c',
+            html: is_html_label(label_str, shape),
+            text: None,
+            font_name: font_name.to_string(),
+            font_size,
+        }
+    } else {
+        make_label(
+            label_str,
+            is_html_value(label_str),
+            &obj,
+            font_name,
+            font_size,
+            env.charset_latin1,
+        )
+    };
+    let xlabel = attrs.get("xlabel").filter(|s| !s.is_empty()).map(|s| {
+        make_label(
+            s,
+            is_html_value(s),
+            &obj,
+            font_name,
+            font_size,
+            env.charset_latin1,
+        )
+    });
+
+    let mut geom = NodeGeometry {
+        shape,
+        width: nd_width,
+        height: nd_height,
+        outline_width: nd_width,
+        outline_height: nd_height,
+        label,
+        xlabel,
+        polygon: None,
+        record: None,
+    };
+    match init {
+        ShapeInit::Poly | ShapeInit::Epsf => {
+            poly_init(node, shape, desc.unwrap_or(pd(false, 1, 4)), env, &mut geom);
+        }
+        ShapeInit::Point => point_init(node, desc.map_or(1, |d| d.peripheries), &mut geom),
+        ShapeInit::Record => record_init(node, label_str, &obj, env, &mut geom),
+    }
+    geom
+}
+
+/// Sizes every node of `graph` (sets `NodeData::width`/`height` to `ND_width`/`ND_height`),
+/// reading `rankdir`, `quantum` and `charset` from the root graph.
+pub fn size_graph_nodes(graph: &mut Graph) {
+    let env_attrs = graph.graph_attrs.clone();
+    let name = graph.name.clone();
+    let env = NodeSizeEnv::from_graph_attrs(&name, &env_attrs);
+    for node in &mut graph.nodes {
+        let geom = node_geometry(node, &env);
+        node.width = geom.width;
+        node.height = geom.height;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// poly_init
+// ---------------------------------------------------------------------------------------------
+
+/// `star_size` from `shapes.c`.
+fn star_size(sz0: Point) -> Point {
+    let alpha = PI / 10.0;
+    let alpha2 = 2.0 * alpha;
+    let alpha3 = 3.0 * alpha;
+    let alpha4 = 2.0 * alpha2;
+    let rx = sz0.x / (2.0 * alpha.cos());
+    let ry = sz0.y / (alpha.sin() + alpha3.sin());
+    let r0 = rx.max(ry);
+    let r = r0 * alpha4.sin() * alpha2.cos() / (alpha.cos() * alpha4.cos());
+    Point::new(2.0 * r * alpha.cos(), r * (1.0 + alpha3.sin()))
+}
+
+/// `star_vertices` from `shapes.c`: fills 10 vertices and adjusts `bb` to the star aspect.
+fn star_vertices(vertices: &mut [Point], bb: &mut Point) {
+    let alpha = PI / 10.0;
+    let alpha2 = 2.0 * alpha;
+    let alpha3 = 3.0 * alpha;
+    let alpha4 = 2.0 * alpha2;
+    let mut sz = *bb;
+    let aspect = (1.0 + alpha3.sin()) / (2.0 * alpha.cos());
+    let a = sz.y / sz.x;
+    if a > aspect {
+        sz.x = sz.y / aspect;
+    } else if a < aspect {
+        sz.y = sz.x * aspect;
+    }
+    let r = sz.x / (2.0 * alpha.cos());
+    let r0 = r * alpha.cos() * alpha4.cos() / (alpha4.sin() * alpha2.cos());
+    let offset = (r * (1.0 - alpha3.sin())) / 2.0;
+    let mut theta = alpha;
+    for i in (0..10).step_by(2) {
+        vertices[i] = Point::new(r * theta.cos(), r * theta.sin() - offset);
+        theta += alpha2;
+        vertices[i + 1] = Point::new(r0 * theta.cos(), r0 * theta.sin() - offset);
+        theta += alpha2;
+    }
+    *bb = sz;
+}
+
+/// `cylinder_size` from `shapes.c`.
+fn cylinder_size(mut sz: Point) -> Point {
+    sz.y *= 1.375;
+    sz
+}
+
+/// `cylinder_vertices` from `shapes.c` (19 vertices).
+fn cylinder_vertices(v: &mut [Point], bb: &mut Point) {
+    let x = bb.x / 2.0;
+    let y = bb.y / 2.0;
+    let yr = bb.y / 11.0;
+    v[0] = Point::new(x, y - yr);
+    v[1] = Point::new(x, y - (1.0 - 0.551784) * yr);
+    v[2] = Point::new(0.551784 * x, y);
+    v[3] = Point::new(0.0, y);
+    v[4] = Point::new(-0.551784 * x, y);
+    v[5] = Point::new(-x, v[1].y);
+    v[6] = Point::new(-x, y - yr);
+    v[7] = v[6];
+    v[8] = Point::new(-x, yr - y);
+    v[9] = v[8];
+    v[10] = Point::new(-x, -v[1].y);
+    v[11] = Point::new(v[4].x, -v[4].y);
+    v[12] = Point::new(v[3].x, -v[3].y);
+    v[13] = Point::new(v[2].x, -v[2].y);
+    v[14] = Point::new(v[1].x, -v[1].y);
+    v[15] = Point::new(v[0].x, -v[0].y);
+    v[16] = v[15];
+    v[17] = v[0];
+    v[18] = v[0];
+}
+
+/// `quant` from `shapes.c`.
+fn quant(val: f64, q: f64) -> f64 {
+    (val / q).ceil() * q
+}
+
+/// Applies the node `margin` (or `PAD`) to a label size, as `poly_init` and `size_reclbl` do.
+/// `clamp` reproduces poly_init's `fmax(margin, 0)` (record fields do not clamp).
+fn pad_dimen(attrs: &AttrMap, mut dimen: Point, clamp: bool) -> Point {
+    let margin = attrs.get("margin").map(String::as_str).unwrap_or("");
+    let (i, mut mx, mut my) = sscanf_two_doubles(margin);
+    if clamp {
+        mx = mx.max(0.0);
+        my = my.max(0.0);
+    }
+    if i > 0 {
+        dimen.x += 2.0 * inch2ps(mx);
+        if i > 1 {
+            dimen.y += 2.0 * inch2ps(my);
+        } else {
+            dimen.y += 2.0 * inch2ps(mx);
+        }
+    } else {
+        // PAD(d): XPAD = 4 * GAP, YPAD = 2 * GAP
+        dimen.x += 4.0 * GAP;
+        dimen.y += 2.0 * GAP;
+    }
+    dimen
+}
+
+fn poly_init(
+    node: &NodeData,
+    shape: ShapeKind,
+    desc: PolygonDesc,
+    env: &NodeSizeEnv<'_>,
+    geom: &mut NodeGeometry,
+) {
+    let attrs = &node.attrs;
+    let is_plain = shape == ShapeKind::Plain;
+    let mut regular = desc.regular;
+    let mut peripheries = desc.peripheries;
+    let mut sides = desc.sides;
+    let mut orientation = desc.orientation;
+    let mut skew = desc.skew;
+    let mut distortion = desc.distortion;
+    regular |= mapbool(attrs.get("regular").map(String::as_str));
+
+    let (mut width, mut height);
+    if is_plain {
+        width = 0.0;
+        height = 0.0;
+    } else if regular {
+        // userSize
+        let w = late_double(attrs, "width", 0.0, MIN_NODEWIDTH);
+        let h = late_double(attrs, "height", 0.0, MIN_NODEHEIGHT);
+        let sz = inch2ps(w.max(h));
+        if sz > 0.0 {
+            width = sz;
+            height = sz;
+        } else {
+            width = inch2ps(geom.width.min(geom.height));
+            height = width;
+        }
+    } else {
+        width = inch2ps(geom.width);
+        height = inch2ps(geom.height);
+    }
+
+    peripheries = late_int(attrs, "peripheries", peripheries as i32, 0) as usize;
+    orientation += late_double(attrs, "orientation", 0.0, -360.0);
+    if sides == 0 {
+        skew = late_double(attrs, "skew", 0.0, -100.0);
+        sides = late_int(attrs, "sides", 4, 0) as usize;
+        distortion = late_double(attrs, "distortion", 0.0, -100.0);
+    }
+
+    let label_dimen = geom.label.dimen;
+    let mut dimen = label_dimen;
+    if (dimen.x > 0.0 || dimen.y > 0.0) && !is_plain {
+        dimen = pad_dimen(attrs, dimen, true);
+    }
+    let spacex = dimen.x - label_dimen.x;
+
+    if env.quantum > 0.0 {
+        let q = inch2ps(env.quantum);
+        dimen.x = quant(dimen.x, q);
+        dimen.y = quant(dimen.y, q);
+    }
+
+    // Images (`image`, `shapefile`) are not supported: imagesize stays (0, 0).
+    let imagesize = Point::new(0.0, 0.0);
+    let mut bb = Point::new(dimen.x.max(imagesize.x), dimen.y.max(imagesize.y));
+
+    if sides <= 2 && (distortion != 0.0 || skew != 0.0) {
+        sides = 120;
+    }
+
+    let valign = match attrs.get("labelloc").and_then(|p| p.bytes().next()) {
+        Some(b't') => 't',
+        Some(b'b') => 'b',
+        _ => 'c',
+    };
+    geom.label.valign = valign;
+
+    let is_box = sides == 4 && (orientation % 90.0).abs() < 0.5 && distortion == 0.0 && skew == 0.0;
+    let has_gen = matches!(shape, ShapeKind::Star | ShapeKind::Cylinder);
+    if is_box {
+        // exact fit
+    } else if has_gen {
+        bb = if shape == ShapeKind::Star {
+            star_size(bb)
+        } else {
+            cylinder_size(bb)
+        };
+    } else {
+        let temp = bb.y * SQRT2;
+        if height > temp && valign == 'c' {
+            bb.x *= (1.0 / (1.0 - (bb.y / height) * (bb.y / height))).sqrt();
+        } else {
+            bb.x *= SQRT2;
+            bb.y = temp;
+        }
+        if sides > 2 {
+            let temp = (PI / sides as f64).cos();
+            bb.x /= temp;
+            bb.y /= temp;
+        }
+    }
+
+    let min_bb = bb;
+    let mut fixedshape = false;
+    let fxd = attrs.get("fixedsize").map_or("false", String::as_str);
+    if fxd == "shape" {
+        bb = Point::new(width, height);
+        fixedshape = true;
+    } else if mapbool(Some(fxd)) {
+        bb = Point::new(width, height);
+    } else {
+        width = width.max(bb.x);
+        height = height.max(bb.y);
+        bb = Point::new(width, height);
+    }
+
+    if regular {
+        let m = bb.x.max(bb.y);
+        width = m;
+        height = m;
+        bb = Point::new(m, m);
+    }
+
+    if !mapbool(Some(attrs.get("nojustify").map_or("false", String::as_str))) {
+        if is_box {
+            geom.label.space.x = dimen.x.max(bb.x) - spacex;
+        } else if dimen.y < bb.y {
+            let temp = bb.x * (1.0 - (dimen.y * dimen.y) / (bb.y * bb.y)).sqrt();
+            geom.label.space.x = dimen.x.max(temp) - spacex;
+        } else {
+            geom.label.space.x = dimen.x - spacex;
+        }
+    } else {
+        geom.label.space.x = dimen.x - spacex;
+    }
+    if !fixedshape {
+        let mut temp = bb.y - min_bb.y;
+        if dimen.y < imagesize.y {
+            temp += imagesize.y - dimen.y;
+        }
+        geom.label.space.y = dimen.y + temp;
+    }
+
+    let penwidth = late_double(attrs, "penwidth", DEFAULT_NODEPENWIDTH, MIN_NODEPENWIDTH);
+    let mut outp = peripheries.max(1);
+    if peripheries >= 1 && penwidth > 0.0 {
+        outp += 1;
+    }
+
+    let mut vertices;
+    let mut outline_bb;
+    if sides < 3 {
+        sides = 2;
+        vertices = vec![Point::default(); outp * sides];
+        let mut p = Point::new(bb.x / 2.0, bb.y / 2.0);
+        vertices[0] = Point::new(-p.x, -p.y);
+        vertices[1] = p;
+        if peripheries > 1 {
+            let mut i = 2;
+            for _ in 1..peripheries {
+                p.x += GAP;
+                p.y += GAP;
+                vertices[i] = Point::new(-p.x, -p.y);
+                vertices[i + 1] = p;
+                i += 2;
+            }
+            bb = Point::new(2.0 * p.x, 2.0 * p.y);
+        }
+        outline_bb = bb;
+        if outp > peripheries {
+            p.x += penwidth / 2.0;
+            p.y += penwidth / 2.0;
+            let i = sides * peripheries;
+            vertices[i] = Point::new(-p.x, -p.y);
+            vertices[i + 1] = p;
+            outline_bb = Point::new(2.0 * p.x, 2.0 * p.y);
+        }
+    } else {
+        vertices = vec![Point::default(); outp * sides];
+        let (mut sinx, mut cosx) = (0.0_f64, 0.0_f64);
+        let (mut xmax, mut ymax);
+        if has_gen {
+            if shape == ShapeKind::Star {
+                star_vertices(&mut vertices, &mut bb);
+            } else {
+                cylinder_vertices(&mut vertices, &mut bb);
+            }
+            xmax = bb.x / 2.0;
+            ymax = bb.y / 2.0;
+        } else {
+            let sectorangle = 2.0 * PI / sides as f64;
+            let sidelength = (sectorangle / 2.0).sin();
+            let skewdist = (distortion.abs() + skew.abs()).hypot(1.0);
+            let gdistortion = distortion * SQRT2 / (sectorangle / 2.0).cos();
+            let gskew = skew / 2.0;
+            let mut angle = (sectorangle - PI) / 2.0;
+            sinx = angle.sin();
+            cosx = angle.cos();
+            let mut r = Point::new(0.5 * cosx, 0.5 * sinx);
+            xmax = 0.0;
+            ymax = 0.0;
+            angle += (PI - sectorangle) / 2.0;
+            for i in 0..sides {
+                angle += sectorangle;
+                sinx = angle.sin();
+                cosx = angle.cos();
+                r.x += sidelength * cosx;
+                r.y += sidelength * sinx;
+                let mut p = Point::new(r.x * (skewdist + r.y * gdistortion) + r.y * gskew, r.y);
+                let alpha = orientation.to_radians() + p.y.atan2(p.x);
+                sinx = alpha.sin();
+                cosx = alpha.cos();
+                let h = p.x.hypot(p.y);
+                p.x = h * cosx;
+                p.y = h * sinx;
+                p.x *= bb.x;
+                p.y *= bb.y;
+                xmax = p.x.abs().max(xmax);
+                ymax = p.y.abs().max(ymax);
+                vertices[i] = p;
+                if is_box {
+                    vertices[1] = Point::new(-p.x, p.y);
+                    vertices[2] = Point::new(-p.x, -p.y);
+                    vertices[3] = Point::new(p.x, -p.y);
+                    break;
+                }
+            }
+        }
+
+        xmax *= 2.0;
+        ymax *= 2.0;
+        bb = Point::new(width.max(xmax), height.max(ymax));
+        outline_bb = bb;
+        let scalex = bb.x / xmax;
+        let scaley = bb.y / ymax;
+        for v in vertices.iter_mut().take(sides) {
+            v.x *= scalex;
+            v.y *= scaley;
+        }
+
+        if outp > 1 {
+            let i0 = sides; // C's `i` after the scaling loop
+            let mut r = vertices[0];
+            let mut q = r;
+            for j in 1..sides {
+                q = vertices[(i0 - j) % sides];
+                if q.x != r.x || q.y != r.y {
+                    break;
+                }
+            }
+            let mut beta = (r.y - q.y).atan2(r.x - q.x);
+            let mut qprev = q;
+            for i in 0..sides {
+                q = vertices[i];
+                if !(q.x == qprev.x && q.y == qprev.y) {
+                    for j in 1..sides {
+                        r = vertices[(i + j) % sides];
+                        if r.x != q.x || r.y != q.y {
+                            break;
+                        }
+                    }
+                    let alpha = beta;
+                    beta = (r.y - q.y).atan2(r.x - q.x);
+                    let gamma = (alpha + PI - beta) / 2.0;
+                    let temp = GAP / gamma.sin();
+                    sinx = (alpha - gamma).sin() * temp;
+                    cosx = (alpha - gamma).cos() * temp;
+                }
+                qprev = q;
+                for j in 1..peripheries {
+                    q.x += cosx;
+                    q.y += sinx;
+                    vertices[i + j * sides] = q;
+                }
+                if outp > peripheries {
+                    q.x += cosx * penwidth / 2.0 / GAP;
+                    q.y += sinx * penwidth / 2.0 / GAP;
+                    vertices[i + peripheries * sides] = q;
+                }
+            }
+            for i in 0..sides {
+                let p = vertices[i + peripheries.saturating_sub(1) * sides];
+                bb = Point::new((2.0 * p.x.abs()).max(bb.x), (2.0 * p.y.abs()).max(bb.y));
+                let q = vertices[i + (outp - 1) * sides];
+                outline_bb = Point::new(
+                    (2.0 * q.x.abs()).max(outline_bb.x),
+                    (2.0 * q.y.abs()).max(outline_bb.y),
+                );
+            }
+        }
+    }
+
+    if fixedshape {
+        geom.width = ps2inch(dimen.x.max(bb.x));
+        geom.height = ps2inch(dimen.y.max(bb.y));
+        geom.outline_width = ps2inch(dimen.x.max(outline_bb.x));
+        geom.outline_height = ps2inch(dimen.y.max(outline_bb.y));
+    } else {
+        geom.width = ps2inch(bb.x);
+        geom.height = ps2inch(bb.y);
+        geom.outline_width = ps2inch(outline_bb.x);
+        geom.outline_height = ps2inch(outline_bb.y);
+    }
+    geom.polygon = Some(PolygonGeometry {
+        regular,
+        peripheries,
+        sides,
+        orientation,
+        distortion,
+        skew,
+        fixedshape,
+        vertices,
+    });
+}
+
+// ---------------------------------------------------------------------------------------------
+// point_init
+// ---------------------------------------------------------------------------------------------
+
+fn point_init(node: &NodeData, default_peripheries: usize, geom: &mut NodeGeometry) {
+    let attrs = &node.attrs;
+    let w = late_double(attrs, "width", f64::MAX, MIN_NODEWIDTH);
+    let h = late_double(attrs, "height", f64::MAX, MIN_NODEHEIGHT);
+    let wm = w.min(h);
+    let nd = if w == f64::MAX && h == f64::MAX {
+        DEF_POINT
+    } else if wm > 0.0 {
+        wm.max(MIN_POINT)
+    } else {
+        wm
+    };
+    let mut sz = nd * 72.0;
+    let peripheries = late_int(attrs, "peripheries", default_peripheries as i32, 0) as usize;
+    let mut outp = peripheries.max(1);
+    let sides = 2;
+    let penwidth = late_double(attrs, "penwidth", DEFAULT_NODEPENWIDTH, MIN_NODEPENWIDTH);
+    if peripheries >= 1 && penwidth > 0.0 {
+        outp += 1;
+    }
+    let mut vertices = vec![Point::default(); outp * sides];
+    let mut p = Point::new(sz / 2.0, sz / 2.0);
+    vertices[0] = Point::new(-p.x, -p.y);
+    vertices[1] = p;
+    let mut i;
+    if peripheries > 1 {
+        i = 2;
+        for _ in 1..peripheries {
+            p.x += GAP;
+            p.y += GAP;
+            vertices[i] = Point::new(-p.x, -p.y);
+            vertices[i + 1] = p;
+            i += 2;
+        }
+        sz = 2.0 * p.x;
+    } else {
+        i = sides;
+    }
+    if peripheries >= 1 && penwidth > 0.0 && outp > peripheries {
+        p.x += penwidth / 2.0;
+        p.y += penwidth / 2.0;
+        vertices[i] = Point::new(-p.x, -p.y);
+        vertices[i + 1] = p;
+    }
+    let sz_outline = 2.0 * p.x;
+    geom.width = ps2inch(sz);
+    geom.height = geom.width;
+    geom.outline_width = ps2inch(sz_outline);
+    geom.outline_height = geom.outline_width;
+    geom.polygon = Some(PolygonGeometry {
+        regular: true,
+        peripheries,
+        sides: 2,
+        orientation: 0.0,
+        distortion: 0.0,
+        skew: 0.0,
+        fixedshape: false,
+        vertices,
+    });
+}
+
+// ---------------------------------------------------------------------------------------------
+// record_init and helpers
+// ---------------------------------------------------------------------------------------------
+
+const HASTEXT: u8 = 1;
+const HASPORT: u8 = 2;
+const HASTABLE: u8 = 4;
+const INTEXT: u8 = 8;
+const INPORT: u8 = 16;
+
+fn is_ctrl(c: u8) -> bool {
+    matches!(c, b'{' | b'}' | b'|' | b'<' | b'>')
+}
+
+/// A record field as built by `parse_reclbl` (`field_t`).
+#[derive(Debug, Clone, Default)]
+struct Field {
+    id: Option<String>,
+    /// Field label text (`fp->lp`) for leaf fields.
+    text: Option<String>,
+    lp: Option<LabelGeometry>,
+    lr: bool,
+    flds: Vec<Field>,
+    size: Point,
+    b: BoundingBox,
+}
+
+/// Byte-level port of `parse_reclbl`, sharing one text buffer between recursion levels as C
+/// does (ports and text live in the same buffer, which C relies on).
+struct RecParser<'a> {
+    src: &'a [u8],
+    pos: usize,
+    html: bool,
+    buf: Vec<u8>,
+}
+
+impl RecParser<'_> {
+    fn at(&self, i: usize) -> u8 {
+        self.src.get(i).copied().unwrap_or(0)
+    }
+
+    fn put(&mut self, i: usize, c: u8) {
+        if i >= self.buf.len() {
+            self.buf.resize(i + 1, 0);
+        }
+        self.buf[i] = c;
+    }
+
+    fn get(&self, i: isize) -> u8 {
+        if i < 0 {
+            0
+        } else {
+            self.buf.get(i as usize).copied().unwrap_or(0)
+        }
+    }
+
+    fn cstr(&self) -> String {
+        let end = self
+            .buf
+            .iter()
+            .position(|&c| c == 0)
+            .unwrap_or(self.buf.len());
+        String::from_utf8_lossy(&self.buf[..end]).into_owned()
+    }
+
+    fn parse(&mut self, lr: bool, flag: bool) -> Option<Field> {
+        let mut rv = Field {
+            lr,
+            ..Field::default()
+        };
+        let mut fp: Option<usize> = None;
+        let mut tmpport: Option<String> = None;
+        let mut mode: u8 = 0;
+        let mut tsp: isize = 0;
+        let mut hstsp: isize = 0;
+        let mut psp: isize = 0;
+        let mut hspsp: isize = isize::MIN;
+        let mut wflag = true;
+        let mut ishardspace = false;
+        while wflag {
+            let uc = self.at(self.pos);
+            if uc != 0 && uc < b' ' {
+                self.pos += 1;
+                continue;
+            }
+            let mut dotext = false;
+            match uc {
+                b'<' if !self.html => {
+                    if mode & (HASTABLE | HASPORT) != 0 {
+                        return None;
+                    }
+                    mode |= HASPORT | INPORT;
+                    self.pos += 1;
+                    psp = 0;
+                    hspsp = 0;
+                }
+                b'<' => {
+                    if mode & (HASTABLE | HASPORT) != 0 {
+                        return None;
+                    }
+                    dotext = true;
+                }
+                b'>' if !self.html => {
+                    if mode & INPORT == 0 {
+                        return None;
+                    }
+                    if psp > 1 && psp - 1 != hspsp && self.get(psp - 1) == b' ' {
+                        psp -= 1;
+                    }
+                    self.put(psp as usize, 0);
+                    tmpport = Some(self.cstr());
+                    mode &= !INPORT;
+                    self.pos += 1;
+                }
+                b'{' => {
+                    self.pos += 1;
+                    if mode != 0 || self.at(self.pos) == 0 {
+                        return None;
+                    }
+                    mode = HASTABLE;
+                    let sub = self.parse(!lr, false)?;
+                    rv.flds.push(sub);
+                }
+                b'}' | b'|' | 0 => {
+                    if (uc == 0 && !flag) || mode & INPORT != 0 {
+                        return None;
+                    }
+                    if mode & HASTABLE == 0 {
+                        rv.flds.push(Field::default());
+                        fp = Some(rv.flds.len() - 1);
+                    }
+                    if let Some(tp) = tmpport.take()
+                        && let Some(f) = fp
+                    {
+                        rv.flds[f].id = Some(tp);
+                    }
+                    if mode & (HASTEXT | HASTABLE) == 0 {
+                        mode |= HASTEXT;
+                        self.put(tsp as usize, b' ');
+                        tsp += 1;
+                    }
+                    if mode & HASTEXT != 0 {
+                        if tsp > 1 && tsp - 1 != hstsp && self.get(tsp - 1) == b' ' {
+                            tsp -= 1;
+                        }
+                        self.put(tsp as usize, 0);
+                        let text = self.cstr();
+                        if let Some(f) = fp {
+                            rv.flds[f].text = Some(text);
+                            rv.flds[f].lr = true;
+                        }
+                        tsp = 0;
+                        hstsp = 0;
+                    }
+                    if uc != 0 {
+                        if uc == b'}' {
+                            self.pos += 1;
+                            return Some(rv);
+                        }
+                        mode = 0;
+                        self.pos += 1;
+                    } else {
+                        wflag = false;
+                    }
+                }
+                b'\\' => {
+                    let nx = self.at(self.pos + 1);
+                    if nx != 0 {
+                        if is_ctrl(nx) {
+                            // the control character is taken literally
+                        } else if nx == b' ' && !self.html {
+                            ishardspace = true;
+                        } else {
+                            self.put(tsp as usize, b'\\');
+                            tsp += 1;
+                            mode |= INTEXT | HASTEXT;
+                        }
+                        self.pos += 1;
+                    }
+                    dotext = true;
+                }
+                _ => dotext = true,
+            }
+            if dotext {
+                let c = self.at(self.pos);
+                if mode & HASTABLE != 0 && c != b' ' {
+                    return None;
+                }
+                if mode & (INTEXT | INPORT) == 0 && c != b' ' {
+                    mode |= INTEXT | HASTEXT;
+                }
+                if mode & INTEXT != 0 {
+                    if !(c == b' ' && !ishardspace && self.get(tsp - 1) == b' ' && !self.html) {
+                        self.put(tsp as usize, c);
+                        tsp += 1;
+                    }
+                    if ishardspace {
+                        hstsp = tsp - 1;
+                    }
+                } else if mode & INPORT != 0 {
+                    if !(c == b' ' && !ishardspace && (psp == 0 || self.get(psp - 1) == b' ')) {
+                        self.put(psp as usize, c);
+                        psp += 1;
+                    }
+                    if ishardspace {
+                        hspsp = psp - 1;
+                    }
+                }
+                self.pos += 1;
+                while self.at(self.pos) & 0xc0 == 0x80 {
+                    let c = self.at(self.pos);
+                    self.put(tsp as usize, c);
+                    tsp += 1;
+                    self.pos += 1;
+                }
+            }
+        }
+        Some(rv)
+    }
+}
+
+/// `size_reclbl` from `shapes.c`.
+fn size_reclbl(attrs: &AttrMap, f: &mut Field) -> Point {
+    let d = if let Some(lp) = &f.lp {
+        let mut dimen = lp.dimen;
+        if dimen.x > 0.0 || dimen.y > 0.0 {
+            dimen = pad_dimen(attrs, dimen, false);
+        }
+        dimen
+    } else {
+        let mut d = Point::new(0.0, 0.0);
+        let lr = f.lr;
+        for sub in &mut f.flds {
+            let d0 = size_reclbl(attrs, sub);
+            if lr {
+                d.x += d0.x;
+                d.y = d.y.max(d0.y);
+            } else {
+                d.y += d0.y;
+                d.x = d.x.max(d0.x);
+            }
+        }
+        d
+    };
+    f.size = d;
+    d
+}
+
+/// `resize_reclbl` from `shapes.c` (note the `(int)` truncation when distributing space).
+fn resize_reclbl(f: &mut Field, sz: Point, nojustify: bool) {
+    let d = Point::new(sz.x - f.size.x, sz.y - f.size.y);
+    f.size = sz;
+    if let Some(lp) = &mut f.lp
+        && !nojustify
+    {
+        lp.space.x += d.x;
+        lp.space.y += d.y;
+    }
+    let n = f.flds.len();
+    if n > 0 {
+        let inc = if f.lr { d.x / n as f64 } else { d.y / n as f64 };
+        let lr = f.lr;
+        for (i, sf) in f.flds.iter_mut().enumerate() {
+            let amt = f64::from(((i + 1) as f64 * inc) as i32 - (i as f64 * inc) as i32);
+            let newsz = if lr {
+                Point::new(sf.size.x + amt, sz.y)
+            } else {
+                Point::new(sz.x, sf.size.y + amt)
+            };
+            resize_reclbl(sf, newsz, nojustify);
+        }
+    }
+}
+
+/// `pos_reclbl` from `shapes.c` (box placement only).
+fn pos_reclbl(f: &mut Field, mut ul: Point) {
+    f.b = BoundingBox::new(ul.x, ul.y - f.size.y, ul.x + f.size.x, ul.y);
+    let lr = f.lr;
+    for sub in &mut f.flds {
+        pos_reclbl(sub, ul);
+        if lr {
+            ul.x += sub.size.x;
+        } else {
+            ul.y -= sub.size.y;
+        }
+    }
+}
+
+fn label_fields(
+    f: &mut Field,
+    html: bool,
+    obj: &LabelSubstContext<'_>,
+    font_name: &str,
+    font_size: f64,
+    latin1: bool,
+) {
+    if let Some(text) = &f.text {
+        let src = if html {
+            format!("<{text}>")
+        } else {
+            text.clone()
+        };
+        f.lp = Some(make_label(&src, html, obj, font_name, font_size, latin1));
+    }
+    for sub in &mut f.flds {
+        label_fields(sub, html, obj, font_name, font_size, latin1);
+    }
+}
+
+fn to_record_field(f: &Field) -> RecordField {
+    RecordField {
+        port: f.id.clone(),
+        text: f.text.clone().unwrap_or_default(),
+        bbox: f.b,
+        children: f.flds.iter().map(to_record_field).collect(),
+        horizontal: f.lr,
+        label: f.lp.clone(),
+    }
+}
+
+/// `parse_reclbl` on `label` for `record_init`, falling back to `\N` on a syntax error.
+fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
+    let src = if html {
+        &label[1..label.len() - 1]
+    } else {
+        label
+    };
+    let len = src.len().max(1).max(2);
+    let mut p = RecParser {
+        src: src.as_bytes(),
+        pos: 0,
+        html,
+        buf: vec![0; len + 1],
+    };
+    if let Some(f) = p.parse(lr, true) {
+        return f;
+    }
+    let mut p = RecParser {
+        src: b"\\N",
+        pos: 0,
+        html,
+        buf: vec![0; len + 1],
+    };
+    p.parse(lr, true).unwrap_or_default()
+}
+
+fn record_init(
+    node: &NodeData,
+    label: &str,
+    obj: &LabelSubstContext<'_>,
+    env: &NodeSizeEnv<'_>,
+    geom: &mut NodeGeometry,
+) {
+    let attrs = &node.attrs;
+    let flip = !env.realflip;
+    let html = geom.label.html;
+    let mut info = parse_record_label(label, html, flip);
+    let (font_name, font_size) = (geom.label.font_name.clone(), geom.label.font_size);
+    label_fields(
+        &mut info,
+        html,
+        obj,
+        &font_name,
+        font_size,
+        env.charset_latin1,
+    );
+    size_reclbl(attrs, &mut info);
+    let mut sz = Point::new(inch2ps(geom.width), inch2ps(geom.height));
+    if !mapbool(Some(attrs.get("fixedsize").map_or("false", String::as_str))) {
+        sz.x = info.size.x.max(sz.x);
+        sz.y = info.size.y.max(sz.y);
+    }
+    let nojustify = mapbool(Some(attrs.get("nojustify").map_or("false", String::as_str)));
+    resize_reclbl(&mut info, sz, nojustify);
+    let ul = Point::new(-sz.x / 2.0, sz.y / 2.0);
+    pos_reclbl(&mut info, ul);
+    geom.width = ps2inch(info.size.x);
+    // Kluge!! +1 to fix rounding diff between layout and rendering
+    geom.height = ps2inch(info.size.y + 1.0);
+    geom.outline_width = geom.width;
+    geom.outline_height = geom.height;
+    geom.record = Some(to_record_field(&info));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node(attrs: &[(&str, &str)]) -> NodeData {
+        let mut n = NodeData {
+            id: gv_core::NodeId(0),
+            name: "n".into(),
+            attrs: AttrMap::new(),
+            pos: Point::default(),
+            width: 0.0,
+            height: 0.0,
+            rank: 0,
+            order: 0,
+        };
+        for (k, v) in attrs {
+            n.attrs.insert((*k).into(), (*v).into());
+        }
+        n
+    }
+
+    fn wh(attrs: &[(&str, &str)]) -> (String, String) {
+        let g = node_geometry(&node(attrs), &NodeSizeEnv::new("G"));
+        (format!("{:.5}", g.width), format!("{:.5}", g.height))
+    }
+
+    // Expected values are `dot -Tdot` output of Graphviz 16.1.0 with the LUT text estimator.
+    #[test]
+    fn ellipse_hello_world() {
+        let g = node_geometry(&node(&[("label", "hello world")]), &NodeSizeEnv::new("G"));
+        assert!((g.width - 1.5358).abs() < 5e-5, "{}", g.width);
+        assert!((g.height - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn record_height_kluge() {
+        let (_, h) = wh(&[("shape", "record"), ("label", "a|b")]);
+        assert_eq!(h, "0.51389");
+    }
+
+    #[test]
+    fn record_port_overwrites_text_like_c() {
+        let mut f = parse_record_label("abc <p> def|x", false, true);
+        assert_eq!(f.flds[0].text.as_deref(), Some(""));
+        assert_eq!(f.flds[0].id.as_deref(), Some(""));
+        label_fields(
+            &mut f,
+            false,
+            &LabelSubstContext::for_node("n"),
+            "Times-Roman",
+            14.0,
+            false,
+        );
+        assert!(f.flds[0].lp.as_ref().unwrap().dimen.x == 0.0);
+    }
+
+    #[test]
+    fn record_hard_spaces() {
+        let f = parse_record_label("a\\ \\ b  c|d", false, true);
+        assert_eq!(f.flds[0].text.as_deref(), Some("a  b  c"));
+        let f = parse_record_label("", false, true);
+        assert_eq!(f.flds[0].text.as_deref(), Some(" "));
+    }
+
+    #[test]
+    fn late_double_is_strtod_prefix() {
+        let mut a = AttrMap::new();
+        a.insert("w".into(), "1.5in".into());
+        assert_eq!(late_double(&a, "w", 0.0, 0.0), 1.5);
+        a.insert("w".into(), "x".into());
+        assert_eq!(late_double(&a, "w", 7.0, 0.0), 7.0);
+        a.insert("w".into(), "-3".into());
+        assert_eq!(late_double(&a, "w", 7.0, 0.01), 0.01);
+    }
+}
