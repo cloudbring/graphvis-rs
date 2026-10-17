@@ -388,7 +388,8 @@ pub fn clip_and_install_info<S: SplineGraph + ?Sized>(
     }
     let mut newspl = Bezier::default();
     arrow_clip(g, fe, hn, &mut ps, &mut start, &mut end, &mut newspl, info);
-    let mut list = Vec::with_capacity(end - start + 4);
+    // C computes `end - start + 4` in int; end can precede start after arrow clipping.
+    let mut list = Vec::with_capacity((end as isize - start as isize + 4).max(0) as usize);
     let mut i = start;
     let bb = g.bb_mut();
     while i < end + 4 {
