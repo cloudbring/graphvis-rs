@@ -68,13 +68,14 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
         let Some((center, size)) = *r else { continue };
         let nd = &mut g.nodes[i];
         nd.coord = center;
-        // ND_width/ND_height = PS2INCH(size); gv_nodesize.
-        nd.width = size.x / 72.0;
-        nd.height = size.y / 72.0;
-        let w = nd.width * 72.0;
-        nd.lw = w / 2.0;
-        nd.rw = w / 2.0;
-        nd.ht = nd.height * 72.0;
+        // walkTree: ND_width/ND_height = PS2INCH(size) and gv_nodesize set
+        // ND_lw/rw/ht from the patch. finishNode then calls common_init_node,
+        // which resets ND_width/ND_height to the shape's own size (the `width`
+        // and `height` attributes, the label), as LGraph::new computed them;
+        // addXLabels sizes the node from those, the drawing from ND_lw/rw/ht.
+        nd.lw = size.x / 2.0;
+        nd.rw = size.x / 2.0;
+        nd.ht = size.y;
         nd.pos[0] = center.x / 72.0;
         nd.pos[1] = center.y / 72.0;
     }
@@ -92,5 +93,12 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
     g.bb = res.root_bb;
     gv_postprocess(&mut g, true);
     g.write_back(graph);
+    // The output and the renderer use the patch size (ND_lw + ND_rw, ND_ht).
+    for (i, r) in res.nodes.iter().enumerate() {
+        if let Some((_, size)) = *r {
+            graph.nodes[i].width = size.x / 72.0;
+            graph.nodes[i].height = size.y / 72.0;
+        }
+    }
     Ok(())
 }
