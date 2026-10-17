@@ -1,0 +1,94 @@
+digraph Alf {
+	graph [bb="0,0,137.84,137.84",
+		layout=patchwork,
+		size="6,9"
+	];
+	node [label="\N",
+		shape=box
+	];
+	Decl	[height=0.5038,
+		label="\n\nDecl|{name|access|decl_flags|extern_c_linkage}",
+		pos="124.06,18.137",
+		width=0.38289];
+	Nontype_decl	[height=0.40304,
+		label="Nontype_decl|{type}",
+		pos="51.69,123.33",
+		width=0.47861];
+	Nontype_decl -> Decl;
+	Defined_decl	[height=0.40304,
+		label="Defined_decl|{linkage}",
+		pos="86.15,123.33",
+		width=0.47861];
+	Defined_decl -> Nontype_decl;
+	Data_decl	[height=0.40304,
+		label="Data_decl|{storage_class}",
+		pos="120.61,123.33",
+		width=0.47861];
+	Data_decl -> Defined_decl;
+	Function_decl	[height=0.5038,
+		label="Function_decl|{formals|defaults}",
+		pos="13.784,90.685",
+		width=0.38289];
+	Function_decl -> Defined_decl;
+	Data	[height=0.5038,
+		label="Data|{initializer}",
+		pos="13.784,54.411",
+		width=0.38289];
+	Data -> Data_decl;
+	Defn	[height=0.5038,
+		pos="124.06,90.685",
+		width=0.38289];
+	Data -> Defn;
+	Function	[height=0.5038,
+		label="Function|{body}",
+		pos="13.784,18.137",
+		width=0.38289];
+	Function -> Function_decl;
+	Function -> Defn;
+	Constructor	[height=0.5038,
+		label="Constructor|{member_initializers}",
+		pos="41.352,90.685",
+		width=0.38289];
+	Constructor -> Function;
+	Aggregate	[height=0.5038,
+		pos="41.352,54.411",
+		width=0.38289];
+	Type_decl	[height=0.5038,
+		pos="41.352,18.137",
+		width=0.38289];
+	Aggregate -> Type_decl;
+	Type_decl -> Decl;
+	Class	[height=0.5038,
+		pos="68.92,90.685",
+		width=0.38289];
+	Class -> Aggregate;
+	Union	[height=0.5038,
+		pos="96.489,90.685",
+		width=0.38289];
+	Union -> Aggregate;
+	Defn -> Defined_decl;
+	Data_member	[height=0.5038,
+		pos="68.92,54.411",
+		width=0.38289];
+	Data_member -> Nontype_decl;
+	Enum	[height=0.5038,
+		pos="68.92,18.137",
+		width=0.38289];
+	Enum -> Type_decl;
+	Enumerator	[height=0.5038,
+		pos="96.489,54.411",
+		width=0.38289];
+	Enumerator -> Nontype_decl;
+	Destructor	[height=0.5038,
+		pos="124.06,54.411",
+		width=0.38289];
+	Destructor -> Function;
+	Template_type_arg	[height=0.5038,
+		pos="96.489,18.137",
+		width=0.38289];
+	Template_type_arg -> Type_decl;
+	Typedef	[height=0.40304,
+		pos="17.23,123.33",
+		width=0.47861];
+	Typedef -> Type_decl;
+}

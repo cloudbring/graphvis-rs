@@ -1,0 +1,408 @@
+digraph g {
+	graph [bb="0,0,225.83,225.83",
+		center=true,
+		fontname=Courier,
+		fontsize=24,
+		layout=patchwork,
+		orientation=land,
+		page="8.5,11",
+		ranksep=1.0,
+		size="10,7.5",
+		style="setlinewidth(8)"
+	];
+	node [label="\N",
+		shape=box,
+		width=0.5
+	];
+	subgraph cluster_0 {
+		graph [bb="112.92,137.27,225.83,225.83",
+			label=gryphon
+		];
+		22342	[height=0.35143,
+			kind=proc,
+			label="22342\nksh",
+			pname=ksh,
+			pos="206.07,149.92",
+			width=0.5489];
+		22343	[height=0.41001,
+			kind=proc,
+			label="22343\ngcc",
+			pname=gcc,
+			pos="129.85,181.55",
+			width=0.47048];
+		22346	[height=0.41001,
+			kind=proc,
+			label="22346\ncpp",
+			pname=cpp,
+			pos="129.85,152.03",
+			width=0.47048];
+		22347	[height=0.52715,
+			kind=proc,
+			label="22347\ncc1",
+			pname=cc1,
+			pos="159.96,206.85",
+			width=0.36593];
+		22351	[height=0.52715,
+			kind=proc,
+			label="22351\nas",
+			pname=as,
+			pos="186.31,206.85",
+			width=0.36593];
+		22344	[height=0.52715,
+			kind=proc,
+			label="22344\nksh",
+			pname=ksh,
+			pos="212.66,206.85",
+			width=0.36593];
+		22345	[height=0.35143,
+			kind=proc,
+			label="22345\ngcc",
+			pname=gcc,
+			pos="166.55,175.23",
+			width=0.5489];
+		22348	[height=0.35143,
+			kind=proc,
+			label="22348\ncpp",
+			pname=cpp,
+			pos="166.55,149.92",
+			width=0.5489];
+		22350	[height=0.35143,
+			kind=proc,
+			label="22350\ncc1",
+			pname=cc1,
+			pos="206.07,175.23",
+			width=0.5489];
+		22357	[height=0.41001,
+			kind=proc,
+			label="22357\nas",
+			pname=as,
+			pos="129.85,211.07",
+			width=0.47048];
+	}
+	subgraph cluster_1 {
+		graph [bb="0.0001107,137.27,112.92,225.83",
+			label=toucan
+		];
+		22349	[height=0.35143,
+			kind=proc,
+			label="22349\nksh",
+			pname=ksh,
+			pos="93.156,149.92",
+			width=0.5489];
+		22352	[height=0.41001,
+			kind=proc,
+			label="22352\ngcc",
+			pname=gcc,
+			pos="16.937,181.55",
+			width=0.47048];
+		22356	[height=0.41001,
+			kind=proc,
+			label="22356\ncpp",
+			pname=cpp,
+			pos="16.937,152.03",
+			width=0.47048];
+		22361	[height=0.52715,
+			kind=proc,
+			label="22361\ncc1",
+			pname=cc1,
+			pos="47.048,206.85",
+			width=0.36593];
+		22369	[height=0.52715,
+			kind=proc,
+			label="22369\nas",
+			pname=as,
+			pos="73.395,206.85",
+			width=0.36593];
+		22353	[height=0.52715,
+			kind=proc,
+			label="22353\nksh",
+			pname=ksh,
+			pos="99.742,206.85",
+			width=0.36593];
+		22355	[height=0.35143,
+			kind=proc,
+			label="22355\ngcc",
+			pname=gcc,
+			pos="53.635,175.23",
+			width=0.5489];
+		22360	[height=0.35143,
+			kind=proc,
+			label="22360\ncpp",
+			pname=cpp,
+			pos="53.635,149.92",
+			width=0.5489];
+		22365	[height=0.35143,
+			kind=proc,
+			label="22365\ncc1",
+			pname=cc1,
+			pos="93.156,175.23",
+			width=0.5489];
+		22374	[height=0.41001,
+			kind=proc,
+			label="22374\nas",
+			pname=as,
+			pos="16.937,211.07",
+			width=0.47048];
+	}
+	subgraph cluster_2 {
+		graph [bb="72.849,0.0001107,131.13,51.476",
+			label=parker
+		];
+		22354	[height=0.35747,
+			kind=proc,
+			label="22354\nksh",
+			pname=ksh,
+			pos="92.275,38.607",
+			width=0.53962];
+		22359	[height=0.35747,
+			kind=proc,
+			label="22359\ngcc",
+			pname=gcc,
+			pos="92.275,12.869",
+			width=0.53962];
+		22375	[height=0.71495,
+			kind=proc,
+			label="22375\nas",
+			pname=as,
+			pos="121.42,25.738",
+			width=0.26981];
+	}
+	subgraph cluster_3 {
+		graph [bb="0.0001107,68.635,72.849,137.27",
+			label=condor
+		];
+		22358	[height=0.47663,
+			kind=proc,
+			label="22358\nksh",
+			pname=ksh,
+			pos="14.57,120.11",
+			width=0.40472];
+		22362	[height=0.47663,
+			kind=proc,
+			label="22362\ngcc",
+			pname=gcc,
+			pos="14.57,85.794",
+			width=0.40472];
+		22367	[height=0.31776,
+			kind=proc,
+			label="22367\ncpp",
+			pname=cpp,
+			pos="50.994,125.83",
+			width=0.60707];
+		22373	[height=0.31776,
+			kind=proc,
+			label="22373\ncc1",
+			pname=cc1,
+			pos="50.994,102.95",
+			width=0.60707];
+		22378	[height=0.31776,
+			kind=proc,
+			label="22378\nas",
+			pname=as,
+			pos="50.994,80.074",
+			width=0.60707];
+	}
+	subgraph cluster_4 {
+		graph [bb="0.0001107,0.0001107,72.849,68.635",
+			label=kite
+		];
+		22363	[height=0.47663,
+			kind=proc,
+			label="22363\nksh",
+			pname=ksh,
+			pos="14.57,51.476",
+			width=0.40472];
+		22366	[height=0.47663,
+			kind=proc,
+			label="22366\ngcc",
+			pname=gcc,
+			pos="14.57,17.159",
+			width=0.40472];
+		22371	[height=0.31776,
+			kind=proc,
+			label="22371\ncpp",
+			pname=cpp,
+			pos="50.994,57.196",
+			width=0.60707];
+		22376	[height=0.31776,
+			kind=proc,
+			label="22376\ncc1",
+			pname=cc1,
+			pos="50.994,34.318",
+			width=0.60707];
+		22380	[height=0.31776,
+			kind=proc,
+			label="22380\nas",
+			pname=as,
+			pos="50.994,11.439",
+			width=0.60707];
+	}
+	subgraph cluster_5 {
+		graph [bb="72.849,51.476,131.13,137.27",
+			label=coot
+		];
+		22368	[height=0.47663,
+			kind=proc,
+			label="22368\nksh",
+			pname=ksh,
+			pos="87.419,120.11",
+			width=0.40472];
+		22372	[height=0.47663,
+			kind=proc,
+			label="22372\ngcc",
+			pname=gcc,
+			pos="116.56,120.11",
+			width=0.40472];
+		22377	[height=0.35747,
+			kind=proc,
+			label="22377\ncpp",
+			pname=cpp,
+			pos="92.275,90.084",
+			width=0.53962];
+		22379	[height=0.35747,
+			kind=proc,
+			label="22379\ncc1",
+			pname=cc1,
+			pos="92.275,64.346",
+			width=0.53962];
+		22381	[height=0.71495,
+			kind=proc,
+			label="22381\nas",
+			pname=as,
+			pos="121.42,77.215",
+			width=0.26981];
+	}
+	{
+		graph [rank=same];
+		22337	[height=0.61596,
+			kind=proc,
+			label="22337\nksh",
+			pname=ksh,
+			pos="169.46,22.175",
+			width=0.31317];
+		"93642-32246"	[fname="/home/ek/work/src/lefty/lex.c",
+			height=0.43997,
+			kind=file,
+			label="93642-32246\n/home/ek/work/src/lefty/lex.c",
+			pos="210.05,121.43",
+			width=0.43844];
+		22337 -> "93642-32246"	[minlen=10,
+			style=invis];
+	}
+	22342 -> 22343;
+	22343 -> 22346;
+	22343 -> 22347;
+	22343 -> 22351;
+	"93736-32246"	[fname="/home/ek/work/src/lefty/lefty.c",
+		height=0.61596,
+		kind=file,
+		label="93736-32246\n/home/ek/work/src/lefty/lefty.c",
+		pos="192.01,22.175",
+		width=0.31317];
+	22346 -> "93736-32246";
+	22344 -> 22345;
+	22345 -> 22348;
+	22345 -> 22350;
+	22345 -> 22357;
+	"93627-32246"	[fname="/home/ek/work/src/lefty/gfxview.c",
+		height=0.61596,
+		kind=file,
+		label="93627-32246\n/home/ek/work/src/lefty/gfxview.c",
+		pos="214.56,22.175",
+		width=0.31317];
+	22348 -> "93627-32246";
+	22349 -> 22352;
+	22352 -> 22356;
+	22352 -> 22361;
+	22352 -> 22369;
+	"93645-32246"	[fname="/home/ek/work/src/lefty/txtview.c",
+		height=0.43997,
+		kind=file,
+		label="93645-32246\n/home/ek/work/src/lefty/txtview.c",
+		pos="146.91,121.43",
+		width=0.43844];
+	22356 -> "93645-32246";
+	22353 -> 22355;
+	22355 -> 22360;
+	22355 -> 22365;
+	22355 -> 22374;
+	"93638-32246"	[fname="/home/ek/work/src/lefty/internal.c",
+		height=0.43997,
+		kind=file,
+		label="93638-32246\n/home/ek/work/src/lefty/internal.c",
+		pos="178.48,121.43",
+		width=0.43844];
+	22360 -> "93638-32246";
+	22354 -> 22359;
+	22359 -> 22375;
+	"135504-32246"	[fname="/home/ek/work/sun4/lefty/display.o",
+		height=0.5133,
+		kind=file,
+		label="135504-32246\n/home/ek/work/sun4/lefty/display.o",
+		pos="144.66,18.479",
+		width=0.37581];
+	22375 -> "135504-32246";
+	22358 -> 22362;
+	22362 -> 22367;
+	22362 -> 22373;
+	22362 -> 22378;
+	"88860-32246"	[fname="/home/ek/dev/src/lefty/stringify.c",
+		height=0.43997,
+		kind=file,
+		label="88860-32246\n/home/ek/dev/src/lefty/stringify.c",
+		pos="146.91,89.754",
+		width=0.43844];
+	22367 -> "88860-32246";
+	22363 -> 22366;
+	22366 -> 22371;
+	22366 -> 22376;
+	22366 -> 22380;
+	"93626-32246"	[fname="/home/ek/work/src/lefty/exec.c",
+		height=0.43997,
+		kind=file,
+		label="93626-32246\n/home/ek/work/src/lefty/exec.c",
+		pos="178.48,89.754",
+		width=0.43844];
+	22371 -> "93626-32246";
+	"37592-32246"	[fname="/home/ek/dev/src/lefty/exec.h",
+		height=0.5133,
+		kind=file,
+		label="37592-32246\n/home/ek/dev/src/lefty/exec.h",
+		pos="144.66,55.436",
+		width=0.37581];
+	22371 -> "37592-32246";
+	22368 -> 22372;
+	22372 -> 22377;
+	22372 -> 22379;
+	22372 -> 22381;
+	"93643-32246"	[fname="/home/ek/work/src/lefty/parse.c",
+		height=0.43997,
+		kind=file,
+		label="93643-32246\n/home/ek/work/src/lefty/parse.c",
+		pos="210.05,89.754",
+		width=0.43844];
+	22377 -> "93643-32246";
+	22316	[height=0.41064,
+		kind=proc,
+		label="22316\nksh",
+		pname=ksh,
+		pos="175.1,59.132",
+		width=0.46976];
+	22324	[height=0.41064,
+		kind=proc,
+		label="22324\nnmake",
+		pname=nmake,
+		pos="208.92,59.132",
+		width=0.46976];
+	22316 -> 22324;
+	22324 -> 22337;
+	22324 -> "93642-32246";
+	22337 -> 22342;
+	22337 -> 22344;
+	22337 -> 22349;
+	22337 -> 22353;
+	22337 -> 22354;
+	22337 -> 22358;
+	22337 -> 22363;
+	22337 -> 22368;
+}

@@ -1,0 +1,109 @@
+digraph g {
+	graph [bb="0,0,126.49,126.49",
+		layout=patchwork,
+		rankdir=LR
+	];
+	node [color=4,
+		colorscheme=rdbu5,
+		fontcolor=5,
+		label="\N",
+		shape=box,
+		style=filled
+	];
+	subgraph cluster_0 {
+		graph [bb="0.00019764,63.246,126.49,126.49",
+			color=3,
+			colorscheme=rdbu5
+		];
+		node [colorscheme=rdbu5,
+			fontcolor=3
+		];
+		Hef1a	[color=1,
+			height=0.43921,
+			pos="110.68,79.057",
+			width=0.43921];
+		Gal4VP16	[color=5,
+			height=0.43921,
+			label="Gal4-VP16",
+			pos="79.057,110.68",
+			width=0.43921];
+		Hef1a -> Gal4VP16	[arrowhead=none];
+		TRE	[color=1,
+			height=0.43921,
+			pos="15.812,79.057",
+			width=0.43921];
+		DeltamCherry	[color=5,
+			height=0.43921,
+			pos="15.812,110.68",
+			width=0.43921];
+		TRE -> DeltamCherry	[arrowhead=none];
+		UAS	[color=1,
+			height=0.43921,
+			pos="47.434,110.68",
+			width=0.43921];
+		LacI	[color=5,
+			height=0.43921,
+			pos="110.68,110.68",
+			width=0.43921];
+		UAS -> LacI	[arrowhead=none];
+		Hef1aLacOid	[color=1,
+			height=0.43921,
+			label="Hef1a-LacOid",
+			pos="47.434,79.057",
+			width=0.43921];
+		rtTA3	[color=5,
+			height=0.43921,
+			pos="79.057,79.057",
+			width=0.43921];
+		Hef1aLacOid -> rtTA3	[arrowhead=none];
+		Gal4VP16 -> UAS	[arrowhead=none];
+		LacI -> Hef1aLacOid	[arrowhead=none];
+		rtTA3 -> TRE	[arrowhead=none];
+	}
+	Gal4VP16protein	[height=0.43921,
+		label="Gal4-VP16",
+		pos="110.68,47.434",
+		width=0.43921];
+	Gal4VP16 -> Gal4VP16protein;
+	LacIprotein	[height=0.43921,
+		label=LacI,
+		pos="47.434,15.812",
+		width=0.43921];
+	LacI -> LacIprotein;
+	rtTA3protein	[height=0.43921,
+		label=rtTA3,
+		pos="79.057,47.434",
+		width=0.43921];
+	rtTA3 -> rtTA3protein;
+	product	[color=2,
+		fontcolor=3,
+		height=0.43921,
+		label="",
+		pos="15.812,47.434",
+		width=0.43921];
+	DeltamCherry -> product;
+	repression	[color=5,
+		fontcolor=black,
+		height=0.43921,
+		label="LacI repression",
+		pos="15.812,15.812",
+		style=dotted,
+		width=0.43921];
+	repression -> Hef1aLacOid	[arrowhead=tee];
+	combination	[height=0.43921,
+		label="rtTA3 + Doxycycline",
+		pos="47.434,47.434",
+		width=0.43921];
+	combination -> TRE;
+	LacIprotein -> repression;
+	rtTA3protein -> combination;
+	Gal4VP16protein -> UAS;
+	IPTG	[height=0.43921,
+		pos="79.057,15.812",
+		width=0.43921];
+	IPTG -> repression	[arrowhead=tee];
+	Doxycycline	[height=0.43921,
+		pos="110.68,15.812",
+		width=0.43921];
+	Doxycycline -> combination;
+}

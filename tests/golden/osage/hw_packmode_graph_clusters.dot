@@ -1,0 +1,53 @@
+graph clus {
+	graph [bb="0,0,293,270",
+		layout=osage,
+		packmode="graph"
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="160,170,293,270"];
+		a1	[height=0.5,
+			pos="199,190",
+			width=0.75];
+		a2	[height=0.5,
+			pos="264,245",
+			width=0.75];
+		a1 -- a2	[pos="216.08,204.45 225.71,212.6 237.69,222.74 247.26,230.84"];
+		a3	[height=0.5,
+			pos="189,250",
+			width=0.75];
+	}
+	subgraph cluster_b {
+		graph [bb="0,50,170,146"];
+		b1	[height=0.5,
+			pos="141,126",
+			width=0.75];
+		b2	[height=0.5,
+			pos="74,70",
+			shape=box,
+			width=2];
+		b3	[height=0.5,
+			pos="71,126",
+			width=0.75];
+	}
+	subgraph cluster_c {
+		graph [bb="80,170,138,234.8",
+			label=C,
+			lheight=0.23,
+			lp="109,222.4",
+			lwidth=0.13
+		];
+		c1	[height=0.5,
+			pos="109,190",
+			width=0.75];
+	}
+	a1 -- b1	[pos="184.96,174.51 175.97,164.59 164.35,151.77 155.31,141.79"];
+	d	[height=0.5,
+		pos="27,208",
+		width=0.75];
+	e	[height=0.5,
+		pos="208,18",
+		shape=circle,
+		width=0.5];
+	d -- e	[pos="41.812,192.45 76.597,155.94 163.01,65.227 195.44,31.186"];
+}

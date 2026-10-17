@@ -1,0 +1,3 @@
+graph two {
+layout=fdp;
+ a -- b; }

@@ -1,0 +1,14 @@
+graph nested {
+layout=patchwork;
+
+inset=5;
+subgraph cluster_1 {
+  area=2;
+  a [area=3]; b [area=1];
+  subgraph cluster_11 { c [area=2]; d; e [area=0.25]; }
+}
+subgraph cluster_2 { f [area=6]; subgraph cluster_21 { g; } subgraph cluster_22 { } }
+subgraph plain { h; i [area=2]; }
+j [area=4];
+a -- f; g -- j;
+}

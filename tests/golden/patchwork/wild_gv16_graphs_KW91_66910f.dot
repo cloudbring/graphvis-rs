@@ -1,0 +1,65 @@
+digraph G {
+	graph [bb="0,0,100,100",
+		layout=patchwork,
+		style=bold
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_outer {
+		graph [bb="0.00025,30,100,100"];
+		subgraph cluster_inner {
+			graph [bb="0.00025,30,71.429,100",
+				label="                          Act_2"
+			];
+			{
+				graph [rank=same];
+				Act_21	[height=0.48611,
+					pos="14.286,82.5",
+					width=0.39683];
+				Act_22	[height=0.32407,
+					pos="50,65",
+					width=0.59524];
+				Act_21 -> Act_22	[minlen=2];
+			}
+			{
+				graph [rank=same];
+				Act_23	[height=0.48611,
+					pos="14.286,47.5",
+					width=0.39683];
+				Act_24	[height=0.32407,
+					pos="50,41.667",
+					width=0.59524];
+				Act_23 -> Act_24	[minlen=2];
+			}
+			Act_25	[height=0.32407,
+				pos="50,88.334",
+				width=0.59524];
+			Act_23 -> Act_25;
+			Act_22 -> Act_23;
+			Act_22 -> Act_24;
+			Act_24 -> Act_25;
+		}
+		Act_1	[height=0.48611,
+			pos="85.715,82.5",
+			width=0.39683];
+		Act_1 -> Act_21;
+		Act_1 -> Act_23;
+		Act_3	[height=0.48611,
+			pos="85.715,47.5",
+			width=0.39683];
+		Act_25 -> Act_3;
+	}
+	Ext_2	[height=0.41667,
+		pos="50,15",
+		width=0.46296];
+	Act_3 -> Ext_2;
+	Ext_1	[height=0.41667,
+		pos="16.667,15",
+		width=0.46296];
+	Ext_1 -> Act_1;
+	Ext_3	[height=0.41667,
+		pos="83.334,15",
+		width=0.46296];
+	Ext_3 -> Act_24;
+}

@@ -1,0 +1,41 @@
+graph {
+	graph [URL="https://en.wikipedia.org/wiki/Vincent_van_Gogh",
+		bb="0,0,174.26,88.046",
+		label="Vincent van Gogh Paintings",
+		layout=patchwork,
+		lheight=0.23,
+		lp="87.129,12.4",
+		lwidth=2.20
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_self_portraits {
+		graph [URL="https://en.wikipedia.org/wiki/Portraits_of_Vincent_van_Gogh",
+			bb="55.507,24.8,87.129,88.046",
+			label="Self-portraits"
+		];
+		"Self-Portrait with Grey Felt Hat"	[URL="https://www.vangoghmuseum.nl/en/collection/s0016V1962",
+			height=0.43921,
+			pos="71.318,72.235",
+			width=0.43921];
+		"Self-Portrait as a Painter"	[URL="https://www.vangoghmuseum.nl/en/collection/s0022V1962",
+			height=0.43921,
+			pos="71.318,40.612",
+			width=0.43921];
+	}
+	subgraph cluster_flowers {
+		graph [URL="https://en.wikipedia.org/wiki/Sunflowers_(Van_Gogh_series)",
+			bb="87.129,24.8,118.75,88.046",
+			label=Flowers
+		];
+		Sunflowers	[URL="https://www.nationalgallery.org.uk/paintings/vincent-van-gogh-sunflowers",
+			height=0.43921,
+			pos="102.94,72.235",
+			width=0.43921];
+		"Almond Blossom"	[URL="https://www.vangoghmuseum.nl/en/collection/s0176V1962",
+			height=0.43921,
+			pos="102.94,40.612",
+			width=0.43921];
+	}
+}

@@ -1,0 +1,67 @@
+digraph G {
+	graph [bb="0,0,109.54,109.54",
+		layout=patchwork,
+		size="6,6"
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster0 {
+		graph [bb="0.00022822,54.772,54.772,109.54"];
+		x0	[height=0.50715,
+			pos="13.693,91.287",
+			width=0.38036];
+		y0	[height=0.50715,
+			pos="41.079,91.287",
+			width=0.38036];
+		x0 -> y0;
+		z0	[height=0.25358,
+			pos="27.386,63.901",
+			width=0.76073];
+		x0 -> z0;
+	}
+	subgraph cluster1 {
+		graph [bb="54.772,54.772,109.54,109.54"];
+		x1	[height=0.50715,
+			pos="68.466,91.287",
+			width=0.38036];
+		y1	[height=0.50715,
+			pos="95.852,91.287",
+			width=0.38036];
+		x1 -> y1;
+		z1	[height=0.25358,
+			pos="82.159,63.901",
+			width=0.76073];
+		x1 -> z1;
+	}
+	subgraph cluster2 {
+		graph [bb="0.00022822,0.00022822,54.772,54.772"];
+		x2	[height=0.38036,
+			pos="18.258,41.079",
+			width=0.50715];
+		y2	[height=0.38036,
+			pos="18.258,13.693",
+			width=0.50715];
+		x2 -> y2;
+		z2	[height=0.76073,
+			pos="45.644,27.386",
+			width=0.25358];
+		x2 -> z2;
+	}
+	a	[height=0.50715,
+		pos="68.466,36.515",
+		width=0.38036];
+	b	[height=0.50715,
+		pos="95.852,36.515",
+		width=0.38036];
+	a -> b;
+	a -> x0;
+	a -> z2;
+	c	[height=0.25358,
+		pos="82.159,9.1289",
+		width=0.76073];
+	b -> c;
+	b -> x1;
+	b -> x2;
+	c -> z1;
+}

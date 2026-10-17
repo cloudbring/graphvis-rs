@@ -1,0 +1,63 @@
+digraph {
+	graph [bb="0,0,296.27,104.8",
+		compound=true,
+		layout=osage
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="0,0,146.27,104.8",
+			label="Cluster A",
+			lheight=0.23,
+			lp="73.137,92.4",
+			lwidth=0.75
+		];
+		node1	[height=0.5,
+			pos="36.637,60",
+			width=0.96213];
+		node3	[height=0.5,
+			pos="109.64,60",
+			width=0.96213];
+		node5	[height=0.5,
+			pos="36.637,20",
+			width=0.96213];
+		node7	[height=0.5,
+			pos="109.64,20",
+			width=0.96213];
+	}
+	subgraph cluster_b {
+		graph [bb="150,0,296.27,104.8",
+			label="Cluster B",
+			lheight=0.23,
+			lp="223.14,92.4",
+			lwidth=0.74
+		];
+		node2	[height=0.5,
+			pos="186.64,60",
+			width=0.96213];
+		node4	[height=0.5,
+			pos="259.64,60",
+			width=0.96213];
+		node6	[height=0.5,
+			pos="186.64,20",
+			width=0.96213];
+		node8	[height=0.5,
+			pos="259.64,20",
+			width=0.96213];
+	}
+	node1 -> node2	[label=1,
+		lp="102.37,68.4",
+		pos="e,151.52,60 71.427,60 91.915,60 118.09,60 140.31,60"];
+	node3 -> node4	[label=2,
+		lp="175.37,68.4",
+		ltail=cluster_a,
+		pos="e,224.52,60 144.43,60 164.92,60 191.09,60 213.31,60"];
+	node5 -> node6	[label=3,
+		lhead=cluster_b,
+		lp="102.37,28.4",
+		pos="e,151.52,20 71.427,20 91.915,20 118.09,20 140.31,20"];
+	node7 -> node8	[label=4,
+		lhead=cluster_b,
+		lp="175.37,28.4",
+		ltail=cluster_a,
+		pos="e,224.52,20 144.43,20 164.92,20 191.09,20 213.31,20"];
+}

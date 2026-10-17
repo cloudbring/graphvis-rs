@@ -1,0 +1,65 @@
+digraph G {
+	graph [bb="0,0,249.82,274.92",
+		layout=fdp
+	];
+	node [label="\N"];
+	subgraph cluster0 {
+		graph [bb="69.376,-1.199e-14,139.38,52",
+			fillcolor="blue:red",
+			style="filled,rounded"
+		];
+		0	[height=0.5,
+			pos="104.38,26",
+			width=0.75];
+	}
+	subgraph cluster1 {
+		graph [bb="96.543,62.847,166.54,114.85",
+			fillcolor="blue:red",
+			peripheries=0,
+			style=filled
+		];
+		1	[height=0.5,
+			pos="131.54,88.847",
+			width=0.75];
+	}
+	subgraph cluster2 {
+		graph [bb="6.2117,97.615,76.212,149.62",
+			fillcolor=blue,
+			style=filled
+		];
+		2	[height=0.5,
+			pos="41.212,123.62",
+			width=0.75];
+	}
+	subgraph cluster3 {
+		graph [bb="3.9968e-15,161.68,70,213.68",
+			fillcolor=red,
+			peripheries=0,
+			style="filled,rounded"
+		];
+		3	[height=0.5,
+			pos="35,187.68",
+			width=0.75];
+	}
+	subgraph cluster4 {
+		graph [bb="73.297,222.92,143.3,274.92",
+			bgcolor="red:blue",
+			peripheries=0
+		];
+		4	[height=0.5,
+			pos="108.3,248.92",
+			width=0.75];
+	}
+	subgraph cluster5 {
+		graph [bb="179.82,161.83,249.82,213.83",
+			bgcolor="red:blue"
+		];
+		5	[height=0.5,
+			pos="214.82,187.83",
+			width=0.75];
+	}
+	0 -> 1	[pos="e,124.02,71.434 111.94,43.506 114.3,48.954 116.96,55.102 119.54,61.071"];
+	1 -> 2	[pos="e,64.787,114.54 107.81,97.982 97.852,101.81 86.084,106.34 75.233,110.52"];
+	2 -> 3	[pos="e,36.789,169.23 39.448,141.8 38.954,146.9 38.404,152.57 37.864,158.15"];
+	3 -> 4	[pos="e,91.135,234.58 52,201.89 61.001,209.41 72.248,218.8 82.317,227.22"];
+}

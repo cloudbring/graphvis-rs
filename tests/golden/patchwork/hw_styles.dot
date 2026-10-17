@@ -1,0 +1,41 @@
+graph areas {
+	graph [bb="0,0,162.79,162.79",
+		layout=patchwork
+	];
+	node [fillcolor=lightblue,
+		label="\N",
+		shape=box,
+		style=filled
+	];
+	a	[area=1,
+		height=0.36339,
+		pos="143.68,26.165",
+		width=0.53083];
+	b	[area=2,
+		height=0.43607,
+		pos="130.94,54.945",
+		width=0.88472];
+	c	[area=3,
+		height=0.98117,
+		pos="77.855,35.322",
+		width=0.58981];
+	d	[area=4,
+		height=0.98117,
+		pos="28.311,35.322",
+		width=0.78642];
+	e	[area=5,
+		height=1.2798,
+		pos="135.66,116.72",
+		width=0.75365];
+	f	[area=0.5,
+		height=0.1817,
+		pos="143.68,6.5413",
+		width=0.53083];
+	g	[area=10,
+		height=1.2798,
+		pos="54.263,116.72",
+		width=1.5073];
+	h	[height=0.54509,
+		pos="111.83,19.623",
+		width=0.35389];
+}

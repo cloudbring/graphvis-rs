@@ -1,0 +1,28 @@
+digraph {
+	graph [bb="0,0,135.43,89.6",
+		fontname="Comic Sans MS",
+		label="Comic Sans MS",
+		layout=osage,
+		lheight=0.23,
+		lp="67.716,12.4",
+		lwidth=1.26
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="0,24.8,96.415,89.6",
+			fontname="Courier New",
+			label="Courier New",
+			lheight=0.23,
+			lp="48.208,77.2",
+			lwidth=1.28
+		];
+		Arial	[fontname=Arial,
+			height=0.5,
+			pos="48.208,44.8",
+			width=0.8432];
+		Arial -> Arial	[fontname=Impact,
+			label=Impact,
+			lp="116,44.8",
+			pos="e,76.518,38.076 76.518,51.524 87.465,51.822 96.563,49.581 96.563,44.8 96.563,41.812 93.009,39.816 87.671,38.812"];
+	}
+}

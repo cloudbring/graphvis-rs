@@ -1,0 +1,38 @@
+digraph {
+	graph [bb="0,0,80.921,88.046",
+		label="Graph Title",
+		layout=patchwork,
+		lheight=0.23,
+		lp="40.46,12.4",
+		lwidth=0.90
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_t {
+		graph [bb="8.8377,24.8,40.46,88.046",
+			label="Cluster Top",
+			labelloc=t
+		];
+		a	[height=0.43921,
+			pos="24.649,72.235",
+			width=0.43921];
+		b	[height=0.43921,
+			pos="24.649,40.612",
+			width=0.43921];
+		a -> b;
+	}
+	subgraph cluster_b {
+		graph [bb="40.46,24.8,72.083,88.046",
+			label="Cluster Bottom",
+			labelloc=b
+		];
+		c	[height=0.43921,
+			pos="56.272,72.235",
+			width=0.43921];
+		d	[height=0.43921,
+			pos="56.272,40.612",
+			width=0.43921];
+		c -> d;
+	}
+}

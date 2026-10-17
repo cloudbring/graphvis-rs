@@ -1,0 +1,8 @@
+graph empty {
+	graph [bb="0,0,0,0",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+}

@@ -1,0 +1,19 @@
+digraph G {
+	graph [bb="0,0,135,107",
+		layout=fdp
+	];
+	node [label="\N"];
+	subgraph cluster_yellow {
+		graph [bb="-7.9936e-15,-7.9936e-15,135,107",
+			color=yellow
+		];
+		a	[color=red,
+			height=0.5,
+			pos="35,26",
+			width=0.75];
+		b	[color=green,
+			height=0.5,
+			pos="100,81",
+			width=0.75];
+	}
+}

@@ -1,0 +1,10 @@
+graph disc {
+layout=fdp;
+
+K=2;
+a -- b -- c -- a;
+d -- e -- f -- d;
+g -- h;
+i; j;
+k -- l -- m -- n -- k;
+}

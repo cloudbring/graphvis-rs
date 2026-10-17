@@ -1,0 +1,115 @@
+digraph G {
+	graph [bb="0,0,134.16,134.16",
+		bgcolor=blue,
+		layout=patchwork
+	];
+	node [fillcolor="white:black",
+		label="\N",
+		shape=box,
+		style=filled
+	];
+	subgraph cluster_1 {
+		graph [bb="0.00018634,0.00018634,67.082,134.16",
+			fontcolor=white,
+			label="Linear Angle Variations (white to black gradient)"
+		];
+		n9	[gradientangle=360,
+			height=0.62113,
+			label="n8:360",
+			pos="55.902,22.361",
+			width=0.31056];
+		n8	[gradientangle=315,
+			height=0.41409,
+			label="n8:315",
+			pos="50.312,119.26",
+			width=0.46585];
+		n7	[gradientangle=270,
+			height=0.41409,
+			label="n7:270",
+			pos="16.771,89.443",
+			width=0.46585];
+		n6	[gradientangle=225,
+			height=0.41409,
+			label="n6:225",
+			pos="50.312,89.443",
+			width=0.46585];
+		n5	[gradientangle=180,
+			height=0.41409,
+			label="n5:180",
+			pos="16.771,59.629",
+			width=0.46585];
+		n4	[gradientangle=135,
+			height=0.41409,
+			label="n4:135",
+			pos="50.312,59.629",
+			width=0.46585];
+		n3	[gradientangle=90,
+			height=0.62113,
+			label="n3:90 ",
+			pos="11.181,22.361",
+			width=0.31056];
+		n2	[gradientangle=45,
+			height=0.62113,
+			label="n2:45 ",
+			pos="33.541,22.361",
+			width=0.31056];
+		n1	[gradientangle=0,
+			height=0.41409,
+			label="n1:0  ",
+			pos="16.771,119.26",
+			width=0.46585];
+	}
+	subgraph cluster_2 {
+		graph [bb="67.082,0.00018634,134.16,134.16",
+			fontcolor=white,
+			label="Radial Angle Variations (white to black gradient)"
+		];
+		node [style=radial];
+		n18	[gradientangle=360,
+			height=0.62113,
+			label="n17:360",
+			pos="122.98,22.361",
+			width=0.31056];
+		n17	[gradientangle=315,
+			height=0.41409,
+			label="n17:315",
+			pos="117.39,119.26",
+			width=0.46585];
+		n16	[gradientangle=270,
+			height=0.41409,
+			label="n16:270",
+			pos="83.853,89.443",
+			width=0.46585];
+		n15	[gradientangle=225,
+			height=0.41409,
+			label="n15:225",
+			pos="117.39,89.443",
+			width=0.46585];
+		n14	[gradientangle=180,
+			height=0.41409,
+			label="n14:180",
+			pos="83.853,59.629",
+			width=0.46585];
+		n13	[gradientangle=135,
+			height=0.41409,
+			label="n13:135",
+			pos="117.39,59.629",
+			width=0.46585];
+		n12	[gradientangle=90,
+			height=0.62113,
+			label="n12:90 ",
+			pos="78.263,22.361",
+			width=0.31056];
+		n11	[gradientangle=45,
+			height=0.62113,
+			label="n11:45 ",
+			pos="100.62,22.361",
+			width=0.31056];
+		n10	[gradientangle=0,
+			height=0.41409,
+			label="n10:0  ",
+			pos="83.853,119.26",
+			width=0.46585];
+	}
+	n5 -> n14;
+}

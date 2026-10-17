@@ -1,0 +1,12 @@
+digraph {
+layout=osage;
+
+  label="Graph Label"
+  tooltip="Graph Tooltip"
+  subgraph cluster_a {
+    label="Cluster Label"
+    tooltip="Cluster Tooltip"
+    Node1 [tooltip="Node1 Tooltip"]
+    Node1 -> Node2 [label="Edge" tooltip="Edge Tooltip"]
+  }
+}

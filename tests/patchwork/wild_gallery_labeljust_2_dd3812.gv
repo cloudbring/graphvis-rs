@@ -1,0 +1,19 @@
+digraph {
+layout=patchwork;
+
+  subgraph cluster_l {
+    label="l"
+    labeljust=l
+    a
+  }
+  subgraph cluster_c {
+    label="c"
+    labeljust=c
+    b
+  }
+  subgraph cluster_r {
+    label="r"
+    labeljust=r
+    c
+  }
+}

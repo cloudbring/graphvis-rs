@@ -1,0 +1,168 @@
+digraph G {
+	graph [bb="0,0,640.12,681.78",
+		bgcolor=blue,
+		layout=fdp
+	];
+	node [label="\N",
+		style=filled
+	];
+	subgraph cluster_1 {
+		graph [bb="0,232.65,214,447.28",
+			fontcolor=white,
+			label="X11 Colors",
+			lheight=0.23,
+			lp="107,434.88",
+			lwidth=0.90
+		];
+		n5	[fillcolor="antiquewhite:aquamarine",
+			height=0.5,
+			pos="89,396.48",
+			shape=box,
+			width=0.75];
+		n4	[fillcolor="bisque4:blue2",
+			height=0.5,
+			pos="179,300.48",
+			shape=ellipse,
+			width=0.75];
+		n3	[fillcolor="cadetblue1:chocolate1",
+			height=0.57482,
+			pos="106.36,261.34",
+			shape=circle,
+			width=0.57482];
+		n2	[fillcolor="crimson:cyan4",
+			height=0.5,
+			pos="169,396.48",
+			shape=diamond,
+			width=0.81292];
+		n1	[fillcolor="deepskyblue2:firebrick",
+			height=0.68889,
+			pos="91,331.48",
+			shape=triangle,
+			width=1.1496];
+		n0	[fillcolor="gray24:gray88",
+			height=0.5,
+			pos="35,264.48",
+			shape=pentagon,
+			width=0.75];
+	}
+	subgraph cluster_2 {
+		graph [bb="426.12,234.96,640.12,449.47",
+			fontcolor=white,
+			label="SVG Colors",
+			lheight=0.23,
+			lp="533.12,437.07",
+			lwidth=0.96
+		];
+		n11	[fillcolor="bisque:brown",
+			height=0.5,
+			pos="515.12,398.67",
+			shape=box,
+			width=0.75];
+		n10	[fillcolor="green:darkorchid",
+			height=0.5,
+			pos="605.12,302.67",
+			shape=ellipse,
+			width=0.75];
+		n9	[fillcolor="deepskyblue:gold",
+			height=0.57482,
+			pos="532.11,263.66",
+			shape=circle,
+			width=0.57482];
+		n8	[fillcolor="lightseagreen:orangered",
+			height=0.5,
+			pos="595.12,398.67",
+			shape=diamond,
+			width=0.81292];
+		n7	[fillcolor="turquoise:salmon",
+			height=0.68889,
+			pos="517.12,333.67",
+			shape=triangle,
+			width=1.1496];
+		n6	[fillcolor="snow:black",
+			height=0.5,
+			pos="461.12,266.67",
+			shape=pentagon,
+			width=0.75];
+	}
+	subgraph cluster_3 {
+		graph [bb="219.42,-1.5987e-14,459.97,223.73",
+			fontcolor=white,
+			label="Brewer - accent",
+			lheight=0.23,
+			lp="339.7,211.33",
+			lwidth=1.23
+		];
+		n17	[fillcolor="/accent3/1:/accent3/3",
+			height=0.5,
+			pos="254.42,26",
+			shape=box,
+			width=0.75];
+		n16	[fillcolor="/accent4/1:/accent4/4",
+			height=0.5,
+			pos="332.42,26",
+			shape=ellipse,
+			width=0.75];
+		n15	[fillcolor="/accent5/1:/accent5/5",
+			height=0.70894,
+			pos="312.86,165.4",
+			shape=circle,
+			width=0.70894];
+		n14	[fillcolor="/accent6/1:/accent6/6",
+			height=0.5,
+			pos="395.42,158",
+			shape=diamond,
+			width=1.0026];
+		n13	[fillcolor="/accent7/1:/accent7/7",
+			height=0.68889,
+			pos="314.42,93",
+			shape=triangle,
+			width=1.4179];
+		n12	[fillcolor="/accent8/1:/accent8/8",
+			height=0.5,
+			pos="420.42,44",
+			shape=pentagon,
+			width=0.8763];
+	}
+	subgraph cluster_4 {
+		graph [bb="215.06,458.05,455.6,681.78",
+			fontcolor=white,
+			label="Brewer - blues",
+			lheight=0.23,
+			lp="335.33,669.38",
+			lwidth=1.14
+		];
+		n23	[fillcolor="/blues3/1:/blues3/2",
+			height=0.5,
+			pos="250.06,484.05",
+			shape=box,
+			width=0.75];
+		n22	[fillcolor="/blues4/1:/blues4/3",
+			height=0.5,
+			pos="328.06,484.05",
+			shape=ellipse,
+			width=0.75];
+		n21	[fillcolor="/blues5/1:/blues5/4",
+			height=0.70894,
+			pos="308.11,623.45",
+			shape=circle,
+			width=0.70894];
+		n20	[fillcolor="/blues6/1:/blues6/5",
+			height=0.5,
+			pos="391.06,616.05",
+			shape=diamond,
+			width=1.0026];
+		n19	[fillcolor="/blues7/1:/blues7/6",
+			height=0.68889,
+			pos="310.06,551.05",
+			shape=triangle,
+			width=1.4179];
+		n18	[fillcolor="/blues8/1:/blues8/7",
+			height=0.5,
+			pos="416.06,502.05",
+			shape=pentagon,
+			width=0.8763];
+	}
+	n3 -> n9	[pos="e,511.37,263.55 127.47,261.46 196.65,261.83 416.78,263.03 499.91,263.48"];
+	n9 -> n15	[pos="e,336.3,175.91 513.03,255.11 475.9,238.47 393.46,201.52 346.79,180.61"];
+	n15 -> n21	[pos="e,308.38,597.52 312.59,191.34 311.79,268.41 309.43,496.23 308.5,586.25"];
+}

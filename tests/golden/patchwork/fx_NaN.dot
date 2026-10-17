@@ -1,0 +1,360 @@
+digraph xyz {
+	graph [bb="0,0,275.68,275.68",
+		layout=patchwork,
+		orientation=landscape,
+		ratio=compress,
+		size="16,10"
+	];
+	node [label="\N",
+		shape=box
+	];
+	AbstractMemory	[height=0.39574,
+		pos="258.13,14.247",
+		width=0.48744];
+	Memory	[height=0.45342,
+		pos="45.947,259.36",
+		width=0.42543];
+	AbstractMemory -> Memory;
+	Displayed	[height=0.45769,
+		pos="108.78,226.56",
+		width=0.42147];
+	Memory -> Displayed;
+	InterpTypes	[height=0.45769,
+		pos="139.13,226.56",
+		width=0.42147];
+	Memory -> InterpTypes;
+	AliasedMemory	[height=0.45342,
+		pos="76.578,259.36",
+		width=0.42543];
+	AliasedMemory -> Memory;
+	AliasedMemory -> AliasedMemory;
+	Architecture	[height=0.45342,
+		pos="107.21,259.36",
+		width=0.42543];
+	ROOT	[height=0.45342,
+		pos="137.84,259.36",
+		width=0.42543];
+	Architecture -> ROOT;
+	Assembly	[height=0.45342,
+		pos="168.47,259.36",
+		width=0.42543];
+	Assembly -> ROOT;
+	AtomProperties	[height=0.45342,
+		pos="199.1,259.36",
+		width=0.42543];
+	NRAtom	[height=0.45342,
+		pos="229.73,259.36",
+		width=0.42543];
+	AtomProperties -> NRAtom;
+	NRAtom -> ROOT;
+	NRAtom -> AtomProperties;
+	AtomWr	[height=0.45342,
+		pos="260.37,259.36",
+		width=0.42543];
+	Wr	[height=0.42193,
+		pos="16.459,227.84",
+		width=0.45718];
+	AtomWr -> Wr;
+	WrClass	[height=0.45342,
+		pos="15.316,259.36",
+		width=0.42543];
+	Wr -> WrClass;
+	Break	[height=0.42193,
+		pos="16.459,197.47",
+		width=0.45718];
+	Break -> Break;
+	Target	[height=0.42193,
+		pos="16.459,167.09",
+		width=0.45718];
+	Break -> Target;
+	Target -> ROOT;
+	Target -> Target;
+	Event	[height=0.42193,
+		pos="16.459,106.33",
+		width=0.45718];
+	Target -> Event;
+	Thread	[height=0.42193,
+		pos="16.459,45.569",
+		width=0.45718];
+	Target -> Thread;
+	Target -> Displayed;
+	FrameClass	[height=0.41683,
+		pos="49.577,45.017",
+		width=0.46279];
+	Target -> FrameClass;
+	TThread	[height=0.39574,
+		pos="152.85,42.74",
+		width=0.48744];
+	Target -> TThread;
+	TargetF	[height=0.39574,
+		pos="152.85,14.247",
+		width=0.48744];
+	Target -> TargetF;
+	Breakpoint	[height=0.42193,
+		pos="16.459,136.71",
+		width=0.45718];
+	Breakpoint -> ROOT;
+	Breakpoint -> Breakpoint;
+	Breakpoint -> Event;
+	Event -> ROOT;
+	Event -> Target;
+	Event -> Event;
+	CDB	[height=0.42193,
+		pos="16.459,75.948",
+		width=0.45718];
+	CDB -> Target;
+	CDB -> Thread;
+	Thread -> ROOT;
+	Thread -> Thread;
+	CommonFrame	[height=0.42193,
+		pos="16.459,15.19",
+		width=0.45718];
+	CommonFrame -> Target;
+	ControlOps	[height=0.45769,
+		pos="48.09,226.56",
+		width=0.42147];
+	InterpF	[height=0.45769,
+		pos="78.435,226.56",
+		width=0.42147];
+	ControlOps -> InterpF;
+	InterpF -> ROOT;
+	InterpF -> InterpF;
+	Interp	[height=0.46419,
+		pos="81.198,193.37",
+		width=0.41556];
+	InterpF -> Interp;
+	Displayed -> Displayed;
+	Displayed -> InterpTypes;
+	InterpTypes -> ROOT;
+	InterpTypes -> InterpTypes;
+	ETimer	[height=0.45769,
+		pos="169.47,226.56",
+		width=0.42147];
+	RTHeapRep	[height=0.45769,
+		pos="199.82,226.56",
+		width=0.42147];
+	ETimer -> RTHeapRep;
+	RTHeapRep -> ROOT;
+	EventHandler	[height=0.45769,
+		pos="230.16,226.56",
+		width=0.42147];
+	EventHandler -> ROOT;
+	StandardEvents	[height=0.45769,
+		pos="260.51,226.56",
+		width=0.42147];
+	EventHandler -> StandardEvents;
+	StandardEvents -> Target;
+	StandardEvents -> StandardEvents;
+	Expression	[height=0.41683,
+		pos="49.577,195.08",
+		width=0.46279];
+	Expression -> ROOT;
+	ExpressionServer	[height=0.41683,
+		pos="49.577,165.06",
+		width=0.46279];
+	ExpressionServer -> Expression;
+	FollowBreakpoint	[height=0.41683,
+		pos="49.577,135.05",
+		width=0.46279];
+	FollowBreakpoint -> Breakpoint;
+	Formatter	[height=0.41683,
+		pos="49.577,105.04",
+		width=0.46279];
+	Formatter -> ROOT;
+	Formatter -> Thread;
+	Frame	[height=0.41683,
+		pos="49.577,75.029",
+		width=0.46279];
+	Frame -> Memory;
+	Frame -> Target;
+	Frame -> Frame;
+	FrameClass -> Frame;
+	IntIntTbl	[height=0.41683,
+		pos="49.577,15.006",
+		width=0.46279];
+	IntIntTbl -> ROOT;
+	IntIntTbl -> IntIntTbl;
+	Interp -> ROOT;
+	Interp -> InterpF;
+	InterpScan	[height=0.46419,
+		pos="111.12,193.37",
+		width=0.41556];
+	TokenStream	[height=0.46419,
+		pos="141.04,193.37",
+		width=0.41556];
+	InterpScan -> TokenStream;
+	TokenStream -> ROOT;
+	TokenStream -> TokenStream;
+	List	[height=0.46419,
+		pos="170.96,193.37",
+		width=0.41556];
+	List -> Thread;
+	LoadState	[height=0.46419,
+		pos="200.88,193.37",
+		width=0.41556];
+	LoadState -> ROOT;
+	LoadState -> LoadState;
+	LoadStateRep	[height=0.46419,
+		pos="230.8,193.37",
+		width=0.41556];
+	LoadState -> LoadStateRep;
+	LoadStateRep -> LoadState;
+	LocationRep	[height=0.46419,
+		pos="260.72,193.37",
+		width=0.41556];
+	LocationRep -> Memory;
+	MC68Frame	[height=0.40893,
+		pos="83.22,161.94",
+		width=0.47172];
+	MC68Frame -> CommonFrame;
+	MC68GCommonFrame	[height=0.40893,
+		pos="83.22,132.49",
+		width=0.47172];
+	MC68GCommonFrame -> EventHandler;
+	MUTEX	[height=0.40893,
+		pos="83.22,103.05",
+		width=0.47172];
+	MUTEX -> ROOT;
+	MipsFrame	[height=0.40893,
+		pos="83.22,73.608",
+		width=0.47172];
+	MipsFrame -> CommonFrame;
+	MipsFrame -> InterpTypes;
+	MipsGCommonFrame	[height=0.40893,
+		pos="83.22,44.165",
+		width=0.47172];
+	MipsGCommonFrame -> EventHandler;
+	NopBreakpoint	[height=0.40893,
+		pos="83.22,14.722",
+		width=0.47172];
+	NopBreakpoint -> Breakpoint;
+	PSFormatter	[height=0.47489,
+		pos="114.82,159.56",
+		width=0.4062];
+	PSFormatter -> InterpTypes;
+	PSInterp	[height=0.47489,
+		pos="144.07,159.56",
+		width=0.4062];
+	PSInterp -> InterpTypes;
+	PSLoadState	[height=0.47489,
+		pos="173.32,159.56",
+		width=0.4062];
+	PSLoadState -> InterpTypes;
+	PSMemory	[height=0.47489,
+		pos="202.56,159.56",
+		width=0.4062];
+	PSMemory -> InterpTypes;
+	ProtectedWire	[height=0.47489,
+		pos="231.81,159.56",
+		width=0.4062];
+	ProtectedWire -> ProtectedWire;
+	Wire	[height=0.47489,
+		pos="261.06,159.56",
+		width=0.4062];
+	ProtectedWire -> Wire;
+	Wire -> ROOT;
+	Wire -> Wire;
+	TrapMemory	[height=0.39574,
+		pos="187.94,42.74",
+		width=0.48744];
+	Wire -> TrapMemory;
+	RTHeap	[height=0.39574,
+		pos="117.75,128.22",
+		width=0.48744];
+	RTHeap -> RTHeapRep;
+	Rd	[height=0.39574,
+		pos="117.75,99.727",
+		width=0.48744];
+	RdClass	[height=0.39574,
+		pos="117.75,71.233",
+		width=0.48744];
+	Rd -> RdClass;
+	RdClass -> MUTEX;
+	RegisterMemory	[height=0.39574,
+		pos="117.75,42.74",
+		width=0.48744];
+	RegisterMemory -> Memory;
+	Scope	[height=0.39574,
+		pos="117.75,14.247",
+		width=0.48744];
+	Scope -> ROOT;
+	Scope -> Target;
+	Scope -> Scope;
+	SourceLoc	[height=0.39574,
+		pos="152.85,128.22",
+		width=0.48744];
+	SourceLoc -> Target;
+	SourceMap	[height=0.39574,
+		pos="187.94,128.22",
+		width=0.48744];
+	SourceMap -> ROOT;
+	SparcFrame	[height=0.39574,
+		pos="223.04,128.22",
+		width=0.48744];
+	SparcFrame -> CommonFrame;
+	SparcGCommonFrame	[height=0.39574,
+		pos="258.13,128.22",
+		width=0.48744];
+	SparcGCommonFrame -> EventHandler;
+	StreamWire	[height=0.39574,
+		pos="152.85,99.727",
+		width=0.48744];
+	StreamWire -> Wire;
+	Symbol	[height=0.39574,
+		pos="152.85,71.233",
+		width=0.48744];
+	Symbol -> Displayed;
+	Symbol -> Symbol;
+	TThread -> ROOT;
+	TThread -> Target;
+	TargetF -> Target;
+	TargetState	[height=0.39574,
+		pos="187.94,99.727",
+		width=0.48744];
+	TargetState -> Assembly;
+	TextRd	[height=0.39574,
+		pos="223.04,99.727",
+		width=0.48744];
+	TextRd -> Rd;
+	TextWr	[height=0.39574,
+		pos="258.13,99.727",
+		width=0.48744];
+	TextWr -> Wr;
+	Trap	[height=0.39574,
+		pos="187.94,71.233",
+		width=0.48744];
+	Trap -> ROOT;
+	TrapMemory -> Memory;
+	UFileRd	[height=0.39574,
+		pos="187.94,14.247",
+		width=0.48744];
+	UFileRd -> Rd;
+	UFileRd -> UFileRd;
+	UFileWr	[height=0.39574,
+		pos="223.04,71.233",
+		width=0.48744];
+	UFileWr -> Wr;
+	UFileWr -> UFileWr;
+	UnixHandler	[height=0.39574,
+		pos="258.13,71.233",
+		width=0.48744];
+	UnixHandler -> Event;
+	UnixHandler -> UnixHandler;
+	UserBreak	[height=0.39574,
+		pos="223.04,42.74",
+		width=0.48744];
+	UserBreak -> Break;
+	UserBreak -> Breakpoint;
+	UserBreak -> Event;
+	UserBreak -> Trap;
+	UserBreak -> UserBreak;
+	VaxFrame	[height=0.39574,
+		pos="223.04,14.247",
+		width=0.48744];
+	VaxFrame -> CommonFrame;
+	VaxGCommonFrame	[height=0.39574,
+		pos="258.13,42.74",
+		width=0.48744];
+	VaxGCommonFrame -> EventHandler;
+	WrClass -> MUTEX;
+}
