@@ -1,104 +1,220 @@
-//! Edge port resolution: `chkPort`, `poly_port`, `record_port` and
-//! `compassPort` from `lib/common/shapes.c` and `lib/common/utils.c`.
+//! Edge port resolution: `chkPort`, `poly_port`, `record_port`,
+//! `compassPort`, `compassPoint`, `closestSide` and `resolvePort(s)` from
+//! `lib/common/shapes.c` and `lib/common/utils.c`, shared by all engines
+//! through [`PortGraph`].
 
-use super::shapes::{InsideCtx, InsideFn};
-use super::splines::bezier_clip;
+use super::shapes::InsideFn;
+use super::splines::{SplineGraph, bezier_clip};
 use super::types::{LGraph, PortInfo};
-use gv_core::{BoundingBox, Point};
+use gv_core::{BoundingBox, NodeData, Point};
+use std::f64::consts::PI;
 
 pub const BOTTOM: u8 = 1 << 0;
 pub const RIGHT: u8 = 1 << 1;
 pub const TOP: u8 = 1 << 2;
 pub const LEFT: u8 = 1 << 3;
 
-/// `compassPoint`: where the ray from the centre towards `(x, y)` leaves the shape.
-fn compass_point(g: &LGraph<'_>, n: usize, y: f64, x: f64) -> Point {
-    let shape = &g.nodes[n].shape;
-    let p = Point::new(x, y);
+const MC_SCALE: i32 = 256;
+const RANKDIR_LR: i32 = 1;
+const RANKDIR_BT: i32 = 2;
+const RANKDIR_RL: i32 = 3;
+
+/// What port resolution needs beyond [`SplineGraph`]: the node's input
+/// record, from which the shape geometry (record fields, HTML cells) is
+/// derived.
+pub trait PortGraph: SplineGraph {
+    /// Input data of real node `n`.
+    fn port_node(&self, n: usize) -> &NodeData;
+    /// Graph-level parameters of node sizing.
+    fn port_env(&self) -> gv_geom::NodeSizeEnv<'_>;
+}
+
+/// `cwrotatepf(p, cwrot)` (geom.c).
+pub fn cwrotatepf(p: Point, cwrot: i32) -> Point {
+    match cwrot {
+        90 => Point::new(p.y, -p.x),
+        180 => Point::new(p.x, -p.y),
+        270 => Point::new(p.y, p.x),
+        _ => p,
+    }
+}
+
+/// `ccwrotatepf(p, ccwrot)` (geom.c).
+pub fn ccwrotatepf(p: Point, ccwrot: i32) -> Point {
+    match ccwrot {
+        90 => Point::new(-p.y, p.x),
+        180 => Point::new(p.x, -p.y),
+        270 => Point::new(p.y, p.x),
+        _ => p,
+    }
+}
+
+/// `invflip_side(side, rankdir)`.
+fn invflip_side(side: u8, rankdir: i32) -> u8 {
+    match rankdir {
+        RANKDIR_BT => match side {
+            TOP => BOTTOM,
+            BOTTOM => TOP,
+            s => s,
+        },
+        RANKDIR_LR => match side {
+            TOP => RIGHT,
+            BOTTOM => LEFT,
+            LEFT => TOP,
+            RIGHT => BOTTOM,
+            s => s,
+        },
+        RANKDIR_RL => match side {
+            TOP => RIGHT,
+            BOTTOM => LEFT,
+            LEFT => BOTTOM,
+            RIGHT => TOP,
+            s => s,
+        },
+        _ => side,
+    }
+}
+
+/// `invflip_angle(angle, rankdir)`.
+fn invflip_angle(angle: f64, rankdir: i32) -> f64 {
+    match rankdir {
+        RANKDIR_BT => -angle,
+        RANKDIR_LR => angle - PI * 0.5,
+        RANKDIR_RL => {
+            if angle == PI {
+                -0.5 * PI
+            } else if angle == PI * 0.75 {
+                -0.25 * PI
+            } else if angle == PI * 0.5 {
+                0.0
+            } else if angle == 0.0 {
+                PI * 0.5
+            } else if angle == PI * -0.25 {
+                PI * 0.75
+            } else if angle == PI * -0.5 {
+                PI
+            } else {
+                angle
+            }
+        }
+        _ => angle,
+    }
+}
+
+/// `compassPoint(ictxt, y, x)`: where the ray from the centre towards
+/// `(x, y)` leaves the node shape.
+fn compass_point<S: PortGraph + ?Sized>(g: &S, n: usize, y: f64, x: f64) -> Point {
+    let rd = g.rankdir();
+    let mut p = Point::new(x, y);
+    if rd != 0 {
+        p = cwrotatepf(p, 90 * rd);
+    }
     let mut curve = [Point::new(0.0, 0.0), Point::new(0.0, 0.0), p, p];
-    let mut ctx = InsideCtx::default();
-    bezier_clip(&mut |q| shape.inside(&mut ctx, q), &mut curve, true);
+    let mut ctx = super::splines::inside_ctx(g, n, None);
+    if let Some(shape) = g.shape(n) {
+        bezier_clip(&mut |q| shape.inside(&mut ctx, q), &mut curve, true);
+    }
+    if rd != 0 {
+        curve[0] = ccwrotatepf(curve[0], 90 * rd);
+    }
     curve[0]
 }
 
-/// `compassPort`; returns the port and whether the compass was unrecognised.
-fn compass_port(
-    g: &LGraph<'_>,
+/// `compassPort(n, bp, pp, compass, sides, ictxt)`: fills `pp`; returns
+/// whether the compass point was unrecognised.
+pub fn compass_port<S: PortGraph + ?Sized>(
+    g: &S,
     n: usize,
     bp: Option<BoundingBox>,
+    pp: &mut PortInfo,
     compass: &str,
     sides: u8,
-    use_ictxt: bool,
-) -> (PortInfo, bool) {
-    let nd = &g.nodes[n];
-    let (b, mut p, mut defined) = match bp {
-        Some(b) => (
-            b,
-            Point::new((b.ll.x + b.ur.x) / 2.0, (b.ll.y + b.ur.y) / 2.0),
-            true,
-        ),
-        None => (
-            BoundingBox::new(-nd.lw, -nd.ht / 2.0, nd.lw, nd.ht / 2.0),
-            Point::new(0.0, 0.0),
-            false,
-        ),
-    };
+    ictxt: bool,
+) -> bool {
+    let mut b;
+    let mut p;
+    let mut rv = false;
+    let mut theta = 0.0;
+    let mut constrain = false;
+    let mut dyna = false;
+    let mut side = 0u8;
+    let mut clip = true;
+    let mut defined;
+    if let Some(bb) = bp {
+        b = bb;
+        p = Point::new((b.ll.x + b.ur.x) / 2.0, (b.ll.y + b.ur.y) / 2.0);
+        defined = true;
+    } else {
+        p = Point::new(0.0, 0.0);
+        b = BoundingBox::default();
+        let (lw, ht) = (g.lw(n), g.ht(n));
+        if g.flip() {
+            b.ur.x = ht / 2.0;
+            b.ll.x = -b.ur.x;
+            b.ur.y = lw;
+            b.ll.y = -b.ur.y;
+        } else {
+            b.ur.y = ht / 2.0;
+            b.ll.y = -b.ur.y;
+            b.ur.x = lw;
+            b.ll.x = -b.ur.x;
+        }
+        defined = false;
+    }
     let maxv = b.ur.x.max(b.ur.y) * 4.0;
     let ctr = p;
-    let mut rv = false;
-    let mut constrain = false;
-    let mut clip = true;
-    let mut side = 0u8;
-    let mut dyna = false;
-    let cp = |y: f64, x: f64| compass_point(g, n, y, x);
-    let c: Vec<char> = compass.chars().collect();
-    if !c.is_empty() {
-        let next = c.get(1).copied();
-        match c[0] {
-            'e' => {
-                if next.is_some() {
+    let cb = compass.as_bytes();
+    if !cb.is_empty() {
+        let rest = &cb[1..];
+        match cb[0] {
+            b'e' => {
+                if !rest.is_empty() {
                     rv = true;
                 } else {
-                    if use_ictxt {
-                        p = cp(ctr.y, maxv)
+                    if ictxt {
+                        p = compass_point(g, n, ctr.y, maxv);
                     } else {
-                        p.x = b.ur.x
+                        p.x = b.ur.x;
                     }
+                    theta = 0.0;
                     constrain = true;
                     defined = true;
                     clip = false;
                     side = sides & RIGHT;
                 }
             }
-            's' => {
+            b's' => {
                 p.y = b.ll.y;
                 constrain = true;
                 clip = false;
-                match next {
+                match rest.first() {
                     None => {
+                        theta = -PI * 0.5;
                         defined = true;
-                        if use_ictxt {
-                            p = cp(-maxv, ctr.x)
+                        if ictxt {
+                            p = compass_point(g, n, -maxv, ctr.x);
                         } else {
-                            p.x = ctr.x
+                            p.x = ctr.x;
                         }
                         side = sides & BOTTOM;
                     }
-                    Some('e') => {
+                    Some(b'e') => {
+                        theta = -PI * 0.25;
                         defined = true;
-                        if use_ictxt {
-                            p = cp(-maxv, maxv)
+                        if ictxt {
+                            p = compass_point(g, n, -maxv, maxv);
                         } else {
-                            p.x = b.ur.x
+                            p.x = b.ur.x;
                         }
                         side = sides & (BOTTOM | RIGHT);
                     }
-                    Some('w') => {
+                    Some(b'w') => {
+                        theta = -PI * 0.75;
                         defined = true;
-                        if use_ictxt {
-                            p = cp(-maxv, -maxv)
+                        if ictxt {
+                            p = compass_point(g, n, -maxv, -maxv);
                         } else {
-                            p.x = b.ll.x
+                            p.x = b.ll.x;
                         }
                         side = sides & (BOTTOM | LEFT);
                     }
@@ -110,50 +226,54 @@ fn compass_port(
                     }
                 }
             }
-            'w' => {
-                if next.is_some() {
+            b'w' => {
+                if !rest.is_empty() {
                     rv = true;
                 } else {
-                    if use_ictxt {
-                        p = cp(ctr.y, -maxv)
+                    if ictxt {
+                        p = compass_point(g, n, ctr.y, -maxv);
                     } else {
-                        p.x = b.ll.x
+                        p.x = b.ll.x;
                     }
+                    theta = PI;
                     constrain = true;
                     defined = true;
                     clip = false;
                     side = sides & LEFT;
                 }
             }
-            'n' => {
+            b'n' => {
                 p.y = b.ur.y;
                 constrain = true;
                 clip = false;
-                match next {
+                match rest.first() {
                     None => {
                         defined = true;
-                        if use_ictxt {
-                            p = cp(maxv, ctr.x)
+                        theta = PI * 0.5;
+                        if ictxt {
+                            p = compass_point(g, n, maxv, ctr.x);
                         } else {
-                            p.x = ctr.x
+                            p.x = ctr.x;
                         }
                         side = sides & TOP;
                     }
-                    Some('e') => {
+                    Some(b'e') => {
                         defined = true;
-                        if use_ictxt {
-                            p = cp(maxv, maxv)
+                        theta = PI * 0.25;
+                        if ictxt {
+                            p = compass_point(g, n, maxv, maxv);
                         } else {
-                            p.x = b.ur.x
+                            p.x = b.ur.x;
                         }
                         side = sides & (TOP | RIGHT);
                     }
-                    Some('w') => {
+                    Some(b'w') => {
                         defined = true;
-                        if use_ictxt {
-                            p = cp(maxv, -maxv)
+                        theta = PI * 0.75;
+                        if ictxt {
+                            p = compass_point(g, n, maxv, -maxv);
                         } else {
-                            p.x = b.ll.x
+                            p.x = b.ll.x;
                         }
                         side = sides & (TOP | LEFT);
                     }
@@ -165,26 +285,47 @@ fn compass_port(
                     }
                 }
             }
-            '_' => {
+            b'_' => {
                 dyna = true;
                 side = sides;
             }
-            'c' => {}
+            b'c' => {}
             _ => rv = true,
         }
     }
-    (
-        PortInfo {
-            p,
-            defined,
-            constrained: constrain,
-            clip,
-            bp,
-            side,
-            dyna,
-        },
-        rv,
-    )
+    let rankdir = g.rankdir();
+    p = cwrotatepf(p, 90 * rankdir);
+    pp.side = if dyna {
+        side
+    } else {
+        invflip_side(side, rankdir)
+    };
+    pp.bp = bp;
+    pp.p = p;
+    pp.theta = invflip_angle(theta, rankdir);
+    if p.x == 0.0 && p.y == 0.0 {
+        pp.order = (MC_SCALE / 2) as u8;
+    } else {
+        let mut angle = p.y.atan2(p.x) + 1.5 * PI;
+        if angle >= 2.0 * PI {
+            angle -= 2.0 * PI;
+        }
+        pp.order = ((MC_SCALE as f64 * angle) / (2.0 * PI)) as i32 as u8;
+    }
+    pp.constrained = constrain;
+    pp.defined = defined;
+    pp.clip = clip;
+    pp.dyna = dyna;
+    rv
+}
+
+/// `Center` in shapes.c: the port of an edge without a port name.
+pub fn port_center() -> PortInfo {
+    PortInfo {
+        theta: -1.0,
+        clip: true,
+        ..PortInfo::default()
+    }
 }
 
 /// `portToTbl` / `portToCell` (`htmltable.c`): the box and sides of the
@@ -216,118 +357,113 @@ fn port_to_tbl(tbl: &gv_geom::html_label::HtmlTbl, id: &str) -> Option<(Bounding
     None
 }
 
-/// `chkPort(portfn, n, s)` for port string `s` (`name[:compass]`).
-fn resolve_port(g: &LGraph<'_>, n: usize, s: &str) -> PortInfo {
-    if s.is_empty() {
-        return PortInfo {
-            clip: true,
-            ..PortInfo::default()
-        };
+/// `ND_shape(n)->fns->portfn(n, portname, compass)`: `record_port` for
+/// records, `poly_port` otherwise.
+pub fn shape_port<S: PortGraph + ?Sized>(
+    g: &S,
+    n: usize,
+    portname: &str,
+    compass: Option<&str>,
+) -> PortInfo {
+    if portname.is_empty() {
+        return port_center();
     }
-    let (portname, compass) = match s.split_once(':') {
-        Some((a, b)) => (a, Some(b)),
-        None => (s, None),
-    };
-    let src = &g.src.nodes[n];
-    let nd = &g.nodes[n];
-    let env = gv_geom::NodeSizeEnv::from_graph_attrs(&g.src.name, &g.src.graph_attrs);
-    let geom = gv_geom::node_geometry(src, &env);
+    let compass = compass.unwrap_or("_");
     let all = BOTTOM | RIGHT | TOP | LEFT;
-    match nd.shape.inside {
-        InsideFn::Record => {
-            let field = geom
-                .record
-                .as_ref()
-                .and_then(|rec| rec.find_port(portname).map(|f| (f.bbox, rec.bbox)));
-            match field {
-                Some((fb, rb)) => {
-                    // f->sides: the sides of the record box the field lies on.
-                    let eq = |a: f64, b: f64| (a - b).abs() < 1e-6;
-                    let mut sides = 0u8;
-                    if eq(fb.ll.y, rb.ll.y) {
-                        sides |= BOTTOM;
-                    }
-                    if eq(fb.ur.x, rb.ur.x) {
-                        sides |= RIGHT;
-                    }
-                    if eq(fb.ur.y, rb.ur.y) {
-                        sides |= TOP;
-                    }
-                    if eq(fb.ll.x, rb.ll.x) {
-                        sides |= LEFT;
-                    }
-                    compass_port(g, n, Some(fb), compass.unwrap_or("_"), sides, false).0
+    let src = g.port_node(n);
+    let geom = gv_geom::node_geometry(src, &g.port_env());
+    let mut rv = PortInfo::default();
+    let is_record = g.shape(n).is_some_and(|s| s.inside == InsideFn::Record);
+    if is_record && let Some(rec) = geom.record.as_ref() {
+        match rec.find_port(portname) {
+            Some(f) => {
+                // f->sides: the sides of the record box the field lies on.
+                let (fb, rb) = (f.bbox, rec.bbox);
+                let eq = |a: f64, b: f64| (a - b).abs() < 0.5;
+                let mut sides = 0u8;
+                if eq(fb.ll.y, rb.ll.y) {
+                    sides |= BOTTOM;
                 }
-                None => {
-                    let whole = BoundingBox::new(-nd.lw, -nd.ht / 2.0, nd.rw, nd.ht / 2.0);
-                    compass_port(g, n, Some(whole), portname, all, false).0
+                if eq(fb.ur.x, rb.ur.x) {
+                    sides |= RIGHT;
                 }
+                if eq(fb.ur.y, rb.ur.y) {
+                    sides |= TOP;
+                }
+                if eq(fb.ll.x, rb.ll.x) {
+                    sides |= LEFT;
+                }
+                compass_port(g, n, Some(fb), &mut rv, compass, sides, false);
+            }
+            None => {
+                compass_port(g, n, Some(rec.bbox), &mut rv, portname, all, false);
             }
         }
-        _ => {
-            if let Some(gv_geom::html_label::HtmlLabel::Table(tbl)) =
-                geom.label.html_label.as_deref()
-                && let Some((bp, sides)) = port_to_tbl(tbl, portname)
-            {
-                return compass_port(g, n, Some(bp), compass.unwrap_or("_"), sides, false).0;
-            }
-            let is_box = matches!(
-                src.attrs.get("shape").map(String::as_str),
-                Some("box" | "rect" | "rectangle")
-            );
-            compass_port(g, n, None, portname, all, !is_box).0
-        }
+        return rv;
     }
+    if let Some(gv_geom::html_label::HtmlLabel::Table(tbl)) = geom.label.html_label.as_deref()
+        && let Some((bp, sides)) = port_to_tbl(tbl, portname)
+    {
+        compass_port(g, n, Some(bp), &mut rv, compass, sides, false);
+        rv.name = None;
+        return rv;
+    }
+    let is_box = matches!(
+        src.attrs.get("shape").map(String::as_str),
+        Some("box" | "rect" | "rectangle")
+    );
+    compass_port(g, n, None, &mut rv, portname, all, !is_box);
+    rv.name = None;
+    rv
 }
 
-fn port_string(p: &gv_core::Port) -> String {
-    match (&p.name, &p.compass) {
-        (Some(a), Some(b)) => format!("{a}:{b}"),
-        (Some(a), None) => a.clone(),
-        (None, Some(b)) => b.clone(),
-        (None, None) => String::new(),
-    }
-}
-
-/// Resolves `tailport`/`headport` of every edge, keeping `*clip=false`.
-pub fn resolve_all_ports(g: &mut LGraph<'_>) {
-    for ei in 0..g.edges.len() {
-        let src = &g.src.edges[ei];
-        let (t, h) = (g.edges[ei].tail, g.edges[ei].head);
-        let ts = port_string(&src.tail_port);
-        let hs = port_string(&src.head_port);
-        let tclip = g.edges[ei].tail_port.clip;
-        let hclip = g.edges[ei].head_port.clip;
-        let mut tp = resolve_port(g, t, &ts);
-        let mut hp = resolve_port(g, h, &hs);
-        if !tclip {
-            tp.clip = false;
-        }
-        if !hclip {
-            hp.clip = false;
-        }
-        g.edges[ei].tail_port = tp;
-        g.edges[ei].head_port = hp;
-    }
+/// `chkPort(portfn, n, s)` for a parsed port (`name[:compass]`).
+pub fn chk_port<S: PortGraph + ?Sized>(g: &S, n: usize, p: &gv_core::Port) -> PortInfo {
+    let name = p.name.clone().unwrap_or_default();
+    let mut pt = shape_port(g, n, &name, p.compass.as_deref());
+    pt.name = if name.is_empty() && p.compass.is_none() {
+        None
+    } else if let Some(c) = &p.compass {
+        Some(c.clone())
+    } else {
+        Some(name)
+    };
+    pt
 }
 
 /// `closestSide(n, other, oldport)`: compass of the side of the port box
-/// nearest to `other`, or `None` for the centre.
-fn closest_side(g: &LGraph<'_>, n: usize, other: usize, old: &PortInfo) -> Option<&'static str> {
+/// nearest to `other`, or `""` for the centre.
+fn closest_side<S: PortGraph + ?Sized>(
+    g: &S,
+    n: usize,
+    other: usize,
+    old: &PortInfo,
+) -> &'static str {
     const SIDE_PORT: [&str; 4] = ["s", "e", "n", "w"];
-    let pt = g.nodes[n].coord;
-    let opt = g.nodes[other].coord;
+    let rkd = g.rankdir();
+    let cvt = |p: Point| match rkd {
+        RANKDIR_BT => Point::new(p.x, -p.y),
+        RANKDIR_LR => Point::new(-p.y, p.x),
+        RANKDIR_RL => Point::new(p.y, p.x),
+        _ => p,
+    };
+    let pt = cvt(g.coord(n));
+    let opt = cvt(g.coord(other));
     let sides = old.side;
     if sides == 0 || sides == (TOP | BOTTOM | LEFT | RIGHT) {
-        return None;
+        return "";
     }
-    let nd = &g.nodes[n];
-    let b = old
-        .bp
-        .unwrap_or(BoundingBox::new(-nd.lw, -nd.ht / 2.0, nd.lw, nd.ht / 2.0));
-    let mut rv = None;
+    let b = old.bp.unwrap_or_else(|| {
+        let (lw, ht) = (g.lw(n), g.ht(n));
+        if g.flip() {
+            BoundingBox::new(-ht / 2.0, -lw, ht / 2.0, lw)
+        } else {
+            BoundingBox::new(-lw, -ht / 2.0, lw, ht / 2.0)
+        }
+    });
+    let mut rv: Option<&'static str> = None;
     let mut mind = 0.0;
-    for i in 0..4 {
+    for (i, name) in SIDE_PORT.iter().enumerate() {
         if sides & (1 << i) == 0 {
             continue;
         }
@@ -341,9 +477,25 @@ fn closest_side(g: &LGraph<'_>, n: usize, other: usize, old: &PortInfo) -> Optio
         let d = super::geom::dist2(p, opt);
         if rv.is_none() || d < mind {
             mind = d;
-            rv = Some(SIDE_PORT[i]);
+            rv = Some(name);
         }
     }
+    rv.unwrap_or("")
+}
+
+/// `resolvePort(n, other, oldport)`.
+pub fn resolve_port<S: PortGraph + ?Sized>(
+    g: &S,
+    n: usize,
+    other: usize,
+    old: &PortInfo,
+) -> PortInfo {
+    let compass = closest_side(g, n, other, old);
+    let mut rv = PortInfo {
+        name: old.name.clone(),
+        ..PortInfo::default()
+    };
+    compass_port(g, n, old.bp, &mut rv, compass, old.side, false);
     rv
 }
 
@@ -352,8 +504,7 @@ pub fn resolve_ports(g: &mut LGraph<'_>, e: usize) {
     let (t, h) = (g.edges[e].tail, g.edges[e].head);
     if g.edges[e].tail_port.dyna {
         let old = g.edges[e].tail_port.clone();
-        let c = closest_side(g, t, h, &old).unwrap_or("");
-        let mut np = compass_port(g, t, old.bp, c, old.side, false).0;
+        let mut np = resolve_port(g, t, h, &old);
         if !old.clip {
             np.clip = false;
         }
@@ -361,11 +512,40 @@ pub fn resolve_ports(g: &mut LGraph<'_>, e: usize) {
     }
     if g.edges[e].head_port.dyna {
         let old = g.edges[e].head_port.clone();
-        let c = closest_side(g, h, t, &old).unwrap_or("");
-        let mut np = compass_port(g, h, old.bp, c, old.side, false).0;
+        let mut np = resolve_port(g, h, t, &old);
         if !old.clip {
             np.clip = false;
         }
         g.edges[e].head_port = np;
+    }
+}
+
+impl PortGraph for LGraph<'_> {
+    fn port_node(&self, n: usize) -> &NodeData {
+        &self.src.nodes[n]
+    }
+    fn port_env(&self) -> gv_geom::NodeSizeEnv<'_> {
+        gv_geom::NodeSizeEnv::from_graph_attrs(&self.src.name, &self.src.graph_attrs)
+    }
+}
+
+/// Resolves `tailport`/`headport` of every edge, keeping `*clip=false`.
+pub fn resolve_all_ports(g: &mut LGraph<'_>) {
+    for ei in 0..g.edges.len() {
+        let src = &g.src.edges[ei];
+        let (t, h) = (g.edges[ei].tail, g.edges[ei].head);
+        let (tsrc, hsrc) = (src.tail_port.clone(), src.head_port.clone());
+        let tclip = g.edges[ei].tail_port.clip;
+        let hclip = g.edges[ei].head_port.clip;
+        let mut tp = chk_port(g, t, &tsrc);
+        let mut hp = chk_port(g, h, &hsrc);
+        if !tclip {
+            tp.clip = false;
+        }
+        if !hclip {
+            hp.clip = false;
+        }
+        g.edges[ei].tail_port = tp;
+        g.edges[ei].head_port = hp;
     }
 }

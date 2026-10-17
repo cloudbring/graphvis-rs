@@ -1,7 +1,6 @@
 //! Port of `lib/dotgen/sameport.c`: merge edge ports for `samehead`/`sametail`.
 
 use super::Dot;
-use super::init::{ccwrotatepf, cwrotatepf};
 use super::types::*;
 use gv_core::Point;
 
@@ -65,19 +64,18 @@ impl Dot<'_> {
         x /= r;
         y /= r;
         let nu = &self.nodes[u];
+        let (x1, y1) = (nu.coord.x, nu.coord.y);
         let r = (nu.lw + nu.rw).max(nu.ht + self.graphs[0].ranksep as f64);
-        // shape_clip: boundary point on the ray from the centre along (x, y).
-        let rankdir = self.graphs[0].rankdir;
-        let dir_final = ccwrotatepf(Point::new(x * r, y * r), rankdir * 90);
-        let p_final = match self.nodes[u].real {
-            Some(ri) => {
-                let mut nd = self.input.nodes[ri].clone();
-                nd.pos = Point::new(0.0, 0.0);
-                gv_geom::clip_ray_to_node_boundary(&nd, &gv_core::Port::default(), dir_final)
-            }
-            None => dir_final,
-        };
-        let p = cwrotatepf(p_final, rankdir * 90);
+        let (x2, y2) = (x * r + x1, y * r + y1);
+        // now move (x1,y1) to the node boundary
+        let mut curve = [
+            Point::new(x1, y1),
+            Point::new((2.0 * x1 + x2) / 3.0, (2.0 * y1 + y2) / 3.0),
+            Point::new((2.0 * x2 + x1) / 3.0, (2.0 * y2 + y1) / 3.0),
+            Point::new(x2, y2),
+        ];
+        crate::common::splines::shape_clip(self, u, &mut curve);
+        let p = Point::new(curve[0].x - x1, curve[0].y - y1);
         let pr = Point::new(p.x.round(), p.y.round());
         let nu = &self.nodes[u];
         let order = ((MC_SCALE as f64 * (nu.lw + pr.x)) / (nu.lw + nu.rw)) as i32 as u8;

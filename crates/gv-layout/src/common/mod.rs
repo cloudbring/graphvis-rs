@@ -5,7 +5,8 @@
 //! - [`init`] — `graph_init`, `common_init_node`, `common_init_edge`
 //! - [`shapes`] — shape vertices and `insidefn`s for clipping (`shapes.c`)
 //! - [`ports`] — `poly_port`, `record_port`, `compassPort`
-//! - [`splines`] — `clip_and_install`, self loops, port labels (`splines.c`)
+//! - [`splines`] — `clip_and_install`, `beginpath`/`endpath`, self loops, port labels (`splines.c`)
+//! - [`routespl`] — box-path routing: `routesplines`, `checkpath` (`routespl.c`)
 //! - [`arrows`] — arrow flags and lengths (`arrows.c`)
 //! - [`postproc`] — `gv_postprocess` (`postproc.c`)
 //! - [`xlabels`] — external label placement (`lib/label`)
@@ -20,6 +21,7 @@ pub mod init;
 pub mod ns;
 pub mod ports;
 pub mod postproc;
+pub mod routespl;
 pub mod shapes;
 pub mod splines;
 pub mod types;

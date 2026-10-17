@@ -1,16 +1,21 @@
-//! Edge spline installation shared by the neato family, ported from
+//! Edge spline installation shared by all engines, ported from
 //! `lib/common/splines.c` (`bezier_clip`, `shape_clip0`, `clip_and_install`,
-//! `makeSelfEdge` and the `self*` loop routers, port labels, `edgeMidpoint`),
+//! `arrow_clip`, `beginpath`/`endpath`, `conc_slope`, `makeSelfEdge` and the
+//! `self*` loop routers, port labels, `edgeMidpoint`, `getsplinepoints`),
 //! `lib/common/utils.c` (`Bezier`, `dotneato_closest`) and
 //! `lib/common/emit.c` (`update_bb_bz`).
+//!
+//! The code reaches the layout state through [`SplineGraph`], implemented by
+//! the neato family's [`LGraph`] and by dot (`dotgen::splines_host`).
 
 use super::arrows::{arrow_end_clip, arrow_flags, arrow_start_clip};
-use super::geom::{MILLIPOINT, approxeqpt, dist, dist2, mid};
+use super::geom::{MILLIPOINT, add, approxeqpt, dist, dist2, mid};
 use super::ports::{BOTTOM, LEFT, RIGHT, TOP};
-use super::shapes::InsideCtx;
-use super::types::{Bezier, EdgeType, LGraph, TextLabel};
+use super::routespl::{Path, PathEnd};
+use super::shapes::{InsideCtx, NodeShape};
+use super::types::{Bezier, EdgeType, LGraph, PortInfo, TextLabel};
 use super::utils::late_double;
-use gv_core::{BoundingBox, Point};
+use gv_core::{AttrMap, BoundingBox, Point};
 
 /// `Bezier(V, t, Left, Right)`: de Casteljau evaluation and subdivision.
 pub fn bezier_split(v: &[Point; 4], t: f64) -> (Point, [Point; 4], [Point; 4]) {
@@ -68,20 +73,167 @@ pub fn bezier_clip(inside: &mut dyn FnMut(Point) -> bool, sp: &mut [Point; 4], l
     *sp = if found { best } else { seg };
 }
 
+/// Which label of an edge (`ED_label`, `ED_head_label`, `ED_tail_label`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LabelKind {
+    Main,
+    Head,
+    Tail,
+    /// `ED_xlabel`.
+    Xlabel,
+}
+
+/// Snapshot of a `textlabel_t` (`dimen`, `pos`, `set`).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct LabelView {
+    pub dimen: Point,
+    pub pos: Point,
+    pub set: bool,
+}
+
+/// `splineInfo` flags of the caller (`ignoreSwap`, `isOrtho`); the callbacks
+/// (`swapEnds`, `splineMerge`) are [`SplineGraph`] methods.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SplineInfo {
+    pub ignore_swap: bool,
+    pub is_ortho: bool,
+}
+
+/// The layout state the shared spline code reads and writes: the `ND_*` /
+/// `ED_*` / `GD_*` fields `splines.c` touches plus the `splineInfo`
+/// callbacks. Implemented by the neato family's [`LGraph`] and by dot.
+pub trait SplineGraph {
+    fn tail(&self, e: usize) -> usize;
+    fn head(&self, e: usize) -> usize;
+    /// `ND_coord(n)`.
+    fn coord(&self, n: usize) -> Point;
+    fn lw(&self, n: usize) -> f64;
+    fn rw(&self, n: usize) -> f64;
+    fn ht(&self, n: usize) -> f64;
+    /// `ND_shape(n)` when it has an `insidefn` (`None` for virtual nodes).
+    fn shape(&self, n: usize) -> Option<&NodeShape>;
+    /// `GD_rankdir(agraphof(n))`.
+    fn rankdir(&self) -> i32 {
+        0
+    }
+    /// `GD_flip(g)`.
+    fn flip(&self) -> bool {
+        false
+    }
+    /// `GD_ranksep(agraphof(n))`.
+    fn ranksep(&self) -> f64 {
+        0.0
+    }
+    fn rank(&self, _n: usize) -> i32 {
+        0
+    }
+    fn order(&self, _n: usize) -> i32 {
+        0
+    }
+    /// `ND_node_type(n) == NORMAL`.
+    fn is_normal_node(&self, _n: usize) -> bool {
+        true
+    }
+    /// `ED_to_orig(e)`.
+    fn to_orig(&self, _e: usize) -> Option<usize> {
+        None
+    }
+    /// `ED_edge_type(e) == NORMAL`.
+    fn is_normal_edge(&self, _e: usize) -> bool {
+        true
+    }
+    /// `ED_edge_type(e) == IGNORED`.
+    fn is_ignored_edge(&self, _e: usize) -> bool {
+        false
+    }
+    fn tail_port(&self, e: usize) -> &PortInfo;
+    fn head_port(&self, e: usize) -> &PortInfo;
+    fn tail_port_mut(&mut self, e: usize) -> &mut PortInfo;
+    fn head_port_mut(&mut self, e: usize) -> &mut PortInfo;
+    /// Attributes of a real edge (`agxget`).
+    fn edge_attrs(&self, e: usize) -> &AttrMap;
+    /// `arrow_flags(e, &sflag, &eflag)`.
+    fn arrow_flags(&self, e: usize) -> (u32, u32);
+    /// `splineInfo.swapEnds`.
+    fn swap_ends(&self, _e: usize) -> bool {
+        false
+    }
+    /// `splineInfo.splineMerge`.
+    fn spline_merge(&self, _n: usize) -> bool {
+        false
+    }
+    /// `ND_in(n)` / `ND_out(n)` of the fast graph (concentrator slopes).
+    fn fast_in(&self, _n: usize) -> &[usize] {
+        &[]
+    }
+    fn fast_out(&self, _n: usize) -> &[usize] {
+        &[]
+    }
+    /// `ED_spl(e)`.
+    fn spl(&self, e: usize) -> Option<&Vec<Bezier>>;
+    fn spl_mut(&mut self, e: usize) -> &mut Option<Vec<Bezier>>;
+    /// `GD_bb(g)` of the graph being routed.
+    fn bb_mut(&mut self) -> &mut BoundingBox;
+    fn label(&self, e: usize, k: LabelKind) -> Option<LabelView>;
+    fn set_label_pos(&mut self, e: usize, k: LabelKind, pos: Point);
+    /// `E_labelangle || E_labeldistance` (the attributes are declared).
+    fn has_port_label_attrs(&self) -> bool;
+    /// `resolvePort(n, other, oldport)` for ports with `dyna` set.
+    fn resolve_port(&self, _n: usize, _other: usize, old: &PortInfo) -> PortInfo {
+        old.clone()
+    }
+    /// `ND_shape(n)->fns->pboxfn(n, port, side, rv, &k)`: the boxes from a
+    /// port to the node border and the side mask, if the shape has one.
+    fn pboxfn(&self, _n: usize, _port: &PortInfo, _side: u8) -> Option<(u8, Vec<BoundingBox>)> {
+        None
+    }
+}
+
+/// The `inside_t` context for node `n` (`.s.n = n, .s.bp = bp`), including
+/// `poly_inside`'s scale from `ND_lw + ND_rw` and `ND_ht`.
+pub fn inside_ctx<S: SplineGraph + ?Sized>(g: &S, n: usize, bp: Option<BoundingBox>) -> InsideCtx {
+    let mut ctx = InsideCtx {
+        bp,
+        rankdir: g.rankdir(),
+        ..InsideCtx::default()
+    };
+    if let Some(shape) = g.shape(n) {
+        let (xsize, ysize) = if g.flip() {
+            (g.ht(n), g.lw(n) + g.rw(n))
+        } else {
+            (g.lw(n) + g.rw(n), g.ht(n))
+        };
+        let sx = if xsize == 0.0 {
+            shape.width
+        } else {
+            shape.width / xsize
+        };
+        let sy = if ysize == 0.0 {
+            shape.height
+        } else {
+            shape.height / ysize
+        };
+        if sx != 1.0 || sy != 1.0 {
+            ctx.scale = Some(Point::new(sx, sy));
+        }
+    }
+    ctx
+}
+
 /// `shape_clip0`: clip `curve` (absolute coordinates) to node `n`.
-fn shape_clip0(
-    g: &LGraph<'_>,
+fn shape_clip0<S: SplineGraph + ?Sized>(
+    g: &S,
     ctx: &mut InsideCtx,
     n: usize,
     curve: &mut [Point],
     left_inside: bool,
 ) {
-    let c0 = g.nodes[n].coord;
+    let c0 = g.coord(n);
     let mut c = [Point::default(); 4];
     for i in 0..4 {
         c[i] = Point::new(curve[i].x - c0.x, curve[i].y - c0.y);
     }
-    let shape = &g.nodes[n].shape;
+    let shape = g.shape(n).expect("shape_clip0 needs an insidefn");
     bezier_clip(&mut |p| shape.inside(ctx, p), &mut c, left_inside);
     for i in 0..4 {
         curve[i] = Point::new(c[i].x + c0.x, c[i].y + c0.y);
@@ -89,17 +241,574 @@ fn shape_clip0(
 }
 
 /// `shape_clip(n, curve)`: clips using `curve[0]` to decide which end is inside.
-pub fn shape_clip(g: &LGraph<'_>, n: usize, curve: &mut [Point; 4]) {
-    if g.nodes[n].shape.no_clip {
+pub fn shape_clip<S: SplineGraph + ?Sized>(g: &S, n: usize, curve: &mut [Point; 4]) {
+    let Some(shape) = g.shape(n) else { return };
+    if shape.no_clip {
         return;
     }
-    let mut ctx = InsideCtx::default();
-    let c0 = g.nodes[n].coord;
-    let left_inside = g.nodes[n]
-        .shape
-        .inside(&mut ctx, Point::new(curve[0].x - c0.x, curve[0].y - c0.y));
+    let mut ctx = inside_ctx(g, n, None);
+    let c0 = g.coord(n);
+    let left_inside = shape.inside(&mut ctx, Point::new(curve[0].x - c0.x, curve[0].y - c0.y));
     shape_clip0(g, &mut ctx, n, curve, left_inside);
 }
+
+/// `ED_to_orig` walk used by `new_spline`, `clip_and_install` and `beginpath`:
+/// follow `to_orig` while the edge is not `NORMAL`.
+pub fn orig_edge<S: SplineGraph + ?Sized>(g: &S, fe: usize) -> usize {
+    let mut e = fe;
+    while !g.is_normal_edge(e) {
+        match g.to_orig(e) {
+            Some(o) => e = o,
+            None => break,
+        }
+    }
+    e
+}
+
+fn has_insidefn<S: SplineGraph + ?Sized>(g: &S, n: usize) -> bool {
+    g.shape(n).is_some_and(|s| !s.no_clip)
+}
+
+/// `arrow_clip(fe, hn, ps, &start, &end, spl, info)`.
+fn arrow_clip<S: SplineGraph + ?Sized>(
+    g: &S,
+    fe: usize,
+    hn: usize,
+    ps: &mut [Point],
+    start: &mut usize,
+    end: &mut usize,
+    spl: &mut Bezier,
+    info: SplineInfo,
+) {
+    let mut e = fe;
+    while let Some(o) = g.to_orig(e) {
+        e = o;
+    }
+    let j = if info.ignore_swap {
+        false
+    } else {
+        g.swap_ends(e)
+    };
+    let (mut sflag, mut eflag) = g.arrow_flags(e);
+    if g.spline_merge(hn) {
+        eflag = 0;
+    }
+    if g.spline_merge(g.tail(fe)) {
+        sflag = 0;
+    }
+    if j {
+        std::mem::swap(&mut sflag, &mut eflag);
+    }
+    let attrs = g.edge_attrs(e);
+    if info.is_ortho {
+        if eflag != 0 || sflag != 0 {
+            super::arrows::arrow_ortho_clip(attrs, ps, *start, *end, spl, sflag, eflag);
+        }
+    } else {
+        if sflag != 0 {
+            *start = arrow_start_clip(attrs, ps, *start, *end, spl, sflag);
+        }
+        if eflag != 0 {
+            *end = arrow_end_clip(attrs, ps, *start, *end, spl, eflag);
+        }
+    }
+}
+
+/// `clip_and_install(fe, hn, ps, pn, &sinfo)` with the default `splineInfo`
+/// (`ignoreSwap = isOrtho = false`).
+pub fn clip_and_install<S: SplineGraph + ?Sized>(g: &mut S, fe: usize, hn: usize, ps_in: &[Point]) {
+    clip_and_install_info(g, fe, hn, ps_in, SplineInfo::default());
+}
+
+/// `clip_and_install(fe, hn, ps, pn, info)`: given a raw spline from the tail
+/// of `fe` ending in node `hn`, clip the ends to the node boundaries and the
+/// arrowheads, attach the result to the edge and grow the graph's bounding box.
+pub fn clip_and_install_info<S: SplineGraph + ?Sized>(
+    g: &mut S,
+    fe: usize,
+    hn_in: usize,
+    ps_in: &[Point],
+    info: SplineInfo,
+) {
+    let mut ps = ps_in.to_vec();
+    let pn = ps.len();
+    let mut tn = g.tail(fe);
+    let mut hn = hn_in;
+    let orig = orig_edge(g, fe);
+    // may be a reversed flat edge
+    if !info.ignore_swap && g.rank(tn) == g.rank(hn) && g.order(tn) > g.order(hn) {
+        std::mem::swap(&mut hn, &mut tn);
+    }
+    let (clip_tail, clip_head, tbox, hbox) = if tn == g.tail(orig) {
+        let (tp, hp) = (g.tail_port(orig), g.head_port(orig));
+        (tp.clip, hp.clip, tp.bp, hp.bp)
+    } else {
+        let (tp, hp) = (g.tail_port(orig), g.head_port(orig));
+        (hp.clip, tp.clip, hp.bp, tp.bp)
+    };
+    let mut start = 0usize;
+    if clip_tail && has_insidefn(g, tn) {
+        let mut ctx = inside_ctx(g, tn, tbox);
+        let c = g.coord(tn);
+        let shape = g.shape(tn).unwrap();
+        while start < pn - 4 {
+            let p2 = Point::new(ps[start + 3].x - c.x, ps[start + 3].y - c.y);
+            if !shape.inside(&mut ctx, p2) {
+                break;
+            }
+            start += 3;
+        }
+        shape_clip0(g, &mut ctx, tn, &mut ps[start..start + 4], true);
+    }
+    let mut end = pn - 4;
+    if clip_head && has_insidefn(g, hn) {
+        let mut ctx = inside_ctx(g, hn, hbox);
+        let c = g.coord(hn);
+        let shape = g.shape(hn).unwrap();
+        while end > 0 {
+            let p2 = Point::new(ps[end].x - c.x, ps[end].y - c.y);
+            if !shape.inside(&mut ctx, p2) {
+                break;
+            }
+            end -= 3;
+        }
+        shape_clip0(g, &mut ctx, hn, &mut ps[end..end + 4], false);
+    }
+    while start < pn - 4 {
+        if !approxeqpt(ps[start], ps[start + 3], MILLIPOINT) {
+            break;
+        }
+        start += 3;
+    }
+    while end > 0 {
+        if !approxeqpt(ps[end], ps[end + 3], MILLIPOINT) {
+            break;
+        }
+        end -= 3;
+    }
+    let mut newspl = Bezier::default();
+    arrow_clip(g, fe, hn, &mut ps, &mut start, &mut end, &mut newspl, info);
+    let mut list = Vec::with_capacity(end - start + 4);
+    let mut i = start;
+    let bb = g.bb_mut();
+    while i < end + 4 {
+        let mut cp = [Point::default(); 4];
+        list.push(ps[i]);
+        cp[0] = ps[i];
+        i += 1;
+        if i >= end + 4 {
+            break;
+        }
+        list.push(ps[i]);
+        cp[1] = ps[i];
+        i += 1;
+        list.push(ps[i]);
+        cp[2] = ps[i];
+        i += 1;
+        cp[3] = ps[i];
+        update_bb_bz(bb, &cp);
+    }
+    newspl.list = list;
+    new_spline(g, fe, newspl);
+}
+
+/// `new_spline(e, sz)`: attach `bz` to the edge reached through `ED_to_orig`.
+pub fn new_spline<S: SplineGraph + ?Sized>(g: &mut S, e: usize, bz: Bezier) {
+    let mut e = e;
+    while let Some(o) = g.to_orig(e) {
+        if g.is_normal_edge(e) {
+            break;
+        }
+        e = o;
+    }
+    g.spl_mut(e).get_or_insert_with(Vec::new).push(bz);
+}
+
+/// `conc_slope(n)`: mean slope through a concentrator node.
+pub fn conc_slope<S: SplineGraph + ?Sized>(g: &S, n: usize) -> f64 {
+    let mut s_in = 0.0;
+    let mut s_out = 0.0;
+    let ins = g.fast_in(n);
+    let outs = g.fast_out(n);
+    for &e in ins {
+        s_in += g.coord(g.tail(e)).x;
+    }
+    for &e in outs {
+        s_out += g.coord(g.head(e)).x;
+    }
+    let c = g.coord(n);
+    let x1 = c.x - s_in / ins.len() as f64;
+    let y1 = c.y - g.coord(g.tail(ins[0])).y;
+    let m_in = y1.atan2(x1);
+    let x2 = s_out / outs.len() as f64 - c.x;
+    let y2 = g.coord(g.head(outs[0])).y - c.y;
+    let m_out = y2.atan2(x2);
+    (m_in + m_out) / 2.0
+}
+
+/// `getsplinepoints(e)`: the splines of `e` or of the edge it stands for.
+pub fn getsplinepoints<S: SplineGraph + ?Sized>(g: &S, e: usize) -> Option<&Vec<Bezier>> {
+    let mut le = e;
+    loop {
+        if let Some(sp) = g.spl(le) {
+            return Some(sp);
+        }
+        if g.is_normal_edge(le) {
+            return None;
+        }
+        le = g.to_orig(le)?;
+    }
+}
+
+/// Edge kinds for `beginpath`/`endpath` (`REGULAREDGE`, `FLATEDGE`, `SELFEDGE`).
+pub const REGULAREDGE: i32 = 1;
+pub const FLATEDGE: i32 = 2;
+pub const SELFWPEDGE: i32 = 4;
+pub const SELFNPEDGE: i32 = 8;
+pub const SELFEDGE: i32 = 8;
+pub const EDGETYPEMASK: i32 = 15;
+
+fn ht2<S: SplineGraph + ?Sized>(g: &S, n: usize) -> f64 {
+    g.ht(n) / 2.0
+}
+
+fn clear_orig_clip<S: SplineGraph + ?Sized>(g: &mut S, e: usize, n: usize, at_tail: bool) {
+    let orig = orig_edge(g, e);
+    let on_tail = if at_tail {
+        n == g.tail(orig)
+    } else {
+        n != g.head(orig)
+    };
+    if on_tail {
+        g.tail_port_mut(orig).clip = false;
+    } else {
+        g.head_port_mut(orig).clip = false;
+    }
+}
+
+/// `beginpath(P, e, et, endp, merge)`: set up the boxes near the tail node.
+pub fn beginpath<S: SplineGraph + ?Sized>(
+    g: &mut S,
+    p: &mut Path,
+    e: usize,
+    et: i32,
+    endp: &mut PathEnd,
+    merge: bool,
+) {
+    let n = g.tail(e);
+    if g.tail_port(e).dyna {
+        let np = g.resolve_port(n, g.head(e), g.tail_port(e));
+        *g.tail_port_mut(e) = np;
+    }
+    let tport = g.tail_port(e).clone();
+    let nc = g.coord(n);
+    p.start.p = add(nc, tport.p);
+    if merge {
+        p.start.theta = conc_slope(g, g.tail(e));
+        p.start.constrained = true;
+    } else if tport.constrained {
+        p.start.theta = tport.theta;
+        p.start.constrained = true;
+    } else {
+        p.start.constrained = false;
+    }
+    p.boxes.clear();
+    p.data = e;
+    endp.np = p.start.p;
+    let side = tport.side;
+    let ranksep = g.ranksep();
+    let (lw, rw) = (g.lw(n), g.rw(n));
+    let h2 = ht2(g, n);
+    if et == REGULAREDGE && g.is_normal_node(n) && side != 0 {
+        let mut b = endp.nb;
+        let mut b0 = BoundingBox::default();
+        if side & TOP != 0 {
+            endp.sidemask = TOP;
+            if p.start.p.x < nc.x {
+                b0.ll.x = b.ll.x - 1.0;
+                b0.ll.y = p.start.p.y;
+                b0.ur.x = b.ur.x;
+                b0.ur.y = nc.y + h2 + ranksep / 2.0;
+                b.ur.x = nc.x - lw - (FUDGE - 2.0);
+                b.ur.y = b0.ll.y;
+                b.ll.y = nc.y - h2;
+                b.ll.x -= 1.0;
+            } else {
+                b0.ll.x = b.ll.x;
+                b0.ll.y = p.start.p.y;
+                b0.ur.x = b.ur.x + 1.0;
+                b0.ur.y = nc.y + h2 + ranksep / 2.0;
+                b.ll.x = nc.x + rw + (FUDGE - 2.0);
+                b.ur.y = b0.ll.y;
+                b.ll.y = nc.y - h2;
+                b.ur.x += 1.0;
+            }
+            endp.boxes = vec![b0, b];
+            p.start.p.y += 1.0;
+        } else if side & BOTTOM != 0 {
+            endp.sidemask = BOTTOM;
+            b.ur.y = b.ur.y.max(p.start.p.y);
+            endp.boxes = vec![b];
+            p.start.p.y -= 1.0;
+        } else if side & LEFT != 0 {
+            endp.sidemask = LEFT;
+            b.ur.x = p.start.p.x;
+            b.ll.y = nc.y - h2;
+            b.ur.y = p.start.p.y;
+            endp.boxes = vec![b];
+            p.start.p.x -= 1.0;
+        } else {
+            endp.sidemask = RIGHT;
+            b.ll.x = p.start.p.x;
+            b.ll.y = nc.y - h2;
+            b.ur.y = p.start.p.y;
+            endp.boxes = vec![b];
+            p.start.p.x += 1.0;
+        }
+        clear_orig_clip(g, e, n, true);
+        return;
+    }
+    if et == FLATEDGE && side != 0 {
+        let mut b = endp.nb;
+        let mut b0 = BoundingBox::default();
+        if side & TOP != 0 {
+            b.ll.y = b.ll.y.min(p.start.p.y);
+            endp.boxes = vec![b];
+            p.start.p.y += 1.0;
+        } else if side & BOTTOM != 0 {
+            if endp.sidemask == TOP {
+                b0.ur.y = nc.y - h2;
+                b0.ur.x = b.ur.x + 1.0;
+                b0.ll.x = p.start.p.x;
+                b0.ll.y = b0.ur.y - ranksep / 2.0;
+                b.ll.x = nc.x + rw + (FUDGE - 2.0);
+                b.ll.y = b0.ur.y;
+                b.ur.y = nc.y + h2;
+                b.ur.x += 1.0;
+                endp.boxes = vec![b0, b];
+            } else {
+                b.ur.y = b.ur.y.max(p.start.p.y);
+                endp.boxes = vec![b];
+            }
+            p.start.p.y -= 1.0;
+        } else if side & LEFT != 0 {
+            b.ur.x = p.start.p.x + 1.0;
+            if endp.sidemask == TOP {
+                b.ur.y = nc.y + h2;
+                b.ll.y = p.start.p.y - 1.0;
+            } else {
+                b.ll.y = nc.y - h2;
+                b.ur.y = p.start.p.y + 1.0;
+            }
+            endp.boxes = vec![b];
+            p.start.p.x -= 1.0;
+        } else {
+            b.ll.x = p.start.p.x;
+            if endp.sidemask == TOP {
+                b.ur.y = nc.y + h2;
+                b.ll.y = p.start.p.y;
+            } else {
+                b.ll.y = nc.y - h2;
+                b.ur.y = p.start.p.y + 1.0;
+            }
+            endp.boxes = vec![b];
+            p.start.p.x += 1.0;
+        }
+        clear_orig_clip(g, e, n, true);
+        endp.sidemask = side;
+        return;
+    }
+    let side = if et == REGULAREDGE {
+        BOTTOM
+    } else {
+        endp.sidemask
+    };
+    if let Some((mask, boxes)) = g.pboxfn(n, &tport, side).filter(|(m, _)| *m != 0) {
+        endp.boxes = boxes;
+        endp.sidemask = mask;
+    } else {
+        endp.boxes = vec![endp.nb];
+        match et {
+            SELFEDGE => unreachable!("beginpath is not used for self edges"),
+            FLATEDGE => {
+                if endp.sidemask == TOP {
+                    endp.boxes[0].ll.y = p.start.p.y;
+                } else {
+                    endp.boxes[0].ur.y = p.start.p.y;
+                }
+            }
+            REGULAREDGE => {
+                endp.boxes[0].ur.y = p.start.p.y;
+                endp.sidemask = BOTTOM;
+                p.start.p.y -= 1.0;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// `endpath(P, e, et, endp, merge)`: set up the boxes near the head node.
+pub fn endpath<S: SplineGraph + ?Sized>(
+    g: &mut S,
+    p: &mut Path,
+    e: usize,
+    et: i32,
+    endp: &mut PathEnd,
+    merge: bool,
+) {
+    let n = g.head(e);
+    if g.head_port(e).dyna {
+        let np = g.resolve_port(n, g.tail(e), g.head_port(e));
+        *g.head_port_mut(e) = np;
+    }
+    let hport = g.head_port(e).clone();
+    let nc = g.coord(n);
+    p.end.p = add(nc, hport.p);
+    if merge {
+        p.end.theta = conc_slope(g, g.head(e)) + std::f64::consts::PI;
+        p.end.constrained = true;
+    } else if hport.constrained {
+        p.end.theta = hport.theta;
+        p.end.constrained = true;
+    } else {
+        p.end.constrained = false;
+    }
+    endp.np = p.end.p;
+    let side = hport.side;
+    let ranksep = g.ranksep();
+    let (lw, rw) = (g.lw(n), g.rw(n));
+    let h2 = ht2(g, n);
+    if et == REGULAREDGE && g.is_normal_node(n) && side != 0 {
+        let mut b = endp.nb;
+        let mut b0 = BoundingBox::default();
+        if side & TOP != 0 {
+            endp.sidemask = TOP;
+            b.ll.y = b.ll.y.min(p.end.p.y);
+            endp.boxes = vec![b];
+            p.end.p.y += 1.0;
+        } else if side & BOTTOM != 0 {
+            endp.sidemask = BOTTOM;
+            if p.end.p.x < nc.x {
+                b0.ll.x = b.ll.x - 1.0;
+                b0.ur.y = p.end.p.y;
+                b0.ur.x = b.ur.x;
+                b0.ll.y = nc.y - h2 - ranksep / 2.0;
+                b.ur.x = nc.x - lw - (FUDGE - 2.0);
+                b.ll.y = b0.ur.y;
+                b.ur.y = nc.y + h2;
+                b.ll.x -= 1.0;
+            } else {
+                b0.ll.x = b.ll.x;
+                b0.ur.y = p.end.p.y;
+                b0.ur.x = b.ur.x + 1.0;
+                b0.ll.y = nc.y - h2 - ranksep / 2.0;
+                b.ll.x = nc.x + rw + (FUDGE - 2.0);
+                b.ll.y = b0.ur.y;
+                b.ur.y = nc.y + h2;
+                b.ur.x += 1.0;
+            }
+            endp.boxes = vec![b0, b];
+            p.end.p.y -= 1.0;
+        } else if side & LEFT != 0 {
+            endp.sidemask = LEFT;
+            b.ur.x = p.end.p.x;
+            b.ur.y = nc.y + h2;
+            b.ll.y = p.end.p.y;
+            endp.boxes = vec![b];
+            p.end.p.x -= 1.0;
+        } else {
+            endp.sidemask = RIGHT;
+            b.ll.x = p.end.p.x;
+            b.ur.y = nc.y + h2;
+            b.ll.y = p.end.p.y;
+            endp.boxes = vec![b];
+            p.end.p.x += 1.0;
+        }
+        clear_orig_clip(g, e, n, false);
+        endp.sidemask = side;
+        return;
+    }
+    if et == FLATEDGE && side != 0 {
+        let mut b = endp.nb;
+        let mut b0 = BoundingBox::default();
+        if side & TOP != 0 {
+            b.ll.y = b.ll.y.min(p.end.p.y);
+            endp.boxes = vec![b];
+            p.end.p.y += 1.0;
+        } else if side & BOTTOM != 0 {
+            if endp.sidemask == TOP {
+                b0.ll.x = b.ll.x - 1.0;
+                b0.ur.y = nc.y - h2;
+                b0.ur.x = p.end.p.x;
+                b0.ll.y = b0.ur.y - ranksep / 2.0;
+                b.ur.x = nc.x - lw - 2.0;
+                b.ll.y = b0.ur.y;
+                b.ur.y = nc.y + h2;
+                b.ll.x -= 1.0;
+                endp.boxes = vec![b0, b];
+            } else {
+                b.ur.y = b.ur.y.max(p.start.p.y);
+                endp.boxes = vec![b];
+            }
+            p.end.p.y -= 1.0;
+        } else if side & LEFT != 0 {
+            b.ur.x = p.end.p.x + 1.0;
+            if endp.sidemask == TOP {
+                b.ur.y = nc.y + h2;
+                b.ll.y = p.end.p.y - 1.0;
+            } else {
+                b.ll.y = nc.y - h2;
+                b.ur.y = p.end.p.y + 1.0;
+            }
+            endp.boxes = vec![b];
+            p.end.p.x -= 1.0;
+        } else {
+            b.ll.x = p.end.p.x - 1.0;
+            if endp.sidemask == TOP {
+                b.ur.y = nc.y + h2;
+                b.ll.y = p.end.p.y - 1.0;
+            } else {
+                b.ll.y = nc.y - h2;
+                b.ur.y = p.end.p.y;
+            }
+            endp.boxes = vec![b];
+            p.end.p.x += 1.0;
+        }
+        clear_orig_clip(g, e, n, false);
+        endp.sidemask = side;
+        return;
+    }
+    let side = if et == REGULAREDGE {
+        TOP
+    } else {
+        endp.sidemask
+    };
+    if let Some((mask, boxes)) = g.pboxfn(n, &hport, side).filter(|(m, _)| *m != 0) {
+        endp.boxes = boxes;
+        endp.sidemask = mask;
+    } else {
+        endp.boxes = vec![endp.nb];
+        match et {
+            SELFEDGE => unreachable!("endpath is not used for self edges"),
+            FLATEDGE => {
+                if endp.sidemask == TOP {
+                    endp.boxes[0].ll.y = p.end.p.y;
+                } else {
+                    endp.boxes[0].ur.y = p.end.p.y;
+                }
+            }
+            REGULAREDGE => {
+                endp.boxes[0].ll.y = p.end.p.y;
+                endp.sidemask = TOP;
+                p.end.p.y += 1.0;
+            }
+            _ => {}
+        }
+    }
+}
+
+/// `FUDGE` in `beginpath`/`endpath`.
+const FUDGE: f64 = 2.0;
 
 const HW: f64 = 2.0;
 const SMALL: f64 = 0.000_000_000_1;
@@ -150,108 +859,6 @@ pub fn update_bb_bz(bb: &mut BoundingBox, cp: &[Point; 4]) {
     }
 }
 
-/// `clip_and_install(fe, hn, ps, pn, info)` for edges without virtual
-/// chains (`ED_to_orig` is NULL and ranks are equal, as in neato): clips the
-/// raw spline `ps` to the end nodes and arrowheads, appends it to the edge's
-/// splines and grows the root bounding box.
-pub fn clip_and_install(g: &mut LGraph<'_>, e: usize, hn: usize, ps_in: &[Point]) {
-    let mut ps = ps_in.to_vec();
-    let pn = ps.len();
-    let tn = g.edges[e].tail;
-    let (clip_tail, clip_head, tbox, hbox) = if tn == g.edges[e].tail {
-        let ed = &g.edges[e];
-        (
-            ed.tail_port.clip,
-            ed.head_port.clip,
-            ed.tail_port.bp,
-            ed.head_port.bp,
-        )
-    } else {
-        let ed = &g.edges[e];
-        (
-            ed.head_port.clip,
-            ed.tail_port.clip,
-            ed.head_port.bp,
-            ed.tail_port.bp,
-        )
-    };
-    let mut start = 0usize;
-    if clip_tail && !g.nodes[tn].shape.no_clip {
-        let mut ctx = InsideCtx {
-            bp: tbox,
-            ..InsideCtx::default()
-        };
-        let c = g.nodes[tn].coord;
-        while start < pn - 4 {
-            let p2 = Point::new(ps[start + 3].x - c.x, ps[start + 3].y - c.y);
-            if !g.nodes[tn].shape.inside(&mut ctx, p2) {
-                break;
-            }
-            start += 3;
-        }
-        shape_clip0(g, &mut ctx, tn, &mut ps[start..start + 4], true);
-    }
-    let mut end = pn - 4;
-    if clip_head && !g.nodes[hn].shape.no_clip {
-        let mut ctx = InsideCtx {
-            bp: hbox,
-            ..InsideCtx::default()
-        };
-        let c = g.nodes[hn].coord;
-        while end > 0 {
-            let p2 = Point::new(ps[end].x - c.x, ps[end].y - c.y);
-            if !g.nodes[hn].shape.inside(&mut ctx, p2) {
-                break;
-            }
-            end -= 3;
-        }
-        shape_clip0(g, &mut ctx, hn, &mut ps[end..end + 4], false);
-    }
-    while start < pn - 4 {
-        if !approxeqpt(ps[start], ps[start + 3], MILLIPOINT) {
-            break;
-        }
-        start += 3;
-    }
-    while end > 0 {
-        if !approxeqpt(ps[end], ps[end + 3], MILLIPOINT) {
-            break;
-        }
-        end -= 3;
-    }
-    let mut newspl = Bezier::default();
-    // arrow_clip
-    let attrs = &g.src.edges[e].attrs;
-    let (sflag, eflag) = arrow_flags(attrs, g.is_directed());
-    if sflag != 0 {
-        start = arrow_start_clip(attrs, &mut ps, start, end, &mut newspl, sflag);
-    }
-    if eflag != 0 {
-        end = arrow_end_clip(attrs, &mut ps, start, end, &mut newspl, eflag);
-    }
-    let mut list = Vec::with_capacity(end - start + 4);
-    let mut i = start;
-    while i < end + 4 {
-        let mut cp = [Point::default(); 4];
-        list.push(ps[i]);
-        cp[0] = ps[i];
-        i += 1;
-        if i >= end + 4 {
-            break;
-        }
-        list.push(ps[i]);
-        cp[1] = ps[i];
-        i += 1;
-        list.push(ps[i]);
-        cp[2] = ps[i];
-        i += 1;
-        cp[3] = ps[i];
-        update_bb_bz(&mut g.bb, &cp);
-    }
-    newspl.list = list;
-    g.edges[e].spl.get_or_insert_with(Vec::new).push(newspl);
-}
-
 /// `addLabelBB` / `updateBB`: grow `bb` by a positioned label.
 pub fn add_label_bb(bb: &mut BoundingBox, lp: &TextLabel, flip: bool) {
     let (w, h) = if flip {
@@ -278,6 +885,39 @@ pub fn add_label_bb(bb: &mut BoundingBox, lp: &TextLabel, flip: bool) {
     }
 }
 
+/// `addLabelBB` with explicit `dimen`/`pos`.
+pub fn add_label_bb_dims(bb: &mut BoundingBox, dimen: Point, p: Point, flip: bool) {
+    let (w, h) = if flip {
+        (dimen.y, dimen.x)
+    } else {
+        (dimen.x, dimen.y)
+    };
+    let min = p.x - w / 2.0;
+    let max = p.x + w / 2.0;
+    if min < bb.ll.x {
+        bb.ll.x = min;
+    }
+    if max > bb.ur.x {
+        bb.ur.x = max;
+    }
+    let min = p.y - h / 2.0;
+    let max = p.y + h / 2.0;
+    if min < bb.ll.y {
+        bb.ll.y = min;
+    }
+    if max > bb.ur.y {
+        bb.ur.y = max;
+    }
+}
+
+/// `updateBB(g, lp)` for label `k` of edge `e`.
+pub fn update_bb_label<S: SplineGraph + ?Sized>(g: &mut S, e: usize, k: LabelKind) {
+    if let Some(l) = g.label(e, k) {
+        let flip = g.flip();
+        add_label_bb_dims(g.bb_mut(), l.dimen, l.pos, flip);
+    }
+}
+
 fn convert_sides_to_points(tail_side: u8, head_side: u8) -> i32 {
     const VERTICES: [u8; 8] = [12, 4, 6, 2, 3, 1, 9, 8];
     let ti = VERTICES.iter().position(|&v| v == tail_side);
@@ -288,26 +928,40 @@ fn convert_sides_to_points(tail_side: u8, head_side: u8) -> i32 {
     }
 }
 
-fn label_width(lbl: &TextLabel) -> f64 {
-    lbl.dimen.x
+/// Label extent along x (`width`) or y (`height`), honouring `GD_flip`.
+fn label_extent<S: SplineGraph + ?Sized>(g: &S, e: usize, along_x: bool) -> Option<f64> {
+    let l = g.label(e, LabelKind::Main)?;
+    Some(if along_x != g.flip() {
+        l.dimen.x
+    } else {
+        l.dimen.y
+    })
 }
 
-fn label_height(lbl: &TextLabel) -> f64 {
-    lbl.dimen.y
+struct SelfEnds {
+    n: usize,
+    np: Point,
+    tp: Point,
+    hp: Point,
+    pp: i32,
 }
 
-fn self_right(g: &mut LGraph<'_>, edges: &[usize], stepx: f64, sizey: f64) {
-    let e = edges[0];
-    let n = g.edges[e].tail;
+fn self_ends<S: SplineGraph + ?Sized>(g: &S, e: usize) -> SelfEnds {
+    let n = g.tail(e);
+    let np = g.coord(n);
+    let tp = add(g.tail_port(e).p, np);
+    let hp = add(g.head_port(e).p, np);
+    let pp = convert_sides_to_points(g.tail_port(e).side, g.head_port(e).side);
+    SelfEnds { n, np, tp, hp, pp }
+}
+
+fn self_right<S: SplineGraph + ?Sized>(g: &mut S, edges: &[usize], stepx: f64, sizey: f64) {
+    let SelfEnds { n, np, tp, hp, pp } = self_ends(g, edges[0]);
     let cnt = edges.len();
     let stepy = (sizey / 2.0 / cnt as f64).max(2.0);
-    let np = g.nodes[n].coord;
-    let tp = super::geom::add(g.edges[e].tail_port.p, np);
-    let hp = super::geom::add(g.edges[e].head_port.p, np);
     let mut sgn = if tp.y >= hp.y { 1.0 } else { -1.0 };
-    let mut dx = g.nodes[n].rw;
+    let mut dx = g.rw(n);
     let mut dy = 0.0;
-    let pp = convert_sides_to_points(g.edges[e].tail_port.side, g.edges[e].head_port.side);
     if (pp == 32 || pp == 65) && tp.y == hp.y {
         sgn = -sgn;
     }
@@ -327,31 +981,25 @@ fn self_right(g: &mut LGraph<'_>, edges: &[usize], stepx: f64, sizey: f64) {
             Point::new(hp.x + hx / 3.0, hp.y - dy),
             hp,
         ];
-        if let Some(l) = g.edges[e].label.as_mut() {
-            let width = label_width(l);
-            l.pos = Point::new(np.x + dx + width / 2.0, np.y);
-            l.set = true;
+        if let Some(width) = label_extent(g, e, true) {
+            let c = g.coord(n);
+            g.set_label_pos(e, LabelKind::Main, Point::new(c.x + dx + width / 2.0, c.y));
             if width > stepx {
                 dx += width - stepx;
             }
         }
-        let h = g.edges[e].head;
+        let h = g.head(e);
         clip_and_install(g, e, h, &points);
     }
 }
 
-fn self_left(g: &mut LGraph<'_>, edges: &[usize], stepx: f64, sizey: f64) {
-    let e = edges[0];
-    let n = g.edges[e].tail;
+fn self_left<S: SplineGraph + ?Sized>(g: &mut S, edges: &[usize], stepx: f64, sizey: f64) {
+    let SelfEnds { n, np, tp, hp, pp } = self_ends(g, edges[0]);
     let cnt = edges.len();
     let stepy = (sizey / 2.0 / cnt as f64).max(2.0);
-    let np = g.nodes[n].coord;
-    let tp = super::geom::add(g.edges[e].tail_port.p, np);
-    let hp = super::geom::add(g.edges[e].head_port.p, np);
     let mut sgn = if tp.y >= hp.y { 1.0 } else { -1.0 };
-    let mut dx = g.nodes[n].lw;
+    let mut dx = g.lw(n);
     let mut dy = 0.0;
-    let pp = convert_sides_to_points(g.edges[e].tail_port.side, g.edges[e].head_port.side);
     if (pp == 12 || pp == 67) && tp.y == hp.y {
         sgn = -sgn;
     }
@@ -371,32 +1019,27 @@ fn self_left(g: &mut LGraph<'_>, edges: &[usize], stepx: f64, sizey: f64) {
             Point::new(hp.x - hx / 3.0, hp.y - dy),
             hp,
         ];
-        if let Some(l) = g.edges[e].label.as_mut() {
-            let width = label_width(l);
-            l.pos = Point::new(np.x - dx - width / 2.0, np.y);
-            l.set = true;
+        if let Some(width) = label_extent(g, e, true) {
+            let c = g.coord(n);
+            g.set_label_pos(e, LabelKind::Main, Point::new(c.x - dx - width / 2.0, c.y));
             if width > stepx {
                 dx += width - stepx;
             }
         }
-        let h = g.edges[e].head;
+        let h = g.head(e);
         clip_and_install(g, e, h, &points);
     }
 }
 
-fn self_top(g: &mut LGraph<'_>, edges: &[usize], sizex: f64, stepy: f64) {
-    let e = edges[0];
-    let n = g.edges[e].tail;
+fn self_top<S: SplineGraph + ?Sized>(g: &mut S, edges: &[usize], sizex: f64, stepy: f64) {
+    let SelfEnds { n, np, tp, hp, pp } = self_ends(g, edges[0]);
     let cnt = edges.len();
     let stepx = (sizex / 2.0 / cnt as f64).max(2.0);
-    let np = g.nodes[n].coord;
-    let tp = super::geom::add(g.edges[e].tail_port.p, np);
-    let hp = super::geom::add(g.edges[e].head_port.p, np);
     let sgn = if tp.x >= hp.x { 1.0 } else { -1.0 };
-    let (lw, rw) = (g.nodes[n].lw, g.nodes[n].rw);
-    let mut dy = g.nodes[n].ht / 2.0;
+    let (lw, rw) = (g.lw(n), g.rw(n));
+    let mut dy = g.ht(n) / 2.0;
     let mut dx = 0.0;
-    match convert_sides_to_points(g.edges[e].tail_port.side, g.edges[e].head_port.side) {
+    match pp {
         15 => dx = sgn * (rw - (hp.x - np.x) + stepx),
         38 => dx = sgn * (lw - (np.x - hp.x) + stepx),
         41 | 48 => dx = sgn * (rw - (tp.x - np.x) + stepx),
@@ -427,31 +1070,26 @@ fn self_top(g: &mut LGraph<'_>, edges: &[usize], sizex: f64, stepy: f64) {
             Point::new(hp.x - dx, hp.y + hy / 3.0),
             hp,
         ];
-        if let Some(l) = g.edges[e].label.as_mut() {
-            let height = label_height(l);
-            l.pos = Point::new(np.x, np.y + dy + height / 2.0);
-            l.set = true;
+        if let Some(height) = label_extent(g, e, false) {
+            let c = g.coord(n);
+            g.set_label_pos(e, LabelKind::Main, Point::new(c.x, c.y + dy + height / 2.0));
             if height > stepy {
                 dy += height - stepy;
             }
         }
-        let h = g.edges[e].head;
+        let h = g.head(e);
         clip_and_install(g, e, h, &points);
     }
 }
 
-fn self_bottom(g: &mut LGraph<'_>, edges: &[usize], sizex: f64, stepy: f64) {
-    let e = edges[0];
-    let n = g.edges[e].tail;
+fn self_bottom<S: SplineGraph + ?Sized>(g: &mut S, edges: &[usize], sizex: f64, stepy: f64) {
+    let SelfEnds { n, np, tp, hp, pp } = self_ends(g, edges[0]);
     let cnt = edges.len();
     let stepx = (sizex / 2.0 / cnt as f64).max(2.0);
-    let np = g.nodes[n].coord;
-    let tp = super::geom::add(g.edges[e].tail_port.p, np);
-    let hp = super::geom::add(g.edges[e].head_port.p, np);
     let mut sgn = if tp.x >= hp.x { 1.0 } else { -1.0 };
-    let mut dy = g.nodes[n].ht / 2.0;
+    let mut dy = g.ht(n) / 2.0;
     let mut dx = 0.0;
-    if convert_sides_to_points(g.edges[e].tail_port.side, g.edges[e].head_port.side) == 67 {
+    if pp == 67 {
         sgn = -sgn;
     }
     let mut ty = dy.min(3.0 * (tp.y + dy - np.y));
@@ -470,24 +1108,23 @@ fn self_bottom(g: &mut LGraph<'_>, edges: &[usize], sizex: f64, stepy: f64) {
             Point::new(hp.x - dx, hp.y - hy / 3.0),
             hp,
         ];
-        if let Some(l) = g.edges[e].label.as_mut() {
-            let height = label_height(l);
-            l.pos = Point::new(np.x, np.y - dy - height / 2.0);
-            l.set = true;
+        if let Some(height) = label_extent(g, e, false) {
+            let c = g.coord(n);
+            g.set_label_pos(e, LabelKind::Main, Point::new(c.x, c.y - dy - height / 2.0));
             if height > stepy {
                 dy += height - stepy;
             }
         }
-        let h = g.edges[e].head;
+        let h = g.head(e);
         clip_and_install(g, e, h, &points);
     }
 }
 
 /// `makeSelfEdge(edges, cnt, sizex, sizey, sinfo)`.
-pub fn make_self_edge(g: &mut LGraph<'_>, edges: &[usize], sizex: f64, sizey: f64) {
+pub fn make_self_edge<S: SplineGraph + ?Sized>(g: &mut S, edges: &[usize], sizex: f64, sizey: f64) {
     let e = edges[0];
-    let tp = &g.edges[e].tail_port;
-    let hp = &g.edges[e].head_port;
+    let tp = g.tail_port(e);
+    let hp = g.head_port(e);
     let (ts, hs) = (tp.side, hp.side);
     if (!tp.defined && !hp.defined)
         || (ts & LEFT == 0 && hs & LEFT == 0 && (ts != hs || ts & (TOP | BOTTOM) == 0))
@@ -510,14 +1147,19 @@ pub const PORT_LABEL_DISTANCE: f64 = 10.0;
 pub const PORT_LABEL_ANGLE: f64 = -25.0;
 
 /// `place_portlabel(e, head_p)`; returns whether the label was placed.
-fn place_portlabel(g: &mut LGraph<'_>, e: usize, head_p: bool) -> bool {
-    let attrs = &g.src.edges[e].attrs;
+pub fn place_portlabel<S: SplineGraph + ?Sized>(g: &mut S, e: usize, head_p: bool) -> bool {
+    if g.is_ignored_edge(e) {
+        return false;
+    }
+    let attrs = g.edge_attrs(e);
     let la = attrs.get("labelangle").filter(|s| !s.is_empty());
     let ld = attrs.get("labeldistance").filter(|s| !s.is_empty());
     if la.is_none() && ld.is_none() {
         return false;
     }
-    let Some(spl) = g.edges[e].spl.as_ref() else {
+    let angle_attr = late_double(attrs, "labelangle", PORT_LABEL_ANGLE, -180.0);
+    let dist_attr = late_double(attrs, "labeldistance", 1.0, 0.0);
+    let Some(spl) = getsplinepoints(g, e) else {
         return false;
     };
     let (pe, pf) = if !head_p {
@@ -543,41 +1185,116 @@ fn place_portlabel(g: &mut LGraph<'_>, e: usize, head_p: bool) -> bool {
             (bez.list[n - 1], bezier_pt(&c, 0.9))
         }
     };
-    let angle = (pf.y - pe.y).atan2(pf.x - pe.x)
-        + late_double(attrs, "labelangle", PORT_LABEL_ANGLE, -180.0).to_radians();
-    let d = PORT_LABEL_DISTANCE * late_double(attrs, "labeldistance", 1.0, 0.0);
+    let angle = (pf.y - pe.y).atan2(pf.x - pe.x) + angle_attr.to_radians();
+    let d = PORT_LABEL_DISTANCE * dist_attr;
     let pos = Point::new(d.mul_add(angle.cos(), pe.x), d.mul_add(angle.sin(), pe.y));
-    let l = if head_p {
-        g.edges[e].head_label.as_mut()
+    let k = if head_p {
+        LabelKind::Head
     } else {
-        g.edges[e].tail_label.as_mut()
+        LabelKind::Tail
     };
-    if let Some(l) = l {
-        l.pos = pos;
-        l.set = true;
-    }
+    g.set_label_pos(e, k, pos);
     true
 }
 
 /// `makePortLabels(e)`: place head/tail labels when `labelangle` or
 /// `labeldistance` is declared, growing the root bounding box.
-pub fn make_port_labels(g: &mut LGraph<'_>, e: usize) {
-    if !g.has_labelangle && !g.has_labeldistance {
+pub fn make_port_labels<S: SplineGraph + ?Sized>(g: &mut S, e: usize) {
+    if !g.has_port_label_attrs() {
         return;
     }
-    if g.edges[e].head_label.as_ref().is_some_and(|l| !l.set) && place_portlabel(g, e, true) {
-        let l = g.edges[e].head_label.clone().unwrap();
-        add_label_bb(&mut g.bb, &l, false);
+    if g.label(e, LabelKind::Head).is_some_and(|l| !l.set) && place_portlabel(g, e, true) {
+        update_bb_label(g, e, LabelKind::Head);
     }
-    if g.edges[e].tail_label.as_ref().is_some_and(|l| !l.set) && place_portlabel(g, e, false) {
-        let l = g.edges[e].tail_label.clone().unwrap();
-        add_label_bb(&mut g.bb, &l, false);
+    if g.label(e, LabelKind::Tail).is_some_and(|l| !l.set) && place_portlabel(g, e, false) {
+        update_bb_label(g, e, LabelKind::Tail);
     }
 }
 
 /// `addEdgeLabels(e)`.
-pub fn add_edge_labels(g: &mut LGraph<'_>, e: usize) {
+pub fn add_edge_labels<S: SplineGraph + ?Sized>(g: &mut S, e: usize) {
     make_port_labels(g, e);
+}
+
+impl SplineGraph for LGraph<'_> {
+    fn tail(&self, e: usize) -> usize {
+        self.edges[e].tail
+    }
+    fn head(&self, e: usize) -> usize {
+        self.edges[e].head
+    }
+    fn coord(&self, n: usize) -> Point {
+        self.nodes[n].coord
+    }
+    fn lw(&self, n: usize) -> f64 {
+        self.nodes[n].lw
+    }
+    fn rw(&self, n: usize) -> f64 {
+        self.nodes[n].rw
+    }
+    fn ht(&self, n: usize) -> f64 {
+        self.nodes[n].ht
+    }
+    fn shape(&self, n: usize) -> Option<&NodeShape> {
+        Some(&self.nodes[n].shape)
+    }
+    fn tail_port(&self, e: usize) -> &PortInfo {
+        &self.edges[e].tail_port
+    }
+    fn head_port(&self, e: usize) -> &PortInfo {
+        &self.edges[e].head_port
+    }
+    fn tail_port_mut(&mut self, e: usize) -> &mut PortInfo {
+        &mut self.edges[e].tail_port
+    }
+    fn head_port_mut(&mut self, e: usize) -> &mut PortInfo {
+        &mut self.edges[e].head_port
+    }
+    fn edge_attrs(&self, e: usize) -> &AttrMap {
+        &self.src.edges[e].attrs
+    }
+    fn arrow_flags(&self, e: usize) -> (u32, u32) {
+        arrow_flags(&self.src.edges[e].attrs, self.is_directed())
+    }
+    fn spl(&self, e: usize) -> Option<&Vec<Bezier>> {
+        self.edges[e].spl.as_ref()
+    }
+    fn spl_mut(&mut self, e: usize) -> &mut Option<Vec<Bezier>> {
+        &mut self.edges[e].spl
+    }
+    fn bb_mut(&mut self) -> &mut BoundingBox {
+        &mut self.bb
+    }
+    fn label(&self, e: usize, k: LabelKind) -> Option<LabelView> {
+        let ed = &self.edges[e];
+        let l = match k {
+            LabelKind::Main => ed.label.as_ref(),
+            LabelKind::Head => ed.head_label.as_ref(),
+            LabelKind::Tail => ed.tail_label.as_ref(),
+            LabelKind::Xlabel => ed.xlabel.as_ref(),
+        }?;
+        Some(LabelView {
+            dimen: l.dimen,
+            pos: l.pos,
+            set: l.set,
+        })
+    }
+    fn set_label_pos(&mut self, e: usize, k: LabelKind, pos: Point) {
+        let ed = &mut self.edges[e];
+        let l = match k {
+            LabelKind::Main => ed.label.as_mut(),
+            LabelKind::Head => ed.head_label.as_mut(),
+            LabelKind::Tail => ed.tail_label.as_mut(),
+            LabelKind::Xlabel => ed.xlabel.as_mut(),
+        };
+        if let Some(l) = l {
+            l.pos = pos;
+            l.set = true;
+        }
+    }
+    fn has_port_label_attrs(&self) -> bool {
+        self.has_labelangle || self.has_labeldistance
+    }
 }
 
 fn end_points(spl: &[Bezier]) -> (Point, Point) {
