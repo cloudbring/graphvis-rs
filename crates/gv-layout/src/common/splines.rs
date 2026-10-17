@@ -9,7 +9,7 @@
 //! the neato family's [`LGraph`] and by dot (`dotgen::splines_host`).
 
 use super::arrows::{arrow_end_clip, arrow_flags, arrow_start_clip};
-use super::geom::{MILLIPOINT, add, approxeqpt, dist, dist2, mid};
+use super::geom::{MILLIPOINT, add, approxeqpt, dist, dist2, mid, radians};
 use super::ports::{BOTTOM, LEFT, RIGHT, TOP};
 use super::routespl::{Path, PathEnd};
 use super::shapes::{InsideCtx, NodeShape};
@@ -1185,7 +1185,7 @@ pub fn place_portlabel<S: SplineGraph + ?Sized>(g: &mut S, e: usize, head_p: boo
             (bez.list[n - 1], bezier_pt(&c, 0.9))
         }
     };
-    let angle = (pf.y - pe.y).atan2(pf.x - pe.x) + angle_attr.to_radians();
+    let angle = (pf.y - pe.y).atan2(pf.x - pe.x) + radians(angle_attr);
     let d = PORT_LABEL_DISTANCE * dist_attr;
     let pos = Point::new(d.mul_add(angle.cos(), pe.x), d.mul_add(angle.sin(), pe.y));
     let k = if head_p {

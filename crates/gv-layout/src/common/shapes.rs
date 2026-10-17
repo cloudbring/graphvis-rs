@@ -303,7 +303,7 @@ fn regular_unit_vertices(sides: usize, orientation: f64, distortion: f64, skew: 
         r.x += sidelength * cosx;
         r.y += sidelength * sinx;
         let mut p = Point::new(r.x * (skewdist + r.y * gdistortion) + r.y * gskew, r.y);
-        let alpha = orientation.to_radians() + p.y.atan2(p.x);
+        let alpha = super::geom::radians(orientation) + p.y.atan2(p.x);
         let (s, c) = (alpha.sin(), alpha.cos());
         let h = p.x.hypot(p.y);
         p.x = h * c;

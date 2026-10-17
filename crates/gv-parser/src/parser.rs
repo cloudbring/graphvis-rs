@@ -501,11 +501,14 @@ impl Parser {
     fn parse_simple(&mut self) -> Result<SimpleItem> {
         if matches!(self.peek().kind, TokenKind::Subgraph | TokenKind::LBrace) {
             let subg_id = self.parse_subgraph()?;
-            let endpoints = self.graph.subgraphs[subg_id.0 as usize]
+            // C's edgerhs walks agfstnode(subg)..agnxtnode: node sequence order, not the
+            // order the nodes were listed in the subgraph body.
+            let mut endpoints: Vec<(NodeId, Port)> = self.graph.subgraphs[subg_id.0 as usize]
                 .nodes
                 .iter()
                 .map(|&nid| (nid, Port::default()))
                 .collect();
+            endpoints.sort_by_key(|&(nid, _)| nid.0);
             Ok(SimpleItem::Subgraph(endpoints))
         } else {
             let mut nodes = vec![self.parse_node_ref()?];
