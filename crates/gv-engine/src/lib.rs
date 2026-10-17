@@ -2,13 +2,32 @@
 
 pub use gv_core::{Graph, GraphvizError, Result};
 pub use gv_layout::{LayoutEngine, layout_graph};
-pub use gv_parser::parse_dot;
+pub use gv_parser::{GlobalAttrs, parse_dot, parse_dot_all};
 pub use gv_render::{OutputFormat, render_graph};
 
-/// End-to-end DOT rendering pipeline for any supported engine and output format.
+/// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
+/// first graph in `dot_source`.
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
     let output_format = OutputFormat::parse(format)?;
-    let mut graph = parse_dot(dot_source)?;
+    let graph = parse_dot(dot_source)?;
+    render_parsed(graph, engine, output_format)
+}
+
+/// Renders every graph in `dot_source`, applying `globals` (`-G`/`-N`/`-E`) before each graph body.
+pub fn render_dot_all(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+    globals: &GlobalAttrs,
+) -> Result<Vec<String>> {
+    let output_format = OutputFormat::parse(format)?;
+    parse_dot_all(dot_source, globals)?
+        .into_iter()
+        .map(|graph| render_parsed(graph, engine, output_format))
+        .collect()
+}
+
+fn render_parsed(mut graph: Graph, engine: &str, output_format: OutputFormat) -> Result<String> {
     // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
     let layout_engine = match graph.graph_attrs.get("layout") {
         Some(name) if !name.trim().is_empty() => LayoutEngine::parse(name.trim())?,
@@ -30,6 +49,22 @@ mod tests {
     fn smoke_render_svg() {
         let svg = render_dot("digraph G { a -> b; }", "dot", "svg").unwrap();
         assert!(svg.contains("<svg"));
+    }
+
+    #[test]
+    fn render_dot_all_renders_every_graph_with_globals() {
+        let mut globals = GlobalAttrs::default();
+        globals.node.insert("shape".into(), "box".into());
+        let outs = render_dot_all(
+            "digraph G { a -> b } digraph H { c -> d }",
+            "dot",
+            "svg",
+            &globals,
+        )
+        .unwrap();
+        assert_eq!(outs.len(), 2);
+        assert!(outs[0].contains("<title>a</title>") && !outs[0].contains("<ellipse"));
+        assert!(outs[1].contains("<title>c</title>"));
     }
 
     #[test]

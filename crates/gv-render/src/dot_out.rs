@@ -15,7 +15,7 @@ use gv_core::{
     resolve_color_with_scheme,
 };
 use gv_geom::straight_spline;
-use gv_parser::{canon_str, is_html_string, write_canon};
+use gv_parser::{canon_str, canon_value, write_canon};
 use std::fmt::Write;
 
 const POINTS_PER_INCH: f64 = 72.0;
@@ -505,10 +505,13 @@ fn collect_record_rects(field: &RecordField, out: &mut Vec<String>) {
 }
 
 fn xdot_color_hex(spec: Option<&str>, default: RgbaColor, scheme: Option<&str>) -> String {
-    let rgba = spec
-        .and_then(|s| s.split(':').next())
-        .and_then(|s| resolve_color_with_scheme(s, scheme))
-        .unwrap_or(default);
+    let rgba = match spec.and_then(|s| s.split(':').next()).map(str::trim) {
+        Some(s) if !s.is_empty() => resolve_color_with_scheme(s, scheme).unwrap_or_else(|| {
+            gv_core::warn_unknown_color(s);
+            RgbaColor::BLACK
+        }),
+        _ => default,
+    };
     if rgba.a == 255 {
         rgba.to_hex_rgb()
     } else {
@@ -785,8 +788,8 @@ pub fn render_plain(graph: &Graph) -> String {
         let h_in = fmt_g5(node.height);
 
         let raw_label = node.attrs.get("label").map(String::as_str).unwrap_or("\\N");
-        let label_str = if is_html_string(raw_label) {
-            canon_str(raw_label)
+        let label_str = if graph.html_strings.contains(raw_label) {
+            canon_value(raw_label, &graph.html_strings)
         } else {
             let ctx = LabelSubstContext {
                 node_name: &node.name,

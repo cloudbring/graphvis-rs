@@ -5,11 +5,13 @@ use std::collections::BTreeSet;
 
 /// Formats a [`Graph`] into canonical DOT representation (`dot -Tcanon`).
 pub fn write_canon(graph: &Graph) -> String {
+    let html = &graph.html_strings;
     let mut out = String::new();
     let mut state = WriteState {
         written_nodes: BTreeSet::new(),
         written_edges: BTreeSet::new(),
         attrs_written_nodes: BTreeSet::new(),
+        subgraph_edges: subgraph_edge_membership(graph),
     };
 
     if graph.strict {
@@ -28,12 +30,16 @@ pub fn write_canon(graph: &Graph) -> String {
     let all_nodes: Vec<NodeId> = graph.nodes.iter().map(|n| n.id).collect();
     let all_edges: Vec<EdgeId> = graph.edges.iter().map(|e| e.id).collect();
 
-    let root_node_defaults = effective_node_defaults(graph, &all_nodes, &graph.node_defaults);
+    let mut root_node_defaults = effective_node_defaults(graph, &all_nodes, &graph.node_defaults);
+    // dot declares `label="\N"` as the node default when the input does not.
+    root_node_defaults
+        .entry("label".to_string())
+        .or_insert_with(|| "\\N".to_string());
     let root_edge_defaults = effective_edge_defaults(graph, &all_edges, &graph.edge_defaults);
 
-    write_dict(&mut out, 1, "graph", &graph.graph_attrs, None);
-    write_dict(&mut out, 1, "node", &root_node_defaults, None);
-    write_dict(&mut out, 1, "edge", &root_edge_defaults, None);
+    write_dict(&mut out, 1, "graph", &graph.graph_attrs, None, html);
+    write_dict(&mut out, 1, "node", &root_node_defaults, None, html);
+    write_dict(&mut out, 1, "edge", &root_edge_defaults, None, html);
 
     // Determine top-level subgraphs (those not nested inside another subgraph)
     let mut child_subgraphs = BTreeSet::new();
@@ -77,6 +83,39 @@ struct WriteState {
     written_nodes: BTreeSet<NodeId>,
     written_edges: BTreeSet<EdgeId>,
     attrs_written_nodes: BTreeSet<NodeId>,
+    subgraph_edges: Vec<Vec<EdgeId>>,
+}
+
+/// Edge lists per subgraph. After ranking, dot adds every edge whose endpoints both lie in a
+/// cluster to that cluster and its ancestors (`mark_lowclusters`), so `-Tcanon` prints them there.
+fn subgraph_edge_membership(graph: &Graph) -> Vec<Vec<EdgeId>> {
+    let mut parent: Vec<Option<usize>> = vec![None; graph.subgraphs.len()];
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        for child in &sg.subgraphs {
+            parent[child.0 as usize] = Some(i);
+        }
+    }
+    let mut sets: Vec<BTreeSet<EdgeId>> = graph
+        .subgraphs
+        .iter()
+        .map(|sg| sg.edges.iter().copied().collect())
+        .collect();
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        if !sg.is_cluster {
+            continue;
+        }
+        let members: BTreeSet<NodeId> = sg.nodes.iter().copied().collect();
+        for e in &graph.edges {
+            if members.contains(&e.tail) && members.contains(&e.head) {
+                let mut cur = Some(i);
+                while let Some(c) = cur {
+                    sets[c].insert(e.id);
+                    cur = parent[c];
+                }
+            }
+        }
+    }
+    sets.into_iter().map(|s| s.into_iter().collect()).collect()
 }
 
 fn effective_node_defaults(graph: &Graph, nodes: &[NodeId], defaults: &AttrMap) -> AttrMap {
@@ -158,6 +197,7 @@ fn write_subgraph(
         "graph",
         &subg.graph_attrs,
         Some(parent_graph_attrs),
+        &graph.html_strings,
     );
     write_dict(
         out,
@@ -165,6 +205,7 @@ fn write_subgraph(
         "node",
         &subg_node_defaults,
         Some(parent_node_defaults),
+        &graph.html_strings,
     );
     write_dict(
         out,
@@ -172,6 +213,7 @@ fn write_subgraph(
         "edge",
         &subg_edge_defaults,
         Some(parent_edge_defaults),
+        &graph.html_strings,
     );
 
     for &child_id in &subg.subgraphs {
@@ -187,10 +229,11 @@ fn write_subgraph(
         );
     }
 
+    let scope_edges = state.subgraph_edges[subg_id.0 as usize].clone();
     write_nodes_and_edges(
         graph,
         &subg.nodes,
-        &subg.edges,
+        &scope_edges,
         &subg_node_defaults,
         &subg_edge_defaults,
         inner_level,
@@ -226,21 +269,32 @@ fn write_nodes_and_edges(
         if !state.written_nodes.contains(&node_id)
             && (!has_edges_in_scope || !non_default.is_empty())
         {
-            write_node_stmt(out, level, node, &non_default, state);
+            write_node_stmt(out, level, node, &non_default, &graph.html_strings, state);
         }
 
-        for edge in &graph.edges {
-            if edge.tail == node_id
-                && scope_edge_set.contains(&edge.id)
-                && !state.written_edges.contains(&edge.id)
-            {
+        // Out-edges iterate by head node sequence, then edge sequence (`agedgeseqcmpf`).
+        let mut out_edges: Vec<&EdgeData> = graph
+            .edges
+            .iter()
+            .filter(|e| e.tail == node_id && scope_edge_set.contains(&e.id))
+            .collect();
+        out_edges.sort_by_key(|e| (e.head, e.id));
+        for edge in out_edges {
+            if !state.written_edges.contains(&edge.id) {
                 let head_node = &graph.nodes[edge.head.0 as usize];
                 let head_non_default = collect_non_default_node_attrs(head_node, node_defaults);
                 if edge.head != node_id
                     && !state.written_nodes.contains(&edge.head)
                     && !head_non_default.is_empty()
                 {
-                    write_node_stmt(out, level, head_node, &head_non_default, state);
+                    write_node_stmt(
+                        out,
+                        level,
+                        head_node,
+                        &head_non_default,
+                        &graph.html_strings,
+                        state,
+                    );
                 }
                 write_edge_stmt(out, level, graph, edge, edge_defaults, state);
             }
@@ -253,12 +307,13 @@ fn write_node_stmt(
     level: usize,
     node: &NodeData,
     non_default_attrs: &[(&String, &String)],
+    html: &BTreeSet<String>,
     state: &mut WriteState,
 ) {
     push_indent(out, level);
     out.push_str(&canon_str(&node.name));
     if !state.attrs_written_nodes.contains(&node.id) && !non_default_attrs.is_empty() {
-        write_inline_attrs(out, level, non_default_attrs);
+        write_inline_attrs(out, level, non_default_attrs, html);
         state.attrs_written_nodes.insert(node.id);
     }
     out.push_str(";\n");
@@ -290,7 +345,7 @@ fn write_edge_stmt(
 
     let non_default = collect_non_default_edge_attrs(edge, edge_defaults);
     if !non_default.is_empty() {
-        write_inline_attrs(out, level, &non_default);
+        write_inline_attrs(out, level, &non_default, &graph.html_strings);
     }
 
     out.push_str(";\n");
@@ -316,6 +371,7 @@ fn write_dict(
     dict_name: &str,
     attrs: &AttrMap,
     parent_attrs: Option<&AttrMap>,
+    html: &BTreeSet<String>,
 ) {
     let entries: Vec<(&String, &String)> = attrs
         .iter()
@@ -339,7 +395,7 @@ fn write_dict(
         }
         out.push_str(&canon_str(k));
         out.push('=');
-        out.push_str(&canon_str(v));
+        out.push_str(&canon_value(v, html));
     }
     if entries.len() > 1 {
         out.push('\n');
@@ -348,7 +404,12 @@ fn write_dict(
     out.push_str("];\n");
 }
 
-fn write_inline_attrs(out: &mut String, level: usize, attrs: &[(&String, &String)]) {
+fn write_inline_attrs(
+    out: &mut String,
+    level: usize,
+    attrs: &[(&String, &String)],
+    html: &BTreeSet<String>,
+) {
     out.push_str("\t[");
     for (idx, (k, v)) in attrs.iter().enumerate() {
         if idx > 0 {
@@ -357,7 +418,7 @@ fn write_inline_attrs(out: &mut String, level: usize, attrs: &[(&String, &String
         }
         out.push_str(&canon_str(k));
         out.push('=');
-        out.push_str(&canon_str(v));
+        out.push_str(&canon_value(v, html));
     }
     out.push(']');
 }
@@ -442,13 +503,20 @@ pub fn is_html_string(s: &str) -> bool {
     depth == 0
 }
 
+/// Canonicalizes an attribute value: a string lexed as an HTML string (`<...>`, recorded in
+/// `html`) is emitted verbatim, anything else (including a quoted `"<x>"`) is quoted as needed.
+pub fn canon_value(s: &str, html: &BTreeSet<String>) -> String {
+    if html.contains(s) {
+        s.to_string()
+    } else {
+        canon_str(s)
+    }
+}
+
 /// Canonicalizes a single identifier or string value following `_agstrcanon` in `write.c`.
 pub fn canon_str(s: &str) -> String {
     if s.is_empty() {
         return "\"\"".to_string();
-    }
-    if is_html_string(s) {
-        return s.to_string();
     }
     if can_be_unquoted(s) {
         return s.to_string();

@@ -5,15 +5,21 @@ pub mod canon;
 pub mod lexer;
 pub mod parser;
 
-pub use canon::{canon_str, is_html_string, write_canon};
+pub use canon::{canon_str, canon_value, is_html_string, write_canon};
 pub use lexer::{Lexer, Token, TokenKind};
-pub use parser::Parser;
+pub use parser::{GlobalAttrs, Parser};
 
 use gv_core::{Graph, Result};
 
 /// Parses a DOT graph specification into an arena-backed [`Graph`].
 pub fn parse_dot(input: &str) -> Result<Graph> {
     Parser::parse_str(input)
+}
+
+/// Parses every graph in a DOT stream (`digraph G {..} digraph H {..}`), applying `globals`
+/// (`-G`/`-N`/`-E` command line attributes) as if declared at the top of each graph.
+pub fn parse_dot_all(input: &str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
+    Parser::parse_all(input, globals)
 }
 
 #[cfg(test)]
@@ -161,6 +167,59 @@ mod tests {
                 .map(String::as_str),
             Some("Mdiamond")
         );
+    }
+
+    #[test]
+    fn canon_distinguishes_quoted_and_html_labels() {
+        let g = parse_dot(
+            "digraph { a [label=\"<x>\"]; b [label=<<b>x</b>>]; a -> b [label=\"<e>\"]; }",
+        )
+        .unwrap();
+        let canon = write_canon(&g);
+        assert!(canon.contains("a\t[label=\"<x>\"];"), "{canon}");
+        assert!(canon.contains("b\t[label=<<b>x</b>>];"), "{canon}");
+        assert!(canon.contains("a -> b\t[label=\"<e>\"];"), "{canon}");
+        assert!(canon.contains("node [label=\"\\N\"];"), "{canon}");
+    }
+
+    #[test]
+    fn parse_dot_all_returns_every_graph_with_globals() {
+        let mut globals = GlobalAttrs::default();
+        globals.graph.insert("rankdir".into(), "LR".into());
+        globals.node.insert("shape".into(), "box".into());
+        globals.edge.insert("color".into(), "red".into());
+        let graphs = parse_dot_all("digraph G { a -> b } graph H { c -- d }", &globals).unwrap();
+        assert_eq!(graphs.len(), 2);
+        assert_eq!(graphs[0].name, "G");
+        assert_eq!(graphs[1].name, "H");
+        assert_eq!(graphs[1].kind, GraphKind::Undirected);
+        for g in &graphs {
+            assert_eq!(g.graph_attrs.get("rankdir").map(String::as_str), Some("LR"));
+            assert_eq!(
+                g.nodes[0].attrs.get("shape").map(String::as_str),
+                Some("box")
+            );
+            assert_eq!(
+                g.edges[0].attrs.get("color").map(String::as_str),
+                Some("red")
+            );
+        }
+        assert_eq!(
+            parse_dot("digraph G { a } digraph H { b }").unwrap().name,
+            "G"
+        );
+        assert!(
+            parse_dot_all("", &GlobalAttrs::default())
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn canon_orders_out_edges_by_head_sequence() {
+        let g = parse_dot("digraph { b; c; a -> c; a -> b; }").unwrap();
+        let canon = write_canon(&g);
+        assert!(canon.find("a -> b").unwrap() < canon.find("a -> c").unwrap());
     }
 
     #[test]

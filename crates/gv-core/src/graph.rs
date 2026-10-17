@@ -1,6 +1,6 @@
 use crate::geom::{BoundingBox, Point, Spline};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct NodeId(pub u32);
@@ -80,6 +80,10 @@ pub struct Graph {
     pub edges: Vec<EdgeData>,
     pub subgraphs: Vec<SubgraphData>,
     pub bb: BoundingBox,
+    /// Attribute values that were written as HTML strings (`<...>`) in the source, stored with
+    /// their delimiters. A quoted `"<x>"` is a plain string and is not recorded here.
+    #[serde(default)]
+    pub html_strings: BTreeSet<String>,
 }
 
 impl Graph {
@@ -96,6 +100,7 @@ impl Graph {
             edges: Vec::new(),
             subgraphs: Vec::new(),
             bb: BoundingBox::default(),
+            html_strings: BTreeSet::new(),
         }
     }
 
