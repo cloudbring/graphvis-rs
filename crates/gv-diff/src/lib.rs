@@ -62,6 +62,8 @@ pub struct Layout {
     /// Keyed by `tail -> head #k` where `k` counts repeated edges between the pair.
     pub edges: BTreeMap<String, EdgeGeom>,
     pub clusters: BTreeMap<String, [f64; 4]>,
+    /// True when ranks run along x (`rankdir=LR|RL`).
+    pub ranks_along_x: bool,
 }
 
 fn parse_pt(s: &str) -> Option<Pt> {
@@ -106,6 +108,10 @@ pub fn extract(dot_text: &str) -> Result<Layout, String> {
 pub fn extract_graph(g: &Graph) -> Layout {
     let mut out = Layout {
         bb: g.graph_attrs.get("bb").and_then(|s| parse_bb(s)),
+        ranks_along_x: g
+            .graph_attrs
+            .get("rankdir")
+            .is_some_and(|d| matches!(d.trim().to_ascii_uppercase().as_str(), "LR" | "RL")),
         ..Layout::default()
     };
     for n in &g.nodes {
@@ -224,6 +230,15 @@ pub struct FileReport {
     pub edge_err: f64,
     /// Elements present on one side only.
     pub missing: usize,
+    /// Nodes whose width and height match C, regardless of position.
+    #[serde(default)]
+    pub sizes_ok: usize,
+    /// Nodes fall into the same ranks as in C (dot only; informational).
+    #[serde(default)]
+    pub rank_ok: bool,
+    /// Within every rank, nodes appear in the same left-to-right order as in C.
+    #[serde(default)]
+    pub order_ok: bool,
     /// Set when the port failed or panicked on this input.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
@@ -262,6 +277,34 @@ fn finite_or(v: f64, cap: f64) -> f64 {
     if v.is_finite() { v } else { cap }
 }
 
+/// Groups nodes into ranks by their rank-axis coordinate, each rank sorted along the
+/// other axis. Coordinates within 0.5pt are treated as one rank.
+fn ranks(l: &Layout, names: &[&String]) -> Vec<Vec<String>> {
+    let along_x = l.ranks_along_x;
+    let mut v: Vec<(f64, f64, &String)> = names
+        .iter()
+        .filter_map(|n| {
+            let p = l.nodes.get(*n)?.pos;
+            Some(if along_x {
+                (p.x, p.y, *n)
+            } else {
+                (p.y, p.x, *n)
+            })
+        })
+        .collect();
+    v.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
+    let mut out: Vec<Vec<String>> = Vec::new();
+    let mut last = f64::NAN;
+    for (r, _, n) in v {
+        if out.is_empty() || (r - last).abs() > 0.5 {
+            out.push(Vec::new());
+        }
+        last = r;
+        out.last_mut().unwrap().push(n.clone());
+    }
+    out
+}
+
 pub fn compare(golden: &Layout, actual: &Layout) -> FileReport {
     let mut r = FileReport {
         bb_ok: match (golden.bb, actual.bb) {
@@ -279,10 +322,10 @@ pub fn compare(golden: &Layout, actual: &Layout) -> FileReport {
         };
         let d = g.pos.dist(a.pos);
         r.node_err = r.node_err.max(d);
-        if d <= TOL_POS
-            && (g.width - a.width).abs() <= TOL_SIZE
-            && (g.height - a.height).abs() <= TOL_SIZE
-        {
+        let size_ok =
+            (g.width - a.width).abs() <= TOL_SIZE && (g.height - a.height).abs() <= TOL_SIZE;
+        r.sizes_ok += usize::from(size_ok);
+        if d <= TOL_POS && size_ok {
             r.nodes_ok += 1;
         }
     }
@@ -315,6 +358,23 @@ pub fn compare(golden: &Layout, actual: &Layout) -> FileReport {
         .keys()
         .filter(|k| !golden.edges.contains_key(*k))
         .count();
+    let shared: Vec<&String> = golden
+        .nodes
+        .keys()
+        .filter(|k| actual.nodes.contains_key(*k))
+        .collect();
+    let (gr, ar) = (ranks(golden, &shared), ranks(actual, &shared));
+    let as_sets = |v: &Vec<Vec<String>>| {
+        v.iter()
+            .map(|r| {
+                let mut r = r.clone();
+                r.sort();
+                r
+            })
+            .collect::<Vec<_>>()
+    };
+    r.rank_ok = as_sets(&gr) == as_sets(&ar);
+    r.order_ok = r.rank_ok && gr == ar;
     for (name, g) in &golden.clusters {
         r.clusters += 1;
         match actual.clusters.get(name) {

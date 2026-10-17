@@ -147,7 +147,16 @@ fn print_summary(b: &Baseline, worst: usize) {
         "edges ok:  {edges_ok} / {edges}  ({:.1}%)",
         pct(edges_ok, edges)
     );
+    let sizes_ok = sum(|r| r.sizes_ok);
+    println!(
+        "sizes ok:  {sizes_ok} / {nodes}  ({:.1}%)",
+        pct(sizes_ok, nodes)
+    );
     println!("clusters:  {cl_ok} / {cl}  ({:.1}%)", pct(cl_ok, cl));
+    let rank_ok = b.files.values().filter(|r| r.rank_ok).count();
+    let order_ok = b.files.values().filter(|r| r.order_ok).count();
+    println!("ranks ok:  {rank_ok} / {n}  ({:.1}%)", pct(rank_ok, n));
+    println!("order ok:  {order_ok} / {n}  ({:.1}%)", pct(order_ok, n));
     let bb_ok = b.files.values().filter(|r| r.bb_ok).count();
     println!("bb ok:     {bb_ok} / {n}  ({:.1}%)", pct(bb_ok, n));
     let mut v: Vec<_> = b.files.iter().collect();
