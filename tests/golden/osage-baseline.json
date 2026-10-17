@@ -1005,6 +1005,36 @@
       "rank_ok": true,
       "order_ok": true
     },
+    "hw_splines_ortho": {
+      "nodes": 9,
+      "nodes_ok": 9,
+      "edges": 3,
+      "edges_ok": 3,
+      "clusters": 3,
+      "clusters_ok": 3,
+      "bb_ok": true,
+      "node_err": 0.0,
+      "edge_err": 0.0,
+      "missing": 0,
+      "sizes_ok": 9,
+      "rank_ok": true,
+      "order_ok": true
+    },
+    "hw_splines_ortho_nested": {
+      "nodes": 12,
+      "nodes_ok": 12,
+      "edges": 4,
+      "edges_ok": 4,
+      "clusters": 4,
+      "clusters_ok": 4,
+      "bb_ok": true,
+      "node_err": 0.0,
+      "edge_err": 0.0,
+      "missing": 0,
+      "sizes_ok": 12,
+      "rank_ok": true,
+      "order_ok": true
+    },
     "hw_splines_true": {
       "nodes": 9,
       "nodes_ok": 9,
