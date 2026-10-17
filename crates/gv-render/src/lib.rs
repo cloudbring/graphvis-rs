@@ -69,8 +69,11 @@ fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
 }
 
 /// The graph with layout attributes and, for xdot, draw operations attached.
-fn attached(m: &emit::model::Model<'_>, xdot: bool) -> Graph {
-    let (mut g, _, _) = emit::output::attach_attrs(m);
+fn attached(
+    m: &emit::model::Model<'_>,
+    xdot: bool,
+) -> (Graph, Vec<std::collections::BTreeSet<String>>) {
+    let (mut g, _, _, mut forced) = emit::output::attach_attrs(m);
     if xdot {
         let eng = xdot_engine::XdotEngine::new(m.root_attrs().get("xdotversion"), None);
         let eng = emit::run(m, eng);
@@ -81,10 +84,13 @@ fn attached(m: &emit::model::Model<'_>, xdot: bool) -> Graph {
                 emit::job::ObjKind::Node(n) => &mut g.nodes[n].attrs,
                 emit::job::ObjKind::Edge(e) => &mut g.edges[e].attrs,
             };
+            if let emit::job::ObjKind::Cluster(c) = kind {
+                forced[m.clusters[c].sub].insert(name.to_string());
+            }
             attrs.insert(name.to_string(), value);
         }
     }
-    g
+    (g, forced)
 }
 
 /// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
@@ -96,11 +102,14 @@ pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Re
     Ok(match format {
         OutputFormat::Svg => emit::run(&m, svg_engine::SvgEngine::default()).out,
         OutputFormat::Json | OutputFormat::Json0 => {
-            let g = attached(&m, format == OutputFormat::Json);
+            let (g, _) = attached(&m, format == OutputFormat::Json);
             json::write_json(&g, format == OutputFormat::Json, &edge_order(&m))
         }
-        OutputFormat::Dot => write_canon(&attached(&m, false)),
-        OutputFormat::Xdot => write_canon(&attached(&m, true)),
+        OutputFormat::Dot | OutputFormat::Xdot => {
+            let (mut g, forced) = attached(&m, format == OutputFormat::Xdot);
+            emit::output::propagate_inherited(&mut g, graph, &forced);
+            gv_parser::write_canon_forced(&g, &forced)
+        }
         OutputFormat::Plain => {
             let zoom = emit::job::Job::new(
                 &m,

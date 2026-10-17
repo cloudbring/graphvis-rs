@@ -84,6 +84,11 @@ pub struct Graph {
     /// their delimiters. A quoted `"<x>"` is a plain string and is not recorded here.
     #[serde(default)]
     pub html_strings: BTreeSet<String>,
+    /// cgraph's internal ids of anonymous subgraphs (subgraph index -> id); the root graph,
+    /// anonymous subgraphs and edges draw odd ids from one counter in creation order. C
+    /// prints an anonymous subgraph's name as `%<id>`.
+    #[serde(default)]
+    pub anon_subgraph_ids: BTreeMap<u32, u64>,
 }
 
 impl Graph {
@@ -101,6 +106,7 @@ impl Graph {
             subgraphs: Vec::new(),
             bb: BoundingBox::default(),
             html_strings: BTreeSet::new(),
+            anon_subgraph_ids: BTreeMap::new(),
         }
     }
 

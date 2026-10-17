@@ -423,8 +423,16 @@ impl W<'_> {
         self.out.push_str("{\n");
         indent(&mut self.out, self.level);
         self.out.push_str("\"name\": ");
-        let name = sub.map_or(g.name.as_str(), |s| g.subgraphs[s].name.as_str());
-        stoj(name, &mut self.out);
+        let name = match sub {
+            None if g.name.is_empty() => "%1".to_string(),
+            None => g.name.clone(),
+            Some(s) if g.subgraphs[s].name.is_empty() => format!(
+                "%{}",
+                g.anon_subgraph_ids.get(&(s as u32)).copied().unwrap_or(0)
+            ),
+            Some(s) => g.subgraphs[s].name.clone(),
+        };
+        stoj(&name, &mut self.out);
         if top {
             self.out.push_str(",\n");
             indent(&mut self.out, self.level);

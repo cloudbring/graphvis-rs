@@ -39,6 +39,8 @@ pub struct Parser {
     graph: Graph,
     scope_stack: Vec<SubgraphId>,
     globals: GlobalAttrs,
+    /// cgraph's id counter for anonymous objects (`ctr` in `idmap`).
+    anon_ctr: u64,
 }
 
 impl Parser {
@@ -51,6 +53,7 @@ impl Parser {
             graph: Graph::new("", GraphKind::Undirected, false),
             scope_stack: Vec::new(),
             globals: globals.clone(),
+            anon_ctr: 1,
         })
     }
 
@@ -242,6 +245,7 @@ impl Parser {
             String::new()
         };
 
+        self.anon_ctr = if name.is_empty() { 3 } else { 1 };
         self.graph = Graph::new(name, kind, strict);
         self.graph.graph_attrs.extend(self.globals.graph.clone());
         self.graph.node_defaults.extend(self.globals.node.clone());
@@ -540,6 +544,10 @@ impl Parser {
         }
 
         let id = SubgraphId(self.graph.subgraphs.len() as u32);
+        if name.is_empty() {
+            self.graph.anon_subgraph_ids.insert(id.0, self.anon_ctr);
+            self.anon_ctr += 2;
+        }
         let is_cluster = name.to_ascii_lowercase().starts_with("cluster");
         let graph_attrs = self.current_graph_attrs().clone();
         let node_defaults = self.current_node_defaults().clone();
@@ -604,7 +612,11 @@ impl Parser {
             head_port = parse_port_str(hp);
         }
 
+        let before = self.graph.edges.len();
         let edge_id = self.graph.add_edge(tail, head, merged_attrs.clone());
+        if self.graph.edges.len() > before {
+            self.anon_ctr += 2;
+        }
         if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
             if tail_port != Port::default() {
                 edge.tail_port = tail_port;

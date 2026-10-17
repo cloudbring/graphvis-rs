@@ -5,6 +5,7 @@ use super::model::Model;
 use super::num::fmt_g;
 use gv_core::{Graph, Point};
 use gv_geom::shapes::{RecordField, ShapeKind};
+use std::collections::BTreeSet;
 use std::fmt::Write;
 
 fn g5(v: f64) -> String {
@@ -34,7 +35,7 @@ fn record_rects(f: &RecordField, c: Point, out: &mut String) {
 /// `attach_attrs_and_arrows`: returns a copy of the graph with `pos`, `width`, `height`,
 /// `rects`, `bb`, `lp`, `lwidth`, `lheight`, `xlp`, `head_lp`, `tail_lp` set, and whether any
 /// edge has start or end arrows.
-pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool) {
+pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<String>>) {
     let mut g = m.g.clone();
     let (mut s_arrows, mut e_arrows) = (false, false);
     for (i, n) in m.nodes.iter().enumerate() {
@@ -111,16 +112,80 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool) {
         g.graph_attrs
             .insert("lheight".into(), format!("{:.2}", l.dimen.y / 72.0));
     }
+    let mut explicit: Vec<BTreeSet<String>> = vec![BTreeSet::new(); g.subgraphs.len()];
     for c in &m.clusters {
         let a = &mut g.subgraphs[c.sub].graph_attrs;
         a.insert("bb".into(), bbs(c.bb));
+        explicit[c.sub].insert("bb".into());
         if let Some(l) = c.label.as_ref().filter(|l| !l.text.is_empty()) {
             a.insert("lp".into(), pt(l.pos));
             a.insert("lwidth".into(), format!("{:.2}", l.dimen.x / 72.0));
             a.insert("lheight".into(), format!("{:.2}", l.dimen.y / 72.0));
+            for k in ["lp", "lwidth", "lheight"] {
+                explicit[c.sub].insert(k.into());
+            }
         }
     }
-    (g, s_arrows, e_arrows)
+    (g, s_arrows, e_arrows, explicit)
+}
+
+/// For `agwrite`: subgraphs that only inherited `bb`, `lp`, `lwidth` or `lheight` follow
+/// their parent's new value (cgraph keeps graph attribute values in per-graph dictionaries,
+/// so a value set on the root is not a local value of the subgraph).
+pub(crate) fn propagate_inherited(g: &mut Graph, orig: &Graph, explicit: &[BTreeSet<String>]) {
+    // Subgraphs that only inherited these attributes keep following their parent: cgraph
+    // stores graph attribute values in per-graph dictionaries, so a changed root value is
+    // not a local value of the subgraph.
+    let mut is_child = vec![false; g.subgraphs.len()];
+    for sg in &orig.subgraphs {
+        for c in &sg.subgraphs {
+            is_child[c.0 as usize] = true;
+        }
+    }
+    fn walk(
+        g: &mut Graph,
+        orig: &Graph,
+        s: usize,
+        parent: Option<usize>,
+        explicit: &[BTreeSet<String>],
+    ) {
+        for k in ["bb", "lp", "lwidth", "lheight"] {
+            if explicit[s].contains(k) {
+                continue;
+            }
+            let porig = match parent {
+                None => orig.graph_attrs.get(k),
+                Some(p) => orig.subgraphs[p].graph_attrs.get(k),
+            };
+            if orig.subgraphs[s].graph_attrs.get(k) == porig {
+                let pfinal = match parent {
+                    None => g.graph_attrs.get(k).cloned(),
+                    Some(p) => g.subgraphs[p].graph_attrs.get(k).cloned(),
+                };
+                match pfinal {
+                    Some(v) => {
+                        g.subgraphs[s].graph_attrs.insert(k.into(), v);
+                    }
+                    None => {
+                        g.subgraphs[s].graph_attrs.remove(k);
+                    }
+                }
+            }
+        }
+        let kids: Vec<usize> = orig.subgraphs[s]
+            .subgraphs
+            .iter()
+            .map(|c| c.0 as usize)
+            .collect();
+        for c in kids {
+            walk(g, orig, c, Some(s), explicit);
+        }
+    }
+    for (s, child) in is_child.iter().enumerate() {
+        if !child {
+            walk(g, orig, s, None, explicit);
+        }
+    }
 }
 
 /// `write_plain` (`-Tplain`, `-Tplain-ext`).
