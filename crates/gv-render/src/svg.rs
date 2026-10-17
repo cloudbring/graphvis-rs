@@ -165,7 +165,11 @@ pub(crate) fn effective_graph_bb(graph: &Graph) -> BoundingBox {
     }
     // C prints a degenerate box as is: `0,0,0,0` for an empty graph or one
     // whose only nodes have zero size (e.g. `shape=plain` with no label).
-    if graph.nodes.iter().all(|n| n.width == 0.0 && n.height == 0.0) {
+    if graph
+        .nodes
+        .iter()
+        .all(|n| n.width == 0.0 && n.height == 0.0)
+    {
         return graph.bb;
     }
     let mut min_x = f64::INFINITY;
