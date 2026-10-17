@@ -271,6 +271,7 @@ impl Parser {
             gv_core::AttrSym {
                 defval: "\\N".to_string(),
                 print: false,
+                id: 0,
             },
         );
         // Command-line defaults come from cgraph's ProtoGraph dictionaries.
@@ -280,11 +281,14 @@ impl Parser {
             (DictKind::Edge, self.globals.edge.clone()),
         ] {
             for (k, v) in map {
-                self.dict_mut(0, kind).insert(
+                let d = self.dict_mut(0, kind);
+                let id = d.get(&k).map_or(d.len(), |s| s.id);
+                d.insert(
                     k,
                     gv_core::AttrSym {
                         defval: v,
                         print: false,
+                        id,
                     },
                 );
             }
@@ -715,8 +719,15 @@ impl Parser {
     fn bind_attr(&mut self, kind: DictKind, name: &str) {
         let gi = self.scope_dict();
         if !self.lookup_view(gi, kind, name) {
-            self.dict_mut(0, kind)
-                .insert(name.to_string(), gv_core::AttrSym::default());
+            let d = self.dict_mut(0, kind);
+            let id = d.len();
+            d.insert(
+                name.to_string(),
+                gv_core::AttrSym {
+                    id,
+                    ..Default::default()
+                },
+            );
         }
     }
 
@@ -749,7 +760,7 @@ impl Parser {
                             name.to_string(),
                             gv_core::AttrSym {
                                 defval: v,
-                                print: false,
+                                ..Default::default()
                             },
                         );
                     }
@@ -761,7 +772,7 @@ impl Parser {
                 name.to_string(),
                 gv_core::AttrSym {
                     defval: value.to_string(),
-                    print: false,
+                    ..Default::default()
                 },
             );
         }

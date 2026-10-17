@@ -144,6 +144,10 @@ pub struct Graph {
 pub struct AttrSym {
     pub defval: String,
     pub print: bool,
+    /// `sym->id`: declaration order in the root dictionary (cgraph's ProtoGraph
+    /// `label` first). Only meaningful in the root's dictionaries.
+    #[serde(default)]
+    pub id: usize,
 }
 
 /// The local graph, node and edge dictionaries of one graph or subgraph.

@@ -845,6 +845,66 @@ impl Dot<'_> {
         ] {
             aux.edge_defaults.remove(k);
         }
+        // setState rebinds only some Agsyms to auxg. The others (N_penwidth, E_arrowsz,
+        // E_penwidth, E_arrowhead, E_arrowtail) keep the main graph's symbols, and
+        // agxget reads the aux attribute with the same `id`. auxg declares cgraph's
+        // ProtoGraph `label` first, then the main graph's attributes in name order
+        // (agnxtattr), then the ports and `weight` cloneGraph/setState add. N_fixed is
+        // looked up as "fixed", so fixedsize is the value of an attribute `fixed`.
+        let empty = gv_core::AttrDicts::default();
+        let main = input.dicts.first().unwrap_or(&empty);
+        let mut aux_node_names: Vec<String> = vec!["label".to_string()];
+        aux_node_names.extend(main.node.keys().filter(|k| *k != "label").cloned());
+        let mut aux_edge_names: Vec<String> = main.edge.keys().cloned().collect();
+        for k in ["headport", "tailport", "weight"] {
+            if !main.edge.contains_key(k) {
+                aux_edge_names.push(k.to_string());
+            }
+        }
+        let stale = |dict: &std::collections::BTreeMap<String, gv_core::AttrSym>,
+                     names: &[String],
+                     attrs: &mut gv_core::AttrMap,
+                     keys: &[&str]| {
+            let orig = attrs.clone();
+            let value = |name: &str| {
+                orig.get(name)
+                    .cloned()
+                    .or_else(|| dict.get(name).map(|s| s.defval.clone()))
+                    .unwrap_or_default()
+            };
+            for &k in keys {
+                match dict.get(k) {
+                    None => {
+                        attrs.remove(k);
+                    }
+                    Some(sym) => {
+                        if let Some(an) = names.get(sym.id) {
+                            attrs.insert(k.to_string(), value(an));
+                        }
+                    }
+                }
+            }
+        };
+        let fix_node = |attrs: &mut gv_core::AttrMap| {
+            stale(&main.node, &aux_node_names, attrs, &["penwidth"]);
+            match main.node.get("fixed") {
+                Some(sym) => {
+                    let v = attrs.get("fixed").cloned().unwrap_or(sym.defval.clone());
+                    attrs.insert("fixedsize".to_string(), v);
+                }
+                None => {
+                    attrs.remove("fixedsize");
+                }
+            }
+        };
+        let fix_edge = |attrs: &mut gv_core::AttrMap| {
+            stale(
+                &main.edge,
+                &aux_edge_names,
+                attrs,
+                &["arrowhead", "arrowtail", "arrowsize", "penwidth"],
+            );
+        };
         let rightx = self.nodes[hn0].coord.x;
         let leftx = self.nodes[tn0].coord.x;
         let (tn, hn) = if flip { (hn0, tn0) } else { (tn0, hn0) };
@@ -863,6 +923,7 @@ impl Dot<'_> {
             ] {
                 nd.attrs.remove(k);
             }
+            fix_node(&mut nd.attrs);
             id
         };
         let auxt = clone_node(&mut aux, tn);
@@ -908,6 +969,7 @@ impl Dot<'_> {
             ] {
                 attrs.remove(k);
             }
+            fix_edge(&mut attrs);
             let id = aux.add_edge(t, h, Default::default());
             let ae = &mut aux.edges[id.0 as usize];
             ae.attrs = attrs;
@@ -926,7 +988,11 @@ impl Dot<'_> {
         }
         let hvye = match hvye {
             Some(h) => h,
-            None => aux.add_edge(auxt, auxh, Default::default()).0 as usize,
+            None => {
+                let h = aux.add_edge(auxt, auxh, Default::default()).0 as usize;
+                fix_edge(&mut aux.edges[h].attrs);
+                h
+            }
         };
         aux.edges[hvye]
             .attrs
