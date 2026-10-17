@@ -63,7 +63,9 @@ impl Dot<'_> {
     }
 
     fn edgelabel_ranks(&mut self, g: G) {
-        if self.graphs[g].has_labels & EDGE_LABEL != 0 {
+        // `GD_has_labels(g)`: the label flags live on the cgraph root, so a pack
+        // component's own record has none.
+        if !self.comp && self.graphs[g].has_labels & EDGE_LABEL != 0 {
             for n in self.nodes_of(g) {
                 for e in self.out_edges(g, n) {
                     self.edges[e].minlen *= 2;

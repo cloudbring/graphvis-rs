@@ -14,6 +14,14 @@
 //!
 //! Render fidelity: compares the port's `-n2` renderings of the C layouts in
 //! `tests/golden/render/laid` with C's (see `gv_diff::render`).
+//!
+//! ```text
+//! gv-diff pairs C_DIR PORT_DIR [--worst N]
+//! ```
+//!
+//! Compares two directories of `-Tdot` layouts by file stem (C references vs
+//! port outputs produced elsewhere, e.g. by `scripts/dot-broad-validate.sh`).
+//! A stem present only in C_DIR counts as a port failure.
 
 use gv_diff::{Baseline, FileReport, compare_file};
 use std::collections::BTreeMap;
@@ -24,6 +32,9 @@ use std::sync::Mutex;
 fn main() -> ExitCode {
     if std::env::args().nth(1).as_deref() == Some("render") {
         return render_main(std::env::args().skip(2).collect());
+    }
+    if std::env::args().nth(1).as_deref() == Some("pairs") {
+        return pairs_main(std::env::args().skip(2).collect());
     }
     let mut golden = PathBuf::from("tests/golden");
     let mut baseline_path: Option<PathBuf> = None;
@@ -85,6 +96,61 @@ fn main() -> ExitCode {
         }
     };
     check_against(&base, &current, filter.is_some())
+}
+
+fn pairs_main(args: Vec<String>) -> ExitCode {
+    let mut dirs = Vec::new();
+    let mut worst = 15usize;
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        if a == "--worst" {
+            worst = it.next().and_then(|s| s.parse().ok()).unwrap_or(15);
+        } else {
+            dirs.push(PathBuf::from(a));
+        }
+    }
+    let [cdir, pdir] = dirs.as_slice() else {
+        eprintln!("usage: gv-diff pairs C_DIR PORT_DIR [--worst N]");
+        return ExitCode::FAILURE;
+    };
+    let Ok(rd) = std::fs::read_dir(cdir) else {
+        eprintln!("cannot read {}", cdir.display());
+        return ExitCode::FAILURE;
+    };
+    let mut stems: Vec<String> = rd
+        .flatten()
+        .filter_map(|e| {
+            let p = e.path();
+            (p.extension()? == "dot").then(|| p.file_stem().unwrap().to_string_lossy().to_string())
+        })
+        .collect();
+    stems.sort();
+    let mut files = BTreeMap::new();
+    for stem in stems {
+        let c = std::fs::read_to_string(cdir.join(format!("{stem}.dot"))).unwrap_or_default();
+        let p = std::fs::read_to_string(pdir.join(format!("{stem}.dot")));
+        let report = match (gv_diff::extract(&c), p.map(|p| gv_diff::extract(&p))) {
+            (Err(e), _) => FileReport {
+                error: Some(format!("golden: {e}")),
+                ..FileReport::default()
+            },
+            (Ok(g), Ok(Ok(a))) => gv_diff::compare(&g, &a),
+            (Ok(g), r) => FileReport {
+                nodes: g.nodes.len(),
+                edges: g.edges.len(),
+                clusters: g.clusters.len(),
+                error: Some(match r {
+                    Ok(Err(e)) => format!("port output: {e}"),
+                    _ => "no port output".to_string(),
+                }),
+                ..FileReport::default()
+            },
+        };
+        files.insert(stem, report);
+    }
+    let cur = Baseline { files };
+    print_summary(&cur, worst);
+    ExitCode::SUCCESS
 }
 
 fn run_all(files: &[PathBuf], golden: &Path) -> BTreeMap<String, FileReport> {

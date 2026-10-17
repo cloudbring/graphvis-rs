@@ -258,18 +258,18 @@ impl Dot<'_> {
 
     /// `G_ordering` exists when any graph sets `ordering`.
     fn g_ordering_declared(&self) -> bool {
-        self.input.graph_attrs.contains_key("ordering")
+        self.root_input.graph_attrs.contains_key("ordering")
             || self
-                .input
+                .root_input
                 .subgraphs
                 .iter()
                 .any(|s| s.graph_attrs.contains_key("ordering"))
     }
 
     fn n_ordering_declared(&self) -> bool {
-        self.input.node_defaults.contains_key("ordering")
+        self.root_input.node_defaults.contains_key("ordering")
             || self
-                .input
+                .root_input
                 .nodes
                 .iter()
                 .any(|n| n.attrs.contains_key("ordering"))
@@ -923,7 +923,8 @@ impl Dot<'_> {
         for i in self.graphs[g].minrank..=self.graphs[g].maxrank {
             self.rk_mut(g, i).n = 0;
         }
-        let walkbackwards = g != 0;
+        // `g != agroot(g)`: also true for a pack component's root.
+        let walkbackwards = g != 0 || self.comp;
         if walkbackwards {
             nl.reverse();
         }

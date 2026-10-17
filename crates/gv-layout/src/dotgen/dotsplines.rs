@@ -422,8 +422,12 @@ impl Dot<'_> {
     fn finish_splines(&mut self) {
         self.splines_done = true;
         let declared = |k: &str| {
-            self.input.edge_defaults.contains_key(k)
-                || self.input.edges.iter().any(|e| e.attrs.contains_key(k))
+            self.root_input.edge_defaults.contains_key(k)
+                || self
+                    .root_input
+                    .edges
+                    .iter()
+                    .any(|e| e.attrs.contains_key(k))
         };
         let has_head = declared("headlabel");
         let has_tail = declared("taillabel");

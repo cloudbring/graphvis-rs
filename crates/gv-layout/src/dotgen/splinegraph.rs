@@ -25,8 +25,12 @@ impl Dot<'_> {
 
     /// Whether some edge declares attribute `k` (`agattr(g, AGEDGE, k, NULL)`).
     pub fn edge_attr_declared(&self, k: &str) -> bool {
-        self.input.edge_defaults.contains_key(k)
-            || self.input.edges.iter().any(|e| e.attrs.contains_key(k))
+        self.root_input.edge_defaults.contains_key(k)
+            || self
+                .root_input
+                .edges
+                .iter()
+                .any(|e| e.attrs.contains_key(k))
     }
 }
 

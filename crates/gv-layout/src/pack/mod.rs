@@ -10,9 +10,11 @@
 #![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
 use crate::common::geom::{add, sub as psub};
-use crate::common::types::{LGraph, P_PIN, Sub};
+use crate::common::types::{Bezier, LGraph, P_PIN, Sub};
 use crate::common::utils::{compute_bb, coord, parse_leading_int};
 use crate::cutil::qsort_by;
+
+pub mod cccomps;
 use gv_core::{BoundingBox, Point};
 use std::collections::HashSet;
 
@@ -193,6 +195,187 @@ pub fn ccomps(g: &LGraph<'_>) -> Vec<Sub> {
     out
 }
 
+/// A graph or cluster of a packing layout (`Agraph_t *` in `shiftGraph`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PkGraph {
+    /// Component `gs[i]`.
+    Comp(usize),
+    /// A cluster (backend index).
+    Clust(usize),
+}
+
+/// `ND_clust(n)` as seen by `genPoly` in `l_clust` mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PkClust {
+    /// A cluster (backend index).
+    Clust(usize),
+    /// A non-cluster graph the layout recorded (dot sets `ND_clust(n)` to the
+    /// layout root for nodes outside every cluster).
+    Graph(usize),
+}
+
+/// What `lib/pack` reads and writes on the components `gs[0..ng]` of a root
+/// graph: node positions (`ND_pos`, `ND_coord`), sizes, edge splines, labels
+/// and cluster boxes. Implemented for neato-family [`LGraph`] components and
+/// for dot (`dotgen::pack`).
+pub trait PackGraph {
+    fn pk_ncomps(&self) -> usize;
+    /// `compute_bb(gs[i])`, storing the result as `GD_bb(gs[i])`.
+    fn pk_compute_bb(&mut self, i: usize);
+    /// `GD_bb(g)`.
+    fn pk_graph_bb(&self, g: PkGraph) -> BoundingBox;
+    fn pk_bb(&self, i: usize) -> BoundingBox {
+        self.pk_graph_bb(PkGraph::Comp(i))
+    }
+    /// Nodes of `gs[i]` in `agfstnode` order.
+    fn pk_nodes(&self, i: usize) -> Vec<usize>;
+    /// `GD_clust(g)[1..=GD_n_cluster(g)]`.
+    fn pk_clusters(&self, g: PkGraph) -> Vec<usize>;
+    /// Nodes of cluster `c` (`agfstnode(subg)`).
+    fn pk_cluster_nodes(&self, c: usize) -> Vec<usize>;
+    /// `ND_clust(n)` before `genPoly` marks the top-level clusters.
+    fn pk_node_clust(&self, n: usize) -> Option<PkClust>;
+    /// `coord(n)`: `ND_pos` in points.
+    fn pk_coord(&self, n: usize) -> Point;
+    /// `(ND_xsize(n), ND_ysize(n))`.
+    fn pk_node_size(&self, n: usize) -> Point;
+    /// Out-edges of `n` in the root graph (`agfstout(root, n)`).
+    fn pk_root_outs(&self, n: usize) -> Vec<usize>;
+    fn pk_head(&self, e: usize) -> usize;
+    /// `ED_spl(e)`.
+    fn pk_spl(&self, e: usize) -> Option<&[Bezier]>;
+    /// `agget(gs[i], "sortv")`.
+    fn pk_sortv(&self, i: usize) -> Option<&str>;
+    /// `shiftGraphs` on a node: `ND_pos += d / 72`, `ND_coord += d`, and its xlabel.
+    fn pk_shift_node(&mut self, n: usize, dx: f64, dy: f64);
+    /// `shiftEdge(e, dx, dy)`.
+    fn pk_shift_edge(&mut self, e: usize, dx: f64, dy: f64);
+    /// The non-recursive part of `shiftGraph`: `GD_bb` and a set `GD_label`.
+    fn pk_shift_graph_box(&mut self, g: PkGraph, dx: f64, dy: f64);
+}
+
+/// [`PackGraph`] over neato-family components ([`Sub`] views of an [`LGraph`]).
+struct LPack<'g, 'a> {
+    g: &'g mut LGraph<'a>,
+    gs: &'g mut [Sub],
+}
+
+impl PackGraph for LPack<'_, '_> {
+    fn pk_ncomps(&self) -> usize {
+        self.gs.len()
+    }
+    fn pk_compute_bb(&mut self, i: usize) {
+        compute_bb(self.g, &mut self.gs[i], false);
+    }
+    fn pk_graph_bb(&self, g: PkGraph) -> BoundingBox {
+        match g {
+            PkGraph::Comp(i) => self.gs[i].bb,
+            PkGraph::Clust(c) => self.g.clusters[c].bb,
+        }
+    }
+    fn pk_nodes(&self, i: usize) -> Vec<usize> {
+        self.gs[i].nodes.clone()
+    }
+    fn pk_clusters(&self, g: PkGraph) -> Vec<usize> {
+        match g {
+            PkGraph::Comp(i) => self.gs[i].clusters.clone(),
+            PkGraph::Clust(c) => self.g.clusters[c].children.clone(),
+        }
+    }
+    fn pk_cluster_nodes(&self, c: usize) -> Vec<usize> {
+        crate::neatogen::neatoinit::subgraph_nodes(self.g.src, self.g.clusters[c].subgraph)
+            .into_iter()
+            .collect()
+    }
+    fn pk_node_clust(&self, _n: usize) -> Option<PkClust> {
+        None
+    }
+    fn pk_coord(&self, n: usize) -> Point {
+        coord(self.g, n)
+    }
+    fn pk_node_size(&self, n: usize) -> Point {
+        let nd = &self.g.nodes[n];
+        Point::new(nd.lw + nd.rw, nd.ht)
+    }
+    fn pk_root_outs(&self, n: usize) -> Vec<usize> {
+        let root = self.g.root_sub();
+        self.g.outs(&root, n).collect()
+    }
+    fn pk_head(&self, e: usize) -> usize {
+        self.g.edges[e].head
+    }
+    fn pk_spl(&self, e: usize) -> Option<&[Bezier]> {
+        self.g.edges[e].spl.as_deref()
+    }
+    fn pk_sortv(&self, _i: usize) -> Option<&str> {
+        self.g.gattr("sortv")
+    }
+    fn pk_shift_node(&mut self, n: usize, dx: f64, dy: f64) {
+        let nd = &mut self.g.nodes[n];
+        nd.pos[0] += dx / 72.0;
+        nd.pos[1] += dy / 72.0;
+        nd.coord.x += dx;
+        nd.coord.y += dy;
+        if let Some(l) = nd.xlabel.as_mut() {
+            l.pos.x += dx;
+            l.pos.y += dy;
+        }
+    }
+    fn pk_shift_edge(&mut self, e: usize, dx: f64, dy: f64) {
+        let ed = &mut self.g.edges[e];
+        for l in [
+            &mut ed.label,
+            &mut ed.xlabel,
+            &mut ed.head_label,
+            &mut ed.tail_label,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            l.pos.x += dx;
+            l.pos.y += dy;
+        }
+        if let Some(spl) = ed.spl.as_mut() {
+            shift_beziers(spl, dx, dy);
+        }
+    }
+    fn pk_shift_graph_box(&mut self, g: PkGraph, dx: f64, dy: f64) {
+        let (bb, label) = match g {
+            PkGraph::Comp(i) => (&mut self.gs[i].bb, None),
+            PkGraph::Clust(c) => {
+                let cl = &mut self.g.clusters[c];
+                (&mut cl.bb, cl.label.as_mut())
+            }
+        };
+        bb.ll.x += dx;
+        bb.ur.x += dx;
+        bb.ll.y += dy;
+        bb.ur.y += dy;
+        if let Some(l) = label.filter(|l| l.set) {
+            l.pos.x += dx;
+            l.pos.y += dy;
+        }
+    }
+}
+
+/// The spline part of `shiftEdge`.
+pub fn shift_beziers(spl: &mut [Bezier], dx: f64, dy: f64) {
+    for b in spl.iter_mut() {
+        for p in &mut b.list {
+            p.x += dx;
+            p.y += dy;
+        }
+        if b.sflag != 0 {
+            b.sp.x += dx;
+            b.sp.y += dy;
+        }
+        if b.eflag != 0 {
+            b.ep.x += dx;
+            b.ep.y += dy;
+        }
+    }
+}
+
 const C: f64 = 100.0;
 
 fn c_round(f: f64) -> i64 {
@@ -295,8 +478,8 @@ fn fill_line(p: Point, q: Point, ps: &mut PointSet) {
 }
 
 /// `fillEdge(e, p, ps, dx, dy, ssize, doS)`.
-fn fill_edge(
-    g: &LGraph<'_>,
+fn fill_edge<P: PackGraph + ?Sized>(
+    g: &P,
     e: usize,
     p: Point,
     ps: &mut PointSet,
@@ -306,9 +489,9 @@ fn fill_edge(
     do_s: bool,
 ) {
     let mv = |q: Point| Point::new(q.x + dx, q.y + dy);
-    let spl = g.edges[e].spl.as_ref();
+    let spl = g.pk_spl(e);
     if !do_s || spl.is_none() {
-        let hpt = cell(mv(coord(g, g.edges[e].head)), ssize);
+        let hpt = cell(mv(g.pk_coord(g.pk_head(e))), ssize);
         fill_line(p, hpt, ps);
         return;
     }
@@ -375,10 +558,10 @@ fn gen_box(bb0: &BoundingBox, ssize: i32, margin: u32, center: Point, index: usi
     }
 }
 
-/// `genPoly(root, g, info, ssize, pinfo, center)`.
-fn gen_poly(
-    g: &LGraph<'_>,
-    sub: &Sub,
+/// `genPoly(root, g, info, ssize, pinfo, center)` for component `gi`.
+fn gen_poly<P: PackGraph + ?Sized>(
+    g: &P,
+    gi: usize,
     ssize: i32,
     pinfo: &PackInfo,
     center: Point,
@@ -386,13 +569,19 @@ fn gen_poly(
 ) -> GInfo {
     let mut ps = PointSet::new();
     let margin = f64::from(pinfo.margin);
-    let dx = center.x - sub.bb.ll.x.round();
-    let dy = center.y - sub.bb.ll.y.round();
-    let root = g.root_sub();
-    let mut clust_of: Vec<Option<usize>> = vec![None; g.nodes.len()];
+    let gbb = g.pk_bb(gi);
+    let dx = center.x - gbb.ll.x.round();
+    let dy = center.y - gbb.ll.y.round();
+    let nodes = g.pk_nodes(gi);
     if pinfo.mode == PackMode::Clust {
-        for &c in &sub.clusters {
-            let b = g.clusters[c].bb;
+        // ND_clust(n) as the layout left it, overridden for nodes of top-level
+        // clusters with a non-degenerate box.
+        let mut clust_of: std::collections::HashMap<usize, PkClust> = nodes
+            .iter()
+            .filter_map(|&n| g.pk_node_clust(n).map(|c| (n, c)))
+            .collect();
+        for c in g.pk_clusters(PkGraph::Comp(gi)) {
+            let b = g.pk_graph_bb(PkGraph::Clust(c));
             let mut bb = BoundingBox::new(
                 b.ll.x.round(),
                 b.ll.y.round(),
@@ -405,36 +594,47 @@ fn gen_poly(
                 let ll = round_pt(cell(bb.ll, ssize));
                 let ur = round_pt(cell(bb.ur, ssize));
                 add_rect(&mut ps, ll, ur);
-                for n in crate::neatogen::neatoinit::subgraph_nodes(g.src, g.clusters[c].subgraph) {
-                    clust_of[n] = Some(c);
+                for n in g.pk_cluster_nodes(c) {
+                    clust_of.insert(n, PkClust::Clust(c));
                 }
             }
         }
-    }
-    for &n in &sub.nodes {
-        let ptf = coord(g, n);
-        let mut pt = Point::new(ptf.x.round() + dx, ptf.y.round() + dy);
-        let in_clust = clust_of[n];
-        if in_clust.is_none() {
-            let nd = &g.nodes[n];
-            let s2 = Point::new(
-                (margin + (nd.lw + nd.rw) / 2.0).round(),
-                (margin + nd.ht / 2.0).round(),
-            );
+        for &n in &nodes {
+            let ptf = g.pk_coord(n);
+            let mut pt = Point::new(ptf.x.round() + dx, ptf.y.round() + dy);
+            let in_clust = clust_of.get(&n).copied();
+            if in_clust.is_none() {
+                let s = g.pk_node_size(n);
+                let s2 = Point::new((margin + s.x / 2.0).round(), (margin + s.y / 2.0).round());
+                let ll = round_pt(cell(psub(pt, s2), ssize));
+                let ur = round_pt(cell(add(pt, s2), ssize));
+                add_rect(&mut ps, ll, ur);
+            }
+            pt = round_pt(cell(pt, ssize));
+            for e in g.pk_root_outs(n) {
+                if in_clust.is_some() && in_clust == clust_of.get(&g.pk_head(e)).copied() {
+                    continue;
+                }
+                fill_edge(g, e, pt, &mut ps, dx, dy, ssize, pinfo.do_splines);
+            }
+        }
+    } else {
+        for &n in &nodes {
+            let ptf = g.pk_coord(n);
+            let mut pt = Point::new(ptf.x.round() + dx, ptf.y.round() + dy);
+            let s = g.pk_node_size(n);
+            let s2 = Point::new((margin + s.x / 2.0).round(), (margin + s.y / 2.0).round());
             let ll = round_pt(cell(psub(pt, s2), ssize));
             let ur = round_pt(cell(add(pt, s2), ssize));
             add_rect(&mut ps, ll, ur);
-        }
-        pt = round_pt(cell(pt, ssize));
-        for e in g.outs(&root, n) {
-            if in_clust.is_some() && in_clust == clust_of[g.edges[e].head] {
-                continue;
+            pt = round_pt(cell(pt, ssize));
+            for e in g.pk_root_outs(n) {
+                fill_edge(g, e, pt, &mut ps, dx, dy, ssize, pinfo.do_splines);
             }
-            fill_edge(g, e, pt, &mut ps, dx, dy, ssize, pinfo.do_splines);
         }
     }
-    let w = grid(sub.bb.ur.x - sub.bb.ll.x + 2.0 * margin, ssize);
-    let h = grid(sub.bb.ur.y - sub.bb.ll.y + 2.0 * margin, ssize);
+    let w = grid(gbb.ur.x - gbb.ll.x + 2.0 * margin, ssize);
+    let h = grid(gbb.ur.y - gbb.ll.y + 2.0 * margin, ssize);
     GInfo {
         perim: w + h,
         cells: ps.into_iter().collect(),
@@ -582,19 +782,19 @@ fn cmpf(x: &usize, y: &usize, infos: &[GInfo]) -> i32 {
 }
 
 /// `polyGraphs(ng, gs, root, pinfo)`.
-fn poly_graphs(g: &mut LGraph<'_>, gs: &mut [Sub], pinfo: &PackInfo) -> Option<Vec<Point>> {
-    let ng = gs.len();
+fn poly_graphs<P: PackGraph + ?Sized>(g: &mut P, pinfo: &PackInfo) -> Option<Vec<Point>> {
+    let ng = g.pk_ncomps();
     if ng == 0 {
         return None;
     }
     let mut fixed_bb = BoundingBox::default();
     let mut fixed_cnt = 0;
-    for (i, sub) in gs.iter_mut().enumerate() {
-        compute_bb(g, sub, false);
+    for i in 0..ng {
+        g.pk_compute_bb(i);
         if let Some(f) = &pinfo.fixed
             && f[i]
         {
-            let b = sub.bb;
+            let b = g.pk_bb(i);
             let bb = BoundingBox::new(
                 b.ll.x.round(),
                 b.ll.y.round(),
@@ -612,7 +812,7 @@ fn poly_graphs(g: &mut LGraph<'_>, gs: &mut [Sub], pinfo: &PackInfo) -> Option<V
             fixed_cnt += 1;
         }
     }
-    let bbs: Vec<BoundingBox> = gs.iter().map(|s| s.bb).collect();
+    let bbs: Vec<BoundingBox> = (0..ng).map(|i| g.pk_bb(i)).collect();
     let step = compute_step(&bbs, pinfo.margin);
     if step <= 0 {
         return None;
@@ -624,14 +824,12 @@ fn poly_graphs(g: &mut LGraph<'_>, gs: &mut [Sub], pinfo: &PackInfo) -> Option<V
             ((fixed_bb.ll.y + fixed_bb.ur.y) / 2.0).round(),
         );
     }
-    let infos: Vec<GInfo> = gs
-        .iter()
-        .enumerate()
-        .map(|(i, s)| {
+    let infos: Vec<GInfo> = (0..ng)
+        .map(|i| {
             if pinfo.mode == PackMode::Graph {
-                gen_box(&s.bb, step, pinfo.margin, center, i)
+                gen_box(&bbs[i], step, pinfo.margin, center, i)
             } else {
-                gen_poly(g, s, step, pinfo, center, i)
+                gen_poly(g, i, step, pinfo, center, i)
             }
         })
         .collect();
@@ -780,24 +978,33 @@ pub fn array_rects(gs: &[BoundingBox], pinfo: &PackInfo) -> Vec<Point> {
 
 /// `putGraphs(ng, gs, root, pinfo)`: translations for each component.
 pub fn put_graphs(g: &mut LGraph<'_>, gs: &mut [Sub], pinfo: &mut PackInfo) -> Option<Vec<Point>> {
-    if gs.is_empty() {
+    put_graphs_in(&mut LPack { g, gs }, pinfo)
+}
+
+/// `putGraphs` over any [`PackGraph`].
+pub fn put_graphs_in<P: PackGraph + ?Sized>(g: &mut P, pinfo: &mut PackInfo) -> Option<Vec<Point>> {
+    let ng = g.pk_ncomps();
+    if ng == 0 {
         return None;
     }
     if pinfo.mode <= PackMode::Graph {
-        return poly_graphs(g, gs, pinfo);
+        return poly_graphs(g, pinfo);
     }
-    for s in gs.iter_mut() {
-        compute_bb(g, s, false);
+    for i in 0..ng {
+        g.pk_compute_bb(i);
     }
-    let bbs: Vec<BoundingBox> = gs.iter().map(|s| s.bb).collect();
+    let bbs: Vec<BoundingBox> = (0..ng).map(|i| g.pk_bb(i)).collect();
     if pinfo.mode == PackMode::Array {
         if pinfo.flags & PK_USER_VALS != 0 {
-            let v = g
-                .gattr("sortv")
-                .and_then(parse_leading_int)
-                .filter(|&v| v >= 0)
-                .unwrap_or(0) as u32;
-            pinfo.vals = Some(vec![v; gs.len()]);
+            let vals = (0..ng)
+                .map(|i| {
+                    g.pk_sortv(i)
+                        .and_then(parse_leading_int)
+                        .filter(|&v| v >= 0)
+                        .unwrap_or(0) as u32
+                })
+                .collect();
+            pinfo.vals = Some(vals);
         }
         let pts = array_rects(&bbs, pinfo);
         pinfo.vals = None;
@@ -808,90 +1015,45 @@ pub fn put_graphs(g: &mut LGraph<'_>, gs: &mut [Sub], pinfo: &mut PackInfo) -> O
 
 /// `shiftGraphs(ng, gs, pp, root, doSplines)`.
 pub fn shift_graphs(g: &mut LGraph<'_>, gs: &mut [Sub], pp: &[Point], do_splines: bool) {
-    let root = g.root_sub();
-    for (i, sub) in gs.iter_mut().enumerate() {
+    shift_graphs_in(&mut LPack { g, gs }, pp, do_splines);
+}
+
+/// `shiftGraphs` over any [`PackGraph`].
+pub fn shift_graphs_in<P: PackGraph + ?Sized>(g: &mut P, pp: &[Point], do_splines: bool) {
+    for i in 0..g.pk_ncomps() {
         let (dx, dy) = (pp[i].x, pp[i].y);
-        let (fx, fy) = (dx / 72.0, dy / 72.0);
-        for &n in &sub.nodes {
-            let nd = &mut g.nodes[n];
-            nd.pos[0] += fx;
-            nd.pos[1] += fy;
-            nd.coord.x += dx;
-            nd.coord.y += dy;
-            if let Some(l) = nd.xlabel.as_mut() {
-                l.pos.x += dx;
-                l.pos.y += dy;
-            }
+        for n in g.pk_nodes(i) {
+            g.pk_shift_node(n, dx, dy);
             if do_splines {
-                let outs: Vec<usize> = g.outs(&root, n).collect();
-                for e in outs {
-                    shift_edge(g, e, dx, dy);
+                for e in g.pk_root_outs(n) {
+                    g.pk_shift_edge(e, dx, dy);
                 }
             }
         }
-        sub.bb.ll.x += dx;
-        sub.bb.ur.x += dx;
-        sub.bb.ll.y += dy;
-        sub.bb.ur.y += dy;
-        for c in sub.clusters.clone() {
-            shift_cluster(g, c, dx, dy);
-        }
+        shift_graph(g, PkGraph::Comp(i), dx, dy);
     }
 }
 
-fn shift_cluster(g: &mut LGraph<'_>, c: usize, dx: f64, dy: f64) {
-    let cl = &mut g.clusters[c];
-    cl.bb.ll.x += dx;
-    cl.bb.ur.x += dx;
-    cl.bb.ll.y += dy;
-    cl.bb.ur.y += dy;
-    if let Some(l) = cl.label.as_mut().filter(|l| l.set) {
-        l.pos.x += dx;
-        l.pos.y += dy;
-    }
-    for k in g.clusters[c].children.clone() {
-        shift_cluster(g, k, dx, dy);
-    }
-}
-
-fn shift_edge(g: &mut LGraph<'_>, e: usize, dx: f64, dy: f64) {
-    let ed = &mut g.edges[e];
-    for l in [
-        &mut ed.label,
-        &mut ed.xlabel,
-        &mut ed.head_label,
-        &mut ed.tail_label,
-    ]
-    .into_iter()
-    .flatten()
-    {
-        l.pos.x += dx;
-        l.pos.y += dy;
-    }
-    let Some(spl) = ed.spl.as_mut() else { return };
-    for b in spl.iter_mut() {
-        for p in &mut b.list {
-            p.x += dx;
-            p.y += dy;
-        }
-        if b.sflag != 0 {
-            b.sp.x += dx;
-            b.sp.y += dy;
-        }
-        if b.eflag != 0 {
-            b.ep.x += dx;
-            b.ep.y += dy;
-        }
+/// `shiftGraph(g, dx, dy)`.
+fn shift_graph<P: PackGraph + ?Sized>(g: &mut P, sg: PkGraph, dx: f64, dy: f64) {
+    g.pk_shift_graph_box(sg, dx, dy);
+    for c in g.pk_clusters(sg) {
+        shift_graph(g, PkGraph::Clust(c), dx, dy);
     }
 }
 
 /// `packGraphs(ng, gs, root, info)`; false if packing failed.
 pub fn pack_graphs(g: &mut LGraph<'_>, gs: &mut [Sub], info: &PackInfo) -> bool {
+    pack_graphs_in(&mut LPack { g, gs }, info)
+}
+
+/// `packGraphs` over any [`PackGraph`].
+pub fn pack_graphs_in<P: PackGraph + ?Sized>(g: &mut P, info: &PackInfo) -> bool {
     let mut info = info.clone();
-    let Some(pp) = put_graphs(g, gs, &mut info) else {
+    let Some(pp) = put_graphs_in(g, &mut info) else {
         return false;
     };
-    shift_graphs(g, gs, &pp, info.do_splines);
+    shift_graphs_in(g, &pp, info.do_splines);
     true
 }
 

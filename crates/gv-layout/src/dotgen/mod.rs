@@ -23,6 +23,7 @@ pub mod init;
 pub mod mincross;
 pub mod ns;
 pub mod output;
+pub mod pack;
 pub mod position;
 pub mod postproc;
 pub mod qsort;
@@ -40,6 +41,12 @@ use types::*;
 /// statics.
 pub struct Dot<'a> {
     pub input: &'a Graph,
+    /// The cgraph root whose attribute dictionaries are visible (`agattr(agroot(g), ...)`):
+    /// `input` itself, or the whole graph when `input` is a pack component.
+    pub root_input: &'a Graph,
+    /// The layout graph is a component subgraph (`dot_root(g) != agroot(g)`, doDot's
+    /// pack branch).
+    pub comp: bool,
     pub nodes: Vec<NodeInfo>,
     pub edges: Vec<EdgeInfo>,
     pub graphs: Vec<GraphInfo>,
@@ -73,6 +80,8 @@ impl<'a> Dot<'a> {
     fn empty(input: &'a Graph) -> Self {
         Dot {
             input,
+            root_input: input,
+            comp: false,
             nodes: Vec::new(),
             edges: Vec::new(),
             graphs: Vec::new(),
@@ -230,11 +239,12 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         let mut d = Dot::new(graph);
         d.graph_init();
         let maxphase = utils::late_int(d.agget(0, "phase"), -1, 1);
-        d.dot_layout()
-            .map_err(|message| gv_core::GraphvizError::LayoutError {
+        pack::do_dot(&mut d, graph, maxphase).map_err(|message| {
+            gv_core::GraphvizError::LayoutError {
                 stage: "dot",
                 message,
-            })?;
+            }
+        })?;
         if (1..=3).contains(&maxphase) {
             output::Output::phase(&d, maxphase)
         } else {

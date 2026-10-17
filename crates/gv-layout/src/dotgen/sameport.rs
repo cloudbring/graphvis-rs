@@ -6,8 +6,12 @@ use gv_core::Point;
 
 impl Dot<'_> {
     fn attr_declared(&self, name: &str) -> bool {
-        self.input.edge_defaults.contains_key(name)
-            || self.input.edges.iter().any(|e| e.attrs.contains_key(name))
+        self.root_input.edge_defaults.contains_key(name)
+            || self
+                .root_input
+                .edges
+                .iter()
+                .any(|e| e.attrs.contains_key(name))
     }
 
     pub fn dot_sameports(&mut self) {
