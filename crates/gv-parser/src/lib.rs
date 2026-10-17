@@ -185,6 +185,27 @@ mod tests {
     }
 
     #[test]
+    fn command_line_attrs_are_fixed_at_root() {
+        // `global_def` marks the symbols `fixed`: root attribute statements keep
+        // the command-line value, subgraphs and individual objects may change it.
+        let mut globals = GlobalAttrs::default();
+        globals.graph.insert("rankdir".into(), "LR".into());
+        globals.node.insert("shape".into(), "box".into());
+        let src = "digraph G { rankdir=TB; graph [rankdir=BT]; node [shape=circle]; a; \
+                   b [shape=point]; subgraph s { rankdir=RL; node [shape=egg]; c } }";
+        let g = &parse_dot_all(src, &globals).unwrap()[0];
+        assert_eq!(g.graph_attrs.get("rankdir").map(String::as_str), Some("LR"));
+        let shape = |n: usize| g.nodes[n].attrs.get("shape").map(String::as_str);
+        assert_eq!(shape(0), Some("box"));
+        assert_eq!(shape(1), Some("point"));
+        assert_eq!(shape(2), Some("egg"));
+        assert_eq!(
+            g.subgraphs[0].graph_attrs.get("rankdir").map(String::as_str),
+            Some("RL")
+        );
+    }
+
+    #[test]
     fn parse_dot_all_returns_every_graph_with_globals() {
         let mut globals = GlobalAttrs::default();
         globals.graph.insert("rankdir".into(), "LR".into());

@@ -341,8 +341,14 @@ impl Parser {
                     let key = self.parse_atom()?;
                     self.expect(&TokenKind::Equals)?;
                     let val = self.parse_value_or_port_atom()?;
-                    self.attr_stmt(DictKind::Graph, &key, &val);
-                    self.current_graph_attrs_mut().insert(key, val);
+                    if !self.fixed_at_root(DictKind::Graph, &key) {
+                        self.attr_stmt(DictKind::Graph, &key, &val);
+                        self.current_graph_attrs_mut().insert(key, val);
+                    } else {
+                        if let Some(sym) = self.dict_mut(0, DictKind::Graph).get_mut(&key) {
+                            sym.print = true;
+                        }
+                    }
                     return Ok(());
                 }
                 self.parse_compound()
@@ -386,6 +392,18 @@ impl Parser {
             TokenKind::Node => DictKind::Node,
             _ => DictKind::Edge,
         };
+        // `-G`/`-N`/`-E` symbols are `fixed`: root attribute statements keep them.
+        let mut kept = AttrMap::new();
+        for (k, v) in attrs {
+            if self.fixed_at_root(kind, &k) {
+                if let Some(sym) = self.dict_mut(0, kind).get_mut(&k) {
+                    sym.print = true;
+                }
+            } else {
+                kept.insert(k, v);
+            }
+        }
+        let attrs = kept;
         for (k, v) in &attrs {
             self.attr_stmt(kind, k, v);
         }
@@ -637,6 +655,17 @@ impl Parser {
     }
 
     /// Dictionary index of the graph in scope (0: root).
+    /// `sym->fixed` in `attrstmt`: a command-line default (`global_def`) that a
+    /// root-level attribute statement does not change (subgraphs still may).
+    fn fixed_at_root(&self, kind: DictKind, name: &str) -> bool {
+        self.scope_dict() == 0
+            && match kind {
+                DictKind::Graph => self.globals.graph.contains_key(name),
+                DictKind::Node => self.globals.node.contains_key(name),
+                DictKind::Edge => self.globals.edge.contains_key(name),
+            }
+    }
+
     fn scope_dict(&self) -> usize {
         self.scope_stack.last().map_or(0, |s| s.0 as usize + 1)
     }
