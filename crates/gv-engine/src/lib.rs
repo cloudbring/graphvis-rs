@@ -9,6 +9,8 @@ pub use gv_render::{OutputFormat, render_graph, render_graph_named};
 /// first graph in `dot_source`.
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
     let output_format = OutputFormat::parse(format)?;
+    // Each call is one C process: per-process counters (gradient and anchor ids) restart.
+    gv_render::reset_render_state();
     let graph = parse_dot(dot_source)?;
     render_parsed(
         graph,
@@ -72,6 +74,18 @@ fn render_parsed(
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn repeated_renders_are_identical() {
+        // Gradient and HTML anchor ids are per-process statics in C; a library call must
+        // not see the counts left by an earlier call.
+        let src = r#"digraph { a [style=filled, fillcolor="red:blue"];
+            b [label=<<TABLE><TR><TD HREF="x">c</TD></TR></TABLE>>]; a -> b }"#;
+        let first = render_dot(src, "dot", "svg").unwrap();
+        assert_eq!(first, render_dot(src, "dot", "svg").unwrap());
+        assert!(first.contains("_l_0"));
+    }
+
     use super::*;
     use std::fs;
     use std::path::PathBuf;
