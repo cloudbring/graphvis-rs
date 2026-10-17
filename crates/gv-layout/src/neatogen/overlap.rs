@@ -12,7 +12,7 @@ use crate::sfdpgen::post_process::StressMajorizationSmoother;
 use crate::sparse::{Format, MACHINEACC, SparseMatrix, distance};
 
 /// `call_tri(n, x)`: Delaunay graph plus the diagonal, symmetrized.
-fn call_tri(n: usize, x: &[f64]) -> SparseMatrix {
+pub fn call_tri(n: usize, x: &[f64]) -> SparseMatrix {
     let xv: Vec<f64> = (0..n).map(|i| x[2 * i]).collect();
     let yv: Vec<f64> = (0..n).map(|i| x[2 * i + 1]).collect();
     let edges = if n > 2 {
@@ -400,11 +400,10 @@ pub fn remove_overlap(
     let _ = res;
 }
 
-/// `fdpAdjust(g, am)`: prism overlap removal on the nodes of `sub`.
-pub fn fdp_adjust(g: &mut LGraph<'_>, sub: &Sub, am: &AdjustData) {
+/// `makeMatrix(g)`: assigns `ND_id` in node order and returns the adjacency
+/// matrix of `sub`, one entry per out-edge weighted by `weight` (default 1).
+pub fn make_matrix(g: &mut LGraph<'_>, sub: &Sub) -> SparseMatrix {
     let n = sub.nodes.len();
-    let dim = g.ndim;
-    // makeMatrix: node ids in sub order, one entry per out-edge.
     for (i, &v) in sub.nodes.iter().enumerate() {
         g.nodes[v].id = i;
     }
@@ -424,19 +423,36 @@ pub fn fdp_adjust(g: &mut LGraph<'_>, sub: &Sub, am: &AdjustData) {
             val.push(w);
         }
     }
-    let a0 = crate::sparse::from_coordinate_arrays(irn.len(), n, n, &irn, &jcn, Some(&val), true);
+    crate::sparse::from_coordinate_arrays(irn.len(), n, n, &irn, &jcn, Some(&val), true)
+}
+
+/// `getSizes(g, pad, ...)`: half sizes in inches plus `pad`, indexed by `ND_id`.
+pub fn get_sizes(g: &LGraph<'_>, sub: &Sub, pad: (f64, f64)) -> Vec<f64> {
+    let dim = g.ndim;
+    let mut sizes = vec![0.0f64; dim * sub.nodes.len()];
+    for &v in &sub.nodes {
+        let i = g.nodes[v].id;
+        sizes[i * dim] = g.nodes[v].width * 0.5 + pad.0;
+        sizes[i * dim + 1] = g.nodes[v].height * 0.5 + pad.1;
+    }
+    sizes
+}
+
+/// `fdpAdjust(g, am)`: prism overlap removal on the nodes of `sub`.
+pub fn fdp_adjust(g: &mut LGraph<'_>, sub: &Sub, am: &AdjustData) {
+    let n = sub.nodes.len();
+    let dim = g.ndim;
+    let a0 = make_matrix(g, sub);
     let sep = sep_factor(g);
     let pad = if sep.do_add {
         (sep.x / 72.0, sep.y / 72.0)
     } else {
         (DFLT_MARGIN / 72.0, DFLT_MARGIN / 72.0)
     };
-    let mut sizes = vec![0.0f64; dim * n];
+    let sizes = get_sizes(g, sub, pad);
     let mut pos = vec![0.0f64; dim * n];
     for &v in &sub.nodes {
         let i = g.nodes[v].id;
-        sizes[i * dim] = g.nodes[v].width * 0.5 + pad.0;
-        sizes[i * dim + 1] = g.nodes[v].height * 0.5 + pad.1;
         for k in 0..dim {
             pos[i * dim + k] = g.nodes[v].pos[k];
         }
