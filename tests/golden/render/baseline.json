@@ -26,8 +26,8 @@
         "diff_lines": 0
       },
       "arrows": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "clust": {
         "identical": true,
@@ -330,8 +330,8 @@
         "diff_lines": 0
       },
       "gallery_shapes_0_851a8a": {
-        "identical": false,
-        "diff_lines": 13
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
@@ -382,12 +382,12 @@
         "diff_lines": 0
       },
       "gv16_directed_arrows_54d1cf": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_biological_693e87": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_clust_f4945e": {
         "identical": true,
@@ -402,8 +402,8 @@
         "diff_lines": 0
       },
       "gv16_directed_oldarrows_f70da3": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
         "identical": false,
@@ -415,11 +415,11 @@
       },
       "gv16_directed_sdh_29b016": {
         "identical": false,
-        "diff_lines": 475
+        "diff_lines": 262
       },
       "gv16_directed_switch_2841f8": {
-        "identical": false,
-        "diff_lines": 81
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_table_ece616": {
         "identical": true,
@@ -518,12 +518,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_arrows_148b6b": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_arrowsize_46ccd8": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_awilliams_7293a0": {
         "identical": true,
@@ -558,8 +558,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b155_4084eb": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
@@ -594,8 +594,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b51_33bcb0": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b53_19559c": {
         "identical": true,
@@ -834,28 +834,28 @@
         "diff_lines": 0
       },
       "gv16_graphs_grdlinear_1bd0ce": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_angle_418478": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_node_67d0c8": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_grdradial_angle_4e0504": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_f61057": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_node_3c9cf2": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdshapes_4ce58c": {
         "identical": true,
@@ -886,16 +886,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_inv_nul_a40710": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_inv_val_6e189e": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_japanese_16a6f0": {
-        "identical": false,
-        "diff_lines": 34
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_jcctree_c8e393": {
         "identical": true,
@@ -1002,20 +1002,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbc_125873": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbd_dc16cf": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbl_a41807": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbr_5a5b4f": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdc_ad3689": {
         "identical": true,
@@ -1034,36 +1034,36 @@
         "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftc_0ffff4": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftd_e445c7": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftl_38cf7d": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftr_b79416": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbc_843e58": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbd_6fba3c": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbl_d1e12a": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbr_9a14a7": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndc_64430e": {
         "identical": true,
@@ -1082,20 +1082,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntc_4ae879": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntd_bcdf9c": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntl_ce8626": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntr_de9123": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_layer2_cabcac": {
         "identical": true,
@@ -1106,8 +1106,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_ldbxtried_9e83ae": {
-        "identical": false,
-        "diff_lines": 17
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_longflat_780117": {
         "identical": true,
@@ -1138,12 +1138,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_nestedclust_fdfd6a": {
-        "identical": false,
-        "diff_lines": 58
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_newarrows_769825": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ngk10_4_6aab96": {
         "identical": true,
@@ -1158,8 +1158,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_nul_nul_d3f49c": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_val_01f8af": {
         "identical": true,
@@ -1398,8 +1398,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_val_nul_b2870b": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_val_981291": {
         "identical": true,
@@ -1430,8 +1430,8 @@
         "diff_lines": 0
       },
       "gv16_gui_template_b7dd0f": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_back_d0c9c8": {
         "identical": true,
@@ -1454,8 +1454,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_fixed_5e49db": {
-        "identical": false,
-        "diff_lines": 13
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_forward_5a0d3d": {
         "identical": true,
@@ -1490,8 +1490,8 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_arrows_dot_1ce23f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_compound_dot_96e185": {
         "identical": true,
@@ -1530,8 +1530,8 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_nestedclust_dot_b56c31": {
-        "identical": false,
-        "diff_lines": 58
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_ordering_dot1_a6f94e": {
         "identical": true,
@@ -1958,12 +1958,12 @@
         "diff_lines": 0
       },
       "wild_graphs_arrows_a4826e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_arrowsize_ccef6e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_b278_ab7732": {
         "identical": true,
@@ -2472,8 +2472,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_Latin1_cd0c3d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_NewCenturySchlbk_eea47a": {
         "identical": true,
@@ -2552,8 +2552,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b34_ca01c7": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b3_6bcefe": {
         "identical": true,
@@ -2572,16 +2572,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_b56_36f937": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b58_d34a29": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_b60_bf5b3a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
         "identical": false,
@@ -2760,28 +2760,28 @@
         "diff_lines": 0
       },
       "gv16_graphs_grdangles_7f37b4": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdcluster_99a310": {
-        "identical": false,
-        "diff_lines": 8
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdcolors_0537a2": {
-        "identical": false,
-        "diff_lines": 48
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_node_67d0c8": {
-        "identical": false,
-        "diff_lines": 16
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_node_3c9cf2": {
-        "identical": false,
-        "diff_lines": 16
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdshapes_4ce58c": {
-        "identical": false,
-        "diff_lines": 64
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_hashtable_4d0f6a": {
         "identical": true,
@@ -12054,8 +12054,8 @@
         "diff_lines": 0
       },
       "arrows": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "clust": {
         "identical": true,
@@ -12110,12 +12110,12 @@
         "diff_lines": 0
       },
       "gallery__index_1_732559": {
-        "identical": false,
-        "diff_lines": 32
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_2_1abd41": {
-        "identical": false,
-        "diff_lines": 22
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery__index_2_9e1005": {
         "identical": true,
@@ -12150,12 +12150,12 @@
         "diff_lines": 0
       },
       "gallery_beautify_0_bd129e": {
-        "identical": false,
-        "diff_lines": 62
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_beautify_1_1cfb90": {
-        "identical": false,
-        "diff_lines": 62
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_bgcolor_0_c2942d": {
         "identical": true,
@@ -12358,8 +12358,8 @@
         "diff_lines": 2
       },
       "gallery_shapes_0_851a8a": {
-        "identical": false,
-        "diff_lines": 17
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_shapes_1_91cd61": {
         "identical": false,
@@ -12410,12 +12410,12 @@
         "diff_lines": 0
       },
       "gv16_directed_arrows_54d1cf": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_biological_693e87": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_clust_f4945e": {
         "identical": true,
@@ -12430,8 +12430,8 @@
         "diff_lines": 0
       },
       "gv16_directed_oldarrows_f70da3": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_polypoly_87bcc9": {
         "identical": false,
@@ -12443,11 +12443,11 @@
       },
       "gv16_directed_sdh_29b016": {
         "identical": false,
-        "diff_lines": 845
+        "diff_lines": 632
       },
       "gv16_directed_switch_2841f8": {
-        "identical": false,
-        "diff_lines": 113
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_directed_table_ece616": {
         "identical": true,
@@ -12518,8 +12518,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_Symbol_af1a2d": {
-        "identical": false,
-        "diff_lines": 272
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_Times_e379da": {
         "identical": true,
@@ -12546,12 +12546,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_arrows_148b6b": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_arrowsize_46ccd8": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_awilliams_7293a0": {
         "identical": true,
@@ -12586,8 +12586,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b155_4084eb": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b15_8c212e": {
         "identical": false,
@@ -12622,8 +12622,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b51_33bcb0": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b53_19559c": {
         "identical": true,
@@ -12738,8 +12738,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_center_a90232": {
-        "identical": false,
-        "diff_lines": 22
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_clover_ae8650": {
         "identical": true,
@@ -12842,8 +12842,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_grammar_882f58": {
-        "identical": false,
-        "diff_lines": 366
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdangles_7f37b4": {
         "identical": true,
@@ -12862,28 +12862,28 @@
         "diff_lines": 0
       },
       "gv16_graphs_grdlinear_1bd0ce": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_angle_418478": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdlinear_node_67d0c8": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_grdradial_angle_4e0504": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_f61057": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdradial_node_3c9cf2": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_grdshapes_4ce58c": {
         "identical": true,
@@ -12914,16 +12914,16 @@
         "diff_lines": 0
       },
       "gv16_graphs_inv_nul_a40710": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_inv_val_6e189e": {
         "identical": true,
         "diff_lines": 0
       },
       "gv16_graphs_japanese_16a6f0": {
-        "identical": false,
-        "diff_lines": 50
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_jcctree_c8e393": {
         "identical": true,
@@ -13030,20 +13030,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbc_125873": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbd_dc16cf": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbl_a41807": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fbr_5a5b4f": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-fdc_ad3689": {
         "identical": true,
@@ -13062,36 +13062,36 @@
         "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftc_0ffff4": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftd_e445c7": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftl_38cf7d": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ftr_b79416": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbc_843e58": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbd_6fba3c": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbl_d1e12a": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-nbr_9a14a7": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ndc_64430e": {
         "identical": true,
@@ -13110,20 +13110,20 @@
         "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntc_4ae879": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntd_bcdf9c": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntl_ce8626": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_labelroot-ntr_de9123": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_layer2_cabcac": {
         "identical": true,
@@ -13134,8 +13134,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_ldbxtried_9e83ae": {
-        "identical": false,
-        "diff_lines": 17
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_longflat_780117": {
         "identical": true,
@@ -13166,12 +13166,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_nestedclust_fdfd6a": {
-        "identical": false,
-        "diff_lines": 102
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_newarrows_769825": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ngk10_4_6aab96": {
         "identical": true,
@@ -13186,8 +13186,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_nul_nul_d3f49c": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_nul_val_01f8af": {
         "identical": true,
@@ -13214,8 +13214,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_pack_1c2410": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_pgram_6b9235": {
         "identical": false,
@@ -13378,8 +13378,8 @@
         "diff_lines": 8
       },
       "gv16_graphs_style_e4c38d": {
-        "identical": false,
-        "diff_lines": 22
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_train11_5e9e4b": {
         "identical": true,
@@ -13426,8 +13426,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_val_nul_b2870b": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_val_981291": {
         "identical": true,
@@ -13446,8 +13446,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_world_6aa0c7": {
-        "identical": false,
-        "diff_lines": 30
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_xlabels_e9f1cf": {
         "identical": true,
@@ -13458,8 +13458,8 @@
         "diff_lines": 0
       },
       "gv16_gui_template_b7dd0f": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_back_d0c9c8": {
         "identical": true,
@@ -13482,8 +13482,8 @@
         "diff_lines": 0
       },
       "gv16_infosrc_fixed_5e49db": {
-        "identical": false,
-        "diff_lines": 17
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_infosrc_forward_5a0d3d": {
         "identical": true,
@@ -13518,8 +13518,8 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_arrows_dot_1ce23f": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_compound_dot_96e185": {
         "identical": true,
@@ -13558,8 +13558,8 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_nestedclust_dot_b56c31": {
-        "identical": false,
-        "diff_lines": 102
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_ordering_dot1_a6f94e": {
         "identical": true,
@@ -13578,16 +13578,16 @@
         "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato1_0327de": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato2_dc0918": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_pack_neato_c0395a": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_linux_x86_ports_dot_99eb47": {
         "identical": true,
@@ -13662,16 +13662,16 @@
         "diff_lines": 0
       },
       "gv16_nshare_pack_neato1_014679": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato2_10690f": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_pack_neato_e0a2bb": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_nshare_ports_dot_25dc96": {
         "identical": true,
@@ -13962,8 +13962,8 @@
         "diff_lines": 0
       },
       "pack": {
-        "identical": false,
-        "diff_lines": 168
+        "identical": true,
+        "diff_lines": 0
       },
       "record": {
         "identical": true,
@@ -13986,12 +13986,12 @@
         "diff_lines": 0
       },
       "wild_graphs_arrows_a4826e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_arrowsize_ccef6e": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_b278_ab7732": {
         "identical": true,
@@ -14006,8 +14006,8 @@
         "diff_lines": 0
       },
       "wild_graphs_complex_edges_71191c": {
-        "identical": false,
-        "diff_lines": 70
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_graphs_ctext_0bf48f": {
         "identical": true,
@@ -14058,8 +14058,8 @@
         "diff_lines": 0
       },
       "world": {
-        "identical": false,
-        "diff_lines": 30
+        "identical": true,
+        "diff_lines": 0
       }
     }
   }
