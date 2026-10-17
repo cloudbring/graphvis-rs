@@ -10,6 +10,10 @@ pub(crate) fn trim_zeros(mut s: String) -> String {
         if s.ends_with('.') {
             s.pop();
         }
+        // agxbuf_trim_zeros turns a remaining "-0" into "0"
+        if s == "-0" {
+            s = "0".to_string();
+        }
     }
     s
 }
@@ -104,7 +108,7 @@ mod tests {
         assert_eq!(gvdouble(-0.004), "0");
         assert_eq!(gvdouble(12.5), "12.5");
         assert_eq!(gvdouble(-209.8), "-209.8");
-        assert_eq!(xdot_num(-0.001), "-0");
+        assert_eq!(xdot_num(-0.001), "0");
         assert_eq!(xdot_num(20.0), "20");
         assert_eq!(gvprintnum(0.5), ".5");
     }
