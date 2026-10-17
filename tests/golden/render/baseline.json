@@ -7604,8 +7604,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_user_shapes_1adbcd": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_inv_7c5cb7": {
         "identical": true,
@@ -8288,8 +8288,8 @@
         "diff_lines": 0
       },
       "wild_graphs_user_shapes_670d68": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html1_9b6ede": {
         "identical": true,
@@ -9706,8 +9706,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_user_shapes_1adbcd": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_val_inv_7c5cb7": {
         "identical": true,
@@ -10390,8 +10390,8 @@
         "diff_lines": 0
       },
       "wild_graphs_user_shapes_670d68": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "wild_info_html1_9b6ede": {
         "identical": true,
@@ -11532,12 +11532,12 @@
         "diff_lines": 0
       },
       "gv16_graphs_layer2_cabcac": {
-        "identical": false,
-        "diff_lines": 96
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_layer_e184db": {
-        "identical": false,
-        "diff_lines": 96
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_ldbxtried_9e83ae": {
         "identical": true,
