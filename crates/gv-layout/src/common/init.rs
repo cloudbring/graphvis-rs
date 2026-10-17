@@ -326,6 +326,7 @@ impl<'a> LGraph<'a> {
             // C prints label positions even when placement failed (the
             // unplaced position is the origin, moved by the final translation).
             ed.label_pos = e.label.as_ref().map(|l| l.pos);
+            ed.label_unplaced = e.label.as_ref().is_some_and(|l| !l.set);
             for (key, lbl) in [
                 ("head_lp", &e.head_label),
                 ("tail_lp", &e.tail_label),

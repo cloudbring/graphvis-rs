@@ -348,7 +348,12 @@ impl<'g> Model<'g> {
                     l
                 })
             };
-            let label = mk(&lg.label, "label", e.label_pos, fontcolor);
+            let mut label = mk(&lg.label, "label", e.label_pos, fontcolor);
+            if e.label_unplaced
+                && let Some(l) = label.as_mut()
+            {
+                l.set = false;
+            }
             let xlabel = mk(&lg.xlabel, "xlabel", parse_point(a.get("xlp")), fontcolor);
             let head_label = mk(
                 &lg.head_label,

@@ -50,6 +50,10 @@ pub struct EdgeData {
     pub attrs: AttrMap,
     pub spline: Spline,
     pub label_pos: Option<Point>,
+    /// The layout could not place the label (`ED_label(e)->set` is false):
+    /// `lp` is still printed, but renderers do not draw it.
+    #[serde(default)]
+    pub label_unplaced: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -186,6 +190,7 @@ impl Graph {
             attrs: merged_attrs,
             spline: Spline::default(),
             label_pos: None,
+            label_unplaced: false,
         });
         id
     }
