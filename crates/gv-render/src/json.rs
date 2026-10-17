@@ -5,8 +5,21 @@ use gv_core::{AttrMap, Graph, GraphKind};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 
-/// `stoj`.
+thread_local! {
+    static LATIN1: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// `stoj`: converts Latin-1 input (`charset=latin1`) to UTF-8 first.
 fn stoj(s: &str, out: &mut String) {
+    if LATIN1.with(|c| c.get()) {
+        let conv = gv_core::font::latin1_to_utf8(s);
+        stoj_raw(&conv, out);
+    } else {
+        stoj_raw(s, out);
+    }
+}
+
+fn stoj_raw(s: &str, out: &mut String) {
     out.push('"');
     for c in s.chars() {
         match c {
@@ -302,6 +315,7 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
                 Grad::Linear(x0, y0, x1, y1, st) => {
                     out.push_str("\"grad\": \"linear\",\n");
                     indent(out, l);
+                    indent(out, l);
                     let _ = writeln!(out, "\"p0\": [{x0:.3},{y0:.3}],");
                     indent(out, l);
                     let _ = writeln!(out, "\"p1\": [{x1:.3},{y1:.3}],");
@@ -310,6 +324,7 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
                 }
                 Grad::Radial(x0, y0, r0, x1, y1, r1, st) => {
                     out.push_str("\"grad\": \"radial\",\n");
+                    indent(out, l);
                     indent(out, l);
                     let _ = writeln!(out, "\"p0\": [{x0:.3},{y0:.3},{r0:.3}],");
                     indent(out, l);
@@ -417,11 +432,7 @@ impl W<'_> {
                 } else {
                     v
                 };
-                if self.latin1 {
-                    stoj(&gv_core::font::latin1_to_utf8(v), &mut self.out);
-                } else {
-                    stoj(v, &mut self.out);
-                }
+                stoj(v, &mut self.out);
             }
         }
     }
@@ -719,6 +730,8 @@ pub(crate) fn write_json(g: &Graph, do_xdot: bool, edge_order: &[usize]) -> Stri
         node_gid,
         edge_gid,
     };
+    LATIN1.with(|c| c.set(w.latin1));
     w.write_graph(None);
+    LATIN1.with(|c| c.set(false));
     w.out
 }
