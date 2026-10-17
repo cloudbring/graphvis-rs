@@ -2092,8 +2092,6 @@ fn emit_geom_html_table_recursive(
     out: &mut String,
     tbl: &gv_geom::shapes::HtmlTable,
     center: Point,
-    font_name: &str,
-    font_size: f64,
     default_font_color: &str,
     default_stroke: &str,
     scheme: Option<&str>,
@@ -2168,32 +2166,94 @@ fn emit_geom_html_table_recursive(
                 out,
                 nested,
                 center,
-                font_name,
-                font_size,
                 default_font_color,
                 default_stroke,
                 scheme,
             );
-        } else if !cell.text.is_empty() {
-            let ctx = LabelSubstContext::default();
-            let mut layout =
-                measure_multiline_label_with_context(&cell.text, &ctx, font_name, font_size);
-            for line in &mut layout.lines {
-                line.justify = cell.align;
+        } else if let Some(rich) = &cell.rich_text {
+            let spans = gv_geom::html_label::emit_htextspans(rich, center, default_font_color);
+            emit_html_text_spans(out, &spans, scheme);
+        }
+    }
+}
+
+/// `svg_textspan` (plugin/core/gvrender_core_svg.c) for the spans of an HTML text block.
+fn emit_html_text_spans(
+    out: &mut String,
+    spans: &[gv_geom::html_label::HtmlTextSpan],
+    scheme: Option<&str>,
+) {
+    use gv_geom::html_label::{HTML_BF, HTML_IF, HTML_OL, HTML_S, HTML_SUB, HTML_SUP, HTML_UL};
+    for sp in spans {
+        out.push_str("<text xml:space=\"preserve\" text-anchor=\"start\"");
+        let _ = write!(
+            out,
+            " x=\"{}\" y=\"{}\"",
+            fmt_gv_double(sp.x),
+            fmt_gv_double(-(sp.y + sp.yoffset_centerline))
+        );
+        let (mut weight, mut style) = (false, false);
+        if let Some(a) = translate_postscript_fontname(&sp.font_name) {
+            let _ = write!(out, " font-family=\"{}", a.family);
+            if a.svg_font_family != a.family {
+                let _ = write!(out, ",{}", a.svg_font_family);
             }
-            let cell_center =
-                Point::new((c_bb.ll.x + c_bb.ur.x) / 2.0, (c_bb.ll.y + c_bb.ur.y) / 2.0);
-            emit_text_label(
+            out.push('"');
+            if let Some(w) = a.weight {
+                let _ = write!(out, " font-weight=\"{w}\"");
+                weight = true;
+            }
+            if let Some(st) = a.stretch {
+                let _ = write!(out, " font-stretch=\"{st}\"");
+            }
+            if let Some(st) = a.style {
+                let _ = write!(out, " font-style=\"{st}\"");
+                style = true;
+            }
+        } else {
+            let _ = write!(
                 out,
-                &layout,
-                cell_center,
-                default_font_color,
-                scheme,
-                false,
-                false,
-                false,
+                " font-family=\"{}\"",
+                xml_escape(&sp.font_name, false, false, false)
             );
         }
+        let flags = sp.flags;
+        if flags & HTML_BF != 0 && !weight {
+            out.push_str(" font-weight=\"bold\"");
+        }
+        if flags & HTML_IF != 0 && !style {
+            out.push_str(" font-style=\"italic\"");
+        }
+        if flags & (HTML_UL | HTML_S | HTML_OL) != 0 {
+            let mut parts = Vec::new();
+            if flags & HTML_UL != 0 {
+                parts.push("underline");
+            }
+            if flags & HTML_OL != 0 {
+                parts.push("overline");
+            }
+            if flags & HTML_S != 0 {
+                parts.push("line-through");
+            }
+            let _ = write!(out, " text-decoration=\"{}\"", parts.join(","));
+        }
+        if flags & HTML_SUP != 0 {
+            out.push_str(" baseline-shift=\"super\"");
+        }
+        if flags & HTML_SUB != 0 {
+            out.push_str(" baseline-shift=\"sub\"");
+        }
+        let _ = write!(out, " font-size=\"{:.2}\"", sp.font_size);
+        let (fill_str, fill_opacity) = format_paint_and_opacity(Some(&sp.color), "black", scheme);
+        if !fill_str.eq_ignore_ascii_case("black") {
+            let _ = write!(out, " fill=\"{fill_str}\"");
+            if let Some(op) = fill_opacity {
+                let _ = write!(out, " fill-opacity=\"{op:.6}\"");
+            }
+        }
+        out.push('>');
+        out.push_str(&xml_escape(&sp.text, true, true, true));
+        out.push_str("</text>\n");
     }
 }
 
@@ -2214,12 +2274,33 @@ fn emit_html_label(
             out,
             &geom_tbl,
             center,
-            font_name,
-            font_size,
             default_font_color,
             default_stroke,
             scheme,
         );
+        return;
+    }
+    if !html.to_ascii_lowercase().contains("<table") {
+        // HTML text label (`emit_html_txt`); a label C rejects draws nothing.
+        let inner = if html.len() >= 2 && html.starts_with('<') && html.ends_with('>') {
+            &html[1..html.len() - 1]
+        } else {
+            html
+        };
+        let obj = LabelSubstContext::default();
+        let lay = gv_geom::html_label::make_html_label(
+            inner,
+            &obj,
+            font_name,
+            font_size,
+            Some(default_font_color),
+            None,
+        );
+        if let Some(gv_geom::html_label::HtmlLabel::Text(t)) = &lay.label {
+            let center = Point::new((bb.ll.x + bb.ur.x) / 2.0, (bb.ll.y + bb.ur.y) / 2.0);
+            let spans = gv_geom::html_label::emit_htextspans(t, center, default_font_color);
+            emit_html_text_spans(out, &spans, scheme);
+        }
         return;
     }
     let table = parse_html_table(html);

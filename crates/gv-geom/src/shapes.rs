@@ -335,6 +335,9 @@ pub struct HtmlCell {
     pub bbox: BoundingBox,
     /// Optional nested `<TABLE>` inside this cell.
     pub nested_table: Option<HtmlTable>,
+    /// Sized and positioned rich text of a text cell (box in label coordinates); draw it with
+    /// [`crate::html_label::emit_htextspans`].
+    pub rich_text: Option<HtmlText>,
 }
 
 /// A parsed and laid-out HTML-like `<TABLE>` label.
@@ -787,6 +790,10 @@ fn convert_html_tbl(t: &HtmlTbl) -> HtmlTable {
                 bbox: c.data.bx,
                 nested_table: match &c.child {
                     HtmlContent::Table(n) => Some(convert_html_tbl(n)),
+                    _ => None,
+                },
+                rich_text: match &c.child {
+                    HtmlContent::Text(tx) => Some(tx.clone()),
                     _ => None,
                 },
             })

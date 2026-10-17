@@ -1980,6 +1980,70 @@ pub fn make_html_label(
     }
 }
 
+/// One text span as `emit_htextspans` hands it to `gvrender_textspan` (always left-justified).
+#[derive(Debug, Clone, PartialEq)]
+pub struct HtmlTextSpan {
+    /// Left end of the span (graph coordinates).
+    pub x: f64,
+    /// Baseline in graph coordinates (y up), before `yoffset_centerline` is applied.
+    pub y: f64,
+    /// `tl.yoffset_centerline`: the item's value for simple text, else `1`.
+    pub yoffset_centerline: f64,
+    pub text: String,
+    pub font_name: String,
+    pub font_size: f64,
+    pub flags: u8,
+    pub color: String,
+    pub width: f64,
+}
+
+/// `emit_html_txt` + `emit_htextspans`: positions the spans of a sized and placed text block.
+/// `pos` is `env.pos` (the label position), `font_color` the label's `fontcolor`.
+pub fn emit_htextspans(txt: &HtmlText, pos: Point, font_color: &str) -> Vec<HtmlTextSpan> {
+    let mut out = Vec::new();
+    if txt.spans.is_empty() {
+        return out;
+    }
+    let b = txt.bx;
+    let halfwidth_x = (b.ur.x - b.ll.x) / 2.0;
+    let center_x = pos.x + (b.ur.x + b.ll.x) / 2.0;
+    let py = pos.y + (b.ur.y + b.ll.y) / 2.0;
+    let left_x = center_x - halfwidth_x;
+    let right_x = center_x + halfwidth_x;
+    let mut base_y = py + (b.ur.y - b.ll.y) / 2.0;
+    for span in &txt.spans {
+        let mut x = match span.just {
+            'l' => left_x,
+            'r' => right_x - span.size,
+            _ => center_x - span.size / 2.0,
+        };
+        base_y -= span.lfsize;
+        for item in &span.items {
+            out.push(HtmlTextSpan {
+                x,
+                y: base_y,
+                yoffset_centerline: if txt.simple {
+                    item.yoffset_centerline
+                } else {
+                    1.0
+                },
+                text: item.text.clone(),
+                font_name: item.font_name.clone(),
+                font_size: item.font_size,
+                flags: item.flags,
+                color: item
+                    .font
+                    .as_ref()
+                    .and_then(|f| f.color.clone())
+                    .unwrap_or_else(|| font_color.to_string()),
+                width: item.width,
+            });
+            x += item.width;
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2013,6 +2077,25 @@ mod tests {
         let d = dimen("<TABLE><TR><TD> a </TD></TR></TABLE>");
         assert!((d.y - 28.8).abs() < 1e-9, "{d:?}");
         assert!((d.x - (13.21 + 12.0)).abs() < 0.01, "{d:?}");
+    }
+
+    #[test]
+    fn right_bold_spans_match_c_svg() {
+        // C: <text text-anchor="start" x="8" y="-14.8" ...>right </text>
+        //    <text text-anchor="start" x="37.94" y="-14.8" ... font-weight="bold">bold</text>
+        // for a box node at (36.2, 18) with width 72.4.
+        let obj = LabelSubstContext::for_node("a");
+        let lay = make_html_label("right <B>bold</B>", &obj, "Times-Roman", 14.0, None, None);
+        let Some(HtmlLabel::Text(t)) = lay.label else {
+            panic!()
+        };
+        let spans = emit_htextspans(&t, Point::new(36.2, 18.0), "black");
+        assert_eq!(spans.len(), 2);
+        assert!((spans[0].x - 8.0).abs() < 0.01);
+        assert!((spans[0].y + spans[0].yoffset_centerline - 14.8).abs() < 0.01);
+        assert!((spans[1].x - 37.94).abs() < 0.01);
+        assert_eq!(spans[1].flags, HTML_BF);
+        assert_eq!(spans[0].text, "right ");
     }
 
     #[test]
