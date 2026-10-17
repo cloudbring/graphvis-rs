@@ -1,0 +1,35 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,151.54,124.8",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "height": "0.5",
+      "label": "tab\therectl \"q\" \/sl",
+      "pos": "75.769,18",
+      "width": "2.1047"
+    },
+    {
+      "_gvid": 1,
+      "name": "é",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "75.769,106.8",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 0,
+      "label": "&amp;&lt;x&gt;",
+      "lp": "92.61,62.4",
+      "pos": "e,75.769,36.41 75.769,88.651 75.769,76.958 75.769,61.192 75.769,47.618"
+    }
+  ]
+}

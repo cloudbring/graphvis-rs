@@ -222,6 +222,10 @@ fn low_cluster_edges(graph: &Graph) -> Vec<std::collections::BTreeSet<usize>> {
 
 /// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
 pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Result<String> {
+    gv_core::charset::begin_render(
+        &graph.name,
+        graph.graph_attrs.get("charset").map(String::as_str),
+    );
     if format == OutputFormat::Canon {
         if graph.dicts.len() == graph.subgraphs.len() + 1 {
             return Ok(agwrite::agwrite(graph, &[]));

@@ -18,19 +18,32 @@ use std::sync::Mutex;
 /// Output formats in the corpus: directory name and file extension.
 pub const FORMATS: &[&str] = &["svg", "json", "json0", "xdot", "dot", "plain", "plain-ext"];
 
-/// References that C does not reproduce from run to run, skipped. In `-Tplain`, labels
-/// whose text grows under `htmlEntityUTF8` (e.g. `&infin;`) are canonicalised into a buffer
-/// sized for the original string (`write_plain` in `lib/common/output.c`), so the label field
-/// picks up whatever follows in memory.
+/// References that C does not reproduce from run to run, skipped. In `-Tplain`, a label
+/// whose converted text (`htmlEntityUTF8`, e.g. `&infin;`, or `latin1ToUTF8`) is not
+/// already an interned string and needs no quoting is printed after `canon` in
+/// `lib/common/output.c` has freed it (`agstrcanon` returns its argument unquoted, then
+/// `agstrfree` releases it), so the label field is whatever the freed memory holds.
 pub const UNSTABLE: &[(&str, &str)] = &[
     ("plain", "gallery__index_7_fe2a40"),
     ("plain", "gv16_graphs_Symbol_af1a2d"),
     ("plain", "gv16_graphs_b34_ca01c7"),
     ("plain", "gv16_graphs_b56_36f937"),
+    ("plain", "charset_Latin1"),
+    ("plain", "charset_b34"),
+    ("plain", "charset_b56"),
+    ("plain", "charset_b60"),
+    ("plain", "charset_latin1_html"),
+    ("plain", "charset_latin1_mixed"),
     ("plain-ext", "gallery__index_7_fe2a40"),
     ("plain-ext", "gv16_graphs_Symbol_af1a2d"),
     ("plain-ext", "gv16_graphs_b34_ca01c7"),
     ("plain-ext", "gv16_graphs_b56_36f937"),
+    ("plain-ext", "charset_Latin1"),
+    ("plain-ext", "charset_b34"),
+    ("plain-ext", "charset_b56"),
+    ("plain-ext", "charset_b60"),
+    ("plain-ext", "charset_latin1_html"),
+    ("plain-ext", "charset_latin1_mixed"),
 ];
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -162,10 +175,11 @@ pub fn run_corpus(root: &Path, formats: &[&str], filter: Option<&str>) -> Render
                     let Some((fmt, stem, reference)) = jobs.get(i) else {
                         break;
                     };
-                    let laid = std::fs::read_to_string(laid_dir.join(format!("{stem}.dot")))
+                    let laid = std::fs::read(laid_dir.join(format!("{stem}.dot")))
+                        .map(gv_core::charset::decode)
                         .unwrap_or_default();
                     let refs = std::fs::read(reference).unwrap_or_default();
-                    let refs = String::from_utf8_lossy(&refs);
+                    let refs = gv_core::charset::decode(refs);
                     let report = match render_port(&laid, fmt) {
                         Ok(actual) => compare_output(&refs, &actual, fmt == "svg"),
                         Err(e) => RenderReport {

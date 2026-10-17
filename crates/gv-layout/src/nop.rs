@@ -230,7 +230,15 @@ fn label_dimen(
     if text.is_empty() {
         return Point::default();
     }
-    gv_geom::node_size::make_label(text, html, ctx, fontname, fontsize, false).dimen
+    gv_geom::node_size::make_label(
+        text,
+        html,
+        ctx,
+        fontname,
+        fontsize,
+        gv_core::charset::current(),
+    )
+    .dimen
 }
 
 fn attr_f64(attrs: &AttrMap, key: &str, default: f64, min: f64) -> f64 {

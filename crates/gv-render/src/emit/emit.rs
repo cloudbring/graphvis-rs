@@ -11,7 +11,7 @@ use super::job::{
     GVRENDER_DOES_TOOLTIPS, GVRENDER_NO_WHITE_BG, ObjKind, RGRADIENT,
 };
 use super::model::{Bz, TextLabel};
-use gv_core::font::{LabelSubstContext, html_entity_utf8, strdup_and_subst_obj};
+use gv_core::font::{LabelSubstContext, convert_label_text, strdup_and_subst_obj};
 use gv_core::{BoundingBox, Point};
 
 pub(crate) const DEFAULT_COLOR: &str = "black";
@@ -290,7 +290,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
     }
 
     fn preprocess_tooltip(&self, s: &str) -> String {
-        interpret_crnl(&html_entity_utf8(s))
+        interpret_crnl(&convert_label_text(s, gv_core::charset::current()))
     }
 
     /// `initObjMapData`.
@@ -1036,7 +1036,12 @@ impl<'a, E: Engine> Emitter<'a, E> {
             o.headtarget = a.nonempty("headtarget").map(sub).or(dflt);
         }
         if flags & GVRENDER_DOES_TOOLTIPS != 0 {
-            let tt = |s: &str| sub(&interpret_crnl(&html_entity_utf8(s)));
+            let tt = |s: &str| {
+                sub(&interpret_crnl(&convert_label_text(
+                    s,
+                    gv_core::charset::current(),
+                )))
+            };
             if let Some(s) = pick("tooltip", "edgetooltip") {
                 o.tooltip = Some(tt(s));
                 o.explicit_tooltip = true;

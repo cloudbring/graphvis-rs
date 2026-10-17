@@ -1,0 +1,10 @@
+digraph G {
+	graph [bb="0,0,54,36",
+		charset=foo
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		label=é,
+		pos="27,18",
+		width=0.75];
+}

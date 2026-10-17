@@ -163,9 +163,9 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
     Parsed::Run(opts)
 }
 
-/// Reads a DOT file. C reads bytes; input that is not UTF-8 (Latin-1 graphs)
-/// is decoded byte for byte as ISO-8859-1, which is what C's `latin1ToUTF8`
-/// (charset=latin1) and its invalid-UTF-8 fallback measure.
+/// Reads a DOT file. C reads bytes; bytes that are not part of valid UTF-8 are
+/// kept as raw-byte chars (`gv_core::charset`), so labels are converted once,
+/// where C converts them, and the output carries C's bytes.
 fn read_input(path: Option<&str>) -> io::Result<String> {
     let bytes = match path {
         Some(p) => fs::read(p)?,
@@ -175,8 +175,7 @@ fn read_input(path: Option<&str>) -> io::Result<String> {
             buf
         }
     };
-    Ok(String::from_utf8(bytes)
-        .unwrap_or_else(|e| e.into_bytes().iter().map(|&b| char::from(b)).collect()))
+    Ok(gv_core::charset::decode(bytes))
 }
 
 fn main() -> ExitCode {
@@ -262,7 +261,7 @@ fn main() -> ExitCode {
             (None, None) => &mut stdout,
         };
         for text in outputs {
-            if let Err(e) = out.write_all(text.as_bytes()) {
+            if let Err(e) = out.write_all(&gv_core::charset::encode(&text)) {
                 eprintln!("{argv0}: write error: {e}");
                 return ExitCode::FAILURE;
             }

@@ -1,0 +1,18 @@
+digraph G {
+	graph [bb="0,0,221.54,58.831",
+		charset=big5
+	];
+	node [label="\N"];
+	a	[height=0.8171,
+		label="ä¸­\nXÃ©\lY",
+		pos="38.537,29.416",
+		width=1.0705];
+	b	[height=0.5,
+		label=<<B>ä¸­</B>>,
+		pos="122.54,29.416",
+		width=0.75];
+	c	[height=0.5,
+		label="¤¤\\n",
+		pos="194.54,29.416",
+		width=0.75];
+}

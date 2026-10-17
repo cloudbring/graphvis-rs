@@ -1,0 +1,12 @@
+digraph G {
+	graph [bb="0,0,181.61,36",
+		charset=latin1
+	];
+	node [fontsize=10,
+		label="\N"
+	];
+	a	[height=0.5,
+		label=בגדהוזחטיךכלםמןנסעףפץצרשתûü,
+		pos="90.803,18",
+		width=2.5223];
+}

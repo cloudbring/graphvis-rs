@@ -1,0 +1,4 @@
+digraph G {
+ graph [charset=foo]
+ a [label="é"]
+}

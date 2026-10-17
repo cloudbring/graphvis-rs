@@ -1,0 +1,6 @@
+digraph G {
+ graph [charset=big5]
+ a [label="ä¸­\nXÃ©\lY"]
+ b [label=<<B>ä¸­</B>>]
+ c [label="¤¤\\n"]
+}

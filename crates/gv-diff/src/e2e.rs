@@ -60,7 +60,7 @@ pub fn normalize(svg: &str) -> String {
 /// FNV-1a, 64-bit.
 pub fn hash(s: &str) -> String {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-    for b in s.bytes() {
+    for &b in gv_core::charset::encode(s).iter() {
         h ^= u64::from(b);
         h = h.wrapping_mul(0x0000_0100_0000_01b3);
     }
@@ -115,7 +115,7 @@ fn run_c(path: &Path) -> Option<String> {
     }
     let bytes = reader.join().ok()?;
     // C may exit non-zero yet still emit its drawing; that output is the reference.
-    (!bytes.is_empty()).then(|| normalize(&String::from_utf8_lossy(&bytes)))
+    (!bytes.is_empty()).then(|| normalize(&gv_core::charset::decode(bytes)))
 }
 
 fn run_port(src: &str) -> Option<String> {
@@ -217,9 +217,9 @@ pub fn main(args: Vec<String>) -> ExitCode {
     items.retain(|(k, _)| golden.files.contains_key(k));
     std::panic::set_hook(Box::new(|_| {}));
     let results = parallel(&items, |p| {
-        std::fs::read_to_string(p)
+        std::fs::read(p)
             .ok()
-            .and_then(|s| run_port(&s))
+            .and_then(|b| run_port(&gv_core::charset::decode(b)))
             .map(|o| hash(&o))
     });
     let _ = std::panic::take_hook();

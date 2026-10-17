@@ -1,0 +1,19 @@
+graph 1 5.5722 2.8778
+node 0 3.3169 2.7056 0.73947 0.34444 seres solid box black lightgrey
+node 1 2.6642 1.8611 0.72504 0.34444 vivos solid box black lightgrey
+node 6 3.9836 1.8611 0.89119 0.34444 inertes solid box black lightgrey
+node 2 1.4003 1.0167 1.0918 0.34444 animales solid box black lightgrey
+node 5 2.6642 1.0167 0.93126 0.34444 plantas solid box black lightgrey
+node 3 0.60857 0.17222 1.2171 0.34444 pensantes solid box black lightgrey
+node 4 2.1919 0.17222 1.4582 0.34444 nopensantes solid box black lightgrey
+node 7 3.9836 1.0167 1.2006 0.34444  solid box black lightgrey
+node 8 5.2058 1.0167 0.73283 0.34444 lagos solid box black lightgrey
+edge 0 1 4 3.1849 2.5264 3.1017 2.4224 2.9919 2.2851 2.8947 2.1636 solid black
+edge 0 6 4 3.4518 2.5264 3.5368 2.4224 3.6487 2.2851 3.7481 2.1636 solid black
+edge 1 2 4 2.4083 1.6819 2.2301 1.5668 1.9893 1.4112 1.7876 1.2809 solid black
+edge 1 5 4 2.6642 1.6819 2.6642 1.5879 2.6642 1.4667 2.6642 1.3544 solid black
+edge 6 7 4 3.9836 1.6819 3.9836 1.5879 3.9836 1.4667 3.9836 1.3544 solid black
+edge 6 8 4 4.231 1.6819 4.4032 1.5668 4.6361 1.4112 4.8311 1.2809 solid black
+edge 2 3 4 1.24 0.83751 1.1359 0.73014 0.99768 0.58751 0.87707 0.4631 solid black
+edge 2 4 4 1.5604 0.83751 1.6646 0.73014 1.8028 0.58751 1.9233 0.4631 solid black
+stop

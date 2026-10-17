@@ -1,0 +1,35 @@
+digraph G {
+	graph [bb="0,0,99.319,178.2",
+		charset=latin1
+	];
+	node [label="\N"];
+	subgraph cluster_x {
+		graph [bb="14.66,8,84.66,99.4",
+			label=clé,
+			lheight=0.23,
+			lp="49.66,87",
+			lwidth=0.24
+		];
+		b	[height=0.70278,
+			label="{réc|<p>é}",
+			pos="49.66,41.3",
+			rects="22.66,41.3,76.536,66.1 22.66,16.5,76.536,41.3",
+			shape=record,
+			width=0.75,
+			xlabel=xé,
+			xlp="15.66,75"];
+	}
+	a	[height=0.5,
+		label="Ã©tÃ© &amp; \N",
+		pos="49.66,160.2",
+		width=1.3794];
+	a -> b:p	[URL=u,
+		head_lp="84.536,37.3",
+		headlabel=hé,
+		label=é,
+		lp="81.638,115.8",
+		pos="e,77.536,28.9 60.357,142.17 79.539,110.3 115.39,43.717 88.551,31.018",
+		tail_lp="54.913,133.77",
+		taillabel=té,
+		tooltip="é\ntip"];
+}

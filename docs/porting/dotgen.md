@@ -126,10 +126,6 @@ match C (pos/lp/head_lp/tail_lp/xlp within 2pt) except where C itself exceeds a
   error) is laid out once per component that holds it; C's components share
   the node record, so stale state from the first layout leaks into the
   second. `wild_GraphViz-Samples_complex` with `-Gpack=true` differs.
-* Latin-1 input: the CLI decodes non-UTF-8 files byte for byte; with
-  `charset=latin1` the label is then converted a second time, so the five
-  Latin-1 test graphs of the 16.1.0 sources differ from C (the UTF-8 corpus
-  copies are exact).
 * `agcontains` of virtual nodes is false (they have ID 0 in C), as in C.
 
 ## Validation
@@ -210,7 +206,8 @@ cdt splay tree; `edge_attr_declared` is cached (it made splines quadratic).
   the port (60 s cap) as is and with `-Grankdir=LR`, `-Gsplines=ortho`,
   `-Gconcentrate=true`, `-Gnewrank=true`; `gv-diff pairs C_DIR PORT_DIR`
   compares them. Exact: 374/379 in every variant (ortho: 371/376, C times out
-  on `b100`, `b103`, `b104`); the five misses are the Latin-1 inputs.
+  on `b100`, `b103`, `b104`); the five misses were the Latin-1 inputs, exact
+  (379/379, ortho 376/376) since the charset work (`render.md`, Charset).
 * Timing (min of 3 process runs, `-Tsvg`, shared machine): b100 4.5 s (C) /
   4.7 s (port), b104 4.6/4.6, b103 0.73/0.69, b29 0.36/0.27, random DAGs of
   2000 and 8000 nodes 0.56/0.46 and 24.5/20.0, 40x40 grid 0.12/0.08.
@@ -220,8 +217,6 @@ cdt splay tree; `edge_attr_declared` is cached (it made splines quadratic).
 
 * `pack` with nodes in two non-nested clusters would need the components to
   share node records (C lays such nodes out repeatedly).
-* `-Tdot`/`-Tsvg` of Latin-1 input needs byte strings in the parser and
-  writers.
 * `neato -n2` (`nop.rs`) does not run `addXLabels`, so an edge `xlabel`
   without `xlp` in its input (dot's pack branch leaves edge xlabels unplaced)
   is placed by C but not by the port.
