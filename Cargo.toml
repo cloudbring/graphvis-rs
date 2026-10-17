@@ -9,6 +9,7 @@ members = [
     "crates/gv-engine",
     "crates/gv-wasm",
     "crates/gv-cli",
+    "crates/gv-diff",
 ]
 
 [workspace.package]

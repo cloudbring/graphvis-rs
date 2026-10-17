@@ -7,9 +7,13 @@ pub use gv_render::{OutputFormat, render_graph};
 
 /// End-to-end DOT rendering pipeline for any supported engine and output format.
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
-    let layout_engine = LayoutEngine::parse(engine)?;
     let output_format = OutputFormat::parse(format)?;
     let mut graph = parse_dot(dot_source)?;
+    // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
+    let layout_engine = match graph.graph_attrs.get("layout") {
+        Some(name) if !name.trim().is_empty() => LayoutEngine::parse(name.trim())?,
+        _ => LayoutEngine::parse(engine)?,
+    };
     if output_format != OutputFormat::Canon {
         layout_graph(&mut graph, layout_engine)?;
     }
