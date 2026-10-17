@@ -13,6 +13,7 @@ math-trace = []
 portable-math = []
 
 [dependencies]
+libm.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 

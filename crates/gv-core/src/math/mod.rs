@@ -5,8 +5,10 @@
 //! the port reproduces C's last bits. On other targets Rust takes them from a different libm
 //! (glibc on Linux, compiler-builtins' musl port on wasm32) that disagrees in the last ulp on
 //! some inputs, which is enough to change a force-directed layout. Every call in the port goes
-//! through this module, and on those targets the functions whose results differ use
-//! [`portable`] implementations that reproduce Apple's. See `docs/porting/libm.md`.
+//! through this module, and on those targets it uses [`portable`] implementations: ports that
+//! reproduce Apple's results where Apple's algorithm is known (`hypot`, `cbrt`), and the `libm`
+//! crate (the musl port Rust itself uses on wasm32) for the rest, so that every non-Apple
+//! target computes the same bits. See `docs/porting/libm.md`.
 //!
 //! `sqrt` and `mul_add` are correctly rounded everywhere and stay `f64` methods.
 
@@ -40,7 +42,11 @@ pub fn hypot(x: f64, y: f64) -> f64 {
 #[must_use]
 pub fn powf(x: f64, y: f64) -> f64 {
     trace::log(1, x, y);
-    x.powf(y)
+    if PORTABLE {
+        portable::pow(x, y)
+    } else {
+        x.powf(y)
+    }
 }
 
 /// C `atan2(y, x)` is `math::atan2(y, x)`.
@@ -48,7 +54,11 @@ pub fn powf(x: f64, y: f64) -> f64 {
 #[must_use]
 pub fn atan2(y: f64, x: f64) -> f64 {
     trace::log(2, y, x);
-    y.atan2(x)
+    if PORTABLE {
+        portable::atan2(y, x)
+    } else {
+        y.atan2(x)
+    }
 }
 
 /// C `sin(x)`.
@@ -56,7 +66,7 @@ pub fn atan2(y: f64, x: f64) -> f64 {
 #[must_use]
 pub fn sin(x: f64) -> f64 {
     trace::log(3, x, 0.0);
-    x.sin()
+    if PORTABLE { portable::sin(x) } else { x.sin() }
 }
 
 /// C `cos(x)`.
@@ -64,7 +74,7 @@ pub fn sin(x: f64) -> f64 {
 #[must_use]
 pub fn cos(x: f64) -> f64 {
     trace::log(4, x, 0.0);
-    x.cos()
+    if PORTABLE { portable::cos(x) } else { x.cos() }
 }
 
 /// C `tan(x)`.
@@ -72,7 +82,7 @@ pub fn cos(x: f64) -> f64 {
 #[must_use]
 pub fn tan(x: f64) -> f64 {
     trace::log(5, x, 0.0);
-    x.tan()
+    if PORTABLE { portable::tan(x) } else { x.tan() }
 }
 
 /// C `asin(x)`.
@@ -80,7 +90,11 @@ pub fn tan(x: f64) -> f64 {
 #[must_use]
 pub fn asin(x: f64) -> f64 {
     trace::log(6, x, 0.0);
-    x.asin()
+    if PORTABLE {
+        portable::asin(x)
+    } else {
+        x.asin()
+    }
 }
 
 /// C `acos(x)`.
@@ -88,7 +102,11 @@ pub fn asin(x: f64) -> f64 {
 #[must_use]
 pub fn acos(x: f64) -> f64 {
     trace::log(7, x, 0.0);
-    x.acos()
+    if PORTABLE {
+        portable::acos(x)
+    } else {
+        x.acos()
+    }
 }
 
 /// C `exp(x)`.
@@ -96,7 +114,7 @@ pub fn acos(x: f64) -> f64 {
 #[must_use]
 pub fn exp(x: f64) -> f64 {
     trace::log(8, x, 0.0);
-    x.exp()
+    if PORTABLE { portable::exp(x) } else { x.exp() }
 }
 
 /// C `log(x)`.
@@ -104,7 +122,7 @@ pub fn exp(x: f64) -> f64 {
 #[must_use]
 pub fn ln(x: f64) -> f64 {
     trace::log(9, x, 0.0);
-    x.ln()
+    if PORTABLE { portable::log(x) } else { x.ln() }
 }
 
 /// C `log2(x)`.
@@ -112,7 +130,11 @@ pub fn ln(x: f64) -> f64 {
 #[must_use]
 pub fn log2(x: f64) -> f64 {
     trace::log(10, x, 0.0);
-    x.log2()
+    if PORTABLE {
+        portable::log2(x)
+    } else {
+        x.log2()
+    }
 }
 
 /// C `cbrt(x)`.

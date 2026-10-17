@@ -7,9 +7,10 @@
 //! whose cube root `c` has a 17-bit significand, so `z = c^3` is exact. Then
 //! `cbrt(x) = 2^n c (1 + p((y - z) / z))` with `p` a degree-5 minimax polynomial.
 
-/// Significands of the cube roots `c` in `[1, 2)`, as `c * 2^16`. Entry `(e % 3) << 7 | f`
-/// serves the reduced arguments `2^(e % 3) * (1 + f / 128)` and up. `z = c^3` and the
-/// table's `zinv = 1 / z` are recomputed from `c` (both exactly match Apple's table).
+/// Cube roots `c` in `[1, 2)` as `c * 2^16` (17-bit significands), from Apple's `cbrt_table`.
+/// Entry `(e % 3) << 7 | f` serves reduced arguments `y` in `2^(e % 3) * [1 + f/128, 1 +
+/// (f + 1)/128)`. Apple's table also stores `z = c^3` (exact) and `zinv = 1 / z`; both are
+/// recomputed here and equal the stored values for every entry.
 const CBRT_TABLE: [u32; 384] = [
     0x10000, 0x100aa, 0x10153, 0x101fc, 0x102a3, 0x1034a, 0x103f0, 0x10495, 0x10539, 0x105dd,
     0x10680, 0x10721, 0x107c3, 0x10863, 0x10903, 0x109a2, 0x10a40, 0x10add, 0x10b7a, 0x10c16,
