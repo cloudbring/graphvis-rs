@@ -133,6 +133,10 @@ pub fn spline_edges_by(
 
 /// `spline_edges_(g, pmargin, edgetype)`.
 pub fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edgetype: EdgeType) {
+    if edgetype == EdgeType::Ortho {
+        ortho_spline_edges(g, sub, pmargin, edgetype);
+        return;
+    }
     let router = if edgetype >= EdgeType::Pline {
         super::routing::Router::new(g, sub, pmargin, edgetype)
     } else {
@@ -160,6 +164,65 @@ pub fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edget
     }
 }
 
+/// `makeObstacle(n, pmargin, isOrtho=true)`: polygon nodes become their
+/// outline box (without margin); other shapes as for splines.
+fn ortho_obstacle(lg: &LGraph<'_>, n: usize, pm: &Expand) -> Option<Vec<Point>> {
+    use crate::common::shapes::InsideFn;
+    let nd = &lg.nodes[n];
+    let sh = &nd.shape;
+    if sh.name == "cylinder" || !matches!(sh.inside, InsideFn::Poly | InsideFn::Point) {
+        return super::routing::make_obstacle(lg, n, pm);
+    }
+    let width = nd.lw + nd.rw;
+    let outline_width = sh.outline_width;
+    let outline_lw = nd.lw * outline_width / width;
+    let outline_ht = sh.outline_height;
+    let vs = [
+        Point::new(-outline_lw, -outline_ht / 2.0),
+        Point::new(outline_lw, -outline_ht / 2.0),
+        Point::new(outline_lw, outline_ht / 2.0),
+        Point::new(-outline_lw, outline_ht / 2.0),
+    ];
+    let c = nd.coord;
+    Some(
+        vs.iter()
+            .rev()
+            .map(|p| Point::new(p.x + c.x, p.y + c.y))
+            .collect(),
+    )
+}
+
+/// `spline_edges_(g, pmargin, EDGETYPE_ORTHO)`: orthogonal routes when the
+/// node boxes do not touch, straight lines otherwise.
+fn ortho_spline_edges(lg: &mut LGraph<'_>, sub: &Sub, pm: &Expand, et: EdgeType) {
+    let obs: Vec<Vec<Point>> = sub
+        .nodes
+        .iter()
+        .filter_map(|&n| ortho_obstacle(lg, n, pm))
+        .collect();
+    let mut use_edges = false;
+    if super::legal::plegal_arrangement(&obs) {
+        crate::ortho::ortho_edges_of(lg, sub.nodes.clone(), false);
+        use_edges = true;
+    }
+    for &n in &sub.nodes {
+        let outs: Vec<usize> = lg.outs(sub, n).collect();
+        for e in outs {
+            let head = lg.edges[e].head;
+            if use_edges && lg.edges[e].spl.is_some() {
+                crate::common::splines::add_edge_labels(lg, e);
+            } else if lg.edges[e].count == 0 {
+                continue;
+            } else if n == head {
+                let step = lg.nodesep as f64;
+                make_self_arcs(lg, e, step);
+            } else {
+                make_straight_edge(lg, sub, e, et);
+            }
+        }
+    }
+}
+
 /// `spline_edges0(g, set_aspect)`.
 pub fn spline_edges0(g: &mut LGraph<'_>, sub: &Sub, is_root: bool, set_aspect: bool) {
     let mut et = g.edge_type;
@@ -169,9 +232,8 @@ pub fn spline_edges0(g: &mut LGraph<'_>, sub: &Sub, is_root: bool, set_aspect: b
     if et == EdgeType::None {
         return;
     }
-    if et == EdgeType::Ortho || et == EdgeType::CompoundEdge {
-        // lib/ortho is not ported; C falls back to polylines when ORTHO is
-        // unavailable, which is the closest available routing.
+    if et == EdgeType::CompoundEdge {
+        // spline_edges_ routes compound edges as polylines.
         et = EdgeType::Pline;
     }
     spline_edges_main(g, sub, et);

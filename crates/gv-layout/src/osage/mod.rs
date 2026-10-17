@@ -292,7 +292,7 @@ pub fn osage_layout(graph: &mut Graph) -> Result<()> {
                 &root,
                 et,
                 &mut |lg, sub, pm, et| {
-                    crate::fdpgen::layout::ortho_spline_edges(lg, sub, pm, et);
+                    crate::neatogen::neatosplines::spline_edges_route(lg, sub, pm, et);
                     true
                 },
             );

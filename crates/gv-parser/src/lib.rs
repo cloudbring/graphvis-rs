@@ -200,7 +200,10 @@ mod tests {
         assert_eq!(shape(1), Some("point"));
         assert_eq!(shape(2), Some("egg"));
         assert_eq!(
-            g.subgraphs[0].graph_attrs.get("rankdir").map(String::as_str),
+            g.subgraphs[0]
+                .graph_attrs
+                .get("rankdir")
+                .map(String::as_str),
             Some("RL")
         );
     }

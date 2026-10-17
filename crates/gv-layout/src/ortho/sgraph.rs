@@ -11,8 +11,10 @@ pub struct SNode {
     pub save_n_adj: usize,
     /// `cells[0]`: left or bottom, `cells[1]`: top or right adjacent cell.
     pub cells: [Option<usize>; 2],
-    /// `adj_edge_list[0..n_adj]`.
-    pub adj_edge_list: Vec<usize>,
+    /// `n_adj`: entries of `adj_edge_list` in use.
+    pub n_adj: usize,
+    /// `adj_edge_list`: start of this node's slots in [`SGraph::adj`].
+    pub adj_base: usize,
     pub index: usize,
     pub is_vert: bool,
 }
@@ -34,8 +36,14 @@ pub struct SGraph {
     pub save_nedges: usize,
     /// Allocated nodes (`nnodes` in use plus the two dummies).
     pub nodes: Vec<SNode>,
-    /// `edges[0..nedges]`.
+    /// `edges[0..nedges]`; slots past `nedges` keep stale edges, as in C.
     pub edges: Vec<SEdge>,
+    pub nedges: usize,
+    /// The adjacency storage of `initSEdges`: 6 slots per node and `maxdeg`
+    /// for each dummy node, back to back. A node with more edges than slots
+    /// writes into its neighbour's slots, as C does (dot's `addNodeEdges`
+    /// can give a side node a 7th edge); the search reads them back.
+    pub adj: Vec<usize>,
 }
 
 impl SGraph {
@@ -50,23 +58,50 @@ impl SGraph {
     /// `gsave(G)`.
     pub fn gsave(&mut self) {
         self.save_nnodes = self.nnodes;
-        self.save_nedges = self.edges.len();
+        self.save_nedges = self.nedges;
         for i in 0..self.nnodes {
-            self.nodes[i].save_n_adj = self.nodes[i].adj_edge_list.len();
+            self.nodes[i].save_n_adj = self.nodes[i].n_adj;
         }
     }
 
     /// `reset(G)`.
     pub fn reset(&mut self) {
         self.nnodes = self.save_nnodes;
-        self.edges.truncate(self.save_nedges);
+        self.nedges = self.save_nedges;
         for i in 0..self.nnodes {
-            let s = self.nodes[i].save_n_adj;
-            self.nodes[i].adj_edge_list.truncate(s);
+            self.nodes[i].n_adj = self.nodes[i].save_n_adj;
         }
         for i in self.nnodes..self.nnodes + 2 {
-            self.nodes[i].adj_edge_list.clear();
+            self.nodes[i].n_adj = 0;
         }
+    }
+
+    /// `initSEdges(g, maxdeg)`.
+    pub fn init_sedges(&mut self, maxdeg: usize) {
+        self.adj = vec![0; 6 * self.nnodes + 2 * maxdeg];
+        let mut base = 0;
+        for i in 0..self.nnodes + 2 {
+            self.nodes[i].adj_base = base;
+            base += if i < self.nnodes { 6 } else { maxdeg };
+        }
+    }
+
+    /// `adj_edge_list[k]` of node `n`.
+    pub fn adj_edge(&self, n: usize, k: usize) -> usize {
+        self.adj
+            .get(self.nodes[n].adj_base + k)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// `addEdgeToNode(np, idx)`.
+    fn add_edge_to_node(&mut self, n: usize, idx: usize) {
+        let slot = self.nodes[n].adj_base + self.nodes[n].n_adj;
+        if slot >= self.adj.len() {
+            self.adj.resize(slot + 1, 0);
+        }
+        self.adj[slot] = idx;
+        self.nodes[n].n_adj += 1;
     }
 
     /// `createSNode(g)`.
@@ -79,15 +114,21 @@ impl SGraph {
 
     /// `createSEdge(g, v1, v2, wt)`.
     pub fn create_sedge(&mut self, v1: usize, v2: usize, wt: f64) -> usize {
-        let idx = self.edges.len();
-        self.edges.push(SEdge {
+        let idx = self.nedges;
+        self.nedges += 1;
+        let e = SEdge {
             weight: wt,
             cnt: 0,
             v1: self.nodes[v1].index,
             v2: self.nodes[v2].index,
-        });
-        self.nodes[v1].adj_edge_list.push(idx);
-        self.nodes[v2].adj_edge_list.push(idx);
+        };
+        if idx < self.edges.len() {
+            self.edges[idx] = e;
+        } else {
+            self.edges.push(e);
+        }
+        self.add_edge_to_node(v1, idx);
+        self.add_edge_to_node(v2, idx);
         idx
     }
 
@@ -117,8 +158,8 @@ impl SGraph {
             if n == to {
                 break;
             }
-            for y in 0..self.nodes[n].adj_edge_list.len() {
-                let e = self.nodes[n].adj_edge_list[y];
+            for y in 0..self.nodes[n].n_adj {
+                let e = self.adj_edge(n, y);
                 let adjn = self.adjacent_node(e, n);
                 if self.nodes[adjn].n_val < 0 {
                     // int + double, negated, back to int (truncation)

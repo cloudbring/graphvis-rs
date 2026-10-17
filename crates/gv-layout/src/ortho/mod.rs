@@ -1019,8 +1019,18 @@ fn add_node_edges(sg: &mut SGraph, cp: &Cell, c: usize, np: usize) {
 
 /// `orthoEdges(g, useLbls)`: route every edge of `g` orthogonally. Returns
 /// false where C returns non-zero (the maze could not be built).
-pub fn ortho_edges<S: OrthoGraph + ?Sized>(g: &mut S, _use_lbls: bool) -> bool {
+pub fn ortho_edges<S: OrthoGraph + ?Sized>(g: &mut S, use_lbls: bool) -> bool {
     let nodes = g.ortho_nodes();
+    ortho_edges_of(g, nodes, use_lbls)
+}
+
+/// `orthoEdges(sg, useLbls)` on the subgraph made of `nodes` (in `agfstnode`
+/// order) and their out-edges, e.g. one packed component.
+pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
+    g: &mut S,
+    nodes: Vec<usize>,
+    _use_lbls: bool,
+) -> bool {
     let node_cell: std::collections::HashMap<usize, usize> =
         nodes.iter().enumerate().map(|(i, &n)| (n, i)).collect();
     let boxes: Vec<(Point, f64, f64)> = nodes
@@ -1092,6 +1102,18 @@ pub fn ortho_edges<S: OrthoGraph + ?Sized>(g: &mut S, _use_lbls: bool) -> bool {
         }
         if !o.mp.sg.short_path(&mut pq, dn, sn) {
             return true;
+        }
+        if dump {
+            let mut l = format!("OSPN {}:", o.routes.len());
+            let mut x = Some(sn);
+            while let Some(v) = x {
+                l.push_str(&format!(
+                    " {}/{}",
+                    o.mp.sg.nodes[v].index, o.mp.sg.nodes[v].n_val
+                ));
+                x = o.mp.sg.nodes[v].n_dad;
+            }
+            eprintln!("{l}");
         }
         let r = convert_sp_to_route(&mut o.mp, sn, dn);
         if dump {

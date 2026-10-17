@@ -4,6 +4,7 @@
 use super::partition::partition;
 use super::sgraph::SGraph;
 use super::trapezoid::dfp_cmp;
+use crate::cdt::Cdt;
 use gv_core::{BoundingBox, Point};
 use std::cmp::Ordering;
 
@@ -78,38 +79,48 @@ fn hcmpid(a: &Point, b: &Point) -> i32 {
     dfp_cmp(a.x, b.x)
 }
 
-/// An ordered set of points (`Dtoset` with `vcmpid`/`hcmpid`).
+/// `vdict`/`hdict`: a `Dtoset` of `(point, snode)` items under `vcmpid` or
+/// `hcmpid`. The comparators are fuzzy (`dfp_cmp`), so lookups must follow
+/// cdt's splay tree to find the same items as C.
 struct PointDict {
-    items: Vec<(Point, usize)>,
+    dt: Cdt<(Point, usize)>,
     cmp: fn(&Point, &Point) -> i32,
+}
+
+fn ord(c: i32) -> Ordering {
+    c.cmp(&0)
 }
 
 impl PointDict {
     fn new(cmp: fn(&Point, &Point) -> i32) -> Self {
         PointDict {
-            items: Vec::new(),
+            dt: Cdt::new(),
             cmp,
         }
     }
 
-    fn search(&self, p: &Point) -> Result<usize, usize> {
-        self.items
-            .binary_search_by(|(q, _)| match (self.cmp)(q, p) {
-                x if x < 0 => Ordering::Less,
-                0 => Ordering::Equal,
-                _ => Ordering::Greater,
-            })
+    /// `dtmatch(dict, &p)`.
+    fn find(&mut self, p: &Point) -> Option<usize> {
+        let cmp = self.cmp;
+        self.dt.find(&|o: &(Point, usize)| ord(cmp(p, &o.0)))
     }
 
-    /// `dtmatch`: position of the item equal to `p`.
-    fn find(&self, p: &Point) -> Option<usize> {
-        self.search(p).ok()
+    /// `dtnext(dict, item)`.
+    fn next(&mut self, k: usize) -> Option<usize> {
+        let cmp = self.cmp;
+        let key = self.dt.get(k).0;
+        self.dt.next(k, &|o: &(Point, usize)| ord(cmp(&key, &o.0)))
     }
 
+    fn item(&self, k: usize) -> (Point, usize) {
+        *self.dt.get(k)
+    }
+
+    /// `dtinsert(dict, item)`.
     fn insert(&mut self, p: Point, np: usize) {
-        if let Err(i) = self.search(&p) {
-            self.items.insert(i, (p, np));
-        }
+        let cmp = self.cmp;
+        self.dt
+            .insert((p, np), &|o: &(Point, usize)| ord(cmp(&p, &o.0)));
     }
 }
 
@@ -263,7 +274,7 @@ fn create_sedges(mp: &mut Maze, c: usize) {
 /// `findSVert(g, cdt, p, ditems, isVert)`.
 fn find_svert(sg: &mut SGraph, dict: &mut PointDict, p: Point, is_vert: bool) -> usize {
     if let Some(i) = dict.find(&p) {
-        return dict.items[i].1;
+        return dict.item(i).1;
     }
     let np = sg.create_snode();
     sg.nodes[np].is_vert = is_vert;
@@ -307,40 +318,51 @@ fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) {
         let cb = mp.cells[i].bb;
         let mut sides = Vec::new();
         let mut walk =
-            |dict: &PointDict, start: Point, along_x: bool, ci: usize, sg: &mut SGraph| {
-                if let Some(mut k) = dict.find(&start) {
-                    while k < dict.items.len() {
-                        let (p, np) = dict.items[k];
-                        let lim = if along_x {
-                            p.x < cb.ur.x
-                        } else {
-                            p.y < cb.ur.y
-                        };
-                        if !lim {
-                            break;
-                        }
-                        sides.push(Some(np));
-                        sg.nodes[np].cells[ci] = Some(i);
-                        k += 1;
+            |dict: &mut PointDict, start: Point, along_x: bool, ci: usize, sg: &mut SGraph| {
+                let mut k = dict.find(&start);
+                while let Some(kk) = k {
+                    let (p, np) = dict.item(kk);
+                    let lim = if along_x {
+                        p.x < cb.ur.x
+                    } else {
+                        p.y < cb.ur.y
+                    };
+                    if !lim {
+                        break;
                     }
+                    sides.push(Some(np));
+                    sg.nodes[np].cells[ci] = Some(i);
+                    k = dict.next(kk);
                 }
             };
-        walk(&hdict, cb.ll, true, 1, &mut mp.sg);
-        walk(&vdict, cb.ll, false, 1, &mut mp.sg);
-        walk(&hdict, Point::new(cb.ll.x, cb.ur.y), true, 0, &mut mp.sg);
-        walk(&vdict, Point::new(cb.ur.x, cb.ll.y), false, 0, &mut mp.sg);
+        walk(&mut hdict, cb.ll, true, 1, &mut mp.sg);
+        walk(&mut vdict, cb.ll, false, 1, &mut mp.sg);
+        walk(
+            &mut hdict,
+            Point::new(cb.ll.x, cb.ur.y),
+            true,
+            0,
+            &mut mp.sg,
+        );
+        walk(
+            &mut vdict,
+            Point::new(cb.ur.x, cb.ll.y),
+            false,
+            0,
+            &mut mp.sg,
+        );
         if sides.len() > maxdeg {
             maxdeg = sides.len();
         }
         mp.cells[i].sides = sides;
     }
-    let _ = maxdeg;
     for i in 0..mp.ngcells {
         mark_small(mp, i);
     }
     let nn = mp.sg.nnodes;
     mp.sg.nodes[nn].index = nn;
     mp.sg.nodes[nn + 1].index = nn + 1;
+    mp.sg.init_sedges(maxdeg);
     for i in mp.ngcells..mp.cells.len() {
         create_sedges(mp, i);
     }
@@ -381,6 +403,27 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
             ..Cell::default()
         });
     }
+    let dump = std::env::var_os("GVDUMP").is_some();
+    if dump {
+        let ng = mp.ngcells;
+        for (i, c) in mp.cells.iter().enumerate() {
+            let (tag, k) = if i < ng { ("OMG", i) } else { ("OMC", i - ng) };
+            eprintln!(
+                "{tag} {k} {:?} {:?} {:?} {:?}",
+                c.bb.ll.x, c.bb.ll.y, c.bb.ur.x, c.bb.ur.y
+            );
+        }
+    }
     mk_maze_graph(&mut mp, big);
+    if dump {
+        for i in 0..mp.ngcells {
+            let s: String = mp.cells[i]
+                .sides
+                .iter()
+                .map(|n| format!(" {}", n.map_or(-1, |n| mp.sg.nodes[n].index as i64)))
+                .collect();
+            eprintln!("OMS {i}:{s}");
+        }
+    }
     Some(mp)
 }
