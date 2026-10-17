@@ -66,23 +66,28 @@ impl Output {
         let mut edge_attrs = Vec::new();
         let lp_of = |l: Option<L>| l.filter(|&l| d.labels[l].set).map(|l| d.labels[l].pos);
         let fmt = |p: Point| format!("{},{}", fmt_g5(p.x), fmt_g5(p.y));
+        // attach_attrs_and_arrows: edges without splines (or IGNORED) get no
+        // attributes; with splines, lp/head_lp/tail_lp are written whether
+        // set or not and xlp only when set.
+        let pos_of = |l: Option<L>| l.map(|l| d.labels[l].pos);
         for ei in 0..d.input.edges.len() {
             let ed = &d.edges[ei];
             let mut extra = Vec::new();
-            for (k, l) in [
-                ("head_lp", ed.head_label),
-                ("tail_lp", ed.tail_label),
-                ("xlp", ed.xlabel),
+            let Some(bzs) = ed.spl.as_ref().filter(|_| ed.edge_type != IGNORED) else {
+                edge_attrs.push(extra);
+                edges.push(None);
+                continue;
+            };
+            for (k, p) in [
+                ("head_lp", pos_of(ed.head_label)),
+                ("tail_lp", pos_of(ed.tail_label)),
+                ("xlp", lp_of(ed.xlabel)),
             ] {
-                if let Some(p) = lp_of(l) {
+                if let Some(p) = p {
                     extra.push((k, fmt(p)));
                 }
             }
             edge_attrs.push(extra);
-            let Some(bzs) = ed.spl.as_ref() else {
-                edges.push(None);
-                continue;
-            };
             let spline = Spline {
                 segments: bzs
                     .iter()
@@ -93,7 +98,7 @@ impl Output {
                     })
                     .collect(),
             };
-            edges.push(Some((spline, lp_of(ed.label))));
+            edges.push(Some((spline, pos_of(ed.label))));
         }
         let node_xlp = (0..n).map(|i| lp_of(d.nodes[i].xlabel).map(fmt)).collect();
         let graph_lp = lp_of(d.graphs[0].label).map(fmt);

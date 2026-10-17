@@ -3,7 +3,7 @@
 //! `lib/common/shapes.c` and `lib/common/utils.c`, shared by all engines
 //! through [`PortGraph`].
 
-use super::shapes::{InsideCtx, InsideFn};
+use super::shapes::InsideFn;
 use super::splines::{SplineGraph, bezier_clip};
 use super::types::{LGraph, PortInfo};
 use gv_core::{BoundingBox, NodeData, Point};
@@ -110,10 +110,7 @@ fn compass_point<S: PortGraph + ?Sized>(g: &S, n: usize, y: f64, x: f64) -> Poin
         p = cwrotatepf(p, 90 * rd);
     }
     let mut curve = [Point::new(0.0, 0.0), Point::new(0.0, 0.0), p, p];
-    let mut ctx = InsideCtx {
-        rankdir: rd,
-        ..InsideCtx::default()
-    };
+    let mut ctx = super::splines::inside_ctx(g, n, None);
     if let Some(shape) = g.shape(n) {
         bezier_clip(&mut |q| shape.inside(&mut ctx, q), &mut curve, true);
     }

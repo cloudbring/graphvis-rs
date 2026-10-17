@@ -434,8 +434,10 @@ pub(crate) fn build_positioned_graph(graph: &Graph, xdot: bool) -> Graph {
             label_text: &label_text_owned,
         };
 
+        // C writes `lp` only for edges that have splines.
         if let Some(e_label) = edge.attrs.get("label").cloned()
             && !e_label.is_empty()
+            && !edge.spline.segments.is_empty()
         {
             let lp = edge.label_pos.unwrap_or_else(|| {
                 spline

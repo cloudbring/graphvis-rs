@@ -189,6 +189,37 @@ pub trait SplineGraph {
     }
 }
 
+/// The `inside_t` context for node `n` (`.s.n = n, .s.bp = bp`), including
+/// `poly_inside`'s scale from `ND_lw + ND_rw` and `ND_ht`.
+pub fn inside_ctx<S: SplineGraph + ?Sized>(g: &S, n: usize, bp: Option<BoundingBox>) -> InsideCtx {
+    let mut ctx = InsideCtx {
+        bp,
+        rankdir: g.rankdir(),
+        ..InsideCtx::default()
+    };
+    if let Some(shape) = g.shape(n) {
+        let (xsize, ysize) = if g.flip() {
+            (g.ht(n), g.lw(n) + g.rw(n))
+        } else {
+            (g.lw(n) + g.rw(n), g.ht(n))
+        };
+        let sx = if xsize == 0.0 {
+            shape.width
+        } else {
+            shape.width / xsize
+        };
+        let sy = if ysize == 0.0 {
+            shape.height
+        } else {
+            shape.height / ysize
+        };
+        if sx != 1.0 || sy != 1.0 {
+            ctx.scale = Some(Point::new(sx, sy));
+        }
+    }
+    ctx
+}
+
 /// `shape_clip0`: clip `curve` (absolute coordinates) to node `n`.
 fn shape_clip0<S: SplineGraph + ?Sized>(
     g: &S,
@@ -215,10 +246,7 @@ pub fn shape_clip<S: SplineGraph + ?Sized>(g: &S, n: usize, curve: &mut [Point; 
     if shape.no_clip {
         return;
     }
-    let mut ctx = InsideCtx {
-        rankdir: g.rankdir(),
-        ..InsideCtx::default()
-    };
+    let mut ctx = inside_ctx(g, n, None);
     let c0 = g.coord(n);
     let left_inside = shape.inside(&mut ctx, Point::new(curve[0].x - c0.x, curve[0].y - c0.y));
     shape_clip0(g, &mut ctx, n, curve, left_inside);
@@ -318,14 +346,9 @@ pub fn clip_and_install_info<S: SplineGraph + ?Sized>(
         let (tp, hp) = (g.tail_port(orig), g.head_port(orig));
         (hp.clip, tp.clip, hp.bp, tp.bp)
     };
-    let rankdir = g.rankdir();
     let mut start = 0usize;
     if clip_tail && has_insidefn(g, tn) {
-        let mut ctx = InsideCtx {
-            bp: tbox,
-            rankdir,
-            ..InsideCtx::default()
-        };
+        let mut ctx = inside_ctx(g, tn, tbox);
         let c = g.coord(tn);
         let shape = g.shape(tn).unwrap();
         while start < pn - 4 {
@@ -339,11 +362,7 @@ pub fn clip_and_install_info<S: SplineGraph + ?Sized>(
     }
     let mut end = pn - 4;
     if clip_head && has_insidefn(g, hn) {
-        let mut ctx = InsideCtx {
-            bp: hbox,
-            rankdir,
-            ..InsideCtx::default()
-        };
+        let mut ctx = inside_ctx(g, hn, hbox);
         let c = g.coord(hn);
         let shape = g.shape(hn).unwrap();
         while end > 0 {

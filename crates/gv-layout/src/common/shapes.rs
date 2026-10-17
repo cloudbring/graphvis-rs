@@ -601,6 +601,9 @@ pub struct InsideCtx {
     pub bp: Option<gv_core::BoundingBox>,
     /// `GD_rankdir` of the graph (0 = TB); points are rotated by `90 * rankdir`.
     pub rankdir: i32,
+    /// `s.scalex`, `s.scaley` of `poly_inside` (node size over `lw + rw` and
+    /// `ht`); `None` means 1, which holds unless dot widened `rw` for loops.
+    pub scale: Option<Point>,
 }
 
 fn same_side(p0: Point, p1: Point, l0: Point, l1: Point) -> bool {
@@ -694,6 +697,10 @@ impl NodeShape {
         if let Some(b) = ctx.bp {
             return inside_box(p, &b);
         }
+        let p = match ctx.scale {
+            Some(s) if !self.fixedshape => Point::new(p.x * s.x, p.y * s.y),
+            _ => p,
+        };
         let sides = self.sides;
         // xsize = lw + rw = width and ysize = ht = height, so scale is 1.
         let (box_urx, box_ury) = if self.fixedshape {
