@@ -258,6 +258,14 @@ impl<'a> LGraph<'a> {
                 .iter()
                 .any(|e| e.attrs.contains_key("labeldistance"));
 
+        // cgraph orders a node's out-edges by head sequence, then edge
+        // sequence (`agedgeseqcmpf`); in-edges by tail, then edge.
+        for list in out.iter_mut() {
+            list.sort_by_key(|&e| (graph.edges[e].head.0, e));
+        }
+        for list in inn.iter_mut() {
+            list.sort_by_key(|&e| (graph.edges[e].tail.0, e));
+        }
         let mut lg = LGraph {
             src: graph,
             nodes,

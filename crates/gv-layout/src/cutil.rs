@@ -306,6 +306,88 @@ fn qsort_impl<T: Clone, F: FnMut(&T, &T) -> i32>(
     }
 }
 
+/// Mersenne Twister of `lib/neatogen/randomkit.c` (`rk_state`), with
+/// 64-bit `unsigned long` as on macOS/arm64.
+#[derive(Clone)]
+pub struct RkState {
+    key: [u64; 624],
+    pos: usize,
+}
+
+impl RkState {
+    /// `rk_seed(seed, state)`.
+    pub fn new(seed: u64) -> Self {
+        let mut key = [0u64; 624];
+        let mut seed = seed & 0xffff_ffff;
+        for (pos, k) in key.iter_mut().enumerate() {
+            *k = seed;
+            seed =
+                (1_812_433_253u64.wrapping_mul(seed ^ (seed >> 30)) + pos as u64 + 1) & 0xffff_ffff;
+        }
+        RkState { key, pos: 624 }
+    }
+
+    /// `rk_random(state)`: 32 random bits.
+    pub fn random(&mut self) -> u64 {
+        const N: usize = 624;
+        const M: usize = 397;
+        const MATRIX_A: u64 = 0x9908_b0df;
+        const UPPER: u64 = 0x8000_0000;
+        const LOWER: u64 = 0x7fff_ffff;
+        if self.pos == N {
+            let k = &mut self.key;
+            let mut i = 0;
+            while i < N - M {
+                let y = (k[i] & UPPER) | (k[i + 1] & LOWER);
+                k[i] = k[i + M] ^ (y >> 1) ^ ((y & 1) * MATRIX_A);
+                i += 1;
+            }
+            while i < N - 1 {
+                let y = (k[i] & UPPER) | (k[i + 1] & LOWER);
+                k[i] = k[i + M - N] ^ (y >> 1) ^ ((y & 1) * MATRIX_A);
+                i += 1;
+            }
+            let y = (k[N - 1] & UPPER) | (k[0] & LOWER);
+            k[N - 1] = k[M - 1] ^ (y >> 1) ^ ((y & 1) * MATRIX_A);
+            self.pos = 0;
+        }
+        let mut y = self.key[self.pos];
+        self.pos += 1;
+        y ^= y >> 11;
+        y ^= (y << 7) & 0x9d2c_5680;
+        y ^= (y << 15) & 0xefc6_0000;
+        y ^= y >> 18;
+        y
+    }
+
+    /// `rk_interval(max, state)`: uniform integer in `[0, max]`.
+    pub fn interval(&mut self, max: u64) -> u64 {
+        if max == 0 {
+            return 0;
+        }
+        let mut mask = max;
+        for s in [1, 2, 4, 8, 16, 32] {
+            mask |= mask >> s;
+        }
+        if max <= 0xffff_ffff {
+            loop {
+                let v = self.random() & mask;
+                if v <= max {
+                    return v;
+                }
+            }
+        }
+        loop {
+            let hi = self.random();
+            let lo = self.random();
+            let v = ((hi << 32) | lo) & mask;
+            if v <= max {
+                return v;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
