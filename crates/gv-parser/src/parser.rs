@@ -795,30 +795,38 @@ impl Parser {
         let mut merged_attrs = self.current_edge_defaults().clone();
         merged_attrs.extend(edge_attrs.clone());
 
-        if tail_port == Port::default()
-            && let Some(tp) = merged_attrs.get("tailport")
-        {
-            tail_port = parse_port_str(tp);
-        }
-        if head_port == Port::default()
-            && let Some(hp) = merged_attrs.get("headport")
-        {
-            head_port = parse_port_str(hp);
-        }
-
         let before = self.graph.edges.len();
         let edge_id = self.graph.add_edge(tail, head, merged_attrs.clone());
-        if self.graph.edges.len() > before {
+        let is_new = self.graph.edges.len() > before;
+        if is_new {
             self.anon_ctr += 2;
         }
         if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
-            if tail_port != Port::default() {
-                edge.tail_port = tail_port;
+            // grammar.y `newedge`: an existing undirected edge found the other way round
+            // takes the endpoint ports swapped.
+            if edge.tail != edge.head && edge.head == tail {
+                std::mem::swap(&mut tail_port, &mut head_port);
             }
-            if head_port != Port::default() {
-                edge.head_port = head_port;
+            // `newedge` sets the endpoint ports (`mkport`) after `agedge` applied the edge
+            // defaults and before `applyattrs` applies the statement's attribute list, so
+            // an explicit `tailport`/`headport` in the list wins over `n:port`, which wins
+            // over a default.
+            for (key, endpoint) in [("tailport", &tail_port), ("headport", &head_port)] {
+                if *endpoint != Port::default() && !edge_attrs.contains_key(key) {
+                    merged_attrs.insert(key.to_string(), port_to_str(endpoint));
+                }
             }
             edge.attrs.extend(merged_attrs);
+            edge.tail_port = edge
+                .attrs
+                .get("tailport")
+                .map(|s| parse_port_str(s))
+                .unwrap_or_default();
+            edge.head_port = edge
+                .attrs
+                .get("headport")
+                .map(|s| parse_port_str(s))
+                .unwrap_or_default();
         }
 
         self.record_node_in_active_subgraphs(tail);
@@ -891,6 +899,16 @@ impl Parser {
         } else {
             &mut self.graph.edge_defaults
         }
+    }
+}
+
+/// grammar.y `concatPort`: `name` or `name:compass`.
+fn port_to_str(p: &Port) -> String {
+    match (&p.name, &p.compass) {
+        (Some(n), Some(c)) => format!("{n}:{c}"),
+        (Some(n), None) => n.clone(),
+        (None, Some(c)) => c.clone(),
+        (None, None) => String::new(),
     }
 }
 
