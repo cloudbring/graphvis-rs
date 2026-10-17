@@ -1,0 +1,9 @@
+graph sv {
+layout=osage;
+
+packmode="array_u";
+subgraph cluster_a { sortv=3; a1; a2; }
+subgraph cluster_b { sortv=1; b1; }
+subgraph cluster_c { sortv=2; c1; c2; c3; }
+n1 [sortv=5]; n2 [sortv=0]; n3 [sortv=4];
+}

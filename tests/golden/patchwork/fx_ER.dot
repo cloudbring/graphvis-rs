@@ -1,0 +1,93 @@
+graph ER {
+	graph [bb="0,0,212.62,213.54",
+		fontsize=20,
+		label="\n\nEntity Relation Diagram\ndrawn by NEATO",
+		layout=patchwork,
+		lheight=1.33,
+		lp="106.31,52",
+		lwidth=2.73
+	];
+	node [color=lightgrey,
+		label="\N",
+		shape=box,
+		style=filled
+	];
+	{
+		graph [fontsize="",
+			label=""
+		];
+		node [label=name];
+		name0	[color="",
+			height=0.50715,
+			pos="147.39,195.29",
+			style="",
+			width=0.38036];
+		name1	[color="",
+			height=0.50715,
+			pos="65.231,158.77",
+			style="",
+			width=0.38036];
+		name2	[color="",
+			height=0.50715,
+			pos="65.231,122.26",
+			style="",
+			width=0.38036];
+	}
+	course	[color="",
+		height=0.50715,
+		pos="147.39,122.26",
+		style="",
+		width=0.38036];
+	"C-I"	[height=0.50715,
+		pos="147.39,158.77",
+		width=0.38036];
+	course -- "C-I"	[label=n,
+		len=1.00];
+	institute	[color="",
+		height=0.50715,
+		pos="92.617,195.29",
+		style="",
+		width=0.38036];
+	institute -- name1;
+	"S-I"	[height=0.50715,
+		pos="65.231,195.29",
+		width=0.38036];
+	institute -- "S-I"	[label=1,
+		len=1.00];
+	student	[color="",
+		height=0.50715,
+		pos="120,195.29",
+		style="",
+		width=0.38036];
+	student -- name2;
+	grade	[color="",
+		height=0.50715,
+		pos="92.617,122.26",
+		style="",
+		width=0.38036];
+	student -- grade;
+	number	[color="",
+		height=0.50715,
+		pos="120,158.77",
+		style="",
+		width=0.38036];
+	student -- number;
+	"S-C"	[height=0.50715,
+		pos="120,122.26",
+		width=0.38036];
+	student -- "S-C"	[label=m,
+		len=1.00];
+	name0 -- course;
+	code	[color="",
+		height=0.50715,
+		pos="92.617,158.77",
+		style="",
+		width=0.38036];
+	code -- course;
+	"C-I" -- institute	[label=1,
+		len=1.00];
+	"S-C" -- course	[label=n,
+		len=1.00];
+	"S-I" -- student	[label=n,
+		len=1.00];
+}

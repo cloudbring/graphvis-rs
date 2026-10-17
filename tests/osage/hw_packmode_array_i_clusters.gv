@@ -1,0 +1,10 @@
+graph clus {
+layout=osage;
+
+packmode="array_i";
+subgraph cluster_a { a1; a2; a3; a1 -- a2; }
+subgraph cluster_b { b1; b2 [shape=box, width=2]; b3; }
+subgraph cluster_c { label="C"; c1; }
+d; e [shape=circle];
+a1 -- b1; d -- e;
+}

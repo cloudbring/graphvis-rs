@@ -1,0 +1,8 @@
+graph emptyc {
+layout=fdp;
+
+
+subgraph cluster_empty { label="nothing"; }
+subgraph cluster_one { a; }
+a -- b;
+}

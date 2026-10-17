@@ -1,0 +1,267 @@
+digraph states {
+	graph [bb="-82.552,0,612.35,468.06",
+		compound=true,
+		fontname=Arial,
+		fontsize=9,
+		labelloc=t,
+		layout=fdp,
+		nodesep=0.4,
+		ranksep=0.4
+	];
+	node [fontname=Arial,
+		fontsize=9,
+		label="\N",
+		shape=box
+	];
+	subgraph clustere3ffa58211d69e3db000538bf02fa1d0 {
+		graph [bb="0,0,429.78,438.2",
+			label="DriveCom Z",
+			lheight=0.15,
+			lp="214.89,428.8",
+			lwidth=0.67
+		];
+		subgraph clustere3ffa77611d69e3db000538bf02fa1d0 {
+			graph [bb="8,8,335.53,344.8",
+				label=Active,
+				lheight=0.15,
+				lp="171.76,335.4",
+				lwidth=0.34
+			];
+			Ie3ffa77611d69e3db000538bf02fa1d0	[color=black,
+				height=0.2,
+				label="",
+				pos="127.77,192",
+				shape=circle,
+				style=filled,
+				width=0.2];
+			Se3ffa84b11d69e3db000538bf02fa1d0	[height=0.5,
+				label=Undefined,
+				pos="155.77,300",
+				width=0.79211];
+			Se3ffa60811d69e3db000538bf02fa1d0	[height=0.5,
+				label="Wait Switch On Inhibit",
+				pos="172.77,90",
+				width=1.4449];
+			Se3ffa87211d69e3db000538bf02fa1d0	[height=0.5,
+				label="Switch On Inhibit",
+				pos="57.765,90",
+				width=1.1601];
+			Se3ffa65611d69e3db000538bf02fa1d0	[height=0.5,
+				label="Wait Ready To Switch On",
+				pos="116.77,146",
+				width=1.6533];
+			Se3ffa61c11d69e3db000538bf02fa1d0	[height=0.5,
+				label="Ready To Switch On",
+				pos="246.77,146",
+				width=1.3685];
+			Se3ffa53211d69e3db000538bf02fa1d0	[height=0.5,
+				label="Wait Switched On",
+				pos="283.77,48",
+				width=1.2156];
+			Se3ffa8ac11d69e3db000538bf02fa1d0	[height=0.5,
+				label="Switched On",
+				pos="153.77,34",
+				width=0.9309];
+			Se3ffa83711d69e3db000538bf02fa1d0	[height=0.5,
+				label="Wait Operation Enabled",
+				pos="211.77,202",
+				width=1.5494];
+			Se3ffa81011d69e3db000538bf02fa1d0	[height=0.5,
+				label="Operation Enabled",
+				pos="88.765,244",
+				width=1.2646];
+			Se3ffa8d311d69e3db000538bf02fa1d0	[height=0.5,
+				label="Quick Stop Active",
+				pos="254.77,258",
+				width=1.2087];
+		}
+		Ie3ffa58211d69e3db000538bf02fa1d0	[color=black,
+			height=0.2,
+			label="",
+			pos="126.76,383.4",
+			shape=circle,
+			style=filled,
+			width=0.2];
+		Se3ffa4bf11d69e3db000538bf02fa1d0	[height=0.5,
+			label=Idle,
+			pos="290.76,393.4",
+			width=0.75];
+		Se3ffa7b011d69e3db000538bf02fa1d0	[height=0.5,
+			label=Disabled,
+			pos="194.76,393.4",
+			width=0.75];
+		Se3ffa90d11d69e3db000538bf02fa1d0	[height=0.5,
+			label=Malfunction,
+			pos="390.76,393.4",
+			width=0.86144];
+	}
+	Ie3ffa58211d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="Out_RFGInhibit=true;\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = false;\nOut_EnableOperation = false;",
+		lp="133.82,414.45",
+		pos="e,263.53,391.74 134.24,383.86 154.72,385.1 212.88,388.65 252.23,391.05"];
+	Se3ffa4bf11d69e3db000538bf02fa1d0 -> Se3ffa7b011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_QuickStop &&\n!In_ReadyToSwitchOn &&\n!In_SwitchedOn &&\n!In_OperationEnabled\n\nServo_Res_Disable = true;",
+		lp="302.42,351.45",
+		pos="e,222.09,383.82 263.51,383.83 254.19,382.94 243.57,382.69 233.52,383.08"];
+	Se3ffa4bf11d69e3db000538bf02fa1d0 -> Ie3ffa77611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();",
+		lhead=clustere3ffa77611d69e3db000538bf02fa1d0,
+		lp="290.74,301.78",
+		pos="e,132.49,197.84 276.01,375.17 244.06,335.69 168.98,242.92 139.73,206.78"];
+	Se3ffa7b011d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_QuickStop ||\nIn_ReadyToSwitchOn ||\nIn_SwitchedOn ||\nIn_OperationEnabled\n\nServo_Res_Disable = false;",
+		lp="292.67,436.06",
+		pos="e,263.44,403.67 222.02,403.66 231.34,404.61 241.96,404.87 252.01,404.46"];
+	Se3ffa7b011d69e3db000538bf02fa1d0 -> Ie3ffa77611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nServo_Res_Disable = true;",
+		lhead=clustere3ffa77611d69e3db000538bf02fa1d0,
+		lp="78.306,276.25",
+		pos="e,130.07,198.94 188.7,375.17 175.91,336.72 146.3,247.73 133.66,209.72"];
+	Ie3ffa77611d69e3db000538bf02fa1d0 -> Se3ffa84b11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		pos="e,150.99,281.59 129.69,199.42 133.43,213.84 141.85,246.33 148.12,270.5"];
+	Ie3ffa77611d69e3db000538bf02fa1d0 -> Se3ffa90d11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_Malfunction\n/*1state_SwitchOnInhibit = false;\n1state_ReadyToSwitchOn = false;\n1state_SwitchedOn = false;\n1state_OperationEnabled = \
+false;\n1state_QuickStopActive = false;*/",
+		lp="172.41,317.6",
+		ltail=clustere3ffa77611d69e3db000538bf02fa1d0,
+		pos="e,359.34,377.8 131.25,198.83 154.58,226.63 282.74,326.54 349.89,371.57"];
+	Se3ffa84b11d69e3db000538bf02fa1d0 -> Se3ffa60811d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="Out_QuickStop = true;",
+		lp="119.15,206.15",
+		pos="e,171.28,108.38 157.24,281.73 160.18,245.43 166.78,163.92 170.36,119.77"];
+	Se3ffa60811d69e3db000538bf02fa1d0 -> Se3ffa60811d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';",
+		lp="330.16,90",
+		pos="e,224.97,79.136 224.97,100.86 241.11,100.64 253.78,97.023 253.78,90 253.78,84.732 246.65,81.378 236.28,79.938"];
+	Se3ffa60811d69e3db000538bf02fa1d0 -> Se3ffa87211d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_QuickStop\nServo_Res_Disable = true;",
+		lp="61.889,100.8",
+		pos="e,99.804,90 120.31,90 117.31,90 114.28,90 111.27,90"];
+	Se3ffa87211d69e3db000538bf02fa1d0 -> Se3ffa65611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_DisableVoltage = true;\nOut_QuickStop = true;\nServo_Res_Disable = \
+false;",
+		lp="0.32179,141.14",
+		pos="e,97.605,127.81 77.084,108.34 80.995,112.05 85.178,116.02 89.308,119.94"];
+	Se3ffa65611d69e3db000538bf02fa1d0 -> Se3ffa65611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';",
+		lp="281.67,146",
+		pos="e,176.75,135.21 176.75,156.79 192.96,156.23 205.28,152.63 205.28,146 205.28,141.03 198.35,137.76 188.05,136.2"];
+	Se3ffa65611d69e3db000538bf02fa1d0 -> Se3ffa61c11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label=In_ReadyToSwitchOn,
+		lp="137.4,151.4",
+		pos="e,197.19,146 176.44,146 179.58,146 182.75,146 185.9,146"];
+	Se3ffa61c11d69e3db000538bf02fa1d0 -> Se3ffa53211d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_SwitchOn = true;",
+		lp="346.15,118.48",
+		pos="e,276.84,66.35 253.72,127.57 259.1,113.33 266.64,93.365 272.82,76.994"];
+	Se3ffa53211d69e3db000538bf02fa1d0 -> Se3ffa53211d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';",
+		lp="432.91,48",
+		pos="e,327.81,37.136 327.81,58.864 343.63,59.098 356.53,55.477 356.53,48 356.53,42.451 349.42,39.026 339.29,37.724"];
+	Se3ffa53211d69e3db000538bf02fa1d0 -> Se3ffa8ac11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label=In_SwitchedOn,
+		lp="219.25,35.652",
+		pos="e,187.45,37.628 239.75,43.26 226.54,41.837 212.02,40.274 198.74,38.844"];
+	Se3ffa8ac11d69e3db000538bf02fa1d0 -> Se3ffa83711d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_EnableOperation = true;",
+		lp="98.024,128.79",
+		pos="e,205.46,183.72 160.08,52.299 170.11,81.333 189.74,138.21 201.71,172.89"];
+	Se3ffa83711d69e3db000538bf02fa1d0 -> Se3ffa83711d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';",
+		lp="372.93,202",
+		pos="e,268.02,191.17 268.02,212.83 284.12,212.41 296.54,208.8 296.54,202 296.54,196.9 289.56,193.6 279.27,192.08"];
+	Se3ffa83711d69e3db000538bf02fa1d0 -> Se3ffa81011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_OperationEnabled\nServo_Res_Enable = true;",
+		lp="98.704,211.74",
+		pos="e,134.59,228.35 157.82,220.42 153.7,221.83 149.54,223.25 145.41,224.66"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_OperationEnabled\nServo_Res_Enable = false;",
+		lp="130.39,326.02",
+		pos="e,265.79,374.93 113.53,262.32 149.43,288.87 216.02,338.12 256.57,368.11"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa81011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_QuickStop.isAvailable()\nsig_Cmd_QuickStop.get();\nOut_QuickStop = false;",
+		lp="230.07,244",
+		pos="e,134.61,238.56 134.61,249.44 150.48,249.49 163.29,247.68 163.29,244 163.29,241.27 156.23,239.56 146.11,238.89"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa81011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!Cmd_Enable && Servo_Res_Enable\nServo_Res_Enable = false;\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = \
+false;\nOut_EnableOperation = false;",
+		lp="371.39,244",
+		pos="e,134.36,235.97 134.36,252.03 197.68,257.64 296.85,254.96 296.85,244 296.85,233.68 208.96,230.71 145.83,235.07"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa8d311d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_QuickStop\nServo_Res_Enable = false;",
+		lp="112.35,239.8",
+		pos="e,210.83,254.29 134.57,247.86 154.65,249.56 178.39,251.56 199.45,253.33"];
+	Se3ffa8d311d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_ReadyToSwitchOn &&\n!In_SwitchedOn &&\n!In_OperationEnabled",
+		lp="315.28,336.68",
+		pos="e,277.88,375.12 252.24,276.45 254.45,299.15 264.12,337.88 273.77,364.52"];
+	Se3ffa8d311d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || !Cmd_Enable\nsig_Cmd_Init.get();\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = \
+false;\nOut_EnableOperation = false;",
+		lp="364.48,287.62",
+		pos="e,293.79,374.94 268.3,276.42 277.93,298.86 288.38,336.99 292.42,363.62"];
+	Se3ffa90d11d69e3db000538bf02fa1d0 -> Ie3ffa77611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_Malfunction\nOut_ResetMalfunction = false;",
+		lhead=clustere3ffa77611d69e3db000538bf02fa1d0,
+		lp="200.51,275.98",
+		pos="e,134.87,193.16 376.74,375.11 331.96,331.76 194.16,226.47 145.09,198.44"];
+	Se3ffa90d11d69e3db000538bf02fa1d0 -> Se3ffa90d11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_ResetMalfunction.isAvailable()\nsig_Cmd_ResetMalfunction.get();\nOut_ResetMalfunction = true;\nOut_SwitchOn = false;\nOut_\
+DisableVoltage = false;\nOut_EnableOperation = false;\nOut_QuickStop = false;",
+		lp="531.56,393.4",
+		pos="e,422.26,382.79 422.26,404.01 437.4,405.32 450.78,401.78 450.78,393.4 450.78,387.24 443.56,383.7 433.73,382.77"];
+}

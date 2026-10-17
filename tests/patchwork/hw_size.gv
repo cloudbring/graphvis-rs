@@ -1,0 +1,7 @@
+graph areas {
+layout=patchwork;
+
+size="2,2";
+a [area=1]; b [area=2]; c [area=3]; d [area=4]; e [area=5];
+f [area=0.5]; g [area=10]; h;
+}

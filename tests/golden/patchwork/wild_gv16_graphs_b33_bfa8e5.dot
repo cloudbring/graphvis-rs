@@ -1,0 +1,19 @@
+digraph JAAS {
+	graph [bb="0,0,31.624,31.624",
+		fontname=arial,
+		fontsize=20,
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster0 {
+		graph [bb="0.00079055,0.00079055,31.624,31.624",
+			label=Foo
+		];
+		JOC	[height=0.43921,
+			label=JAAS,
+			pos="15.812,15.812",
+			width=0.43921];
+	}
+}

@@ -1,0 +1,81 @@
+digraph G {
+	graph [URL="https://www.graphviz.org/doc/info/output.html",
+		bb="0,0,94.869,119.67",
+		label=output,
+		layout=patchwork,
+		lheight=0.23,
+		lp="47.434,12.4",
+		lwidth=0.50
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster0 {
+		graph [URL="https://www.graphviz.org/doc/info/arrows.html",
+			bb="0.00026352,77.505,47.434,119.67",
+			fillcolor=yellow,
+			label=arrows,
+			style=filled
+		];
+		command	[URL="https://www.graphviz.org/doc/info/command.html",
+			fillcolor=grey,
+			height=0.58561,
+			pos="11.859,98.587",
+			style=filled,
+			width=0.3294];
+		name	[URL="\G \N",
+			height=0.58561,
+			pos="35.576,98.587",
+			width=0.3294];
+	}
+	lang	[URL="https://www.graphviz.org/doc/info/lang.html",
+		height=0.58561,
+		pos="59.293,98.587",
+		width=0.3294];
+	colors	[URL="https://www.graphviz.org/doc/info/output.html",
+		fillcolor=lightblue,
+		height=0.58561,
+		label=<<table href="https://www.graphviz.org/doc/info/colors.html"><tr><td BGCOLOR="green">colors</td></tr></table>>,
+		pos="83.01,98.587",
+		style=filled,
+		width=0.3294];
+	lang -> colors	[URL="\E",
+		edgetooltip=self];
+	lang -> command	[URL="https://www.graphviz.org/doc/info/shapes.html"];
+	size	[height=0.366,
+		pos="18.974,64.329",
+		width=0.52705];
+	lang -> size	[URL=headurl,
+		edgetooltip=headurl,
+		headULR=headsize,
+		headlabel=size];
+	word	[height=0.366,
+		pos="18.974,37.976",
+		width=0.52705];
+	word -> size	[URL=tailurl,
+		tailULR=tailsize,
+		taillabel=size];
+	garf	[height=0.366,
+		pos="56.921,64.329",
+		width=0.52705];
+	word -> garf	[URL=labelurl,
+		label=garf,
+		labelURL=garf];
+	line	[height=0.366,
+		pos="56.921,37.976",
+		width=0.52705];
+	all	[height=0.73201,
+		pos="85.382,51.153",
+		width=0.26352];
+	line -> all	[URL=labelurl,
+		edgetooltip=edgetooltip,
+		edgeurl=edgeurl,
+		headURL=headURL,
+		headlabel=headlabel,
+		headtooltip=headtooltip,
+		label=garf,
+		labelURL=garf,
+		tailURL=tailURL,
+		taillabel=taillabel,
+		tailtooltip=tailtooltip];
+}

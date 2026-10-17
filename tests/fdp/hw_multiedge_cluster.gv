@@ -1,0 +1,6 @@
+graph mc {
+layout=fdp;
+
+subgraph cluster_x { p; q; }
+r -- p; r -- p; r -- q; s -- q; s -- r;
+}

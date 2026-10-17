@@ -1,0 +1,63 @@
+digraph {
+	graph [bb="0,0,438.38,208.74",
+		compound=true,
+		layout=fdp
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="0,33.751,212.48,208.74",
+			label="Cluster A",
+			lheight=0.23,
+			lp="106.24,196.34",
+			lwidth=0.75
+		];
+		node1	[height=0.5,
+			pos="90.834,59.751",
+			width=0.96213];
+		node3	[height=0.5,
+			pos="169.84,95.507",
+			width=0.96213];
+		node5	[height=0.5,
+			pos="42.637,107.46",
+			width=0.96213];
+		node7	[height=0.5,
+			pos="102.72,157.94",
+			width=0.96213];
+	}
+	subgraph cluster_b {
+		graph [bb="225.91,0,438.38,174.99",
+			label="Cluster B",
+			lheight=0.23,
+			lp="332.14,162.59",
+			lwidth=0.74
+		];
+		node2	[height=0.5,
+			pos="335.66,26",
+			width=0.96213];
+		node4	[height=0.5,
+			pos="395.75,76.481",
+			width=0.96213];
+		node6	[height=0.5,
+			pos="268.54,88.434",
+			width=0.96213];
+		node8	[height=0.5,
+			pos="347.55,124.19",
+			width=0.96213];
+	}
+	node1 -> node2	[label=1,
+		lp="204.08,52.057",
+		pos="e,301.83,30.664 124.62,55.094 167.76,49.146 242.56,38.835 290.54,32.22"];
+	node3 -> node4	[label=2,
+		lp="273.47,78.084",
+		ltail=cluster_a,
+		pos="e,361.11,79.398 204.15,92.617 243.05,89.341 306.64,83.986 349.79,80.351"];
+	node5 -> node6	[label=3,
+		lhead=cluster_b,
+		lp="146.27,106.84",
+		pos="e,233.91,91.35 76.947,104.57 115.84,101.29 179.43,95.938 222.59,92.304"];
+	node7 -> node8	[label=4,
+		lhead=cluster_b,
+		lp="215.97,150.25",
+		ltail=cluster_a,
+		pos="e,313.72,128.85 136.5,153.28 179.65,147.34 254.44,137.02 302.43,130.41"];
+}

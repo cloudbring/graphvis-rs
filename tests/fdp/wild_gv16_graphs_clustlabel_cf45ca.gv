@@ -1,0 +1,8 @@
+digraph G {
+layout=fdp;
+
+  subgraph cluster0 {
+    a->{c b};
+    label = "cluster0";
+  }
+}

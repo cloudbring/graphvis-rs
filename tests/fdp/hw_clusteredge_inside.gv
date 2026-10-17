@@ -1,0 +1,6 @@
+digraph ce3 {
+layout=fdp;
+
+subgraph cluster_a { a1 -> a2; }
+a1 -> cluster_a; cluster_a -> b; b -> cluster_a; cluster_a -> cluster_a;
+}

@@ -1,0 +1,15 @@
+digraph {
+layout=fdp;
+
+  label="Graph Title"
+  subgraph cluster_t {
+    labelloc="t"
+    label="Cluster Top"
+    a -> b
+  }
+  subgraph cluster_b {
+    labelloc="b"
+    label="Cluster Bottom"
+    c -> d
+  }
+}

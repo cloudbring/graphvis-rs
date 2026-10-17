@@ -44,6 +44,9 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
     let (mut s_arrows, mut e_arrows) = (false, false);
     for (i, n) in m.nodes.iter().enumerate() {
         let a = &mut g.nodes[i].attrs;
+        if a.remove(super::model::CLUST_NODE_KEY).is_some() {
+            continue;
+        }
         a.insert("pos".into(), pt(n.coord));
         a.insert("height".into(), g5(n.ht / 72.0));
         a.insert("width".into(), g5((n.lw + n.rw) / 72.0));
@@ -206,6 +209,9 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
     );
     for (i, n) in m.nodes.iter().enumerate() {
         let a = n.attrs;
+        if a.get(super::model::CLUST_NODE_KEY).is_some() {
+            continue;
+        }
         let lbl = if n.label.is_html {
             canon_value(a.get("label").unwrap_or(""), &g.html_strings)
         } else {

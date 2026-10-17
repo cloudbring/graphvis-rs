@@ -1,0 +1,312 @@
+//! Edges to clusters, ported from `lib/common/utils.c`: `processClusterEdges`,
+//! `checkCompound`, `clustNode`, `cloneEdge`, `mapEdge`/`insertEdge` and
+//! `undoClusterEdges`/`undoCompound`/`mapN`.
+//!
+//! A node whose name starts with `cluster` and equals a cluster's name stands
+//! for that cluster. `processClusterEdges` deletes such nodes, adds one
+//! invisible box node `__0:<cluster>` inside each named cluster (C's name
+//! counter never advances) and re-attaches the edges to it. cgraph mutates
+//! the graph in place; the port builds the modified graph as a new
+//! [`Graph`] (`work`) and maps the layout back with [`undo_cluster_edges`].
+
+use crate::fdpgen::ClusterTree;
+use gv_core::{AttrMap, CLUST_NODE_KEY, EdgeId, Graph, NodeId, SubgraphId};
+use std::collections::HashMap;
+
+/// The graph with cluster edges replaced, and how it maps to the input.
+#[derive(Debug, Clone)]
+pub struct ClusterEdges {
+    pub work: Graph,
+    /// Input node → work node (`None` for deleted cluster-named nodes).
+    node_map: Vec<Option<usize>>,
+    /// Input edge → work edge (the edge itself or its clone).
+    edge_map: Vec<Option<usize>>,
+    /// Work nodes that are cluster nodes, with their cluster.
+    pub clust_nodes: Vec<(usize, usize)>,
+    /// `num_clust_edges(g)`.
+    pub count: usize,
+}
+
+impl ClusterEdges {
+    /// `IS_CLUST_NODE(n)` for a work node.
+    pub fn is_clust_node(&self, n: usize) -> bool {
+        self.clust_nodes.iter().any(|&(m, _)| m == n)
+    }
+}
+
+/// `processClusterEdges(g)`; `None` when the graph has no cluster edges.
+pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<ClusterEdges> {
+    // mkClustMap: first cluster of each name in preorder.
+    let mut cmap: HashMap<&str, usize> = HashMap::new();
+    for c in 0..tree.len() {
+        cmap.entry(graph.subgraphs[tree.subgraph[c]].name.as_str())
+            .or_insert(c);
+    }
+    let mapc = |n: usize| -> Option<usize> {
+        let name = graph.nodes[n].name.as_str();
+        if name.starts_with("cluster") {
+            cmap.get(name).copied()
+        } else {
+            None
+        }
+    };
+    let members: Vec<Vec<bool>> = (0..tree.len())
+        .map(|c| {
+            let mut v = vec![false; graph.nodes.len()];
+            for n in crate::fdpgen::subgraph_member_nodes(graph, tree.subgraph[c]) {
+                v[n] = true;
+            }
+            v
+        })
+        .collect();
+    // agcontains(g, subg): subg is a direct child subgraph of g.
+    let contains_subg = |g: usize, s: usize| {
+        graph.subgraphs[tree.subgraph[g]]
+            .subgraphs
+            .contains(&SubgraphId(tree.subgraph[s] as u32))
+    };
+
+    // Endpoints of the work graph: input nodes, then cluster nodes (by cluster).
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+    enum End {
+        Node(usize),
+        Clust(usize),
+    }
+    let mut clust_order: Vec<usize> = Vec::new();
+    let clust_node = |c: usize, order: &mut Vec<usize>| {
+        if !order.contains(&c) {
+            order.push(c);
+        }
+        End::Clust(c)
+    };
+    let mut deleted = vec![false; graph.nodes.len()];
+    let mut map: HashMap<(usize, usize), (End, End)> = HashMap::new();
+    // Clones in creation order: (input edge, tail, head).
+    let mut clones: Vec<(usize, End, End)> = Vec::new();
+    let mut count = 0usize;
+
+    let mut out: Vec<Vec<usize>> = vec![Vec::new(); graph.nodes.len()];
+    for (i, e) in graph.edges.iter().enumerate() {
+        out[e.tail.0 as usize].push(i);
+    }
+    for l in out.iter_mut() {
+        l.sort_by_key(|&e| (graph.edges[e].head.0, e));
+    }
+    for n in 0..graph.nodes.len() {
+        for &e in &out[n] {
+            let t = graph.edges[e].tail.0 as usize;
+            let h = graph.edges[e].head.0 as usize;
+            let tg = mapc(t);
+            let hg = mapc(h);
+            if tg.is_none() && hg.is_none() {
+                continue;
+            }
+            if tg == hg {
+                // "cluster cycle ... not supported"
+                continue;
+            }
+            if let Some(&(ct, ch)) = map.get(&(t, h)) {
+                clones.push((e, ct, ch));
+                count += 1;
+                continue;
+            }
+            let (ct, ch) = match (tg, hg) {
+                (Some(tc), Some(hc)) => {
+                    if contains_subg(hc, tc) || contains_subg(tc, hc) {
+                        continue;
+                    }
+                    let cn = clust_node(tc, &mut clust_order);
+                    deleted[t] = true;
+                    let cn1 = clust_node(hc, &mut clust_order);
+                    deleted[h] = true;
+                    (cn, cn1)
+                }
+                (None, Some(hc)) => {
+                    if members[hc][t] {
+                        continue;
+                    }
+                    let cn = clust_node(hc, &mut clust_order);
+                    deleted[h] = true;
+                    (End::Node(t), cn)
+                }
+                (Some(tc), None) => {
+                    if members[tc][h] {
+                        continue;
+                    }
+                    let cn = clust_node(tc, &mut clust_order);
+                    deleted[t] = true;
+                    (cn, End::Node(h))
+                }
+                (None, None) => unreachable!(),
+            };
+            clones.push((e, ct, ch));
+            map.insert((t, h), (ct, ch));
+            map.insert((h, t), (ch, ct));
+            count += 1;
+        }
+    }
+    if count == 0 {
+        return None;
+    }
+
+    // Build the work graph.
+    let mut work = Graph::new(graph.name.clone(), graph.kind, graph.strict);
+    work.graph_attrs = graph.graph_attrs.clone();
+    work.node_defaults = graph.node_defaults.clone();
+    work.edge_defaults = graph.edge_defaults.clone();
+    work.html_strings = graph.html_strings.clone();
+    let mut node_map = vec![None; graph.nodes.len()];
+    for (i, nd) in graph.nodes.iter().enumerate() {
+        if deleted[i] {
+            continue;
+        }
+        let id = work.nodes.len();
+        let mut d = nd.clone();
+        d.id = NodeId(id as u32);
+        work.node_lookup.insert(d.name.clone(), d.id);
+        work.nodes.push(d);
+        node_map[i] = Some(id);
+    }
+    let mut clust_nodes = Vec::new();
+    let mut cnode_of: HashMap<usize, usize> = HashMap::new();
+    for &c in &clust_order {
+        let name = format!("__0:{}", graph.subgraphs[tree.subgraph[c]].name);
+        let id = work.ensure_node(&name);
+        let a = &mut work.nodes[id.0 as usize].attrs;
+        a.insert("label".into(), String::new());
+        a.insert("style".into(), "invis".into());
+        a.insert("shape".into(), "box".into());
+        clust_nodes.push((id.0 as usize, c));
+        cnode_of.insert(c, id.0 as usize);
+    }
+    let end_id = |x: End| -> usize {
+        match x {
+            End::Node(n) => node_map[n].expect("kept node"),
+            End::Clust(c) => cnode_of[&c],
+        }
+    };
+    let mut edge_map = vec![None; graph.edges.len()];
+    for (i, ed) in graph.edges.iter().enumerate() {
+        let (t, h) = (ed.tail.0 as usize, ed.head.0 as usize);
+        let (Some(wt), Some(wh)) = (node_map[t], node_map[h]) else {
+            continue;
+        };
+        let id = work.edges.len();
+        let mut d = ed.clone();
+        d.id = EdgeId(id as u32);
+        d.tail = NodeId(wt as u32);
+        d.head = NodeId(wh as u32);
+        work.edges.push(d);
+        edge_map[i] = Some(id);
+    }
+    for &(e, ct, ch) in &clones {
+        let id = work.edges.len();
+        let mut d = graph.edges[e].clone();
+        d.id = EdgeId(id as u32);
+        d.tail = NodeId(end_id(ct) as u32);
+        d.head = NodeId(end_id(ch) as u32);
+        work.edges.push(d);
+        // A later clone of the same input edge (none in practice) wins.
+        edge_map[e] = Some(id);
+    }
+    let emap_old: Vec<Option<usize>> = (0..graph.edges.len())
+        .map(|i| {
+            let ed = &graph.edges[i];
+            if deleted[ed.tail.0 as usize] || deleted[ed.head.0 as usize] {
+                None
+            } else {
+                edge_map[i]
+            }
+        })
+        .collect();
+    work.subgraphs = graph
+        .subgraphs
+        .iter()
+        .map(|sg| {
+            let mut s = sg.clone();
+            s.nodes = sg
+                .nodes
+                .iter()
+                .filter_map(|n| node_map[n.0 as usize].map(|m| NodeId(m as u32)))
+                .collect();
+            s.edges = sg
+                .edges
+                .iter()
+                .filter_map(|e| emap_old[e.0 as usize].map(|m| EdgeId(m as u32)))
+                .collect();
+            s
+        })
+        .collect();
+    for &(n, c) in &clust_nodes {
+        work.subgraphs[tree.subgraph[c]]
+            .nodes
+            .push(NodeId(n as u32));
+    }
+    Some(ClusterEdges {
+        work,
+        node_map,
+        edge_map,
+        clust_nodes,
+        count,
+    })
+}
+
+/// `undoClusterEdges(g)`: copy the layout of `work` (after `write_back`)
+/// into the input graph. Deleted cluster-named nodes come back with default
+/// attributes and are marked with [`CLUST_NODE_KEY`]; their edges take the
+/// geometry of the clones. Edges C deleted without a clone are removed.
+pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
+    for (i, m) in ce.node_map.iter().enumerate() {
+        match *m {
+            Some(w) => {
+                let src = &work.nodes[w];
+                let dst = &mut graph.nodes[i];
+                dst.pos = src.pos;
+                dst.width = src.width;
+                dst.height = src.height;
+                dst.attrs = src.attrs.clone();
+            }
+            None => {
+                let mut a: AttrMap = graph.node_defaults.clone();
+                a.entry("label".to_string())
+                    .or_insert_with(|| "\\N".to_string());
+                a.insert(CLUST_NODE_KEY.to_string(), String::new());
+                graph.nodes[i].attrs = a;
+            }
+        }
+    }
+    for (i, m) in ce.edge_map.iter().enumerate() {
+        let Some(w) = *m else {
+            continue;
+        };
+        let src = &work.edges[w];
+        let dst = &mut graph.edges[i];
+        dst.spline = src.spline.clone();
+        dst.label_pos = src.label_pos;
+        dst.attrs = src.attrs.clone();
+    }
+    graph.bb = work.bb;
+    for (dst, src) in graph.subgraphs.iter_mut().zip(&work.subgraphs) {
+        dst.bb = src.bb;
+        dst.graph_attrs = src.graph_attrs.clone();
+    }
+    graph.graph_attrs = work.graph_attrs.clone();
+    // Edges of deleted nodes that were not re-attached are gone, as in C.
+    let mut new_id = vec![None; graph.edges.len()];
+    let mut kept = Vec::with_capacity(graph.edges.len());
+    for (i, mut e) in std::mem::take(&mut graph.edges).into_iter().enumerate() {
+        if ce.edge_map[i].is_some() {
+            new_id[i] = Some(kept.len());
+            e.id = EdgeId(kept.len() as u32);
+            kept.push(e);
+        }
+    }
+    graph.edges = kept;
+    for sg in &mut graph.subgraphs {
+        sg.edges = sg
+            .edges
+            .iter()
+            .filter_map(|e| new_id[e.0 as usize].map(|n| EdgeId(n as u32)))
+            .collect();
+    }
+}

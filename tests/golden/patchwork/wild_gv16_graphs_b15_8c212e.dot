@@ -1,0 +1,358 @@
+digraph g {
+	graph [bb="0,0,189.74,189.74",
+		concentrate=true,
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph clusterWalking {
+		graph [bb="0.00013176,0.00013176,60.371,49.693",
+			label=walking
+		];
+		Walk	[height=0.34509,
+			label=" <In> Walk | | <Normal> Normal | | <Target> Target ",
+			pos="20.124,37.27",
+			width=0.55899];
+		WalkStepUp	[height=0.34509,
+			label=" <In> WalkStepUp | | <Normal> Normal ",
+			pos="20.124,12.423",
+			width=0.55899];
+		WalkStepDown	[height=0.69018,
+			label=" <In> WalkStepDown | | <Normal> Normal ",
+			pos="50.309,24.847",
+			width=0.27949];
+	}
+	subgraph cluster0 {
+		graph [bb="135.53,115.95,189.74,189.74",
+			label=running
+		];
+		Run	[height=0.51241,
+			label=" <In> Run | | { <Normal> Normal | | <Target> Target }",
+			pos="149.08,171.29",
+			width=0.37646];
+		RunToStop	[height=0.51241,
+			label=" <In> RunToStop | | <Always> Always ",
+			pos="176.18,171.29",
+			width=0.37646];
+		RunStepUp	[height=0.51241,
+			label=" <In> RunStepUp | | <Normal> Normal ",
+			pos="149.08,134.4",
+			width=0.37646];
+		RunStepDown	[height=0.51241,
+			label=" <In> RunStepDown | | <Normal> Normal ",
+			pos="176.18,134.4",
+			width=0.37646];
+	}
+	subgraph cluster1 {
+		graph [bb="0.00013176,49.693,60.371,115.95",
+			label=FPM
+		];
+		FPMStand	[height=0.46012,
+			label=" <In> FPMStand | | <Always> Always ",
+			pos="15.093,99.386",
+			width=0.41924];
+		FPMRotate	[height=0.46012,
+			label=" <In> FPMRotate | | <Always> Always ",
+			pos="45.278,99.386",
+			width=0.41924];
+		FPMStep	[height=0.46012,
+			label=" <In> FPMStep | | <Always> Always ",
+			pos="15.093,66.257",
+			width=0.41924];
+		FPMCenter	[height=0.46012,
+			label=" <In> FPMCenter | | <Always> Always ",
+			pos="45.278,66.257",
+			width=0.41924];
+	}
+	subgraph cluster2 {
+		graph [bb="81.316,115.95,135.53,189.74",
+			label=FPMHover
+		];
+		FPMHover	[height=0.51241,
+			label=" <In> FPMHover | | <Always> Always ",
+			pos="94.868,171.29",
+			width=0.37646];
+		FPMHoverRotate	[height=0.51241,
+			label=" <In> FPMHoverRotate | | <Always> Always ",
+			pos="121.97,171.29",
+			width=0.37646];
+		FPMHoverStep	[height=0.51241,
+			label=" <In> FPMHoverStep | | <Always> Always ",
+			pos="94.868,134.4",
+			width=0.37646];
+		FPMHoverCenter	[height=0.51241,
+			label=" <In> FPMHoverCenter | | <Always> Always ",
+			pos="121.97,134.4",
+			width=0.37646];
+	}
+	subgraph cluster3 {
+		graph [bb="0.00013176,115.95,81.316,189.74",
+			label=hover
+		];
+		HoverRest	[height=0.51241,
+			label=" <In> HoverRest | | <Normal> Normal | | <Target> Target ",
+			pos="13.553,171.29",
+			width=0.37646];
+		HoverForward	[height=0.51241,
+			label=" <In> HoverForward | | <Normal> Normal | | <Target> Target ",
+			pos="13.553,134.4",
+			width=0.37646];
+		HoverForwardToStop	[height=0.51241,
+			label=" <In> HoverForwardToStop | | <Normal> Normal | | <Target> Target ",
+			pos="40.658,171.29",
+			width=0.37646];
+		HoverFaceBack	[height=0.51241,
+			label=" <In> HoverFaceBack | | <Normal> Normal ",
+			pos="67.763,171.29",
+			width=0.37646];
+		HoverStrafeToStop	[height=0.51241,
+			label=" <In> HoverStrafeToStop | | <Normal> Normal | | <Target> Target ",
+			pos="40.658,134.4",
+			width=0.37646];
+		HoverStrafe	[height=0.51241,
+			label=" <In> HoverStrafe | | <Normal> Normal | | <Target> Target ",
+			pos="67.763,134.4",
+			width=0.37646];
+	}
+	Stand	[height=0.46849,
+		label=" <In> Stand | | <Normal> Normal | | <Target> Target ",
+		pos="174.91,67.462",
+		width=0.41175];
+	FaceBack	[height=0.35136,
+		label=" <In> FaceBack | | <Always> Always ",
+		pos="150.21,37.947",
+		width=0.54901];
+	Stand:Normal -> FaceBack:In;
+	Stand:Normal -> Walk:In;
+	Stand:Target -> Walk:In;
+	Strafe	[height=0.35136,
+		label=" <In> Strafe | | <Always> Always ",
+		pos="150.21,12.649",
+		width=0.54901];
+	Stand:Normal -> Strafe:In;
+	JumpVertical	[height=0.70273,
+		label=" <In> JumpVertical | | <Normal> Normal | | <Target> Target ",
+		pos="179.85,25.298",
+		width=0.2745];
+	Stand:Normal -> JumpVertical:In;
+	Stand:Target -> JumpVertical:In;
+	Fall	[height=0.43921,
+		label=" <In> Fall | | <Normal> Normal | | <Target> Target ",
+		pos="142.3,100.14",
+		width=0.43921];
+	Stand:Normal -> Fall:In;
+	Stand:Target -> Fall:In;
+	Stand:Normal -> FPMStand:In;
+	Stand:Target -> FPMStand:In;
+	FaceBack:Always -> Stand:In;
+	FaceBack:Always -> JumpVertical:In;
+	FaceBack:Always -> Fall:In;
+	Walk:Normal -> Stand:In;
+	Walk:Normal -> Stand:In;
+	Walk:Target -> Stand:In;
+	Walk:Target -> Stand:In;
+	Walk:Normal -> FaceBack:In;
+	Walk:Normal -> WalkStepUp:In;
+	Walk:Target -> WalkStepUp:In;
+	Walk:Normal -> WalkStepDown:In;
+	Walk:Target -> WalkStepDown:In;
+	Walk:Normal -> Run:In;
+	Walk:Target -> Run:In;
+	Walk:Normal -> Strafe:In;
+	JumpRunning	[height=0.4026,
+		label=" <In> JumpRunning | | <Normal> Normal | | <Target> Target ",
+		pos="77.62,101.46",
+		width=0.47913];
+	Walk:Normal -> JumpRunning:In;
+	Walk:Target -> JumpRunning:In;
+	Walk:Normal -> Fall:In;
+	Walk:Target -> Fall:In;
+	WalkStepUp:Normal -> Walk:In;
+	WalkStepUp:Normal -> Fall:In;
+	WalkStepDown:Normal -> Walk:In;
+	WalkStepDown:Normal -> Fall:In;
+	Run:Normal -> FaceBack:In;
+	Run:Normal -> Walk:In;
+	Run:Target -> Walk:In;
+	Run:Normal -> RunToStop:In;
+	Run:Normal -> RunToStop:In;
+	Run:Target -> RunToStop:In;
+	Run:Target -> RunToStop:In;
+	Run:Normal -> RunStepUp:In;
+	Run:Target -> RunStepUp:In;
+	Run:Normal -> RunStepDown:In;
+	Run:Target -> RunStepDown:In;
+	Run:Normal -> Strafe:In;
+	Run:Normal -> JumpRunning:In;
+	Run:Target -> JumpRunning:In;
+	Run:Normal -> Fall:In;
+	Run:Target -> Fall:In;
+	RunToStop:Always -> Stand:In;
+	RunToStop:Always -> Stand:In;
+	RunToStop:Always -> Walk:In;
+	RunToStop:Always -> Run:In;
+	RunToStop:Always -> Fall:In;
+	RunStepUp:Normal -> Run:In;
+	RunStepUp:Normal -> Fall:In;
+	RunStepDown:Normal -> Run:In;
+	RunStepDown:Normal -> Fall:In;
+	Strafe:Always -> Stand:In;
+	Strafe:Always -> Stand:In;
+	Strafe:Always -> Run:In;
+	Strafe:Always -> Fall:In;
+	MidJump	[height=0.4026,
+		label=" <In> MidJump | | <Normal> Normal | | <Target> Target ",
+		pos="77.62,72.469",
+		width=0.47913];
+	JumpVertical:Normal -> MidJump:In;
+	JumpVertical:Target -> MidJump:In;
+	JumpRunning:Normal -> MidJump:In;
+	JumpRunning:Target -> MidJump:In;
+	MidJumpFaceBack	[height=0.4026,
+		label=" <In> MidJumpFaceBack | | <Normal> Normal ",
+		pos="77.62,43.481",
+		width=0.47913];
+	MidJump:Normal -> MidJumpFaceBack:In;
+	MidJump:Normal -> Fall:In;
+	MidJump:Target -> Fall:In;
+	MidJump:Normal -> HoverRest:In;
+	MidJump:Target -> HoverRest:In;
+	MidJumpFaceBack:Normal -> MidJump:In;
+	FallFaceBack	[height=0.43921,
+		label=" <In> FallFaceBack | | <Normal> Normal ",
+		pos="173.93,100.14",
+		width=0.43921];
+	MidJumpFaceBack:Normal -> FallFaceBack:In;
+	MidJumpFaceBack:Normal -> HoverRest:In;
+	LandVertical	[height=0.4026,
+		label=" <In> LandVertical | | <Normal> Normal | | <Target> Target ",
+		pos="77.62,14.494",
+		width=0.47913];
+	LandVertical:Normal -> Stand:In;
+	LandVertical:Target -> Stand:In;
+	LandRunning	[height=0.43921,
+		label=" <In> LandRunning | | <Normal> Normal | | <Target> Target ",
+		pos="110.68,100.14",
+		width=0.43921];
+	LandRunning:Normal -> Stand:In;
+	LandRunning:Target -> Stand:In;
+	LandRunning:Normal -> Run:In;
+	LandRunning:Target -> Run:In;
+	Fall:Normal -> LandVertical:In;
+	Fall:Target -> LandVertical:In;
+	Fall:Normal -> LandRunning:In;
+	Fall:Target -> LandRunning:In;
+	Fall:Normal -> FallFaceBack:In;
+	Fall:Normal -> HoverRest:In;
+	Fall:Target -> HoverRest:In;
+	FallFaceBack:Normal -> LandVertical:In;
+	FallFaceBack:Normal -> LandRunning:In;
+	FallFaceBack:Normal -> Fall:In;
+	FallFaceBack:Normal -> HoverRest:In;
+	Flight	[height=0.3904,
+		label=" <In> Flight | | <Normal> Normal | | <Target> Target | | <Target> Target | | <Target> Target ",
+		pos="112.66,70.273",
+		width=0.49411];
+	FlightToHover	[height=0.3904,
+		label=" <In> FlightToHover | | <Normal> Normal | | <Target> Target ",
+		pos="112.66,42.164",
+		width=0.49411];
+	Flight:Normal -> FlightToHover:In;
+	Flight:Target -> FlightToHover:In;
+	Flight:Target -> FlightToHover:In;
+	FlightStrafe	[height=0.3904,
+		label=" <In> FlightStrafe | | <Normal> Normal ",
+		pos="112.66,14.055",
+		width=0.49411];
+	Flight:Normal -> FlightStrafe:In;
+	FlightToHover:Normal -> HoverRest:In;
+	FlightToHover:Target -> HoverRest:In;
+	FlightStrafe:Normal -> Flight:In;
+	FlightStrafe:Normal -> Flight:In;
+	FlightStrafe:Normal -> FlightToHover:In;
+	FPMStand:Always -> Stand:In;
+	FPMStand:Always -> FPMRotate:In;
+	FPMStand:Always -> FPMStep:In;
+	FPMRotate:Always -> FPMStand:In;
+	FPMRotate:Always -> FPMStep:In;
+	FPMStep:Always -> FPMCenter:In;
+	FPMCenter:Always -> FPMStand:In;
+	FPMCenter:Always -> FPMStep:In;
+	FPMHover:Always -> FPMHoverRotate:In;
+	FPMHover:Always -> FPMHoverStep:In;
+	FPMHover:Always -> HoverRest:In;
+	FPMHoverRotate:Always -> FPMHover:In;
+	FPMHoverRotate:Always -> FPMHoverStep:In;
+	FPMHoverStep:Always -> FPMHoverCenter:In;
+	FPMHoverCenter:Always -> FPMHover:In;
+	FPMHoverCenter:Always -> FPMHoverStep:In;
+	HoverRest:Normal -> Fall:In;
+	HoverRest:Target -> Fall:In;
+	HoverRest:Normal -> FPMHover:In;
+	HoverRest:Target -> FPMHover:In;
+	HoverRest:Normal -> HoverForward:In;
+	HoverRest:Target -> HoverForward:In;
+	HoverRest:Normal -> HoverStrafe:In;
+	HoverRest:Target -> HoverStrafe:In;
+	HoverToFlight	[height=0.46849,
+		label=" <In> HoverToFlight | | <Normal> Normal | | <Target> Target ",
+		pos="145.27,67.462",
+		width=0.41175];
+	HoverRest:Normal -> HoverToFlight:In;
+	HoverRest:Target -> HoverToFlight:In;
+	HoverForward:Normal -> Fall:In;
+	HoverForward:Target -> Fall:In;
+	HoverForward:Normal -> HoverForwardToStop:In;
+	HoverForward:Normal -> HoverForwardToStop:In;
+	HoverForward:Target -> HoverForwardToStop:In;
+	HoverForward:Target -> HoverForwardToStop:In;
+	HoverForward:Normal -> HoverFaceBack:In;
+	HoverForward:Normal -> HoverStrafe:In;
+	HoverForward:Target -> HoverStrafe:In;
+	HoverForward:Normal -> HoverToFlight:In;
+	HoverForward:Target -> HoverToFlight:In;
+	HoverForwardToStop:Normal -> Fall:In;
+	HoverForwardToStop:Target -> Fall:In;
+	HoverForwardToStop:Normal -> HoverRest:In;
+	HoverForwardToStop:Normal -> HoverRest:In;
+	HoverForwardToStop:Target -> HoverRest:In;
+	HoverForwardToStop:Target -> HoverRest:In;
+	HoverForwardToStop:Normal -> HoverForward:In;
+	HoverForwardToStop:Target -> HoverForward:In;
+	HoverForwardToStop:Normal -> HoverStrafe:In;
+	HoverForwardToStop:Target -> HoverStrafe:In;
+	HoverForwardToStop:Normal -> HoverToFlight:In;
+	HoverForwardToStop:Target -> HoverToFlight:In;
+	HoverFaceBack:Normal -> Fall:In;
+	HoverFaceBack:Normal -> HoverRest:In;
+	HoverFaceBack:Normal -> HoverToFlight:In;
+	HoverStrafeToStop:Normal -> Fall:In;
+	HoverStrafeToStop:Target -> Fall:In;
+	HoverStrafeToStop:Normal -> HoverRest:In;
+	HoverStrafeToStop:Normal -> HoverRest:In;
+	HoverStrafeToStop:Target -> HoverRest:In;
+	HoverStrafeToStop:Target -> HoverRest:In;
+	HoverStrafeToStop:Normal -> HoverForward:In;
+	HoverStrafeToStop:Target -> HoverForward:In;
+	HoverStrafeToStop:Normal -> HoverStrafe:In;
+	HoverStrafeToStop:Target -> HoverStrafe:In;
+	HoverStrafeToStop:Normal -> HoverToFlight:In;
+	HoverStrafeToStop:Target -> HoverToFlight:In;
+	HoverStrafe:Normal -> Fall:In;
+	HoverStrafe:Target -> Fall:In;
+	HoverStrafe:Normal -> HoverForward:In;
+	HoverStrafe:Target -> HoverForward:In;
+	HoverStrafe:Normal -> HoverStrafeToStop:In;
+	HoverStrafe:Normal -> HoverStrafeToStop:In;
+	HoverStrafe:Target -> HoverStrafeToStop:In;
+	HoverStrafe:Target -> HoverStrafeToStop:In;
+	HoverStrafe:Normal -> HoverToFlight:In;
+	HoverStrafe:Target -> HoverToFlight:In;
+	HoverToFlight:Normal -> Fall:In;
+	HoverToFlight:Target -> Fall:In;
+	HoverToFlight:Normal -> Flight:In;
+	HoverToFlight:Target -> Flight:In;
+	HoverToFlight:Normal -> HoverRest:In;
+	HoverToFlight:Target -> HoverRest:In;
+}

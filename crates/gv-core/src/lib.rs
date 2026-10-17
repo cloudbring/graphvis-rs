@@ -18,6 +18,6 @@ pub use font::{
 };
 pub use geom::{BezierSegment, BoundingBox, Point, Spline};
 pub use graph::{
-    AttrDicts, AttrMap, AttrSym, EdgeData, EdgeId, Graph, GraphKind, NodeData, NodeId, Port,
-    SubgraphData, SubgraphId,
+    AttrDicts, AttrMap, AttrSym, CLUST_NODE_KEY, EdgeData, EdgeId, Graph, GraphKind, NodeData,
+    NodeId, Port, SubgraphData, SubgraphId,
 };

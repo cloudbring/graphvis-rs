@@ -1,0 +1,228 @@
+digraph yours_truly {
+	graph [bb="0,0,144.91,169.71",
+		label="Complex Architecture",
+		labelloc=t,
+		layout=patchwork,
+		lheight=0.23,
+		lp="72.457,157.31",
+		lwidth=1.73,
+		nodesep=0.25,
+		splines=true
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_clients_mobvm_a {
+		graph [bb="0.00017252,0.00017252,32.203,62.106",
+			label="xvm_a Clients",
+			style=dashed
+		];
+		{
+			graph [rank=same];
+			mobvm_a_req	[height=0.43129,
+				label="xvm_a Application ..",
+				pos="16.102,46.58",
+				width=0.44726];
+			mobvm_a_req1	[height=0.43129,
+				label="xvm_a Application 1",
+				pos="16.102,15.527",
+				width=0.44726];
+		}
+	}
+	subgraph cluster_clients_prot_a {
+		graph [bb="32.203,0.00017252,64.406,62.106",
+			label="Z Clients",
+			style=dashed
+		];
+		{
+			graph [rank=same];
+			z_req	[height=0.43129,
+				label="Z Application ..",
+				pos="48.305,46.58",
+				width=0.44726];
+			z_req1	[height=0.43129,
+				label="Z Application 1",
+				pos="48.305,15.527",
+				width=0.44726];
+		}
+	}
+	subgraph cluster_prot_asrv {
+		graph [bb="120.76,20.702,144.91,62.106",
+			label="Z Shapeshifters\n(Configurable\nZ Shapeshifter)",
+			style=dashed
+		];
+		z_req;
+		z_shapeshifter	[height=0.57505,
+			label="Z Shapeshifter Appearances",
+			pos="132.84,41.404",
+			width=0.33545];
+		z_req -> z_shapeshifter	[constraint=true,
+			dir=both];
+		z_req1;
+		z_req1 -> z_shapeshifter	[constraint=true,
+			dir=both];
+	}
+	subgraph cluster_machsrv {
+		graph [bb="96.609,20.702,120.76,62.106",
+			label="Machsrv Shapeshifter"
+		];
+		mobvm_a_req;
+		machsrv_xprot_gen	[height=0.57505,
+			label="<f0>Machsrv Core|<f1>PROT_A-to-XPROT Converter",
+			pos="108.69,41.404",
+			width=0.33545];
+		mobvm_a_req -> machsrv_xprot_gen:f0	[constraint=true,
+			dir=both];
+		mobvm_a_req1;
+		mobvm_a_req1 -> machsrv_xprot_gen:f0	[constraint=true,
+			dir=both];
+		z_shapeshifter;
+		z_shapeshifter -> machsrv_xprot_gen:f0	[constraint=true,
+			dir=both,
+			label="Foo SCADA"];
+	}
+	subgraph cluster_accel {
+		graph [bb="96.609,0.00017252,144.91,20.702",
+			label="NOXd Shapeshifter"
+		];
+		accel_appearance	[height=0.28753,
+			label="NOXd Appearance",
+			pos="120.76,10.351",
+			width=0.6709];
+	}
+	subgraph cluster_yours_trulybox {
+		graph [bb="0.00017252,62.106,84.533,144.91",
+			label=YoursTruly
+		];
+		subgraph cluster_tunnel {
+			graph [bb="48.305,62.106,84.533,144.91",
+				label="Foo Reactor"
+			];
+			accel_appearance;
+			accel	[height=0.38337,
+				label="NOX Shapeshifter",
+				pos="66.419,103.51",
+				width=0.50317];
+			accel_appearance -> accel	[constraint=true,
+				dir=both];
+			tunnel_ingress	[height=0.38337,
+				label="Ingress Shapeshifter",
+				pos="66.419,131.11",
+				width=0.50317];
+			tunnel_ingress -> accel	[dir=both];
+			tunnel_egress	[height=0.38337,
+				label="Egress Shapeshifter",
+				pos="66.419,75.907",
+				width=0.50317];
+			accel -> tunnel_egress	[dir=both];
+		}
+		subgraph cluster_frontend {
+			graph [bb="0.00017252,62.106,48.305,144.91",
+				label="YoursTruly Front-End"
+			];
+			machsrv_xprot_gen;
+			tunnel_ingress;
+			others	[height=0.57505,
+				label="Other Chunks",
+				pos="12.076,124.21",
+				width=0.33545];
+			other_xprot	[height=0.57505,
+				label="XPROT \"crystalizer\"",
+				pos="36.229,124.21",
+				width=0.33545];
+			other_xprot -> machsrv_xprot_gen	[constraint=true,
+				dir=both,
+				label="XPROT over PROT_G"];
+			front_end_jz	[height=0.57505,
+				label="JZ Chunk",
+				pos="12.076,82.808",
+				width=0.33545];
+			front_end_jz -> tunnel_ingress	[dir=both,
+				label="XPROT over PROT_G"];
+			front_end_jz -> other_xprot	[dir=both];
+			arbiter_vadam	[height=0.57505,
+				label="Arbiter Chunks",
+				pos="36.229,82.808",
+				width=0.33545];
+			arbiter_vadam -> others	[style=dotted];
+			arbiter_vadam -> other_xprot	[style=dotted];
+			arbiter_vadam -> front_end_jz	[style=dotted];
+		}
+	}
+	subgraph cluster_shapeshifter_misc {
+		graph [bb="64.406,0.00017252,96.609,62.106",
+			label="Other Shapeshifters",
+			style=dashed
+		];
+		others;
+		handle_x	[height=0.43129,
+			label="Shapeshift X",
+			pos="80.508,46.58",
+			width=0.44726];
+		others -> handle_x	[constraint=true,
+			dir=both,
+			style=dotted];
+		handle_1	[height=0.43129,
+			label="Shapeshift 1",
+			pos="80.508,15.527",
+			width=0.44726];
+		others -> handle_1	[constraint=true,
+			dir=both,
+			style=dotted];
+	}
+	subgraph cluster_space_ship_a {
+		graph [bb="84.533,62.106,144.91,144.91",
+			label=ShipX
+		];
+		subgraph cluster_vm_a {
+			graph [bb="84.533,62.106,144.91,95.229",
+				label=ReactorX
+			];
+			subgraph cluster_tungsten {
+				graph [bb="84.533,62.106,144.91,95.229",
+					label=Tungsten
+				];
+				zzz	[height=0.46004,
+					label=ZZZ,
+					pos="99.628,78.668",
+					width=0.41931];
+				yyy	[height=0.46004,
+					label=YYY,
+					pos="129.82,78.668",
+					width=0.41931];
+			}
+		}
+		subgraph cluster_piston {
+			graph [bb="84.533,95.229,144.91,144.91",
+				label=ReactorY
+			];
+			zzz_worker	[height=0.34503,
+				label="{ZZZ Worker}",
+				pos="104.66,132.49",
+				width=0.55908];
+			yyy_worker	[height=0.34503,
+				label="{YYY Worker}",
+				pos="104.66,107.65",
+				width=0.55908];
+			foo_agent	[height=0.69007,
+				label="{Foo Agent}",
+				pos="134.85,120.07",
+				width=0.27954];
+			foo_agent -> zzz_worker	[constraint=true,
+				dir=both,
+				label=MechCmd];
+			foo_agent -> yyy_worker	[constraint=true,
+				dir=both,
+				label=MechCmd];
+		}
+		zzz_worker -> zzz	[constraint=true,
+			dir=both,
+			label="SCADA_A()"];
+		yyy_worker -> yyy	[constraint=true,
+			dir=both,
+			label="SCADA_A()"];
+	}
+	tunnel_egress -> foo_agent	[constraint=true,
+		dir=both,
+		label="Raw PROT_G"];
+}

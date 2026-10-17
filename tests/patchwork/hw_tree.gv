@@ -1,0 +1,11 @@
+digraph tree {
+layout=patchwork;
+
+
+subgraph cluster_root {
+  subgraph cluster_x { x1 [area=5]; x2 [area=5]; x3; }
+  subgraph cluster_y { y1 [area=7]; subgraph cluster_yy { y2; y3 [area=3]; } }
+  r [area=2];
+}
+z [area=9];
+}

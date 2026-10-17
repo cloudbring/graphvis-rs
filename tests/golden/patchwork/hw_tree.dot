@@ -1,0 +1,50 @@
+digraph tree {
+	graph [bb="0,0,181.66,181.66",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_root {
+		graph [bb="0.00013762,49.544,181.66,181.66"];
+		subgraph cluster_x {
+			graph [bb="0.00013762,49.544,83.261,181.66"];
+			x1	[area=5,
+				height=0.83406,
+				pos="41.63,151.63",
+				width=1.1564];
+			x2	[area=5,
+				height=1.0009,
+				pos="34.692,85.575",
+				width=0.96366];
+			x3	[height=1.0009,
+				pos="76.322,85.575",
+				width=0.19273];
+		}
+		subgraph cluster_y {
+			graph [bb="83.261,69.869,181.66,181.66"];
+			subgraph cluster_yy {
+				graph [bb="83.261,69.869,181.66,110.52"];
+				y2	[height=0.5646,
+					pos="169.36,90.194",
+					width=0.34166];
+				y3	[area=3,
+					height=0.5646,
+					pos="120.16,90.194",
+					width=1.025];
+			}
+			y1	[area=7,
+				height=0.98804,
+				pos="132.46,146.09",
+				width=1.3666];
+		}
+		r	[area=2,
+			height=0.2823,
+			pos="132.46,59.706",
+			width=1.3666];
+	}
+	z	[area=9,
+		height=0.6881,
+		pos="90.83,24.772",
+		width=2.523];
+}

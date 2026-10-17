@@ -1,0 +1,10 @@
+graph loops {
+layout=fdp;
+
+
+a -- a;
+a -- b;
+a -- b;
+b -- c;
+c -- c [label="self"];
+}

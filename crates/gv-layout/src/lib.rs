@@ -6,11 +6,14 @@ pub mod common;
 pub mod cutil;
 pub mod dot;
 pub mod dotgen;
+pub mod fdpgen;
 pub mod force_circular;
 pub mod neatogen;
 pub mod nop;
 pub mod ortho;
+pub mod osage;
 pub mod pack;
+pub mod patchwork;
 pub mod sfdpgen;
 pub mod sparse;
 pub mod twopigen;
@@ -90,12 +93,12 @@ pub fn layout_graph_with_options(
         LayoutEngine::Nop1 => nop::layout_nop(graph, 1),
         LayoutEngine::Nop2 => nop::layout_nop(graph, 2),
         LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph),
-        LayoutEngine::Fdp => force_circular::layout_fdp(graph),
+        LayoutEngine::Fdp => fdpgen::layout::fdp_layout(graph),
         LayoutEngine::Sfdp => sfdpgen::sfdpinit::sfdp_layout(graph),
         LayoutEngine::Twopi => twopigen::twopiinit::twopi_layout(graph),
         LayoutEngine::Circo => circogen::circularinit::circo_layout(graph),
-        LayoutEngine::Osage => force_circular::layout_osage(graph),
-        LayoutEngine::Patchwork => force_circular::layout_patchwork(graph),
+        LayoutEngine::Osage => osage::osage_layout(graph),
+        LayoutEngine::Patchwork => patchwork::patchwork_layout(graph),
     }
 }
 
@@ -266,8 +269,11 @@ mod tests {
                 assert!(node.pos.x.is_finite() && node.pos.y.is_finite());
                 assert!(node.pos.x >= 0.0 && node.pos.y >= 0.0);
             }
-            for edge in &g.edges {
-                assert!(!edge.spline.segments.is_empty());
+            // patchwork draws no edges, as in C.
+            if engine != LayoutEngine::Patchwork {
+                for edge in &g.edges {
+                    assert!(!edge.spline.segments.is_empty());
+                }
             }
         }
     }

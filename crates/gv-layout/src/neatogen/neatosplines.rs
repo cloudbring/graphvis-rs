@@ -88,6 +88,20 @@ fn equiv_key(g: &LGraph<'_>, e: usize) -> (usize, [u64; 2], usize, [u64; 2]) {
 
 /// `splineEdges(g, spline_edges_, edgetype)`.
 pub fn spline_edges_main(g: &mut LGraph<'_>, sub: &Sub, edgetype: EdgeType) {
+    spline_edges_by(g, sub, edgetype, &mut |g, sub, margin, et| {
+        spline_edges_route(g, sub, margin, et);
+        true
+    });
+}
+
+/// `splineEdges(g, edgefn, edgetype)`: resolve ports, group equivalent
+/// edges (`ED_count`/`ED_to_virt`), then run `edgefn`; false if it failed.
+pub fn spline_edges_by(
+    g: &mut LGraph<'_>,
+    sub: &Sub,
+    edgetype: EdgeType,
+    edgefn: &mut dyn FnMut(&mut LGraph<'_>, &Sub, &Expand, EdgeType) -> bool,
+) -> bool {
     let margin = esep_factor(g);
     for &n in &sub.nodes {
         let outs: Vec<usize> = g.outs(sub, n).collect();
@@ -114,11 +128,11 @@ pub fn spline_edges_main(g: &mut LGraph<'_>, sub: &Sub, edgetype: EdgeType) {
             }
         }
     }
-    spline_edges_route(g, sub, &margin, edgetype);
+    edgefn(g, sub, &margin, edgetype)
 }
 
 /// `spline_edges_(g, pmargin, edgetype)`.
-fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edgetype: EdgeType) {
+pub fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edgetype: EdgeType) {
     let router = if edgetype >= EdgeType::Pline {
         super::routing::Router::new(g, sub, pmargin, edgetype)
     } else {

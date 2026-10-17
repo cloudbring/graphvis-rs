@@ -57,3 +57,7 @@ gen_dir "$OUT/sfdp" "$REPO_ROOT"/tests/sfdp/*.gv
 # Circo and twopi corpora: every input sets layout=circo|twopi (see scripts/gen-circo-corpus.py, gen-twopi-corpus.py).
 gen_dir "$OUT/circo" "$REPO_ROOT"/tests/circo/*.gv
 gen_dir "$OUT/twopi" "$REPO_ROOT"/tests/twopi/*.gv
+# fdp, osage and patchwork corpora (scripts/gen-<engine>-corpus.py).
+gen_dir "$OUT/fdp" "$REPO_ROOT"/tests/fdp/*.gv
+gen_dir "$OUT/osage" "$REPO_ROOT"/tests/osage/*.gv
+gen_dir "$OUT/patchwork" "$REPO_ROOT"/tests/patchwork/*.gv

@@ -846,7 +846,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
     fn emit_node(&mut self, n: usize, drawn: &mut [bool]) {
         let m = self.job.m;
         let nd = &m.nodes[n];
-        if drawn[n] {
+        if drawn[n] || nd.attrs.get(super::model::CLUST_NODE_KEY).is_some() {
             return;
         }
         let half = Point::new(nd.lw, nd.ht / 2.0);

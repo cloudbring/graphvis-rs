@@ -1,0 +1,50 @@
+digraph finite_state_machine {
+	graph [bb="0,0,94.869,94.869",
+		layout=patchwork,
+		rankdir=LR
+	];
+	node [label="\N",
+		shape=box
+	];
+	LR_0	[height=0.43921,
+		pos="79.057,15.812",
+		width=0.43921];
+	LR_2	[height=0.43921,
+		pos="15.812,15.812",
+		width=0.43921];
+	LR_0 -> LR_2	[label="SS(B)"];
+	LR_1	[height=0.43921,
+		pos="47.434,47.434",
+		width=0.43921];
+	LR_0 -> LR_1	[label="SS(S)"];
+	LR_3	[height=0.43921,
+		pos="47.434,79.057",
+		width=0.43921];
+	LR_4	[height=0.43921,
+		pos="79.057,79.057",
+		width=0.43921];
+	LR_8	[height=0.43921,
+		pos="15.812,47.434",
+		width=0.43921];
+	LR_6	[height=0.43921,
+		pos="79.057,47.434",
+		width=0.43921];
+	LR_8 -> LR_6	[label="S(b)"];
+	LR_5	[height=0.43921,
+		pos="47.434,15.812",
+		width=0.43921];
+	LR_8 -> LR_5	[label="S(a)"];
+	LR_2 -> LR_4	[label="S(A)"];
+	LR_2 -> LR_6	[label="SS(b)"];
+	LR_2 -> LR_5	[label="SS(a)"];
+	LR_1 -> LR_3	[label="S($end)"];
+	LR_6 -> LR_6	[label="S(b)"];
+	LR_6 -> LR_5	[label="S(a)"];
+	LR_5 -> LR_5	[label="S(a)"];
+	LR_7	[height=0.43921,
+		pos="15.812,79.057",
+		width=0.43921];
+	LR_5 -> LR_7	[label="S(b)"];
+	LR_7 -> LR_8	[label="S(b)"];
+	LR_7 -> LR_5	[label="S(a)"];
+}

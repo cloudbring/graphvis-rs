@@ -1,0 +1,52 @@
+graph sv {
+	graph [bb="0,0,298,120",
+		layout=osage,
+		packmode=array
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="120,60,236,100",
+			sortv=3
+		];
+		a1	[height=0.5,
+			pos="149,80",
+			width=0.75];
+		a2	[height=0.5,
+			pos="207,80",
+			width=0.75];
+	}
+	subgraph cluster_b {
+		graph [bb="240,60,298,100",
+			sortv=1
+		];
+		b1	[height=0.5,
+			pos="269,80",
+			width=0.75];
+	}
+	subgraph cluster_c {
+		graph [bb="0,40,116,120",
+			sortv=2
+		];
+		c1	[height=0.5,
+			pos="29,100",
+			width=0.75];
+		c2	[height=0.5,
+			pos="87,100",
+			width=0.75];
+		c3	[height=0.5,
+			pos="29,60",
+			width=0.75];
+	}
+	n1	[height=0.5,
+		pos="58,18",
+		sortv=5,
+		width=0.75];
+	n2	[height=0.5,
+		pos="178,18",
+		sortv=0,
+		width=0.75];
+	n3	[height=0.5,
+		pos="269,18",
+		sortv=4,
+		width=0.75];
+}

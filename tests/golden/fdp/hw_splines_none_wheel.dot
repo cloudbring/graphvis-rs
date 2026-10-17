@@ -1,0 +1,42 @@
+graph wheel {
+	graph [bb="0,0,198.49,191.84",
+		layout=fdp,
+		splines=none
+	];
+	node [label="\N",
+		shape=box
+	];
+	hub	[height=0.5,
+		pos="98.344,96.534",
+		width=0.75];
+	r1	[height=0.5,
+		pos="92.161,18",
+		width=0.75];
+	hub -- r1;
+	r2	[height=0.5,
+		pos="164.58,57.552",
+		width=0.75];
+	hub -- r2;
+	r3	[height=0.5,
+		pos="171.49,120.48",
+		width=0.75];
+	hub -- r3;
+	r4	[height=0.5,
+		pos="104.84,173.84",
+		width=0.75];
+	hub -- r4;
+	r5	[height=0.5,
+		pos="33.862,139.47",
+		width=0.75];
+	hub -- r5;
+	r6	[height=0.5,
+		pos="27,68.2",
+		width=0.75];
+	hub -- r6;
+	r1 -- r2;
+	r2 -- r3;
+	r3 -- r4;
+	r4 -- r5;
+	r5 -- r6;
+	r6 -- r1;
+}

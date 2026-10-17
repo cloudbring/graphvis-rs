@@ -1,0 +1,6 @@
+graph empty {
+	graph [bb="0,0,54,36",
+		layout=fdp
+	];
+	node [label="\N"];
+}

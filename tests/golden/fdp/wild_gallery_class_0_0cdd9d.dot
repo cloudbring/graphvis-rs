@@ -1,0 +1,20 @@
+digraph G {
+	graph [bb="0,0,179.9,108",
+		class=cats,
+		layout=fdp
+	];
+	node [label="\N"];
+	subgraph cluster_big {
+		graph [bb="0,-7.9936e-15,179.9,108",
+			class=big_cats
+		];
+		Lion	[class="yellow social",
+			height=0.5,
+			pos="142.62,82",
+			width=0.8132];
+		"Snow Leopard"	[class="white solitary",
+			height=0.5,
+			pos="75.625,26",
+			width=1.8785];
+	}
+}

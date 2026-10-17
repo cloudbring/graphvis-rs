@@ -1,0 +1,54 @@
+digraph G {
+	graph [bb="0,0,89.443,89.443",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_0 {
+		graph [bb="0.00027951,0.00027951,67.082,44.722",
+			color=hotpink,
+			label="hello world"
+		];
+		a	[height=0.31056,
+			pos="22.361,33.541",
+			width=0.62113];
+		b	[height=0.31056,
+			pos="22.361,11.181",
+			width=0.62113];
+		a -> b;
+		c	[height=0.62113,
+			pos="55.902,22.361",
+			width=0.31056];
+		a -> c;
+	}
+	subgraph cluster_1 {
+		graph [bb="0.00027951,44.722,89.443,89.443",
+			color=purple,
+			label=MSDOT,
+			style=dashed
+		];
+		x	[height=0.62113,
+			pos="11.181,67.082",
+			width=0.31056];
+		y	[height=0.62113,
+			pos="33.541,67.082",
+			width=0.31056];
+		x -> y;
+		z	[height=0.62113,
+			pos="55.902,67.082",
+			width=0.31056];
+		x -> z;
+		y -> z;
+		q	[height=0.62113,
+			pos="78.263,67.082",
+			width=0.31056];
+		y -> q;
+	}
+	y -> b;
+	top	[height=0.62113,
+		pos="78.263,22.361",
+		width=0.31056];
+	top -> a;
+	top -> y;
+}

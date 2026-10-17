@@ -1,0 +1,9 @@
+digraph dg {
+layout=fdp;
+
+
+a -> b -> c -> d -> a;
+a -> c;
+b -> d [dir=both];
+e -> a [arrowhead=none];
+}

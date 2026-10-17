@@ -1,0 +1,8 @@
+graph {
+layout=fdp;
+
+  Triangle  [shape=polygon sides=3]
+  Rectangle [shape=polygon sides=4]
+  Pentagon  [shape=polygon sides=5]
+  Hexagon   [shape=polygon sides=6]
+}

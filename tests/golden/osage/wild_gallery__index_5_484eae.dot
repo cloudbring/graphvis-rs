@@ -1,0 +1,39 @@
+digraph G {
+	graph [bb="0,0,236,80",
+		compound=true,
+		layout=osage,
+		nodesep=1.0
+	];
+	node [label="\N"];
+	subgraph cluster_A {
+		graph [bb="0,0,116,80"];
+		a	[height=0.5,
+			pos="29,60",
+			width=0.75];
+		b	[height=0.5,
+			pos="87,60",
+			width=0.75];
+		a -> b	[pos="e,59.831,60 56.302,60 56.449,60 56.596,60 56.743,60"];
+		c	[height=0.5,
+			pos="29,20",
+			width=0.75];
+		a -> c	[pos="e,29,38.39 29,41.873 29,41.728 29,41.583 29,41.438"];
+	}
+	subgraph cluster_B {
+		graph [bb="120,0,236,80"];
+		d	[height=0.5,
+			pos="149,60",
+			width=0.75];
+		e	[height=0.5,
+			pos="207,60",
+			width=0.75];
+		d -> e	[pos="e,179.83,60 176.3,60 176.45,60 176.6,60 176.74,60"];
+		f	[height=0.5,
+			pos="149,20",
+			width=0.75];
+		f -> e	[pos="e,188.16,47.01 167.99,33.097 171.43,35.47 175.09,37.99 178.72,40.5"];
+	}
+	a -> e	[lhead=cluster_B,
+		ltail=cluster_A,
+		pos="e,179.55,60 56.422,60 86.344,60 134.48,60 168.25,60"];
+}

@@ -1,0 +1,6 @@
+graph ce1 {
+layout=fdp;
+
+subgraph cluster_a { a1 -- a2; } subgraph cluster_b { b1; b2; }
+x -- cluster_a; cluster_a -- cluster_b; cluster_b -- y; x -- y;
+}

@@ -1,0 +1,48 @@
+graph G {
+	graph [bb="0,0,388.44,124",
+		layout=osage
+	];
+	node [label="\N"];
+	subgraph clusterA {
+		graph [bb="0,40,178,124"];
+		subgraph clusterC {
+			graph [bb="2,82,118,122"];
+			C	[height=0.5,
+				pos="31,102",
+				width=0.75];
+			D	[height=0.5,
+				pos="89,102",
+				width=0.75];
+			C -- D	[pos="58.302,102 59.477,102 60.656,102 61.831,102"];
+		}
+		a	[height=0.5,
+			pos="149,102",
+			width=0.75];
+		b	[height=0.5,
+			pos="60,60",
+			width=0.75];
+		a -- b	[pos="126.54,91.402 113.05,85.035 95.942,76.961 82.451,70.595"];
+	}
+	subgraph clusterB {
+		graph [bb="182,62,298,102"];
+		d	[height=0.5,
+			pos="211,82",
+			width=0.75];
+		f	[height=0.5,
+			pos="269,82",
+			width=0.75];
+		d -- f	[pos="238.3,82 239.48,82 240.66,82 241.83,82"];
+	}
+	e	[height=0.5,
+		pos="240,18",
+		width=0.75];
+	clusterB	[height=0.5,
+		pos="345.22,82",
+		width=1.2005];
+	e -- clusterB	[pos="260.29,30.34 277.49,40.801 302.21,55.839 320.55,66.995"];
+	d -- D	[pos="184.53,86.34 164.06,89.694 135.87,94.316 115.42,97.669"];
+	clusterC	[height=0.5,
+		pos="89.218,18",
+		width=1.2005];
+	clusterC -- clusterB	[pos="126.72,27.375 175.19,39.492 259.1,60.471 307.62,72.6"];
+}

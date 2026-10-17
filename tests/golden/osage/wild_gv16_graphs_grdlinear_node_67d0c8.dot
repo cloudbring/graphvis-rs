@@ -1,0 +1,54 @@
+digraph G {
+	graph [bb="0,0,207,148.2",
+		bgcolor="yellow:blue",
+		gradientangle=60,
+		label="Graph",
+		layout=osage,
+		lheight=0.23,
+		lp="103.5,12.4",
+		lwidth=0.49
+	];
+	node [label="\N"];
+	subgraph cluster_1 {
+		graph [bb="0,24.8,207,148.2",
+			fillcolor="green:magenta",
+			fontcolor=white,
+			label=Cluster,
+			lheight=0.23,
+			lp="103.5,135.8",
+			lwidth=0.56,
+			style=filled
+		];
+		node [style=filled];
+		n5	[fillcolor="antiquewhite:aquamarine",
+			height=0.5,
+			pos="178,96.8",
+			shape=box,
+			width=0.75];
+		n4	[fillcolor="bisque4:blue2",
+			height=0.5,
+			pos="43,47.8",
+			shape=ellipse,
+			width=0.75];
+		n3	[fillcolor="cadetblue1:chocolate1",
+			height=0.57482,
+			pos="178.69,47.493",
+			shape=circle,
+			width=0.57482];
+		n2	[fillcolor="crimson:cyan4",
+			height=0.5,
+			pos="118.26,96.8",
+			shape=diamond,
+			width=0.81292];
+		n1	[fillcolor="deepskyblue2:firebrick",
+			height=0.68889,
+			pos="43.387,96.6",
+			shape=triangle,
+			width=1.1496];
+		n0	[fillcolor="gray24:gray88",
+			height=0.5,
+			pos="118,47.8",
+			shape=pentagon,
+			width=0.75];
+	}
+}

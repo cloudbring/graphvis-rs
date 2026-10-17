@@ -1,0 +1,40 @@
+digraph G {
+	graph [bb="0,0,201,56",
+		layout=osage
+	];
+	node [label="\N",
+		shape=box,
+		style=filled
+	];
+	subgraph clusterA {
+		graph [bb="0,0,132,56",
+			fillcolor=lightgray,
+			pencolor=blue,
+			style=filled
+		];
+		eeeee	[color=yellow,
+			fontcolor=red,
+			height=0.72222,
+			peripheries=3,
+			pos="37,28",
+			width=0.97222];
+		ee	[height=0.5,
+			pos="103,28",
+			width=0.75];
+		eeeee -> ee	[pos="e,75.613,28 72.319,28 72.457,28 72.594,28 72.732,28"];
+	}
+	ddddddd	[color=orange,
+		fillcolor=blue,
+		fontcolor=yellow,
+		height=0.5,
+		pos="168.5,28",
+		width=0.90278];
+	ddddddd -> eeeee	[color=lightblue,
+		fontcolor=green,
+		head_lp="99.004,19.6",
+		headlabel=headlabel,
+		label=flue,
+		labelfontcolor=chocolate,
+		lp="98.553,36.4",
+		pos="e,72.187,28 135.66,28 119.81,28 100.52,28 83.215,28"];
+}

@@ -1,0 +1,10 @@
+graph labels {
+layout=fdp;
+
+
+label="graph label";
+a -- b [label="ab"];
+b -- c [label="bc"];
+c -- a;
+a [label="node A"]; b [shape=box]; c [shape=diamond];
+}

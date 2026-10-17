@@ -1,0 +1,68 @@
+graph Petersen {
+	graph [bb="0,0,100,100",
+		layout=patchwork
+	];
+	node [color=black,
+		fontname=Arial,
+		height=0.400000,
+		label="\N",
+		shape=box,
+		width=0.400000
+	];
+	edge [color=black];
+	0	[height=0.32407,
+		pos="78.572,11.667",
+		width=0.59524];
+	1	[height=0.41667,
+		pos="50,85",
+		width=0.46296];
+	0 -- 1	[color=blue,
+		len=2.6];
+	5	[height=0.48611,
+		pos="42.857,52.5",
+		width=0.39683];
+	0 -- 5	[color=red,
+		weight=5];
+	2	[height=0.41667,
+		pos="83.334,85",
+		width=0.46296];
+	1 -- 2	[color=blue,
+		len=2.6];
+	6	[height=0.48611,
+		pos="42.857,17.5",
+		width=0.39683];
+	1 -- 6	[color=red,
+		weight=5];
+	3	[height=0.48611,
+		pos="14.286,52.5",
+		width=0.39683];
+	2 -- 3	[color=blue,
+		len=2.6];
+	7	[height=0.32407,
+		pos="78.572,58.334",
+		width=0.59524];
+	2 -- 7	[color=red,
+		weight=5];
+	4	[height=0.48611,
+		pos="14.286,17.5",
+		width=0.39683];
+	3 -- 4	[color=blue,
+		len=2.6];
+	8	[height=0.32407,
+		pos="78.572,35",
+		width=0.59524];
+	3 -- 8	[color=red,
+		weight=5];
+	4 -- 0	[color=blue,
+		len=2.6];
+	9	[height=0.41667,
+		pos="16.667,85",
+		width=0.46296];
+	4 -- 9	[color=red,
+		weight=5];
+	5 -- 7;
+	6 -- 8;
+	7 -- 9;
+	8 -- 5;
+	9 -- 6;
+}

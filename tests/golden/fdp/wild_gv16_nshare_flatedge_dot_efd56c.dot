@@ -1,0 +1,37 @@
+digraph {
+	graph [bb="0,0,15909,4407.8",
+		layout=fdp
+	];
+	node [label="\N"];
+	tcp	[height=0.5,
+		pos="8670,3529.7",
+		width=0.75];
+	kernel_linux	[height=0.5,
+		pos="8670,18",
+		width=1.6624];
+	tcp -> kernel_linux	[label=linux,
+		lp="8655.7,1787.7",
+		pos="e,8670,36.13 8670,3511.2 8670,3253 8670,369.87 8670,47.293"];
+	usmStats	[height=0.5,
+		pos="45.916,632.48",
+		width=1.2754];
+	"usmStats-5.5"	[height=0.5,
+		pos="6459.8,1079.5",
+		width=1.7001];
+	usmStats -> "usmStats-5.5"	[color=red,
+		constraint=false,
+		pos="e,6398.9,1076.8 90.648,636.86 621.91,681.12 5718.5,1036.5 6387.5,1076.1"];
+	"usmStats-5.5" -> usmStats	[color=red,
+		constraint=false,
+		pos="e,92.068,634.41 6401,1074 5795.4,1024.7 702.52,669.7 103.4,635.06"];
+	snmpv3mibs	[height=0.5,
+		pos="7968.1,4389.8",
+		width=1.6778];
+	snmpv3mibs -> usmStats	[pos="e,75.508,646.51 7935.4,4374.3 7407.4,4123.9 667.53,927.3 85.898,651.44",
+		style=dashed];
+	snmpv3mibs -> "usmStats-5.5"	[pos="e,6468.1,1097.7 7959.8,4371.6 7846.7,4123.4 6613.2,1416.2 6472.8,1108.1"];
+	snmpEngine	[height=0.5,
+		pos="15849,1001.1",
+		width=1.6477];
+	snmpv3mibs -> snmpEngine	[pos="e,15814,1016.1 8003.2,4374.7 8545.6,4141.5 15192,1283.8 15804,1020.5"];
+}

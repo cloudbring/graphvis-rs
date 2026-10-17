@@ -1,0 +1,115 @@
+digraph G {
+	graph [bb="0,0,148.32,148.32",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph clusterA {
+		graph [bb="0.00016855,107.87,74.162,148.32",
+			style=rounded
+		];
+		{
+			2	[height=0.56183,
+				pos="37.081,128.1",
+				width=0.34334];
+			3	[height=0.56183,
+				pos="61.802,128.1",
+				width=0.34334];
+		}
+		1	[height=0.56183,
+			pos="12.36,128.1",
+			width=0.34334];
+		1 -> 2;
+		1 -> 3;
+	}
+	b	[height=0.56183,
+		pos="86.522,128.1",
+		style=bold,
+		width=0.34334];
+	c	[height=0.56183,
+		pos="111.24,128.1",
+		style=dashed,
+		width=0.34334];
+	d	[height=0.56183,
+		pos="135.96,128.1",
+		style=dotted,
+		width=0.34334];
+	e	[height=0.49941,
+		pos="13.906,89.893",
+		style="setlinewidth(3)",
+		width=0.38626];
+	f	[height=0.49941,
+		pos="13.906,53.936",
+		style=invis,
+		width=0.38626];
+	g	[height=0.49941,
+		pos="13.906,17.979",
+		style=solid,
+		width=0.38626];
+	a	[height=0.49941,
+		pos="41.716,89.893",
+		width=0.38626];
+	a -> b	[style=bold];
+	a -> c	[style=dashed];
+	a -> d	[style=dotted];
+	a -> e	[style="setlinewidth(3)"];
+	a -> f	[style=invis];
+	a -> g	[style=solid];
+	B	[height=0.49941,
+		pos="41.716,53.936",
+		style="bold,rounded",
+		width=0.38626];
+	BD	[height=0.44947,
+		pos="132.87,91.691",
+		style="bold,rounded,diagonals",
+		width=0.42918];
+	B -> BD;
+	C	[height=0.49941,
+		pos="41.716,17.979",
+		style="dashed,rounded",
+		width=0.38626];
+	CD	[height=0.52438,
+		pos="68.865,56.633",
+		style="dashed,rounded,diagonals",
+		width=0.36787];
+	C -> CD;
+	D	[height=0.44947,
+		pos="71.072,91.691",
+		style="dotted,rounded",
+		width=0.42918];
+	DD	[height=0.52438,
+		pos="68.865,18.878",
+		style="dotted,rounded,diagonals",
+		width=0.36787];
+	D -> DD;
+	E	[height=0.44947,
+		pos="101.97,91.691",
+		style="setlinewidth(3),rounded",
+		width=0.42918];
+	ED	[height=0.4195,
+		pos="98.662,60.408",
+		style="setlinewidth(3),rounded,diagonals",
+		width=0.45983];
+	E -> ED;
+	BFD	[height=0.4195,
+		pos="131.77,60.408",
+		style="filled, bold,rounded,diagonals",
+		width=0.45983];
+	BD -> BFD;
+	CFD	[height=0.31463,
+		pos="104.18,33.98",
+		style="filled, dashed,rounded,diagonals",
+		width=0.61311];
+	CD -> CFD;
+	DFD	[height=0.31463,
+		pos="104.18,11.327",
+		style="filled, dotted,rounded,diagonals",
+		width=0.61311];
+	DD -> DFD;
+	EFD	[height=0.62925,
+		pos="137.29,22.653",
+		style="filled, setlinewidth(3),rounded,diagonals",
+		width=0.30656];
+	ED -> EFD;
+}
