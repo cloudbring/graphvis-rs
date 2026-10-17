@@ -163,15 +163,20 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
     Parsed::Run(opts)
 }
 
+/// Reads a DOT file. C reads bytes; input that is not UTF-8 (Latin-1 graphs)
+/// is decoded byte for byte as ISO-8859-1, which is what C's `latin1ToUTF8`
+/// (charset=latin1) and its invalid-UTF-8 fallback measure.
 fn read_input(path: Option<&str>) -> io::Result<String> {
-    match path {
-        Some(p) => fs::read_to_string(p),
+    let bytes = match path {
+        Some(p) => fs::read(p)?,
         None => {
-            let mut buf = String::new();
-            io::stdin().read_to_string(&mut buf)?;
-            Ok(buf)
+            let mut buf = Vec::new();
+            io::stdin().read_to_end(&mut buf)?;
+            buf
         }
-    }
+    };
+    Ok(String::from_utf8(bytes)
+        .unwrap_or_else(|e| e.into_bytes().iter().map(|&b| char::from(b)).collect()))
 }
 
 fn main() -> ExitCode {
