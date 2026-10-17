@@ -1,0 +1,26 @@
+digraph G {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 52 228 52 228 0 ",
+		bb="0,0,228,52",
+		class=cats,
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_big {
+		graph [_draw_="c 7 -#000000 p 4 0 0 0 52 228 52 228 0 ",
+			bb="0,0,228,52",
+			class=big_cats
+		];
+		Lion	[_draw_="c 7 -#000000 e 37 26 29.28 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 37 21.8 0 26.44 4 -Lion ",
+			class="yellow social",
+			height=0.5,
+			pos="37,26",
+			width=0.8132];
+		"Snow Leopard"	[_draw_="c 7 -#000000 e 152 26 67.63 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 152 21.8 0 82.04 12 -Snow Leopard ",
+			class="white solitary",
+			height=0.5,
+			pos="152,26",
+			width=1.8785];
+	}
+}

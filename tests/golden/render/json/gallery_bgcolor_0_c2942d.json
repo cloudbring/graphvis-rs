@@ -1,0 +1,312 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#add8e6"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,105.600],[435.000,105.600],[435.000,0.000]]
+    }
+  ],
+  "_ldraw_": 
+  [
+    {
+      "op": "F",
+      "size": 14.000,
+      "face": "Times-Roman"
+    },
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#000000"
+    },
+    {
+      "op": "T",
+      "pt": [217.500,4.200],
+      "align": "c",
+      "width": 34.210,
+      "text": "Home"
+    }
+  ],
+  "bb": "0,0,435,105.6",
+  "bgcolor": "lightblue",
+  "label": "Home",
+  "lheight": "0.23",
+  "lp": "217.5,8.4",
+  "lwidth": "0.48",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "cluster_ground_floor",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#90ee90"
+        },
+        {
+          "op": "P",
+          "points": [[0.000,28.800],[0.000,105.600],[199.000,105.600],[199.000,28.800]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [99.500,89.000],
+          "align": "c",
+          "width": 76.610,
+          "text": "Ground Floor"
+        }
+      ],
+      "bb": "0,28.8,199,105.6",
+      "bgcolor": "lightgreen",
+      "label": "Ground Floor",
+      "lheight": "0.23",
+      "lp": "99.5,93.2",
+      "lwidth": "1.06",
+      "_gvid": 0,
+      "nodes": [
+        2,3
+      ]
+    },
+    {
+      "name": "cluster_top_floor",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#ffffe0"
+        },
+        {
+          "op": "P",
+          "points": [[207.000,28.800],[207.000,105.600],[435.000,105.600],[435.000,28.800]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [321.000,89.000],
+          "align": "c",
+          "width": 56.390,
+          "text": "Top Floor"
+        }
+      ],
+      "bb": "207,28.8,435,105.6",
+      "bgcolor": "lightyellow",
+      "label": "Top Floor",
+      "lheight": "0.23",
+      "lp": "321,93.2",
+      "lwidth": "0.78",
+      "_gvid": 1,
+      "nodes": [
+        4,5
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "Lounge",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [49.000,54.800,40.540,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [49.000,50.600],
+          "align": "c",
+          "width": 42.770,
+          "text": "Lounge"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "49,54.8",
+      "width": "1.126"
+    },
+    {
+      "_gvid": 3,
+      "name": "Kitchen",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [149.000,54.800,41.610,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [149.000,50.600],
+          "align": "c",
+          "width": 44.320,
+          "text": "Kitchen"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "149,54.8",
+      "width": "1.1557"
+    },
+    {
+      "_gvid": 4,
+      "name": "Bedroom",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [262.000,54.800,46.980,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [262.000,50.600],
+          "align": "c",
+          "width": 52.100,
+          "text": "Bedroom"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "262,54.8",
+      "width": "1.3049"
+    },
+    {
+      "_gvid": 5,
+      "name": "Bathroom",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [377.000,54.800,49.660,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [377.000,50.600],
+          "align": "c",
+          "width": 55.990,
+          "text": "Bathroom"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "377,54.8",
+      "width": "1.3794"
+    }
+  ]
+}

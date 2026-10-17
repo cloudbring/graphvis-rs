@@ -1,0 +1,13 @@
+digraph G {
+	graph [bb="0,0,219.85,144"];
+	node [label="\N"];
+	default	[height=0.5,
+		pos="37.848,72",
+		width=1.0513];
+	"1in"	[height=1,
+		pos="120.85,72",
+		width=0.75];
+	"2in"	[height=2,
+		pos="192.85,72",
+		width=0.75];
+}

@@ -1,0 +1,173 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,720.000],[540.000,720.000],[540.000,0.000]]
+    }
+  ],
+  "bb": "0,0,540,720",
+  "center": "1",
+  "rankdir": "LR",
+  "ratio": "fill",
+  "size": "7.5,10.0",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "%1",
+      "bb": "0,0,79.766,198",
+      "center": "1",
+      "rank": "same",
+      "rankdir": "LR",
+      "ratio": "fill",
+      "size": "7.5,10.0",
+      "_gvid": 0,
+      "nodes": [
+        2,3,4
+      ]
+    },
+    {
+      "name": "%3",
+      "bb": "0,0,79.766,198",
+      "center": "1",
+      "rank": "min",
+      "rankdir": "LR",
+      "ratio": "fill",
+      "size": "7.5,10.0",
+      "_gvid": 1,
+      "nodes": [
+        5
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "dc1",
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [270.000,61.250],
+          "align": "c",
+          "width": 29.950,
+          "text": "DC 1"
+        }
+      ],
+      "height": "0.5",
+      "label": "DC 1",
+      "pos": "270,65.455",
+      "shape": "plaintext",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "dc10",
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [270.000,257.620],
+          "align": "c",
+          "width": 36.950,
+          "text": "DC 10"
+        }
+      ],
+      "height": "0.5",
+      "label": "DC 10",
+      "pos": "270,261.82",
+      "shape": "plaintext",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 4,
+      "name": "dc100",
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [270.000,453.980],
+          "align": "c",
+          "width": 43.950,
+          "text": "DC 100"
+        }
+      ],
+      "height": "0.5",
+      "label": "DC 100",
+      "pos": "270,458.18",
+      "shape": "plaintext",
+      "width": "0.83261"
+    },
+    {
+      "_gvid": 5,
+      "name": "no_dc",
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [270.000,650.350],
+          "align": "c",
+          "width": 63.770,
+          "text": "NOTHING"
+        }
+      ],
+      "height": "0.5",
+      "label": "NOTHING",
+      "pos": "270,654.55",
+      "shape": "plaintext",
+      "width": "1.1079"
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,91.200],[450.630,91.200],[450.630,0.000]]
+    }
+  ],
+  "bb": "0,0,450.63,91.202",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "34",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[450.630,91.200],[0.000,91.200],[0.000,0.000],[450.630,0.000]]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[0.000,68.400],[0.000,91.200],[450.620,91.200],[450.620,68.400]]
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "ZapfChancery-MediumItalic"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [139.130,74.200],
+          "align": "l",
+          "width": 172.360,
+          "text": "\"ZapfChancery-MediumItalic\""
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[0.000,45.600],[0.000,68.400],[450.620,68.400],[450.620,45.600]]
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "ZapfChancery-MediumItalic"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [93.980,51.400],
+          "align": "l",
+          "width": 262.660,
+          "text": "\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\""
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[0.000,22.800],[0.000,45.600],[450.620,45.600],[450.620,22.800]]
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "ZapfChancery-MediumItalic"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [134.060,28.600],
+          "align": "l",
+          "width": 182.510,
+          "text": "\"abcdefghijlklmnopqrstuvwxyz\""
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[0.000,0.000],[0.000,22.800],[450.620,22.800],[450.620,0.000]]
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "ZapfChancery-MediumItalic"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [3.000,5.800],
+          "align": "l",
+          "width": 444.620,
+          "text": "\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\\\\nabcdefghijlklmnopqrstuvwxyz\""
+        }
+      ],
+      "fontname": "ZapfChancery-MediumItalic",
+      "height": "1.2667",
+      "label": "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n\t<TR><TD>\"ZapfChancery-MediumItalic\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\"<\/TD><\/TR>\n\t<TR><TD>\"abcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<TR><TD>\"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\\nabcdefghijlklmnopqrstuvwxyz\"<\/TD><\/TR>\n\t<\/TABLE>",
+      "margin": "0,0",
+      "pos": "225.31,45.601",
+      "shape": "box",
+      "width": "6.2587"
+    }
+  ]
+}

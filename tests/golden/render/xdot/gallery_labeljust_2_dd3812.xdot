@@ -1,0 +1,55 @@
+digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 76.8 226 76.8 226 0 ",
+		bb="0,0,226,76.8",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_l {
+		graph [_draw_="c 7 -#000000 p 4 0 0 0 76.8 70 76.8 70 0 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 9.95 60.2 0 3.89 1 -l ",
+			bb="0,0,70,76.8",
+			label=l,
+			labeljust=l,
+			lheight=0.23,
+			lp="9.945,64.4",
+			lwidth=0.05
+		];
+		a	[_draw_="c 7 -#000000 e 35 26 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 35 21.8 0 6.21 1 -a ",
+			height=0.5,
+			pos="35,26",
+			width=0.75];
+	}
+	subgraph cluster_c {
+		graph [_draw_="c 7 -#000000 p 4 78 0 78 76.8 148 76.8 148 0 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 113 60.2 0 6.21 1 -c ",
+			bb="78,0,148,76.8",
+			label=c,
+			labeljust=c,
+			lheight=0.23,
+			lp="113,64.4",
+			lwidth=0.09
+		];
+		b	[_draw_="c 7 -#000000 e 113 26 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 113 21.8 0 7 1 -b ",
+			height=0.5,
+			pos="113,26",
+			width=0.75];
+	}
+	subgraph cluster_r {
+		graph [_draw_="c 7 -#000000 p 4 156 0 156 76.8 226 76.8 226 0 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 215.67 60.2 0 4.66 1 -r ",
+			bb="156,0,226,76.8",
+			label=r,
+			labeljust=r,
+			lheight=0.23,
+			lp="215.67,64.4",
+			lwidth=0.06
+		];
+		c	[_draw_="c 7 -#000000 e 191 26 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 191 21.8 0 6.21 1 -c ",
+			height=0.5,
+			pos="191,26",
+			width=0.75];
+	}
+}

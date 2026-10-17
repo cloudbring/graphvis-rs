@@ -1,0 +1,31 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,742,741.77",
+  "bgcolor": "purple:pink",
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "cluster1",
+      "bb": "0,0,742,741.77",
+      "bgcolor": "blue:green",
+      "_gvid": 0,
+      "nodes": [
+        1
+      ]
+    },
+    {
+      "_gvid": 1,
+      "name": "a0",
+      "fillcolor": "gold:brown",
+      "gradientangle": "180",
+      "height": "10.08",
+      "label": "\n <TABLE border=\"10\" cellspacing=\"10\" cellpadding=\"10\" style=\"rounded\"  bgcolor=\"yellow:violet\" gradientangle=\"315\">\n<TR><TD border=\"3\"  bgcolor=\"yellow\">00<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:green\">01<\/TD>\n<TD border=\"3\"  bgcolor=\"green\">02<\/TD>\n<TD border=\"3\"  bgcolor=\"green:blue\">03<\/TD>\n<TD border=\"3\"  bgcolor=\"blue\">04<\/TD>\n<TD border=\"3\"  bgcolor=\"blue:purple\">05<\/TD>\n<TD border=\"3\"  bgcolor=\"purple\">06<\/TD>\n<TD border=\"3\"  bgcolor=\"purple:violet\">07<\/TD>\n<TD border=\"3\"  bgcolor=\"violet\">08<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"yellow:gold\">10<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:green\">11<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:green\">12<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:blue\">13<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:blue\">14<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:purple\">15<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:purple\">16<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:violet\">17<\/TD>\n<TD border=\"3\"  bgcolor=\"yellow:violet\">18<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"gold\">20<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:green\">21<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:green\">22<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:blue\">23<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:blue\">24<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:purple\">25<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:purple\">26<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:violet\">27<\/TD>\n<TD border=\"3\"  bgcolor=\"gold:violet\">28<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"gold:orange\">30<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:green\">31<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:green\">32<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:blue\">33<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:blue\">34<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:purple\">35<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:purple\">36<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:violet\">37<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:violet\">38<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"orange\">40<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:green\">41<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:green\">42<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:blue\">43<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:blue\">44<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:purple\">45<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:purple\">46<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:violet\">47<\/TD>\n<TD border=\"3\"  bgcolor=\"orange:violet\">48<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"orange:red\">50<\/TD>\n<TD border=\"3\"  bgcolor=\"red:green\">51<\/TD>\n<TD border=\"3\"  bgcolor=\"red:green\">52<\/TD>\n<TD border=\"3\"  bgcolor=\"red:blue\">53<\/TD>\n<TD border=\"3\"  bgcolor=\"red:blue\">54<\/TD>\n<TD border=\"3\"  bgcolor=\"red:purple\">55<\/TD>\n<TD border=\"3\"  bgcolor=\"red:purple\">56<\/TD>\n<TD border=\"3\"  bgcolor=\"red:violet\">57<\/TD>\n<TD border=\"3\"  bgcolor=\"red:violet\">58<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"red\">60<\/TD>\n<TD border=\"3\"  bgcolor=\"red:green\">61<\/TD>\n<TD border=\"3\"  bgcolor=\"red:green\">62<\/TD>\n<TD border=\"3\"  bgcolor=\"red:blue\">63<\/TD>\n<TD border=\"3\"  bgcolor=\"red:blue\">64<\/TD>\n<TD border=\"3\"  bgcolor=\"red:purple\">65<\/TD>\n<TD border=\"3\"  bgcolor=\"red:purple\">66<\/TD>\n<TD border=\"3\"  bgcolor=\"red:violet\">67<\/TD>\n<TD border=\"3\"  bgcolor=\"red:violet\">68<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"red:brown\">70<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:green\">71<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:green\">72<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:blue\">73<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:blue\">74<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:purple\">75<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:purple\">76<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:violet\">77<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:violet\">78<\/TD><\/TR>\n  \n<TR><TD border=\"3\"  bgcolor=\"brown\">80<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:green\">81<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:green\">82<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:blue\">83<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:blue\">84<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:purple\">85<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:purple\">86<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:violet\">87<\/TD>\n<TD border=\"3\"  bgcolor=\"brown:violet\">88<\/TD><\/TR>\n  \n<\/TABLE>",
+      "pos": "371,370.89",
+      "shape": "circle",
+      "style": "filled",
+      "width": "10.08"
+    }
+  ]
+}

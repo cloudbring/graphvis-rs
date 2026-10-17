@@ -1,0 +1,95 @@
+{
+  "name": "G",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,148,202.4",
+  "label": "label demo",
+  "labeljust": "right",
+  "labelloc": "top",
+  "lheight": "0.23",
+  "lp": "117.09,194",
+  "lwidth": "0.86",
+  "_subgraph_cnt": 2,
+  "objects": [
+    {
+      "name": "cluster0",
+      "bb": "0,0,70,148.8",
+      "label": "cluster0",
+      "labeljust": "right",
+      "labelloc": "bottom",
+      "lheight": "0.23",
+      "lp": "39.841,12.4",
+      "lwidth": "0.62",
+      "_gvid": 0,
+      "nodes": [
+        2,3
+      ],
+      "edges": [
+        0
+      ]
+    },
+    {
+      "name": "cluster1",
+      "bb": "78,24.8,148,173.6",
+      "label": "cluster1",
+      "labeljust": "right",
+      "labelloc": "top",
+      "lheight": "0.23",
+      "lp": "117.84,161.2",
+      "lwidth": "0.62",
+      "_gvid": 1,
+      "nodes": [
+        4,5
+      ],
+      "edges": [
+        1
+      ]
+    },
+    {
+      "_gvid": 2,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "35,122.8",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "35,50.8",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 4,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "113,122.8",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 5,
+      "name": "d",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "113,50.8",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 2,
+      "head": 3,
+      "pos": "e,35,68.904 35,104.5 35,97.21 35,88.526 35,80.336"
+    },
+    {
+      "_gvid": 1,
+      "tail": 4,
+      "head": 5,
+      "pos": "e,113,68.904 113,104.5 113,97.21 113,88.526 113,80.336"
+    }
+  ]
+}

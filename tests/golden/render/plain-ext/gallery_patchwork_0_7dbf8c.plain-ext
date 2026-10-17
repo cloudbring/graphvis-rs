@@ -1,0 +1,8 @@
+graph 1 8.6178 8.6178
+node "$2" 4.3089 6.3794 8.6178 4.4768 "$2" filled box black gold
+node "$1" 2.3292 2.0706 4.6583 4.141 "$1" filled box black gold
+node "50c" 6.6381 2.9231 3.9595 2.4359 "50c" filled box black silver
+node "20c" 5.7896 0.85257 2.2626 1.7051 "20c" filled box black silver
+node "10c" 7.7693 1.1367 1.6969 1.1368 "10c" filled box black silver
+node "5c" 7.7693 0.28419 1.6969 0.56838 "5c" filled box black silver
+stop

@@ -1,0 +1,9 @@
+graph G {
+	graph [bb="0,0,60,60"];
+	node [label="\N"];
+	a	[height=0.83333,
+		label="",
+		pos="30,30",
+		shape=doublecircle,
+		width=0.83333];
+}

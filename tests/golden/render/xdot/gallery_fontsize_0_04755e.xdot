@@ -1,0 +1,37 @@
+digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 165.25 282.13 165.25 282.13 0 ",
+		_ldraw_="F 40 11 -Times-Roman c 7 -#000000 T 141.06 12 0 282.13 16 -40pt Graph Label ",
+		bb="0,0,282.13,165.25",
+		fontsize=40,
+		label="40pt Graph Label",
+		lheight=0.67,
+		lp="141.06,24",
+		lwidth=3.92,
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [_draw_="c 7 -#000000 p 4 21.57 60 21.57 165.25 260.56 165.25 260.56 60 ",
+			_ldraw_="F 30 11 -Times-Roman c 7 -#000000 T 141.06 134.25 0 223.29 18 -30pt Cluster Label ",
+			bb="21.568,60,260.56,165.25",
+			fontsize="30pt",
+			label="30pt Cluster Label",
+			lheight=0.50,
+			lp="141.06,143.25",
+			lwidth=3.10
+		];
+		"20pt Node"	[_draw_="c 7 -#000000 e 111.56 90.63 70.62 22.63 ",
+			_ldraw_="F 20 11 -Times-Roman c 7 -#000000 T 111.56 84.63 0 83.88 9 -20pt Node ",
+			fontsize="20pt",
+			height=0.62854,
+			pos="111.56,90.627",
+			width=1.9618];
+		"20pt Node" -> "20pt Node"	[_draw_="c 7 -#000000 B 7 178.04 98.74 190.99 97.79 200.19 95.09 200.19 90.63 200.19 87.63 196.04 85.42 189.38 84.02 ",
+			_hdraw_="S 5 -solid c 7 -#000000 C 7 -#000000 P 3 189.92 80.55 179.55 82.72 189 87.49 ",
+			_ldraw_="F 10 11 -Times-Roman c 7 -#000000 T 220.6 87.63 0 40.83 9 -10pt Edge ",
+			fontsize=10,
+			label="10pt Edge",
+			lp="220.6,90.627",
+			pos="e,178.04,82.52 178.04,98.74 190.99,97.79 200.19,95.091 200.19,90.627 200.19,87.628 196.04,85.424 189.38,84.015"];
+	}
+}

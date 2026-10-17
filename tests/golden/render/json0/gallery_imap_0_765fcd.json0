@@ -1,0 +1,36 @@
+{
+  "name": "mainmap",
+  "directed": true,
+  "strict": false,
+  "URL": "http:\/\/www.research.att.com\/base.html",
+  "bb": "0,0,98.237,108",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "command",
+      "URL": "http:\/\/www.research.att.com\/command.html",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "49.118,90",
+      "width": "1.3644"
+    },
+    {
+      "_gvid": 1,
+      "name": "output",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "49.118,18",
+      "width": "0.99212"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "URL": "colors.html",
+      "pos": "e,49.118,36.104 49.118,71.697 49.118,64.407 49.118,55.726 49.118,47.536"
+    }
+  ]
+}

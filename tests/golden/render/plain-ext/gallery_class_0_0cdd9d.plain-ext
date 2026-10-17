@@ -1,0 +1,4 @@
+graph 1 3.1667 0.72222
+node Lion 0.51389 0.36111 0.8132 0.5 Lion solid ellipse black lightgrey
+node "Snow Leopard" 2.1111 0.36111 1.8785 0.5 "Snow Leopard" solid ellipse black lightgrey
+stop

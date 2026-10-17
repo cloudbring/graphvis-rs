@@ -1,0 +1,19 @@
+{
+  "name": "%1",
+  "directed": false,
+  "strict": false,
+  "bb": "0,0,54,36",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "tee",
+      "height": "0.5",
+      "label": "<table border=\"0\" cellspacing=\"0\" cellborder=\"1\">\n <tr>\n  <td width=\"9\" height=\"9\" fixedsize=\"true\" style=\"invis\"><\/td>\n  <td width=\"9\" height=\"9\" fixedsize=\"true\" sides=\"ltr\"><\/td>\n  <td width=\"9\" height=\"9\" fixedsize=\"true\" style=\"invis\"><\/td>\n <\/tr>\n <tr>\n  <td width=\"9\" height=\"9\" fixedsize=\"true\" sides=\"tlb\"><\/td>\n  <td width=\"9\" height=\"9\" fixedsize=\"true\" sides=\"b\"><\/td>\n  <td width=\"9\" height=\"9\" fixedsize=\"true\" sides=\"brt\"><\/td>\n <\/tr>\n<\/table>",
+      "margin": "0",
+      "pos": "27,18",
+      "shape": "none",
+      "width": "0.75"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+graph 1 3.6022 3.9361
+node a 0.55115 1.9472 1.1023 1.2945 "<bala> Graphs can\lbe fun\l|<f1> mid|<f2> right" solid record black lightgrey
+node b 1.9772 2.5861 0.75 1.0611 "<left>   |<mid> b |   " solid record black lightgrey
+node y 1.9772 0.53054 0.75 1.0611 "<p1>   | y |<p2>   " solid record black lightgrey
+node d 1.9772 1.5583 0.75 0.52778 "\N" solid record black lightgrey
+node x 3.2272 2.1139 0.75 1.0611 "<p1>   | x |<p2>   " solid record black lightgrey
+node z 3.2272 3.4055 0.75 1.0611 "   | z |<p2>   " solid record black lightgrey
+node c 0.55115 0.53054 0.75 1.0611 "<p1>   | c |<p2>   " solid record black lightgrey
+edge a:bala b:left 4 1.1023 2.2917 1.3981 2.2917 1.3024 2.7215 1.4575 2.8761 solid black
+edge a:f2 y:p1 4 1.1023 1.4861 1.3874 1.4861 1.3076 1.0827 1.4559 0.93139 solid black
+edge a:f1 d 4 1.1023 1.8305 1.2163 1.8305 1.335 1.8086 1.4466 1.7771 solid black
+edge b:mid x:p1 4 2.3522 2.5861 2.5171 2.5861 2.5849 2.5201 2.695 2.4829 solid black
+edge b:left z:p2 4 2.3522 2.9305 2.5174 2.9305 2.5847 2.998 2.6949 3.036 solid black
+edge c:p2 y:p2 4 0.94004 0.1861 1.1746 0.1861 1.269 0.1861 1.4466 0.1861 solid black
+edge c:p1 d 4 0.94004 0.87499 1.074 0.87499 1.3222 1.0389 1.5407 1.2062 solid black
+stop

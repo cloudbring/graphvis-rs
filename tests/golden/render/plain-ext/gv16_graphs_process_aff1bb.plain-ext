@@ -1,0 +1,25 @@
+graph 1 3.9497 6.5
+node run 1.2003 6.25 0.75 0.5 run solid ellipse black lightgrey
+node intr 0.4364 5.25 0.75 0.5 intr solid ellipse black lightgrey
+node kernel 2.4781 5.25 0.9768 0.5 kernel solid ellipse black lightgrey
+node runbl 0.4364 4.25 0.8728 0.5 runbl solid ellipse black lightgrey
+node zombie 1.6725 4.25 1.0961 0.5 zombie solid ellipse black lightgrey
+node sleep 2.8947 4.25 0.85774 0.5 sleep solid ellipse black lightgrey
+node runmem 2.7697 0.25 1.2005 0.5 runmem solid ellipse black lightgrey
+node swap 2.8947 3.25 0.85787 0.5 swap solid ellipse black lightgrey
+node runswap 2.8947 2.25 1.2154 0.5 runswap solid ellipse black lightgrey
+node new 3.1586 1.25 0.75348 0.5 new solid ellipse black lightgrey
+edge run intr 4 1.0307 6.0203 0.90416 5.8592 0.73193 5.64 0.60546 5.479 solid black
+edge run kernel 4 1.4407 6.0532 1.6604 5.886 1.9849 5.6392 2.2124 5.4661 solid black
+edge intr runbl 4 0.4364 4.9958 0.4364 4.8451 0.4364 4.6517 0.4364 4.5014 solid black
+edge kernel zombie 4 2.2953 5.0156 2.1653 4.8586 1.9912 4.6486 1.8601 4.4904 solid black
+edge kernel sleep 4 2.5789 5.0007 2.6444 4.8479 2.7294 4.6494 2.7949 4.4971 solid black
+edge kernel runmem 16 2.8001 5.0572 3.01 4.9265 3.2762 4.7319 3.4503 4.5 3.8033 4.0296 3.9225 3.8519 3.9225 3.2639 3.9225 3.2639 3.9225 3.2639 3.9225 2.2361 3.9225 1.6743 3.9497 1.4804 3.6586 1 3.5236 0.77722 3.2965 0.59088 3.1057 0.46142 solid black
+edge runbl run 7 0.61833 4.4826 0.7259 4.6226 0.85633 4.8125 0.9364 5 1.0768 5.329 1.1454 5.7401 1.1767 5.9954 solid black
+edge sleep runmem 13 2.6951 4.0278 2.5733 3.889 2.4251 3.6965 2.3392 3.5 2.1581 3.0863 2.1989 2.9499 2.1586 2.5 2.1387 2.2786 2.1212 2.219 2.1586 2 2.2539 1.4425 2.5096 0.82599 2.6583 0.49857 solid black
+edge sleep swap 4 2.8947 3.9958 2.8947 3.8451 2.8947 3.6517 2.8947 3.5014 solid black
+edge swap runswap 4 2.8947 2.9958 2.8947 2.8451 2.8947 2.6517 2.8947 2.5014 solid black
+edge runswap runmem 7 2.799 2.0019 2.7461 1.8594 2.6856 1.6724 2.6586 1.5 2.6047 1.1551 2.6635 0.75174 2.714 0.50199 solid black
+edge runswap new 4 2.96 1.9958 3.0008 1.8451 3.0533 1.6517 3.0942 1.5014 solid black
+edge new runmem 4 3.0665 1.0057 3.0054 0.85297 2.9254 0.65315 2.8639 0.49939 solid black
+stop
