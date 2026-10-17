@@ -189,7 +189,10 @@ pub(crate) fn build_positioned_graph(graph: &Graph, xdot: bool) -> Graph {
 
     // 2. Clusters (`subgraphs`)
     for idx in 0..g.subgraphs.len() {
-        let is_clust = g.subgraphs[idx].is_cluster || g.subgraphs[idx].name.starts_with("cluster");
+        // Layouts only keep clusters with nodes (`collapse_cluster` skips
+        // empty ones), so those get no `bb`.
+        let is_clust = (g.subgraphs[idx].is_cluster || g.subgraphs[idx].name.starts_with("cluster"))
+            && !g.subgraphs[idx].nodes.is_empty();
         if !is_clust {
             continue;
         }
