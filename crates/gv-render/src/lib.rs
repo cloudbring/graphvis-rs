@@ -3,12 +3,20 @@
 #![forbid(unsafe_code)]
 
 pub mod dot_out;
+pub mod emit;
+mod svg_engine;
 pub mod json;
 pub mod svg;
 
 pub use dot_out::{render_dot_positioned, render_plain};
 pub use json::render_json;
-pub use svg::render_svg;
+pub use emit::reset_render_state;
+
+/// Renders `graph` as SVG (`-Tsvg`).
+pub fn render_svg(graph: &Graph) -> String {
+    let m = emit::model::Model::build(graph);
+    emit::run(&m, svg_engine::SvgEngine::default()).out
+}
 
 use gv_core::{Graph, GraphvizError, Result};
 use gv_parser::write_canon;
