@@ -633,11 +633,14 @@ impl NodeShape {
                 pr.x.hypot(pr.y) <= radius
             }
             InsideFn::Record => {
+                // `fld0->b` spans the record size; `record_init` stores
+                // ND_height = size.y + 1 ("Kluge!!"), so the box is 1pt shorter.
+                let h = self.height - 1.0;
                 let mut b = ctx.bp.unwrap_or(gv_core::BoundingBox::new(
                     -self.width / 2.0,
-                    -self.height / 2.0,
+                    -h / 2.0,
                     self.width / 2.0,
-                    self.height / 2.0,
+                    h / 2.0,
                 ));
                 let e = self.penwidth / 2.0;
                 b.ll.x -= e;
