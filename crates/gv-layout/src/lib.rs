@@ -7,6 +7,8 @@ pub mod dotgen;
 pub mod force_circular;
 pub mod neatogen;
 pub mod pack;
+pub mod sfdpgen;
+pub mod sparse;
 
 use gv_core::{Graph, GraphvizError, Result};
 

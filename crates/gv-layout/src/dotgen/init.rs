@@ -256,13 +256,10 @@ impl<'a> Dot<'a> {
     pub fn do_graph_label(&mut self, sg: G) {
         let flip = self.graphs[0].flip();
         let name = self.graphs[sg].name.clone();
-        let Some(gl) = gv_geom::graph_label_geometry(
-            &name,
-            &self.graphs[sg].attrs,
-            sg == 0,
-            flip,
-            self.env_latin1(),
-        ) else {
+        let env = gv_geom::NodeSizeEnv::from_graph(self.input);
+        let Some(gl) =
+            gv_geom::graph_label_geometry_in(&name, &self.graphs[sg].attrs, sg == 0, flip, &env)
+        else {
             return;
         };
         self.graphs[0].has_labels |= GRAPH_LABEL;
@@ -272,10 +269,6 @@ impl<'a> Dot<'a> {
         if let Some((side, d)) = gl.border {
             self.graphs[sg].border[side as usize] = d;
         }
-    }
-
-    fn env_latin1(&self) -> bool {
-        gv_geom::NodeSizeEnv::from_graph(self.input).charset_latin1
     }
 
     fn push_label(&mut self, lg: &gv_geom::LabelGeometry) -> L {
@@ -378,39 +371,6 @@ impl<'a> Dot<'a> {
             directed,
             &env,
         );
-        let mut geo = geo;
-        // `aghtmlstr`: only `<...>` tokens are HTML; a quoted "< x >" is plain text.
-        if let Some(text) = ie.attrs.get("label")
-            && geo.label.as_ref().is_some_and(|l| l.html)
-            && !self.input.html_strings.contains(text)
-        {
-            let fontsize = super::utils::late_double(
-                ie.attrs.get("fontsize").map(String::as_str),
-                gv_core::font::DEFAULT_FONT_SIZE,
-                1.0,
-            );
-            let fontname = ie
-                .attrs
-                .get("fontname")
-                .filter(|s| !s.is_empty())
-                .map_or(gv_core::font::DEFAULT_FONT_NAME, String::as_str);
-            let obj = gv_core::font::LabelSubstContext {
-                graph_name: &self.input.name,
-                tail_name: &self.nodes[t].name,
-                head_name: &self.nodes[h].name,
-                is_edge: true,
-                is_directed: directed,
-                ..Default::default()
-            };
-            geo.label = Some(gv_geom::make_label(
-                text,
-                false,
-                &obj,
-                fontname,
-                fontsize,
-                env.charset_latin1,
-            ));
-        }
         if let Some(lg) = &geo.label {
             let l = self.push_label(lg);
             self.edges[e].label = Some(l);
@@ -481,7 +441,7 @@ impl<'a> Dot<'a> {
         let nd = &self.input.nodes[r];
         let shape = ShapeKind::from_node(nd);
         let raw_label = nd.attrs.get("label").map_or("\\N", |s| s.as_str());
-        let html = is_html_label(raw_label, shape);
+        let html = self.input.html_strings.contains(raw_label) && is_html_label(raw_label, shape);
         let rankdir_s = match self.graphs[0].rankdir {
             RANKDIR_LR => "LR",
             RANKDIR_BT => "BT",

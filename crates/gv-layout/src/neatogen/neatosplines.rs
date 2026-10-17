@@ -89,6 +89,12 @@ fn equiv_key(g: &LGraph<'_>, e: usize) -> (usize, [u64; 2], usize, [u64; 2]) {
 /// `splineEdges(g, spline_edges_, edgetype)`.
 pub fn spline_edges_main(g: &mut LGraph<'_>, sub: &Sub, edgetype: EdgeType) {
     let margin = esep_factor(g);
+    for &n in &sub.nodes {
+        let outs: Vec<usize> = g.outs(sub, n).collect();
+        for e in outs {
+            crate::common::ports::resolve_ports(g, e);
+        }
+    }
     let mut map: std::collections::HashMap<(usize, [u64; 2], usize, [u64; 2]), usize> =
         std::collections::HashMap::new();
     for &n in &sub.nodes {

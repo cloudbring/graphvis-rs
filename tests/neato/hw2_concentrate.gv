@@ -1,0 +1,3 @@
+digraph conc {
+layout=neato;
+ concentrate=true; a -> b; b -> a; a -> c; c -> b; }

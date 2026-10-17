@@ -1,0 +1,9 @@
+graph xl {
+layout=neato;
+
+
+a [xlabel="ext a"]; b [xlabel="ext b"]; c;
+a -- b [xlabel="ex"];
+b -- c [label="mid", labelangle=30, headlabel="H", taillabel="T"];
+c -- a [label="ca"];
+}

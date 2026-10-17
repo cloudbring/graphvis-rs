@@ -154,6 +154,12 @@ pub fn extract_graph(g: &Graph) -> Layout {
         out.edges.insert(key, geom);
     }
     for sg in &g.subgraphs {
+        // Only clusters carry their own `bb`; a non-cluster subgraph may show
+        // the root's `bb` through attribute inheritance in the parser.
+        let is_cluster = sg.is_cluster || sg.name.starts_with("cluster");
+        if !is_cluster {
+            continue;
+        }
         if let Some(bb) = sg.graph_attrs.get("bb").and_then(|s| parse_bb(s)) {
             out.clusters.insert(sg.name.clone(), bb);
         }

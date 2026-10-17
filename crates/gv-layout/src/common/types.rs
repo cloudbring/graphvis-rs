@@ -4,7 +4,7 @@
 //! [`LGraph`] wraps a parsed [`Graph`] and holds per-node and per-edge layout
 //! fields. Subgraphs (connected components, clusters) are [`Sub`] views over
 //! node indices. Iteration helpers reproduce cgraph orders: nodes by creation
-//! sequence; `agfstout`/`agnxtout` by edge sequence; `agfstedge`/`agnxtedge`
+//! sequence; `agfstout`/`agnxtout` by (head, edge) sequence (`agedgeseqcmpf`); `agfstedge`/`agnxtedge`
 //! as out-edges followed by non-loop in-edges.
 
 use super::shapes::NodeShape;
@@ -208,9 +208,9 @@ pub struct LGraph<'a> {
     pub src: &'a Graph,
     pub nodes: Vec<LNode>,
     pub edges: Vec<LEdge>,
-    /// Out-edges of each node in edge sequence order.
+    /// Out-edges of each node ordered by (head, edge) sequence.
     pub out: Vec<Vec<usize>>,
-    /// In-edges of each node in edge sequence order.
+    /// In-edges of each node ordered by (tail, edge) sequence.
     pub inn: Vec<Vec<usize>>,
     pub ndim: usize,
     /// `GD_nodesep(root)` in points.

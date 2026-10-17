@@ -1,0 +1,17 @@
+graph gl {
+	graph [bb="0,0,214.26,71.439",
+		label="a very very long graph label indeed",
+		layout=neato,
+		lheight=0.23,
+		lp="107.13,12.4",
+		lwidth=2.75
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		pos="71.523,53.439",
+		width=0.75];
+	b	[height=0.5,
+		pos="142.73,42.8",
+		width=0.75];
+	a -- b	[pos="98.039,49.477 103.89,48.603 110.09,47.676 115.96,46.8"];
+}
