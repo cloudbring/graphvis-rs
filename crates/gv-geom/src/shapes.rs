@@ -726,7 +726,7 @@ pub fn compute_node_dimensions_with_rankdir(node: &mut NodeData, graph_name: &st
             label_text: "",
         };
         let layout = measure_multiline_label_with_context(&raw_label, &ctx, &font_name, font_size);
-        Point::new(layout.width, layout.height.floor())
+        Point::new(layout.width, layout.height)
     };
 
     // Add padding around non-empty label (`poly_init` in `shapes.c`).
