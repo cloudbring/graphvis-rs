@@ -1,5 +1,6 @@
 //! Graphviz layout engines in pure Rust (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`).
 
+pub mod cutil;
 pub mod dot;
 pub mod force_circular;
 
