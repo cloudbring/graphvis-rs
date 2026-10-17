@@ -888,6 +888,12 @@ pub fn add_xlabels<S: XLabelGraph + ?Sized>(g: &mut S) {
     }
     let force = g.xl_forcelabels();
     place_labels(&objs, &mut lbls, bb, force);
+    let cnt = lbls.iter().filter(|l| l.set).count();
+    if cnt != n_lbls {
+        gv_core::diag::agwarningf(&format!(
+            "{cnt} out of {n_lbls} exterior labels positioned.\n"
+        ));
+    }
     for (li, r) in refs.iter().enumerate() {
         let xl = lbls[li];
         if !xl.set {
