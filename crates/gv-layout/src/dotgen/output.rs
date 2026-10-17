@@ -462,6 +462,8 @@ impl Output {
         graph.bb = self.bb;
         for (si, bb) in self.cluster_bb {
             graph.subgraphs[si].bb = bb;
+            // `is_a_cluster` also honours `cluster=true`.
+            graph.subgraphs[si].is_cluster = true;
         }
         for (i, e) in self.edges.into_iter().enumerate() {
             if let Some((s, lp)) = e {
