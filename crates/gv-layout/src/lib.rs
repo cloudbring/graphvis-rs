@@ -10,6 +10,7 @@ pub mod nop;
 pub mod pack;
 pub mod sfdpgen;
 pub mod sparse;
+pub mod vpsc;
 
 use gv_core::{Graph, GraphvizError, Result};
 

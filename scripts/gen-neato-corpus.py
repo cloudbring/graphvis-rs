@@ -374,6 +374,18 @@ def handwritten3():
     c["hw3_portho_sep_scale"] = OVERLAP % "overlap=portho_yx; sep=\"0.3,0.6\";"
     c["hw3_ortho_random120"] = randgraph(120, 160, 20, "overlap=ortho; node [shape=box];")
     c["hw3_ortho_clusters"] = CLUSTERS % "overlap=orthoxy; node [shape=box, width=1];"
+    # overlap=vpsc (lib/vpsc removeoverlaps)
+    c["hw3_vpsc_biglabels"] = BIGLABELS % "overlap=vpsc;"
+    c["hw3_vpsc_K6"] = complete(6, "overlap=vpsc; node [shape=box];")
+    c["hw3_vpsc_random50"] = randgraph(50, 70, 18, "overlap=vpsc; node [shape=box];")
+    c["hw3_vpsc_random120"] = randgraph(120, 160, 20, "overlap=vpsc; node [shape=box];")
+    c["hw3_vpsc_random200"] = randgraph(200, 260, 5, "overlap=vpsc; node [shape=box, width=1];")
+    c["hw3_vpsc_grid"] = grid(4, 4, "overlap=vpsc; node [shape=box, width=1.5];")
+    c["hw3_vpsc_grid_tall"] = grid(5, 3, "overlap=vpsc; node [shape=box, height=1.2];")
+    c["hw3_vpsc_sep_add"] = OVERLAP % "overlap=vpsc; sep=\"+12\";"
+    c["hw3_vpsc_sep_scale"] = OVERLAP % "overlap=vpsc; sep=0.4;"
+    c["hw3_vpsc_clusters"] = CLUSTERS % "overlap=vpsc; node [shape=box, width=1];"
+    c["hw3_vpsc_tree"] = tree(4, "overlap=vpsc; node [shape=box, width=1.2];")
     return c
 
 
