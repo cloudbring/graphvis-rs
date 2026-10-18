@@ -2585,7 +2585,10 @@
     "main/fuzz_flat_adj_default_headport": "6def06a9ae1d4b87",
     "main/fuzz_flat_adj_stale_minlen": "3096fbbf80dfe2eb",
     "main/fuzz_install_in_rank_abort": "2c2bb1567b6a47a5",
-    "main/fuzz_newrank_pack_sink": "462ec06563aa941f"
+    "main/fuzz_newrank_pack_sink": "462ec06563aa941f",
+    "main/fuzz_lost_edge_label": "42e40ecd749f1088",
+    "main/fuzz_subgraph_splines_root": "18ba622ad58bcf37",
+    "main/fuzz_xlabel_empty_label": "c28766bc580b1ab3"
   },
   "unstable": [
     "fdp/wild_gv16_graphs_badvoro_2e8cb8",
