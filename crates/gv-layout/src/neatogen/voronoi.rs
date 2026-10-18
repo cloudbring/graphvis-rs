@@ -79,90 +79,111 @@ fn make_poly(g: &LGraph<'_>, n: usize, xm: f64, ym: f64, add: bool) -> Poly {
     let sh = &nd.shape;
     let mut pp = Poly::default();
     let mut verts;
-    match sh.inside {
-        InsideFn::Record => {
-            let (llx, lly, urx, ury) = (
-                -nd.width * 36.0,
-                -nd.height * 36.0,
-                nd.width * 36.0,
-                nd.height * 36.0,
-            );
-            verts = if add {
-                vec![
-                    Point::new(llx / 72.0 - xm, lly / 72.0 - ym),
-                    Point::new(urx / 72.0 + xm, lly / 72.0 - ym),
-                    Point::new(urx / 72.0 + xm, ury / 72.0 + ym),
-                    Point::new(llx / 72.0 - xm, ury / 72.0 + ym),
-                ]
-            } else {
-                vec![
-                    Point::new(llx / 72.0, lly / 72.0),
-                    Point::new(urx / 72.0, lly / 72.0),
-                    Point::new(urx / 72.0, ury / 72.0),
-                    Point::new(llx / 72.0, ury / 72.0),
-                ]
-            };
-            pp.kind = BOX;
-        }
-        InsideFn::Point => {
-            pp.kind = CIRCLE;
-            verts = if add {
-                gen_round(g, n, xm, ym)
-            } else {
-                gen_round(g, n, 0.0, 0.0)
-            };
-        }
-        _ => {
-            let sides = sh.sides;
-            let name = sh.name.as_str();
-            if add {
-                pp.kind = if name == "box"
-                    || (name == "polygon" && is_box(&sh.vertices[..sides.min(sh.vertices.len())]))
-                {
-                    BOX
-                } else if sides < 3 && sh.regular {
-                    CIRCLE
-                } else {
-                    0
+    if nd.clust.is_some() {
+        // ND_clust(n): a box of the node's size
+        let (bx, by) = if add {
+            (nd.width / 2.0 + xm, nd.height / 2.0 + ym)
+        } else {
+            (nd.width / 2.0, nd.height / 2.0)
+        };
+        pp.kind = BOX;
+        verts = vec![
+            Point::new(bx, by),
+            Point::new(-bx, by),
+            Point::new(-bx, -by),
+            Point::new(bx, -by),
+        ];
+    } else {
+        match sh.inside {
+            InsideFn::Record => {
+                // the root field's box (field_t b), without record_init's +1 height
+                let (llx, lly, urx, ury) = match sh.record_box {
+                    Some(b) => (b.ll.x, b.ll.y, b.ur.x, b.ur.y),
+                    None => (
+                        -nd.width * 36.0,
+                        -nd.height * 36.0,
+                        nd.width * 36.0,
+                        nd.height * 36.0,
+                    ),
                 };
-                if sides >= 3 {
-                    let v = &sh.vertices;
-                    verts = if pp.kind == BOX {
-                        vec![
-                            Point::new(v[0].x / 72.0 + xm, v[0].y / 72.0 + ym),
-                            Point::new(v[1].x / 72.0 - xm, v[1].y / 72.0 + ym),
-                            Point::new(v[2].x / 72.0 - xm, v[2].y / 72.0 - ym),
-                            Point::new(v[3].x / 72.0 + xm, v[3].y / 72.0 - ym),
-                        ]
-                    } else {
-                        (0..sides)
-                            .map(|i| {
-                                let h = math::hypot(v[i].x, v[i].y);
-                                Point::new(
-                                    v[i].x * (1.0 + xm / h) / 72.0,
-                                    v[i].y * (1.0 + ym / h) / 72.0,
-                                )
-                            })
-                            .collect()
-                    };
+                verts = if add {
+                    vec![
+                        Point::new(llx / 72.0 - xm, lly / 72.0 - ym),
+                        Point::new(urx / 72.0 + xm, lly / 72.0 - ym),
+                        Point::new(urx / 72.0 + xm, ury / 72.0 + ym),
+                        Point::new(llx / 72.0 - xm, ury / 72.0 + ym),
+                    ]
                 } else {
-                    verts = gen_round(g, n, xm, ym);
-                }
-            } else {
-                verts = if sides >= 3 {
-                    (0..sides)
-                        .map(|i| Point::new(sh.vertices[i].x / 72.0, sh.vertices[i].y / 72.0))
-                        .collect()
+                    vec![
+                        Point::new(llx / 72.0, lly / 72.0),
+                        Point::new(urx / 72.0, lly / 72.0),
+                        Point::new(urx / 72.0, ury / 72.0),
+                        Point::new(llx / 72.0, ury / 72.0),
+                    ]
+                };
+                pp.kind = BOX;
+            }
+            InsideFn::Point => {
+                pp.kind = CIRCLE;
+                verts = if add {
+                    gen_round(g, n, xm, ym)
                 } else {
                     gen_round(g, n, 0.0, 0.0)
                 };
-                pp.kind = if name == "box" || (name == "polygon" && is_box(&verts)) {
-                    BOX
-                } else if sides < 3 && sh.regular {
-                    CIRCLE
+            }
+            _ => {
+                let sides = sh.sides;
+                let name = sh.name.as_str();
+                if add {
+                    pp.kind = if name == "box"
+                        || (name == "polygon"
+                            && is_box(&sh.vertices[..sides.min(sh.vertices.len())]))
+                    {
+                        BOX
+                    } else if sides < 3 && sh.regular {
+                        CIRCLE
+                    } else {
+                        0
+                    };
+                    if sides >= 3 {
+                        let v = &sh.vertices;
+                        verts = if pp.kind == BOX {
+                            vec![
+                                Point::new(v[0].x / 72.0 + xm, v[0].y / 72.0 + ym),
+                                Point::new(v[1].x / 72.0 - xm, v[1].y / 72.0 + ym),
+                                Point::new(v[2].x / 72.0 - xm, v[2].y / 72.0 - ym),
+                                Point::new(v[3].x / 72.0 + xm, v[3].y / 72.0 - ym),
+                            ]
+                        } else {
+                            (0..sides)
+                                .map(|i| {
+                                    let h = math::hypot(v[i].x, v[i].y);
+                                    Point::new(
+                                        v[i].x * (1.0 + xm / h) / 72.0,
+                                        v[i].y * (1.0 + ym / h) / 72.0,
+                                    )
+                                })
+                                .collect()
+                        };
+                    } else {
+                        verts = gen_round(g, n, xm, ym);
+                    }
                 } else {
-                    0
-                };
+                    verts = if sides >= 3 {
+                        (0..sides)
+                            .map(|i| Point::new(sh.vertices[i].x / 72.0, sh.vertices[i].y / 72.0))
+                            .collect()
+                    } else {
+                        gen_round(g, n, 0.0, 0.0)
+                    };
+                    pp.kind = if name == "box" || (name == "polygon" && is_box(&verts)) {
+                        BOX
+                    } else if sides < 3 && sh.regular {
+                        CIRCLE
+                    } else {
+                        0
+                    };
+                }
             }
         }
     }
