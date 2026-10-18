@@ -48,6 +48,9 @@ pub fn render_all(
 /// not UTF-8 (a `charset=latin1` file, say) are kept rather than replaced, and the result is
 /// the bytes the command line writes, every graph's output concatenated. A JS string cannot
 /// carry such bytes, so `renderAll` cannot reproduce C on these inputs.
+///
+/// Like `dot`, the graphs read before a syntax error are still rendered and returned; it
+/// throws only when the error leaves nothing to render.
 #[wasm_bindgen(js_name = renderAllBytes)]
 pub fn render_all_bytes(
     dot_source: &[u8],
@@ -55,9 +58,17 @@ pub fn render_all_bytes(
     format: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let src = gv_core::charset::decode_slice(dot_source);
-    let parts = gv_engine::render_dot_all(&src, engine, format, &gv_engine::GlobalAttrs::default())
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-    Ok(gv_core::charset::encode(&parts.concat()).into_owned())
+    let (parts, err) = gv_engine::render_dot_all_partial(
+        &src,
+        engine,
+        format,
+        &gv_engine::GlobalAttrs::default(),
+        gv_engine::LayoutOptions::default(),
+    );
+    match err {
+        Some(e) if parts.is_empty() => Err(JsValue::from_str(&e.to_string())),
+        _ => Ok(gv_core::charset::encode(&parts.concat()).into_owned()),
+    }
 }
 
 /// Convenience helper to render a DOT graph directly to an SVG string using the specified layout engine.

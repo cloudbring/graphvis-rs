@@ -13,6 +13,23 @@ export function inspectGraph(dot_source: string, engine: string): string;
 export function render(dot_source: string, engine: string, format: string): string;
 
 /**
+ * Renders every graph in a DOT string (a file may hold several), one output string per graph,
+ * like the `dot` command line does for a multi-graph input file.
+ */
+export function renderAll(dot_source: string, engine: string, format: string): string[];
+
+/**
+ * [`render_all`] for a file's raw bytes, as the `dot` command line reads them: bytes that are
+ * not UTF-8 (a `charset=latin1` file, say) are kept rather than replaced, and the result is
+ * the bytes the command line writes, every graph's output concatenated. A JS string cannot
+ * carry such bytes, so `renderAll` cannot reproduce C on these inputs.
+ *
+ * Like `dot`, the graphs read before a syntax error are still rendered and returned; it
+ * throws only when the error leaves nothing to render.
+ */
+export function renderAllBytes(dot_source: Uint8Array, engine: string, format: string): Uint8Array;
+
+/**
  * Convenience helper to render a DOT graph to Graphviz `json` format.
  */
 export function renderJson(dot_source: string, engine: string): string;
@@ -43,6 +60,8 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly inspectGraph: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly render: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly renderAll: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly renderAllBytes: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly renderJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly renderSvg: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly supportedEngines: () => [number, number];
@@ -53,6 +72,7 @@ export interface InitOutput {
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+    readonly __externref_drop_slice: (a: number, b: number) => void;
     readonly __wbindgen_start: () => void;
 }
 
