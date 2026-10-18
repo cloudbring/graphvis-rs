@@ -920,6 +920,8 @@ impl Dot<'_> {
             let id = aux.ensure_node(&src.name);
             let nd = &mut aux.nodes[id.0 as usize];
             nd.attrs = src.attrs.clone();
+            // stale symbols read the clone's copied values, NULLed symbols included
+            fix_node(&mut nd.attrs);
             for k in [
                 "xlabel",
                 "group",
@@ -930,7 +932,6 @@ impl Dot<'_> {
             ] {
                 nd.attrs.remove(k);
             }
-            fix_node(&mut nd.attrs);
             id
         };
         let auxt = clone_node(&mut aux, tn);
@@ -965,6 +966,7 @@ impl Dot<'_> {
                 (auxh, auxt)
             };
             let mut attrs = src.attrs.clone();
+            fix_edge(&mut attrs);
             for k in [
                 "constraint",
                 "minlen",
@@ -976,7 +978,6 @@ impl Dot<'_> {
             ] {
                 attrs.remove(k);
             }
-            fix_edge(&mut attrs);
             let id = aux.add_edge(t, h, Default::default());
             let ae = &mut aux.edges[id.0 as usize];
             ae.attrs = attrs;
