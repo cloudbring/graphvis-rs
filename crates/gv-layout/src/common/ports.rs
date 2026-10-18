@@ -378,22 +378,7 @@ pub fn shape_port<S: PortGraph + ?Sized>(
     if is_record && let Some(rec) = geom.record.as_ref() {
         match rec.find_port(portname) {
             Some(f) => {
-                // f->sides: the sides of the record box the field lies on.
-                let (fb, rb) = (f.bbox, rec.bbox);
-                let eq = |a: f64, b: f64| (a - b).abs() < 0.5;
-                let mut sides = 0u8;
-                if eq(fb.ll.y, rb.ll.y) {
-                    sides |= BOTTOM;
-                }
-                if eq(fb.ur.x, rb.ur.x) {
-                    sides |= RIGHT;
-                }
-                if eq(fb.ur.y, rb.ur.y) {
-                    sides |= TOP;
-                }
-                if eq(fb.ll.x, rb.ll.x) {
-                    sides |= LEFT;
-                }
+                let (fb, sides) = (f.bbox, f.sides);
                 compass_port(g, n, Some(fb), &mut rv, compass, sides, false);
             }
             None => {
@@ -409,10 +394,16 @@ pub fn shape_port<S: PortGraph + ?Sized>(
         rv.name = None;
         return rv;
     }
-    let is_box = matches!(
-        src.attrs.get("shape").map(String::as_str),
-        Some("box" | "rect" | "rectangle")
-    );
+    // IS_BOX: the shape's polygon is p_box, as for box, rect, rectangle, unknown names
+    // (bind_shape copies Shapes[0]) and shapefile user shapes.
+    let shape_name = src
+        .attrs
+        .get("shape")
+        .map(String::as_str)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("ellipse");
+    let custom = shape_name != "epsf" && src.attrs.get("shapefile").is_some_and(|f| !f.is_empty());
+    let is_box = custom || gv_geom::ShapeKind::parse(shape_name) == gv_geom::ShapeKind::Box;
     compass_port(g, n, None, &mut rv, portname, all, !is_box);
     rv.name = None;
     rv
@@ -501,23 +492,16 @@ pub fn resolve_port<S: PortGraph + ?Sized>(
 }
 
 /// `resolvePorts(e)`: pick the side of dynamic (`_`) ports facing the other end.
+/// `compassPort` regenerates every field but the name, so `tailclip=false` is lost.
 pub fn resolve_ports(g: &mut LGraph<'_>, e: usize) {
     let (t, h) = (g.edges[e].tail, g.edges[e].head);
     if g.edges[e].tail_port.dyna {
         let old = g.edges[e].tail_port.clone();
-        let mut np = resolve_port(g, t, h, &old);
-        if !old.clip {
-            np.clip = false;
-        }
-        g.edges[e].tail_port = np;
+        g.edges[e].tail_port = resolve_port(g, t, h, &old);
     }
     if g.edges[e].head_port.dyna {
         let old = g.edges[e].head_port.clone();
-        let mut np = resolve_port(g, h, t, &old);
-        if !old.clip {
-            np.clip = false;
-        }
-        g.edges[e].head_port = np;
+        g.edges[e].head_port = resolve_port(g, h, t, &old);
     }
 }
 

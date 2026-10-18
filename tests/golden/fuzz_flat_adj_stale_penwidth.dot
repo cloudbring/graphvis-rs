@@ -1,0 +1,20 @@
+digraph G {
+	graph [bb="0,0,198,46.318"];
+	node [label="\N",
+		ordering=out,
+		penwidth=0.6,
+		shape=underline
+	];
+	edge [constraint=false];
+	n1	[fixedsize=shape,
+		height=0.5,
+		pos="27,28.318",
+		width=0.75];
+	n24	[height=0.5,
+		pos="99,28.318",
+		width=0.75];
+	n25	[height=0.5,
+		pos="171,28.318",
+		width=0.75];
+	n24:se -> n25	[pos="e,156.41,10.126 118.32,9.9978 125.99,-1.6835 137.08,-1.1128 147.02,3.9091"];
+}

@@ -1,0 +1,8 @@
+graph G {
+	graph [bb="0,0,54,36"];
+	node [label="\N"];
+	57	[color="0.1,0.9,0.7;0.3:brown",
+		height=0.5,
+		pos="27,18",
+		width=0.75];
+}

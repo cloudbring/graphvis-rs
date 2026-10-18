@@ -518,7 +518,8 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
     p.data = e;
     endp.np = p.start.p;
     let side = tport.side;
-    let ranksep = g.ranksep();
+    // GD_ranksep is an int: GD_ranksep(g)/2 truncates.
+    let half_ranksep = f64::from(g.ranksep() as i32 / 2);
     let (lw, rw) = (g.lw(n), g.rw(n));
     let h2 = ht2(g, n);
     if et == REGULAREDGE && g.is_normal_node(n) && side != 0 {
@@ -530,7 +531,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
                 b0.ll.x = b.ll.x - 1.0;
                 b0.ll.y = p.start.p.y;
                 b0.ur.x = b.ur.x;
-                b0.ur.y = nc.y + h2 + ranksep / 2.0;
+                b0.ur.y = nc.y + h2 + half_ranksep;
                 b.ur.x = nc.x - lw - (FUDGE - 2.0);
                 b.ur.y = b0.ll.y;
                 b.ll.y = nc.y - h2;
@@ -539,7 +540,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
                 b0.ll.x = b.ll.x;
                 b0.ll.y = p.start.p.y;
                 b0.ur.x = b.ur.x + 1.0;
-                b0.ur.y = nc.y + h2 + ranksep / 2.0;
+                b0.ur.y = nc.y + h2 + half_ranksep;
                 b.ll.x = nc.x + rw + (FUDGE - 2.0);
                 b.ur.y = b0.ll.y;
                 b.ll.y = nc.y - h2;
@@ -582,7 +583,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
                 b0.ur.y = nc.y - h2;
                 b0.ur.x = b.ur.x + 1.0;
                 b0.ll.x = p.start.p.x;
-                b0.ll.y = b0.ur.y - ranksep / 2.0;
+                b0.ll.y = b0.ur.y - half_ranksep;
                 b.ll.x = nc.x + rw + (FUDGE - 2.0);
                 b.ll.y = b0.ur.y;
                 b.ur.y = nc.y + h2;
@@ -677,7 +678,8 @@ pub fn endpath<S: SplineGraph + ?Sized>(
     }
     endp.np = p.end.p;
     let side = hport.side;
-    let ranksep = g.ranksep();
+    // GD_ranksep is an int: GD_ranksep(g)/2 truncates.
+    let half_ranksep = f64::from(g.ranksep() as i32 / 2);
     let (lw, rw) = (g.lw(n), g.rw(n));
     let h2 = ht2(g, n);
     if et == REGULAREDGE && g.is_normal_node(n) && side != 0 {
@@ -694,7 +696,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
                 b0.ll.x = b.ll.x - 1.0;
                 b0.ur.y = p.end.p.y;
                 b0.ur.x = b.ur.x;
-                b0.ll.y = nc.y - h2 - ranksep / 2.0;
+                b0.ll.y = nc.y - h2 - half_ranksep;
                 b.ur.x = nc.x - lw - (FUDGE - 2.0);
                 b.ll.y = b0.ur.y;
                 b.ur.y = nc.y + h2;
@@ -703,7 +705,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
                 b0.ll.x = b.ll.x;
                 b0.ur.y = p.end.p.y;
                 b0.ur.x = b.ur.x + 1.0;
-                b0.ll.y = nc.y - h2 - ranksep / 2.0;
+                b0.ll.y = nc.y - h2 - half_ranksep;
                 b.ll.x = nc.x + rw + (FUDGE - 2.0);
                 b.ll.y = b0.ur.y;
                 b.ur.y = nc.y + h2;
@@ -742,7 +744,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
                 b0.ll.x = b.ll.x - 1.0;
                 b0.ur.y = nc.y - h2;
                 b0.ur.x = p.end.p.x;
-                b0.ll.y = b0.ur.y - ranksep / 2.0;
+                b0.ll.y = b0.ur.y - half_ranksep;
                 b.ur.x = nc.x - lw - 2.0;
                 b.ll.y = b0.ur.y;
                 b.ur.y = nc.y + h2;

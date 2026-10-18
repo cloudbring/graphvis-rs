@@ -1,0 +1,4 @@
+graph "G" {
+splines="curved";
+"86" -- "86";
+}

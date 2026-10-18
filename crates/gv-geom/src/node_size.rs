@@ -478,6 +478,34 @@ impl NodeGeometry {
     }
 }
 
+/// `getPenColor` (htmltable.c): the object's `pencolor`, else its `color`.
+fn get_pen_color(attrs: &AttrMap) -> Option<&str> {
+    ["pencolor", "color"]
+        .into_iter()
+        .filter_map(|k| attrs.get(k))
+        .map(String::as_str)
+        .find(|s| !s.is_empty())
+}
+
+/// `lp->text` of a made label, which a later label's `\L` expands to (`make_label`):
+/// the raw string for a record, the substituted text for plain text, the HTML source
+/// for HTML text and `<TABLE>` for a table (`make_html_label`).
+fn label_l_text(l: &LabelGeometry, raw: &str, is_record: bool) -> String {
+    if is_record {
+        return if l.html { html_inner_text(raw) } else { raw }.to_string();
+    }
+    if let Some(t) = &l.text {
+        return t.source.clone();
+    }
+    if l.html {
+        if matches!(l.html_label.as_deref(), Some(HtmlLabel::Table(_))) {
+            return "<TABLE>".to_string();
+        }
+        return html_inner_text(raw).to_string();
+    }
+    String::new()
+}
+
 fn html_inner_text(raw: &str) -> &str {
     if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
         &raw[1..raw.len() - 1]
@@ -511,7 +539,9 @@ pub fn make_label(
         let dimen = lay.dimen;
         return LabelGeometry {
             dimen,
-            space: dimen,
+            // only make_simple_label sets lp->space; an HTML label's stays (0, 0)
+            // unless the shape sets it (poly_init, except fixedsize=shape).
+            space: Point::default(),
             valign: 'c',
             html: true,
             html_failed: lay.label.is_none(),
@@ -564,6 +594,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     let obj = LabelSubstContext::for_node(&node.name);
     let obj = LabelSubstContext {
         graph_name: env.graph_name,
+        pen_color: get_pen_color(attrs),
         ..obj
     };
 
@@ -574,7 +605,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             dimen: Point::default(),
             space: Point::default(),
             valign: 'c',
-            html: env.is_html(label_str) && is_html_label(label_str, shape),
+            html: env.is_html(label_str),
             html_label: None,
             html_failed: false,
             text: None,
@@ -591,10 +622,17 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             env.charset,
         )
     };
+    // common_init_node makes ND_label first, so the xlabel's `\L` is its text.
+    let ltext = label_l_text(&label, label_str, init == ShapeInit::Record);
+    let xobj = LabelSubstContext {
+        label_text: &ltext,
+        has_label: true,
+        ..obj.clone()
+    };
     let xlabel = attrs
         .get("xlabel")
         .filter(|s| !s.is_empty())
-        .map(|s| make_label(s, env.is_html(s), &obj, font_name, font_size, env.charset));
+        .map(|s| make_label(s, env.is_html(s), &xobj, font_name, font_size, env.charset));
 
     let mut geom = NodeGeometry {
         shape,
@@ -612,7 +650,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             poly_init(node, shape, desc.unwrap_or(pd(false, 1, 4)), env, &mut geom);
         }
         ShapeInit::Point => point_init(node, desc.map_or(1, |d| d.peripheries), &mut geom),
-        ShapeInit::Record => record_init(node, label_str, &obj, env, &mut geom),
+        ShapeInit::Record => record_init(node, label_str, &xobj, env, &mut geom),
     }
     geom
 }
@@ -673,6 +711,7 @@ pub fn graph_label_geometry_in(
     let s = attrs.get("label").filter(|s| !s.is_empty())?;
     let obj = LabelSubstContext {
         graph_name: name,
+        pen_color: get_pen_color(attrs),
         ..LabelSubstContext::default()
     };
     let label = make_label(
@@ -765,6 +804,7 @@ pub fn edge_label_geometry(
         head_name,
         is_edge: true,
         is_directed: directed,
+        pen_color: get_pen_color(attrs),
         ..LabelSubstContext::default()
     };
     let mk = |key: &str, obj: &LabelSubstContext<'_>, name: &str, size: f64| {
@@ -776,21 +816,11 @@ pub fn edge_label_geometry(
     let label = mk("label", &obj, fontname, fontsize);
     // Later labels see `\L` = the main label's `lp->text`.
     let ltext = match (&label, attrs.get("label")) {
-        (Some(l), _) if l.text.is_some() => l
-            .text
-            .as_ref()
-            .map(|t| t.source.clone())
-            .unwrap_or_default(),
-        (Some(l), Some(raw)) if l.html => {
-            if matches!(l.html_label.as_deref(), Some(HtmlLabel::Table(_))) {
-                "<TABLE>".to_string()
-            } else {
-                html_inner_text(raw).to_string()
-            }
-        }
+        (Some(l), Some(raw)) => label_l_text(l, raw, false),
         _ => String::new(),
     };
     obj.label_text = &ltext;
+    obj.has_label = label.is_some();
     EdgeLabelGeometry {
         xlabel: mk("xlabel", &obj, fontname, fontsize),
         head_label: mk("headlabel", &obj, lfontname, lfontsize),
@@ -1334,6 +1364,9 @@ struct Field {
     flds: Vec<Field>,
     size: Point,
     b: BoundingBox,
+    /// `f->sides`: the sides of the record box the field lies on (`BOTTOM` = 1,
+    /// `RIGHT` = 2, `TOP` = 4, `LEFT` = 8).
+    sides: u8,
 }
 
 /// Byte-level port of `parse_reclbl`, sharing one text buffer between recursion levels as C
@@ -1583,12 +1616,27 @@ fn resize_reclbl(f: &mut Field, sz: Point, nojustify: bool) {
     }
 }
 
-/// `pos_reclbl` from `shapes.c` (box placement only).
-fn pos_reclbl(f: &mut Field, mut ul: Point) {
+/// `pos_reclbl` from `shapes.c`: field boxes and the record sides each field lies on.
+fn pos_reclbl(f: &mut Field, mut ul: Point, sides: u8) {
+    const BOTTOM: u8 = 1;
+    const RIGHT: u8 = 2;
+    const TOP: u8 = 4;
+    const LEFT: u8 = 8;
+    f.sides = sides;
     f.b = BoundingBox::new(ul.x, ul.y - f.size.y, ul.x + f.size.x, ul.y);
     let lr = f.lr;
-    for sub in &mut f.flds {
-        pos_reclbl(sub, ul);
+    let last = f.flds.len().saturating_sub(1);
+    for (i, sub) in f.flds.iter_mut().enumerate() {
+        let mask = match (lr, i == 0, i == last) {
+            (_, true, true) => TOP | BOTTOM | RIGHT | LEFT,
+            (true, true, false) => TOP | BOTTOM | LEFT,
+            (true, false, true) => TOP | BOTTOM | RIGHT,
+            (true, false, false) => TOP | BOTTOM,
+            (false, true, false) => TOP | RIGHT | LEFT,
+            (false, false, true) => LEFT | BOTTOM | RIGHT,
+            (false, false, false) => LEFT | RIGHT,
+        };
+        pos_reclbl(sub, ul, sides & mask);
         if lr {
             ul.x += sub.size.x;
         } else {
@@ -1626,6 +1674,7 @@ fn to_record_field(f: &Field) -> RecordField {
         children: f.flds.iter().map(to_record_field).collect(),
         horizontal: f.lr,
         label: f.lp.clone(),
+        sides: f.sides,
     }
 }
 
@@ -1646,6 +1695,7 @@ fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
     if let Some(f) = p.parse(lr, true) {
         return f;
     }
+    gv_core::diag::agerrorf(&format!("bad label format {src}\n"));
     let mut p = RecParser {
         src: b"\\N",
         pos: 0,
@@ -1677,7 +1727,7 @@ fn record_init(
     let nojustify = mapbool(Some(attrs.get("nojustify").map_or("false", String::as_str)));
     resize_reclbl(&mut info, sz, nojustify);
     let ul = Point::new(-sz.x / 2.0, sz.y / 2.0);
-    pos_reclbl(&mut info, ul);
+    pos_reclbl(&mut info, ul, 0b1111);
     geom.width = ps2inch(info.size.x);
     // Kluge!! +1 to fix rounding diff between layout and rendering
     geom.height = ps2inch(info.size.y + 1.0);

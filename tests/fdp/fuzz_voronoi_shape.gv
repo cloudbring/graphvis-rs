@@ -1,0 +1,6 @@
+graph "fuzz 20337" {
+layout=fdp;
+overlap="voronoi";
+"n9" [shape="Mdiamond"];
+"n9" -- "n19";
+}

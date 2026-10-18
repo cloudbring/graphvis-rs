@@ -28,6 +28,11 @@ pub trait NsGraph {
         String::new()
     }
 
+    /// `agnameof(n)` in error messages: anonymous and virtual nodes print as `%0`.
+    fn err_name(&self, _n: usize) -> String {
+        "%0".to_string()
+    }
+
     fn rank(&self, n: usize) -> i32;
     fn set_rank(&mut self, n: usize, r: i32);
     fn set_mark(&mut self, n: usize, m: bool);
@@ -285,8 +290,10 @@ fn init_rank<G: NsGraph + ?Sized>(g: &mut G) {
             q.push_back(v);
         }
     }
+    let mut ctr = 0usize;
     while let Some(v) = q.pop_front() {
         g.set_rank(v, 0);
+        ctr += 1;
         for i in 0..g.in_edges(v).len() {
             let e = g.in_edges(v)[i];
             let r = g.rank(g.tail(e)) + g.minlen(e);
@@ -301,6 +308,15 @@ fn init_rank<G: NsGraph + ?Sized>(g: &mut G) {
             g.set_priority(h, p);
             if p <= 0 {
                 q.push_back(h);
+            }
+        }
+    }
+    let nlist = g.nlist();
+    if ctr != nlist.len() {
+        gv_core::diag::agerrorf("trouble in init_rank\n");
+        for v in nlist {
+            if g.priority(v) != 0 {
+                gv_core::diag::agerr_prev(&format!("\t{} {}\n", g.err_name(v), g.priority(v)));
             }
         }
     }

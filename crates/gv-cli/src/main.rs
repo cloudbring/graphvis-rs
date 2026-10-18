@@ -228,20 +228,20 @@ fn main() -> ExitCode {
                 continue;
             }
         };
-        let outputs = match gv_engine::render_dot_all_with_options(
+        let (outputs, err) = gv_engine::render_dot_all_partial(
             &source,
             &opts.engine,
             &opts.format,
             &opts.globals,
             opts.layout,
-        ) {
-            Ok(o) => o,
-            Err(e) => {
+        );
+        if let Some(e) = &err {
+            failed = true;
+            if outputs.is_empty() {
                 eprintln!("Error: {name}: {e}");
-                failed = true;
                 continue;
             }
-        };
+        }
 
         let mut per_input: Option<Box<dyn Write>> = None;
         if let (true, Some(path)) = (opts.auto_output, input) {
@@ -266,12 +266,19 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
+        // The graphs read before a syntax error are written, then the error reported.
+        if let Some(e) = err {
+            let _ = out.flush();
+            eprintln!("Error: {name}: {e}");
+        }
     }
 
     if let Some(w) = shared_out.as_mut() {
         let _ = w.flush();
     }
-    if failed {
+    // dot's main returns `graphviz_errors + agerrors()`: an error reported during layout
+    // or rendering fails the run even though the output was written.
+    if failed || gv_core::diag::error_count() > 0 {
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS

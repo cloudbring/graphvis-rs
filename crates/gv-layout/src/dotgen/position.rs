@@ -87,9 +87,14 @@ impl Dot<'_> {
         self.mark_lowclusters(g);
         self.set_ycoords(g);
         if self.concentrate {
-            // C reports "concentrate=true may not work correctly" and gives up
-            // on the layout; keep going with what was merged.
-            let _ = self.dot_concentrate();
+            // dot_position returns the failure: doDot gives up on the layout and
+            // dot_layout skips dotneato_postprocess, leaving the drawing half made.
+            if let Err(msg) = self.dot_concentrate() {
+                gv_core::diag::agerrorf(&format!("{msg}\n"));
+                gv_core::diag::agerr_prev("concentrate=true may not work correctly.\n");
+                self.aborted = true;
+                return Ok(());
+            }
         }
         self.expand_leaves(g);
         if self.flat_edges(g) {
@@ -898,7 +903,13 @@ impl Dot<'_> {
             if n == 0 {
                 continue;
             }
-            let Some(v) = self.rv(g, r, 0) else { continue };
+            let Some(v) = self.rv(g, r, 0) else {
+                gv_core::diag::agerrorf(&format!(
+                    "contain_nodes clust {} rank {r} missing node\n",
+                    self.graphs[g].name
+                ));
+                continue;
+            };
             let w = self.nodes[v].lw + margin as f64 + self.graphs[g].border[LEFT_IX].x;
             self.make_aux_edge(ln, v, w, 0);
             let v = self.rv(g, r, n - 1).unwrap();

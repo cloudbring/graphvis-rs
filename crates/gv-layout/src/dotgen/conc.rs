@@ -174,7 +174,8 @@ impl Dot<'_> {
             let order = self.nodes[lead].order;
             if self.rv(0, r, order) != Some(lead) {
                 return Err(format!(
-                    "rebuild_vlists: rank lead not in order {order} of rank {r}"
+                    "rebuild_vlists: rank lead {} not in order {order} of rank {r}",
+                    self.nodes[lead].name
                 ));
             }
             let (vb, vo) = {

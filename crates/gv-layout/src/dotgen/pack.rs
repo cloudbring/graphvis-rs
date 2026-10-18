@@ -419,6 +419,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
     let mut nclust: Vec<Option<PkClust>> = vec![None; d.nodes.len()];
     let mut pcl: Vec<PClust> = Vec::new();
     let mut comps = Vec::with_capacity(ccs.len());
+    let mut any_splines = false;
     for (ci, cc) in ccs.iter().enumerate() {
         let cg = cc.to_graph(graph);
         if std::env::var_os("GVDUMP").is_some() {
@@ -431,6 +432,12 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         }
         let mut c = Dot::new_component(&cg.graph, graph, d);
         c.dot_layout()?;
+        if c.aborted {
+            // doDot returns the component's failure before packing
+            d.aborted = true;
+            return Ok(());
+        }
+        any_splines |= c.splines_done;
         comps.push(d.absorb(&c, &cg, ci, &clust_of_sub, &mut pcl, &mut nclust));
     }
     if (1..=3).contains(&maxphase) {
@@ -478,6 +485,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
     d.graphs[0].clust = clust;
     // The root never had setEdgeType: EDGE_TYPE(root) is EDGETYPE_NONE.
     d.et = EdgeType::None;
-    d.splines_done = true;
+    // State is GVSPLINES once a component's dot_splines_ finished (not with splines=none).
+    d.splines_done = any_splines;
     Ok(())
 }

@@ -59,7 +59,7 @@ fn global_attrs_output_file_and_separate_args() {
             "-Gbgcolor=yellow",
             "-Ecolor=red",
         ],
-        "digraph G{a->b} digraph H{c->d}",
+        "digraph G{a->b}\ndigraph H{c->d}",
     );
     assert!(ok);
     let svg = std::fs::read_to_string(&path).unwrap();

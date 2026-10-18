@@ -24,6 +24,14 @@ pub fn parse_dot_all(input: &str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
     Parser::parse_all(input, globals)
 }
 
+/// [`parse_dot_all`] keeping the graphs read before a syntax error, with the error.
+pub fn parse_dot_all_partial(
+    input: &str,
+    globals: &GlobalAttrs,
+) -> (Vec<Graph>, Option<gv_core::GraphvizError>) {
+    Parser::parse_all_partial(input, globals)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,12 +217,23 @@ mod tests {
     }
 
     #[test]
+    fn parse_dot_all_drops_the_rest_of_a_graphs_last_line() {
+        // cgraph reads line by line and starts a new scanner per graph.
+        let graphs = parse_dot_all(
+            "digraph G { a -> b } graph H { c -- d }",
+            &GlobalAttrs::default(),
+        )
+        .unwrap();
+        assert_eq!(graphs.len(), 1);
+    }
+
+    #[test]
     fn parse_dot_all_returns_every_graph_with_globals() {
         let mut globals = GlobalAttrs::default();
         globals.graph.insert("rankdir".into(), "LR".into());
         globals.node.insert("shape".into(), "box".into());
         globals.edge.insert("color".into(), "red".into());
-        let graphs = parse_dot_all("digraph G { a -> b } graph H { c -- d }", &globals).unwrap();
+        let graphs = parse_dot_all("digraph G { a -> b }\ngraph H { c -- d }", &globals).unwrap();
         assert_eq!(graphs.len(), 2);
         assert_eq!(graphs[0].name, "G");
         assert_eq!(graphs[1].name, "H");

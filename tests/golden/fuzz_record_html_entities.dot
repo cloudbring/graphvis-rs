@@ -1,0 +1,11 @@
+digraph G {
+	graph [bb="0,0,54,37"];
+	node [label="\N",
+		shape=record
+	];
+	n72	[height=0.51389,
+		label=<&#945;&beta;>,
+		pos="27,18.5",
+		rects="0,0.5,54,36.5",
+		width=0.75];
+}

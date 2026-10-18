@@ -327,15 +327,30 @@ impl<'a> LGraph<'a> {
             // unplaced position is the origin, moved by the final translation).
             ed.label_pos = e.label.as_ref().map(|l| l.pos);
             ed.label_unplaced = e.label.as_ref().is_some_and(|l| !l.set);
+            // emit_edge_label draws only placed head and tail labels.
+            let unplaced: String = [('h', &e.head_label), ('t', &e.tail_label)]
+                .into_iter()
+                .filter(|(_, l)| l.as_ref().is_some_and(|l| !l.set))
+                .map(|(c, _)| c)
+                .collect();
+            if !unplaced.is_empty() {
+                ed.attrs
+                    .insert(gv_core::UNPLACED_PORT_LABELS_KEY.to_string(), unplaced);
+            }
             // Exact values, as the no-layout engine stores them: the renderer works from
             // these positions as C works from ED_head_label(e)->pos, and the output
             // formatters round them when they print `head_lp`, `tail_lp` and `xlp`.
+            // attach_attrs_and_arrows: only edges with splines get label positions, and
+            // xlp only when the xlabel was placed.
             for (key, lbl) in [
                 ("head_lp", &e.head_label),
                 ("tail_lp", &e.tail_label),
                 ("xlp", &e.xlabel),
             ] {
-                if let Some(l) = lbl.as_ref() {
+                if let Some(l) = lbl
+                    .as_ref()
+                    .filter(|l| e.spl.is_some() && (key != "xlp" || l.set))
+                {
                     ed.attrs
                         .insert(key.to_string(), format!("{:?},{:?}", l.pos.x, l.pos.y));
                 }
@@ -361,7 +376,11 @@ impl<'a> LGraph<'a> {
         }
         let mut registered = vec![false; graph.subgraphs.len()];
         for c in &self.clusters {
-            graph.subgraphs[c.subgraph].bb = c.bb;
+            let sg = &mut graph.subgraphs[c.subgraph];
+            sg.bb = c.bb;
+            // GD_clust holds it even with an empty box, which is drawn.
+            sg.graph_attrs
+                .insert(gv_core::REGISTERED_CLUSTER_KEY.to_string(), String::new());
             registered[c.subgraph] = true;
         }
         for (i, sg) in graph.subgraphs.iter_mut().enumerate() {

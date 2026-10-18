@@ -1,0 +1,15 @@
+graph "fuzz 20337" {
+	graph [bb="0,0,118.73,37.112",
+		layout=fdp,
+		overlap=voronoi
+	];
+	node [label="\N"];
+	n9	[height=0.5,
+		pos="29.265,19.112",
+		shape=Mdiamond,
+		width=0.81292];
+	n19	[height=0.5,
+		pos="91.726,18",
+		width=0.75];
+	n9 -- n19	[pos="58.301,18.595 60.34,18.559 62.392,18.522 64.421,18.486"];
+}

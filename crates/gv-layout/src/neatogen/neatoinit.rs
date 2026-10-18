@@ -52,6 +52,11 @@ fn user_pos(g: &mut LGraph<'_>, n: usize, inputscale: f64, pos_declared: bool) -
         vals.truncate(2);
     }
     if vals.len() < 2 {
+        let msg = format!(
+            "node {}, position {p}, expected two doubles\n",
+            g.src.nodes[n].name
+        );
+        gv_core::diag::agerrorf(&msg);
         return false;
     }
     let pin_attr = mapbool(g.nattr(n, "pin"));

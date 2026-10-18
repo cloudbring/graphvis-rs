@@ -18,17 +18,29 @@ pub(crate) fn trim_zeros(mut s: String) -> String {
     s
 }
 
+/// C `printf("%.{prec}f", v)` on the reference platform (macOS libc): non-finite values
+/// print as `nan` (whatever the sign), `inf` and `-inf`.
+pub(crate) fn c_fixed(v: f64, prec: usize) -> String {
+    if v.is_nan() {
+        "nan".to_string()
+    } else if v.is_infinite() {
+        if v < 0.0 { "-inf" } else { "inf" }.to_string()
+    } else {
+        format!("{v:.prec$}")
+    }
+}
+
 /// `gvprintdouble`: `%.02f` with trailing zeros removed; values within 0.005 of zero print `0`.
 pub(crate) fn gvdouble(num: f64) -> String {
     if num > -0.005 && num < 0.005 {
         return "0".to_string();
     }
-    trim_zeros(format!("{num:.2}"))
+    trim_zeros(c_fixed(num, 2))
 }
 
 /// `%.02f` then `agxbuf_trim_zeros` (xdot numbers; `-0` is possible).
 pub(crate) fn xdot_num(v: f64) -> String {
-    trim_zeros(format!("{v:.2}"))
+    trim_zeros(c_fixed(v, 2))
 }
 
 /// `gvprintnum`: `%.03f`, trailing zeros and a leading `0` removed.
@@ -41,7 +53,7 @@ pub(crate) fn gvprintnum(number: f64) -> String {
     if number > -MAXNEG {
         return "999999999999999.99".to_string();
     }
-    let s = trim_zeros(format!("{number:.3}"));
+    let s = trim_zeros(c_fixed(number, 3));
     if let Some(rest) = s.strip_prefix("0.") {
         format!(".{rest}")
     } else if let Some(rest) = s.strip_prefix("-0.") {
@@ -54,7 +66,8 @@ pub(crate) fn gvprintnum(number: f64) -> String {
 /// C `printf("%.{prec}g", v)`.
 pub(crate) fn fmt_g(v: f64, prec: usize) -> String {
     if v.is_nan() {
-        return if v.is_sign_negative() { "-nan" } else { "nan" }.to_string();
+        // macOS libc prints `nan` for either sign.
+        return "nan".to_string();
     }
     if v.is_infinite() {
         return if v < 0.0 { "-inf" } else { "inf" }.to_string();

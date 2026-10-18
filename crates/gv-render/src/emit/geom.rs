@@ -189,6 +189,21 @@ pub(crate) fn taper_dir(a: Attrs<'_>, directed: bool) -> TaperDir {
     }
 }
 
+/// `Bezier(V, t, NULL, NULL)` as clang compiles it for `pathtolines`:
+/// `(1 - t) * a + t * b` contracted to one fused multiply-add.
+fn bezier_point_fma(v: &[Point; 4], t: f64) -> Point {
+    let mut vt = *v;
+    for i in 1..=3 {
+        for j in 0..=(3 - i) {
+            vt[j] = Point::new(
+                (1.0 - t).mul_add(vt[j].x, t * vt[j + 1].x),
+                (1.0 - t).mul_add(vt[j].y, t * vt[j + 1].y),
+            );
+        }
+    }
+    vt[0]
+}
+
 /// `taper` (`lib/common/taper.c`): the outline of a tapered edge.
 pub(crate) fn taper(list: &[Point], dir: TaperDir, initwid: f64) -> Vec<Point> {
     use std::f64::consts::PI;
@@ -229,7 +244,7 @@ pub(crate) fn taper(list: &[Point], dir: TaperDir, initwid: f64) -> Vec<Point> {
         let v = [v3, list[i + 1], list[i + 2], list[i + 3]];
         let mut p0 = v[0];
         for step in 1..=20 {
-            let p1 = bezier_split(&v, f64::from(step) / 20.0).0;
+            let p1 = bezier_point_fma(&v, f64::from(step) / 20.0);
             linelen += math::hypot(p0.x - p1.x, p0.y - p1.y);
             pts.push((p1, linelen));
             p0 = p1;

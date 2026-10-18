@@ -1,0 +1,3 @@
+digraph "G" {
+"3" -> "4":"_" [style="tapered", weight="100", constraint="false"];
+}

@@ -1,0 +1,13 @@
+digraph G {
+	graph [bb="0,0,63.026,50.612",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	n30	[height=0.43921,
+		pos="47.214,15.812",
+		width=0.43921,
+		xlabel=end,
+		xlp="10.107,42.212"];
+}

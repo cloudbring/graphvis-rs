@@ -101,6 +101,11 @@ pub const REGISTERED_CLUSTER_KEY: &str = "\u{1}regclust";
 /// (`ED_head_label(e)->set` false: `h`, tail: `t`): `head_lp`/`tail_lp` are still
 /// printed, but renderers do not draw the label.
 pub const UNPLACED_PORT_LABELS_KEY: &str = "\u{1}unplacedportlbl";
+/// Edge attributes holding the layout's final tail/head port names
+/// (`ED_tail_port(e).name`, `ED_head_port(e).name`), which `\E` substitutes; empty when
+/// the layout dropped the name (dot's `sameport`).
+pub const TAIL_PORT_NAME_KEY: &str = "\u{1}tailportname";
+pub const HEAD_PORT_NAME_KEY: &str = "\u{1}headportname";
 
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -144,6 +149,10 @@ pub struct Graph {
 pub struct AttrSym {
     pub defval: String,
     pub print: bool,
+    /// `sym->id`: declaration order in the root dictionary (cgraph's ProtoGraph
+    /// `label` first). Only meaningful in the root's dictionaries.
+    #[serde(default)]
+    pub id: usize,
 }
 
 /// The local graph, node and edge dictionaries of one graph or subgraph.

@@ -1,0 +1,5 @@
+graph "G" {
+layout=osage;
+forcelabels="false";
+"v0" -- "v1" [headlabel="中文标签"];
+}

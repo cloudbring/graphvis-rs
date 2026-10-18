@@ -1,5 +1,20 @@
 {
   "files": {
+    "fuzz_xlabel_node_size": {
+      "nodes": 1,
+      "nodes_ok": 1,
+      "edges": 0,
+      "edges_ok": 0,
+      "clusters": 0,
+      "clusters_ok": 0,
+      "bb_ok": true,
+      "node_err": 0.0,
+      "edge_err": 0.0,
+      "missing": 0,
+      "sizes_ok": 1,
+      "rank_ok": true,
+      "order_ok": true
+    },
     "fx_ER": {
       "nodes": 12,
       "nodes_ok": 12,

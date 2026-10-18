@@ -124,11 +124,18 @@ fn run_c(path: &Path) -> Option<String> {
 
 fn run_port(src: &str) -> Option<String> {
     let src = src.to_string();
+    // As dot does, the graphs read before a syntax error are rendered.
     let out = std::panic::catch_unwind(move || {
-        gv_engine::render_dot_all(&src, "dot", "svg", &gv_parser::GlobalAttrs::default())
+        gv_engine::render_dot_all_partial(
+            &src,
+            "dot",
+            "svg",
+            &gv_parser::GlobalAttrs::default(),
+            gv_engine::LayoutOptions::default(),
+        )
     });
     match out {
-        Ok(Ok(parts)) => Some(normalize(&parts.concat())),
+        Ok((parts, _)) if !parts.is_empty() => Some(normalize(&parts.concat())),
         _ => None,
     }
 }

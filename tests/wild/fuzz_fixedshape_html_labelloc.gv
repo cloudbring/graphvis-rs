@@ -1,0 +1,3 @@
+graph "G" {
+"n12" [label=<<TABLE BGCOLOR="white" STYLE="rounded"><TR><TD>1<BR/>2</TD><TD>αβ</TD><TD><I>i</I></TD></TR></TABLE>>, fixedsize="shape", labelloc="t"];
+}

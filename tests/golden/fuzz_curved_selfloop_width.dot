@@ -1,0 +1,10 @@
+graph G {
+	graph [bb="0,0,72,36",
+		splines=curved
+	];
+	node [label="\N"];
+	86	[height=0.5,
+		pos="27,18",
+		width=1];
+	86 -- 86	[pos="27,18 27,18 27,18 27,18"];
+}

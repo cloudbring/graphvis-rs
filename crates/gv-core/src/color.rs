@@ -116,10 +116,9 @@ impl RgbaColor {
     /// Converts normalized HSVA (`h, s, v, a` in `[0.0, 1.0]`) to an `RgbaColor`,
     /// matching `hsv2rgb` and `RGBA_BYTE` conversion in `lib/common/colxlate.c`.
     pub fn from_hsva(h: f64, s: f64, v: f64, a: f64) -> Self {
-        let h = h.clamp(0.0, 1.0);
-        let s = s.clamp(0.0, 1.0);
-        let v = v.clamp(0.0, 1.0);
-        let a = a.clamp(0.0, 1.0);
+        // fmax(fmin(x, 1.0), 0.0): a NaN becomes 1.
+        let unit = |x: f64| if x.is_nan() { 1.0 } else { x.clamp(0.0, 1.0) };
+        let (h, s, v, a) = (unit(h), unit(s), unit(v), unit(a));
         let (r, g, b) = hsv2rgb(h, s, v);
         Self {
             r: (r * 255.0) as u8,
@@ -303,19 +302,16 @@ fn parse_hex_color(p: &str) -> Option<RgbaColor> {
 }
 
 fn parse_hsv_color(p: &str) -> Option<RgbaColor> {
+    // colorxlate: commas become blanks, then `sscanf("%lf%lf%lf%lf") >= 3`, so text after
+    // the numbers (`0.1,0.9,0.7;0.3` of a weighted list) is ignored.
+    let canon: String = p.chars().map(|c| if c == ',' { ' ' } else { c }).collect();
     let mut nums = [0.0_f64, 0.0, 0.0, 1.0];
+    let mut rest = canon.as_str();
     let mut count = 0;
-    for token in p.split(|c: char| c == ',' || c.is_ascii_whitespace()) {
-        if token.is_empty() {
-            continue;
-        }
-        if count >= 4 {
-            break;
-        }
-        match token.parse::<f64>() {
-            Ok(v) => nums[count] = v,
-            Err(_) => break,
-        }
+    while count < 4 {
+        let Some((v, r)) = scan_lf(rest) else { break };
+        nums[count] = v;
+        rest = r;
         count += 1;
     }
     if count >= 3 {
@@ -323,6 +319,62 @@ fn parse_hsv_color(p: &str) -> Option<RgbaColor> {
     } else {
         None
     }
+}
+
+/// One `%lf` conversion: skips white space, then the longest `strtod` prefix.
+fn scan_lf(s: &str) -> Option<(f64, &str)> {
+    let t = s.trim_start_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c']);
+    let b = t.as_bytes();
+    let mut i = usize::from(matches!(b.first(), Some(b'+' | b'-')));
+    let lower = t[i..]
+        .get(..8.min(t.len() - i))
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let neg = b.first() == Some(&b'-');
+    for (word, v) in [
+        ("infinity", f64::INFINITY),
+        ("inf", f64::INFINITY),
+        ("nan", f64::NAN),
+    ] {
+        if lower.starts_with(word) {
+            let v = if neg { -v } else { v };
+            return Some((v, &t[i + word.len()..]));
+        }
+    }
+    let start = i;
+    while i < b.len() && b[i].is_ascii_digit() {
+        i += 1;
+    }
+    let mut digits = i - start;
+    if i < b.len() && b[i] == b'.' {
+        let f = i + 1;
+        let mut j = f;
+        while j < b.len() && b[j].is_ascii_digit() {
+            j += 1;
+        }
+        digits += j - f;
+        if digits > 0 {
+            i = j;
+        }
+    }
+    if digits == 0 {
+        return None;
+    }
+    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+        let mut j = i + 1;
+        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
+            j += 1;
+        }
+        let e = j;
+        while j < b.len() && b[j].is_ascii_digit() {
+            j += 1;
+        }
+        if j > e {
+            i = j;
+        }
+    }
+    let text = t[..i].strip_suffix('.').unwrap_or(&t[..i]);
+    Some((text.parse().unwrap_or(0.0), &t[i..]))
 }
 
 /// Port of `resolveColor` from `lib/common/colxlate.c`.

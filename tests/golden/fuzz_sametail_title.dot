@@ -1,0 +1,17 @@
+graph G {
+	graph [bb="0,0,126,108"];
+	node [label="\N"];
+	n1	[height=0.5,
+		pos="63,90",
+		width=0.75];
+	n2	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	n1 -- n2	[pos="63,71 63,71 48.584,50.177 37.997,34.884",
+		sametail=st1];
+	n20	[height=0.5,
+		pos="99,18",
+		width=0.75];
+	n1:c -- n20	[pos="63,71 63,71 77.416,50.177 88.003,34.884",
+		sametail=st1];
+}

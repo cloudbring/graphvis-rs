@@ -21,13 +21,23 @@ pub(crate) mod shapes;
 use job::{Emitter, Engine, Job};
 use model::Model;
 
-/// Output order flags from the graph's `outputorder` (`chkOrder`).
+thread_local! {
+    /// `job->flags`: gvRenderJobs ORs each graph's `chkOrder` into the job, which `dot`
+    /// reuses for every graph it renders, so an `outputorder` stays for later graphs.
+    static ORDER_FLAGS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Output order flags from the graph's `outputorder` (`chkOrder`), accumulated.
 fn order_flags(m: &Model<'_>) -> u32 {
-    match m.root_attrs().get("outputorder") {
+    let f = match m.root_attrs().get("outputorder") {
         Some(s) if s.starts_with('n') && s == "nodesfirst" => job::EMIT_SORTED,
         Some(s) if s.starts_with('e') && s == "edgesfirst" => job::EMIT_EDGE_SORTED,
         _ => 0,
-    }
+    };
+    ORDER_FLAGS.with(|c| {
+        c.set(c.get() | f);
+        c.get()
+    })
 }
 
 /// Runs `emit_graph` over `m` with `eng`, returning the engine.
@@ -44,4 +54,5 @@ pub(crate) fn run<E: Engine>(m: &Model<'_>, eng: E) -> E {
 pub fn reset_render_state() {
     crate::svg_engine::reset_gradient_ids();
     html::reset_anchor_ids();
+    ORDER_FLAGS.with(|c| c.set(0));
 }

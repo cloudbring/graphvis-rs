@@ -1,0 +1,12 @@
+graph G {
+	graph [bb="0,0,81,108"];
+	node [label="\N"];
+	n0	[height=0.5,
+		pos="54,90",
+		shape=bogus,
+		width=0.75];
+	n7	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	n0:sw -- n7	[pos="27,72 17.826,62.826 18.758,47.68 21.446,35.923"];
+}

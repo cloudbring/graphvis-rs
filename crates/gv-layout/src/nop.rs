@@ -29,6 +29,20 @@ const POINTS_PER_INCH: f64 = 72.0;
 /// Graph attribute holding a graph or cluster label position computed by the layout, in
 /// exact notation. Renderers prefer it to `lp`; output writers never print it.
 pub const LABEL_POS_KEY: &str = "\u{1}lp";
+
+/// For engines that return before `dotneato_postprocess` on a graph without nodes
+/// (`twopi_layout`, `circo_layout`, `patchwork_layout`): the graph and cluster labels
+/// keep their zeroed position, which C draws and prints at the origin.
+pub(crate) fn labels_at_origin(graph: &mut gv_core::Graph) {
+    let origin = exact_point(gv_core::Point::new(0.0, 0.0));
+    graph
+        .graph_attrs
+        .insert(LABEL_POS_KEY.to_string(), origin.clone());
+    for sg in &mut graph.subgraphs {
+        sg.graph_attrs
+            .insert(LABEL_POS_KEY.to_string(), origin.clone());
+    }
+}
 /// `PAD` in `const.h`: horizontal and vertical label padding.
 const LABEL_PAD_X: f64 = 16.0;
 const LABEL_PAD_Y: f64 = 8.0;
@@ -380,6 +394,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             let ctx = LabelSubstContext {
                 graph_name: &graph.name,
                 node_name: &node.name,
+                is_node: true,
                 ..Default::default()
             };
             let mut l = Lbl {

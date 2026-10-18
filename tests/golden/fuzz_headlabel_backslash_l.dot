@@ -1,0 +1,16 @@
+digraph G {
+	graph [bb="0,0,54,124.8"];
+	node [label="\N"];
+	n3	[height=0.5,
+		pos="27,106.8",
+		width=0.75];
+	n15	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	n3 -> n15	[class=ecls,
+		head_lp="16.5,44.81",
+		headlabel="\L",
+		label=αβγ,
+		lp="37.5,62.4",
+		pos="e,27,36.41 27,88.651 27,76.958 27,61.192 27,47.618"];
+}

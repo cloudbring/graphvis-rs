@@ -9,6 +9,7 @@
 //! then shrinks each box to the horizontal extent the spline actually uses,
 //! so later edges can use the space (`recover_slack` in dot).
 
+use gv_core::diag::agerrorf;
 use gv_core::math;
 use gv_core::{BoundingBox, Point};
 use gv_geom::pathplan::{Pedge, make_polyline, proutespline, pshortestpath};
@@ -123,10 +124,10 @@ fn limit_boxes(boxes: &mut [BoundingBox], pps: &[Point], delta: f64) {
 const INIT_DELTA: f64 = 10.0;
 const LOOP_TRIES: i32 = 15;
 
-/// `routesplines_(pp, &npoints, polyline)`. `is_loop` reports whether the
+/// `routesplines_(pp, &npoints, polyline)`. `loop_head` is the head name when the
 /// path's real edge is a self loop (C refuses those). Returns `None` where C
 /// returns NULL (and `npoints == 0`).
-pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec<Point>> {
+pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> Option<Vec<Point>> {
     if checkpath(pp) {
         return None;
     }
@@ -164,7 +165,8 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
     } else {
         false
     };
-    if is_loop {
+    if let Some(h) = loop_head {
+        agerrorf(&format!("in routesplines, edge is a loop at {h}\n"));
         return None;
     }
     let pt = |x: f64, y: f64| Point::new(x, y);
@@ -198,6 +200,9 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
             polypoints.push(pt(b.ll.x, b.ur.y));
             polypoints.push(pt(b.ll.x, b.ll.y));
         } else if !(prev == -1 && next == -1) {
+            agerrorf(&format!(
+                "in routesplines, illegal values of prev {prev} and next {next}, line 378\n"
+            ));
             return None;
         }
     }
@@ -232,6 +237,9 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
             polypoints.push(pt(b.ur.x, b.ur.y));
         } else {
             if !(prev == -1 && next == -1) {
+                agerrorf(&format!(
+                    "in routesplines, illegal values of prev {prev} and next {next}, line 412\n"
+                ));
                 return None;
             }
             polypoints.push(pt(b.ur.x, b.ll.y));
@@ -261,6 +269,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
             if gvdump() {
                 eprintln!("RS Pshortestpath failed");
             }
+            agerrorf("in routesplines, Pshortestpath failed\n");
             return None;
         }
     };
@@ -299,6 +308,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
                 if gvdump() {
                     eprintln!("RS Proutespline failed");
                 }
+                agerrorf("in routesplines, Proutespline failed\n");
                 return None;
             }
         }
@@ -349,13 +359,13 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, is_loop: bool) -> Option<Vec
 }
 
 /// `routesplines(pp, &npoints)`.
-pub fn routesplines(pp: &mut Path, is_loop: bool) -> Option<Vec<Point>> {
-    routesplines_(pp, false, is_loop)
+pub fn routesplines(pp: &mut Path, loop_head: Option<&str>) -> Option<Vec<Point>> {
+    routesplines_(pp, false, loop_head)
 }
 
 /// `routepolylines(pp, &npoints)`.
-pub fn routepolylines(pp: &mut Path, is_loop: bool) -> Option<Vec<Point>> {
-    routesplines_(pp, true, is_loop)
+pub fn routepolylines(pp: &mut Path, loop_head: Option<&str>) -> Option<Vec<Point>> {
+    routesplines_(pp, true, loop_head)
 }
 
 /// `overlap(i0, i1, j0, j1)`: length of the intersection of two intervals.
@@ -399,8 +409,10 @@ pub fn checkpath(thepath: &mut Path) -> bool {
     if boxn == 0 {
         return true;
     }
+    // C's printpath dump that follows these errors is not reproduced.
     let ba = boxes[0];
     if ba.ll.x > ba.ur.x || ba.ll.y > ba.ur.y {
+        agerrorf("in checkpath, box 0 has LL coord > UR coord\n");
         return true;
     }
     for bi in 0..boxn.saturating_sub(1) {
@@ -408,6 +420,10 @@ pub fn checkpath(thepath: &mut Path) -> bool {
         let ba = &mut lo[bi];
         let bb = &mut hi[0];
         if bb.ll.x > bb.ur.x || bb.ll.y > bb.ur.y {
+            agerrorf(&format!(
+                "in checkpath, box {} has LL coord > UR coord\n",
+                bi + 1
+            ));
             return true;
         }
         let mut l = i32::from(ba.ur.x < bb.ll.x);
@@ -614,7 +630,7 @@ mod tests {
             ],
             data: 0,
         };
-        let ps = routesplines(&mut p, false).unwrap();
+        let ps = routesplines(&mut p, None).unwrap();
         assert_eq!(ps.len(), 4);
         assert!(ps.iter().all(|q| (q.x - 10.0).abs() < 1e-9));
         assert!(p.boxes.iter().all(|b| b.ll.x == 10.0 && b.ur.x == 10.0));

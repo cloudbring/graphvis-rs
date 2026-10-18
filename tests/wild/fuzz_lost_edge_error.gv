@@ -1,0 +1,4 @@
+digraph "G" {
+node [shape="record"];
+"v72":"s" -> "v74" [penwidth="4.25", minlen="0"];
+}

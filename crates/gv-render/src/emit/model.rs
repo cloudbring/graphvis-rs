@@ -77,14 +77,8 @@ impl TextLabel {
                 // `make_html_label` after a parse error: `lp->html` is cleared and
                 // `lp->text` stays the unconverted source.
                 None if g.html_failed => shapes_html_inner(raw).to_string(),
-                _ => {
-                    let inner = if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
-                        &raw[1..raw.len() - 1]
-                    } else {
-                        raw
-                    };
-                    gv_core::font::html_entity_utf8(inner)
-                }
+                // HTML text: `lp->text` is the source string, entities not decoded.
+                _ => shapes_html_inner(raw).to_string(),
             };
         }
         if let Some(t) = &g.text {
@@ -432,16 +426,24 @@ impl<'g> Model<'g> {
                 xlabel,
                 head_label,
                 tail_label,
-                tail_port: e
-                    .tail_port
-                    .compass
-                    .as_deref()
-                    .or(e.tail_port.name.as_deref()),
-                head_port: e
-                    .head_port
-                    .compass
-                    .as_deref()
-                    .or(e.head_port.name.as_deref()),
+                tail_port: e.attrs.get(gv_core::TAIL_PORT_NAME_KEY).map_or_else(
+                    || {
+                        e.tail_port
+                            .compass
+                            .as_deref()
+                            .or(e.tail_port.name.as_deref())
+                    },
+                    |s| Some(s.as_str()).filter(|s| !s.is_empty()),
+                ),
+                head_port: e.attrs.get(gv_core::HEAD_PORT_NAME_KEY).map_or_else(
+                    || {
+                        e.head_port
+                            .compass
+                            .as_deref()
+                            .or(e.head_port.name.as_deref())
+                    },
+                    |s| Some(s.as_str()).filter(|s| !s.is_empty()),
+                ),
             });
         }
 

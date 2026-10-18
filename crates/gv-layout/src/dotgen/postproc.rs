@@ -39,6 +39,13 @@ impl Dot<'_> {
     /// `map_edge(e)`.
     fn map_edge(&mut self, e: E, rankdir: i32, offset: Point) {
         let Some(mut s) = self.edges[e].spl.take() else {
+            if !self.concentrate && self.edges[e].edge_type != IGNORED {
+                let (t, h) = (self.edges[e].tail, self.edges[e].head);
+                gv_core::diag::agerrorf(&format!(
+                    "lost {} {} edge\n",
+                    self.nodes[t].name, self.nodes[h].name
+                ));
+            }
             return;
         };
         for bz in &mut s {

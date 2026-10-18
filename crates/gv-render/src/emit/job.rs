@@ -477,15 +477,25 @@ pub(crate) struct Emitter<'a, E: Engine> {
 
 impl<'a, E: Engine> Emitter<'a, E> {
     pub fn set_pencolor(&mut self, name: &str) {
-        let first = name.split(':').next().unwrap_or("");
-        let c = self.job.resolve_color(first);
+        let c = self.resolve_first_of_list(name);
         self.job.obj_mut().pencolor = c;
     }
 
     pub fn set_fillcolor(&mut self, name: &str) {
-        let first = name.split(':').next().unwrap_or("");
-        let c = self.job.resolve_color(first);
+        let c = self.resolve_first_of_list(name);
         self.job.obj_mut().fillcolor = c;
+    }
+
+    /// `gvrender_set_pencolor`/`gvrender_set_fillcolor`: only the first color of a list
+    /// is resolved, but `gvrender_resolve_color` keeps a pointer to the caller's string,
+    /// whose `:` is restored afterwards. A known color name is therefore written out as
+    /// the whole list (`stroke="red:blue"`).
+    fn resolve_first_of_list(&self, name: &str) -> GvColor {
+        let first = name.split(':').next().unwrap_or("");
+        match self.job.resolve_color(first) {
+            GvColor::Str(_) => GvColor::Str(name.to_string()),
+            c => c,
+        }
     }
 
     pub fn set_gradient_vals(&mut self, stopcolor: &str, angle: i64, frac: f64) {

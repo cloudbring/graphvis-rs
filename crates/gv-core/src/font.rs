@@ -100,6 +100,14 @@ pub struct LabelSubstContext<'a> {
     pub tail_port: Option<&'a str>,
     pub head_port: Option<&'a str>,
     pub label_text: &'a str,
+    /// `getPenColor(obj)` (`pencolor`, else `color`), which an HTML label's outermost
+    /// table without a `COLOR` takes (`make_html_label`).
+    pub pen_color: Option<&'a str>,
+    /// The object is a node (its name may be empty).
+    pub is_node: bool,
+    /// The object has a main label (`ND_label`, `ED_label`, `GD_label`), whose text is
+    /// `label_text` even when empty; without one `\L` stays literal.
+    pub has_label: bool,
 }
 
 impl<'a> LabelSubstContext<'a> {
@@ -116,6 +124,9 @@ impl<'a> LabelSubstContext<'a> {
             tail_port: None,
             head_port: None,
             label_text: "",
+            pen_color: None,
+            is_node: true,
+            has_label: false,
         }
     }
 }
@@ -197,7 +208,15 @@ fn get_metrics_for_font_family(font_name: &str) -> &'static FontFamilyMetrics {
     font_tables::FONT_METRICS
         .iter()
         .find(|m| font_in_list_permissive(font_name, m.font_names))
-        .unwrap_or(&font_tables::FONT_METRICS[0])
+        .unwrap_or_else(|| {
+            let warning = format!(
+                "Warning: no hard-coded metrics for '{font_name}'.  Falling back to 'Times' metrics\n"
+            );
+            if crate::diag::emit_once(&warning) {
+                crate::diag::agwarningf(&warning);
+            }
+            &font_tables::FONT_METRICS[0]
+        })
 }
 
 /// `get_metrics_for_font_variant` from `lib/common/textspan_lut.c`.
@@ -500,7 +519,7 @@ impl LabelSubstContext<'_> {
     fn obj_kind(&self) -> SubstObjKind {
         if self.is_edge {
             SubstObjKind::Edge
-        } else if !self.node_name.is_empty() {
+        } else if self.is_node || !self.node_name.is_empty() {
             SubstObjKind::Node
         } else {
             SubstObjKind::Graph
@@ -531,7 +550,7 @@ fn strdup_and_subst_obj0(s: &str, ctx: &LabelSubstContext<'_>, esc_backslash: bo
     } else {
         ("\\T", "\\H")
     };
-    let l_str = if ctx.label_text.is_empty() {
+    let l_str = if !ctx.has_label && ctx.label_text.is_empty() {
         "\\L"
     } else {
         ctx.label_text
@@ -699,12 +718,9 @@ pub fn make_text_label(
     font_size: f64,
     cs: Charset,
 ) -> TextLabelLayout {
-    // While a label is being made, the object has no label yet, so `\L` stays literal.
-    let ctx = LabelSubstContext {
-        label_text: "",
-        ..ctx.clone()
-    };
-    let substituted = strdup_and_subst_obj0(label, &ctx, false);
+    // `\L` is the object's main label (`ND_label(n)->text`, ...): callers pass an empty
+    // `label_text` while that label itself is being made, which leaves `\L` literal.
+    let substituted = strdup_and_subst_obj0(label, ctx, false);
     let converted = convert_label_text(&substituted, cs);
     let mut layout = make_simple_label_cs(&converted, font_name, font_size, cs);
     layout.source = converted;
@@ -825,6 +841,9 @@ mod tests {
             tail_port: None,
             head_port: None,
             label_text: "",
+            pen_color: None,
+            is_node: false,
+            has_label: false,
         };
         let layout = measure_multiline_label_with_context(
             "\\G: \\T -> \\H (\\E)",

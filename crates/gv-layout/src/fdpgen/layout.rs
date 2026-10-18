@@ -68,6 +68,8 @@ pub struct DNode {
     pub deg: i32,
     pub wdeg: i32,
     pub disp: [f64; 2],
+    /// `ND_shape(dn) = ND_shape(n)`, `ND_shape_info(dn) = ND_shape_info(n)` of a real node.
+    pub shape: Option<NodeShape>,
 }
 
 impl DNode {
@@ -86,6 +88,7 @@ impl DNode {
             deg: 0,
             wdeg: 0,
             disp: [0.0, 0.0],
+            shape: None,
         }
     }
 
@@ -307,9 +310,16 @@ pub fn with_lgraph<R>(
                 hops: 0,
                 dist: 0.0,
                 mark: false,
-                shape: NodeShape::new(&src.nodes[i]),
+                shape: d
+                    .shape
+                    .clone()
+                    .unwrap_or_else(|| NodeShape::new(&src.nodes[i])),
                 xlabel: None,
-                clust: None,
+                // ND_clust(dn) = subg for a cluster's derived node
+                clust: match d.kind {
+                    DKind::Clust(c) => Some(c),
+                    _ => None,
+                },
                 lim: -1,
             }
         })
@@ -540,6 +550,16 @@ impl Fdp<'_, '_> {
                 continue;
             }
             if self.parent[n].is_some() && self.parent[n] != self.gparent(g) {
+                let gname = |g: Option<usize>| match g {
+                    None => self.rg.src.name.as_str(),
+                    Some(c) => self.rg.src.subgraphs[self.tree.subgraph[c]].name.as_str(),
+                };
+                gv_core::diag::agerrorf(&format!(
+                    "node \"{}\" is contained in two non-comparable clusters \"{}\" and \"{}\"\n",
+                    self.rg.src.nodes[n].name,
+                    gname(g),
+                    gname(self.parent[n].unwrap())
+                ));
                 return None;
             }
             self.parent[n] = Some(g);
@@ -555,6 +575,7 @@ impl Fdp<'_, '_> {
             dn.lw = rn.lw;
             dn.rw = rn.rw;
             dn.ht = rn.ht;
+            dn.shape = Some(rn.shape.clone());
             if rn.pinned != 0 {
                 dn.pos = [rn.pos[0], rn.pos[1]];
                 dn.pinned = rn.pinned;

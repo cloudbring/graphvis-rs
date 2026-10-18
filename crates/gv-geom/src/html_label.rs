@@ -266,7 +266,14 @@ struct Lexer {
     pending: Pending,
 }
 
-type LexResult<T> = Result<T, ()>;
+/// Lexer errors carry expat's message (`XML_ErrorString`) or `htmllex.c`'s own.
+type LexResult<T> = Result<T, String>;
+
+const NOT_WELL_FORMED: &str = "not well-formed (invalid token)";
+
+fn nwf<T>() -> LexResult<T> {
+    Err(NOT_WELL_FORMED.to_string())
+}
 
 /// `scanEntity` from `lib/common/utils.c`: `t` starts after `&`; appends `&` (and `#N;` for a
 /// known name) to `out`, returning the number of input bytes consumed after the `&`.
@@ -309,24 +316,30 @@ fn xml_decode(s: &[u8], in_attr: bool) -> LexResult<Vec<u8>> {
     while i < s.len() {
         let c = s[i];
         if c == b'&' {
-            let semi = s[i + 1..].iter().position(|&b| b == b';').ok_or(())?;
-            let name = std::str::from_utf8(&s[i + 1..i + 1 + semi]).map_err(|_| ())?;
+            let semi = s[i + 1..]
+                .iter()
+                .position(|&b| b == b';')
+                .ok_or_else(|| NOT_WELL_FORMED.to_string())?;
+            let name = std::str::from_utf8(&s[i + 1..i + 1 + semi])
+                .map_err(|_| NOT_WELL_FORMED.to_string())?;
             let ch = if let Some(num) = name.strip_prefix('#') {
                 let v = if let Some(hex) = num.strip_prefix('x') {
                     if hex.is_empty() || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
-                        return Err(());
+                        return nwf();
                     }
-                    u32::from_str_radix(hex, 16).map_err(|_| ())?
+                    u32::from_str_radix(hex, 16).map_err(|_| NOT_WELL_FORMED.to_string())?
                 } else {
                     if num.is_empty() || !num.bytes().all(|b| b.is_ascii_digit()) {
-                        return Err(());
+                        return nwf();
                     }
-                    num.parse::<u32>().map_err(|_| ())?
+                    num.parse::<u32>()
+                        .map_err(|_| NOT_WELL_FORMED.to_string())?
                 };
-                let ch = char::from_u32(v).ok_or(())?;
+                let bad = || "reference to invalid character number".to_string();
+                let ch = char::from_u32(v).ok_or_else(bad)?;
                 // XML Char production
                 if !(ch == '\t' || ch == '\n' || ch == '\r' || ch >= ' ') {
-                    return Err(());
+                    return Err(bad());
                 }
                 ch
             } else {
@@ -336,7 +349,7 @@ fn xml_decode(s: &[u8], in_attr: bool) -> LexResult<Vec<u8>> {
                     "gt" => '>',
                     "quot" => '"',
                     "apos" => '\'',
-                    _ => return Err(()),
+                    _ => return Err("undefined entity".to_string()),
                 }
             };
             let mut buf = [0u8; 4];
@@ -345,10 +358,10 @@ fn xml_decode(s: &[u8], in_attr: bool) -> LexResult<Vec<u8>> {
             continue;
         }
         if c == b'<' && in_attr {
-            return Err(());
+            return nwf();
         }
         if c < b' ' && c != b'\t' && c != b'\n' && c != b'\r' {
-            return Err(());
+            return nwf();
         }
         if c == b'\r' {
             // line-end normalisation
@@ -675,7 +688,8 @@ impl Lexer {
                 Tok::Img(mk_img(atts))
             }
             "HTML" => Tok::Html,
-            _ => return Err(()),
+            // lexerror
+            _ => return Err(format!("\0Unknown HTML element <{name}>")),
         };
         self.cur = Some(tok);
         Ok(())
@@ -737,7 +751,7 @@ impl Lexer {
                     Tok::EndImg
                 }
             }
-            _ => return Err(()),
+            _ => return Err(format!("\0Unknown HTML element <{name}>")),
         };
         self.pending = Pending::None;
         self.cur = Some(tok);
@@ -753,7 +767,7 @@ impl Lexer {
         } else {
             let text = xml_decode(u, false)?;
             if text.windows(3).any(|w| w == b"]]>") {
-                return Err(());
+                return nwf();
             }
             // characterData
             if self.in_cell {
@@ -773,15 +787,15 @@ impl Lexer {
     fn tag(&mut self, u: &[u8]) -> LexResult<()> {
         if u.starts_with(b"<!--") {
             if u.len() < 7 || !u.ends_with(b"-->") {
-                return Err(());
+                return nwf();
             }
             return Ok(());
         }
         if u.starts_with(b"<?") || u.starts_with(b"<!") {
-            return Err(());
+            return nwf();
         }
         if !u.ends_with(b">") {
-            return Err(());
+            return nwf();
         }
         let body = &u[1..u.len() - 1];
         if let Some(rest) = body.strip_prefix(b"/") {
@@ -792,18 +806,18 @@ impl Lexer {
             let name = &rest[..e];
             if name.is_empty() || !is_name_start(name[0]) || !name.iter().all(|&c| is_name_char(c))
             {
-                return Err(());
+                return nwf();
             }
             let name = String::from_utf8_lossy(name).into_owned();
             if self.stack.pop().as_deref() != Some(name.as_str()) {
-                return Err(());
+                return Err("mismatched tag".to_string());
             }
             return self.end_element(&name);
         }
         // start tag
         let mut i = 0;
         if body.is_empty() || !is_name_start(body[0]) {
-            return Err(());
+            return nwf();
         }
         while i < body.len() && is_name_char(body[i]) {
             i += 1;
@@ -821,13 +835,13 @@ impl Lexer {
             }
             if body[i] == b'/' {
                 if i + 1 != body.len() {
-                    return Err(());
+                    return nwf();
                 }
                 empty = true;
                 break;
             }
             if i == ws_start || !is_name_start(body[i]) {
-                return Err(());
+                return nwf();
             }
             let ns = i;
             while i < body.len() && is_name_char(body[i]) {
@@ -838,14 +852,14 @@ impl Lexer {
                 i += 1;
             }
             if i >= body.len() || body[i] != b'=' {
-                return Err(());
+                return nwf();
             }
             i += 1;
             while i < body.len() && is_ws(body[i]) {
                 i += 1;
             }
             if i >= body.len() || (body[i] != b'"' && body[i] != b'\'') {
-                return Err(());
+                return nwf();
             }
             let q = body[i];
             i += 1;
@@ -854,12 +868,12 @@ impl Lexer {
                 i += 1;
             }
             if i >= body.len() {
-                return Err(());
+                return nwf();
             }
             let v = xml_decode(&body[vs..i], true)?;
             i += 1;
             if atts.iter().any(|(n, _)| *n == an) {
-                return Err(());
+                return Err("duplicate attribute".to_string());
             }
             atts.push((an, String::from_utf8_lossy(&v).into_owned()));
         }
@@ -889,8 +903,49 @@ fn eat_comment(s: &[u8], p: usize) -> usize {
     if depth == 0 { i - 1 } else { s.len() }
 }
 
+/// An HTML label error as `htmllex.c` reports it: the message and the index of the
+/// `findNext` unit being read (`ctx->currtok`; the unit before it is `prevtok`).
+#[derive(Debug, Clone)]
+pub struct HtmlError {
+    pub msg: String,
+    pub unit: usize,
+    /// `findNext` units (raw source, plus the `<HTML>`/`</HTML>` wrappers).
+    pub units: Vec<String>,
+}
+
+impl HtmlError {
+    /// The `agerrorf` text and its `AGPREV` context line (`error_context`), or only the
+    /// first for `lexerror`'s unknown elements.
+    pub fn report(&self) -> (String, Option<String>) {
+        let line = 1 + self.units[..self.unit]
+            .iter()
+            .map(|u| u.bytes().filter(|&c| c == b'\n').count())
+            .sum::<usize>();
+        if let Some(m) = self.msg.strip_prefix('\0') {
+            return (format!("{m} on line {line} \n"), None);
+        }
+        let prev = self
+            .unit
+            .checked_sub(1)
+            .map_or("", |i| self.units[i].as_str());
+        let cur = self.units.get(self.unit).map_or("", String::as_str);
+        (
+            format!("{} in line {line} \n", self.msg),
+            Some(format!("... {prev}{cur} ...\n")),
+        )
+    }
+}
+
+/// Lexed tokens, the unit each came from, and the units.
+struct Lexed {
+    toks: Vec<Tok>,
+    tok_unit: Vec<usize>,
+    units: Vec<String>,
+}
+
 /// Splits a label into `findNext` units and lexes them.
-fn lex(src: &str) -> LexResult<Vec<Tok>> {
+/// The tokens, and the lexer error that stopped them, if any.
+fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
     let s = src.as_bytes();
     let mut lx = Lexer {
         toks: Vec::new(),
@@ -899,46 +954,78 @@ fn lex(src: &str) -> LexResult<Vec<Tok>> {
         cur: None,
         pending: Pending::None,
     };
-    lx.unit(b"<HTML>", true)?;
-    let mut pos = 0;
-    while pos < s.len() {
-        if s[pos] == b'<' {
-            let mut t = pos + 1;
-            if s[t..].starts_with(b"!--") {
-                t = eat_comment(s, t + 3);
-            } else {
-                while t < s.len() && s[t] != b'>' {
-                    t += 1;
-                }
-            }
-            if t >= s.len() {
-                // "Label closed before end of HTML element": expat sees an unterminated tag.
-                return Err(());
-            }
-            t += 1;
-            lx.unit(&s[pos..t], true)?;
-            pos = t;
-        } else {
-            let mut buf = Vec::new();
-            let mut t = pos;
-            while t < s.len() && s[t] != b'<' {
-                if s[t] == b'&' && s.get(t + 1) != Some(&b'#') {
-                    t += 1 + scan_entity(&s[t + 1..], &mut buf);
+    let mut units: Vec<String> = Vec::new();
+    let mut tok_unit: Vec<usize> = Vec::new();
+    let mut feed = |lx: &mut Lexer, raw: &[u8], data: &[u8], is_tag: bool| {
+        units.push(String::from_utf8_lossy(raw).into_owned());
+        let r = lx.unit(data, is_tag);
+        let u = units.len() - 1;
+        tok_unit.resize(lx.toks.len(), u);
+        r.map(|()| u).map_err(|msg| (msg, u))
+    };
+    let res = (|| {
+        feed(&mut lx, b"<HTML>", b"<HTML>", true)?;
+        let mut pos = 0;
+        while pos < s.len() {
+            if s[pos] == b'<' {
+                let mut t = pos + 1;
+                if s[t..].starts_with(b"!--") {
+                    t = eat_comment(s, t + 3);
                 } else {
-                    buf.push(s[t]);
-                    t += 1;
+                    while t < s.len() && s[t] != b'>' {
+                        t += 1;
+                    }
                 }
+                if t >= s.len() {
+                    // findNext warns, and expat sees an unterminated tag.
+                    gv_core::diag::agwarningf("Label closed before end of HTML element\n");
+                    let raw = &s[pos..];
+                    let u = feed(&mut lx, raw, raw, true)?;
+                    return Err(("unclosed token".to_string(), u));
+                }
+                t += 1;
+                feed(&mut lx, &s[pos..t], &s[pos..t], true)?;
+                pos = t;
+            } else {
+                let mut buf = Vec::new();
+                let mut t = pos;
+                while t < s.len() && s[t] != b'<' {
+                    if s[t] == b'&' && s.get(t + 1) != Some(&b'#') {
+                        t += 1 + scan_entity(&s[t + 1..], &mut buf);
+                    } else {
+                        buf.push(s[t]);
+                        t += 1;
+                    }
+                }
+                // protect_rsqb only affects expat buffering, not the result
+                feed(&mut lx, &s[pos..t], &buf, false)?;
+                pos = t;
             }
-            // protect_rsqb only affects expat buffering, not the result
-            lx.unit(&buf, false)?;
-            pos = t;
         }
+        let u = feed(&mut lx, b"</HTML>", b"</HTML>", true)?;
+        if !lx.stack.is_empty() {
+            return Err(("mismatched tag".to_string(), u));
+        }
+        Ok(())
+    })();
+    match res {
+        Ok(()) => (
+            Lexed {
+                toks: lx.toks,
+                tok_unit,
+                units,
+            },
+            None,
+        ),
+        Err((msg, unit)) => (
+            Lexed {
+                toks: lx.toks,
+                tok_unit,
+                units: units.clone(),
+            },
+            Some(HtmlError { msg, unit, units }),
+        ),
     }
-    lx.unit(b"</HTML>", true)?;
-    if !lx.stack.is_empty() {
-        return Err(());
-    }
-    Ok(lx.toks)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -948,6 +1035,10 @@ fn lex(src: &str) -> LexResult<Vec<Tok>> {
 struct Parser {
     toks: Vec<Tok>,
     pos: usize,
+    /// Furthest token read: yacc's lookahead when it reports an error.
+    furthest: std::cell::Cell<usize>,
+    /// `htmlerror` message of a semantic action (`syntax error` otherwise).
+    err_msg: Option<&'static str>,
     /// `fontstack`: bottom entry is `None`.
     fontstack: Vec<Option<HtmlFont>>,
     fitem_list: Vec<HtmlTextItem>,
@@ -1011,15 +1102,22 @@ fn non_space(s: &str) -> bool {
 }
 
 impl Parser {
+    fn touch(&self, i: usize) {
+        self.furthest.set(self.furthest.get().max(i));
+    }
+
     fn peek(&self) -> Option<&Tok> {
+        self.touch(self.pos);
         self.toks.get(self.pos)
     }
 
     fn peek_at(&self, i: usize) -> Option<&Tok> {
+        self.touch(self.pos + i);
         self.toks.get(self.pos + i)
     }
 
     fn next(&mut self) -> PResult<Tok> {
+        self.touch(self.pos);
         let t = self.toks.get(self.pos).cloned().ok_or(())?;
         self.pos += 1;
         Ok(t)
@@ -1156,6 +1254,7 @@ impl Parser {
         if let Some(s) = self.strings()
             && non_space(&s)
         {
+            self.err_msg = Some("Syntax error: non-space string used before <TABLE>");
             return Err(());
         }
         let Tok::Table(tbl) = self.next()? else {
@@ -1194,6 +1293,7 @@ impl Parser {
         if let Some(s) = self.strings()
             && non_space(&s)
         {
+            self.err_msg = Some("Syntax error: non-space string used after </TABLE>");
             return Err(());
         }
         Ok(tbl)
@@ -1309,10 +1409,16 @@ pub fn parse_html(text: &str) -> Option<HtmlLabel> {
 /// graph's encoding (`charsetToStr`): Latin-1 bytes are decoded to UTF-8, input that is not
 /// valid UTF-8 is a fatal "not well-formed" error, and `BIG-5` is an unknown encoding.
 pub fn parse_html_cs(text: &str, cs: Charset) -> Option<HtmlLabel> {
+    parse_html_report(text, cs).ok()
+}
+
+/// [`parse_html_cs`] with the error C reports; `Err(None)` where the port does not
+/// reproduce the message (encodings).
+pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, Option<HtmlError>> {
     let decoded;
     let text = match cs {
-        Charset::Big5 => return None,
-        Charset::Utf8 if charset::has_raw(text) => return None,
+        Charset::Big5 => return Err(None),
+        Charset::Utf8 if charset::has_raw(text) => return Err(None),
         Charset::Utf8 => text,
         Charset::Latin1 => {
             decoded = charset::encode(text)
@@ -1322,15 +1428,43 @@ pub fn parse_html_cs(text: &str, cs: Charset) -> Option<HtmlLabel> {
             &decoded
         }
     };
-    let toks = lex(text).ok()?;
+    // C lexes on demand: yacc can reject a token before the lexer reaches a later error.
+    let (lexed, lex_err) = lex(text);
+    let Lexed {
+        toks,
+        tok_unit,
+        units,
+    } = lexed;
+    let ntoks = toks.len();
     let mut p = Parser {
         toks,
         pos: 0,
+        furthest: std::cell::Cell::new(0),
+        err_msg: None,
         fontstack: vec![None],
         fitem_list: Vec::new(),
         fspan_list: Vec::new(),
     };
-    p.html().ok()
+    let res = p.html();
+    if let Some(e) = lex_err {
+        if res.is_err() && p.furthest.get() < ntoks {
+            // the parser failed on a token it was given
+        } else {
+            return Err(Some(e));
+        }
+    }
+    res.map_err(|()| {
+        // At end of input yacc's context is the last unit read (`</HTML>`).
+        let unit = tok_unit
+            .get(p.furthest.get())
+            .copied()
+            .unwrap_or(units.len() - 1);
+        Some(HtmlError {
+            msg: p.err_msg.unwrap_or("syntax error").to_string(),
+            unit,
+            units,
+        })
+    })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1945,6 +2079,32 @@ fn pos_html_tbl(tbl: &mut HtmlTbl, mut pos: BoundingBox, sides: u8, parent_pen: 
 /// `make_html_label`: parses, sizes and positions an HTML label. `text` is the label without
 /// its outer `<`...`>` delimiters. `pencolor` is the owning object's `pencolor`/`color`
 /// (`getPenColor`), inherited by the outermost table.
+/// The messages of a rejected HTML label, then `make_label`'s `in label of ...`. Sizing
+/// runs more than once per object in the port (layout, then rendering), so each object's
+/// label is reported once.
+fn report_html_error(e: &HtmlError, obj: &LabelSubstContext<'_>, text: &str) {
+    let what = if obj.is_edge {
+        let op = if obj.is_directed { "->" } else { "--" };
+        format!("edge {} {op} {}", obj.tail_name, obj.head_name)
+    } else if !obj.node_name.is_empty() {
+        format!("node {}", obj.node_name)
+    } else if obj.graph_name.is_empty() {
+        // agnameof of the anonymous root graph (cgraph's first anonymous ID)
+        "graph %1".to_string()
+    } else {
+        format!("graph {}", obj.graph_name)
+    };
+    if !gv_core::diag::emit_once(&format!("\0html\0{what}\0{text}")) {
+        return;
+    }
+    let (msg, context) = e.report();
+    gv_core::diag::agerrorf(&msg);
+    if let Some(c) = context {
+        gv_core::diag::agerr_prev(&c);
+    }
+    gv_core::diag::agerr_prev(&format!("in label of {what}\n"));
+}
+
 pub fn make_html_label(
     text: &str,
     obj: &LabelSubstContext<'_>,
@@ -1954,11 +2114,17 @@ pub fn make_html_label(
     pencolor: Option<&str>,
     cs: Charset,
 ) -> HtmlLabelLayout {
-    let Some(mut lbl) = parse_html_cs(text, cs) else {
-        return HtmlLabelLayout {
-            dimen: Point::new(0.0, 0.0),
-            label: None,
-        };
+    let mut lbl = match parse_html_report(text, cs) {
+        Ok(l) => l,
+        Err(e) => {
+            if let Some(e) = e {
+                report_html_error(&e, obj, text);
+            }
+            return HtmlLabelLayout {
+                dimen: Point::new(0.0, 0.0),
+                label: None,
+            };
+        }
     };
     let mut env = Env {
         name: font_name.to_string(),

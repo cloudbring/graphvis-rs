@@ -496,10 +496,12 @@ fn fill_edge<P: PackGraph + ?Sized>(
         return;
     }
     for bz in spl.unwrap() {
+        // A one-point spline (polyline between overlapping nodes) makes C read
+        // bz.list[1] past the end of the list (undefined); take the point itself.
         let (mut pt, mut hpt, mut k) = if bz.sflag != 0 {
             (bz.sp, bz.list[0], 1)
         } else {
-            (bz.list[0], bz.list[1], 2)
+            (bz.list[0], *bz.list.get(1).unwrap_or(&bz.list[0]), 2)
         };
         pt = cell(mv(pt), ssize);
         hpt = cell(mv(hpt), ssize);
@@ -552,7 +554,9 @@ fn gen_box(bb0: &BoundingBox, ssize: i32, margin: u32, center: Point, index: usi
     let w = grid(bb0.ur.x - bb0.ll.x + 2.0 * m, ssize);
     let h = grid(bb0.ur.y - bb0.ll.y + 2.0 * m, ssize);
     GInfo {
-        perim: w + h,
+        // A degenerate box (an empty component's ±DBL_MAX) saturates GRID's
+        // double-to-int conversion; C's int sum then wraps.
+        perim: w.wrapping_add(h),
         cells: ps.into_iter().collect(),
         index,
     }
@@ -636,7 +640,7 @@ fn gen_poly<P: PackGraph + ?Sized>(
     let w = grid(gbb.ur.x - gbb.ll.x + 2.0 * margin, ssize);
     let h = grid(gbb.ur.y - gbb.ll.y + 2.0 * margin, ssize);
     GInfo {
-        perim: w + h,
+        perim: w.wrapping_add(h),
         cells: ps.into_iter().collect(),
         index,
     }

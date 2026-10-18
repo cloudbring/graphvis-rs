@@ -1,0 +1,9 @@
+digraph "G" {
+"0" [shape="diamond"];
+{
+rank=same;
+"1";
+"0";
+}
+"0":"w" -> "1":"ne" [label="tab	here 😀", sametail="st1"];
+}

@@ -41,6 +41,11 @@ pub struct Parser {
     graph: Graph,
     scope_stack: Vec<SubgraphId>,
     globals: GlobalAttrs,
+    /// Line of the root graph's closing `}`.
+    rbrace_line: usize,
+    /// Keys of the last attribute list in source order: cgraph declares them in this
+    /// order, which fixes their `sym->id`.
+    attr_order: Vec<String>,
     /// cgraph's id counter for anonymous objects (`ctr` in `idmap`).
     anon_ctr: u64,
     /// Parent of each subgraph (`None`: the root graph).
@@ -65,6 +70,8 @@ impl Parser {
             graph: Graph::new("", GraphKind::Undirected, false),
             scope_stack: Vec::new(),
             globals: globals.clone(),
+            rbrace_line: 0,
+            attr_order: Vec::new(),
             anon_ctr: 1,
             sub_parent: Vec::new(),
         })
@@ -79,17 +86,46 @@ impl Parser {
 
     /// Parses every graph in `input`, applying `globals` before each graph body.
     pub fn parse_all(input: &str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
-        let mut parser = Self::new(input, globals)?;
-        let mut graphs = Vec::new();
-        while parser.peek().kind != TokenKind::Eof {
-            parser.scope_stack.clear();
-            parser.parse_graph()?;
-            graphs.push(std::mem::replace(
-                &mut parser.graph,
-                Graph::new("", GraphKind::Undirected, false),
-            ));
+        match Self::parse_all_partial(input, globals) {
+            (graphs, None) => Ok(graphs),
+            (_, Some(e)) => Err(e),
         }
-        Ok(graphs)
+    }
+
+    /// Like [`Parser::parse_all`], but keeps the graphs read before a syntax error: C's
+    /// `agread` returns them one at a time, so `dot` lays out and renders those first.
+    ///
+    /// cgraph's scanner reads its input a line at a time (`fgets`) and each `agread`
+    /// starts a new scanner, so whatever follows a graph's closing `}` on the same line
+    /// is dropped, and the next graph is read from the next line, its line numbers
+    /// counted from there.
+    pub fn parse_all_partial(
+        input: &str,
+        globals: &GlobalAttrs,
+    ) -> (Vec<Graph>, Option<GraphvizError>) {
+        let mut graphs = Vec::new();
+        let mut rest = input;
+        loop {
+            let mut parser = match Self::new(rest, globals) {
+                Ok(p) => p,
+                Err(e) => return (graphs, Some(e)),
+            };
+            if parser.peek().kind == TokenKind::Eof {
+                return (graphs, None);
+            }
+            if let Err(e) = parser.parse_graph() {
+                return (graphs, Some(e));
+            }
+            graphs.push(parser.graph);
+            // the byte after the `rbrace_line`-th newline
+            match rest
+                .match_indices('\n')
+                .nth(parser.rbrace_line.saturating_sub(1))
+            {
+                Some((i, _)) => rest = &rest[i + 1..],
+                None => return (graphs, None),
+            }
+        }
     }
 
     fn peek(&self) -> &Token {
@@ -271,6 +307,7 @@ impl Parser {
             gv_core::AttrSym {
                 defval: "\\N".to_string(),
                 print: false,
+                id: 0,
             },
         );
         // Command-line defaults come from cgraph's ProtoGraph dictionaries.
@@ -280,11 +317,14 @@ impl Parser {
             (DictKind::Edge, self.globals.edge.clone()),
         ] {
             for (k, v) in map {
-                self.dict_mut(0, kind).insert(
+                let d = self.dict_mut(0, kind);
+                let id = d.get(&k).map_or(d.len(), |s| s.id);
+                d.insert(
                     k,
                     gv_core::AttrSym {
                         defval: v,
                         print: false,
+                        id,
                     },
                 );
             }
@@ -292,27 +332,24 @@ impl Parser {
 
         self.expect(&TokenKind::LBrace)?;
         self.parse_stmt_list()?;
-        self.expect(&TokenKind::RBrace)?;
+        self.rbrace_line = self.expect(&TokenKind::RBrace)?.line;
+        // A graph attribute first declared in a subgraph is declared on the root with
+        // default "" (agattr), so agget(root, name) is "" rather than NULL.
+        let declared: Vec<(String, String)> = self.graph.dicts[0]
+            .graph
+            .iter()
+            .map(|(k, v)| (k.clone(), v.defval.clone()))
+            .collect();
+        for (k, v) in declared {
+            self.graph.graph_attrs.entry(k).or_insert(v);
+        }
         // Consume optional trailing semicolons
         while self.peek().kind == TokenKind::Semi {
             self.advance();
         }
 
-        // Allow multi-graph DOT streams (`digraph G { ... } digraph H { ... }`), where C Graphviz
-        // parses and renders the first graph in single-graph invocation mode, while rejecting
-        // stray non-graph tokens after the closing brace.
-        if !matches!(
-            self.peek().kind,
-            TokenKind::Eof | TokenKind::Strict | TokenKind::Graph | TokenKind::Digraph
-        ) {
-            let extra = self.peek();
-            return Err(GraphvizError::SyntaxError {
-                line: extra.line,
-                col: extra.col,
-                message: format!("unexpected token after end of graph: {:?}", extra.kind),
-            });
-        }
-
+        // Stray tokens after the closing brace are the next read's syntax error
+        // (`parse_all_partial`).
         Ok(())
     }
 
@@ -404,8 +441,10 @@ impl Parser {
             }
         }
         let attrs = kept;
-        for (k, v) in &attrs {
-            self.attr_stmt(kind, k, v);
+        for k in std::mem::take(&mut self.attr_order) {
+            if let Some(v) = attrs.get(&k) {
+                self.attr_stmt(kind, &k, v);
+            }
         }
         match attr_tok.kind {
             TokenKind::Graph => self.current_graph_attrs_mut().extend(attrs),
@@ -418,20 +457,17 @@ impl Parser {
 
     fn parse_opt_attr_list(&mut self) -> Result<AttrMap> {
         let mut attrs = AttrMap::new();
+        self.attr_order.clear();
         while self.peek().kind == TokenKind::LBracket {
             self.advance(); // consume `[`
+            // attrdefs: `atom '=' atom` followed by at most one `,` or `;`.
             while self.peek().kind != TokenKind::RBracket && self.peek().kind != TokenKind::Eof {
-                if matches!(self.peek().kind, TokenKind::Comma | TokenKind::Semi) {
-                    self.advance();
-                    continue;
-                }
                 let key = self.parse_value_or_port_atom()?;
-                let val = if self.peek().kind == TokenKind::Equals {
-                    self.advance();
-                    self.parse_value_or_port_atom()?
-                } else {
-                    "true".to_string()
-                };
+                self.expect(&TokenKind::Equals)?;
+                let val = self.parse_value_or_port_atom()?;
+                if !attrs.contains_key(&key) {
+                    self.attr_order.push(key.clone());
+                }
                 attrs.insert(key, val);
                 if matches!(self.peek().kind, TokenKind::Comma | TokenKind::Semi) {
                     self.advance();
@@ -475,9 +511,9 @@ impl Parser {
             }
 
             let edge_attrs = self.parse_opt_attr_list()?;
-            for k in edge_attrs.keys() {
+            for k in std::mem::take(&mut self.attr_order) {
                 if k != "key" {
-                    self.bind_attr(DictKind::Edge, k);
+                    self.bind_attr(DictKind::Edge, &k);
                 }
             }
             for pair in chain.windows(2) {
@@ -498,8 +534,8 @@ impl Parser {
         } else {
             let attrs = self.parse_opt_attr_list()?;
             if matches!(first, SimpleItem::Nodes(_)) {
-                for k in attrs.keys() {
-                    self.bind_attr(DictKind::Node, k);
+                for k in std::mem::take(&mut self.attr_order) {
+                    self.bind_attr(DictKind::Node, &k);
                 }
             }
             if let SimpleItem::Nodes(nodes) = first
@@ -715,8 +751,15 @@ impl Parser {
     fn bind_attr(&mut self, kind: DictKind, name: &str) {
         let gi = self.scope_dict();
         if !self.lookup_view(gi, kind, name) {
-            self.dict_mut(0, kind)
-                .insert(name.to_string(), gv_core::AttrSym::default());
+            let d = self.dict_mut(0, kind);
+            let id = d.len();
+            d.insert(
+                name.to_string(),
+                gv_core::AttrSym {
+                    id,
+                    ..Default::default()
+                },
+            );
         }
     }
 
@@ -749,7 +792,7 @@ impl Parser {
                             name.to_string(),
                             gv_core::AttrSym {
                                 defval: v,
-                                print: false,
+                                ..Default::default()
                             },
                         );
                     }
@@ -761,7 +804,7 @@ impl Parser {
                 name.to_string(),
                 gv_core::AttrSym {
                     defval: value.to_string(),
-                    print: false,
+                    ..Default::default()
                 },
             );
         }
@@ -795,30 +838,49 @@ impl Parser {
         let mut merged_attrs = self.current_edge_defaults().clone();
         merged_attrs.extend(edge_attrs.clone());
 
-        if tail_port == Port::default()
-            && let Some(tp) = merged_attrs.get("tailport")
-        {
-            tail_port = parse_port_str(tp);
+        // agedge on a strict graph returns the existing edge, to which applyattrs adds
+        // only this statement's attributes (the defaults applied when it was made).
+        let undirected = self.graph.kind == gv_core::GraphKind::Undirected;
+        let exists = self.graph.strict
+            && self.graph.edges.iter().any(|e| {
+                (e.tail == tail && e.head == head)
+                    || (undirected && e.tail == head && e.head == tail)
+            });
+        if exists {
+            merged_attrs = edge_attrs.clone();
         }
-        if head_port == Port::default()
-            && let Some(hp) = merged_attrs.get("headport")
-        {
-            head_port = parse_port_str(hp);
-        }
-
         let before = self.graph.edges.len();
         let edge_id = self.graph.add_edge(tail, head, merged_attrs.clone());
-        if self.graph.edges.len() > before {
+        let is_new = self.graph.edges.len() > before;
+        if is_new {
             self.anon_ctr += 2;
         }
         if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
-            if tail_port != Port::default() {
-                edge.tail_port = tail_port;
+            // grammar.y `newedge`: an existing undirected edge found the other way round
+            // takes the endpoint ports swapped.
+            if edge.tail != edge.head && edge.head == tail {
+                std::mem::swap(&mut tail_port, &mut head_port);
             }
-            if head_port != Port::default() {
-                edge.head_port = head_port;
+            // `newedge` sets the endpoint ports (`mkport`) after `agedge` applied the edge
+            // defaults and before `applyattrs` applies the statement's attribute list, so
+            // an explicit `tailport`/`headport` in the list wins over `n:port`, which wins
+            // over a default.
+            for (key, endpoint) in [("tailport", &tail_port), ("headport", &head_port)] {
+                if *endpoint != Port::default() && !edge_attrs.contains_key(key) {
+                    merged_attrs.insert(key.to_string(), port_to_str(endpoint));
+                }
             }
             edge.attrs.extend(merged_attrs);
+            edge.tail_port = edge
+                .attrs
+                .get("tailport")
+                .map(|s| parse_port_str(s))
+                .unwrap_or_default();
+            edge.head_port = edge
+                .attrs
+                .get("headport")
+                .map(|s| parse_port_str(s))
+                .unwrap_or_default();
         }
 
         self.record_node_in_active_subgraphs(tail);
@@ -891,6 +953,16 @@ impl Parser {
         } else {
             &mut self.graph.edge_defaults
         }
+    }
+}
+
+/// grammar.y `concatPort`: `name` or `name:compass`.
+fn port_to_str(p: &Port) -> String {
+    match (&p.name, &p.compass) {
+        (Some(n), Some(c)) => format!("{n}:{c}"),
+        (Some(n), None) => n.clone(),
+        (None, Some(c)) => c.clone(),
+        (None, None) => String::new(),
     }
 }
 

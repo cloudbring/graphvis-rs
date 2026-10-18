@@ -53,6 +53,31 @@ pub fn render_dot_all_with_options(
         .collect()
 }
 
+/// [`render_dot_all_with_options`] that renders the graphs read before a syntax error
+/// and returns that error alongside, as `dot` does.
+pub fn render_dot_all_partial(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+    globals: &GlobalAttrs,
+    options: LayoutOptions,
+) -> (Vec<String>, Option<gv_core::GraphvizError>) {
+    let output_format = match OutputFormat::parse(format) {
+        Ok(f) => f,
+        Err(e) => return (Vec::new(), Some(e)),
+    };
+    gv_render::reset_render_state();
+    let (graphs, parse_err) = gv_parser::parse_dot_all_partial(dot_source, globals);
+    let mut out = Vec::with_capacity(graphs.len());
+    for graph in graphs {
+        match render_parsed(graph, engine, output_format, format, options) {
+            Ok(s) => out.push(s),
+            Err(e) => return (out, Some(e)),
+        }
+    }
+    (out, parse_err)
+}
+
 fn render_parsed(
     mut graph: Graph,
     engine: &str,
@@ -101,7 +126,7 @@ mod tests {
         let mut globals = GlobalAttrs::default();
         globals.node.insert("shape".into(), "box".into());
         let outs = render_dot_all(
-            "digraph G { a -> b } digraph H { c -> d }",
+            "digraph G { a -> b }\ndigraph H { c -> d }",
             "dot",
             "svg",
             &globals,

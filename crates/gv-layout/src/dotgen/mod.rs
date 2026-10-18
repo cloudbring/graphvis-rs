@@ -33,7 +33,7 @@ pub mod splinegraph;
 pub mod types;
 pub mod utils;
 
-use gv_core::{BoundingBox, Graph, Result};
+use gv_core::{Graph, Result};
 use types::*;
 
 /// All dot layout state: arenas mirroring the cgraph objects and their
@@ -76,6 +76,8 @@ pub struct Dot<'a> {
     pub et: crate::common::types::EdgeType,
     /// `State == GVSPLINES`: splines exist and are mapped by postprocessing.
     pub splines_done: bool,
+    /// The layout gave up (dot_position failed): no splines, no postprocessing.
+    pub aborted: bool,
 }
 
 impl<'a> Dot<'a> {
@@ -105,6 +107,7 @@ impl<'a> Dot<'a> {
             remincross: false,
             et: crate::common::types::EdgeType::Spline,
             splines_done: false,
+            aborted: false,
         }
     }
 
@@ -209,12 +212,21 @@ impl<'a> Dot<'a> {
         if maxphase == 1 {
             return Ok(());
         }
-        self.dot_mincross()?;
+        if let Err(e) = self.dot_mincross() {
+            if e == mincross::ABORT_LAYOUT {
+                self.aborted = true;
+                return Ok(());
+            }
+            return Err(e);
+        }
         self.gvdump("M");
         if maxphase == 2 {
             return Ok(());
         }
         self.dot_position()?;
+        if self.aborted {
+            return Ok(());
+        }
         self.gvdump("P");
         if maxphase == 3 {
             return Ok(());
@@ -234,27 +246,34 @@ impl<'a> Dot<'a> {
 /// Lays out `graph` with the dotgen port.
 pub fn layout_dot(graph: &mut Graph) -> Result<()> {
     gv_geom::size_graph_nodes(graph);
-    if graph.nodes.is_empty() {
-        graph.bb = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
-        return Ok(());
-    }
+    let mut aborted = false;
     let result = {
         let mut d = Dot::new(graph);
         d.graph_init();
         let maxphase = utils::late_int(d.agget(0, "phase"), -1, 1);
-        pack::do_dot(&mut d, graph, maxphase).map_err(|message| {
-            gv_core::GraphvizError::LayoutError {
-                stage: "dot",
-                message,
-            }
-        })?;
+        // dot_layout: doDot only when there are nodes; dotneato_postprocess always.
+        if !graph.nodes.is_empty() {
+            pack::do_dot(&mut d, graph, maxphase).map_err(|message| {
+                gv_core::GraphvizError::LayoutError {
+                    stage: "dot",
+                    message,
+                }
+            })?;
+        }
         if (1..=3).contains(&maxphase) {
             output::Output::phase(&d, maxphase)
         } else {
-            d.dotneato_postprocess();
+            if !d.aborted {
+                d.dotneato_postprocess();
+            }
+            aborted = d.aborted;
             output::Output::collect(&d)
         }
     };
     result.apply(graph);
+    if aborted {
+        // no place_graph_label: labels keep their zeroed position
+        crate::nop::labels_at_origin(graph);
+    }
     Ok(())
 }

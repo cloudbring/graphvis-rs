@@ -35,6 +35,13 @@ impl NsGraph for DotNs<'_, '_> {
     fn dump_name(&self, n: usize) -> String {
         self.d.nodes[n].name.clone()
     }
+    fn err_name(&self, n: usize) -> String {
+        if self.d.nodes[n].node_type == NORMAL {
+            self.d.nodes[n].name.clone()
+        } else {
+            "%0".to_string()
+        }
+    }
     fn rank(&self, n: usize) -> i32 {
         self.d.nodes[n].rank
     }

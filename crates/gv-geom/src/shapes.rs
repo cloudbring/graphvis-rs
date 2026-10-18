@@ -257,6 +257,8 @@ pub struct RecordField {
     pub horizontal: bool,
     /// Label of a leaf field (`fp->lp`): `dimen` and the justification `space`.
     pub label: Option<LabelGeometry>,
+    /// `f->sides` (`BOTTOM` = 1, `RIGHT` = 2, `TOP` = 4, `LEFT` = 8).
+    pub sides: u8,
 }
 
 impl RecordField {
@@ -338,7 +340,7 @@ pub(crate) fn html_label_layout(
         font_name,
         font_size,
         None,
-        None,
+        obj.pen_color,
         cs,
     )
 }

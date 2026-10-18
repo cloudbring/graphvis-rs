@@ -16,6 +16,10 @@ const C_VV: i32 = 4;
 const TABLE: [[i32; 3]; 3] = [[C_EE, C_EE, C_EE], [C_EE, C_SS, C_VS], [C_EE, C_VS, C_VV]];
 const CONVERGENCE: f64 = 0.995;
 
+/// Error of a dot phase after which C abandons the layout (dot_layout returns before
+/// dotneato_postprocess); the message was already reported.
+pub const ABORT_LAYOUT: &str = "\u{1}abort";
+
 impl Dot<'_> {
     // ---------------- checkLabelOrder / fixLabelOrder ----------------
 
@@ -897,14 +901,37 @@ impl Dot<'_> {
         }
     }
 
+    /// `install_in_rank(g, n)`. Its failures make dot_mincross, and so the layout, give up
+    /// ([`ABORT_LAYOUT`]).
     pub fn install_in_rank(&mut self, g: G, n: N) -> Result<(), String> {
         let r = self.nodes[n].rank;
-        if r < self.graphs[g].minrank || r > self.graphs[g].maxrank {
-            return Err(format!("install_in_rank: rank {r} not in rank range"));
+        // C reads GD_rank(g)[r] before checking the range; the entries past the ranks
+        // are zeroed.
+        let (i, an) = self.graphs[g]
+            .rank
+            .get((r + 1).max(0) as usize)
+            .map_or((0, 0), |rk| (rk.n, rk.an));
+        let name = |d: &Self, n: N| {
+            if d.nodes[n].node_type == NORMAL {
+                d.nodes[n].name.clone()
+            } else {
+                "%0".to_string()
+            }
+        };
+        if an <= 0 {
+            gv_core::diag::agerrorf(&format!(
+                "install_in_rank, line 1158: {} {} rank {r} i = {i} an = 0\n",
+                self.graphs[g].name,
+                name(self, n)
+            ));
+            return Err(ABORT_LAYOUT.to_string());
         }
-        let i = self.rk(g, r).n;
-        if self.rk(g, r).an <= 0 {
-            return Err("install_in_rank: an = 0".to_string());
+        if r < self.graphs[g].minrank || r > self.graphs[g].maxrank {
+            gv_core::diag::agerrorf(&format!(
+                "install_in_rank, line 1183: rank {r} not in rank range [{},{}]\n",
+                self.graphs[g].minrank, self.graphs[g].maxrank
+            ));
+            return Err(ABORT_LAYOUT.to_string());
         }
         self.set_rv(g, r, i, Some(n));
         self.nodes[n].order = i;

@@ -1,0 +1,9 @@
+graph G {
+	graph [bb="0,0,0,0",
+		layout=neato
+	];
+	node [label="\N"];
+	subgraph cluster_3 {
+		graph [bb="0,0,0,0"];
+	}
+}

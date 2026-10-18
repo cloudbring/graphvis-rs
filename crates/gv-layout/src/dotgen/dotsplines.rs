@@ -820,6 +820,12 @@ impl Dot<'_> {
         // cloneGraph: node/edge attribute declarations, rankdir turned.
         let mut aux = gv_core::Graph::new("auxg", input.kind, false);
         aux.graph_attrs.insert("rank".to_string(), String::new());
+        // GD_drawing(auxg)->quantum and GD_charset(auxg) come from the main graph.
+        for k in ["quantum", "charset"] {
+            if let Some(v) = input.graph_attrs.get(k) {
+                aux.graph_attrs.insert(k.to_string(), v.clone());
+            }
+        }
         aux.node_defaults = input.node_defaults.clone();
         aux.edge_defaults = input.edge_defaults.clone();
         aux.html_strings = input.html_strings.clone();
@@ -845,6 +851,67 @@ impl Dot<'_> {
         ] {
             aux.edge_defaults.remove(k);
         }
+        // setState rebinds only some Agsyms to auxg. The others (N_penwidth, E_arrowsz,
+        // E_penwidth; arrow_flags finds arrowhead/arrowtail by name) keep the main
+        // graph's symbols, and
+        // agxget reads the aux attribute with the same `id`. auxg declares cgraph's
+        // ProtoGraph `label` first, then the main graph's attributes in name order
+        // (agnxtattr), then the ports and `weight` cloneGraph/setState add. N_fixed is
+        // looked up as "fixed", so fixedsize is the value of an attribute `fixed`.
+        let empty = gv_core::AttrDicts::default();
+        let main = input.dicts.first().unwrap_or(&empty);
+        let mut aux_node_names: Vec<String> = vec!["label".to_string()];
+        aux_node_names.extend(main.node.keys().filter(|k| *k != "label").cloned());
+        let mut aux_edge_names: Vec<String> = main.edge.keys().cloned().collect();
+        for k in ["headport", "tailport", "weight"] {
+            if !main.edge.contains_key(k) {
+                aux_edge_names.push(k.to_string());
+            }
+        }
+        let stale = |dict: &std::collections::BTreeMap<String, gv_core::AttrSym>,
+                     names: &[String],
+                     attrs: &mut gv_core::AttrMap,
+                     keys: &[&str]| {
+            let orig = attrs.clone();
+            let value = |name: &str| {
+                orig.get(name)
+                    .cloned()
+                    .or_else(|| dict.get(name).map(|s| s.defval.clone()))
+                    .unwrap_or_default()
+            };
+            for &k in keys {
+                match dict.get(k) {
+                    None => {
+                        attrs.remove(k);
+                    }
+                    Some(sym) => {
+                        if let Some(an) = names.get(sym.id) {
+                            attrs.insert(k.to_string(), value(an));
+                        }
+                    }
+                }
+            }
+        };
+        let fix_node = |attrs: &mut gv_core::AttrMap| {
+            stale(&main.node, &aux_node_names, attrs, &["penwidth"]);
+            match main.node.get("fixed") {
+                Some(sym) => {
+                    let v = attrs.get("fixed").cloned().unwrap_or(sym.defval.clone());
+                    attrs.insert("fixedsize".to_string(), v);
+                }
+                None => {
+                    attrs.remove("fixedsize");
+                }
+            }
+        };
+        let fix_edge = |attrs: &mut gv_core::AttrMap| {
+            stale(
+                &main.edge,
+                &aux_edge_names,
+                attrs,
+                &["arrowsize", "penwidth"],
+            );
+        };
         let rightx = self.nodes[hn0].coord.x;
         let leftx = self.nodes[tn0].coord.x;
         let (tn, hn) = if flip { (hn0, tn0) } else { (tn0, hn0) };
@@ -853,6 +920,8 @@ impl Dot<'_> {
             let id = aux.ensure_node(&src.name);
             let nd = &mut aux.nodes[id.0 as usize];
             nd.attrs = src.attrs.clone();
+            // stale symbols read the clone's copied values, NULLed symbols included
+            fix_node(&mut nd.attrs);
             for k in [
                 "xlabel",
                 "group",
@@ -897,6 +966,7 @@ impl Dot<'_> {
                 (auxh, auxt)
             };
             let mut attrs = src.attrs.clone();
+            fix_edge(&mut attrs);
             for k in [
                 "constraint",
                 "minlen",
@@ -926,7 +996,28 @@ impl Dot<'_> {
         }
         let hvye = match hvye {
             Some(h) => h,
-            None => aux.add_edge(auxt, auxh, Default::default()).0 as usize,
+            None => {
+                let h = aux.add_edge(auxt, auxh, Default::default()).0 as usize;
+                fix_edge(&mut aux.edges[h].attrs);
+                // agedge applies the edge defaults, ports included.
+                let port = |s: Option<&String>| match s.map(String::as_str) {
+                    None | Some("") => gv_core::Port::default(),
+                    Some(v) => match v.split_once(':') {
+                        Some((a, b)) => gv_core::Port {
+                            name: Some(a.to_string()),
+                            compass: Some(b.to_string()),
+                        },
+                        None => gv_core::Port {
+                            name: Some(v.to_string()),
+                            compass: None,
+                        },
+                    },
+                };
+                let ae = &mut aux.edges[h];
+                ae.tail_port = port(ae.attrs.get("tailport"));
+                ae.head_port = port(ae.attrs.get("headport"));
+                h
+            }
         };
         aux.edges[hvye]
             .attrs
@@ -1143,11 +1234,12 @@ impl Dot<'_> {
 
     fn route(&self, p: &mut Path, spline: bool) -> Option<Vec<Point>> {
         let real = orig_edge(self, p.data);
-        let is_loop = self.edges[real].tail == self.edges[real].head;
+        let (t, h) = (self.edges[real].tail, self.edges[real].head);
+        let loop_head = (t == h).then(|| self.nodes[h].name.as_str());
         if spline {
-            routesplines(p, is_loop)
+            routesplines(p, loop_head)
         } else {
-            routepolylines(p, is_loop)
+            routepolylines(p, loop_head)
         }
     }
 
