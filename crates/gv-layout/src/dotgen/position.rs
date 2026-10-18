@@ -903,7 +903,13 @@ impl Dot<'_> {
             if n == 0 {
                 continue;
             }
-            let Some(v) = self.rv(g, r, 0) else { continue };
+            let Some(v) = self.rv(g, r, 0) else {
+                gv_core::diag::agerrorf(&format!(
+                    "contain_nodes clust {} rank {r} missing node\n",
+                    self.graphs[g].name
+                ));
+                continue;
+            };
             let w = self.nodes[v].lw + margin as f64 + self.graphs[g].border[LEFT_IX].x;
             self.make_aux_edge(ln, v, w, 0);
             let v = self.rv(g, r, n - 1).unwrap();
