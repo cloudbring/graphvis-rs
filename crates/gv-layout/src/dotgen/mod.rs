@@ -212,7 +212,13 @@ impl<'a> Dot<'a> {
         if maxphase == 1 {
             return Ok(());
         }
-        self.dot_mincross()?;
+        if let Err(e) = self.dot_mincross() {
+            if e == mincross::ABORT_LAYOUT {
+                self.aborted = true;
+                return Ok(());
+            }
+            return Err(e);
+        }
         self.gvdump("M");
         if maxphase == 2 {
             return Ok(());
