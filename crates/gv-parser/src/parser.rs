@@ -333,6 +333,16 @@ impl Parser {
         self.expect(&TokenKind::LBrace)?;
         self.parse_stmt_list()?;
         self.rbrace_line = self.expect(&TokenKind::RBrace)?.line;
+        // A graph attribute first declared in a subgraph is declared on the root with
+        // default "" (agattr), so agget(root, name) is "" rather than NULL.
+        let declared: Vec<(String, String)> = self.graph.dicts[0]
+            .graph
+            .iter()
+            .map(|(k, v)| (k.clone(), v.defval.clone()))
+            .collect();
+        for (k, v) in declared {
+            self.graph.graph_attrs.entry(k).or_insert(v);
+        }
         // Consume optional trailing semicolons
         while self.peek().kind == TokenKind::Semi {
             self.advance();
