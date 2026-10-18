@@ -87,17 +87,21 @@ writes `hypot(a, b)`. The rewrite was mechanical, done with a `syn`-based rewrit
 - On every other target, or with `--features gv-core/portable-math` on macOS, they use
   `math::portable`:
   - `hypot`: the formula above, with exact power-of-two scaling outside `[2^-500, 2^500]`.
-  - everything else, `cbrt` included: the `libm` crate 0.2.16. This is the same musl-derived code compiler-builtins
-    uses for wasm32, so the wasm results do not change. Linux now gets the same bits as wasm
-    (glibc's `pow`/`exp` pick FMA or non-FMA paths by CPU), and `Cargo.lock` pins the results
-    rather than the toolchain.
+  - `pow`: a Rust port of CORE-MATH's correctly rounded `pow` (`portable/pow/`, see below).
+    Apple's `pow` is within 0.511 ulp and differs from the correctly rounded result only near
+    halfway cases, so a correctly rounded `pow` agrees with it far more often than musl's.
+  - everything else, `cbrt` included: the `libm` crate 0.2.16. This is the same musl-derived
+    code compiler-builtins uses for wasm32. Linux gets the same bits as wasm (glibc's
+    `pow`/`exp` pick FMA or non-FMA paths by CPU), and `Cargo.lock` pins the results rather
+    than the toolchain.
 - `crates/gv-core/src/math/tests.rs` (macOS only) checks the portable `hypot` against the
   system libm on 1,000,000 random and edge inputs.
 
 ## Results
 
 `node scripts/wasm-e2e.mjs` (see its header for the build steps) checks the wasm build against
-C's hashes and renders every graph in multi-graph files through the new `renderAll` binding:
+C's hashes, rendering every graph in multi-graph files. The first `gv_core::math` change (musl
+`pow`, corpus of 2526 files at the time) moved wasm from "before" to "after":
 
 | corpus | files | before | after | native |
 |---|---:|---:|---:|---:|
@@ -112,40 +116,114 @@ C's hashes and renders every graph in multi-graph files through the new `renderA
 | render | 21 | 21 | 21 | 21 |
 | **all** | 2526 | 2247 | 2391 | 2526 |
 
-`gv-diff e2e` on macOS with `portable-math` fails on exactly the same 135 files as wasm. That
-means the remaining gap is entirely `pow`, `sin`, `cos` and `atan2`.
-
-Closing the gap would take one of these:
+`gv-diff e2e` on macOS with `portable-math` failed on exactly the same 135 files as wasm, so
+the remaining gap was entirely `pow`, `sin`, `cos` and `atan2`. Two ways to close it:
 
 1. **Reproduce Apple's `pow`, `sin` and `cos` (and `atan2`) from the binary.** This is the only
    way to get bit-identical output. It means reverse-engineering closed Apple code, which
-   raises a licensing question for the project.
-2. **Correctly rounded `pow` and `atan2`** (e.g. ports of CORE-MATH, MIT licence). Measured on
-   macOS with `portable-math`: CR `pow` plus CR `atan2` reaches 2407/2526 (sfdp 183, neato
-   438, fdp 376). CR `sin`/`cos` is worse than musl (circo 274). CORE-MATH's `pow` is about
-   4,000 lines of C.
+   raises a licensing question for the project. Not done.
+2. **Correctly rounded functions** (CORE-MATH, MIT). Measured on macOS with `portable-math`
+   (corpus of 2538 outputs, using the `core-math` crate's C build): CR `pow` alone gains 16
+   files (sfdp +13, neato +3) and loses none; CR `atan2` on top gains nothing (and lowers one
+   fdp score); CR `sin`/`cos` is worse than musl (circo 274 of 280). So `pow` was ported and
+   the others were not.
 
-### Linux
+### The CORE-MATH `pow` port
 
-CI (`.github/workflows/ci.yml`) runs `cargo test --workspace` on `ubuntu-latest`. That
-includes the corpus ratchets (`crates/gv-diff/tests/*_fidelity.rs`), which compare against
-C hashes and need no C install. Their baselines record macOS results, so they fail on Linux
-for the same libm reason. Before this change Linux also used glibc's `hypot`, so fdp was much
-worse there. A macOS run with `portable-math` stands in for Linux and wasm, and these ratchets
-fail:
+`crates/gv-core/src/math/portable/pow/` ports `src/binary64/pow/pow.c`, `pow.h`, `dint.h` and
+`qint.h` from CORE-MATH (as vendored by `core-math-sys` 1.4.0) line by line: the double-double
+first phase, the 128-bit second phase with the exact/midpoint test of Lauter and Lefèvre, and
+the 256-bit third phase. `tables.rs` was converted from the C initializers by a script.
+Differences from the C: only rounding to nearest (Rust has no other mode), no floating-point
+flags or `errno`, shifts that are undefined in C by 64 or more use the hardware's modulo-64
+behaviour, and the "unexpected worst case" exit returns the 256-bit result instead.
+`add_dint_11` keeps the low limb of its destination, as the C does.
 
-| ratchet | change |
-|---|---|
-| e2e | 2526 → 2391 |
-| sfdp | exact 297 → 197 |
-| fdp | exact 383 → 379 |
-| neato | exact 438 → 436 |
-| main/dot | 514 → 513 |
-| circo | 280 → 279 |
-| twopi | 280 → 279 |
+Checked bit for bit against the C `cr_pow`, out of tree:
 
-osage and patchwork are unchanged. No Linux machine was available to run this directly. To
-make Linux CI meaningful, either close the gap above or add per-target ("portable") baselines.
+| inputs | count | differ |
+|---|---:|---:|
+| random bit patterns, ranges typical of the corpus, exact and midpoint cases, x near 1 | 100,000,000 | 0 |
+| (of which second phase / exact-midpoint test / third phase) | 358,025 / 93,638 / 131,720 | |
+| corpus `pow` arguments (`math-trace`) | 4,000,000 | 0 |
+| random inputs with the C built as `POW_ITERATION=8` and the port forced likewise (third phase only) | 10,000,000 | 0 |
+
+The debug build (overflow-checked shifts and arithmetic) ran 22,000,000 of these without a
+panic. `pow/tests.rs` keeps 32 C results, 8 per phase, and the special values. The ported
+output equals the C build's on all 2538 corpus outputs (`gv-diff e2e --hashes`).
+
+### Portable results
+
+`portable-math` on macOS, Linux and wasm32 give the same output (see Linux below). Identity with
+C, by corpus (`gv-diff e2e`):
+
+| corpus | files | Apple libm | portable, musl `pow` | portable, CORE-MATH `pow` |
+|---|---:|---:|---:|---:|
+| main | 526 | 526 | 525 | 525 |
+| neato | 438 | 438 | 435 | 438 |
+| sfdp | 297 | 297 | 170 | 183 |
+| circo | 280 | 280 | 279 | 279 |
+| twopi | 279 | 279 | 279 | 279 |
+| fdp | 379 | 379 | 376 | 376 |
+| osage | 178 | 178 | 178 | 178 |
+| patchwork | 140 | 140 | 140 | 140 |
+| render | 21 | 21 | 21 | 21 |
+| **all** | 2538 | 2538 | 2403 | 2419 |
+
+## Ratchet baselines per math profile
+
+`gv_core::math::PROFILE` is `Profile::Apple` when the platform libm is used (Apple targets
+without `portable-math`) and `Profile::Portable` otherwise. Every corpus ratchet keeps one
+baseline per profile: `gv-diff` maps `--baseline X.json` to `X.portable.json` on portable
+builds (`gv_diff::profile_baseline`), for reading and for `--update`, and prints which file it
+used. The Apple files stay the record of exact C parity; the portable files guard regressions
+on Linux and wasm, and their numbers document the gap to C. `scripts/update-baselines.sh
+[--portable]` refreshes all of them for one profile.
+
+| ratchet | baseline | Apple | portable |
+|---|---|---:|---:|
+| main (dot) | `tests/golden/baseline.json` | exact 526/526 | 525/526 |
+| neato | `neato-baseline.json` | 438/438 | 438/438 |
+| sfdp | `sfdp-baseline.json` | 297/297 | 208/297 |
+| circo | `circo-baseline.json` | 280/280 | 279/280 |
+| twopi | `twopi-baseline.json` | 280/287 | 279/287 |
+| fdp | `fdp-baseline.json` | 383/383 | 379/383 |
+| osage | `osage-baseline.json` | 178/178 | 178/178 |
+| patchwork | `patchwork-baseline.json` | 140/140 | 140/140 |
+| render | `render/baseline.json` | svg 547/547, xdot 547/547 | same |
+| e2e | `e2e-baseline.json` | 2538/2538 | 2419/2538 |
+
+(The layout ratchets count `gv-diff`'s geometric "exact" files and also guard the total score;
+twopi's 7 non-exact files are not math-related.)
+
+### Linux and wasm32
+
+Checked in Ubuntu 24.04 containers (colima on an arm64 Mac, Rust 1.99.0), with the worktree
+copied in, against the portable baselines generated on macOS. The hash comparison covers every
+corpus output through the whole pipeline, matching C or not:
+
+| platform | `cargo test --workspace` | baselines regenerated by `scripts/update-baselines.sh` | `gv-diff e2e --hashes` vs macOS `portable-math` |
+|---|---|---|---|
+| Linux aarch64 (native VM) | pass (debug) | byte-identical to the committed `*.portable.json` | all 2538 hashes identical |
+| Linux x86_64 (QEMU user emulation) | pass (`--release`; about 2 hours) | not run (several more hours under QEMU) | all 2538 hashes identical |
+| wasm32 (node, `scripts/wasm-e2e.mjs --hashes`) | n/a | n/a | all 2538 hashes identical |
+
+So Linux and wasm compute the same bits as macOS with `portable-math`: no platform dependence
+was found (the math goes through `gv_core::math`, `sqrt`/`mul_add` are exact everywhere, and
+the `libm` crate has no CPU-dependent paths on these targets). Two harness issues were fixed:
+
+- `scripts/wasm-e2e.mjs` read inputs as JS strings, which replaced the non-UTF-8 bytes of the
+  charset corpus files, so 9 of them differed from native. The new `renderAllBytes` binding
+  (`gv-wasm`) takes and returns raw bytes like the native harness (`gv_core::charset`).
+- `.cargo/config.toml` sets `rustc-wrapper = "/opt/homebrew/bin/sccache"`, which does not exist
+  on Linux; CI overrides it with `RUSTC_WRAPPER=sccache`, and the containers used
+  `RUSTC_WRAPPER=` (empty).
+
+CI (`.github/workflows/ci.yml`, `ubuntu-latest`): the `verify` job runs fmt, clippy,
+`cargo test --workspace` (so every ratchet against its portable baseline) and the wasm32
+check. The `wasm-e2e` job installs `wasm-bindgen-cli` at the `wasm-bindgen` version in
+`Cargo.lock` (0.2.129, cached), builds the package, runs `scripts/wasm-e2e.mjs` against
+`e2e-baseline.portable.json`, and `cmp`s the wasm output hashes with native Linux's.
 
 ## Provenance and licences
 
@@ -155,10 +233,11 @@ Everything under `crates/gv-core/src/math/`:
 |---|---|---|---|
 | `mod.rs` | the `math::*` entry points, `PORTABLE`, `PROFILE` | written for this port | project licence |
 | `portable/mod.rs` | re-exports of the `libm` crate | written for this port | project licence |
+| `portable/pow/` | correctly rounded `pow` | Rust port of CORE-MATH `src/binary64/pow/` (Tom Hubrecht, Paul Zimmermann; Copyright (c) 2022-2025 CERN and Inria), tables converted mechanically; licence text kept in `pow/mod.rs` | MIT |
 | `portable/hypot.rs` | Apple-equivalent `hypot` | an original formula identified by black-box comparison with the system libm; no code copied | project licence |
 | `trace.rs` | `math-trace` argument logging | written for this port | project licence |
-| `tests.rs` | portable `hypot` vs system libm | written for this port | project licence |
-| `libm` crate 0.2.16 (dependency) | `pow`, `atan2`, `sin`, `cos`, `tan`, `asin`, `acos`, `exp`, `log`, `log2`, `cbrt` | rust-lang/compiler-builtins: musl/fdlibm ports; `cbrt` is CORE-MATH's (Alexei Sibidanov) | MIT |
+| `tests.rs`, `portable/pow/tests.rs` | portable `hypot` vs system libm; `pow` regression values from the C | written for this port | project licence |
+| `libm` crate 0.2.16 (dependency) | `atan2`, `sin`, `cos`, `tan`, `asin`, `acos`, `exp`, `log`, `log2`, `cbrt` | rust-lang/compiler-builtins: musl/fdlibm ports; `cbrt` is CORE-MATH's (Alexei Sibidanov) | MIT |
 
 No Apple source is shipped. An earlier version ported Apple Libm's `Source/ARM/cbrt.c`, which
 has no licence header and comes from an APSL release; it was replaced by the `libm` crate's
