@@ -5,10 +5,9 @@
 //! the port reproduces C's last bits. On other targets Rust takes them from a different libm
 //! (glibc on Linux, compiler-builtins' musl port on wasm32) that disagrees in the last ulp on
 //! some inputs, which is enough to change a force-directed layout. Every call in the port goes
-//! through this module, and on those targets it uses [`portable`] implementations: ports that
-//! reproduce Apple's results where Apple's algorithm is known (`hypot`, `cbrt`), and the `libm`
-//! crate (the musl port Rust itself uses on wasm32) for the rest, so that every non-Apple
-//! target computes the same bits. See `docs/porting/libm.md`.
+//! through this module, and on those targets it uses [`portable`] implementations: a
+//! reproduction of Apple's `hypot`, and the `libm` crate (the musl port Rust itself uses on
+//! wasm32) for the rest, so that every non-Apple target computes the same bits. See `docs/porting/libm.md`.
 //!
 //! `sqrt` and `mul_add` are correctly rounded everywhere and stay `f64` methods.
 
@@ -24,6 +23,35 @@ mod trace {
 /// Whether this build uses [`portable`] rather than the platform libm. The `portable-math`
 /// feature forces it on macOS, to check the portable code against the corpus natively.
 pub const PORTABLE: bool = cfg!(any(not(target_vendor = "apple"), feature = "portable-math"));
+
+/// Which libm this build computes with. The corpus ratchets keep one baseline per profile:
+/// `Apple` results are C's bit for bit, `Portable` ones document the gap to C (see
+/// `docs/porting/libm.md`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Profile {
+    /// The system libm on Apple targets, the one C Graphviz uses there.
+    Apple,
+    /// [`portable`]: identical on every target (Linux, wasm32, macOS with `portable-math`).
+    Portable,
+}
+
+impl Profile {
+    /// Lower-case name, as used in baseline file names (`baseline.portable.json`).
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Profile::Apple => "apple",
+            Profile::Portable => "portable",
+        }
+    }
+}
+
+/// The math profile of this build.
+pub const PROFILE: Profile = if PORTABLE {
+    Profile::Portable
+} else {
+    Profile::Apple
+};
 
 /// C `hypot(x, y)`.
 #[inline]

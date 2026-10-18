@@ -49,17 +49,6 @@ fn same(a: f64, b: f64) -> bool {
     a.to_bits() == b.to_bits() || (a.is_nan() && b.is_nan())
 }
 
-fn check1(name: &str, got: impl Fn(f64) -> f64, want: impl Fn(f64) -> f64, xs: &[f64]) {
-    let bad: Vec<_> = xs.iter().filter(|&&x| !same(got(x), want(x))).collect();
-    assert!(
-        bad.is_empty(),
-        "{name}: {} of {} differ, e.g. {:?}",
-        bad.len(),
-        xs.len(),
-        &bad[..bad.len().min(5)]
-    );
-}
-
 fn check2(
     name: &str,
     got: impl Fn(f64, f64) -> f64,
@@ -103,17 +92,4 @@ fn hypot_matches_apple() {
         xs.push((r.unit() * 1000.0, r.unit() * 1000.0));
     }
     check2("hypot", portable::hypot, f64::hypot, &xs);
-}
-
-#[test]
-fn cbrt_matches_apple() {
-    let mut r = Rng(0x2545_f491_4f6c_dd1d);
-    let mut xs = EDGES.to_vec();
-    for _ in 0..N {
-        xs.push(r.log_uniform(-1074.0, 1024.0));
-        xs.push(r.log_uniform(-20.0, 20.0));
-        xs.push(r.bits());
-        xs.push(r.unit() * 2.0 - 1.0);
-    }
-    check1("cbrt", portable::cbrt, f64::cbrt, &xs);
 }

@@ -7,6 +7,10 @@
 //! Exits non-zero when the total score or the number of exactly matching files drops
 //! below the baseline. `--update` rewrites the baseline with the current results.
 //!
+//! Every baseline is per math profile (`gv_core::math::PROFILE`): `--baseline X.json` reads
+//! and writes `X.json` on Apple builds and `X.portable.json` on portable ones (Linux, wasm32,
+//! `--features gv-core/portable-math`); see `gv_diff::profile_baseline`.
+//!
 //! ```text
 //! gv-diff render [--root DIR] [--baseline FILE] [--update] [--filter SUBSTR]
 //!                [--format FMT[,FMT...]] [--worst N]
@@ -51,7 +55,11 @@ fn main() -> ExitCode {
     while let Some(a) = args.next() {
         match a.as_str() {
             "--golden" => golden = args.next().expect("--golden DIR").into(),
-            "--baseline" => baseline_path = Some(args.next().expect("--baseline FILE").into()),
+            "--baseline" => {
+                baseline_path = Some(gv_diff::profile_baseline(Path::new(
+                    &args.next().expect("--baseline FILE"),
+                )));
+            }
             "--update" => update = true,
             "--filter" => filter = args.next(),
             "--worst" => worst = args.next().and_then(|s| s.parse().ok()).unwrap_or(15),
@@ -87,6 +95,7 @@ fn main() -> ExitCode {
     let Some(bpath) = baseline_path else {
         return ExitCode::SUCCESS;
     };
+    print_profile(&bpath);
     if update {
         let json = serde_json::to_string_pretty(&current).expect("serialize baseline");
         std::fs::write(&bpath, json + "\n").expect("write baseline");
@@ -101,6 +110,15 @@ fn main() -> ExitCode {
         }
     };
     check_against(&base, &current, filter.is_some())
+}
+
+/// Names the math profile, since it decides which baseline file is used.
+pub(crate) fn print_profile(baseline: &Path) {
+    println!(
+        "math profile: {}; baseline {}",
+        gv_core::math::PROFILE.name(),
+        baseline.display()
+    );
 }
 
 fn pairs_main(args: Vec<String>) -> ExitCode {
@@ -319,7 +337,11 @@ fn render_main(args: Vec<String>) -> ExitCode {
     while let Some(a) = it.next() {
         match a.as_str() {
             "--root" => root = it.next().expect("--root DIR").into(),
-            "--baseline" => baseline_path = Some(it.next().expect("--baseline FILE").into()),
+            "--baseline" => {
+                baseline_path = Some(gv_diff::profile_baseline(Path::new(
+                    &it.next().expect("--baseline FILE"),
+                )));
+            }
             "--update" => update = true,
             "--filter" => filter = it.next(),
             "--format" => formats.extend(
@@ -366,6 +388,7 @@ fn render_main(args: Vec<String>) -> ExitCode {
     let Some(bpath) = baseline_path else {
         return ExitCode::SUCCESS;
     };
+    print_profile(&bpath);
     if update {
         let mut merged = base.unwrap_or_default();
         for (fmt, files) in cur.formats {

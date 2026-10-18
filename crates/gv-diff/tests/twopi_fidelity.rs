@@ -2,7 +2,9 @@
 //! further from C Graphviz than the twopi baseline.
 //!
 //! Refresh the baseline after an improvement with
-//! `cargo run --release -p gv-diff -- --golden tests/golden/twopi --baseline tests/golden/twopi-baseline.json --update tests/twopi`.
+//! `cargo run --release -p gv-diff -- --golden tests/golden/twopi --baseline tests/golden/twopi-baseline.json --update tests/twopi`. Add
+//! `--features gv-core/portable-math` to refresh the portable baseline (`*.portable.json`), which
+//! gv-diff selects on every portable-math build (Linux, wasm32, or macOS with the feature).
 
 use std::process::Command;
 
