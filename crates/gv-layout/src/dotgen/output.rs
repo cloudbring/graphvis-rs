@@ -189,6 +189,10 @@ impl Output {
             graph.subgraphs[si].bb = bb;
             // `is_a_cluster` also honours `cluster=true`.
             graph.subgraphs[si].is_cluster = true;
+            // In GD_clust, so drawn even with an empty box (an abandoned layout).
+            graph.subgraphs[si]
+                .graph_attrs
+                .insert(gv_core::REGISTERED_CLUSTER_KEY.to_string(), String::new());
         }
         for (i, e) in self.edges.into_iter().enumerate() {
             if let Some((s, lp, unplaced)) = e {

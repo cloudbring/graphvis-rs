@@ -432,6 +432,11 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         }
         let mut c = Dot::new_component(&cg.graph, graph, d);
         c.dot_layout()?;
+        if c.aborted {
+            // doDot returns the component's failure before packing
+            d.aborted = true;
+            return Ok(());
+        }
         any_splines |= c.splines_done;
         comps.push(d.absorb(&c, &cg, ci, &clust_of_sub, &mut pcl, &mut nclust));
     }

@@ -87,12 +87,13 @@ impl Dot<'_> {
         self.mark_lowclusters(g);
         self.set_ycoords(g);
         if self.concentrate {
-            // C reports the failure and gives up on the layout (doDot returns before
-            // postprocessing, leaving a half-made drawing); the port keeps going with
-            // what was merged.
+            // dot_position returns the failure: doDot gives up on the layout and
+            // dot_layout skips dotneato_postprocess, leaving the drawing half made.
             if let Err(msg) = self.dot_concentrate() {
                 gv_core::diag::agerrorf(&format!("{msg}\n"));
                 gv_core::diag::agerr_prev("concentrate=true may not work correctly.\n");
+                self.aborted = true;
+                return Ok(());
             }
         }
         self.expand_leaves(g);

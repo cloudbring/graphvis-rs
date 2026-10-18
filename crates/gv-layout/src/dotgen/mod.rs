@@ -76,6 +76,8 @@ pub struct Dot<'a> {
     pub et: crate::common::types::EdgeType,
     /// `State == GVSPLINES`: splines exist and are mapped by postprocessing.
     pub splines_done: bool,
+    /// The layout gave up (dot_position failed): no splines, no postprocessing.
+    pub aborted: bool,
 }
 
 impl<'a> Dot<'a> {
@@ -105,6 +107,7 @@ impl<'a> Dot<'a> {
             remincross: false,
             et: crate::common::types::EdgeType::Spline,
             splines_done: false,
+            aborted: false,
         }
     }
 
@@ -215,6 +218,9 @@ impl<'a> Dot<'a> {
             return Ok(());
         }
         self.dot_position()?;
+        if self.aborted {
+            return Ok(());
+        }
         self.gvdump("P");
         if maxphase == 3 {
             return Ok(());
@@ -234,6 +240,7 @@ impl<'a> Dot<'a> {
 /// Lays out `graph` with the dotgen port.
 pub fn layout_dot(graph: &mut Graph) -> Result<()> {
     gv_geom::size_graph_nodes(graph);
+    let mut aborted = false;
     let result = {
         let mut d = Dot::new(graph);
         d.graph_init();
@@ -250,10 +257,17 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         if (1..=3).contains(&maxphase) {
             output::Output::phase(&d, maxphase)
         } else {
-            d.dotneato_postprocess();
+            if !d.aborted {
+                d.dotneato_postprocess();
+            }
+            aborted = d.aborted;
             output::Output::collect(&d)
         }
     };
     result.apply(graph);
+    if aborted {
+        // no place_graph_label: labels keep their zeroed position
+        crate::nop::labels_at_origin(graph);
+    }
     Ok(())
 }
