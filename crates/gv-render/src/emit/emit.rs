@@ -225,11 +225,13 @@ impl<'a, E: Engine> Emitter<'a, E> {
             ObjKind::Root => LabelSubstContext {
                 graph_name: &m.g.name,
                 label_text: m.label.as_ref().map_or("", |l| l.text.as_str()),
+                has_label: m.label.is_some(),
                 ..Default::default()
             },
             ObjKind::Cluster(c) => LabelSubstContext {
                 graph_name: m.clusters[c].name,
                 label_text: m.clusters[c].label.as_ref().map_or("", |l| l.text.as_str()),
+                has_label: m.clusters[c].label.is_some(),
                 ..Default::default()
             },
             ObjKind::Node(n) => LabelSubstContext {
@@ -237,6 +239,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 node_name: m.nodes[n].name,
                 is_node: true,
                 label_text: &m.nodes[n].label.text,
+                has_label: true,
                 ..Default::default()
             },
             ObjKind::Edge(e) => {
@@ -250,6 +253,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
                     tail_port: ed.tail_port,
                     head_port: ed.head_port,
                     label_text: ed.label.as_ref().map_or("", |l| l.text.as_str()),
+                    has_label: ed.label.is_some(),
                     ..Default::default()
                 }
             }

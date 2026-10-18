@@ -105,6 +105,9 @@ pub struct LabelSubstContext<'a> {
     pub pen_color: Option<&'a str>,
     /// The object is a node (its name may be empty).
     pub is_node: bool,
+    /// The object has a main label (`ND_label`, `ED_label`, `GD_label`), whose text is
+    /// `label_text` even when empty; without one `\L` stays literal.
+    pub has_label: bool,
 }
 
 impl<'a> LabelSubstContext<'a> {
@@ -123,6 +126,7 @@ impl<'a> LabelSubstContext<'a> {
             label_text: "",
             pen_color: None,
             is_node: true,
+            has_label: false,
         }
     }
 }
@@ -546,7 +550,7 @@ fn strdup_and_subst_obj0(s: &str, ctx: &LabelSubstContext<'_>, esc_backslash: bo
     } else {
         ("\\T", "\\H")
     };
-    let l_str = if ctx.label_text.is_empty() {
+    let l_str = if !ctx.has_label && ctx.label_text.is_empty() {
         "\\L"
     } else {
         ctx.label_text
@@ -839,6 +843,7 @@ mod tests {
             label_text: "",
             pen_color: None,
             is_node: false,
+            has_label: false,
         };
         let layout = measure_multiline_label_with_context(
             "\\G: \\T -> \\H (\\E)",

@@ -626,6 +626,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     let ltext = label_l_text(&label, label_str, init == ShapeInit::Record);
     let xobj = LabelSubstContext {
         label_text: &ltext,
+        has_label: true,
         ..obj.clone()
     };
     let xlabel = attrs
@@ -819,6 +820,7 @@ pub fn edge_label_geometry(
         _ => String::new(),
     };
     obj.label_text = &ltext;
+    obj.has_label = label.is_some();
     EdgeLabelGeometry {
         xlabel: mk("xlabel", &obj, fontname, fontsize),
         head_label: mk("headlabel", &obj, lfontname, lfontsize),
