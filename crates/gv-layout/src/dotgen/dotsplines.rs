@@ -852,7 +852,8 @@ impl Dot<'_> {
             aux.edge_defaults.remove(k);
         }
         // setState rebinds only some Agsyms to auxg. The others (N_penwidth, E_arrowsz,
-        // E_penwidth, E_arrowhead, E_arrowtail) keep the main graph's symbols, and
+        // E_penwidth; arrow_flags finds arrowhead/arrowtail by name) keep the main
+        // graph's symbols, and
         // agxget reads the aux attribute with the same `id`. auxg declares cgraph's
         // ProtoGraph `label` first, then the main graph's attributes in name order
         // (agnxtattr), then the ports and `weight` cloneGraph/setState add. N_fixed is
@@ -908,7 +909,7 @@ impl Dot<'_> {
                 &main.edge,
                 &aux_edge_names,
                 attrs,
-                &["arrowhead", "arrowtail", "arrowsize", "penwidth"],
+                &["arrowsize", "penwidth"],
             );
         };
         let rightx = self.nodes[hn0].coord.x;
@@ -997,6 +998,23 @@ impl Dot<'_> {
             None => {
                 let h = aux.add_edge(auxt, auxh, Default::default()).0 as usize;
                 fix_edge(&mut aux.edges[h].attrs);
+                // agedge applies the edge defaults, ports included.
+                let port = |s: Option<&String>| match s.map(String::as_str) {
+                    None | Some("") => gv_core::Port::default(),
+                    Some(v) => match v.split_once(':') {
+                        Some((a, b)) => gv_core::Port {
+                            name: Some(a.to_string()),
+                            compass: Some(b.to_string()),
+                        },
+                        None => gv_core::Port {
+                            name: Some(v.to_string()),
+                            compass: None,
+                        },
+                    },
+                };
+                let ae = &mut aux.edges[h];
+                ae.tail_port = port(ae.attrs.get("tailport"));
+                ae.head_port = port(ae.attrs.get("headport"));
                 h
             }
         };
