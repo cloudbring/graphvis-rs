@@ -195,7 +195,8 @@ impl Dot<'_> {
     /// `is_a_cluster(g)`
     pub fn is_a_cluster(&self, g: G) -> bool {
         if g == 0 {
-            return true;
+            // g == g->root; a pack component (a "_cc_N" subgraph in C) is not the root.
+            return !self.comp || mapbool(self.agget(0, "cluster"));
         }
         let name = &self.graphs[g].name;
         (name.len() >= 7 && name[..7].eq_ignore_ascii_case("cluster"))
