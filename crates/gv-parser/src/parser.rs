@@ -43,6 +43,9 @@ pub struct Parser {
     globals: GlobalAttrs,
     /// Line of the root graph's closing `}`.
     rbrace_line: usize,
+    /// Keys of the last attribute list in source order: cgraph declares them in this
+    /// order, which fixes their `sym->id`.
+    attr_order: Vec<String>,
     /// cgraph's id counter for anonymous objects (`ctr` in `idmap`).
     anon_ctr: u64,
     /// Parent of each subgraph (`None`: the root graph).
@@ -68,6 +71,7 @@ impl Parser {
             scope_stack: Vec::new(),
             globals: globals.clone(),
             rbrace_line: 0,
+            attr_order: Vec::new(),
             anon_ctr: 1,
             sub_parent: Vec::new(),
         })
@@ -427,8 +431,10 @@ impl Parser {
             }
         }
         let attrs = kept;
-        for (k, v) in &attrs {
-            self.attr_stmt(kind, k, v);
+        for k in std::mem::take(&mut self.attr_order) {
+            if let Some(v) = attrs.get(&k) {
+                self.attr_stmt(kind, &k, v);
+            }
         }
         match attr_tok.kind {
             TokenKind::Graph => self.current_graph_attrs_mut().extend(attrs),
@@ -498,9 +504,9 @@ impl Parser {
             }
 
             let edge_attrs = self.parse_opt_attr_list()?;
-            for k in edge_attrs.keys() {
+            for k in std::mem::take(&mut self.attr_order) {
                 if k != "key" {
-                    self.bind_attr(DictKind::Edge, k);
+                    self.bind_attr(DictKind::Edge, &k);
                 }
             }
             for pair in chain.windows(2) {
@@ -521,8 +527,8 @@ impl Parser {
         } else {
             let attrs = self.parse_opt_attr_list()?;
             if matches!(first, SimpleItem::Nodes(_)) {
-                for k in attrs.keys() {
-                    self.bind_attr(DictKind::Node, k);
+                for k in std::mem::take(&mut self.attr_order) {
+                    self.bind_attr(DictKind::Node, &k);
                 }
             }
             if let SimpleItem::Nodes(nodes) = first
