@@ -87,7 +87,17 @@ impl Output {
             let mut extra = Vec::new();
             let Some(bzs) = ed.spl.as_ref().filter(|_| ed.edge_type != IGNORED) else {
                 edge_attrs.push(extra);
-                edges.push(None);
+                // A lost edge (no spline) still draws its placed label (emit_edge);
+                // the output writer skips edges without splines.
+                // (not in the pack branch, whose root never routes: labels stay unplaced)
+                let routed = d.et != crate::common::types::EdgeType::None;
+                match ed
+                    .label
+                    .filter(|&l| routed && ed.edge_type != IGNORED && d.labels[l].set)
+                {
+                    Some(l) => edges.push(Some((Spline::default(), Some(d.labels[l].pos), false))),
+                    None => edges.push(None),
+                }
                 continue;
             };
             let unplaced: String = [('h', ed.head_label), ('t', ed.tail_label)]
