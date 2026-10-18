@@ -5,7 +5,7 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-const VERSION: &str = "dot-rs - graphvis-rs version 0.1.0 (partial port of Graphviz 16.1.0)";
+const VERSION: &str = "dot-rs - graphvis-rs version 0.1.0 (Rust port of Graphviz 16.1.0)";
 
 const USAGE: &str = " -V          - Print version and exit
  -v[n]       - Enable verbose mode (accepted, ignored)
