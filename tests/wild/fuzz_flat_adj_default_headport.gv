@@ -1,0 +1,4 @@
+graph "fuzz 20625" {
+edge [headport="n", constraint="false"];
+"n5" -- "n0";
+}

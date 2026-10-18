@@ -1,0 +1,4 @@
+digraph "G" {
+edge [constraint="false"];
+"n3" -> "n6" [decorate="true", arrowhead="invdot", color="brown", tailport="w"];
+}

@@ -1,0 +1,14 @@
+graph "fuzz 20625" {
+	graph [bb="0,0,126,43.938"];
+	node [label="\N"];
+	edge [constraint=false,
+		headport=n
+	];
+	n5	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	n0	[height=0.5,
+		pos="99,18",
+		width=0.75];
+	n5 -- n0:n	[pos="50.856,26.614 71.611,37.552 99,52.043 99,37.321"];
+}

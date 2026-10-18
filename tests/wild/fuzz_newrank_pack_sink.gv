@@ -1,0 +1,10 @@
+digraph "G" {
+newrank="true";
+pack="8";
+{
+rank=sink;
+"n31";
+"n2";
+}
+"n2" -> "n3" [taillabel="-1.5", style="invis"];
+}

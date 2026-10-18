@@ -1,6 +1,6 @@
 {
   "dataset": "graphvis-rs-wild-corpus",
-  "count": 534,
+  "count": 542,
   "sources": [
     "https://gitlab.com/graphviz/graphviz.git (16.1.0 tests/graphs, regression_tests/shapes, graphs/directed, graphs/undirected)",
     "https://gitlab.com/graphviz/graphviz.gitlab.io.git (Official Graphviz Gallery & Attribute Examples)",
@@ -4679,6 +4679,54 @@
       "bytes": 77,
       "c_nodes": 3,
       "c_edges": 1
+    },
+    {
+      "file": "fuzz_concentrate_abort.gv",
+      "bytes": 620,
+      "c_nodes": 10,
+      "c_edges": 11
+    },
+    {
+      "file": "fuzz_flat_adj_default_headport.gv",
+      "bytes": 78,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_attr_source_order.gv",
+      "bytes": 66,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_attr_leading_comma.gv",
+      "bytes": 69,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_flat_adj_arrowhead.gv",
+      "bytes": 124,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_install_in_rank_abort.gv",
+      "bytes": 96,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_newrank_pack_sink.gv",
+      "bytes": 118,
+      "c_nodes": 3,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_flat_adj_stale_minlen.gv",
+      "bytes": 150,
+      "c_nodes": 6,
+      "c_edges": 3
     }
   ]
 }

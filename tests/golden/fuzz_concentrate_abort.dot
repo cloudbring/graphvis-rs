@@ -1,0 +1,66 @@
+digraph "fuzz 20284" {
+	graph [bb="0,0,0,0",
+		concentrate=true
+	];
+	node [label="\N"];
+	subgraph cluster0 {
+		graph [bb="0,0,0,0"];
+		Ωmega	[height=0.5,
+			pos="2,202.2",
+			width=1.0216];
+		"x-y"	[height=0.5,
+			pos="3,122",
+			width=0.75];
+		Ωmega -> "x-y";
+		日本	[height=0.5,
+			pos="2,26",
+			width=0.75];
+		"x-y" -> 日本;
+		"name 14"	[height=0.5,
+			pos="1,26",
+			width=1.2228];
+		"x-y":n -> "name 14"	[label=ß];
+		"strict"	[height=0.5,
+			pos="1,202.2",
+			width=0.84294];
+		"name 12"	[height=0.5,
+			pos="0,202.2",
+			width=1.2228];
+	}
+	subgraph s9 {
+		日本;
+	}
+	{
+		"x-y";
+		"name 12";
+		"name 15"	[height=0.5,
+			pos="0,26",
+			width=1.2228];
+	}
+	subgraph s16 {
+		"x-y";
+		"name 16"	[height=0.5,
+			pos="2,122",
+			width=1.2228];
+	}
+	Ωmega -> "name 16";
+	"x-y" -> "name 15";
+	"x-y" -> "name 15"	[arrowhead=rnormal];
+	"strict":c -> "name 15"	[arrowtail=rtee,
+		label="e=mc²\lIF\ly1",
+		tooltip="iBmBmz5bue vnBz. 47"];
+	"name 12" -> "name 15";
+	"a b c"	[height=0.5,
+		pos="4,122",
+		width=0.81294];
+	"a b c":nw -> 日本	[class=ecls,
+		penwidth=0.95];
+	"name 9"	[height=0.5,
+		pos="3,26",
+		width=1.0887];
+	"a b c":p0:ne -> "name 9"	[color=crimson,
+		decorate=true,
+		headlabel="…\nß\nΩ",
+		taillabel="x<y"];
+	"name 15" -> "name 15";
+}

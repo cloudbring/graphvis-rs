@@ -1,0 +1,19 @@
+digraph "fuzz 20284" {
+concentrate="true";
+subgraph "cluster0" {
+"Ωmega" [];
+"x-y" [];
+"strict" [];
+"日本" [];
+"name 12" [];
+"name 14";
+}
+"a b c":"p0:ne" -> "name 9" [headlabel="…\nß\nΩ", taillabel="x<y", decorate="true", color="crimson"];
+"x-y":"n" -> "name 14" [label="ß"];
+"strict":"c" -> "name 15" [label="e=mc²\lIF\ly1", arrowtail="rtee", tooltip="iBmBmz5bue vnBz. 47"];
+"x-y" -> subgraph "s9" {"日本"};
+{"name 15" "x-y" "name 12"} -> "name 15";
+"a b c" -> "日本" [penwidth="0.95", class="ecls", tailport="nw"];
+"x-y" -> "name 15" [arrowhead="rnormal"];
+"Ωmega" -> subgraph "s16" {"x-y" "name 16"};
+}

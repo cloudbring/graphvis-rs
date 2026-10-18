@@ -1,0 +1,7 @@
+graph "first" {
+a -- b;
+}
+graph "G" {
+edge [, nodesep=-1];
+c -- d;
+}

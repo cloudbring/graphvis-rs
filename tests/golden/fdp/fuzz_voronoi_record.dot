@@ -1,0 +1,16 @@
+strict graph G {
+	graph [bb="0,0,117.37,37.783",
+		layout=fdp,
+		overlap=voronoi
+	];
+	node [label="\N"];
+	n0	[height=0.51389,
+		pos="27,19.283",
+		rects="0,1.2826,54,37.283",
+		shape=record,
+		width=0.75];
+	n1	[height=0.5,
+		pos="90.372,18",
+		width=0.75];
+	n0 -- n1	[pos="54.243,18.731 57.195,18.671 60.2,18.611 63.152,18.551"];
+}
