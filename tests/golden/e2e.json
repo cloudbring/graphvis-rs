@@ -2575,7 +2575,17 @@
     "osage/fuzz_unplaced_headlabel": "c297a83a55384302",
     "patchwork/fuzz_xlabel_node_size": "feed8f5cad99f4c9",
     "twopi/fuzz_empty_graph_label": "ebe12f93572990bd",
-    "twopi/fuzz_unplaced_xlabel": "e882c09da6e4dd59"
+    "twopi/fuzz_unplaced_xlabel": "e882c09da6e4dd59",
+    "fdp/fuzz_voronoi_record": "d2c084ad680c9ec9",
+    "fdp/fuzz_voronoi_shape": "3ac752a0e5259907",
+    "main/fuzz_attr_leading_comma": "f22b81549b776ec6",
+    "main/fuzz_attr_source_order": "f6076e0a56bbc15f",
+    "main/fuzz_concentrate_abort": "8faac1dd1a75eb28",
+    "main/fuzz_flat_adj_arrowhead": "27812f5c12e4b840",
+    "main/fuzz_flat_adj_default_headport": "6def06a9ae1d4b87",
+    "main/fuzz_flat_adj_stale_minlen": "3096fbbf80dfe2eb",
+    "main/fuzz_install_in_rank_abort": "2c2bb1567b6a47a5",
+    "main/fuzz_newrank_pack_sink": "462ec06563aa941f"
   },
   "unstable": [
     "fdp/wild_gv16_graphs_badvoro_2e8cb8",
