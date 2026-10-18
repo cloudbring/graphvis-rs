@@ -21,8 +21,6 @@ dependencies = [
  "gv-core",
  "gv-engine",
  "gv-parser",
- "serde",
- "serde_json",
 ]
 
 [[package]]

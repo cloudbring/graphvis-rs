@@ -2,70 +2,89 @@
 
 # graphvis-rs
 
-**Pure Rust + WebAssembly, partial port of Graphviz 16.1.0** (`#forbid(unsafe_code)`, zero C/FFI dependencies), running natively on desktop/server and directly inside the browser via `wasm32-unknown-unknown`.
+**A Rust + WebAssembly port of Graphviz 16.1.0** (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS its output is byte-identical to C Graphviz on every input in the project's test corpora.
 
 ---
 
 ## Status
 
-graphvis-rs is a work in progress. Output is not byte-compatible with Graphviz, and only part of Graphviz is ported.
+- All eight layout engines (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`) are function-by-function ports of the Graphviz 16.1.0 C code, together with the libraries they use: network simplex, `pathplan`, `ortho`, `pack`, `vpsc`, the `neatogen` solvers, `lib/label` and the shape, label and HTML-table code. `docs/porting/` maps each Rust module to its C file and lists every known difference.
+- Output formats: `svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`, `plain-ext`. `-n`/`-n2` (use positions from the input) is supported.
+- Text is measured with Graphviz's built-in font metric tables, which is what C does when built without Pango. The reference outputs come from C 16.1.0 run that way (see `scripts/gen-golden.sh`).
+- C behaviour is reproduced where output depends on it, including C bugs and platform details: the macOS `qsort` and `rand`, `drand48`, clang's fused multiply-adds, cdt's splay trees, and C's error counting and exit status. `docs/c-bugs-ledger.md` lists the reproduced C bugs.
 
-- Every layout engine (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`) is a function-by-function port of the Graphviz 16.1.0 C code; see `docs/porting/` for the module maps and the remaining differences.
-- Output formats: `svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`.
-- Text is measured with Graphviz's built-in font metric tables (the layout C produces when it is built without Pango), not with real font rendering.
+### Fidelity against C Graphviz 16.1.0
 
-## Measuring fidelity with `gv-diff`
+Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fail on any regression:
 
-`gv-diff` compares this port against C Graphviz 16.1.0. It reads `-Tdot` output that C produced for each file in `tests/wild` (the 488-file wild corpus) and `tests/fixtures` (20 upstream files), stored in `tests/golden/` (see `scripts/gen-golden.sh`), and scores node positions and sizes, edge splines, labels, cluster boxes, ranks and the graph bounding box within fixed tolerances of 1 to 2 points.
+| Check | macOS (Apple libm, as C uses) | Linux and WASM |
+| :--- | :---: | :---: |
+| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora | 2,589 / 2,589 | 2,470 / 2,589 |
+| Layout geometry, main corpus (565 files: wild graphs, upstream fixtures, fuzz reproducers) | 565 / 565 exact | 564 / 565 |
+| Per-engine corpora, exact | neato 442/442, sfdp 297/297, circo 280/280, fdp 386/386, osage 180/180, patchwork 141/141, twopi 282/289 | see `tests/golden/*.portable.json` |
+| Renderers given C's layout (`gv-diff render`, svg/xdot/dot/json) | all identical | all identical |
+| C's own test graphs (`graphs/`, `tests/graphs/`, `tests/regression_tests/`), dot with base, LR, ortho, concentrate and newrank variants | 379 / 379 per variant (376 for ortho, where C times out on 3) | not measured |
+| Differential fuzzing (6,000 random graphs, all engines, final round) | 98.8% identical | not measured |
+
+- **Linux and WASM** use a portable math library. Apple's `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit (see `docs/porting/libm.md`). Linux on aarch64 and x86_64 and the WASM build give exactly the same output as each other.
+- **twopi:** the 7 inexact files are a floating-point tie in edge routing that C itself breaks differently from build to build.
+- **Fuzzing:** the remaining differences are documented in `docs/porting/fuzzing.md`. Most are C nondeterminism (results that depend on memory addresses) and C crashes.
+
+## Checking fidelity yourself
 
 ```sh
-cargo run --release -p gv-diff -- --baseline tests/golden/baseline.json   # fails on regression
-cargo run --release -p gv-diff -- --filter clust --worst 20               # inspect a subset
-cargo run --release -p gv-diff -- --baseline tests/golden/baseline.json --update
+cargo test --workspace                                         # every ratchet
+cargo run --release -p gv-diff -- e2e --list                   # full-SVG identity, list differences
+cargo run --release -p gv-diff -- --filter clust --worst 20    # layout geometry, a subset
+cargo run --release -p gv-diff -- render                       # renderers on C's own layouts
+node scripts/wasm-e2e.mjs --pkg <wasm-bindgen nodejs output>   # the same check under WASM
+scripts/update-baselines.sh [--portable]                       # after an improvement
 ```
 
-`cargo test --workspace` runs the same check against the checked-in baseline.
-
-Current results over 508 files (all engines are scored against C `dot` output, which is what the golden files contain):
-
-| Metric | Result |
-| :--- | :---: |
-| Files matching C exactly | 109 / 508 (21.5%) |
-| Mean score | 37.2% |
-| Node sizes within 1 pt | 5,046 / 8,916 (56.6%) |
-| Node positions within 1 pt | 707 / 8,916 (7.9%) |
-| Edges within 2 pt | 388 / 11,679 (3.3%) |
-| Cluster boxes | 29 / 355 (8.2%) |
-| Ranks agree | 460 / 508 (90.6%) |
-| In-rank order agrees | 360 / 508 (70.9%) |
-| Graph bounding box within 1 pt | 154 / 508 (30.3%) |
+Regenerating the C references needs Graphviz 16.1.0 installed: `scripts/gen-golden.sh`, `scripts/gen-render-golden.sh` and `GVBINDIR=<pango-free plugin dir> gv-diff e2e --generate`.
 
 ## Performance
 
-There is no maintained benchmark against C Graphviz. An earlier version of this README quoted a "96.7x faster" parse table; it compared C timed as one process launch per corpus (including `exec` and file I/O) with warm, in-process Rust, so it did not measure the same thing and has been removed. The `bench_phase1` and `bench_phase2` binaries in `crates/gv-cli` produced those numbers; do not rely on their C timings.
+Measured with one process per run on both sides on the same machine (Apple M-series), taking the minimum of 3 runs of `-Tsvg`. The machine was shared with other work, so treat these as rough:
+
+| Graph | C `dot` | `dot-rs` |
+| :--- | ---: | ---: |
+| `b100` (Graphviz test graph) | 4.5 s | 4.7 s |
+| `b103` | 0.73 s | 0.69 s |
+| random DAG, 2,000 nodes | 0.56 s | 0.46 s |
+| random DAG, 8,000 nodes | 24.5 s | 20.0 s |
+| `b100` with `splines=ortho` | over 300 s | 20.1 s |
+
+Output is identical in every row. The ortho speedup comes from data structures with better complexity than C's in a few places, not from changing the algorithm. The WASM package is 1.7 MB (about 700 KB gzipped).
 
 ---
 
-## Crate Architecture
+## Crates
 
-- [`crates/gv-core`](crates/gv-core): Arena-backed `Graph` IR, geometry primitives (`Point`, `BoundingBox`, `Spline`), Graphviz 16.1.0 built-in font metrics LUT (`font.rs`), and the X11/SVG/Brewer color tables (`color_table.rs`, generated by `scripts/gen_color_table.py`) with `colorxlate` semantics (`color.rs`).
-- [`crates/gv-parser`](crates/gv-parser): Re-entrant DOT lexer (`lexer.rs`), recursive-descent parser with cluster/subgraph lexical attribute inheritance (`parser.rs`), and canonical serializer (`canon.rs`).
-- [`crates/gv-geom`](crates/gv-geom): Node shape sizing and perimeter ray clipping (`shapes.rs`, including recursive `record`/`Mrecord`, HTML `<TABLE>` labels, polygons, stars, cylinders, and compass ports) + Bezier spline routing and arrowheads (`splines.rs`).
-- [`crates/gv-layout`](crates/gv-layout): Layout engines. `dot` is a partial port (`acyclic`, network simplex `rank`, `mincross`, `position`, `dotsplines`); `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage` and `patchwork` are approximations (see Status).
-- [`crates/gv-render`](crates/gv-render): Graphviz output renderers (`svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`).
-- [`crates/gv-engine`](crates/gv-engine): High-level pipeline orchestrator (`render_dot`, `render_dot_all`).
-- [`crates/gv-diff`](crates/gv-diff): Differential harness against C Graphviz goldens (see above).
-- [`crates/gv-wasm`](crates/gv-wasm): `wasm-bindgen` browser & JS/TS bindings (`render`, `renderSvg`, `renderJson`, `inspectGraph`).
-- [`crates/gv-cli`](crates/gv-cli): `dot-rs` CLI binary (`-T`, `-K`, `-o`, `-G`/`-N`/`-E`, several input files, every graph in a file) and timing binaries (`bench_phase1`, `bench_phase2`).
+- [`gv-core`](crates/gv-core): graph IR, geometry, font metric tables, colour tables with `colorxlate` semantics, charset handling, and the math module (`math::PROFILE` selects Apple or portable).
+- [`gv-parser`](crates/gv-parser): DOT lexer and parser with cgraph's attribute, subgraph and ordering semantics, and the canonical writer.
+- [`gv-geom`](crates/gv-geom): node sizing (`shapes.c`, records, HTML tables, `labels.c`) and `pathplan`.
+- [`gv-layout`](crates/gv-layout): the engines (`dotgen`, `neatogen`, `fdpgen`, `sfdpgen`, `twopigen`, `circogen`, `osage`, `patchwork`), the shared `lib/common` code, plus `ortho`, `pack`, `vpsc`, `sparse` and no-layout mode.
+- [`gv-render`](crates/gv-render): a port of C's emit code and output plugins, and of cgraph's writer.
+- [`gv-engine`](crates/gv-engine): the pipeline (`render_dot`, `render_dot_all`, `render_dot_all_partial`).
+- [`gv-cli`](crates/gv-cli): `dot-rs`, a drop-in `dot` command line (`-T`, `-K`, `-o`, `-O`, `-G`/`-N`/`-E`, `-n`, several files, every graph in a file, C's exit status).
+- [`gv-diff`](crates/gv-diff): the differential harness and ratchets.
+- [`gv-wasm`](crates/gv-wasm): `wasm-bindgen` bindings.
 
 ---
 
-## Browser Usage (`@graphvis-rs/wasm`)
+## Browser usage (`@graphvis-rs/wasm`)
 
 ```js
-import init, { renderSvg, inspectGraph } from '@graphvis-rs/wasm';
+import init, { render, renderAll } from '@graphvis-rs/wasm';
 
 await init();
-const svg = renderSvg('digraph G { a -> b [label="fast"]; }', 'dot');
+const svg = render('digraph G { a -> b [label="fast"]; }', 'dot', 'svg');
 document.getElementById('diagram').innerHTML = svg;
 ```
+
+`render` lays out the first graph in the input. `renderAll` returns one output per graph, and `renderAllBytes` takes and returns raw bytes the way the command line does, including non-UTF-8 input. Each call starts from fresh state, so repeated calls give identical output. `web/index.html` is a playground: `cd web && npm run build:wasm && npm run serve`.
+
+## Licence
+
+Graphviz is distributed under the Eclipse Public License 2.0, and this port follows its C sources closely. Treat the code as a derivative work of Graphviz under EPL-2.0. The `OR MIT` in `Cargo.toml` has not been reviewed for a derivative work. Third-party code in the math module is listed with its provenance in `docs/porting/libm.md`.
