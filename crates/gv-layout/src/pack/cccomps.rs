@@ -136,6 +136,17 @@ impl<'a> Tree<'a> {
                 let dn = dg.agnode(&sg.name);
                 dg.ptr[dn] = DPtr::Clust(s);
                 for &n in &self.nodes[s] {
+                    if let Some(old) = dn_of[n] {
+                        let old_name = dg
+                            .by_name
+                            .iter()
+                            .find(|(_, d)| **d == old)
+                            .map_or("", |(k, _)| k.as_str());
+                        eprintln!(
+                            "Error: node \"{}\" belongs to two non-nested clusters \"{}\" and \"{}\"",
+                            self.g.nodes[n].name, sg.name, old_name
+                        );
+                    }
                     dn_of[n] = Some(dn);
                 }
             } else {
