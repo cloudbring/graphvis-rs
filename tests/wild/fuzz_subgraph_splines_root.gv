@@ -1,0 +1,6 @@
+digraph "G" {
+{
+splines=weird;
+}
+"strict" -> "edge" [fontsize="17.5"];
+}

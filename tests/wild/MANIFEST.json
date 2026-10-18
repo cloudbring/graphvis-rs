@@ -1,6 +1,6 @@
 {
   "dataset": "graphvis-rs-wild-corpus",
-  "count": 542,
+  "count": 545,
   "sources": [
     "https://gitlab.com/graphviz/graphviz.git (16.1.0 tests/graphs, regression_tests/shapes, graphs/directed, graphs/undirected)",
     "https://gitlab.com/graphviz/graphviz.gitlab.io.git (Official Graphviz Gallery & Attribute Examples)",
@@ -4727,6 +4727,24 @@
       "bytes": 150,
       "c_nodes": 6,
       "c_edges": 3
+    },
+    {
+      "file": "fuzz_xlabel_empty_label.gv",
+      "bytes": 65,
+      "c_nodes": 1,
+      "c_edges": 0
+    },
+    {
+      "file": "fuzz_lost_edge_label.gv",
+      "bytes": 148,
+      "c_nodes": 2,
+      "c_edges": 1
+    },
+    {
+      "file": "fuzz_subgraph_splines_root.gv",
+      "bytes": 73,
+      "c_nodes": 3,
+      "c_edges": 1
     }
   ]
 }

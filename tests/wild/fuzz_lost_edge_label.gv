@@ -1,0 +1,4 @@
+digraph "fuzz 30367" {
+"v9" [shape="record", label="{\N|<p0> αβ|<p1> αβ|<p2> long field text}"];
+"v9" -> "v14" [label="\L", tailport="p0:s"];
+}

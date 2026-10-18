@@ -1,0 +1,14 @@
+digraph G {
+	graph [bb="0,0,60.691,108"];
+	node [label="\N"];
+	{
+		graph [splines=weird];
+	}
+	"strict"	[height=0.5,
+		pos="30.346,90",
+		width=0.84294];
+	"edge"	[height=0.5,
+		pos="30.346,18",
+		width=0.81294];
+	"strict" -> "edge"	[fontsize=17.5];
+}
