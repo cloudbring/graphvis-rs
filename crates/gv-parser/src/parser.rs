@@ -447,20 +447,17 @@ impl Parser {
 
     fn parse_opt_attr_list(&mut self) -> Result<AttrMap> {
         let mut attrs = AttrMap::new();
+        self.attr_order.clear();
         while self.peek().kind == TokenKind::LBracket {
             self.advance(); // consume `[`
+            // attrdefs: `atom '=' atom` followed by at most one `,` or `;`.
             while self.peek().kind != TokenKind::RBracket && self.peek().kind != TokenKind::Eof {
-                if matches!(self.peek().kind, TokenKind::Comma | TokenKind::Semi) {
-                    self.advance();
-                    continue;
-                }
                 let key = self.parse_value_or_port_atom()?;
-                let val = if self.peek().kind == TokenKind::Equals {
-                    self.advance();
-                    self.parse_value_or_port_atom()?
-                } else {
-                    "true".to_string()
-                };
+                self.expect(&TokenKind::Equals)?;
+                let val = self.parse_value_or_port_atom()?;
+                if !attrs.contains_key(&key) {
+                    self.attr_order.push(key.clone());
+                }
                 attrs.insert(key, val);
                 if matches!(self.peek().kind, TokenKind::Comma | TokenKind::Semi) {
                     self.advance();
