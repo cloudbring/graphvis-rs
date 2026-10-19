@@ -362,6 +362,7 @@ const modes = [
 	};
 
 	const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 	async function fetchText(u: string) {
 		const res = await fetch(u);
@@ -389,7 +390,7 @@ const modes = [
 				if (!plate && !img.closest('.dv-blink')) {
 					const p = document.createElement('p');
 					p.className = 'dv-empty';
-					p.textContent = which === 'c' ? 'C wrote no output.' : 'The port wrote no output.';
+					p.textContent = `${cap(which === 'c' ? s.names.lname : s.names.rname)} wrote no output.`;
 					holder.append(p);
 				}
 			} else {
@@ -407,7 +408,7 @@ const modes = [
 			return true;
 		}
 		if (!b.trim()) {
-			v.innerHTML = markHTML('off', `Differs: ${s.names.rname} wrote no output`);
+			v.innerHTML = markHTML('off', `Differs: ${escapeHTML(s.names.rname)} wrote no output`);
 			return false;
 		}
 		const changes = diffLines(a, b);
@@ -465,7 +466,7 @@ const modes = [
 			for (const t of lines.slice(lines.length - tail)) rows.push(row('ds-ctx', String(ln++), String(rn++), '', t));
 		});
 		if (shown > LIMIT) rows.push(`<div class="ds-skip">Diff truncated after ${LIMIT} changed lines.</div>`);
-		host.innerHTML = `<div class="ds-head"><span class="chip c">− C</span><span class="chip m">+ ${escapeHTML(s.rightLabel)}</span><span>Generator comments dropped from both sides. Unchanged runs are folded.</span></div><div class="ds-table" role="table" aria-label="Line diff">${rows.join('')}</div>`;
+		host.innerHTML = `<div class="ds-head"><span class="chip c">− ${escapeHTML(s.leftLabel)}</span><span class="chip m">+ ${escapeHTML(s.rightLabel)}</span><span>Generator comments dropped from both sides. Unchanged runs are folded.</span></div><div class="ds-table" role="table" aria-label="Line diff">${rows.join('')}</div>`;
 	}
 
 	function loadImage(u: string) {
@@ -483,7 +484,7 @@ const modes = [
 		const report = s.el.querySelector<HTMLElement>('[data-pixels-report]')!;
 		const canvas = s.el.querySelector<HTMLCanvasElement>('[data-canvas]')!;
 		if (!s.rText.trim() && s.kind !== 'png') {
-			report.innerHTML = markHTML('off', 'Nothing to compare: the port wrote no output');
+			report.innerHTML = markHTML('off', `Nothing to compare: ${escapeHTML(s.names.rname)} wrote no output`);
 			return;
 		}
 		try {
@@ -526,7 +527,7 @@ const modes = [
 			}
 			ctx.putImageData(out, 0, 0);
 			const total = W * H;
-			const size = cw === rw && ch === rh ? '' : ` The drawings differ in size (C ${cw}×${ch}, port ${rw}×${rh}); both are drawn from the top left.`;
+			const size = cw === rw && ch === rh ? '' : ` The drawings differ in size (${escapeHTML(s.names.lname)} ${cw}×${ch}, ${escapeHTML(s.names.rname)} ${rw}×${rh}); both are drawn from the top left.`;
 			report.innerHTML =
 				(differ === 0
 					? markHTML('register', `0 of ${total.toLocaleString('en-US')} pixels differ`)

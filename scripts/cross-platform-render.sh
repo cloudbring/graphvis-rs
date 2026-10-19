@@ -3,6 +3,7 @@
 #   platform.json   which platform, toolchain and math profile produced them
 #   hashes.json     gv-diff e2e --hashes: the -Tsvg hash of every corpus input
 #   samples/NAME.svg  dot-rs -Tsvg of each site gallery sample, byte for byte as written
+#   samples/NAME.exit its exit status (C's: some inputs exit 1 with a drawing, like structs)
 # scripts/cross-platform-compare.py then requires every platform's files to be identical.
 #
 # Usage: scripts/cross-platform-render.sh OUT ID LABEL [cargo args...]
@@ -22,9 +23,12 @@ import json, subprocess, sys
 out, exe = sys.argv[1], sys.argv[2]
 for s in json.load(open("site/src/data/samples.json")):
     src = f"site/public/samples/{s['name']}/{s['wasm_input']}"
-    svg = subprocess.run([f"target/release/dot-rs{exe}", f"-K{s['engine']}", "-Tsvg", src],
-                         capture_output=True, check=False).stdout
-    open(f"{out}/samples/{s['name']}.svg", "wb").write(svg)
+    r = subprocess.run([f"target/release/dot-rs{exe}", f"-K{s['engine']}", "-Tsvg", src], capture_output=True)
+    # An exit status of 1 can come with a valid drawing, as in C, so only empty output fails.
+    if not r.stdout:
+        sys.exit(f"{s['name']}: dot-rs wrote no output (exit {r.returncode}): {r.stderr.decode(errors='replace')}")
+    open(f"{out}/samples/{s['name']}.svg", "wb").write(r.stdout)
+    open(f"{out}/samples/{s['name']}.exit", "w").write(f"{r.returncode}\n")
 PY
 "${PYTHON:-python3}" - "$OUT" "$ID" "$LABEL" <<'PY'
 import json, platform, subprocess, sys

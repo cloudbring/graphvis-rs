@@ -7,7 +7,10 @@ Writes ROOT/manifest.json (platforms, per-platform agreement, sample hashes) for
 Cross-platform page, prints a Markdown summary (for $GITHUB_STEP_SUMMARY), and exits 1 if any
 output differs between platforms.
 
-Usage: scripts/cross-platform-compare.py ROOT [--commit SHA] [--run-url URL]
+Every platform named with --expect must be present: a platform whose job failed before it
+uploaded its outputs is reported as missing and fails the comparison.
+
+Usage: scripts/cross-platform-compare.py ROOT [--expect ID,ID,...] [--commit SHA] [--run-url URL]
 """
 import argparse
 import hashlib
@@ -21,9 +24,11 @@ def main():
     ap.add_argument("root")
     ap.add_argument("--commit", default="")
     ap.add_argument("--run-url", default="")
+    ap.add_argument("--expect", default="", help="comma-separated platform ids that must be present")
     a = ap.parse_args()
 
     dirs = sorted(d for d in os.listdir(a.root) if os.path.isfile(os.path.join(a.root, d, "platform.json")))
+    missing = sorted(set(filter(None, a.expect.split(","))) - set(dirs))
     if len(dirs) < 2:
         sys.exit(f"need at least two platform directories in {a.root}, found {dirs}")
     plats = [json.load(open(os.path.join(a.root, d, "platform.json"))) | {"dir": d} for d in dirs]
@@ -45,7 +50,11 @@ def main():
             p = os.path.join(a.root, d, "samples", f"{n}.svg")
             sha[d] = hashlib.sha256(open(p, "rb").read()).hexdigest() if os.path.exists(p) else None
         same = len(set(sha.values())) == 1 and None not in sha.values()
-        samples.append({"name": n, "sha256": sha, "identical": same})
+        # Exit statuses, where a platform records them (the native builds).
+        exits = {d: open(p).read().strip() for d in dirs if os.path.exists(p := os.path.join(a.root, d, "samples", f"{n}.exit"))}
+        if len(set(exits.values())) > 1:
+            same = False
+        samples.append({"name": n, "sha256": sha, "exit": exits, "identical": same})
         if not same:
             sample_diff.append(n)
 
@@ -61,7 +70,8 @@ def main():
         "corpus_files": len(keys),
         "corpus_differences": corpus_diff,
         "samples": samples,
-        "identical": not corpus_diff and not sample_diff,
+        "missing_platforms": missing,
+        "identical": not corpus_diff and not sample_diff and not missing,
     }
     json.dump(manifest, open(os.path.join(a.root, "manifest.json"), "w"), indent=1)
 
@@ -72,10 +82,13 @@ def main():
     for p in plats:
         same_s = sum(1 for s in samples if s["sha256"][p["dir"]] == s["sha256"][ref])
         print(f"| {p['label']} | {p['runtime']} | {p['corpus_agree']} / {len(keys)} | {same_s} / {len(names)} |")
+    if missing:
+        print(f"\n**Missing platforms** (their jobs produced no outputs): {', '.join(missing)}.")
     if manifest["identical"]:
         print("\n**Every platform produced byte-identical output.**")
         return 0
-    print(f"\n**Differences:** {len(corpus_diff)} corpus inputs, {len(sample_diff)} samples.")
+    if corpus_diff or sample_diff:
+        print(f"\n**Differences:** {len(corpus_diff)} corpus inputs, {len(sample_diff)} samples.")
     for c in corpus_diff[:30]:
         print(f"- `{c['file']}`")
     for n in sample_diff:

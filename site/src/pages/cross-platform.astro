@@ -22,6 +22,7 @@ type Manifest = {
 	corpus_files: number;
 	corpus_differences: { file: string }[];
 	samples: { name: string; sha256: Record<string, string | null>; identical: boolean }[];
+	missing_platforms?: string[];
 	identical: boolean;
 };
 const path = join(process.cwd(), 'public/cross-platform/manifest.json');
@@ -67,6 +68,9 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 		) : (
 			<>
 				<div class="verdict not-content">
+					{m.missing_platforms?.length ? (
+						<Mark kind="off" label={`Missing platforms: ${m.missing_platforms.join(', ')} (their CI jobs produced no outputs)`} />
+					) : null}
 					{m.identical ? (
 						<Mark kind="register" label={`Every platform wrote byte-identical output: ${fmt(m.corpus_files)} corpus inputs and ${m.samples.length} samples`} />
 					) : (
@@ -213,8 +217,10 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 		const base = viewer.dataset.c!.replace(/[^/]+\/samples\/[^/]+$/, '');
 		const load = async (side: 'left' | 'right') => {
 			const s = sel(side);
-			const res = await fetch(`${base}${s.value}/samples/${sel('sample').value}.svg`);
-			const text = await res.text();
+			const u = `${base}${s.value}/samples/${sel('sample').value}.svg`;
+			const res = await fetch(u);
+			// A platform without this sample (its job failed) must not feed a 404 page to the viewer.
+			const text = res.ok ? await res.text() : '';
 			viewer.dispatchEvent(new CustomEvent(`gv:replace-${side}`, { detail: { text, label: s.selectedOptions[0].textContent!.trim() } }));
 		};
 		sel('left').addEventListener('change', () => load('left'));

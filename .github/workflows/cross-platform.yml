@@ -113,7 +113,9 @@ jobs:
       - name: Compare
         shell: bash  # -eo pipefail, so a difference fails the step through the tee
         run: |
+          # Every platform must have uploaded its outputs; a failed job shows up as missing.
           python3 scripts/cross-platform-compare.py xp \
+            --expect linux-x86_64,linux-arm64,windows-x86_64,macos-arm64,wasm32 \
             --commit "${{ github.event.pull_request.head.sha || github.sha }}" \
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             | tee -a "$GITHUB_STEP_SUMMARY"
