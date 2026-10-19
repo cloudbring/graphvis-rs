@@ -1,0 +1,1 @@
+(no fuzz case of its own: found while minimising r2/diff/s12614.gv seed=12614; the full case is covered by neato-router-record-obstacle-height)

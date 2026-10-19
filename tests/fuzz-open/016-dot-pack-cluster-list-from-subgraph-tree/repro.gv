@@ -1,0 +1,5 @@
+digraph G {
+pack=8;
+subgraph cluster_0 { a }
+subgraph cluster_1 { a }
+}

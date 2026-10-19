@@ -1,0 +1,12 @@
+graph G {
+layout=neato;
+splines=true;
+a [pos="0,0!"];
+b [pos="3,0!"];
+s [shape=star, pos="1.5,0!"];
+c [pos="0,1.5!"];
+d [pos="3,1.5!"];
+y [shape=cylinder, pos="1.5,1.5!"];
+a -- b;
+c -- d;
+}

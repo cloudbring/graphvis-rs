@@ -178,33 +178,90 @@ Robustness (debug overflow and panics)
   `fillEdge`.
 * Unknown shapes are boxes for compass ports (`IS_BOX`).
 
-## Differences that remain, and why
+## Differences that remain: the open issues
 
-* **C nondeterminism.** fdp and neato with clusters, and twopi with samehead arrows,
-  depend on heap addresses. VPSC (`mode=ipsep`) iterates a `std::set` of pointers. These
-  are the `c_unstable` cases (C's output changed between two runs). Several corpus
-  files are in the same state: `gen-golden.sh` and `gv-diff e2e --generate` rewrite them
-  on every run, so their committed goldens and hashes are kept.
-* **C undefined behaviour or crash paths.** A node in two non-nested clusters, with
-  `pack`, or with newrank and clusters: C reports the conflict and lays out from
-  inconsistent shared node records (often a crash, see above). The port cannot
-  reproduce the stale state. The minimised `rank=max` + cluster + `pack` case
-  (`seed 24180`) panics in `build_skeleton` where C reads a NULL rank leader, and C
-  crashes on the same graph without `pack`. `fillEdge` on a one-point spline reads past
-  the list in C. `mode=ipsep` with overlapping clusters makes C abort on a `SIZE_MAX`
-  allocation.
-* **Open differences.** These were found but not fixed in this pass. Each has a
-  minimised reproducer under the fuzz run directories, not in the corpus:
-  * circo and neato `splines=spline` edges to a record port. C's `Pshortestpath` fails
-    ("destination point not in any triangle") and falls back to a straight polyline,
-    while the port routes a spline: the record port point differs by 0.1pt.
-  * dot `pack` with `splines=""|none` and edge labels: C leaves the labels unplaced at
-    component coordinates outside the page, so `edge_in_box` drops the edge; the port
-    emits the edge group.
-  * Some samehead/sametail and concentrate combinations, and neato `overlap=ortho|scale`
-    with pinned nodes.
-* **stderr.** Exit status and the error messages above match. Not reproduced:
-  `printpath` dumps, the remaining `agwarningf` texts (port and HTML attribute warnings,
-  "no position for edge with label"), and the exact line numbers of DOT syntax errors.
-  The port's syntax-error message text also differs (`DOT syntax error at line L,
-  column C: ...` instead of `syntax error in line L near 'tok'`).
+The remaining differences are triaged into one issue draft per root cause. The drafts are
+in [`docs/issues/manifest.json`](../issues/manifest.json) (title, labels, severity,
+seeds and the issue body). Each one has a directory under
+[`tests/fuzz-open/`](../../tests/fuzz-open) with the smallest reproducer (`repro.gv`),
+C's and the port's output (`c.*`, `rust.*`), the command (`cmd.txt`) and the fuzz cases
+it covers (`cases.txt`, with seeds).
+
+How the triage was done:
+
+* All 126 cases that were not identical after round 4 (`final_recheck.txt`: 106 SVG,
+  3 exit status, 1 port panic, 15 `c_unstable`, 1 `c_crash`) were re-run against the
+  port at HEAD with `scripts/fuzz-triage.py`. That script runs C 10 times per case, so
+  C instability is measured rather than guessed from two runs. Two cases (seeds 1324
+  and 12131, both earlier `c_unstable`) now match C and were dropped. The other 124
+  still differ.
+* Each case was re-minimised against HEAD, and every cluster was checked against the
+  C source. Where the fix is small, a patched copy of the port was built, and a case
+  joins an issue only if that fix makes it match C. This was checked for the
+  record-obstacle, star/cylinder-obstacle, Hilbert-key-sign and fdp `sincos` issues.
+  Five cases need two fixes. Four need both obstacle fixes, and one needs the record
+  fix plus the upstream multispline face order. Their issue bodies say which.
+* Nine of the 15 cases that the two-run check called `c_unstable` are stable over 10
+  C runs. Only 13 of the 124 cases vary in C over 10 runs, and they split three ways:
+  * Three are time-seeded (`start=random` without a seed, or fdp `start=regular`).
+  * Four are C-side issues: fdp address dependence, and sfdp `smoothing=rng`.
+  * Six vary slightly but are port bugs. With the fdp `sincos` or star/record-obstacle
+    fix applied, the port matches C's most frequent output.
+
+  Seed 33861 crashes C on some runs (`mode=KK model=circuit`).
+* Every fuzz seed regenerates byte for byte with `python3 -I scripts/fuzz-gen.py --seed N`.
+  The exceptions are the 11 time-seeded cases from rounds 1–2, which the current
+  generator no longer produces.
+
+Of the 124 cases, 100 fall into 17 port issues. An 18th port issue, `019`, is a
+separate difference that appeared while minimising one of them. The other 24 fall into 8 upstream-C
+issues: undefined behaviour, crashes, address- or clock-dependent output. These are
+proposed as wontfix, with an explanation of what the port does instead. Further issues
+cover gaps that are not from fuzzing: the keyword parser bug, stderr wording, Linux/WASM
+portable math, the twopi arrows graphs and Latin-1 `-Tplain`. One correction to earlier
+notes: the circo/neato "record port 0.1pt off" difference is the record obstacle being
+1pt taller in the port (it uses `ND_height` instead of the field box), not the port point
+itself. The ortho variant also no longer has a gap: with a longer timeout, C finishes
+`b100`, `b103` and `b104`, and their outputs match the port's.
+
+| Issue | Severity | Fuzz cases | Status |
+|---|---|---:|---|
+| [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
+| [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
+| [`003-pack-filledge-zero-point-spline-panic`](../../tests/fuzz-open/003-pack-filledge-zero-point-spline-panic) | high | — | port; C crashes too |
+| [`004-neato-router-record-obstacle-height`](../../tests/fuzz-open/004-neato-router-record-obstacle-height) | medium | 20 | port |
+| [`005-xlabels-hilbert-key-signed-order`](../../tests/fuzz-open/005-xlabels-hilbert-key-signed-order) | medium | 16 | port |
+| [`006-fdp-cluster-port-sincos-fusion`](../../tests/fuzz-open/006-fdp-cluster-port-sincos-fusion) | medium | 12 | port |
+| [`007-dot-port-endpoint-attr-sym-id`](../../tests/fuzz-open/007-dot-port-endpoint-attr-sym-id) | medium | 11 | port |
+| [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
+| [`009-xlabels-dtobag-equal-key-order`](../../tests/fuzz-open/009-xlabels-dtobag-equal-key-order) | medium | 7 | port |
+| [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
+| [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
+| [`012-dot-flat-adj-labelfloat`](../../tests/fuzz-open/012-dot-flat-adj-labelfloat) | medium | 2 | port |
+| [`013-dot-pack-component-missing-attr-dicts`](../../tests/fuzz-open/013-dot-pack-component-missing-attr-dicts) | medium | 1 | port |
+| [`014-dot-pack-failed-component-not-absorbed`](../../tests/fuzz-open/014-dot-pack-failed-component-not-absorbed) | medium | 1 | port |
+| [`015-dot-pack-unplaced-edge-label-shifted-off-page`](../../tests/fuzz-open/015-dot-pack-unplaced-edge-label-shifted-off-page) | low | 6 | port |
+| [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
+| [`017-dot-pack-curved-edge-subpoint`](../../tests/fuzz-open/017-dot-pack-curved-edge-subpoint) | low | 1 | port |
+| [`018-render-interpolate-points-fma`](../../tests/fuzz-open/018-render-interpolate-points-fma) | low | 1 | port |
+| [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
+| [`020-parser-keyword-as-attribute-value`](../../tests/fuzz-open/020-parser-keyword-as-attribute-value) | medium | — | port |
+| [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
+| [`022-stderr-syntax-error-message`](../../tests/fuzz-open/022-stderr-syntax-error-message) | low | — | port |
+| [`023-neato-circuit-kk-agseq-index-crash`](../../tests/fuzz-open/023-neato-circuit-kk-agseq-index-crash) | high | 1 | upstream C, wontfix |
+| [`024-neato-ipsep-node-in-two-clusters-size-max-alloc`](../../tests/fuzz-open/024-neato-ipsep-node-in-two-clusters-size-max-alloc) | high | 1 | upstream C, wontfix |
+| [`025-fdp-cluster-address-dependent-layout`](../../tests/fuzz-open/025-fdp-cluster-address-dependent-layout) | medium | 3 | upstream C, wontfix |
+| [`026-neato-multispline-face-order`](../../tests/fuzz-open/026-neato-multispline-face-order) | medium | 3 | upstream C, wontfix |
+| [`027-dot-sameport-record-uninit-pathend`](../../tests/fuzz-open/027-dot-sameport-record-uninit-pathend) | medium | 2 | upstream C, wontfix |
+| [`028-pack-filledge-one-point-spline`](../../tests/fuzz-open/028-pack-filledge-one-point-spline) | medium | 2 | upstream C, wontfix |
+| [`029-neato-fdp-start-time-seeded`](../../tests/fuzz-open/029-neato-fdp-start-time-seeded) | low | 11 | upstream C, wontfix |
+| [`030-sfdp-smoothing-rng-c-unstable`](../../tests/fuzz-open/030-sfdp-smoothing-rng-c-unstable) | low | 1 | upstream C, wontfix |
+| [`031-platform-libm-apple`](../../tests/fuzz-open/031-platform-libm-apple) | medium | — | wontfix (platform) |
+| [`032-twopi-arrows-c-nondeterministic-routing`](../../tests/fuzz-open/032-twopi-arrows-c-nondeterministic-routing) | medium | — | upstream C, wontfix |
+| [`033-latin1-plain-freed-label`](../../tests/fuzz-open/033-latin1-plain-freed-label) | low | — | upstream C, wontfix |
+
+The C nondeterminism noted above still applies to the corpus. fdp and neato with
+clusters, twopi with samehead arrows, and VPSC (`mode=ipsep`, which iterates a
+`std::set` of pointers) depend on heap addresses. `gen-golden.sh` and
+`gv-diff e2e --generate` rewrite those corpus files on every run, so their committed
+goldens and hashes are kept.

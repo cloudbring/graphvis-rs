@@ -1,0 +1,4 @@
+graph G {
+charset=latin1
+a [label="été"]
+}

@@ -1,0 +1,10 @@
+graph "G" {
+layout=neato;
+mode="ipsep";
+subgraph "cluster_0" {
+"n1" -- "n4";
+}
+subgraph "cluster_1" {
+"n1" [];
+}
+}

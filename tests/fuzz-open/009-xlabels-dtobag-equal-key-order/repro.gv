@@ -1,0 +1,10 @@
+graph "G" {
+layout=neato;
+node [pos="31,-83!"];
+"n0" [];
+"n1" [label=<<TABLE BORDER="0" COLOR="black"><TR><TD BGCOLOR="lightblue">x</TD><TD WIDTH="28" HEIGHT="30">&lt;x&gt;</TD><TD><FONT POINT-SIZE="8">small</FONT></TD></TR></TABLE>>];
+"n3" [shape="star"];
+"n7" [height="1.68"];
+"n12" [pos="-241,74"];
+"n1" -- "n5" [label="\E", headport="w"];
+}

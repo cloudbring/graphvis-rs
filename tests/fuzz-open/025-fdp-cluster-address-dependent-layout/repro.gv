@@ -1,0 +1,14 @@
+graph "G" {
+layout=fdp;
+subgraph "cluster_2" {
+"n6";
+"n32" [fixedsize="false"];
+}
+subgraph "cluster_6" {
+"n4";
+"n30" [];
+}
+"n4" -- "n41";
+"n4" -- "n13";
+"n4" -- "n6":"_" [label="e=mc²", arrowtail="crow"];
+}

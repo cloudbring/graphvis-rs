@@ -1,0 +1,8 @@
+digraph "G" {
+pack="true";
+node [width="2.7"];
+"22" [xlabel="ß"];
+"24" [penwidth="4.79"];
+"25" [fontsize="2"];
+"25":"ne" -> "26" [style="bold,dashed", minlen="0"];
+}

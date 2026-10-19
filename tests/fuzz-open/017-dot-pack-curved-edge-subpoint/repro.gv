@@ -1,0 +1,7 @@
+graph "G" {
+splines="curved";
+pack="8";
+"n26":"n" -- "n59":"c";
+"n59":"sw" -- "n72";
+"n61";
+}

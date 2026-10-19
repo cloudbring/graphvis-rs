@@ -1,0 +1,5 @@
+graph "G" {
+splines="";
+"n7" [style="diagonals"];
+"n7" -- "n7":"ne" [];
+}
