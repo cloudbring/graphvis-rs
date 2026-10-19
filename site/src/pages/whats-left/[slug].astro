@@ -1,0 +1,143 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { marked } from 'marked';
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { Code } from '@astrojs/starlight/components';
+import DiffViewer from '../../components/DiffViewer.astro';
+import Mark from '../../components/Mark.astro';
+import { issues, url, type Issue } from '../../lib/data';
+import { pair } from '../../lib/issues';
+
+export function getStaticPaths() {
+	return issues.map((i) => ({ params: { slug: i.slug }, props: { i } }));
+}
+interface Props {
+	i: Issue;
+}
+const { i } = Astro.props;
+const dir = `whats-left/${i.slug}/`;
+const read = (f: string) => {
+	const p = join(process.cwd(), 'public', dir, f);
+	return existsSync(p) ? readFileSync(p, 'utf8') : undefined;
+};
+const body = await marked.parse(i.body);
+const repro = read('repro.gv');
+const cmd = read('cmd.txt')?.trim();
+const cases = read('cases.txt')?.trim();
+const p = pair(i);
+const stderr = i.files.filter((f) => /stderr|\.err$/.test(f)).map((f) => ({ f, text: read(f) ?? '' }));
+const others = i.files.filter((f) => !['repro.gv', 'cmd.txt', 'cases.txt'].includes(f) && !stderr.some((s) => s.f === f));
+---
+
+<StarlightPage
+	frontmatter={{ title: i.title, description: `${i.upstream_c ? 'Upstream C behaviour' : 'Open difference in graphvis-rs'}: ${i.title}`, tableOfContents: false }}
+>
+	<style is:global>
+		:root {
+			--sl-content-width: 64rem;
+			--sl-text-h1: var(--sl-text-3xl);
+		}
+	</style>
+	<dl class="meta not-content">
+		<div><dt class="label">Kind</dt><dd>{i.upstream_c ? <Mark kind="upstream" label="Upstream C behaviour" /> : <Mark kind="off" label="Port bug" />}</dd></div>
+		<div><dt class="label">Severity</dt><dd class="mono">{i.severity}</dd></div>
+		<div><dt class="label">Engine</dt><dd><code>{i.engine}</code></dd></div>
+		<div><dt class="label">Category</dt><dd>{i.category}</dd></div>
+		<div><dt class="label">Cases</dt><dd class="mono">{i.case_count}</dd></div>
+		<div><dt class="label">Seeds</dt><dd class="mono">{i.seeds.length ? i.seeds.join(', ') : '·'}</dd></div>
+		<div>
+			<dt class="label">Tracking</dt>
+			<dd>
+				{i.issue_url ? <a href={i.issue_url}>GitHub issue</a> : <Mark kind="pending" label="Not filed yet" />}
+				{i.close_as_wontfix && <span class="chip y">won't fix</span>}
+			</dd>
+		</div>
+		<div><dt class="label">Labels</dt><dd class="chips">{i.labels.map((l) => <span class="chip">{l}</span>)}</dd></div>
+	</dl>
+
+	<div class="sl-markdown-content body" set:html={body} />
+
+	<h2 id="compare">C and the port</h2>
+	{
+		p ? (
+			<DiffViewer c={url(`${dir}c.${p.ext}`)} rust={url(`${dir}rust.${p.ext}`)} kind={p.kind} rightLabel="graphvis-rs" />
+		) : (
+			<p class="empty">No pair of C and port outputs in this reproducer.</p>
+		)
+	}
+	{
+		stderr.map((s) => (
+			<Code code={s.text || '(empty)'} lang="text" title={s.f} />
+		))
+	}
+
+	<h2 id="reproduce">Reproduce</h2>
+	{repro && <Code code={repro} lang="txt" title="repro.gv" />}
+	{cmd && <Code code={cmd} lang="sh" title="cmd.txt" />}
+	{cases && <Code code={cases} lang="text" title="cases.txt" />}
+	<p class="files">
+		Files:{' '}
+		{
+			i.files.map((f, k) => (
+				<>
+					{k > 0 && ', '}
+					<a href={url(dir + f)}>
+						<code>{f}</code>
+					</a>
+				</>
+			))
+		}
+		{others.length > 0 && null}. Source: <code>{i.dir}</code>.
+	</p>
+
+	<p class="back"><a href={url('whats-left/')}>All open issues</a></p>
+</StarlightPage>
+
+<style>
+	.meta {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 1rem 1.5rem;
+		margin: 0 0 1.5rem;
+		padding: 0.75rem 0 1rem;
+		border-bottom: 0.5px solid var(--rule-default);
+	}
+	.meta div {
+		margin: 0;
+		min-width: 0;
+	}
+	.meta dt {
+		margin: 0;
+	}
+	.meta dd {
+		margin: 0.25rem 0 0;
+		font-size: var(--sl-text-sm);
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		align-items: center;
+	}
+	.meta dd a {
+		color: var(--register);
+	}
+	.body {
+		max-width: 46rem;
+	}
+	.files {
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+	}
+	.files a,
+	.back a {
+		color: var(--register);
+	}
+	.empty {
+		color: var(--key-3);
+	}
+	@media (max-width: 50rem) {
+		.meta {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+</style>

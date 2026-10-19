@@ -1,0 +1,126 @@
+---
+/**
+ * The key figures as the colour bar at the edge of a press sheet: one patch per check,
+ * each with a bar showing how much of it is in register. Every number comes from
+ * src/data/fidelity.json.
+ */
+import { fidelity, fmt, url } from '../lib/data';
+
+const f = fidelity;
+const layoutMain = f.layout.find((l) => l.name === 'main')!;
+const engines = f.layout.filter((l) => l.name !== 'main');
+const engApple = engines.reduce((a, l) => a + l.apple, 0);
+const engTotal = engines.reduce((a, l) => a + l.total, 0);
+const rSvg = f.render.reduce((a, r) => a + r.apple, 0);
+const rTotal = f.render.reduce((a, r) => a + r.total, 0);
+const cg = f.c_graphs.variants.reduce((a, v) => a + v.exact, 0);
+const cgTotal = f.c_graphs.variants.reduce((a, v) => a + v.total, 0);
+const lastFuzz = f.fuzz.rounds[f.fuzz.rounds.length - 1];
+
+const patches = [
+	{ k: 'Full -Tsvg bytes, macOS', a: f.e2e.apple, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
+	{ k: 'Full -Tsvg bytes, Linux and WASM', a: f.e2e.portable, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
+	{ k: 'Layout geometry, main corpus', a: layoutMain.apple, b: layoutMain.total, href: 'fidelity/#layout' },
+	{ k: 'Layout geometry, 7 engine corpora', a: engApple, b: engTotal, href: 'fidelity/#layout' },
+	{ k: 'Renderers on C’s layouts, 7 formats', a: rSvg, b: rTotal, href: 'fidelity/#renderers' },
+	{ k: 'C’s own test graphs, 5 variants', a: cg, b: cgTotal, href: 'fidelity/#c-test-graphs' },
+	{ k: `Random graphs, fuzz round ${lastFuzz.round}`, a: lastFuzz.all, b: 100, pct: true, cases: lastFuzz.cases, href: 'fidelity/#fuzzing' },
+];
+---
+
+<ol class="slug not-content" aria-label="Key figures">
+	{
+		patches.map((p) => (
+			<li>
+				<a href={url(p.href)}>
+					<span class="fig num">
+						{p.pct ? (
+							<>
+								{p.a}
+								<small>%</small>
+							</>
+						) : (
+							<>
+								{fmt(p.a)}
+								<small>/{fmt(p.b)}</small>
+							</>
+						)}
+					</span>
+					<span class="bar" aria-hidden="true">
+						<span class="in" style={`width:${(100 * p.a) / p.b}%`} />
+					</span>
+					<span class="k">
+						{p.k}
+						{p.cases && <> ({fmt(p.cases)} cases)</>}
+					</span>
+				</a>
+			</li>
+		))
+	}
+</ol>
+
+<style>
+	.slug {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+		border-top: 0.5px solid var(--rule-strong);
+		border-bottom: 0.5px solid var(--rule-default);
+	}
+	.slug li {
+		margin: 0 !important;
+		border-right: 0.5px solid var(--rule);
+	}
+	.slug li:last-child {
+		border-right: 0;
+	}
+	.slug a {
+		display: grid;
+		gap: 0.5rem;
+		height: 100%;
+		padding: 1rem 0.75rem 1rem 0;
+		padding-inline-start: 0.75rem;
+		text-decoration: none;
+		color: inherit;
+		transition: background-color 150ms ease-out;
+	}
+	.slug a:hover {
+		background: var(--control-hover);
+	}
+	.fig {
+		font-size: 1.75rem;
+		font-weight: 720;
+		font-stretch: 125%;
+		letter-spacing: -0.02em;
+		line-height: 1;
+		color: var(--key);
+		white-space: nowrap;
+	}
+	.fig small {
+		font-size: 0.5em;
+		font-weight: 500;
+		font-stretch: 100%;
+		letter-spacing: 0;
+		color: var(--key-3);
+		margin-left: 0.0625rem;
+	}
+	.bar {
+		display: block;
+		height: 4px;
+		background: var(--plate-m);
+		border-radius: 1px;
+		overflow: hidden;
+	}
+	.bar .in {
+		display: block;
+		height: 100%;
+		background: var(--register);
+	}
+	.k {
+		font-size: var(--sl-text-2xs);
+		line-height: 1.4;
+		color: var(--key-3);
+	}
+</style>

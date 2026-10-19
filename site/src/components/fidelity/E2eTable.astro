@@ -1,0 +1,30 @@
+---
+import Bar from './Bar.astro';
+import { fidelity, fmt } from '../../lib/data';
+const e = fidelity.e2e;
+const unstableTotal = e.unstable.length;
+---
+<div class="scroll-x"><table class="ledger">
+	<thead>
+		<tr><th>Corpus</th><th>Inputs</th><th class="n">Files</th><th class="n">macOS</th><th class="n">Linux, WASM</th><th class="n">C unstable, skipped</th></tr>
+	</thead>
+	<tbody>
+		{e.corpora.map((c) => (
+			<tr>
+				<td><strong>{c.name}</strong></td>
+				<td><code>{c.dirs}</code></td>
+				<td class="n">{fmt(c.total)}</td>
+				<td class="n">{fmt(c.apple)}<Bar a={c.apple} b={c.total} /></td>
+				<td class="n">{fmt(c.portable)}<Bar a={c.portable} b={c.total} /></td>
+				<td class="n">{c.unstable || '·'}</td>
+			</tr>
+		))}
+	</tbody>
+	<tfoot>
+		<tr><th>Total</th><th></th><th class="n">{fmt(e.total)}</th><th class="n">{fmt(e.apple)}<Bar a={e.apple} b={e.total} /></th><th class="n">{fmt(e.portable)}<Bar a={e.portable} b={e.total} /></th><th class="n">{unstableTotal}</th></tr>
+	</tfoot>
+</table></div>
+<style>
+	tfoot th { padding-top: 0.75rem; border-bottom: 0; font-weight: 650; color: var(--key); }
+	td code { font-size: 0.8em; }
+</style>

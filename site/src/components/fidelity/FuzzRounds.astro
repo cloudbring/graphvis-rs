@@ -1,0 +1,28 @@
+---
+import { fidelity, fmt } from '../../lib/data';
+const rounds = fidelity.fuzz.rounds;
+const engines = Object.keys(rounds[0].engines);
+// Shade a cell by how far it is from 100%: the remaining share is the magenta fringe.
+const shade = (v: number) => `--off:${Math.min(1, (100 - v) / 50)}`;
+---
+<div class="fz">
+	<table class="ledger">
+		<thead><tr><th>Round</th><th>Seeds</th><th class="n">Cases</th>{engines.map((e) => <th class="n">{e}</th>)}<th class="n">All</th></tr></thead>
+		<tbody>
+			{rounds.map((r) => (
+				<tr>
+					<td>{r.round}</td>
+					<td class="mono">{r.seeds}</td>
+					<td class="n">{fmt(r.cases)}</td>
+					{engines.map((e) => <td class="n cell" style={shade(r.engines[e])}>{r.engines[e].toFixed(1)}</td>)}
+					<td class="n cell" style={shade(r.all)}><strong>{r.all.toFixed(1)}</strong></td>
+				</tr>
+			))}
+		</tbody>
+	</table>
+</div>
+<style>
+	.fz { overflow-x: auto; }
+	.cell { background: color-mix(in srgb, var(--plate-m) calc(var(--off) * 28%), transparent); }
+	td.mono { font-size: var(--sl-text-2xs); white-space: nowrap; }
+</style>

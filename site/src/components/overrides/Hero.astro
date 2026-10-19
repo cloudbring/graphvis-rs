@@ -1,0 +1,155 @@
+---
+/**
+ * The home page's hero: the claim, and one real sample printed as two plates that slide
+ * into register on load.
+ */
+import { fidelity, fmt, samples, url } from '../../lib/data';
+import { svgSize } from '../../lib/svgsize';
+
+const hero = Astro.locals.starlightRoute.entry.data.hero!;
+const s = samples.find((x) => x.name === 'fsm') ?? samples[0];
+const e2e = fidelity.e2e;
+const { width, height } = svgSize(`samples/${s.name}/c.svg`);
+---
+
+<section class="hero">
+	<div class="claim">
+		<p class="label">Graphviz 16.1.0, ported to Rust and WebAssembly</p>
+		<h1 id="_top">{hero.title}</h1>
+		<p class="lead">
+			On macOS, graphvis-rs writes the same <code>-Tsvg</code> bytes as C Graphviz 16.1.0 for{' '}
+			<strong class="num">{fmt(e2e.apple)} of {fmt(e2e.total)}</strong> test inputs. On Linux and in the browser, where Apple's libm is not
+			available, <strong class="num">{fmt(e2e.portable)}</strong>.
+		</p>
+		<div class="actions">
+			<a class="btn primary" href={url('fidelity/')}>Read the evidence</a>
+			<a class="btn" href={url('gallery/')}>Compare C and Rust</a>
+			<a class="btn" href={url('whats-left/')}>What's left</a>
+		</div>
+	</div>
+	<figure class="proof">
+		<div class="sheet crop">
+			<div class="plates registering">
+				<span class="plate plate-c"><img src={url(`samples/${s.name}/c.svg`)} alt="" width={width} height={height} /></span>
+				<span class="plate plate-m"><img src={url(`samples/${s.name}/rust.svg`)} alt="" width={width} height={height} /></span>
+			</div>
+		</div>
+		<figcaption>
+			<span><span class="chip c">C</span> plate: <code>dot -Tsvg fsm.gv</code>, C Graphviz 16.1.0</span>
+			<span><span class="chip m">Rust</span> plate: the same command, graphvis-rs</span>
+			<span class="why">
+				Overprinted. Every line is on both plates, so all of it comes out the blue of cyan and magenta; a difference would show as a cyan or
+				magenta fringe. <a href={url(`gallery/${s.name}/`)}>Inspect this sample</a>
+			</span>
+		</figcaption>
+	</figure>
+</section>
+
+<style>
+	.hero {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+		gap: 3rem;
+		align-items: center;
+		padding-block: 2.5rem 1.5rem;
+	}
+	.claim .label {
+		margin: 0 0 1rem;
+	}
+	h1 {
+		margin: 0;
+		font-size: clamp(2.5rem, 5.2vw, 4.25rem);
+		line-height: 0.98;
+		font-weight: 780;
+		font-stretch: 125%;
+		letter-spacing: -0.03em;
+		color: var(--key);
+	}
+	.lead {
+		margin: 1.5rem 0 0;
+		font-size: var(--sl-text-lg);
+		line-height: 1.55;
+		color: var(--key-2);
+		max-width: 32rem;
+	}
+	.lead strong {
+		color: var(--key);
+		font-weight: 650;
+	}
+	.lead code {
+		font-size: 0.88em;
+	}
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 2rem;
+	}
+	.actions .btn {
+		font-size: var(--sl-text-sm);
+		padding: 0.5rem 1rem;
+	}
+	.proof {
+		margin: 0;
+	}
+	.proof .sheet {
+		padding: 1rem;
+	}
+	.proof .plates img {
+		max-width: 100%;
+		height: auto;
+	}
+	figcaption {
+		display: grid;
+		gap: 0.375rem;
+		margin-top: 1rem;
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+		line-height: 1.5;
+	}
+	figcaption code {
+		font-size: 0.95em;
+	}
+	figcaption .why {
+		color: var(--key-2);
+		margin-top: 0.25rem;
+	}
+	figcaption a {
+		color: var(--register);
+	}
+
+	/* The one orchestrated moment: the plates start out of register and settle. */
+	@keyframes register-c {
+		from {
+			transform: translate(-7px, 5px);
+		}
+	}
+	@keyframes register-m {
+		from {
+			transform: translate(7px, -5px);
+		}
+	}
+	.registering .plate-c {
+		animation: register-c 1100ms cubic-bezier(0.2, 0.7, 0.1, 1) 450ms both;
+	}
+	.registering .plate-m {
+		animation: register-m 1100ms cubic-bezier(0.2, 0.7, 0.1, 1) 450ms both;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.registering .plate-c,
+		.registering .plate-m {
+			animation: none;
+		}
+	}
+	:global([data-theme='dark']) .proof .sheet {
+		filter: brightness(0.94);
+	}
+
+	@media (max-width: 50rem) {
+		.hero {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 2rem;
+			padding-top: 1rem;
+		}
+	}
+</style>

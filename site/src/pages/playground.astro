@@ -1,0 +1,239 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { ENGINES, samples, url } from '../lib/data';
+
+const starters = samples.filter((s) => s.identical_portable && s.wasm_input === 'input.gv' && s.bytes.input < 3000).slice(0, 8);
+const initial = `digraph proof {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  oracle [label="C Graphviz 16.1.0"];
+  port [label="graphvis-rs"];
+  input [shape=note, label="input.gv"];
+  input -> oracle;
+  input -> port;
+  oracle -> compare [label="-Tsvg"];
+  port -> compare [label="-Tsvg"];
+  compare [shape=diamond, label="same bytes?"];
+}
+`;
+---
+
+<StarlightPage frontmatter={{ title: 'Playground', description: 'Lay out your own DOT with the graphvis-rs WASM build, in the browser.', tableOfContents: false }}>
+	<style is:global>
+		:root {
+			--sl-content-width: 72rem;
+		}
+	</style>
+	<p class="intro">
+		Your graph, laid out by the port's WASM build in this tab; nothing is sent anywhere. To compare with C, run
+		<code>dot -K&lt;engine&gt; -Tsvg</code> on the same file with the <a href={url('verify/#the-c-reference')}>reference setup</a>: a
+		stock Graphviz measures text with Pango and will not match either build.
+	</p>
+	<div class="pg not-content" data-pg>
+		<div class="bar">
+			<div class="seg" role="group" aria-label="Layout engine">
+				{ENGINES.map((e, i) => <button type="button" data-engine={e} aria-pressed={i === 0 ? 'true' : 'false'}>{e}</button>)}
+			</div>
+			<div class="actions">
+				<button type="button" class="btn" data-download disabled>Download SVG</button>
+				<button type="button" class="btn primary" data-render>Render <kbd>⌘↵</kbd></button>
+			</div>
+		</div>
+		<div class="panes">
+			<div class="editor">
+				<label class="label" for="pg-src">DOT source</label>
+				<textarea id="pg-src" spellcheck="false" autocapitalize="off" autocomplete="off" data-src>{initial}</textarea>
+				<div class="starters">
+					<span class="label">Start from</span>
+					{starters.map((s) => <button type="button" class="chip" data-load={url(`samples/${s.name}/input.gv`)} data-load-engine={s.engine}>{s.name}</button>)}
+				</div>
+			</div>
+			<div class="out">
+				<div class="status" data-status aria-live="polite">Loading the WASM build…</div>
+				<div class="sheet crop canvas" data-out></div>
+			</div>
+		</div>
+	</div>
+</StarlightPage>
+
+<style>
+	.intro {
+		color: var(--key-2);
+		max-width: 46rem;
+	}
+	.pg {
+		margin-top: 1.5rem;
+		border: 0.5px solid var(--rule-default);
+		border-radius: var(--r-panel);
+		background: var(--stock-raised);
+	}
+	.bar {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.75rem;
+		border-bottom: 0.5px solid var(--rule-default);
+	}
+	.actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+	kbd {
+		font-family: var(--face-mono);
+		font-size: 0.85em;
+		opacity: 0.7;
+	}
+	.panes {
+		display: grid;
+		grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+		min-height: 32rem;
+	}
+	.editor {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 1rem;
+		border-right: 0.5px solid var(--rule-default);
+	}
+	textarea {
+		flex: 1;
+		min-height: 24rem;
+		resize: vertical;
+		padding: 0.75rem;
+		font-family: var(--face-mono);
+		font-size: var(--sl-text-xs);
+		line-height: 1.6;
+		font-variant-ligatures: none;
+		color: var(--key);
+		background: var(--stock-sunk);
+		border: 0.5px solid var(--control-border);
+		border-radius: var(--r-control);
+		tab-size: 2;
+	}
+	textarea:focus-visible {
+		outline: 2px solid var(--focus);
+		outline-offset: 0;
+	}
+	.starters {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		align-items: center;
+	}
+	.starters .label {
+		margin-right: 0.25rem;
+	}
+	.starters .chip {
+		cursor: pointer;
+		transition: border-color 150ms ease-out;
+	}
+	.starters .chip:hover {
+		border-color: var(--rule-strong);
+		color: var(--key);
+	}
+	.out {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1rem;
+		min-width: 0;
+	}
+	.status {
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+		font-family: var(--face-mono);
+		min-height: 1.25rem;
+	}
+	.status.err {
+		color: var(--m-ink);
+		white-space: pre-wrap;
+	}
+	.canvas {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: auto;
+		padding: 1rem;
+		min-height: 20rem;
+	}
+	.canvas :global(svg) {
+		max-width: 100%;
+		height: auto;
+	}
+	@media (max-width: 50rem) {
+		.panes {
+			grid-template-columns: 1fr;
+		}
+		.editor {
+			border-right: 0;
+			border-bottom: 0.5px solid var(--rule-default);
+		}
+	}
+</style>
+
+<script>
+	import { renderBytes, wasmVersion } from '../lib/wasm';
+	const root = document.querySelector<HTMLElement>('[data-pg]')!;
+	const src = root.querySelector<HTMLTextAreaElement>('[data-src]')!;
+	const out = root.querySelector<HTMLElement>('[data-out]')!;
+	const status = root.querySelector<HTMLElement>('[data-status]')!;
+	const dl = root.querySelector<HTMLButtonElement>('[data-download]')!;
+	const engines = root.querySelectorAll<HTMLButtonElement>('[data-engine]');
+	let engine = 'dot';
+	let last = '';
+	let timer: number | undefined;
+
+	async function go() {
+		const res = await renderBytes(new TextEncoder().encode(src.value), engine);
+		if (!res.ok) {
+			status.className = 'status err';
+			status.textContent = res.error ?? 'Render failed';
+			return;
+		}
+		last = res.text;
+		const doc = new DOMParser().parseFromString(res.text.slice(res.text.indexOf('<svg')), 'image/svg+xml');
+		const svg = doc.querySelector('svg');
+		out.replaceChildren(...(svg ? [document.importNode(svg, true)] : []));
+		status.className = 'status';
+		status.textContent = `${engine} · ${res.ms.toFixed(1)} ms · ${new Blob([res.text]).size.toLocaleString('en-US')} bytes · ${await wasmVersion()}, wasm32`;
+		dl.disabled = false;
+	}
+	const soon = () => {
+		window.clearTimeout(timer);
+		timer = window.setTimeout(go, 350);
+	};
+	for (const b of engines)
+		b.addEventListener('click', () => {
+			engine = b.dataset.engine!;
+			for (const x of engines) x.setAttribute('aria-pressed', String(x === b));
+			go();
+		});
+	root.querySelector('[data-render]')!.addEventListener('click', go);
+	src.addEventListener('input', soon);
+	src.addEventListener('keydown', (e) => {
+		if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+			e.preventDefault();
+			go();
+		}
+	});
+	for (const b of root.querySelectorAll<HTMLButtonElement>('[data-load]'))
+		b.addEventListener('click', async () => {
+			src.value = await fetch(b.dataset.load!).then((r) => r.text());
+			const e = b.dataset.loadEngine!;
+			engines.forEach((x) => x.dataset.engine === e && x.click());
+		});
+	dl.addEventListener('click', () => {
+		const a = document.createElement('a');
+		a.href = URL.createObjectURL(new Blob([last], { type: 'image/svg+xml' }));
+		a.download = 'graph.svg';
+		a.click();
+	});
+	wasmVersion()
+		.then(go)
+		.catch((e) => {
+			status.className = 'status err';
+			status.textContent = `Could not load the WASM build: ${e.message}`;
+		});
+</script>

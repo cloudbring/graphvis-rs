@@ -1,0 +1,38 @@
+---
+/**
+ * A registration mark as a status. `register`: the plates line up (byte-identical).
+ * `off`: out of register (differs). `upstream`: C's own behaviour. `pending`: not run yet.
+ */
+interface Props {
+	kind: 'register' | 'off' | 'upstream' | 'pending';
+	label?: string;
+	class?: string;
+}
+const { kind, label, class: cls } = Astro.props;
+---
+
+<span class:list={['mark', `is-${kind}`, cls]} data-mark={kind}>
+	<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.25">
+		{kind === 'register' && (
+			<>
+				<circle cx="8" cy="8" r="4.25" />
+				<path d="M8 1v14M1 8h14" />
+			</>
+		)}
+		{kind === 'off' && (
+			<>
+				<circle cx="6.5" cy="6.5" r="4" />
+				<circle cx="9.5" cy="9.5" r="4" stroke-dasharray="2 1.5" />
+			</>
+		)}
+		{kind === 'upstream' && (
+			<>
+				<circle cx="8" cy="8" r="4.25" stroke-dasharray="2.2 1.6" />
+				<path d="M8 1v4.5M8 11v4M1 8h4.5M11 8h4" />
+			</>
+		)}
+		{kind === 'pending' && <circle cx="8" cy="8" r="4.25" stroke-dasharray="1 2" />}
+	</svg>
+	{label && <span>{label}</span>}
+	<slot />
+</span>
