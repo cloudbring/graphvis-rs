@@ -1,5 +1,0 @@
-graph 1 2.1047 1.7333
-node a 1.0523 0.25 2.1047 0.5 "tab	herectl \"q\" /sl" solid ellipse black lightgrey
-node é 1.0523 1.4833 0.75 0.5 é solid ellipse black lightgrey
-edge é a 4 1.0523 1.2313 1.0523 1.0689 1.0523 0.84989 1.0523 0.66136 "&<x>" 1.2863 0.86667 solid black
-stop

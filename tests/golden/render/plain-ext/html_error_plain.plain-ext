@@ -1,6 +1,0 @@
-graph 1 1.75 1.5
-node a 0.375 1.25 0.75 0.5 "<B>x</I>" solid ellipse black lightgrey
-node b 1.375 1.25 0.75 0.5 b solid ellipse black lightgrey
-node c 1.375 0.25 0.75 0.5 c solid ellipse black lightgrey
-edge b c 4 1.375 0.99579 1.375 0.89454 1.375 0.77397 1.375 0.66022 "<FOO>y</FOO>" 1.375 0.75 solid black
-stop

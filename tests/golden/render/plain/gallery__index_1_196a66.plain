@@ -1,5 +1,0 @@
-graph 1 0.75 1.5
-node abc 0.375 1.25 0.75 0.5 abc solid ellipse black lightgrey
-node def 0.375 0.25 0.75 0.5 def solid ellipse black lightgrey
-edge abc def 4 0.375 0.99579 0.375 0.90042 0.375 0.78793 0.375 0.68012 solid black
-stop

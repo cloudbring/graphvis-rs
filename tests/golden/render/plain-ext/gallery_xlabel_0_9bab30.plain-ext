@@ -1,5 +1,0 @@
-graph 1 1.3795 1.9667
-node ⚡ 0.90431 1.4833 0.75 0.5 ⚡ solid ellipse black lightgrey
-node 🔥 0.90431 0.25 0.75 0.5 🔥 solid ellipse black lightgrey
-edge ⚡ 🔥 4 0.90431 1.2313 0.90431 1.0689 0.90431 0.84989 0.90431 0.66136 Cause 1.1419 0.86667 solid black
-stop

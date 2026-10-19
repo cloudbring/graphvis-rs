@@ -17,7 +17,8 @@
 //! ```
 //!
 //! Render fidelity: compares the port's `-n2` renderings of the C layouts in
-//! `tests/golden/render/laid` with C's (see `gv_diff::render`).
+//! `tests/golden/render/laid` with C's (see `gv_diff::render`; the references are unpacked
+//! from `tests/golden/render.tar.xz` on first use).
 //!
 //! ```text
 //! gv-diff pairs C_DIR PORT_DIR [--worst N]
@@ -362,6 +363,10 @@ fn render_main(args: Vec<String>) -> ExitCode {
     } else {
         formats.iter().map(String::as_str).collect()
     };
+    if let Err(e) = gv_diff::render::ensure_unpacked(&root) {
+        eprintln!("{e}");
+        return ExitCode::FAILURE;
+    }
     let cur = run_corpus(&root, &fmts, filter.as_deref());
     let base: Option<RenderBaseline> = baseline_path
         .as_ref()

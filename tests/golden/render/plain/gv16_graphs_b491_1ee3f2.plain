@@ -1,8 +1,0 @@
-graph 1 2.5586 1.5347
-node Node29 1.2724 1.2708 0.83784 0.52778 "\N" solid record black lightgrey
-node Node27 0.57792 0.25 1.1558 0.5 Node27 solid ellipse black lightgrey
-node Node26 1.9807 0.25 1.1558 0.5 Node26 solid ellipse black lightgrey
-edge Node29 Node29 7 1.6969 1.3672 1.8332 1.3662 1.9412 1.3341 1.9412 1.2708 1.9412 1.2353 1.9071 1.2095 1.8529 1.1937 v 1.9899 1.2708 solid black
-edge Node29 Node27 4 1.1043 1.0166 1.022 0.89897 0.92135 0.755 0.83015 0.62457 solid black
-edge Node29 Node26 4 1.4439 1.0166 1.5276 0.89897 1.6304 0.755 1.7235 0.62457 solid black
-stop

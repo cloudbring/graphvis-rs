@@ -1,6 +1,0 @@
-graph 1 6.0417 1.4667
-node Lounge 0.68056 0.76111 1.126 0.5 Lounge solid ellipse black lightgrey
-node Kitchen 2.0694 0.76111 1.1557 0.5 Kitchen solid ellipse black lightgrey
-node Bedroom 3.6389 0.76111 1.3049 0.5 Bedroom solid ellipse black lightgrey
-node Bathroom 5.2361 0.76111 1.3794 0.5 Bathroom solid ellipse black lightgrey
-stop

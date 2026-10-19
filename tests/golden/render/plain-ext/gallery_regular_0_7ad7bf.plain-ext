@@ -1,6 +1,0 @@
-graph 1 7.3813 1.7601
-node pentagon1 0.88006 0.88005 1.7601 0.5 pentagon1 solid pentagon black lightgrey
-node pentagon2 2.8939 0.88005 1.7601 1.7601 pentagon2 solid pentagon black lightgrey
-node hexagon1 4.7967 0.88005 1.5582 0.5 hexagon1 solid hexagon black lightgrey
-node hexagon2 6.6022 0.88005 1.5582 1.5582 hexagon2 solid hexagon black lightgrey
-stop

@@ -1,6 +1,0 @@
-graph 1 7.2568 0.68889
-node Triangle 1.2152 0.34445 2.4304 0.68889 Triangle solid polygon black lightgrey
-node Rectangle 3.1735 0.34445 0.99962 0.5 Rectangle solid polygon black lightgrey
-node Pentagon 4.729 0.34445 1.613 0.5 Pentagon solid polygon black lightgrey
-node Hexagon 6.5207 0.34445 1.4721 0.5 Hexagon solid polygon black lightgrey
-stop

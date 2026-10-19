@@ -1,6 +1,0 @@
-graph 1 1.2005 1.5
-node routine1 0.60026 1.25 1.2005 0.5 routine1 solid ellipse black lightgrey
-node routine2 0.60026 0.25 1.2005 0.5 routine2 solid ellipse black lightgrey
-edge routine1 routine2 4 0.60026 0.99579 0.60026 0.89454 0.60026 0.77397 0.60026 0.66022 solid black
-edge routine1 routine2 4 0.60026 0.99766 0.60026 0.89658 0.60026 0.77745 0.60026 0.66434 solid black
-stop

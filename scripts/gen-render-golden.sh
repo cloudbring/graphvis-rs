@@ -15,6 +15,9 @@
 # like the port. GVBINDIR must name a plugin directory holding only the core, dot
 # and neato plugins; the default is ~/src/gv-ref/lutplugins.
 #
+# The directories are gitignored: the script ends by packing them into
+# tests/golden/render.tar.xz (scripts/pack-render-golden.py), which is what git tracks.
+#
 # Usage: scripts/gen-render-golden.sh [GVBINDIR]
 set -euo pipefail
 
@@ -60,3 +63,5 @@ echo "wrote $count laid-out inputs and their reference renderings to $OUT"
 for d in "$OUT"/*/; do
   printf '%-10s %4d files %9d bytes\n' "$(basename "$d")" "$(ls "$d" | wc -l)" "$(cat "$d"* | wc -c)"
 done
+# The references are tracked compressed; gv-diff render unpacks the archive (tests/golden/README.md).
+python3 "$REPO_ROOT/scripts/pack-render-golden.py"

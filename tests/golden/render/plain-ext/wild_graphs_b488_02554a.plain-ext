@@ -1,8 +1,0 @@
-graph 1 9.2435 1.5
-node concatenatedname 1.191 0.25 2.2874 0.5 concatenatedname solid ellipse blue blue
-node "concatenated with ports" 1.427 1.25 2.854 0.5 "concatenated with ports" solid ellipse orange orange
-node concatenated 6.177 1.25 6.1329 0.5 "this is a longlong label that just goes on and on and on" solid ellipse black lightgrey
-node backslashed 6.177 0.25 1.6026 0.5 backslashed solid ellipse black lightgrey
-edge "concatenated with ports":"p45:sw" concatenatedname:ne 4 1.5101 0.9941 1.5319 0.90283 1.5458 0.79765 1.5313 0.70072 solid black
-edge concatenated backslashed 4 6.177 0.99579 6.177 0.89454 6.177 0.77397 6.177 0.66022 solid black
-stop

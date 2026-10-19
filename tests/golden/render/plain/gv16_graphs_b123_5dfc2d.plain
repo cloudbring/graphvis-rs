@@ -1,4 +1,0 @@
-graph 1 2.136 0.62658
-node tester_run_ksh 0.94297 0.25 1.8859 0.5 tester_run_ksh solid ellipse black lightgrey
-edge tester_run_ksh tester_run_ksh 7 1.1904 0.49749 1.5881 0.37249 2.136 0.37249 2.136 0.50042 2.136 0.61335 1.5161 0.62658 1.0972 0.54212 solid black
-stop

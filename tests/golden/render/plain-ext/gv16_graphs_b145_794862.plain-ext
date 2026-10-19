@@ -1,8 +1,0 @@
-graph 1 4.9724 1.3889
-node label_foo 4.0219 0.375 0.75 0.52778 "<foo>foo" solid record black lightgrey
-node cluster_foo 1.2857 1.1389 1.5133 0.5 cluster_foo solid ellipse black lightgrey
-node label_xxxxxxx 4.0219 1.1389 1.9009 0.5 label_xxxxxxx solid ellipse black lightgrey
-node columns_foo_insider 1.2857 0.375 2.5715 0.5 columns_foo_insider solid ellipse black lightgrey
-edge cluster_foo label_xxxxxxx 4 2.0469 1.1389 2.3124 1.1389 2.6172 1.1389 2.9061 1.1389 solid black
-edge columns_foo_insider:foo label_foo 4 2.5746 0.375 2.8957 0.375 3.2228 0.375 3.4833 0.375 solid black
-stop

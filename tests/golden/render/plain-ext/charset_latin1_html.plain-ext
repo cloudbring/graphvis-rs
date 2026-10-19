@@ -1,5 +1,0 @@
-graph 1 1.7916 2.245
-node néud 0.8958 1.8836 1.7916 0.72282 <<TABLE><TR><TD>Café &eacute; &#233;</TD><TD TITLE="tïtle">x</TD></TR></TABLE>> solid ellipse black lightgrey
-node b 0.8958 0.53889 1.5729 0.5 "cafÃ© Ã© ÃƒÂ© â‚¬" solid ellipse black lightgrey
-edge néud b 4 0.8958 1.5168 0.8958 1.3418 0.8958 1.1298 0.8958 0.94924  1.0848 1.1556 solid black
-stop

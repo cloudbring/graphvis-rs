@@ -1,5 +1,0 @@
-graph 1 1.3644 1.5
-node command 0.6822 1.25 1.3644 0.5 command solid ellipse black lightgrey
-node output 0.6822 0.25 0.99212 0.5 output solid ellipse black lightgrey
-edge command output 4 0.6822 0.99579 0.6822 0.89454 0.6822 0.77397 0.6822 0.66022 solid black
-stop

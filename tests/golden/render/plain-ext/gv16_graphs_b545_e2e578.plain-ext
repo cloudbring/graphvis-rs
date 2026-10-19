@@ -1,5 +1,0 @@
-graph 1 2.6675 1.5208
-node N11 1.4136 0.26389 2.5077 0.52778 "<p0>WFSt|1571 	as Ref: 1338 	D" solid record black lightgrey
-node N11ne 0.51086 1.2708 1.0217 0.5 N11ne solid ellipse black lightgrey
-edge N11ne N11:p0 4 0.5045 1.0183 0.50221 0.91811 0.49988 0.79708 0.49868 0.67676 solid black
-stop

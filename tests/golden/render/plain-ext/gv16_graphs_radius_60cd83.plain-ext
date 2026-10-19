@@ -1,7 +1,0 @@
-graph 1 2.5 1.5
-node x 0.375 1.25 0.75 0.5 x solid ellipse black lightgrey
-node y 1.25 0.25 0.75 0.5 y solid ellipse black lightgrey
-node z 2.125 1.25 0.75 0.5 z solid ellipse black lightgrey
-edge x y 7 0.375 0.99765 0.375 0.70142 0.375 0.25 0.375 0.25 0.375 0.25 0.70885 0.25 0.70885 0.25 solid black
-edge z y 7 1.7437 1.25 1.5079 1.25 1.25 1.25 1.25 1.25 1.25 1.25 1.25 0.66225 1.25 0.66225 solid black
-stop

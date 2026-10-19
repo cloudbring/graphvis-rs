@@ -1,5 +1,0 @@
-graph 1 9.25 3.2333
-node "1.5x0.5" 1.7917 1.6167 3.5833 1.2333 "1.5x0.5" solid rect black lightgrey
-node "0.5x1.5" 4.625 1.6167 1.5833 3.2333 "0.5x1.5" solid rect black lightgrey
-node "1.5x1.5" 7.4583 1.6167 3.5833 3.2333 "1.5x1.5" solid rect black lightgrey
-stop

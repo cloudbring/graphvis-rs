@@ -1,5 +1,0 @@
-graph 1 2 0.5
-node T 0.375 0.25 0.75 0.5 T solid ellipse black lightgrey
-node H 1.625 0.25 0.75 0.5 H solid ellipse black lightgrey
-edge T H 4 0.7556 0.25 0.82932 0.25 0.90872 0.25 0.98839 0.25 solid black
-stop

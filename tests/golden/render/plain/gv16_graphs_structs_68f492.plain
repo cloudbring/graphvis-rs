@@ -1,7 +1,0 @@
-graph 1 3.523 2.075
-node struct1 1.0501 1.8111 1.833 0.52778 "<f0> left|<f1> middle|<f2> right" solid record black lightgrey
-node struct2 0.50845 0.53054 1.0169 0.52778 "<f0> one|<f1> two" solid record black lightgrey
-node struct3 2.3974 0.53054 2.2512 1.0611 "hello\nworld |{ b |{c|<here> d|e}| f}| g | h" solid record black lightgrey
-edge struct1 struct2 4 0.99605 1.5542 0.99605 1.1423 0.43109 1.2302 0.28544 0.94725 solid black
-edge struct1 struct3 4 1.6719 1.5542 1.6719 1.5542 1.9736 1.1418 2.1928 0.84234 solid black
-stop

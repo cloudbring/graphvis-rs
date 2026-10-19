@@ -1,7 +1,0 @@
-graph 1 0.75 5.1685
-node a 0.375 4.8071 0.75 0.72282 a solid ellipse black lightgrey
-node b 0.375 2.5842 0.75 0.72282 b solid ellipse black lightgrey
-node c 0.375 0.36141 0.75 0.72282 c solid ellipse black lightgrey
-edge a b 4 0.375 4.4405 0.375 4.0804 0.375 3.518 0.375 3.1092 setlinewidth(3) black
-edge b c 4 0.375 2.2176 0.375 1.8576 0.375 1.2952 0.375 0.88637 setlinewidth(3) black
-stop

@@ -1,7 +1,0 @@
-graph 1 7.3417 0.72222
-node Lion 0.51389 0.36111 0.8132 0.5 Lion solid ellipse black lightgrey
-node "Snow Leopard" 2.1111 0.36111 1.8785 0.5 "Snow Leopard" solid ellipse black lightgrey
-node Siamese 3.9861 0.36111 1.2005 0.5 Siamese solid ellipse black lightgrey
-node Persian 5.3889 0.36111 1.0963 0.5 Persian solid ellipse black lightgrey
-node Wildcat 6.7639 0.36111 1.1556 0.5 Wildcat solid ellipse black lightgrey
-stop

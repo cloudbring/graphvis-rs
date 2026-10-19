@@ -1,6 +1,0 @@
-graph 1 7.5 10
-node dc1 3.75 0.90909 0.75 0.5 "DC 1" solid plaintext black lightgrey
-node dc10 3.75 3.6364 0.75 0.5 "DC 10" solid plaintext black lightgrey
-node dc100 3.75 6.3636 0.83261 0.5 "DC 100" solid plaintext black lightgrey
-node no_dc 3.75 9.0909 1.1079 0.5 NOTHING solid plaintext black lightgrey
-stop

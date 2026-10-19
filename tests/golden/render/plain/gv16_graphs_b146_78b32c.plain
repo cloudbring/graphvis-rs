@@ -1,4 +1,0 @@
-graph 1 0.75 0.77778
-node label_foo 0.375 0.26389 0.75 0.52778 "<foo>foo" solid record black lightgrey
-edge label_foo label_foo 7 0.28285 0.51772 0.26768 0.65381 0.29793 0.77778 0.37383 0.77778 0.41771 0.77778 0.44633 0.73635 0.45974 0.67508 solid black
-stop
