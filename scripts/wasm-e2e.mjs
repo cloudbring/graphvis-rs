@@ -9,7 +9,7 @@
 //     target/wasm32-unknown-unknown/release/gv_wasm.wasm
 // then run from the repository root:
 //   node scripts/wasm-e2e.mjs [--pkg /tmp/gvwasm/pkg] [--baseline FILE] [--filter SUBSTR]
-//                             [--list] [--hashes FILE]
+//                             [--list] [--hashes FILE] [--golden FILE]
 //
 // Exits non-zero when a file in the baseline does not match under wasm. wasm32 always uses
 // the portable math profile, so the default baseline is tests/golden/e2e-baseline.portable.json,
@@ -26,6 +26,7 @@ let pkg = '/tmp/gvwasm/pkg';
 let filter = null;
 let list = false;
 let baselinePath = 'tests/golden/e2e-baseline.portable.json';
+let goldenPath = 'tests/golden/e2e.json';
 let hashesPath = null;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--pkg') pkg = args[++i];
@@ -33,6 +34,7 @@ for (let i = 0; i < args.length; i++) {
   else if (args[i] === '--list') list = true;
   else if (args[i] === '--baseline') baselinePath = args[++i];
   else if (args[i] === '--hashes') hashesPath = args[++i];
+  else if (args[i] === '--golden') goldenPath = args[++i];
   else {
     console.error(`unknown argument ${args[i]}`);
     process.exit(2);
@@ -42,7 +44,7 @@ const require = createRequire(import.meta.url);
 const gv = require(path.resolve(pkg, 'gv_wasm.js'));
 
 const root = process.cwd();
-const golden = JSON.parse(fs.readFileSync(path.join(root, 'tests/golden/e2e.json'), 'utf8')).files;
+const golden = JSON.parse(fs.readFileSync(path.resolve(root, goldenPath), 'utf8')).files;
 const baseline = new Set(
   JSON.parse(fs.readFileSync(path.resolve(root, baselinePath), 'utf8')).identical,
 );

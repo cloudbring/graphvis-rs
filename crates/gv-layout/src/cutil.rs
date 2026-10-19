@@ -70,6 +70,12 @@ impl Default for CRand {
 }
 
 impl CRand {
+    /// The state of a process that never called `srand` (seed 1), usable in a `static`.
+    #[must_use]
+    pub const fn new_unseeded() -> Self {
+        Self { next: 1 }
+    }
+
     pub fn srand(&mut self, seed: u32) {
         self.next = u64::from(seed);
     }

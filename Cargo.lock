@@ -81,6 +81,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gv-portable-libm"
+version = "0.1.0"
+dependencies = [
+ "gv-core",
+ "gv-layout",
+ "libm",
+]
+
+[[package]]
 name = "gv-render"
 version = "0.1.0"
 dependencies = [
