@@ -10,12 +10,10 @@ fn run(args: &[&str], stdin: &str) -> (String, String, bool) {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(stdin.as_bytes())
-        .unwrap();
+    // A run rejected on its arguments may exit before reading stdin.
+    if let Err(e) = child.stdin.take().unwrap().write_all(stdin.as_bytes()) {
+        assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "{e}");
+    }
     let out = child.wait_with_output().unwrap();
     (
         String::from_utf8_lossy(&out.stdout).into_owned(),
