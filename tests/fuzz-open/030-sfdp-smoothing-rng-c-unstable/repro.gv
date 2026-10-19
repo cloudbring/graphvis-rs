@@ -1,0 +1,10 @@
+graph "fuzz 23510" {
+layout=sfdp;
+smoothing="rng";
+{"v28" "v7" "v39"} -- "v11";
+"v1" -- subgraph "s83" {"v42" "v33"};
+"v44":"c" -- "v42" [tailport="s"];
+"v39" -- "v42" [arrowsize="2.45"];
+"v27" -- subgraph "s114" {"v45" "v38" "v1"};
+"v20" -- "v11" [label="עברית\lπ\ltab	here\ltab	here\n"];
+}

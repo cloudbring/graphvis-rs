@@ -1,0 +1,2 @@
+GVBINDIR=$HOME/src/gv-ref/lutplugins dot -Tsvg -o /dev/null repro.gv
+dot-rs -Tsvg -o /dev/null repro.gv

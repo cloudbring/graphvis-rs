@@ -1,0 +1,1 @@
+r3/diff/s23510.gv seed=23510  # c_unstable: 4 distinct C outputs in 10 runs; the port matches one

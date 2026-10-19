@@ -1,0 +1,7 @@
+digraph "fuzz 12614" {
+layout=neato;
+splines="polyline";
+mode="hier";
+"10" [label="Start"];
+"9" -> "10":"n" [xlabel="\T", color="white"];
+}

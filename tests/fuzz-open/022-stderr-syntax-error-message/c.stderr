@@ -1,0 +1,6 @@
+Error: repro.gv: syntax error in line 7 scanning a quoted string (missing endquote? longer than 16384?)
+String starting:"abc
+
+]
+ d
+

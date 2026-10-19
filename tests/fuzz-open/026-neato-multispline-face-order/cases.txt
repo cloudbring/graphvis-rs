@@ -1,0 +1,3 @@
+r3/diff/s23516.gv seed=23516
+r4/diff/s33154.gv seed=33154  # twopi
+r2/diff/s10372.gv seed=10372

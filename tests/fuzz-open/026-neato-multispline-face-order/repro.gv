@@ -1,0 +1,7 @@
+graph "G" {
+layout=sfdp;
+splines="true";
+edge [headport="e"];
+"n5" [shape="circle", label="→ arrow"];
+{"n5"} -- "n12";
+}
