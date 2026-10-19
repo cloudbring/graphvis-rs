@@ -12,15 +12,16 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="${1:-/tmp/gv-c-linux}"
+IMAGE="${IMAGE:-gv-c-linux}"
 mkdir -p "$OUT"
 # The sources go in through a volume rather than a bind mount, so this works whatever
 # directories the Docker VM shares.
 docker volume rm -f gv-c-linux-src >/dev/null
 COPYFILE_DISABLE=1 tar -C "$ROOT" -cf - --no-xattrs --exclude ./target --exclude ./site/node_modules --exclude ./web/node_modules \
     --exclude ./.git . \
-  | docker run --rm -i -v gv-c-linux-src:/repo gv-c-linux tar -xf - -C /repo
-docker run --rm -v gv-c-linux-src:/repo -v gv-c-linux-target:/target --name gv-c-linux-run \
-  -e CARGO_TARGET_DIR=/target -w /repo gv-c-linux bash -c '
+  | docker run --rm -i -v gv-c-linux-src:/repo "$IMAGE" tar -xf - -C /repo
+docker run --rm -v gv-c-linux-src:/repo -v "$IMAGE-target":/target --name gv-c-linux-run \
+  -e CARGO_TARGET_DIR=/target -w /repo "$IMAGE" bash -c '
     set -e
     mkdir -p /repo/out
     cargo build --release -q -p gv-diff -p gv-portable-libm
@@ -38,7 +39,7 @@ docker run --rm -v gv-c-linux-src:/repo -v gv-c-linux-target:/target --name gv-c
     /target/release/gv-diff e2e --golden /repo/out/e2e.linux-c-apple-libc.json --baseline /tmp/none.json \
       --list > /repo/out/port-vs-linux-c-apple-libc.txt 2>/dev/null || true
   '
-docker run --rm -v gv-c-linux-src:/repo gv-c-linux tar -C /repo/out -cf - . | tar -C "$OUT" -xf -
+docker run --rm -v gv-c-linux-src:/repo "$IMAGE" tar -C /repo/out -cf - . | tar -C "$OUT" -xf -
 tail -14 "$OUT/port-vs-linux-c.txt"
 tail -14 "$OUT/port-vs-linux-c-libm-matched.txt"
 tail -14 "$OUT/port-vs-linux-c-apple-libc.txt"

@@ -32,6 +32,17 @@ Each patch below is one file. The macOS sheet is solid; switch to the portable p
 
 <DiffList />
 
+### Is it only the math library?
+
+Yes. Running C itself with the port's portable math functions (`scripts/dot-portable-libm.sh` loads them into the unmodified C `dot`) and comparing again:
+
+| | vs stock C on macOS | vs C with the port's math functions |
+| :--- | ---: | ---: |
+| Linux and WASM build | 2,470 / 2,589 | **2,590 / 2,590** |
+| C Graphviz built on Linux, for comparison | 2,005 / 2,586 | — |
+
+With the same math functions on both sides, the browser build is byte-identical to C on every stable input; a ratchet in CI keeps it that way. C itself is less consistent across platforms than the port: built on Linux the way Homebrew builds it on macOS, it matches macOS C on 77.5% of the corpus, against 95.4% for the port in the browser. The details, and what makes Linux C differ (glibc's math, `qsort` and `rand`), are in [Math off macOS](/graphvis-rs/porting/libm/).
+
 ## Layout
 
 `gv-diff` (without `e2e`) compares geometry rather than bytes: it lays out each input with the port, reads C's `-Tdot` output for the same input, and checks the bounding box, every node's centre and size, every edge's spline, arrow endpoints and label positions, and every cluster box. A file is **exact** when every element is within tolerance: 1 pt for node positions, sizes and bounding boxes, 2 pt for edge splines (sampled Hausdorff distance) and labels. This is looser than byte identity, and it covers the per-engine corpora with C goldens kept as `.dot` files (`tests/golden/<engine>/`).
