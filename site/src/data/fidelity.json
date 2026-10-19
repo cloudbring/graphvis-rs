@@ -1,8 +1,8 @@
 {
- "generated": "2026-10-19T13:11:52+00:00",
- "commit": "3c1e085eebe641aa582d0c32dcdf04c5cc5a718b",
- "commit_short": "3c1e085",
- "commit_date": "2026-10-18T01:00:24-04:00",
+ "generated": "2026-10-19T13:58:24+00:00",
+ "commit": "2a743bf60c8b61852e1005cfeede9fa15982d5d2",
+ "commit_short": "2a743bf",
+ "commit_date": "2026-10-19T09:57:41-04:00",
  "source": "measured",
  "measured": {
   "apple": true,
