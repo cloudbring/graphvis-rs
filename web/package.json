@@ -36,7 +36,7 @@
     "circo",
     "twopi"
   ],
-  "license": "EPL-2.0 OR MIT",
+  "license": "EPL-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/cloudbring/graphvis-rs.git"

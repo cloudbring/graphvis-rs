@@ -87,4 +87,4 @@ document.getElementById('diagram').innerHTML = svg;
 
 ## Licence
 
-Graphviz is distributed under the Eclipse Public License 2.0, and this port follows its C sources closely. Treat the code as a derivative work of Graphviz under EPL-2.0. The `OR MIT` in `Cargo.toml` has not been reviewed for a derivative work. Third-party code in the math module is listed with its provenance in `docs/porting/libm.md`.
+[EPL-2.0](LICENSE), the licence of Graphviz. The port follows the Graphviz C sources closely and is a derivative work of Graphviz; [NOTICE](NOTICE) credits the Graphviz authors and lists the third-party code in the math module (MIT), whose provenance is detailed in `docs/porting/libm.md`.
