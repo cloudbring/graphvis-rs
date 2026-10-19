@@ -31,10 +31,10 @@ Remaining differences, all in shared code:
   position.
 - twopi `splines=true` on the arrows graphs (7 files): `i`, `Z` and `I` are
   exactly vertically aligned, and which side the pathplan router passes an
-  obstacle vertex on is a floating-point tie. The Homebrew build (the goldens),
-  the local C build in `~/src/gv-ref/build-circo` and the port each break it
-  differently, so it is not a port bug
-  that can be fixed against the goldens.
+  obstacle vertex on is a floating-point tie. C does not even break it the same
+  way from run to run: the same C binary gives 3–4 different outputs over 20
+  runs, so there is no single C answer to match (issue
+  `tests/fuzz-open/032-twopi-arrows-c-nondeterministic-routing`).
 
 ## Module ↔ C file map
 

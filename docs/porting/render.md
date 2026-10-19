@@ -65,9 +65,6 @@ parsed input) matches C on 493 of 508 inputs (454 before).
 
 ## Known differences
 
-- `gv16_graphs_b15`: dynamic record ports (`Run:Normal`) resolve to a different
-  side in `closestSide`/`resolvePort` (`crates/gv-layout/src/common/ports.rs`),
-  so the routed edges start elsewhere.
 - `-Tplain` of labels changed by `htmlEntityUTF8`/`latin1ToUTF8` that need no
   quoting: `canon` in `write_plain` (`lib/common/output.c`) interns the text,
   `agstrcanon` returns it unquoted and `agstrfree` frees it before it is
@@ -77,7 +74,7 @@ parsed input) matches C on 493 of 508 inputs (454 before).
   port prints the converted label; the garbage is not emulated.
 - HTML cell `STYLE="dashed"` borders: C's `xdot_style` walks past the end of a
   one-element style list and prints adjacent string literals (undefined
-  behaviour); not reproduced.
+  behaviour); not reproduced (`tests/fuzz-open/034-html-cell-dashed-style-overread`).
 - Images (`image=`, `shapefile=`, `<IMG>`) are never loaded; C draws them only
   when the file exists.
 - The SVG generator comment names graphvis-rs.

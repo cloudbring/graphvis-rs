@@ -205,9 +205,10 @@ cdt splay tree; `edge_attr_declared` is cached (it made splines quadratic).
   `graphs/**`, `tests/graphs/**` and `tests/regression_tests/**` with C and
   the port (60 s cap) as is and with `-Grankdir=LR`, `-Gsplines=ortho`,
   `-Gconcentrate=true`, `-Gnewrank=true`; `gv-diff pairs C_DIR PORT_DIR`
-  compares them. Exact: 374/379 in every variant (ortho: 371/376, C times out
-  on `b100`, `b103`, `b104`); the five misses were the Latin-1 inputs, exact
-  (379/379, ortho 376/376) since the charset work (`render.md`, Charset).
+  compares them. Exact: 374/379 in every variant at first; the five misses were the Latin-1
+  inputs, exact (379/379) since the charset work (`render.md`, Charset). With
+  `-Gsplines=ortho`, C needs more than 60 s on `b100`, `b103` and `b104`; given
+  longer, its output equals the port's byte for byte, so ortho is 379/379 too.
 * Timing (min of 3 process runs, `-Tsvg`, shared machine): b100 4.5 s (C) /
   4.7 s (port), b104 4.6/4.6, b103 0.73/0.69, b29 0.36/0.27, random DAGs of
   2000 and 8000 nodes 0.56/0.46 and 24.5/20.0, 40x40 grid 0.12/0.08.

@@ -259,6 +259,7 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`031-platform-libm-apple`](../../tests/fuzz-open/031-platform-libm-apple) | medium | — | wontfix (platform) |
 | [`032-twopi-arrows-c-nondeterministic-routing`](../../tests/fuzz-open/032-twopi-arrows-c-nondeterministic-routing) | medium | — | upstream C, wontfix |
 | [`033-latin1-plain-freed-label`](../../tests/fuzz-open/033-latin1-plain-freed-label) | low | — | upstream C, wontfix |
+| [`034-html-cell-dashed-style-overread`](../../tests/fuzz-open/034-html-cell-dashed-style-overread) | low | — | upstream C, wontfix |
 
 The C nondeterminism noted above still applies to the corpus. fdp and neato with
 clusters, twopi with samehead arrows, and VPSC (`mode=ipsep`, which iterates a

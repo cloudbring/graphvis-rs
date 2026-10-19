@@ -8,9 +8,6 @@
 // site/src/data/issues.json with `files` (what was copied) and, when filed.json maps the
 // slug to a URL, `issue_url`, and copies each entry's directory into
 // site/public/whats-left/<slug>/.
-//
-// Without docs/issues/manifest.json it uses site/placeholder-issues/manifest.json, so the
-// site builds before the triage branch is merged.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,8 +19,7 @@ const opt = (name, dflt) => {
 	return i >= 0 ? resolve(args[i + 1]) : dflt;
 };
 
-const real = join(root, 'docs/issues/manifest.json');
-const manifestPath = opt('--manifest', existsSync(real) ? real : join(root, 'site/placeholder-issues/manifest.json'));
+const manifestPath = opt('--manifest', join(root, 'docs/issues/manifest.json'));
 const filedPath = opt('--filed', join(root, 'docs/issues/filed.json'));
 const outData = join(root, 'site/src/data/issues.json');
 const outPublic = join(root, 'site/public/whats-left');
@@ -48,7 +44,9 @@ const out = manifest.map((issue) => {
 		: [];
 	if (!files.length) console.warn(`warning: ${issue.slug}: no files in ${issue.dir}`);
 	for (const f of files) copyFileSync(join(src, f), join(dst, f));
-	const entry = { ...issue, files };
+	// The body is written for GitHub; on the site its own page is the visual diff.
+	const body = issue.body.replace(/^Visual diff: \{\{SITE\}\}\S*\n?/m, '').replace(/\{\{SITE\}\}/g, '/graphvis-rs');
+	const entry = { ...issue, body, files };
 	if (filed[issue.slug]) entry.issue_url = filed[issue.slug];
 	return entry;
 });

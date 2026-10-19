@@ -180,6 +180,9 @@ used. The Apple files stay the record of exact C parity; the portable files guar
 on Linux and wasm, and their numbers document the gap to C. `scripts/update-baselines.sh
 [--portable]` refreshes all of them for one profile.
 
+These counts are from when the portable profile was introduced; the corpora have grown since.
+The current figures are on the documentation site's Fidelity page (`scripts/site-data.py`).
+
 | ratchet | baseline | Apple | portable |
 |---|---|---:|---:|
 | main (dot) | `tests/golden/baseline.json` | exact 526/526 | 525/526 |

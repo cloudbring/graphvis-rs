@@ -1,0 +1,3 @@
+digraph {
+  n [shape=box label=<<TABLE><TR><TD STYLE="dashed">x</TD></TR></TABLE>>]
+}

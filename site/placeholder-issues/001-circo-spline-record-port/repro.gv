@@ -1,7 +1,0 @@
-graph "fuzz 11675" {
-layout=circo;
-splines="spline";
-"n7" [shape="Mrecord"];
-"n1" -- "n7":"n";
-"n2":"c" -- "n5" [];
-}

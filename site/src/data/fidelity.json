@@ -3194,9 +3194,9 @@
    {
     "name": "ortho",
     "flags": "-Gsplines=ortho",
-    "exact": 376,
-    "total": 376,
-    "note": "C times out on 3 inputs"
+    "exact": 379,
+    "total": 379,
+    "note": "C needs over 60 s on 3 inputs; given longer, they match too"
    },
    {
     "name": "concentrate",

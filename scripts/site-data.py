@@ -209,7 +209,7 @@ def main():
             "variants": [
                 {"name": "base", "flags": "", "exact": 379, "total": 379},
                 {"name": "LR", "flags": "-Grankdir=LR", "exact": 379, "total": 379},
-                {"name": "ortho", "flags": "-Gsplines=ortho", "exact": 376, "total": 376, "note": "C times out on 3 inputs"},
+                {"name": "ortho", "flags": "-Gsplines=ortho", "exact": 379, "total": 379, "note": "C needs over 60 s on 3 inputs; given longer, they match too"},
                 {"name": "concentrate", "flags": "-Gconcentrate=true", "exact": 379, "total": 379},
                 {"name": "newrank", "flags": "-Gnewrank=true", "exact": 379, "total": 379},
             ],
