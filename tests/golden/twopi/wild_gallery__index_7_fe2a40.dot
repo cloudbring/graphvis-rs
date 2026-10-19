@@ -1,0 +1,10 @@
+graph G {
+	graph [bb="0,0,54,36",
+		layout=twopi
+	];
+	node [label="\N"];
+	yen	[height=0.5,
+		label="&#165;",
+		pos="27,18",
+		width=0.75];
+}

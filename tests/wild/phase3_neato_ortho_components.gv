@@ -1,0 +1,8 @@
+graph disc {
+layout=neato; splines=ortho;
+a -- b -- c -- a;
+d -- e -- f -- d;
+g -- h;
+i; j;
+k -- l -- m -- n -- k;
+}

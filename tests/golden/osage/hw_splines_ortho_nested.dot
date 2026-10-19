@@ -1,0 +1,73 @@
+digraph nested {
+	graph [bb="0,0,418,213.6",
+		layout=osage,
+		splines=ortho
+	];
+	node [label="\N"];
+	subgraph cluster_outer {
+		graph [bb="0,40,240,213.6",
+			label=outer,
+			lheight=0.23,
+			lp="120,201.2",
+			lwidth=0.40
+		];
+		subgraph cluster_inner {
+			graph [bb="2,82,118,186.8",
+				label=inner,
+				lheight=0.23,
+				lp="60,174.4",
+				lwidth=0.40
+			];
+			i1	[height=0.5,
+				pos="31,142",
+				width=0.75];
+			i2	[height=0.5,
+				pos="89,142",
+				width=0.75];
+			i3	[height=0.5,
+				pos="31,102",
+				width=0.75];
+		}
+		subgraph cluster_inner2 {
+			graph [bb="122,102,238,166.8",
+				lheight=0.23,
+				lp="180,154.4",
+				lwidth=0.40
+			];
+			j1	[height=0.5,
+				pos="151,122",
+				width=0.75];
+			j2	[height=0.5,
+				pos="209,122",
+				width=0.75];
+			j1 -> j2	[pos="e,181.83,122 178.3,122 178.3,122 178.65,122 178.65,122"];
+		}
+		o1	[height=0.5,
+			pos="60,60",
+			width=0.75];
+		o2	[height=0.5,
+			pos="180,60",
+			width=0.75];
+	}
+	subgraph cluster_side {
+		graph [bb="244,107,360,147"];
+		s1	[height=0.5,
+			pos="273,127",
+			width=0.75];
+		s2	[height=0.5,
+			pos="331,127",
+			width=0.75];
+	}
+	i3 -> s2	[pos="e,316.5,111.3 57.347,97 128.03,97 316.5,97 316.5,97 316.5,97 316.5,99.784 316.5,99.784"];
+	x	[height=0.5,
+		pos="391,127",
+		width=0.75];
+	x -> o1	[pos="e,74.5,75.5 391,108.58 391,99.721 391,91 391,91 391,91 74.5,91 74.5,91 74.5,91 74.5,87.014 74.5,87.014"];
+	x -> s1	[pos="e,273,145.34 391,145.34 391,149.64 391,153 391,153 391,153 273,153 273,153 273,153 273,152.23 273,152.23"];
+	y	[height=0.5,
+		pos="120,18",
+		width=0.75];
+	z	[height=0.5,
+		pos="302,18",
+		width=0.75];
+}

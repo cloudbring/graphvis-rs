@@ -1,0 +1,9 @@
+digraph G {
+layout=osage;
+
+  subgraph cluster_yellow {
+    color="yellow"
+    a [color="red"]
+    b [color="green"]
+  }
+}

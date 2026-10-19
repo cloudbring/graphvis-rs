@@ -1,0 +1,7 @@
+graph ca {
+layout=patchwork;
+
+subgraph cluster_e1 { area=4; }
+subgraph cluster_e2 { }
+a;
+}

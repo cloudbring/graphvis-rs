@@ -1,0 +1,11 @@
+graph single {
+	graph [bb="0,0,31.624,31.624",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	a	[height=0.43921,
+		pos="15.812,15.812",
+		width=0.43921];
+}

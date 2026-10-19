@@ -1,0 +1,68 @@
+digraph G {
+	graph [bb="0,0,100,100",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_0 {
+		graph [bb="0.00025,20,50,100",
+			color=lightgrey,
+			label="process #1",
+			style=filled
+		];
+		node [color=white,
+			style=filled
+		];
+		a0	[height=0.55556,
+			pos="12.5,80",
+			width=0.34722];
+		a1	[height=0.55556,
+			pos="37.5,80",
+			width=0.34722];
+		a0 -> a1;
+		a2	[height=0.55556,
+			pos="12.5,40",
+			width=0.34722];
+		a1 -> a2;
+		a3	[height=0.55556,
+			pos="37.5,40",
+			width=0.34722];
+		a2 -> a3;
+	}
+	subgraph cluster_1 {
+		graph [bb="50,20,100,100",
+			color=blue,
+			label="process #2"
+		];
+		node [style=filled];
+		b0	[height=0.55556,
+			pos="62.5,80",
+			width=0.34722];
+		b1	[height=0.55556,
+			pos="87.5,80",
+			width=0.34722];
+		b0 -> b1;
+		b2	[height=0.55556,
+			pos="62.5,40",
+			width=0.34722];
+		b1 -> b2;
+		b3	[height=0.55556,
+			pos="87.5,40",
+			width=0.34722];
+		b2 -> b3;
+	}
+	a1 -> b3;
+	a3 -> a0;
+	end	[height=0.27778,
+		pos="75,10",
+		width=0.69444];
+	a3 -> end;
+	b2 -> a3;
+	b3 -> end;
+	start	[height=0.27778,
+		pos="25,10",
+		width=0.69444];
+	start -> a0;
+	start -> b0;
+}

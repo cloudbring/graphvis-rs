@@ -1,0 +1,5 @@
+-Kfdp -Tsvg
+
+circo variant (repro-circo.gv):
+C:    GVBINDIR=<pango-free plugins> dot -Kcirco -Tsvg repro.gv
+port: dot-rs -Kcirco -Tsvg repro.gv

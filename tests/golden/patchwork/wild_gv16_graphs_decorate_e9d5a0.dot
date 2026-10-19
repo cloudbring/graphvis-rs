@@ -1,0 +1,206 @@
+digraph states {
+	graph [bb="0,0,122.47,122.47",
+		compound=true,
+		fontname=Arial,
+		fontsize=9,
+		labelloc=t,
+		layout=patchwork,
+		nodesep=0.4,
+		ranksep=0.4
+	];
+	node [fontname=Arial,
+		fontsize=9,
+		label="\N",
+		shape=box
+	];
+	subgraph clustere3ffa58211d69e3db000538bf02fa1d0 {
+		graph [bb="0.00020412,0.00020412,122.47,122.47",
+			label="DriveCom Z"
+		];
+		subgraph clustere3ffa77611d69e3db000538bf02fa1d0 {
+			graph [bb="0.00020412,32.66,122.47,122.47",
+				label=Active
+			];
+			Ie3ffa77611d69e3db000538bf02fa1d0	[color=black,
+				height=0.25988,
+				label="",
+				pos="95.753,42.016",
+				style=filled,
+				width=0.74227];
+			Se3ffa84b11d69e3db000538bf02fa1d0	[height=0.41581,
+				label=Undefined,
+				pos="16.701,77.567",
+				width=0.46392];
+			Se3ffa60811d69e3db000538bf02fa1d0	[height=0.41581,
+				label="Wait Switch On Inhibit",
+				pos="16.701,47.629",
+				width=0.46392];
+			Se3ffa87211d69e3db000538bf02fa1d0	[height=0.46778,
+				label="Switch On Inhibit",
+				pos="48.248,105.63",
+				width=0.41237];
+			Se3ffa65611d69e3db000538bf02fa1d0	[height=0.46778,
+				label="Wait Ready To Switch On",
+				pos="77.939,105.63",
+				width=0.41237];
+			Se3ffa61c11d69e3db000538bf02fa1d0	[height=0.46778,
+				label="Ready To Switch On",
+				pos="107.63,105.63",
+				width=0.41237];
+			Se3ffa53211d69e3db000538bf02fa1d0	[height=0.38982,
+				label="Wait Switched On",
+				pos="51.217,74.761",
+				width=0.49485];
+			Se3ffa8ac11d69e3db000538bf02fa1d0	[height=0.38982,
+				label="Switched On",
+				pos="51.217,46.694",
+				width=0.49485];
+			Se3ffa83711d69e3db000538bf02fa1d0	[height=0.51976,
+				label="Wait Operation Enabled",
+				pos="82.392,70.083",
+				width=0.37113];
+			Se3ffa81011d69e3db000538bf02fa1d0	[height=0.51976,
+				label="Operation Enabled",
+				pos="109.11,70.083",
+				width=0.37113];
+			Se3ffa8d311d69e3db000538bf02fa1d0	[height=0.41581,
+				label="Quick Stop Active",
+				pos="16.701,107.51",
+				width=0.46392];
+		}
+		Ie3ffa58211d69e3db000538bf02fa1d0	[color=black,
+			height=0.45361,
+			label="",
+			pos="15.31,16.33",
+			style=filled,
+			width=0.42526];
+		Se3ffa4bf11d69e3db000538bf02fa1d0	[height=0.45361,
+			label=Idle,
+			pos="45.928,16.33",
+			width=0.42526];
+		Se3ffa7b011d69e3db000538bf02fa1d0	[height=0.45361,
+			label=Disabled,
+			pos="76.547,16.33",
+			width=0.42526];
+		Se3ffa90d11d69e3db000538bf02fa1d0	[height=0.45361,
+			label=Malfunction,
+			pos="107.17,16.33",
+			width=0.42526];
+	}
+	Ie3ffa58211d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="Out_RFGInhibit=true;\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = false;\nOut_EnableOperation = false;"];
+	Se3ffa4bf11d69e3db000538bf02fa1d0 -> Se3ffa7b011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_QuickStop &&\n!In_ReadyToSwitchOn &&\n!In_SwitchedOn &&\n!In_OperationEnabled\n\nServo_Res_Disable = true;"];
+	Se3ffa4bf11d69e3db000538bf02fa1d0 -> Ie3ffa77611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();",
+		lhead=clustere3ffa77611d69e3db000538bf02fa1d0];
+	Se3ffa7b011d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_QuickStop ||\nIn_ReadyToSwitchOn ||\nIn_SwitchedOn ||\nIn_OperationEnabled\n\nServo_Res_Disable = false;"];
+	Se3ffa7b011d69e3db000538bf02fa1d0 -> Ie3ffa77611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nServo_Res_Disable = true;",
+		lhead=clustere3ffa77611d69e3db000538bf02fa1d0];
+	Ie3ffa77611d69e3db000538bf02fa1d0 -> Se3ffa84b11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9];
+	Ie3ffa77611d69e3db000538bf02fa1d0 -> Se3ffa90d11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_Malfunction\n/*1state_SwitchOnInhibit = false;\n1state_ReadyToSwitchOn = false;\n1state_SwitchedOn = false;\n1state_OperationEnabled = \
+false;\n1state_QuickStopActive = false;*/",
+		ltail=clustere3ffa77611d69e3db000538bf02fa1d0];
+	Se3ffa84b11d69e3db000538bf02fa1d0 -> Se3ffa60811d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="Out_QuickStop = true;"];
+	Se3ffa60811d69e3db000538bf02fa1d0 -> Se3ffa60811d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';"];
+	Se3ffa60811d69e3db000538bf02fa1d0 -> Se3ffa87211d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_QuickStop\nServo_Res_Disable = true;"];
+	Se3ffa87211d69e3db000538bf02fa1d0 -> Se3ffa65611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_DisableVoltage = true;\nOut_QuickStop = true;\nServo_Res_Disable = \
+false;"];
+	Se3ffa65611d69e3db000538bf02fa1d0 -> Se3ffa65611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';"];
+	Se3ffa65611d69e3db000538bf02fa1d0 -> Se3ffa61c11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label=In_ReadyToSwitchOn];
+	Se3ffa61c11d69e3db000538bf02fa1d0 -> Se3ffa53211d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_SwitchOn = true;"];
+	Se3ffa53211d69e3db000538bf02fa1d0 -> Se3ffa53211d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';"];
+	Se3ffa53211d69e3db000538bf02fa1d0 -> Se3ffa8ac11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label=In_SwitchedOn];
+	Se3ffa8ac11d69e3db000538bf02fa1d0 -> Se3ffa83711d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || Cmd_Enable\nsig_Cmd_Init.get();\nOut_EnableOperation = true;"];
+	Se3ffa83711d69e3db000538bf02fa1d0 -> Se3ffa83711d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="After(timeout_Response)\nLogError(L'Servo response timeout');\nmessage = L'Servo response timeout';"];
+	Se3ffa83711d69e3db000538bf02fa1d0 -> Se3ffa81011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="In_OperationEnabled\nServo_Res_Enable = true;"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_OperationEnabled\nServo_Res_Enable = false;"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa81011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_QuickStop.isAvailable()\nsig_Cmd_QuickStop.get();\nOut_QuickStop = false;"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa81011d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!Cmd_Enable && Servo_Res_Enable\nServo_Res_Enable = false;\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = \
+false;\nOut_EnableOperation = false;"];
+	Se3ffa81011d69e3db000538bf02fa1d0 -> Se3ffa8d311d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_QuickStop\nServo_Res_Enable = false;"];
+	Se3ffa8d311d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_ReadyToSwitchOn &&\n!In_SwitchedOn &&\n!In_OperationEnabled"];
+	Se3ffa8d311d69e3db000538bf02fa1d0 -> Se3ffa4bf11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_Init.isAvailable() || !Cmd_Enable\nsig_Cmd_Init.get();\nOut_SwitchOn = false;\nOut_DisableVoltage = false;\nOut_QuickStop = \
+false;\nOut_EnableOperation = false;"];
+	Se3ffa90d11d69e3db000538bf02fa1d0 -> Ie3ffa77611d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="!In_Malfunction\nOut_ResetMalfunction = false;",
+		lhead=clustere3ffa77611d69e3db000538bf02fa1d0];
+	Se3ffa90d11d69e3db000538bf02fa1d0 -> Se3ffa90d11d69e3db000538bf02fa1d0	[decorate=true,
+		fontname=Arial,
+		fontsize=9,
+		label="sig_Cmd_ResetMalfunction.isAvailable()\nsig_Cmd_ResetMalfunction.get();\nOut_ResetMalfunction = true;\nOut_SwitchOn = false;\nOut_\
+DisableVoltage = false;\nOut_EnableOperation = false;\nOut_QuickStop = false;"];
+}

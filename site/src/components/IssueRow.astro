@@ -1,0 +1,30 @@
+---
+import Mark from './Mark.astro';
+import { url, type Issue } from '../lib/data';
+interface Props { i: Issue; }
+const { i } = Astro.props;
+---
+<li class="irow">
+	<span class={`sev sev-${i.severity}`}>{i.severity}</span>
+	<div class="main">
+		<a href={url(`whats-left/${i.slug}/`)}>{i.title}</a>
+		<span class="sub">
+			<code>{i.engine}</code> · {i.category} · {i.case_count} case{i.case_count === 1 ? '' : 's'}
+			{i.close_as_wontfix && <> · <span class="chip y">won't fix</span></>}
+		</span>
+	</div>
+	<span class="filed">{i.issue_url ? <a href={i.issue_url}>GitHub issue</a> : <Mark kind="pending" label="not filed" />}</span>
+</li>
+<style>
+	.irow { display: grid; grid-template-columns: 5rem minmax(0, 1fr) auto; gap: 1rem; align-items: baseline; padding: 0.75rem 0; margin: 0 !important; border-bottom: 0.5px solid var(--rule); }
+	.sev { font-family: var(--face-mono); font-size: var(--sl-text-2xs); text-transform: lowercase; color: var(--key-2); }
+	.sev-crash, .sev-critical, .sev-high { color: var(--m-ink); font-weight: 600; }
+	.main { display: grid; gap: 0.25rem; }
+	.main a { color: var(--key); font-weight: 600; text-decoration: none; line-height: 1.35; }
+	.main a:hover { color: var(--register); text-decoration: underline; text-decoration-thickness: 1px; }
+	.sub { font-size: var(--sl-text-xs); color: var(--key-3); }
+	.sub code { font-size: 0.95em; }
+	.filed { font-size: var(--sl-text-xs); }
+	.filed a { color: var(--register); }
+	@media (max-width: 40rem) { .irow { grid-template-columns: 1fr; gap: 0.25rem; } }
+</style>

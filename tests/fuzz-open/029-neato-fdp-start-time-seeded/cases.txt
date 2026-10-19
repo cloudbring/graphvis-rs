@@ -1,0 +1,11 @@
+r1/diff/s1213.gv seed=1213
+r1/diff/s1308.gv seed=1308
+r1/diff/s1259.gv seed=1259
+r1/diff/s787.gv seed=787
+r1/diff/s821.gv seed=821
+r1/diff/s584.gv seed=584
+r2/diff/s10718.gv seed=10718
+r2/diff/s10601.gv seed=10601
+r1/diff/s938.gv seed=938
+r2/diff/s11850.gv seed=11850
+r2/diff/s12031.gv seed=12031

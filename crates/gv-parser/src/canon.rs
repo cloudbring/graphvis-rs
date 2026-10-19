@@ -5,11 +5,21 @@ use std::collections::BTreeSet;
 
 /// Formats a [`Graph`] into canonical DOT representation (`dot -Tcanon`).
 pub fn write_canon(graph: &Graph) -> String {
+    write_canon_forced(graph, &[])
+}
+
+/// [`write_canon`] where `forced[i]` names graph attributes of subgraph `i` that are set on
+/// the subgraph itself (a local dictionary entry in cgraph) and so are written even when
+/// they equal the parent's value.
+pub fn write_canon_forced(graph: &Graph, forced: &[BTreeSet<String>]) -> String {
+    let html = &graph.html_strings;
     let mut out = String::new();
     let mut state = WriteState {
+        forced: forced.to_vec(),
         written_nodes: BTreeSet::new(),
         written_edges: BTreeSet::new(),
         attrs_written_nodes: BTreeSet::new(),
+        subgraph_edges: subgraph_edge_membership(graph),
     };
 
     if graph.strict {
@@ -28,12 +38,16 @@ pub fn write_canon(graph: &Graph) -> String {
     let all_nodes: Vec<NodeId> = graph.nodes.iter().map(|n| n.id).collect();
     let all_edges: Vec<EdgeId> = graph.edges.iter().map(|e| e.id).collect();
 
-    let root_node_defaults = effective_node_defaults(graph, &all_nodes, &graph.node_defaults);
+    let mut root_node_defaults = effective_node_defaults(graph, &all_nodes, &graph.node_defaults);
+    // dot declares `label="\N"` as the node default when the input does not.
+    root_node_defaults
+        .entry("label".to_string())
+        .or_insert_with(|| "\\N".to_string());
     let root_edge_defaults = effective_edge_defaults(graph, &all_edges, &graph.edge_defaults);
 
-    write_dict(&mut out, 1, "graph", &graph.graph_attrs, None);
-    write_dict(&mut out, 1, "node", &root_node_defaults, None);
-    write_dict(&mut out, 1, "edge", &root_edge_defaults, None);
+    write_dict(&mut out, 1, "graph", &graph.graph_attrs, None, html, None);
+    write_dict(&mut out, 1, "node", &root_node_defaults, None, html, None);
+    write_dict(&mut out, 1, "edge", &root_edge_defaults, None, html, None);
 
     // Determine top-level subgraphs (those not nested inside another subgraph)
     let mut child_subgraphs = BTreeSet::new();
@@ -74,9 +88,43 @@ pub fn write_canon(graph: &Graph) -> String {
 }
 
 struct WriteState {
+    forced: Vec<BTreeSet<String>>,
     written_nodes: BTreeSet<NodeId>,
     written_edges: BTreeSet<EdgeId>,
     attrs_written_nodes: BTreeSet<NodeId>,
+    subgraph_edges: Vec<Vec<EdgeId>>,
+}
+
+/// Edge lists per subgraph. After ranking, dot adds every edge whose endpoints both lie in a
+/// cluster to that cluster and its ancestors (`mark_lowclusters`), so `-Tcanon` prints them there.
+fn subgraph_edge_membership(graph: &Graph) -> Vec<Vec<EdgeId>> {
+    let mut parent: Vec<Option<usize>> = vec![None; graph.subgraphs.len()];
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        for child in &sg.subgraphs {
+            parent[child.0 as usize] = Some(i);
+        }
+    }
+    let mut sets: Vec<BTreeSet<EdgeId>> = graph
+        .subgraphs
+        .iter()
+        .map(|sg| sg.edges.iter().copied().collect())
+        .collect();
+    for (i, sg) in graph.subgraphs.iter().enumerate() {
+        if !sg.is_cluster {
+            continue;
+        }
+        let members: BTreeSet<NodeId> = sg.nodes.iter().copied().collect();
+        for e in &graph.edges {
+            if members.contains(&e.tail) && members.contains(&e.head) {
+                let mut cur = Some(i);
+                while let Some(c) = cur {
+                    sets[c].insert(e.id);
+                    cur = parent[c];
+                }
+            }
+        }
+    }
+    sets.into_iter().map(|s| s.into_iter().collect()).collect()
 }
 
 fn effective_node_defaults(graph: &Graph, nodes: &[NodeId], defaults: &AttrMap) -> AttrMap {
@@ -115,18 +163,25 @@ fn write_subgraph(
     out: &mut String,
 ) {
     let subg = &graph.subgraphs[subg_id.0 as usize];
+    let forced = state
+        .forced
+        .get(subg_id.0 as usize)
+        .cloned()
+        .unwrap_or_default();
     let subg_node_defaults = effective_node_defaults(graph, &subg.nodes, &subg.node_defaults);
     let subg_edge_defaults = effective_edge_defaults(graph, &subg.edges, &subg.edge_defaults);
 
-    if is_irrelevant_subgraph(
-        subg.name.as_str(),
-        &subg.graph_attrs,
-        &subg_node_defaults,
-        &subg_edge_defaults,
-        parent_graph_attrs,
-        parent_node_defaults,
-        parent_edge_defaults,
-    ) {
+    if forced.is_empty()
+        && is_irrelevant_subgraph(
+            subg.name.as_str(),
+            &subg.graph_attrs,
+            &subg_node_defaults,
+            &subg_edge_defaults,
+            parent_graph_attrs,
+            parent_node_defaults,
+            parent_edge_defaults,
+        )
+    {
         for &child_id in &subg.subgraphs {
             write_subgraph(
                 graph,
@@ -158,6 +213,8 @@ fn write_subgraph(
         "graph",
         &subg.graph_attrs,
         Some(parent_graph_attrs),
+        &graph.html_strings,
+        Some(&forced),
     );
     write_dict(
         out,
@@ -165,6 +222,8 @@ fn write_subgraph(
         "node",
         &subg_node_defaults,
         Some(parent_node_defaults),
+        &graph.html_strings,
+        None,
     );
     write_dict(
         out,
@@ -172,6 +231,8 @@ fn write_subgraph(
         "edge",
         &subg_edge_defaults,
         Some(parent_edge_defaults),
+        &graph.html_strings,
+        None,
     );
 
     for &child_id in &subg.subgraphs {
@@ -187,10 +248,11 @@ fn write_subgraph(
         );
     }
 
+    let scope_edges = state.subgraph_edges[subg_id.0 as usize].clone();
     write_nodes_and_edges(
         graph,
         &subg.nodes,
-        &subg.edges,
+        &scope_edges,
         &subg_node_defaults,
         &subg_edge_defaults,
         inner_level,
@@ -226,21 +288,32 @@ fn write_nodes_and_edges(
         if !state.written_nodes.contains(&node_id)
             && (!has_edges_in_scope || !non_default.is_empty())
         {
-            write_node_stmt(out, level, node, &non_default, state);
+            write_node_stmt(out, level, node, &non_default, &graph.html_strings, state);
         }
 
-        for edge in &graph.edges {
-            if edge.tail == node_id
-                && scope_edge_set.contains(&edge.id)
-                && !state.written_edges.contains(&edge.id)
-            {
+        // Out-edges iterate by head node sequence, then edge sequence (`agedgeseqcmpf`).
+        let mut out_edges: Vec<&EdgeData> = graph
+            .edges
+            .iter()
+            .filter(|e| e.tail == node_id && scope_edge_set.contains(&e.id))
+            .collect();
+        out_edges.sort_by_key(|e| (e.head, e.id));
+        for edge in out_edges {
+            if !state.written_edges.contains(&edge.id) {
                 let head_node = &graph.nodes[edge.head.0 as usize];
                 let head_non_default = collect_non_default_node_attrs(head_node, node_defaults);
                 if edge.head != node_id
                     && !state.written_nodes.contains(&edge.head)
                     && !head_non_default.is_empty()
                 {
-                    write_node_stmt(out, level, head_node, &head_non_default, state);
+                    write_node_stmt(
+                        out,
+                        level,
+                        head_node,
+                        &head_non_default,
+                        &graph.html_strings,
+                        state,
+                    );
                 }
                 write_edge_stmt(out, level, graph, edge, edge_defaults, state);
             }
@@ -253,12 +326,13 @@ fn write_node_stmt(
     level: usize,
     node: &NodeData,
     non_default_attrs: &[(&String, &String)],
+    html: &BTreeSet<String>,
     state: &mut WriteState,
 ) {
     push_indent(out, level);
     out.push_str(&canon_str(&node.name));
     if !state.attrs_written_nodes.contains(&node.id) && !non_default_attrs.is_empty() {
-        write_inline_attrs(out, level, non_default_attrs);
+        write_inline_attrs(out, level, non_default_attrs, html);
         state.attrs_written_nodes.insert(node.id);
     }
     out.push_str(";\n");
@@ -290,7 +364,7 @@ fn write_edge_stmt(
 
     let non_default = collect_non_default_edge_attrs(edge, edge_defaults);
     if !non_default.is_empty() {
-        write_inline_attrs(out, level, &non_default);
+        write_inline_attrs(out, level, &non_default, &graph.html_strings);
     }
 
     out.push_str(";\n");
@@ -316,10 +390,13 @@ fn write_dict(
     dict_name: &str,
     attrs: &AttrMap,
     parent_attrs: Option<&AttrMap>,
+    html: &BTreeSet<String>,
+    forced: Option<&BTreeSet<String>>,
 ) {
     let entries: Vec<(&String, &String)> = attrs
         .iter()
         .filter(|(k, v)| match parent_attrs {
+            Some(_) if forced.is_some_and(|f| f.contains(*k)) => true,
             Some(parent) => parent.get(*k) != Some(*v),
             None => !v.is_empty(),
         })
@@ -339,7 +416,7 @@ fn write_dict(
         }
         out.push_str(&canon_str(k));
         out.push('=');
-        out.push_str(&canon_str(v));
+        out.push_str(&canon_value(v, html));
     }
     if entries.len() > 1 {
         out.push('\n');
@@ -348,7 +425,12 @@ fn write_dict(
     out.push_str("];\n");
 }
 
-fn write_inline_attrs(out: &mut String, level: usize, attrs: &[(&String, &String)]) {
+fn write_inline_attrs(
+    out: &mut String,
+    level: usize,
+    attrs: &[(&String, &String)],
+    html: &BTreeSet<String>,
+) {
     out.push_str("\t[");
     for (idx, (k, v)) in attrs.iter().enumerate() {
         if idx > 0 {
@@ -357,7 +439,7 @@ fn write_inline_attrs(out: &mut String, level: usize, attrs: &[(&String, &String
         }
         out.push_str(&canon_str(k));
         out.push('=');
-        out.push_str(&canon_str(v));
+        out.push_str(&canon_value(v, html));
     }
     out.push(']');
 }
@@ -442,38 +524,108 @@ pub fn is_html_string(s: &str) -> bool {
     depth == 0
 }
 
-/// Canonicalizes a single identifier or string value following `_agstrcanon` in `write.c`.
+/// Canonicalizes an attribute value: a string lexed as an HTML string (`<...>`, recorded in
+/// `html`) is emitted verbatim, anything else (including a quoted `"<x>"`) is quoted as needed.
+pub fn canon_value(s: &str, html: &BTreeSet<String>) -> String {
+    if html.contains(s) {
+        s.to_string()
+    } else {
+        canon_str(s)
+    }
+}
+
+/// Canonicalizes a single identifier or string value following `_agstrcanon` in `write.c`,
+/// breaking long strings after 128 characters like `agwrite` (`MAX_OUTPUTLINE`).
 pub fn canon_str(s: &str) -> String {
-    if s.is_empty() {
+    canon_str_with(s, 128)
+}
+
+/// [`canon_str`] with an explicit maximum output line length (`linelength`; 0 disables
+/// line breaking).
+pub fn canon_str_with(arg: &str, max_line: usize) -> String {
+    if arg.is_empty() {
         return "\"\"".to_string();
     }
-    if is_html_string(s) {
-        return s.to_string();
-    }
-    if can_be_unquoted(s) {
-        return s.to_string();
-    }
-
-    let mut out = String::with_capacity(s.len() + 2);
-    out.push('"');
-    let bytes = s.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'\\' && i + 1 < bytes.len() && is_graphviz_escape_char(bytes[i + 1]) {
-            out.push('\\');
-            out.push(bytes[i + 1] as char);
-            i += 2;
-        } else if bytes[i] == b'"' {
-            out.push_str("\\\"");
-            i += 1;
+    let b = arg.as_bytes();
+    let is_id_char = |c: u8| c.is_ascii_alphanumeric() || c == b'.' || c == b'-' || !c.is_ascii();
+    let is_escape =
+        |i: usize| b[i] == b'\\' && b.get(i + 1).is_some_and(|&c| is_graphviz_escape_char(c));
+    let mut out: Vec<u8> = Vec::with_capacity(b.len() + 4);
+    out.push(b'"');
+    let mut cnt = 0usize;
+    let mut dotcnt = 0usize;
+    let mut needs_quotes = false;
+    let mut part_of_escape = false;
+    let mut backslash_pending = false;
+    let mut maybe_num = b[0].is_ascii_digit() || b[0] == b'.' || b[0] == b'-';
+    let mut i = 0usize;
+    while i < b.len() {
+        let uc = b[i];
+        if uc == b'"' && !part_of_escape {
+            out.push(b'\\');
+            needs_quotes = true;
+        } else if !part_of_escape && is_escape(i) {
+            needs_quotes = true;
+            part_of_escape = true;
+        } else if maybe_num {
+            if uc == b'-' {
+                if cnt > 0 {
+                    maybe_num = false;
+                    needs_quotes = true;
+                }
+            } else if uc == b'.' {
+                if dotcnt > 0 {
+                    maybe_num = false;
+                    needs_quotes = true;
+                }
+                dotcnt += 1;
+            } else if !uc.is_ascii_digit() {
+                maybe_num = false;
+                needs_quotes = true;
+            }
+            part_of_escape = false;
+        } else if !(uc.is_ascii_alphanumeric() || uc == b'_' || !uc.is_ascii()) {
+            needs_quotes = true;
+            part_of_escape = false;
         } else {
-            let ch = s[i..].chars().next().unwrap();
-            out.push(ch);
-            i += ch.len_utf8();
+            part_of_escape = false;
+        }
+        out.push(uc);
+        i += 1;
+        cnt += 1;
+        if max_line > 0 && i < b.len() {
+            let next = b[i];
+            let last = *out.last().unwrap();
+            if backslash_pending && !(is_id_char(last) || last == b'\\') && is_id_char(next) {
+                out.push(b'\\');
+                out.push(b'\n');
+                needs_quotes = true;
+                backslash_pending = false;
+                cnt = 0;
+            } else if cnt >= max_line {
+                if !(is_id_char(last) || last == b'\\') && is_id_char(next) {
+                    out.push(b'\\');
+                    out.push(b'\n');
+                    needs_quotes = true;
+                    cnt = 0;
+                } else {
+                    backslash_pending = true;
+                }
+            }
         }
     }
-    out.push('"');
-    out
+    out.push(b'"');
+    let quoted = String::from_utf8(out).unwrap_or_default();
+    if needs_quotes || (cnt == 1 && (b[0] == b'.' || b[0] == b'-')) {
+        return quoted;
+    }
+    if ["node", "edge", "strict", "graph", "digraph", "subgraph"]
+        .iter()
+        .any(|t| t.eq_ignore_ascii_case(arg))
+    {
+        return quoted;
+    }
+    arg.to_string()
 }
 
 fn is_graphviz_escape_char(b: u8) -> bool {
@@ -481,48 +633,4 @@ fn is_graphviz_escape_char(b: u8) -> bool {
         b,
         b'E' | b'G' | b'H' | b'L' | b'N' | b'T' | b'l' | b'n' | b'r' | b'\\' | b'"'
     )
-}
-
-fn can_be_unquoted(s: &str) -> bool {
-    if matches!(
-        s.to_ascii_lowercase().as_str(),
-        "node" | "edge" | "strict" | "graph" | "digraph" | "subgraph"
-    ) {
-        return false;
-    }
-
-    let mut chars = s.chars();
-    let Some(first) = chars.next() else {
-        return false;
-    };
-
-    // Valid unquoted identifier
-    if first.is_ascii_alphabetic() || first == '_' || !first.is_ascii() {
-        return chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || !c.is_ascii());
-    }
-
-    // Valid unquoted numeric literal
-    is_valid_dot_numeral(s)
-}
-
-fn is_valid_dot_numeral(s: &str) -> bool {
-    let s = s.strip_prefix('-').unwrap_or(s);
-    if s.is_empty() || s == "." {
-        return false;
-    }
-    let mut dot_count = 0usize;
-    let mut digit_count = 0usize;
-    for ch in s.chars() {
-        if ch.is_ascii_digit() {
-            digit_count += 1;
-        } else if ch == '.' {
-            dot_count += 1;
-            if dot_count > 1 {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-    digit_count > 0
 }

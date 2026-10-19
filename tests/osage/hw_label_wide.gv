@@ -1,0 +1,9 @@
+graph emptyc {
+layout=osage;
+
+
+subgraph cluster_empty { }
+subgraph cluster_lbl { label="a very very very long cluster label"; }
+subgraph cluster_one { a; }
+b;
+}

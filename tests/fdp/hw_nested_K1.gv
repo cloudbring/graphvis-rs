@@ -1,0 +1,19 @@
+graph nested {
+layout=fdp;
+
+K=1;
+subgraph cluster_outer {
+  label="outer";
+  o1 -- o2;
+  subgraph cluster_inner {
+    label="inner";
+    i1 -- i2 -- i3;
+  }
+  o2 -- i1;
+}
+subgraph cluster_side { s1 -- s2; s2 -- s3; }
+x -- o1;
+x -- s1;
+i3 -- s3;
+y;
+}

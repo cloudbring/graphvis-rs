@@ -1,0 +1,19 @@
+---
+import { fidelity, fmt } from '../../lib/data';
+const rows = fidelity.render;
+---
+<div class="scroll-x"><table class="ledger">
+	<thead><tr><th>Format</th><th class="n">Files</th><th class="n">macOS identical</th><th class="n">Linux, WASM identical</th><th class="n">Skipped</th><th>Differ</th></tr></thead>
+	<tbody>
+		{rows.map((r) => (
+			<tr>
+				<td><code>-T{r.format}</code></td>
+				<td class="n">{fmt(r.total)}</td>
+				<td class="n">{fmt(r.apple)}</td>
+				<td class="n">{fmt(r.portable)}</td>
+				<td class="n">{r.skipped || '·'}</td>
+				<td>{r.apple_differs.length ? r.apple_differs.map((f) => <code>{f}</code>) : '·'}</td>
+			</tr>
+		))}
+	</tbody>
+</table></div>

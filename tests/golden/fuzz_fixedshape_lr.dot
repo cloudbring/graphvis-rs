@@ -1,0 +1,14 @@
+digraph G {
+	graph [bb="0,0,144,36",
+		rankdir=LR
+	];
+	node [label="\N"];
+	v1	[fixedsize=shape,
+		height=0.5,
+		pos="27,18",
+		width=0.75];
+	v37	[height=0.5,
+		pos="117,18",
+		width=0.75];
+	v1 -> v37	[pos="e,89.731,18 44.967,18 54.482,18 66.75,18 78.405,18"];
+}

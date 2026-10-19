@@ -1,0 +1,5 @@
+strict digraph "G" {
+edge [label="Ünïcödé\rπ\rעברית\n"];
+"n6":"nw" -> "n13" [label="Start", samehead="sh1"];
+"n6" -> "n13" [arrowsize="1.93"];
+}

@@ -1,0 +1,4 @@
+graph "G" {
+"n1" -- "n2" [sametail="st1"];
+"n1" -- "n20" [tailport="c", sametail="st1"];
+}

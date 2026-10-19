@@ -1,0 +1,5 @@
+graph {
+layout=fdp;
+
+  B -- A [taillabel = "tail"]
+}

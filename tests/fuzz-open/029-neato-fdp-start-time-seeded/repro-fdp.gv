@@ -1,0 +1,6 @@
+digraph G {
+layout=fdp;
+start=regular;
+a -> b;
+b -> c;
+}

@@ -1,0 +1,4 @@
+graph "G" {
+"8" [shape="Mrecord", label="<p0> a"];
+"7" -- "8":"p0" [];
+}

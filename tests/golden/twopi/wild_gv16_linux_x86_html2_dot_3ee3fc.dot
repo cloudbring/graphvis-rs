@@ -1,0 +1,62 @@
+digraph G {
+	graph [bb="0,0,209.3,258.8",
+		layout=twopi,
+		rankdir=LR
+	];
+	node [label="\N",
+		shape=plaintext
+	];
+	{
+		graph [rank=same];
+		b	[height=2.4199,
+			href="http://www.graphviz.org/content/node-shapes",
+			label=<
+<TABLE BGCOLOR="bisque" href="http://www.graphviz.org/content/node-shapes#html">
+  <TR><TD COLSPAN="3" BGCOLOR="bisque" href="http://go/wiki/Elephant">elephant</TD> 
+      <TD ROWSPAN="2" BGCOLOR="chartreuse" 
+          VALIGN="bottom" ALIGN="right">two</TD> </TR>
+  <TR><TD COLSPAN="2" ROWSPAN="2">
+        <TABLE BGCOLOR="grey" href="http://go/wiki/Grey">
+          <TR> <TD href="http://go/wiki/Sweet_corn">corn</TD> </TR> 
+          <TR> <TD BGCOLOR="yellow">c</TD> </TR> 
+          <TR> <TD href="http://go/wiki/F">f</TD> </TR> 
+        </TABLE> </TD>
+      <TD BGCOLOR="white">penguin</TD> 
+  </TR> 
+  <TR> <TD COLSPAN="2" BORDER="4" ALIGN="right" PORT="there">4</TD> </TR>
+</TABLE>>,
+			pos="104.65,90",
+			shape=ellipse,
+			style=filled,
+			width=2.907];
+		c	[height=0.81111,
+			label=<long line 1<BR/>line 2<BR ALIGN="LEFT"/>line 3<BR ALIGN="RIGHT"/>>,
+			pos="104.65,162",
+			width=1.0539];
+	}
+	c -> b	[pos="e,104.65,132.66 104.65,133.13 104.65,133.05 104.65,132.97 104.65,132.89"];
+	a	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD ROWSPAN="3" BGCOLOR="yellow">class</TD></TR>
+  <TR><TD PORT="here" BGCOLOR="lightblue">qualifier</TD></TR>
+</TABLE>>,
+		pos="104.65,18",
+		width=1.4255];
+	a:here -> b:there	[arrowtail=diamond,
+		dir=both,
+		pos="s,147.97,18 e,127.09,35.4 138.02,26.292 137.18,26.993 136.33,27.696 135.51,28.385"];
+	d	[height=0.68889,
+		pos="104.65,234",
+		shape=triangle,
+		width=0.83048];
+	d -> c	[label=<
+<TABLE>
+  <TR><TD BGCOLOR="red" WIDTH="10"> </TD>
+      <TD>Edge labels<BR/>also</TD>
+      <TD BGCOLOR="blue" WIDTH="10"> </TD>
+  </TR>
+</TABLE>>,
+		lp="54.192,234.64",
+		pos="e,104.65,191.19 104.65,221.13 104.65,215.79 104.65,209.28 104.65,202.55"];
+}

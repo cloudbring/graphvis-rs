@@ -1,0 +1,15 @@
+digraph G {
+	graph [bb="0,0,132.2,36"];
+	node [label="\N"];
+	edge [constraint=false];
+	n3	[height=0.5,
+		pos="33.202,18",
+		width=0.75];
+	n6	[height=0.5,
+		pos="105.2,18",
+		width=0.75];
+	n3:w -> n6	[arrowhead=invdot,
+		color=brown,
+		decorate=true,
+		pos="e,78.662,21.623 4.9493,18 -3.063,9 0.12874,21.494 5.9493,27 20.592,40.852 32.133,34.796 60.129,26.578"];
+}

@@ -1,0 +1,42 @@
+graph {
+	graph [bb="0,-24.8,550.26,324.8",
+		label="Vincent van Gogh Paintings",
+		layout=fdp,
+		lheight=0.23,
+		lp="275.13,-12.4",
+		lwidth=2.20
+	];
+	node [label="\N"];
+	subgraph cluster_self_portraits {
+		graph [bb="0,-7.9936e-15,394.57,136.8",
+			label="Self-portraits",
+			lheight=0.23,
+			lp="197.29,124.4",
+			lwidth=1.03
+		];
+		spwgfh	[height=0.5,
+			label="Self-Portrait with Grey Felt Hat",
+			pos="141.87,26",
+			width=3.7186];
+		spaap	[height=0.5,
+			label="Self-Portrait as a Painter",
+			pos="280.87,86",
+			width=2.9361];
+	}
+	subgraph cluster_flowers {
+		graph [bb="312.32,192,550.26,324.8",
+			label=Flowers,
+			lheight=0.23,
+			lp="431.29,312.4",
+			lwidth=0.63
+		];
+		sf	[height=0.5,
+			label=Sunflowers,
+			pos="487.23,274",
+			width=1.5285];
+		ab	[height=0.5,
+			label="Almond Blossom",
+			pos="399.23,218",
+			width=2.192];
+	}
+}

@@ -1,0 +1,37 @@
+digraph G {
+	graph [bb="0,0,54.773,54.773",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box,
+		style=filled
+	];
+	subgraph clusterA {
+		graph [bb="0.00045643,18.258,54.773,54.773",
+			fillcolor=lightgray,
+			pencolor=blue,
+			style=filled
+		];
+		eeeee	[color=yellow,
+			fontcolor=red,
+			height=0.50715,
+			peripheries=3,
+			pos="13.694,36.515",
+			width=0.38036];
+		ee	[height=0.50715,
+			pos="41.08,36.515",
+			width=0.38036];
+		eeeee -> ee;
+	}
+	ddddddd	[color=orange,
+		fillcolor=blue,
+		fontcolor=yellow,
+		height=0.25358,
+		pos="27.387,9.1292",
+		width=0.76073];
+	ddddddd -> eeeee	[color=lightblue,
+		fontcolor=green,
+		headlabel=headlabel,
+		label=flue,
+		labelfontcolor=chocolate];
+}

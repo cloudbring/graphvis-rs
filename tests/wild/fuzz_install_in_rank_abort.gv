@@ -1,0 +1,11 @@
+graph "G" {
+subgraph "cluster3" {
+"n8" [];
+"n9" [];
+}
+{
+rank=source;
+"n9";
+}
+"n8" -- "n9" [];
+}

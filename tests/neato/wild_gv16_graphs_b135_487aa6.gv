@@ -1,0 +1,9 @@
+digraph ID {
+layout=neato;
+
+graph [
+        concentrate = true
+      ];
+A -> B
+B -> A
+}

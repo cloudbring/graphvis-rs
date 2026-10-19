@@ -1,0 +1,11 @@
+digraph "fuzz 30899" {
+	graph [bb="0,0,54,36"];
+	node [label="\N",
+		xlabel="\L"
+	];
+	n77	[height=0.5,
+		label="\E",
+		pos="27,18",
+		width=0.75,
+		xlp="0,36"];
+}

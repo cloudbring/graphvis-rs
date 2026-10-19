@@ -1,0 +1,17 @@
+digraph "fuzz 12951" {
+	graph [bb="0,0,142,108",
+		pack=true,
+		splines=none
+	];
+	node [label="\N"];
+	n2	[height=0.5,
+		pos="115,26",
+		width=0.75];
+	n1	[height=0.5,
+		pos="27,90",
+		width=0.75];
+	n9	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	n1 -> n9;
+}

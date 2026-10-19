@@ -2,6 +2,7 @@
 //! (`lib/common/textspan_lut.c`, `lib/common/textspan.c`, `lib/common/ps_font_equiv.h`,
 //! and `lib/common/labels.c`).
 
+use crate::charset::{self, Charset};
 use serde::{Deserialize, Serialize};
 
 /// Default font family name in Graphviz (`Times-Roman`).
@@ -81,6 +82,10 @@ pub struct TextLabelLayout {
     pub font_name: String,
     /// Font size in points used for measurement.
     pub font_size: f64,
+    /// The label text after object-escape substitution and entity conversion (C's
+    /// `lp->text`), still containing the `\\n`/`\\l`/`\\r` line escapes.
+    #[serde(default)]
+    pub source: String,
 }
 
 /// Context for Graphviz object-based escape sequence substitution (`\N`, `\G`, `\T`, `\H`, `\E`, `\L`).
@@ -95,6 +100,14 @@ pub struct LabelSubstContext<'a> {
     pub tail_port: Option<&'a str>,
     pub head_port: Option<&'a str>,
     pub label_text: &'a str,
+    /// `getPenColor(obj)` (`pencolor`, else `color`), which an HTML label's outermost
+    /// table without a `COLOR` takes (`make_html_label`).
+    pub pen_color: Option<&'a str>,
+    /// The object is a node (its name may be empty).
+    pub is_node: bool,
+    /// The object has a main label (`ND_label`, `ED_label`, `GD_label`), whose text is
+    /// `label_text` even when empty; without one `\L` stays literal.
+    pub has_label: bool,
 }
 
 impl<'a> LabelSubstContext<'a> {
@@ -111,21 +124,27 @@ impl<'a> LabelSubstContext<'a> {
             tail_port: None,
             head_port: None,
             label_text: "",
+            pen_color: None,
+            is_node: true,
+            has_label: false,
         }
     }
 }
 
-/// Font family character width lookup table from `lib/common/textspan_lut.c`.
-struct FontFamilyMetrics {
-    font_names: &'static [&'static str],
-    units_per_em: f64,
-    widths_regular: [i16; 128],
-    widths_bold: [i16; 128],
-    widths_italic: [i16; 128],
-    widths_bold_italic: [i16; 128],
+/// Font family character width lookup table (`struct FontFamilyMetrics` in
+/// `lib/common/textspan_lut.c`).
+pub(crate) struct FontFamilyMetrics {
+    /// Case-insensitive list of metrically-equivalent family names.
+    pub(crate) font_names: &'static [&'static str],
+    /// Widths are stored in `(units_per_em * 1)` pt.
+    pub(crate) units_per_em: f64,
+    pub(crate) widths_regular: [i16; 128],
+    pub(crate) widths_bold: [i16; 128],
+    pub(crate) widths_italic: [i16; 128],
+    pub(crate) widths_bold_italic: [i16; 128],
 }
 
-/// PostScript font alias entry ported from `lib/common/ps_font_equiv.h`.
+/// PostScript font alias entry (`PostscriptAlias` in `lib/common/textspan.h`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PostscriptFontAlias {
     pub name: &'static str,
@@ -139,1051 +158,68 @@ pub struct PostscriptFontAlias {
     pub svg_font_style: Option<&'static str>,
 }
 
-/// Standard PostScript font equivalence table from `lib/common/ps_font_equiv.h`.
-pub const POSTSCRIPT_FONT_ALIASES: &[PostscriptFontAlias] = &[
-    PostscriptFontAlias {
-        name: "AvantGarde-Book",
-        family: "URW Gothic L",
-        weight: Some("book"),
-        stretch: None,
-        style: None,
-        xfig_code: 4,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "AvantGarde-BookOblique",
-        family: "URW Gothic L",
-        weight: Some("book"),
-        stretch: None,
-        style: Some("oblique"),
-        xfig_code: 5,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "AvantGarde-Demi",
-        family: "URW Gothic L",
-        weight: Some("demi"),
-        stretch: None,
-        style: None,
-        xfig_code: 6,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "AvantGarde-DemiOblique",
-        family: "URW Gothic L",
-        weight: Some("demi"),
-        stretch: None,
-        style: Some("oblique"),
-        xfig_code: 7,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Bookman-Demi",
-        family: "URW Bookman L",
-        weight: Some("demi"),
-        stretch: None,
-        style: None,
-        xfig_code: 10,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Bookman-DemiItalic",
-        family: "URW Bookman L",
-        weight: Some("demi"),
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 11,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Bookman-Light",
-        family: "URW Bookman L",
-        weight: Some("light"),
-        stretch: None,
-        style: None,
-        xfig_code: 8,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Bookman-LightItalic",
-        family: "URW Bookman L",
-        weight: Some("light"),
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 9,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Courier",
-        family: "Courier",
-        weight: None,
-        stretch: None,
-        style: None,
-        xfig_code: 12,
-        svg_font_family: "monospace",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Courier-Bold",
-        family: "Courier",
-        weight: Some("bold"),
-        stretch: None,
-        style: None,
-        xfig_code: 14,
-        svg_font_family: "monospace",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Courier-BoldOblique",
-        family: "Courier",
-        weight: Some("bold"),
-        stretch: None,
-        style: Some("oblique"),
-        xfig_code: 15,
-        svg_font_family: "monospace",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Courier-Oblique",
-        family: "Courier",
-        weight: None,
-        stretch: None,
-        style: Some("oblique"),
-        xfig_code: 13,
-        svg_font_family: "monospace",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Helvetica",
-        family: "Helvetica",
-        weight: None,
-        stretch: None,
-        style: None,
-        xfig_code: 16,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Helvetica-Bold",
-        family: "Helvetica",
-        weight: Some("bold"),
-        stretch: None,
-        style: None,
-        xfig_code: 18,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Helvetica-BoldOblique",
-        family: "Helvetica",
-        weight: Some("bold"),
-        stretch: None,
-        style: Some("oblique"),
-        xfig_code: 19,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Helvetica-Narrow",
-        family: "Helvetica",
-        weight: None,
-        stretch: Some("condensed"),
-        style: None,
-        xfig_code: 20,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Helvetica-Narrow-Bold",
-        family: "Helvetica",
-        weight: Some("bold"),
-        stretch: Some("condensed"),
-        style: None,
-        xfig_code: 22,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Helvetica-Narrow-BoldOblique",
-        family: "Helvetica",
-        weight: Some("bold"),
-        stretch: Some("condensed"),
-        style: Some("oblique"),
-        xfig_code: 23,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Helvetica-Narrow-Oblique",
-        family: "Helvetica",
-        weight: None,
-        stretch: Some("condensed"),
-        style: Some("oblique"),
-        xfig_code: 21,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Helvetica-Oblique",
-        family: "Helvetica",
-        weight: None,
-        stretch: None,
-        style: Some("oblique"),
-        xfig_code: 17,
-        svg_font_family: "sans-Serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "NewCenturySchlbk-Bold",
-        family: "Century Schoolbook L",
-        weight: Some("bold"),
-        stretch: None,
-        style: None,
-        xfig_code: 26,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "NewCenturySchlbk-BoldItalic",
-        family: "Century Schoolbook L",
-        weight: Some("bold"),
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 27,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "NewCenturySchlbk-Italic",
-        family: "Century Schoolbook L",
-        weight: None,
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 25,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "NewCenturySchlbk-Roman",
-        family: "Century Schoolbook L",
-        weight: Some("roman"),
-        stretch: None,
-        style: None,
-        xfig_code: 24,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Palatino-Bold",
-        family: "Palatino Linotype",
-        weight: Some("bold"),
-        stretch: None,
-        style: None,
-        xfig_code: 30,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Palatino-BoldItalic",
-        family: "Palatino Linotype",
-        weight: Some("bold"),
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 31,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Palatino-Italic",
-        family: "Palatino Linotype",
-        weight: None,
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 29,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Palatino-Roman",
-        family: "Palatino Linotype",
-        weight: Some("roman"),
-        stretch: None,
-        style: None,
-        xfig_code: 28,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Symbol",
-        family: "Symbol",
-        weight: None,
-        stretch: None,
-        style: None,
-        xfig_code: 32,
-        svg_font_family: "fantasy",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Times-Bold",
-        family: "Times",
-        weight: Some("bold"),
-        stretch: None,
-        style: None,
-        xfig_code: 2,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "Times-BoldItalic",
-        family: "Times",
-        weight: Some("bold"),
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 3,
-        svg_font_family: "serif",
-        svg_font_weight: Some("bold"),
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Times-Italic",
-        family: "Times",
-        weight: None,
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 1,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "Times-Roman",
-        family: "Times",
-        weight: None,
-        stretch: None,
-        style: None,
-        xfig_code: 0,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-    PostscriptFontAlias {
-        name: "ZapfChancery-MediumItalic",
-        family: "URW Chancery L",
-        weight: Some("medium"),
-        stretch: None,
-        style: Some("italic"),
-        xfig_code: 33,
-        svg_font_family: "serif",
-        svg_font_weight: None,
-        svg_font_style: Some("italic"),
-    },
-    PostscriptFontAlias {
-        name: "ZapfDingbats",
-        family: "Dingbats",
-        weight: None,
-        stretch: None,
-        style: None,
-        xfig_code: 34,
-        svg_font_family: "fantasy",
-        svg_font_weight: None,
-        svg_font_style: None,
-    },
-];
+#[rustfmt::skip]
+#[path = "font_tables.rs"]
+mod font_tables;
 
-/// Looks up a PostScript font alias by name (case-insensitive).
-pub fn translate_postscript_fontname(font_name: &str) -> Option<&'static PostscriptFontAlias> {
-    let trimmed = font_name.trim();
-    POSTSCRIPT_FONT_ALIASES
-        .iter()
-        .find(|alias| alias.name.eq_ignore_ascii_case(trimmed))
+/// Standard PostScript font equivalence table (`postscript_alias[]` from `lib/common/textspan.c`,
+/// generated from `ps_font_equiv.h` by `scripts/gen-font-tables.py`).
+pub const POSTSCRIPT_FONT_ALIASES: &[PostscriptFontAlias] = &font_tables::POSTSCRIPT_ALIASES;
+
+/// C `strcasecmp` ordering (ASCII case folding, byte comparison).
+fn strcasecmp(a: &str, b: &str) -> std::cmp::Ordering {
+    let la = a.bytes().map(|c| c.to_ascii_lowercase());
+    let lb = b.bytes().map(|c| c.to_ascii_lowercase());
+    la.cmp(lb)
 }
 
-static ALL_FONT_METRICS: [FontFamilyMetrics; 11] = [
-    // 0: Times_New_Roman.ttf (+ variants) from ttf-mscorefonts-installer.
-    FontFamilyMetrics {
-        font_names: &[
-            "times",
-            "timesroman",
-            "timesnewroman",
-            "freeserif",
-            "liberationserif",
-            "nimbusroman",
-            "texgyretermes",
-            "tinos",
-            "thorndale",
-        ],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 512, 682, 836, 1024, 1024, 1706, 1593, 369,
-            682, 682, 1024, 1155, 512, 682, 512, 569, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
-            1024, 1024, 1024, 569, 569, 1155, 1155, 1155, 909, 1886, 1479, 1366, 1366, 1479, 1251,
-            1139, 1479, 1479, 682, 797, 1479, 1251, 1821, 1479, 1479, 1139, 1479, 1366, 1139, 1251,
-            1479, 1479, 1933, 1479, 1479, 1251, 682, 569, 682, 961, 1024, 682, 909, 1024, 909,
-            1024, 909, 682, 1024, 1024, 569, 569, 1024, 569, 1593, 1024, 1024, 1024, 1024, 682,
-            797, 569, 1024, 1024, 1479, 1024, 1024, 909, 983, 410, 983, 1108, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 512, 682, 1137, 1024, 1024, 2048, 1706, 569,
-            682, 682, 1024, 1167, 512, 682, 512, 569, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
-            1024, 1024, 1024, 682, 682, 1167, 1167, 1167, 1024, 1905, 1479, 1366, 1479, 1479, 1366,
-            1251, 1593, 1593, 797, 1024, 1593, 1366, 1933, 1479, 1593, 1251, 1593, 1479, 1139,
-            1366, 1479, 1479, 2048, 1479, 1479, 1366, 682, 569, 682, 1190, 1024, 682, 1024, 1139,
-            909, 1139, 909, 682, 1024, 1139, 569, 682, 1139, 569, 1706, 1139, 1024, 1139, 1139,
-            909, 797, 682, 1139, 1024, 1479, 1024, 1024, 909, 807, 451, 807, 1065, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 512, 682, 860, 1024, 1024, 1706, 1593, 438,
-            682, 682, 1024, 1382, 512, 682, 512, 569, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
-            1024, 1024, 1024, 682, 682, 1382, 1382, 1382, 1024, 1884, 1251, 1251, 1366, 1479, 1251,
-            1251, 1479, 1479, 682, 909, 1366, 1139, 1706, 1366, 1479, 1251, 1479, 1251, 1024, 1139,
-            1479, 1251, 1706, 1251, 1139, 1139, 797, 569, 797, 864, 1024, 682, 1024, 1024, 909,
-            1024, 909, 569, 1024, 1024, 569, 569, 909, 569, 1479, 1024, 1024, 1024, 1024, 797, 797,
-            569, 1024, 909, 1366, 909, 909, 797, 819, 563, 819, 1108, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 512, 797, 1137, 1024, 1024, 1706, 1593, 569,
-            682, 682, 1024, 1167, 512, 682, 512, 569, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
-            1024, 1024, 1024, 682, 682, 1167, 1167, 1167, 1024, 1704, 1366, 1366, 1366, 1479, 1366,
-            1366, 1479, 1593, 797, 1024, 1366, 1251, 1821, 1479, 1479, 1251, 1479, 1366, 1139,
-            1251, 1479, 1366, 1821, 1366, 1251, 1251, 682, 569, 682, 1167, 1024, 682, 1024, 1024,
-            909, 1024, 909, 682, 1024, 1139, 569, 569, 1024, 569, 1593, 1139, 1024, 1024, 1024,
-            797, 797, 569, 1139, 909, 1366, 1024, 909, 797, 713, 451, 713, 1167, -1,
-        ],
-    },
-    // 1: Arial.ttf (+ variants) from ttf-mscorefonts-installer.
-    FontFamilyMetrics {
-        font_names: &[
-            "helvetica",
-            "arial",
-            "arialmt",
-            "freesans",
-            "liberationsans",
-            "arimo",
-            "albany",
-            "nimbussans",
-            "nimbussansa",
-            "texgyreheros",
-        ],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 569, 569, 727, 1139, 1139, 1821, 1366, 391,
-            682, 682, 797, 1196, 569, 682, 569, 569, 1139, 1139, 1139, 1139, 1139, 1139, 1139,
-            1139, 1139, 1139, 569, 569, 1196, 1196, 1196, 1139, 2079, 1366, 1366, 1479, 1479, 1366,
-            1251, 1593, 1479, 569, 1024, 1366, 1139, 1706, 1479, 1593, 1366, 1593, 1479, 1366,
-            1251, 1479, 1366, 1933, 1366, 1366, 1251, 569, 569, 569, 961, 1139, 682, 1139, 1139,
-            1024, 1139, 1139, 569, 1139, 1139, 455, 455, 1024, 455, 1706, 1139, 1139, 1139, 1139,
-            682, 1024, 569, 1139, 1024, 1479, 1024, 1024, 1024, 684, 532, 684, 1196, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 569, 682, 971, 1139, 1139, 1821, 1479, 487,
-            682, 682, 797, 1196, 569, 682, 569, 569, 1139, 1139, 1139, 1139, 1139, 1139, 1139,
-            1139, 1139, 1139, 682, 682, 1196, 1196, 1196, 1251, 1997, 1479, 1479, 1479, 1479, 1366,
-            1251, 1593, 1479, 569, 1139, 1479, 1251, 1706, 1479, 1593, 1366, 1593, 1479, 1366,
-            1251, 1479, 1366, 1933, 1366, 1366, 1251, 682, 569, 682, 1196, 1139, 682, 1139, 1251,
-            1139, 1251, 1139, 682, 1251, 1251, 569, 569, 1139, 569, 1821, 1251, 1251, 1251, 1251,
-            797, 1139, 682, 1251, 1139, 1593, 1139, 1139, 1024, 797, 573, 797, 1196, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 569, 569, 727, 1139, 1139, 1821, 1366, 391,
-            682, 682, 797, 1196, 569, 682, 569, 569, 1139, 1139, 1139, 1139, 1139, 1139, 1139,
-            1139, 1139, 1139, 569, 569, 1196, 1196, 1196, 1139, 2079, 1366, 1366, 1479, 1479, 1366,
-            1251, 1593, 1479, 569, 1024, 1366, 1139, 1706, 1479, 1593, 1366, 1593, 1479, 1366,
-            1251, 1479, 1366, 1933, 1366, 1366, 1251, 569, 569, 569, 961, 1139, 682, 1139, 1139,
-            1024, 1139, 1139, 569, 1139, 1139, 455, 455, 1024, 455, 1706, 1139, 1139, 1139, 1139,
-            682, 1024, 569, 1139, 1024, 1479, 1024, 1024, 1024, 684, 532, 684, 1196, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 569, 682, 971, 1139, 1139, 1821, 1479, 487,
-            682, 682, 797, 1196, 569, 682, 569, 569, 1139, 1139, 1139, 1139, 1139, 1139, 1139,
-            1139, 1139, 1139, 682, 682, 1196, 1196, 1196, 1251, 1997, 1479, 1479, 1479, 1479, 1366,
-            1251, 1593, 1479, 569, 1139, 1479, 1251, 1706, 1479, 1593, 1366, 1593, 1479, 1366,
-            1251, 1479, 1366, 1933, 1366, 1366, 1251, 682, 569, 682, 1196, 1139, 682, 1139, 1251,
-            1139, 1251, 1139, 682, 1251, 1251, 569, 569, 1139, 569, 1821, 1251, 1251, 1251, 1251,
-            797, 1139, 682, 1251, 1139, 1593, 1139, 1139, 1024, 797, 573, 797, 1196, -1,
-        ],
-    },
-    // 2: Courier_New.ttf (+ variants) from ttf-mscorefonts-installer.
-    FontFamilyMetrics {
-        font_names: &[
-            "cour",
-            "courier",
-            "couriernew",
-            "nimbusmono",
-            "texgyrecursor",
-            "freemono",
-            "liberationmono",
-            "cousine",
-            "cumberland",
-        ],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229, 1229,
-            1229, 1229, 1229, -1,
-        ],
-    },
-    // 3: Nunito
-    FontFamilyMetrics {
-        font_names: &["Nunito"],
-        units_per_em: 1000.0,
-        widths_regular: [
-            0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 258, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 258, 228, 392, 600, 600, 930, 693, 221, 317,
-            317, 450, 600, 228, 424, 228, 283, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600,
-            228, 228, 600, 600, 600, 443, 946, 729, 676, 673, 742, 583, 548, 726, 761, 257, 324,
-            625, 543, 855, 740, 767, 633, 767, 669, 615, 602, 728, 689, 1101, 650, 596, 589, 315,
-            283, 315, 600, 500, 500, 530, 583, 463, 583, 532, 333, 586, 568, 232, 236, 500, 296,
-            856, 568, 556, 583, 583, 358, 481, 350, 561, 515, 841, 525, 514, 463, 352, 265, 352,
-            600, -1,
-        ],
-        widths_bold: [
-            0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 271, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 271, 248, 448, 600, 600, 945, 726, 243, 358,
-            358, 453, 600, 248, 434, 248, 313, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600,
-            248, 248, 600, 600, 600, 459, 950, 744, 688, 680, 762, 597, 562, 736, 773, 282, 354,
-            665, 562, 868, 748, 785, 652, 785, 686, 631, 621, 738, 713, 1113, 672, 618, 605, 354,
-            313, 354, 600, 500, 500, 547, 600, 472, 600, 542, 364, 604, 585, 255, 259, 536, 319,
-            877, 585, 576, 600, 600, 392, 488, 384, 579, 527, 853, 546, 526, 474, 391, 288, 391,
-            600, -1,
-        ],
-        widths_italic: [
-            0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 258, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 258, 228, 392, 600, 600, 930, 693, 221, 317,
-            317, 450, 600, 228, 424, 228, 283, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600,
-            228, 228, 600, 600, 600, 443, 946, 729, 676, 673, 742, 583, 548, 726, 761, 257, 324,
-            625, 543, 856, 739, 767, 633, 767, 669, 615, 602, 728, 688, 1101, 650, 596, 589, 315,
-            283, 315, 600, 500, 500, 530, 583, 463, 583, 532, 333, 586, 568, 232, 236, 500, 296,
-            856, 568, 556, 583, 583, 358, 481, 350, 561, 515, 841, 525, 514, 463, 352, 265, 352,
-            600, -1,
-        ],
-        widths_bold_italic: [
-            0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 271, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 271, 248, 448, 600, 600, 945, 726, 243, 358,
-            358, 453, 600, 248, 434, 248, 313, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600,
-            248, 248, 600, 600, 600, 459, 950, 744, 688, 680, 762, 597, 562, 736, 773, 282, 354,
-            664, 562, 869, 747, 785, 652, 785, 686, 631, 621, 738, 713, 1113, 672, 618, 605, 354,
-            313, 354, 600, 500, 500, 547, 600, 472, 600, 542, 364, 604, 585, 255, 259, 536, 319,
-            877, 585, 576, 600, 600, 392, 488, 384, 579, 527, 853, 546, 526, 474, 391, 288, 391,
-            600, -1,
-        ],
-    },
-    // 4: DejaVuSans
-    FontFamilyMetrics {
-        font_names: &["dejavusans"],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 651, 821, 942, 1716, 1303, 1946, 1597, 563,
-            799, 799, 1024, 1716, 651, 739, 651, 690, 1303, 1303, 1303, 1303, 1303, 1303, 1303,
-            1303, 1303, 1303, 690, 690, 1716, 1716, 1716, 1087, 2048, 1401, 1405, 1430, 1577, 1294,
-            1178, 1587, 1540, 604, 604, 1343, 1141, 1767, 1532, 1612, 1235, 1612, 1423, 1300, 1251,
-            1499, 1401, 2025, 1403, 1251, 1403, 799, 690, 799, 1716, 1024, 1024, 1255, 1300, 1126,
-            1300, 1260, 721, 1300, 1298, 569, 569, 1186, 569, 1995, 1298, 1253, 1300, 1300, 842,
-            1067, 803, 1298, 1212, 1675, 1212, 1212, 1075, 1303, 690, 1303, 1716, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 713, 934, 1067, 1716, 1425, 2052, 1786, 627,
-            936, 936, 1071, 1716, 778, 850, 778, 748, 1425, 1425, 1425, 1425, 1425, 1425, 1425,
-            1425, 1425, 1425, 819, 819, 1716, 1716, 1716, 1188, 2048, 1585, 1561, 1503, 1700, 1399,
-            1399, 1681, 1714, 762, 762, 1587, 1305, 2038, 1714, 1741, 1501, 1741, 1577, 1475, 1397,
-            1663, 1585, 2259, 1579, 1483, 1485, 936, 748, 936, 1716, 1024, 1024, 1382, 1466, 1214,
-            1466, 1389, 891, 1466, 1458, 702, 702, 1362, 702, 2134, 1458, 1407, 1466, 1466, 1010,
-            1219, 979, 1458, 1335, 1892, 1321, 1335, 1192, 1458, 748, 1458, 1716, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 651, 821, 942, 1716, 1303, 1946, 1597, 563,
-            799, 799, 1024, 1716, 651, 739, 651, 690, 1303, 1303, 1303, 1303, 1303, 1303, 1303,
-            1303, 1303, 1303, 690, 690, 1716, 1716, 1716, 1087, 2048, 1401, 1405, 1430, 1577, 1294,
-            1178, 1587, 1540, 604, 604, 1343, 1141, 1767, 1532, 1612, 1235, 1612, 1423, 1300, 1251,
-            1499, 1401, 2025, 1403, 1251, 1403, 799, 690, 799, 1716, 1024, 1024, 1255, 1300, 1126,
-            1300, 1260, 721, 1300, 1298, 569, 569, 1186, 569, 1995, 1298, 1253, 1300, 1300, 842,
-            1067, 803, 1298, 1212, 1675, 1212, 1212, 1075, 1303, 690, 1303, 1716, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 713, 934, 1067, 1425, 1425, 2052, 1786, 627,
-            936, 936, 1071, 1716, 778, 850, 778, 748, 1425, 1425, 1425, 1425, 1425, 1425, 1425,
-            1425, 1425, 1425, 819, 819, 1716, 1716, 1716, 1188, 2048, 1585, 1561, 1503, 1700, 1399,
-            1399, 1681, 1714, 762, 762, 1587, 1305, 2038, 1714, 1741, 1501, 1741, 1577, 1475, 1397,
-            1663, 1585, 2259, 1579, 1483, 1485, 936, 748, 936, 1716, 1024, 1024, 1382, 1466, 1214,
-            1466, 1389, 891, 1466, 1458, 702, 702, 1362, 702, 2134, 1458, 1407, 1466, 1466, 1010,
-            1219, 979, 1458, 1335, 1892, 1321, 1335, 1192, 1458, 748, 1458, 1716, -1,
-        ],
-    },
-    // 5: Consolas
-    FontFamilyMetrics {
-        font_names: &["consola", "consolas"],
-        units_per_em: 2048.0,
-        widths_regular: [
-            1126, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, -1,
-        ],
-        widths_bold: [
-            1126, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, -1,
-        ],
-        widths_italic: [
-            1126, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126, 1126,
-            1126, 1126, 1126, -1,
-        ],
-    },
-    // 6: Trebuchet MS
-    FontFamilyMetrics {
-        font_names: &["Trebuchet MS", "Trebuchet"],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 617, 752, 665, 1074, 1074, 1229, 1446, 327,
-            752, 752, 752, 1074, 752, 752, 752, 1074, 1074, 1074, 1074, 1074, 1074, 1074, 1074,
-            1074, 1074, 1074, 752, 752, 1074, 1074, 1074, 752, 1578, 1208, 1159, 1225, 1256, 1097,
-            1075, 1385, 1340, 570, 976, 1179, 1037, 1453, 1307, 1380, 1142, 1384, 1192, 985, 1189,
-            1328, 1203, 1745, 1140, 1168, 1127, 752, 728, 752, 1074, 1074, 1074, 1076, 1141, 1014,
-            1141, 1117, 757, 1028, 1119, 584, 751, 1033, 604, 1700, 1119, 1099, 1141, 1141, 796,
-            829, 812, 1119, 1003, 1524, 1026, 1010, 972, 752, 1074, 752, 1074, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 617, 752, 751, 1200, 1200, 1401, 1446, 470,
-            752, 752, 885, 1200, 752, 752, 752, 799, 1200, 1200, 1200, 1200, 1200, 1200, 1200,
-            1200, 1200, 1200, 752, 752, 1200, 1200, 1200, 897, 1578, 1297, 1219, 1253, 1316, 1165,
-            1195, 1375, 1400, 570, 1091, 1264, 1132, 1526, 1367, 1440, 1202, 1452, 1251, 1047,
-            1253, 1388, 1273, 1810, 1230, 1256, 1147, 823, 728, 823, 1200, 1200, 1200, 1091, 1191,
-            1048, 1189, 1177, 757, 1028, 1214, 611, 751, 1122, 604, 1760, 1209, 1159, 1193, 1196,
-            875, 882, 812, 1210, 1080, 1605, 1131, 1093, 1082, 888, 1200, 888, 1200, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 617, 752, 665, 1074, 985, 1229, 1446, 327, 752,
-            752, 752, 1074, 752, 752, 752, 1074, 1074, 1074, 1074, 1074, 1074, 1074, 1074, 1074,
-            1074, 1074, 752, 752, 1074, 1074, 1074, 752, 1578, 1251, 1159, 1225, 1256, 1097, 1075,
-            1385, 1340, 570, 976, 1179, 1037, 1559, 1307, 1380, 1113, 1380, 1192, 985, 1189, 1328,
-            1203, 1745, 1140, 1168, 1127, 752, 728, 752, 1074, 1074, 1074, 1076, 1141, 942, 1141,
-            1100, 822, 1028, 1141, 628, 751, 1033, 656, 1700, 1119, 1099, 1141, 1141, 853, 829,
-            860, 1140, 1003, 1524, 1026, 1010, 972, 752, 1074, 752, 1074, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 617, 752, 800, 1200, 1200, 1500, 1446, 617,
-            752, 752, 885, 1200, 752, 752, 752, 813, 1200, 1200, 1200, 1200, 1200, 1200, 1200,
-            1200, 1200, 1200, 752, 752, 1200, 1200, 1200, 813, 1578, 1257, 1208, 1255, 1295, 1215,
-            1199, 1385, 1389, 570, 1021, 1331, 1082, 1610, 1352, 1438, 1195, 1576, 1277, 1027,
-            1403, 1355, 1399, 1897, 1345, 1400, 1252, 994, 978, 994, 1200, 1200, 1200, 1214, 1215,
-            1009, 1215, 1130, 840, 1096, 1151, 669, 794, 1105, 655, 1700, 1151, 1167, 1226, 1226,
-            915, 940, 897, 1141, 1131, 1584, 1179, 1155, 1091, 994, 1200, 994, 1200, -1,
-        ],
-    },
-    // 7: Verdana
-    FontFamilyMetrics {
-        font_names: &["Verdana"],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 720, 806, 940, 1676, 1302, 2204, 1488, 550,
-            930, 930, 1302, 1676, 745, 930, 745, 930, 1302, 1302, 1302, 1302, 1302, 1302, 1302,
-            1302, 1302, 1302, 930, 930, 1676, 1676, 1676, 1117, 2048, 1400, 1404, 1430, 1578, 1295,
-            1177, 1588, 1539, 862, 931, 1419, 1140, 1726, 1532, 1612, 1235, 1612, 1424, 1400, 1262,
-            1499, 1400, 2025, 1403, 1260, 1403, 930, 930, 930, 1676, 1302, 1302, 1230, 1276, 1067,
-            1276, 1220, 720, 1276, 1296, 562, 705, 1212, 562, 1992, 1296, 1243, 1276, 1276, 874,
-            1067, 807, 1296, 1212, 1676, 1212, 1212, 1076, 1300, 930, 1300, 1676, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 700, 824, 1203, 1776, 1456, 2605, 1766, 680,
-            1113, 1113, 1456, 1776, 740, 983, 740, 1412, 1456, 1456, 1456, 1456, 1456, 1456, 1456,
-            1456, 1456, 1456, 824, 824, 1776, 1776, 1776, 1263, 1974, 1590, 1560, 1482, 1700, 1399,
-            1332, 1661, 1715, 1118, 1137, 1579, 1305, 1941, 1734, 1741, 1501, 1741, 1602, 1455,
-            1396, 1663, 1564, 2311, 1564, 1509, 1417, 1113, 1412, 1113, 1776, 1456, 1456, 1368,
-            1432, 1205, 1432, 1360, 865, 1432, 1459, 700, 825, 1374, 700, 2167, 1459, 1406, 1432,
-            1432, 1018, 1215, 933, 1459, 1331, 2006, 1370, 1333, 1222, 1456, 1113, 1456, 1776, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 720, 806, 940, 1676, 1302, 2204, 1488, 550,
-            930, 930, 1302, 1676, 745, 930, 745, 930, 1302, 1302, 1302, 1302, 1302, 1302, 1302,
-            1302, 1302, 1302, 930, 930, 1676, 1676, 1676, 1117, 2048, 1398, 1404, 1430, 1568, 1295,
-            1177, 1588, 1539, 862, 931, 1419, 1140, 1726, 1532, 1612, 1235, 1612, 1424, 1400, 1262,
-            1499, 1398, 2028, 1403, 1260, 1403, 930, 930, 930, 1676, 1302, 1302, 1230, 1276, 1067,
-            1276, 1220, 720, 1273, 1296, 562, 705, 1202, 562, 1993, 1296, 1243, 1276, 1276, 874,
-            1067, 807, 1296, 1210, 1676, 1212, 1210, 1076, 1300, 930, 1300, 1676, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 700, 824, 1203, 1776, 1456, 2605, 1766, 680,
-            1113, 1113, 1456, 1776, 740, 983, 740, 1412, 1456, 1456, 1456, 1456, 1456, 1456, 1456,
-            1456, 1456, 1456, 824, 824, 1776, 1776, 1776, 1263, 1974, 1590, 1560, 1482, 1700, 1399,
-            1332, 1661, 1715, 1118, 1137, 1579, 1305, 1941, 1734, 1741, 1501, 1741, 1602, 1455,
-            1396, 1663, 1564, 2311, 1564, 1509, 1417, 1113, 1412, 1113, 1776, 1456, 1456, 1368,
-            1432, 1205, 1432, 1360, 865, 1432, 1459, 700, 825, 1374, 700, 2167, 1459, 1404, 1432,
-            1432, 1018, 1215, 933, 1459, 1329, 2006, 1370, 1333, 1222, 1456, 1113, 1456, 1776, -1,
-        ],
-    },
-    // 8: OpenSans
-    FontFamilyMetrics {
-        font_names: &["OpenSans"],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 532, 547, 821, 1323, 1171, 1686, 1495, 453,
-            606, 606, 1130, 1171, 502, 659, 545, 752, 1171, 1171, 1171, 1171, 1171, 1171, 1171,
-            1171, 1171, 1171, 545, 545, 1171, 1171, 1171, 879, 1841, 1296, 1327, 1292, 1493, 1139,
-            1057, 1491, 1511, 571, 547, 1257, 1063, 1849, 1544, 1595, 1233, 1595, 1266, 1124, 1133,
-            1491, 1219, 1896, 1182, 1147, 1169, 674, 752, 674, 1110, 918, 1182, 1139, 1255, 975,
-            1255, 1149, 694, 1122, 1257, 518, 518, 1075, 518, 1905, 1257, 1237, 1255, 1255, 836,
-            977, 723, 1257, 1026, 1593, 1073, 1032, 958, 776, 1128, 776, 1171, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 532, 586, 967, 1323, 1169, 1845, 1536, 545,
-            694, 694, 1116, 1169, 594, 659, 584, 846, 1169, 1169, 1169, 1169, 1169, 1169, 1169,
-            1169, 1169, 1169, 584, 594, 1169, 1169, 1169, 977, 1837, 1413, 1376, 1305, 1516, 1147,
-            1124, 1483, 1567, 678, 678, 1360, 1157, 1931, 1665, 1630, 1286, 1630, 1352, 1128, 1186,
-            1548, 1331, 1980, 1366, 1278, 1186, 678, 846, 678, 1090, 842, 1243, 1237, 1296, 1053,
-            1296, 1210, 793, 1157, 1346, 625, 625, 1270, 625, 2011, 1346, 1268, 1296, 1296, 930,
-            1018, 889, 1346, 1165, 1753, 1184, 1165, 999, 807, 1128, 807, 1169, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 532, 530, 791, 1323, 1128, 1624, 1372, 444,
-            584, 584, 1130, 1128, 492, 639, 518, 717, 1128, 1128, 1128, 1128, 1128, 1128, 1128,
-            1128, 1128, 1128, 518, 518, 1128, 1128, 1128, 874, 1735, 1137, 1225, 1198, 1364, 1047,
-            967, 1386, 1389, 559, 547, 1141, 971, 1714, 1438, 1475, 1159, 1475, 1165, 1028, 1020,
-            1384, 1122, 1745, 1063, 1030, 1087, 586, 717, 586, 1059, 807, 1135, 1157, 1182, 922,
-            1182, 1010, 641, 1026, 1182, 520, 520, 999, 520, 1786, 1182, 1149, 1182, 1182, 811,
-            877, 664, 1182, 946, 1468, 979, 946, 909, 715, 1128, 715, 1128, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 532, 586, 928, 1323, 1128, 1753, 1450, 522,
-            694, 694, 1116, 1128, 569, 659, 584, 862, 1128, 1128, 1128, 1128, 1128, 1128, 1128,
-            1128, 1128, 1128, 584, 584, 1128, 1128, 1128, 940, 1753, 1286, 1270, 1253, 1386, 1110,
-            1087, 1413, 1434, 659, 678, 1255, 1061, 1802, 1546, 1495, 1188, 1495, 1247, 1085, 1087,
-            1415, 1208, 1831, 1241, 1155, 1098, 678, 862, 678, 1081, 819, 1135, 1217, 1219, 989,
-            1217, 1141, 764, 1108, 1237, 608, 608, 1163, 608, 1853, 1237, 1198, 1219, 1217, 862,
-            969, 840, 1237, 1049, 1614, 1087, 1063, 932, 727, 1128, 727, 1128, -1,
-        ],
-    },
-    // 9: Georgia
-    FontFamilyMetrics {
-        font_names: &["Georgia"],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 494, 678, 843, 1317, 1249, 1674, 1455, 441,
-            768, 768, 967, 1317, 552, 766, 552, 960, 1257, 880, 1144, 1130, 1157, 1082, 1159, 1029,
-            1221, 1159, 640, 640, 1317, 1317, 1317, 980, 1902, 1374, 1339, 1315, 1534, 1338, 1227,
-            1485, 1669, 798, 1060, 1422, 1236, 1899, 1571, 1524, 1249, 1524, 1437, 1149, 1267,
-            1549, 1365, 1998, 1455, 1260, 1232, 768, 960, 768, 1317, 1317, 1024, 1032, 1147, 930,
-            1176, 990, 666, 1043, 1192, 600, 598, 1097, 586, 1804, 1210, 1104, 1170, 1146, 839,
-            885, 707, 1178, 1017, 1510, 1034, 1008, 909, 881, 768, 881, 1317, -1,
-        ],
-        widths_bold: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 520, 771, 1044, 1440, 1312, 1801, 1637, 551,
-            915, 915, 987, 1440, 672, 776, 672, 966, 1436, 1003, 1283, 1279, 1330, 1227, 1327,
-            1135, 1385, 1327, 752, 752, 1440, 1440, 1440, 1123, 1980, 1553, 1551, 1465, 1708, 1477,
-            1375, 1653, 1870, 913, 1219, 1673, 1404, 2096, 1719, 1679, 1436, 1679, 1633, 1329,
-            1401, 1707, 1561, 2307, 1656, 1499, 1412, 915, 966, 915, 1440, 1440, 1024, 1220, 1322,
-            1088, 1358, 1171, 805, 1181, 1392, 724, 709, 1294, 705, 2080, 1413, 1302, 1347, 1328,
-            1065, 1050, 814, 1386, 1161, 1768, 1204, 1151, 1076, 1024, 794, 1024, 1440, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 494, 678, 843, 1317, 1249, 1674, 1455, 441,
-            768, 768, 967, 1317, 552, 766, 552, 960, 1257, 880, 1144, 1130, 1157, 1082, 1159, 1017,
-            1221, 1159, 786, 786, 1317, 1317, 1317, 980, 1902, 1374, 1339, 1315, 1534, 1338, 1227,
-            1485, 1669, 798, 1060, 1422, 1236, 1899, 1571, 1496, 1249, 1496, 1437, 1149, 1267,
-            1549, 1365, 1998, 1455, 1260, 1232, 768, 960, 768, 1317, 1317, 1024, 1173, 1134, 929,
-            1178, 966, 673, 1173, 1152, 609, 596, 1081, 584, 1801, 1208, 1100, 1184, 1137, 945,
-            883, 711, 1178, 1102, 1684, 1026, 1146, 909, 881, 768, 881, 1317, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 520, 771, 1044, 1440, 1312, 1801, 1637, 551,
-            915, 915, 987, 1440, 672, 776, 672, 966, 1436, 1003, 1283, 1279, 1330, 1227, 1327,
-            1160, 1385, 1327, 752, 752, 1440, 1440, 1440, 1123, 1980, 1553, 1555, 1465, 1708, 1477,
-            1375, 1653, 1870, 923, 1219, 1673, 1404, 2116, 1699, 1679, 1446, 1679, 1633, 1337,
-            1401, 1707, 1561, 2307, 1643, 1499, 1412, 915, 966, 915, 1440, 1440, 1024, 1352, 1329,
-            1097, 1357, 1141, 780, 1330, 1383, 749, 747, 1313, 726, 2052, 1413, 1302, 1357, 1331,
-            1093, 1059, 854, 1403, 1254, 1912, 1195, 1371, 1059, 1024, 794, 1024, 1440, -1,
-        ],
-    },
-    // 10: Calibri
-    FontFamilyMetrics {
-        font_names: &["Calibri"],
-        units_per_em: 2048.0,
-        widths_regular: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 463, 667, 821, 1020, 1038, 1464, 1397, 452,
-            621, 621, 1020, 1020, 511, 627, 517, 791, 1038, 1038, 1038, 1038, 1038, 1038, 1038,
-            1038, 1038, 1038, 548, 548, 1020, 1020, 1020, 949, 1831, 1185, 1114, 1092, 1260, 1000,
-            941, 1292, 1276, 516, 653, 1064, 861, 1751, 1322, 1356, 1058, 1378, 1112, 941, 998,
-            1314, 1162, 1822, 1063, 998, 959, 628, 791, 628, 1020, 1020, 596, 981, 1076, 866, 1076,
-            1019, 625, 964, 1076, 470, 490, 931, 470, 1636, 1076, 1080, 1076, 1076, 714, 801, 686,
-            1076, 925, 1464, 887, 927, 809, 644, 943, 644, 1020, -1,
-        ],
-        widths_bold: [
-            0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 463, 667, 898, 1020, 1038, 1493, 1443, 478,
-            638, 638, 1020, 1020, 528, 627, 547, 880, 1038, 1038, 1038, 1038, 1038, 1038, 1038,
-            1038, 1038, 1038, 565, 565, 1020, 1020, 1020, 949, 1840, 1241, 1148, 1084, 1291, 999,
-            940, 1305, 1292, 546, 678, 1120, 866, 1790, 1349, 1385, 1090, 1405, 1153, 968, 1014,
-            1337, 1211, 1856, 1128, 1064, 979, 665, 880, 665, 1020, 1020, 615, 1011, 1099, 857,
-            1099, 1031, 648, 971, 1099, 503, 523, 983, 503, 1666, 1099, 1101, 1099, 1099, 728, 817,
-            710, 1099, 969, 1526, 941, 970, 814, 704, 973, 704, 1020, -1,
-        ],
-        widths_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 463, 667, 821, 1020, 1038, 1464, 1397, 452,
-            621, 621, 1020, 1020, 511, 627, 517, 794, 1038, 1038, 1038, 1038, 1038, 1038, 1038,
-            1038, 1038, 1038, 548, 548, 1020, 1020, 1020, 949, 1831, 1185, 1114, 1070, 1260, 1000,
-            941, 1292, 1276, 516, 653, 1064, 861, 1751, 1320, 1340, 1058, 1360, 1112, 926, 998,
-            1314, 1162, 1823, 1063, 998, 959, 628, 787, 628, 1020, 1020, 596, 1053, 1053, 852,
-            1053, 978, 625, 1053, 1053, 470, 490, 931, 470, 1620, 1053, 1051, 1053, 1053, 702, 797,
-            686, 1053, 913, 1464, 887, 916, 809, 644, 943, 644, 1020, -1,
-        ],
-        widths_bold_italic: [
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 463, 667, 898, 1020, 1038, 1493, 1443, 478,
-            638, 638, 1020, 1020, 528, 627, 547, 889, 1038, 1038, 1038, 1038, 1038, 1038, 1038,
-            1038, 1038, 1038, 565, 565, 1020, 1020, 1020, 949, 1840, 1241, 1148, 1062, 1291, 999,
-            940, 1305, 1292, 546, 678, 1120, 866, 1790, 1344, 1369, 1090, 1387, 1153, 953, 1014,
-            1337, 1211, 1857, 1128, 1064, 979, 665, 870, 665, 1020, 1020, 615, 1081, 1081, 843,
-            1081, 1006, 648, 1081, 1080, 503, 523, 983, 503, 1646, 1080, 1080, 1081, 1081, 721,
-            807, 710, 1080, 961, 1526, 941, 963, 814, 704, 973, 704, 1020, -1,
-        ],
-    },
-];
+/// `translate_postscript_fontname` from `lib/common/textspan.c`: `bsearch` of the alias table
+/// with `strcasecmp`. The name is used verbatim (no trimming), as in C.
+pub fn translate_postscript_fontname(font_name: &str) -> Option<&'static PostscriptFontAlias> {
+    POSTSCRIPT_FONT_ALIASES
+        .binary_search_by(|alias| strcasecmp(alias.name, font_name))
+        .ok()
+        .map(|i| &POSTSCRIPT_FONT_ALIASES[i])
+}
 
-/// Compares two font names for equality, ignoring case and all characters except ASCII letters,
-/// matching `font_name_equal_permissive` in `lib/common/textspan_lut.c`.
+/// `font_name_equal_permissive` from `lib/common/textspan_lut.c`: compares two font names
+/// ignoring case and every character that is not an ASCII letter.
 fn font_name_equal_permissive(a: &str, b: &str) -> bool {
     let a_iter = a
         .bytes()
-        .filter(|c| c.is_ascii_alphabetic())
+        .filter(u8::is_ascii_alphabetic)
         .map(|c| c.to_ascii_lowercase());
     let b_iter = b
         .bytes()
-        .filter(|c| c.is_ascii_alphabetic())
+        .filter(u8::is_ascii_alphabetic)
         .map(|c| c.to_ascii_lowercase());
     a_iter.eq(b_iter)
 }
 
-/// Checks whether `value` matches any entry in `list` using `font_name_equal_permissive`.
+/// `font_in_list_permissive` from `lib/common/textspan_lut.c`.
 fn font_in_list_permissive(value: &str, list: &[&str]) -> bool {
-    if value.is_empty() {
-        return false;
-    }
     list.iter()
-        .any(|&entry| font_name_equal_permissive(value, entry))
+        .any(|entry| font_name_equal_permissive(value, entry))
 }
 
-fn find_family_metrics(font_name: &str) -> Option<&'static FontFamilyMetrics> {
-    ALL_FONT_METRICS
+/// `get_metrics_for_font_family` from `lib/common/textspan_lut.c`: the first family whose
+/// name list matches, else the `Times` metrics (C emits a once-only warning).
+fn get_metrics_for_font_family(font_name: &str) -> &'static FontFamilyMetrics {
+    font_tables::FONT_METRICS
         .iter()
         .find(|m| font_in_list_permissive(font_name, m.font_names))
+        .unwrap_or_else(|| {
+            let warning = format!(
+                "Warning: no hard-coded metrics for '{font_name}'.  Falling back to 'Times' metrics\n"
+            );
+            if crate::diag::emit_once(&warning) {
+                crate::diag::agwarningf(&warning);
+            }
+            &font_tables::FONT_METRICS[0]
+        })
 }
 
-/// Resolves a font family name and style flags (`bold`, `italic`), consulting both the direct
-/// `textspan_lut.c` table and the PostScript alias table (`ps_font_equiv.h`), and falling back
-/// to `Times` metrics if unknown.
-fn resolve_metrics_and_style(
-    font_name: &str,
-    mut bold: bool,
-    mut italic: bool,
-) -> (&'static FontFamilyMetrics, bool, bool) {
-    let trimmed = font_name.trim();
-    if trimmed.is_empty() {
-        return (&ALL_FONT_METRICS[0], bold, italic);
-    }
-
-    // 1. Direct family lookup (e.g. "Times-Roman", "Helvetica", "Courier", "Arial")
-    if let Some(metrics) = find_family_metrics(trimmed) {
-        return (metrics, bold, italic);
-    }
-
-    // 2. PostScript alias lookup (e.g. "Times-Bold", "Times-Italic", "Helvetica-Bold", "Courier-Bold")
-    if let Some(alias) = translate_postscript_fontname(trimmed) {
-        if alias.svg_font_weight == Some("bold") || alias.weight == Some("bold") {
-            bold = true;
-        }
-        if alias.svg_font_style == Some("italic")
-            || alias.style == Some("italic")
-            || alias.style == Some("oblique")
-        {
-            italic = true;
-        }
-        if let Some(metrics) = find_family_metrics(alias.family) {
-            return (metrics, bold, italic);
-        }
-        if alias.svg_font_family.eq_ignore_ascii_case("sans-serif") {
-            return (&ALL_FONT_METRICS[1], bold, italic);
-        }
-        if alias.svg_font_family.eq_ignore_ascii_case("monospace") {
-            return (&ALL_FONT_METRICS[2], bold, italic);
-        }
-        return (&ALL_FONT_METRICS[0], bold, italic);
-    }
-
-    // 3. Suffix / token stripping for styled font names (e.g. "Arial-Bold", "Verdana Italic")
-    let lower_alpha: String = trimmed
-        .bytes()
-        .filter(|c| c.is_ascii_alphabetic())
-        .map(|c| c.to_ascii_lowercase() as char)
-        .collect();
-    let mut base = lower_alpha.as_str();
-    loop {
-        if let Some(stripped) = base.strip_suffix("bolditalic") {
-            bold = true;
-            italic = true;
-            base = stripped;
-        } else if let Some(stripped) = base.strip_suffix("boldoblique") {
-            bold = true;
-            italic = true;
-            base = stripped;
-        } else if let Some(stripped) = base.strip_suffix("bold") {
-            bold = true;
-            base = stripped;
-        } else if let Some(stripped) = base.strip_suffix("italic") {
-            italic = true;
-            base = stripped;
-        } else if let Some(stripped) = base.strip_suffix("oblique") {
-            italic = true;
-            base = stripped;
-        } else if let Some(stripped) = base.strip_suffix("regular") {
-            base = stripped;
-        } else {
-            break;
-        }
-    }
-    if !base.is_empty()
-        && let Some(metrics) = find_family_metrics(base)
-    {
-        return (metrics, bold, italic);
-    }
-
-    // 4. Fallback to Times metrics (matches C `get_metrics_for_font_family("Times")`).
-    (&ALL_FONT_METRICS[0], bold, italic)
-}
-
+/// `get_metrics_for_font_variant` from `lib/common/textspan_lut.c`.
 fn get_metrics_for_font_variant(
     family_metrics: &'static FontFamilyMetrics,
     bold: bool,
@@ -1200,341 +236,254 @@ fn get_metrics_for_font_variant(
     }
 }
 
-/// Returns the canonical character width in `(units_per_em * 1)` points.
-/// Non-ASCII characters (`>= 128`) fall back to the width of `' '` (ASCII 32),
-/// and unknown ASCII control characters (`-1`) fall back to `0`.
+/// `estimate_character_width_canonical` from `lib/common/textspan_lut.c`: width of one byte in
+/// `(units_per_em * 1)` points. Bytes `>= 128` (every byte of a UTF-8 multi-byte sequence) use
+/// the width of `' '`; unknown ASCII widths (`-1`) count as `0`; each case warns once per process.
 #[inline]
-fn estimate_character_width_canonical(variant_metrics: &[i16; 128], ch: char) -> u32 {
-    let code = ch as u32;
-    if code < 128 {
-        let width = variant_metrics[code as usize];
-        return if width < 0 { 0 } else { width as u32 };
+fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) -> u16 {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static NON_ASCII_WARNED: AtomicBool = AtomicBool::new(false);
+    static NO_WIDTH_WARNED: AtomicBool = AtomicBool::new(false);
+    let character = if byte >= 128 {
+        if !NON_ASCII_WARNED.swap(true, Ordering::Relaxed) {
+            eprintln!(
+                "Warning: Warning: no value for width of non-ASCII character {byte}. Falling \
+                 back to width of space character"
+            );
+        }
+        b' '
+    } else {
+        byte
+    };
+    let width = variant_metrics[usize::from(character)];
+    if width == -1 {
+        if !NO_WIDTH_WARNED.swap(true, Ordering::Relaxed) {
+            eprintln!(
+                "Warning: Warning: no value for width of ASCII character {character}. Falling \
+                 back to 0"
+            );
+        }
+        0
+    } else {
+        width as u16
     }
-    let space_w = variant_metrics[b' ' as usize].max(0) as u32;
-    if code == 0x00A0 {
-        return space_w;
-    }
-    if (0x3000..=0x9FFF).contains(&code)
-        || (0xF900..=0xFAFF).contains(&code)
-        || (0xFF01..=0xFF60).contains(&code)
-    {
-        return space_w * 4;
-    }
-    space_w * (ch.len_utf8() as u32)
 }
 
-/// Estimates the width in points of `text` at a `1pt` font size, ported from
-/// `estimate_text_width_1pt` in `lib/common/textspan_lut.c`.
-static HTML_ENTITIES: &[(&str, u32)] = &[
-    ("AElig", 198),
-    ("Aacute", 193),
-    ("Acirc", 194),
-    ("Agrave", 192),
-    ("Alpha", 913),
-    ("Aring", 197),
-    ("Atilde", 195),
-    ("Auml", 196),
-    ("Beta", 914),
-    ("Ccedil", 199),
-    ("Chi", 935),
-    ("Dagger", 8225),
-    ("Delta", 916),
-    ("ETH", 208),
-    ("Eacute", 201),
-    ("Ecirc", 202),
-    ("Egrave", 200),
-    ("Epsilon", 917),
-    ("Eta", 919),
-    ("Euml", 203),
-    ("Gamma", 915),
-    ("Iacute", 205),
-    ("Icirc", 206),
-    ("Igrave", 204),
-    ("Iota", 921),
-    ("Iuml", 207),
-    ("Kappa", 922),
-    ("Lambda", 923),
-    ("Mu", 924),
-    ("Ntilde", 209),
-    ("Nu", 925),
-    ("OElig", 338),
-    ("Oacute", 211),
-    ("Ocirc", 212),
-    ("Ograve", 210),
-    ("Omega", 937),
-    ("Omicron", 927),
-    ("Oslash", 216),
-    ("Otilde", 213),
-    ("Ouml", 214),
-    ("Phi", 934),
-    ("Pi", 928),
-    ("Prime", 8243),
-    ("Psi", 936),
-    ("Rho", 929),
-    ("Scaron", 352),
-    ("Sigma", 931),
-    ("THORN", 222),
-    ("Tau", 932),
-    ("Theta", 920),
-    ("Uacute", 218),
-    ("Ucirc", 219),
-    ("Ugrave", 217),
-    ("Upsilon", 933),
-    ("Uuml", 220),
-    ("Xi", 926),
-    ("Yacute", 221),
-    ("Yuml", 376),
-    ("Zeta", 918),
-    ("aacute", 225),
-    ("acirc", 226),
-    ("acute", 180),
-    ("aelig", 230),
-    ("agrave", 224),
-    ("alefsym", 8501),
-    ("alpha", 945),
-    ("amp", 38),
-    ("and", 8743),
-    ("ang", 8736),
-    ("aring", 229),
-    ("asymp", 8776),
-    ("atilde", 227),
-    ("auml", 228),
-    ("bdquo", 8222),
-    ("beta", 946),
-    ("brvbar", 166),
-    ("bull", 8226),
-    ("cap", 8745),
-    ("ccedil", 231),
-    ("cedil", 184),
-    ("cent", 162),
-    ("chi", 967),
-    ("circ", 710),
-    ("clubs", 9827),
-    ("cong", 8773),
-    ("copy", 169),
-    ("crarr", 8629),
-    ("cup", 8746),
-    ("curren", 164),
-    ("dArr", 8659),
-    ("dagger", 8224),
-    ("darr", 8595),
-    ("deg", 176),
-    ("delta", 948),
-    ("diams", 9830),
-    ("divide", 247),
-    ("eacute", 233),
-    ("ecirc", 234),
-    ("egrave", 232),
-    ("empty", 8709),
-    ("emsp", 8195),
-    ("ensp", 8194),
-    ("epsilon", 949),
-    ("equiv", 8801),
-    ("eta", 951),
-    ("eth", 240),
-    ("euml", 235),
-    ("euro", 8364),
-    ("exist", 8707),
-    ("fnof", 402),
-    ("forall", 8704),
-    ("frac12", 189),
-    ("frac14", 188),
-    ("frac34", 190),
-    ("frasl", 8260),
-    ("gamma", 947),
-    ("ge", 8805),
-    ("gt", 62),
-    ("hArr", 8660),
-    ("harr", 8596),
-    ("hearts", 9829),
-    ("hellip", 8230),
-    ("iacute", 237),
-    ("icirc", 238),
-    ("iexcl", 161),
-    ("igrave", 236),
-    ("image", 8465),
-    ("infin", 8734),
-    ("int", 8747),
-    ("iota", 953),
-    ("iquest", 191),
-    ("isin", 8712),
-    ("iuml", 239),
-    ("kappa", 954),
-    ("lArr", 8656),
-    ("lambda", 955),
-    ("lang", 9001),
-    ("laquo", 171),
-    ("larr", 8592),
-    ("lceil", 8968),
-    ("ldquo", 8220),
-    ("le", 8804),
-    ("lfloor", 8970),
-    ("lowast", 8727),
-    ("loz", 9674),
-    ("lrm", 8206),
-    ("lsaquo", 8249),
-    ("lsquo", 8216),
-    ("lt", 60),
-    ("macr", 175),
-    ("mdash", 8212),
-    ("micro", 181),
-    ("middot", 183),
-    ("minus", 8722),
-    ("mu", 956),
-    ("nabla", 8711),
-    ("nbsp", 160),
-    ("ndash", 8211),
-    ("ne", 8800),
-    ("ni", 8715),
-    ("not", 172),
-    ("notin", 8713),
-    ("nsub", 8836),
-    ("ntilde", 241),
-    ("nu", 957),
-    ("oacute", 243),
-    ("ocirc", 244),
-    ("oelig", 339),
-    ("ograve", 242),
-    ("oline", 8254),
-    ("omega", 969),
-    ("omicron", 959),
-    ("oplus", 8853),
-    ("or", 8744),
-    ("ordf", 170),
-    ("ordm", 186),
-    ("oslash", 248),
-    ("otilde", 245),
-    ("otimes", 8855),
-    ("ouml", 246),
-    ("para", 182),
-    ("part", 8706),
-    ("permil", 8240),
-    ("perp", 8869),
-    ("phi", 966),
-    ("pi", 960),
-    ("piv", 982),
-    ("plusmn", 177),
-    ("pound", 163),
-    ("prime", 8242),
-    ("prod", 8719),
-    ("prop", 8733),
-    ("psi", 968),
-    ("quot", 34),
-    ("rArr", 8658),
-    ("radic", 8730),
-    ("rang", 9002),
-    ("raquo", 187),
-    ("rarr", 8594),
-    ("rceil", 8969),
-    ("rdquo", 8221),
-    ("real", 8476),
-    ("reg", 174),
-    ("rfloor", 8971),
-    ("rho", 961),
-    ("rlm", 8207),
-    ("rsaquo", 8250),
-    ("rsquo", 8217),
-    ("sbquo", 8218),
-    ("scaron", 353),
-    ("sdot", 8901),
-    ("sect", 167),
-    ("shy", 173),
-    ("sigma", 963),
-    ("sigmaf", 962),
-    ("sim", 8764),
-    ("spades", 9824),
-    ("sub", 8834),
-    ("sube", 8838),
-    ("sum", 8721),
-    ("sup", 8835),
-    ("sup1", 185),
-    ("sup2", 178),
-    ("sup3", 179),
-    ("supe", 8839),
-    ("szlig", 223),
-    ("tau", 964),
-    ("there4", 8756),
-    ("theta", 952),
-    ("thetasym", 977),
-    ("thinsp", 8201),
-    ("thorn", 254),
-    ("tilde", 732),
-    ("times", 215),
-    ("trade", 8482),
-    ("uArr", 8657),
-    ("uacute", 250),
-    ("uarr", 8593),
-    ("ucirc", 251),
-    ("ugrave", 249),
-    ("uml", 168),
-    ("upsih", 978),
-    ("upsilon", 965),
-    ("uuml", 252),
-    ("weierp", 8472),
-    ("xi", 958),
-    ("yacute", 253),
-    ("yen", 165),
-    ("yuml", 255),
-    ("zeta", 950),
-    ("zwj", 8205),
-    ("zwnj", 8204),
-];
+/// `estimate_text_width_1pt` from `lib/common/textspan_lut.c`: width of `text` at 1pt.
+///
+/// Matches C exactly: the font name is looked up directly in the LUT families (PostScript
+/// aliases such as `Times-Bold` are *not* consulted, so they measure as regular Times), and
+/// the text is measured byte by byte, so each byte of a UTF-8 multi-byte character counts as
+/// one space (see `docs/c-bugs-ledger.md`, GV-BUG-011/013).
+pub fn estimate_text_width_1pt(font_name: &str, text: &str, bold: bool, italic: bool) -> f64 {
+    let family_metrics = get_metrics_for_font_family(font_name);
+    let variant_metrics = get_metrics_for_font_variant(family_metrics, bold, italic);
+    let text_width_canonical: u32 = charset::encode(text)
+        .iter()
+        .map(|&b| u32::from(estimate_character_width_canonical(variant_metrics, b)))
+        .sum();
+    f64::from(text_width_canonical) / family_metrics.units_per_em
+}
 
-/// Decodes HTML 4.0 character entity references (`&alpha;`, `&forall;`, `&#165;`, `&#x03B1;`)
-/// into UTF-8 characters, matching `htmlEntityUTF8` in `lib/common/htmllex.c` and `entities.h`.
-pub fn decode_html_entities(text: &str) -> String {
-    if !text.contains('&') {
+/// `htmlEntity` from `lib/common/utils.c`. `s` starts at the byte after `&`. On success returns
+/// `(value, consumed)`. Like C, a numeric reference terminated by `;` is consumed even when
+/// its value is `0` (so `&#0;` collapses to `&`); unknown names consume nothing.
+fn html_entity(s: &[u8]) -> (u32, usize) {
+    let at = |i: usize| s.get(i).copied().unwrap_or(0);
+    if at(0) == b'#' {
+        let mut n: u32 = 0;
+        let mut byte;
+        let mut i;
+        if at(1) == b'x' || at(1) == b'X' {
+            i = 2;
+            loop {
+                byte = at(i);
+                if i >= 8 {
+                    break;
+                }
+                let d = match byte {
+                    b'A'..=b'F' => byte - b'A' + 10,
+                    b'a'..=b'f' => byte - b'a' + 10,
+                    b'0'..=b'9' => byte - b'0',
+                    _ => break,
+                };
+                n = n.wrapping_mul(16).wrapping_add(u32::from(d));
+                i += 1;
+            }
+        } else {
+            i = 1;
+            loop {
+                byte = at(i);
+                if i >= 8 {
+                    break;
+                }
+                if byte.is_ascii_digit() {
+                    n = n.wrapping_mul(10).wrapping_add(u32::from(byte - b'0'));
+                } else {
+                    break;
+                }
+                i += 1;
+            }
+        }
+        // C checks the last byte it examined; when the loop ran to completion `byte` is
+        // the final digit, which can never be ';'.
+        if i < 8 && byte == b';' {
+            (n, i + 1)
+        } else {
+            (0, 0)
+        }
+    } else {
+        for i in 0..font_tables::ENTITY_NAME_LENGTH_MAX {
+            let byte = at(i);
+            if byte == 0 {
+                break;
+            }
+            if byte == b';' {
+                let key = &s[..i];
+                if let Ok(idx) = font_tables::HTML_ENTITIES
+                    .binary_search_by(|(name, _)| name.as_bytes().cmp(key))
+                {
+                    return (font_tables::HTML_ENTITIES[idx].1, i + 1);
+                }
+                break;
+            }
+        }
+        (0, 0)
+    }
+}
+
+/// Appends the C encoding of entity value `v` (`htmlEntityUTF8`/`latin1ToUTF8`: 1, 2 or 3
+/// bytes, never 4).
+fn push_entity_bytes(out: &mut Vec<u8>, v: u32) {
+    if v < 0x7F {
+        out.push(v as u8);
+    } else if v < 0x07FF {
+        out.push(((v >> 6) | 0xC0) as u8);
+        out.push(((v & 0x3F) | 0x80) as u8);
+    } else {
+        out.push(((v >> 12) | 0xE0) as u8);
+        out.push((((v >> 6) & 0x3F) | 0x80) as u8);
+        out.push(((v & 0x3F) | 0x80) as u8);
+    }
+}
+
+/// `htmlEntityUTF8` from `lib/common/utils.c`: replaces HTML entities (`&amp;`, `&#123;`,
+/// `&#x7B;`) by their UTF-8 encoding. Works on the input's bytes (see [`crate::charset`]):
+/// a lead byte without its continuation bytes, or a byte `>= 0xF8`, is converted as if it
+/// were Latin-1, with C's once-per-graph warning.
+pub fn html_entity_utf8(text: &str) -> String {
+    if !text.contains('&') && !charset::has_raw(text) {
         return text.to_string();
     }
-    let mut out = String::with_capacity(text.len());
-    let bytes = text.as_bytes();
+    let s = charset::encode(text);
+    let s: &[u8] = &s;
+    let at = |i: usize| s.get(i).copied().unwrap_or(0);
+    let mut out = Vec::with_capacity(s.len());
     let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'&' {
-            let max_end = (i + 14).min(bytes.len());
-            if let Some(rel_semi) = text[i + 1..max_end].find(';') {
-                let entity = &text[i + 1..i + 1 + rel_semi];
-                let decoded_char = if let Some(num_part) = entity.strip_prefix('#') {
-                    let code_opt = if let Some(hex) = num_part
-                        .strip_prefix('x')
-                        .or_else(|| num_part.strip_prefix('X'))
-                    {
-                        u32::from_str_radix(hex, 16).ok()
-                    } else {
-                        num_part.parse::<u32>().ok()
-                    };
-                    code_opt.and_then(char::from_u32)
+    while i < s.len() {
+        let mut c = s[i];
+        i += 1;
+        let uc: i32 = if c < 0xC0 {
+            0
+        } else if c < 0xE0 {
+            1
+        } else if c < 0xF0 {
+            2
+        } else if c < 0xF8 {
+            3
+        } else {
+            charset::warn_invalid_utf8(|g| {
+                format!(
+                    "Warning: UTF8 codes > 4 bytes are not currently supported (graph {g}) - \
+                     treated as Latin-1. Perhaps \"-Gcharset=latin1\" is needed?\n"
+                )
+            });
+            c = cvt_and_append(c, &mut out);
+            -1
+        };
+        if uc == 0 && c == b'&' {
+            let (v, used) = html_entity(&s[i..]);
+            i += used;
+            if v != 0 {
+                if v < 0x7F {
+                    c = v as u8;
+                } else if v < 0x07FF {
+                    out.push(((v >> 6) | 0xC0) as u8);
+                    c = ((v & 0x3F) | 0x80) as u8;
                 } else {
-                    HTML_ENTITIES
-                        .binary_search_by_key(&entity, |&(k, _)| k)
-                        .ok()
-                        .and_then(|idx| char::from_u32(HTML_ENTITIES[idx].1))
-                        .or_else(|| if entity == "apos" { Some('\'') } else { None })
-                };
-                if let Some(ch) = decoded_char {
-                    out.push(ch);
-                    i += 1 + rel_semi + 1;
-                    continue;
+                    out.push(((v >> 12) | 0xE0) as u8);
+                    out.push((((v >> 6) & 0x3F) | 0x80) as u8);
+                    c = ((v & 0x3F) | 0x80) as u8;
+                }
+            }
+        } else {
+            for _ in 0..uc.max(0) {
+                if at(i) & 0xC0 == 0x80 {
+                    out.push(c);
+                    c = at(i);
+                    i += 1;
+                } else {
+                    charset::warn_invalid_utf8(|g| {
+                        format!(
+                            "Warning: Invalid {}-byte UTF8 found in input of graph {g} - \
+                             treated as Latin-1. Perhaps \"-Gcharset=latin1\" is needed?\n",
+                            uc + 1
+                        )
+                    });
+                    c = cvt_and_append(c, &mut out);
+                    break;
                 }
             }
         }
-        let ch = text[i..].chars().next().unwrap();
-        out.push(ch);
-        i += ch.len_utf8();
+        out.push(c);
     }
-    out
+    charset::decode(out)
 }
 
-pub fn estimate_text_width_1pt(font_name: &str, text: &str, bold: bool, italic: bool) -> f64 {
-    let decoded = decode_html_entities(text);
-    let text = decoded.as_str();
-    let (family_metrics, eff_bold, eff_italic) = resolve_metrics_and_style(font_name, bold, italic);
-    let variant_metrics = get_metrics_for_font_variant(family_metrics, eff_bold, eff_italic);
-    let mut text_width_canonical: u32 = 0;
-    for ch in text.chars() {
-        text_width_canonical += estimate_character_width_canonical(variant_metrics, ch);
+/// `cvtAndAppend`: appends all but the last byte of the Latin-1-to-UTF-8 conversion of `c`
+/// and returns the last one.
+fn cvt_and_append(c: u8, out: &mut Vec<u8>) -> u8 {
+    let mut conv = Vec::with_capacity(3);
+    push_entity_bytes(&mut conv, u32::from(c));
+    let last = conv.pop().unwrap_or(c);
+    out.extend_from_slice(&conv);
+    last
+}
+
+/// `latin1ToUTF8` from `lib/common/utils.c` (used when `charset=latin1`): translates HTML
+/// entities and re-encodes every byte `>= 0x7F` of the input (see [`crate::charset`]) as
+/// if it were a Latin-1 code point.
+pub fn latin1_to_utf8(text: &str) -> String {
+    let s = charset::encode(text);
+    let s: &[u8] = &s;
+    let mut out = Vec::with_capacity(s.len());
+    let mut i = 0;
+    while i < s.len() {
+        let mut v = u32::from(s[i]);
+        i += 1;
+        if v == u32::from(b'&') {
+            let (ev, used) = html_entity(&s[i..]);
+            i += used;
+            v = if ev == 0 { u32::from(b'&') } else { ev };
+        }
+        push_entity_bytes(&mut out, v);
     }
-    f64::from(text_width_canonical) / family_metrics.units_per_em
+    charset::decode(out)
+}
+
+/// The label text conversion of `make_label` for a graph of charset `cs`
+/// (`latin1ToUTF8` for Latin-1, `htmlEntityUTF8` otherwise).
+pub fn convert_label_text(text: &str, cs: Charset) -> String {
+    match cs {
+        Charset::Latin1 => latin1_to_utf8(text),
+        Charset::Utf8 | Charset::Big5 => html_entity_utf8(text),
+    }
+}
+
+/// Decodes HTML character entity references, matching `htmlEntityUTF8` in
+/// `lib/common/utils.c` (kept under its historical name for existing callers).
+pub fn decode_html_entities(text: &str) -> String {
+    html_entity_utf8(text)
 }
 
 /// Estimates the `(width, height)` in points of a single-line text span for a given
@@ -1543,8 +492,8 @@ pub fn estimate_text_size(text: &str, font_name: &str, font_size: f64) -> (f64, 
     estimate_text_size_styled(text, font_name, font_size, false, false)
 }
 
-/// Estimates the `(width, height)` in points of a single-line text span with explicit
-/// `bold` and `italic` flags.
+/// `estimate_textspan_size` from `lib/common/textspan.c` with explicit `bold`/`italic` flags
+/// (`HTML_BF`/`HTML_IF`): `(fontsize * width_1pt, fontsize * LINESPACING)`.
 pub fn estimate_text_size_styled(
     text: &str,
     font_name: &str,
@@ -1557,59 +506,235 @@ pub fn estimate_text_size_styled(
     (width, height)
 }
 
-/// Substitutes Graphviz object-based escape sequences (`\N`, `\G`, `\T`, `\H`, `\E`, `\L`)
-/// while preserving line-formatting escapes (`\n`, `\l`, `\r`, `\\`) for `make_simple_label`,
-/// matching `strdup_and_subst_obj0(str, obj, 0)` in `lib/common/labels.c`.
-pub fn substitute_object_escapes(label: &str, ctx: &LabelSubstContext<'_>) -> String {
-    let mut out = String::with_capacity(label.len());
-    let mut chars = label.chars().peekable();
+/// Kind of graph object a label belongs to, deciding which `strdup_and_subst_obj0`
+/// substitutions are available.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SubstObjKind {
+    Graph,
+    Node,
+    Edge,
+}
+
+impl LabelSubstContext<'_> {
+    fn obj_kind(&self) -> SubstObjKind {
+        if self.is_edge {
+            SubstObjKind::Edge
+        } else if self.is_node || !self.node_name.is_empty() {
+            SubstObjKind::Node
+        } else {
+            SubstObjKind::Graph
+        }
+    }
+}
+
+/// `strdup_and_subst_obj0` from `lib/common/labels.c`.
+///
+/// Replaces `\G`, `\N`, `\E`, `\H`, `\T`, `\L` with the names of the associated objects.
+/// Escapes that do not apply to the object kind stay literal (e.g. `\T` in a node label stays
+/// `\T`, which `make_simple_label` later reduces to `T`), and `\L` stays literal when
+/// `label_text` is empty (no label exists yet). When `esc_backslash` is set `\\` becomes `\`;
+/// every other `\c` dyad is passed through unchanged.
+fn strdup_and_subst_obj0(s: &str, ctx: &LabelSubstContext<'_>, esc_backslash: bool) -> String {
+    if !s.contains('\\') {
+        return s.to_string();
+    }
+    let kind = ctx.obj_kind();
+    let g_str = ctx.graph_name;
+    let n_str = if kind == SubstObjKind::Node {
+        ctx.node_name
+    } else {
+        "\\N"
+    };
+    let (t_str, h_str) = if kind == SubstObjKind::Edge {
+        (ctx.tail_name, ctx.head_name)
+    } else {
+        ("\\T", "\\H")
+    };
+    let l_str = if !ctx.has_label && ctx.label_text.is_empty() {
+        "\\L"
+    } else {
+        ctx.label_text
+    };
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars();
     while let Some(c) = chars.next() {
-        if c == '\\' {
-            if let Some(&next) = chars.peek() {
-                chars.next();
-                match next {
-                    'G' => out.push_str(ctx.graph_name),
-                    'N' => out.push_str(ctx.node_name),
-                    'T' => out.push_str(ctx.tail_name),
-                    'H' => out.push_str(ctx.head_name),
-                    'L' => out.push_str(ctx.label_text),
-                    'E' => {
-                        if ctx.is_edge {
-                            out.push_str(ctx.tail_name);
-                            if let Some(tp) = ctx.tail_port
-                                && !tp.is_empty()
-                            {
-                                out.push(':');
-                                out.push_str(tp);
-                            }
-                            out.push_str(if ctx.is_directed { "->" } else { "--" });
-                            out.push_str(ctx.head_name);
-                            if let Some(hp) = ctx.head_port
-                                && !hp.is_empty()
-                            {
-                                out.push(':');
-                                out.push_str(hp);
-                            }
-                        }
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        let Some(next) = chars.clone().next() else {
+            out.push('\\');
+            continue;
+        };
+        chars.next();
+        match next {
+            'G' => out.push_str(g_str),
+            'N' => out.push_str(n_str),
+            'E' => {
+                if kind == SubstObjKind::Edge {
+                    out.push_str(t_str);
+                    if let Some(tp) = ctx.tail_port.filter(|p| !p.is_empty()) {
+                        out.push(':');
+                        out.push_str(tp);
                     }
-                    other => {
-                        out.push('\\');
-                        out.push(other);
+                    out.push_str(if ctx.is_directed { "->" } else { "--" });
+                    out.push_str(h_str);
+                    if let Some(hp) = ctx.head_port.filter(|p| !p.is_empty()) {
+                        out.push(':');
+                        out.push_str(hp);
                     }
                 }
-            } else {
-                out.push('\\');
             }
-        } else {
-            out.push(c);
+            'T' => out.push_str(t_str),
+            'H' => out.push_str(h_str),
+            'L' => out.push_str(l_str),
+            '\\' if esc_backslash => out.push('\\'),
+            other => {
+                out.push('\\');
+                out.push(other);
+            }
         }
     }
     out
 }
 
-/// Measures a multiline Graphviz label, expanding `\N`, `\G`, `\T`, `\H` escapes and
-/// splitting lines on `\n`, `\l`, `\r` (and literal `'\n'`), matching `make_label` and
-/// `make_simple_label` in `lib/common/labels.c`.
+/// Substitutes Graphviz object escapes (`\N`, `\G`, `\T`, `\H`, `\E`, `\L`) while preserving
+/// line-formatting escapes (`\n`, `\l`, `\r`, `\\`) for `make_simple_label`; this is
+/// `strdup_and_subst_obj0(str, obj, 0)` from `lib/common/labels.c`.
+pub fn substitute_object_escapes(label: &str, ctx: &LabelSubstContext<'_>) -> String {
+    strdup_and_subst_obj0(label, ctx, false)
+}
+
+/// `strdup_and_subst_obj` from `lib/common/labels.c`: object escapes plus `\\` -> `\`
+/// (used for `URL`, `tooltip`, `id`, ... attributes).
+pub fn strdup_and_subst_obj(s: &str, ctx: &LabelSubstContext<'_>) -> String {
+    strdup_and_subst_obj0(s, ctx, true)
+}
+
+/// `storeline` from `lib/common/labels.c`: measures one line and accumulates it into the
+/// label. Empty lines get height `(int)(fontsize * LINESPACING)` (C truncates; non-empty
+/// lines do not), see GV-BUG-012 in `docs/c-bugs-ledger.md`.
+fn storeline(layout: &mut TextLabelLayout, line: String, terminator: TextJustify) {
+    let (width, height) = if line.is_empty() {
+        (0.0, (layout.font_size * LINESPACING).trunc())
+    } else {
+        estimate_text_size(&line, &layout.font_name, layout.font_size)
+    };
+    layout.width = layout.width.max(width);
+    layout.height += height;
+    layout.line_widths.push(width);
+    layout.lines.push(TextLineLayout {
+        text: line,
+        width,
+        height,
+        justify: terminator,
+    });
+}
+
+/// `make_simple_label` from `lib/common/labels.c`: splits `text` (already object- and
+/// entity-substituted) into lines on `\n`, `\l`, `\r` and literal newlines, reducing every
+/// other `\c` to `c`. `width`/`height` are C's `lp->dimen`.
+pub fn make_simple_label(text: &str, font_name: &str, font_size: f64) -> TextLabelLayout {
+    make_simple_label_cs(text, font_name, font_size, Charset::Utf8)
+}
+
+/// [`make_simple_label`] for a graph of charset `cs`. C scans bytes; with `charset=big5` a
+/// byte in `0xA1..=0xFE` takes the next byte with it, so that byte is never an escape.
+pub fn make_simple_label_cs(
+    text: &str,
+    font_name: &str,
+    font_size: f64,
+    cs: Charset,
+) -> TextLabelLayout {
+    let mut layout = TextLabelLayout {
+        font_name: font_name.to_string(),
+        font_size,
+        ..TextLabelLayout::default()
+    };
+    if text.is_empty() {
+        return layout;
+    }
+    let bytes = charset::encode(text);
+    let s: &[u8] = &bytes;
+    let big5 = cs == Charset::Big5;
+    let mut line: Vec<u8> = Vec::new();
+    // C appends the NUL after a trailing backslash, which makes the buffer non-empty without
+    // adding visible text.
+    let mut pending_nul = false;
+    let take = |line: &mut Vec<u8>| charset::decode(std::mem::take(line));
+    let mut i = 0;
+    while i < s.len() {
+        let c = s[i];
+        i += 1;
+        if big5 && (0xA1..=0xFE).contains(&c) {
+            line.push(c);
+            match s.get(i) {
+                Some(&n) => {
+                    line.push(n);
+                    i += 1;
+                }
+                // NB. C protects against an unexpected end here.
+                None => break,
+            }
+        } else if c == b'\\' {
+            match s.get(i) {
+                Some(&j @ (b'n' | b'l' | b'r')) => {
+                    i += 1;
+                    storeline(
+                        &mut layout,
+                        take(&mut line),
+                        TextJustify::from_char(char::from(j)),
+                    );
+                    pending_nul = false;
+                }
+                Some(&other) => {
+                    i += 1;
+                    if !pending_nul {
+                        line.push(other);
+                    }
+                }
+                None => pending_nul = true,
+            }
+        } else if c == b'\n' {
+            storeline(&mut layout, take(&mut line), TextJustify::Center);
+            pending_nul = false;
+        } else if !pending_nul {
+            line.push(c);
+        }
+    }
+    if !line.is_empty() || pending_nul {
+        storeline(&mut layout, take(&mut line), TextJustify::Center);
+    }
+    layout
+}
+
+/// Plain-text branch of `make_label` from `lib/common/labels.c`: object escape substitution,
+/// charset conversion (`latin1ToUTF8` for `charset=latin1`, else `htmlEntityUTF8`) and
+/// `make_simple_label`.
+pub fn make_text_label(
+    label: &str,
+    ctx: &LabelSubstContext<'_>,
+    font_name: &str,
+    font_size: f64,
+    cs: Charset,
+) -> TextLabelLayout {
+    // `\L` is the object's main label (`ND_label(n)->text`, ...): callers pass an empty
+    // `label_text` while that label itself is being made, which leaves `\L` literal.
+    let substituted = strdup_and_subst_obj0(label, ctx, false);
+    let converted = convert_label_text(&substituted, cs);
+    let mut layout = make_simple_label_cs(&converted, font_name, font_size, cs);
+    layout.source = converted;
+    layout
+}
+
+/// Returns `true` if a graph's `charset` attribute selects Latin-1 (`findCharset` in
+/// `lib/common/input.c`: `latin-1`, `latin1`, `l1`, `ISO-8859-1`, `ISO_8859-1`, `ISO8859-1`,
+/// `ISO-IR-100`, case-insensitively).
+pub fn charset_is_latin1(charset: Option<&str>) -> bool {
+    Charset::from_attr(charset) == Charset::Latin1
+}
+
+/// Measures a multiline Graphviz label for a node named `node_name`.
 pub fn measure_multiline_label(
     label: &str,
     node_name: &str,
@@ -1620,75 +745,15 @@ pub fn measure_multiline_label(
     measure_multiline_label_with_context(label, &ctx, font_name, font_size)
 }
 
-/// Measures a multiline Graphviz label with full object escape substitution context.
+/// Measures a multiline plain-text Graphviz label in the charset of the graph being laid
+/// out ([`charset::current`]); see [`make_text_label`].
 pub fn measure_multiline_label_with_context(
     label: &str,
     ctx: &LabelSubstContext<'_>,
     font_name: &str,
     font_size: f64,
 ) -> TextLabelLayout {
-    let substituted = decode_html_entities(&substitute_object_escapes(label, ctx));
-    let mut layout = TextLabelLayout {
-        lines: Vec::new(),
-        line_widths: Vec::new(),
-        width: 0.0,
-        height: 0.0,
-        font_name: font_name.to_string(),
-        font_size,
-    };
-
-    if substituted.is_empty() {
-        return layout;
-    }
-
-    let push_line = |layout: &mut TextLabelLayout, text: String, justify: TextJustify| {
-        let (width, height) = if text.is_empty() {
-            (0.0, font_size * LINESPACING)
-        } else {
-            estimate_text_size(&text, font_name, font_size)
-        };
-        if width > layout.width {
-            layout.width = width;
-        }
-        layout.height += height;
-        layout.line_widths.push(width);
-        layout.lines.push(TextLineLayout {
-            text,
-            width,
-            height,
-            justify,
-        });
-    };
-
-    let mut current_line = String::new();
-    let mut chars = substituted.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            if let Some(&next) = chars.peek() {
-                chars.next();
-                match next {
-                    'n' | 'l' | 'r' => {
-                        let line_text = std::mem::take(&mut current_line);
-                        push_line(&mut layout, line_text, TextJustify::from_char(next));
-                    }
-                    other => {
-                        current_line.push(other);
-                    }
-                }
-            }
-        } else if c == '\n' {
-            let line_text = std::mem::take(&mut current_line);
-            push_line(&mut layout, line_text, TextJustify::Center);
-        } else {
-            current_line.push(c);
-        }
-    }
-
-    if !current_line.is_empty() {
-        push_line(&mut layout, current_line, TextJustify::Center);
-    }
-
-    layout
+    make_text_label(label, ctx, font_name, font_size, charset::current())
 }
 
 #[cfg(test)]
@@ -1701,26 +766,28 @@ mod tests {
         let w_times_a = estimate_text_width_1pt("Times-Roman", "A", false, false);
         assert!((w_times_a - 1479.0 / 2048.0).abs() < 1e-12);
 
-        // Times-Bold: '!' is index 33 (682), '"' is index 34 (1137 vs 836 in regular)
-        let w_times_bold_quote = estimate_text_width_1pt("Times-Bold", "\"", false, false);
-        assert!((w_times_bold_quote - 1137.0 / 2048.0).abs() < 1e-12);
-
-        // Times-Italic: 'A' is index 65 -> width 1251 / 2048 (vs 1479 in regular)
-        let w_times_italic_a = estimate_text_width_1pt("Times-Italic", "A", false, false);
+        // C looks the name up directly in the LUT families: "Times-Bold" and "Times-Italic"
+        // are not family names, so they fall back to regular Times (verified against
+        // `dot -Txdot` 16.1.0: `AAAA` in Times-Bold 14pt is 40.44pt wide, as in Times-Roman).
+        let w_times_bold_a = estimate_text_width_1pt("Times-Bold", "A", false, false);
+        assert!((w_times_bold_a - w_times_a).abs() < 1e-12);
+        let w_times_italic_a = estimate_text_width_1pt("Times", "A", false, true);
         assert!((w_times_italic_a - 1251.0 / 2048.0).abs() < 1e-12);
 
         // Helvetica: 'A' is index 65 -> width 1366 / 2048
         let w_helv_a = estimate_text_width_1pt("Helvetica", "A", false, false);
         assert!((w_helv_a - 1366.0 / 2048.0).abs() < 1e-12);
 
-        // Helvetica-Bold: 'A' is index 65 -> width 1479 / 2048
+        // "Helvetica-Bold" is not a family name either: Times fallback.
         let w_helv_bold_a = estimate_text_width_1pt("Helvetica-Bold", "A", false, false);
+        assert!((w_helv_bold_a - w_times_a).abs() < 1e-12);
+        let w_helv_bold_a = estimate_text_width_1pt("Helvetica", "A", true, false);
         assert!((w_helv_bold_a - 1479.0 / 2048.0).abs() < 1e-12);
 
         // Courier and Courier-Bold: monospace 1229 / 2048 per printable ASCII char
         let w_cour = estimate_text_width_1pt("Courier", "Hello", false, false);
         assert!((w_cour - (5.0 * 1229.0 / 2048.0)).abs() < 1e-12);
-        let w_cour_bold = estimate_text_width_1pt("Courier-Bold", "Hello", false, false);
+        let w_cour_bold = estimate_text_width_1pt("Courier New", "Hello", true, false);
         assert!((w_cour_bold - (5.0 * 1229.0 / 2048.0)).abs() < 1e-12);
 
         // Symbol falls back to Times metrics
@@ -1774,6 +841,9 @@ mod tests {
             tail_port: None,
             head_port: None,
             label_text: "",
+            pen_color: None,
+            is_node: false,
+            has_label: false,
         };
         let layout = measure_multiline_label_with_context(
             "\\G: \\T -> \\H (\\E)",
@@ -1783,5 +853,67 @@ mod tests {
         );
         assert_eq!(layout.lines.len(), 1);
         assert_eq!(layout.lines[0].text, "G_main: src -> dst (src->dst)");
+    }
+
+    #[test]
+    fn utf8_is_measured_per_byte_like_c() {
+        // `dot -Txdot`: "é€x" in Times-Roman 14pt is 24.5pt (5 non-ASCII bytes as spaces + x).
+        let (w, _) = estimate_text_size("é€x", "Times-Roman", 14.0);
+        assert!((w - 24.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn empty_line_height_is_truncated_like_c() {
+        let l = make_simple_label("a\\n\\nb", "Times-Roman", 14.0);
+        assert_eq!(l.lines.len(), 3);
+        assert!((l.lines[1].height - 16.0).abs() < 1e-12);
+        assert!((l.height - (16.8 + 16.0 + 16.8)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn html_entities_follow_c_rules() {
+        assert_eq!(html_entity_utf8("a&amp;b"), "a&b");
+        assert_eq!(html_entity_utf8("&#65;&#x42;"), "AB");
+        assert_eq!(html_entity_utf8("&bogus;"), "&bogus;");
+        assert_eq!(html_entity_utf8("&#0;x"), "&x");
+        assert_eq!(html_entity_utf8("&alpha;"), "\u{3b1}");
+    }
+
+    #[test]
+    fn charset_conversions_run_on_input_bytes() {
+        let raw = |b: &[u8]| charset::decode(b.to_vec());
+        // Latin-1 bytes are converted once; UTF-8 bytes under charset=latin1 twice, as in C.
+        assert_eq!(
+            latin1_to_utf8(&raw(b"caf\xe9 &eacute;")),
+            "caf\u{e9} \u{e9}"
+        );
+        assert_eq!(latin1_to_utf8("\u{e9}"), "\u{c3}\u{a9}");
+        // htmlEntityUTF8 treats a lead byte without continuation bytes as Latin-1.
+        assert_eq!(html_entity_utf8(&raw(b"caf\xe9 x")), "caf\u{e9} x");
+        assert_eq!(html_entity_utf8(&raw(b"\xff")), "\u{ff}");
+        // A 3-byte lead with one continuation byte keeps both, then converts the next one:
+        // the result is not valid UTF-8, like C's.
+        let out = html_entity_utf8(&raw(b"\xe4\xbcz"));
+        assert_eq!(&*charset::encode(&out), b"\xe4\xc2\xbcz");
+        // Width is measured per input byte: one raw byte is one space wide.
+        let w = |t: &str| estimate_text_width_1pt("Times-Roman", t, false, false);
+        assert_eq!(w(&raw(b"\xa4")), w(" "));
+    }
+
+    #[test]
+    fn big5_pairs_bytes_in_make_simple_label() {
+        // E4 B8 AD: E4 takes B8, AD takes the backslash, so "\n" is not a line break.
+        let l = make_simple_label_cs("\u{4e2d}\\nX\\lY", "Times-Roman", 14.0, Charset::Big5);
+        assert_eq!(l.lines.len(), 2);
+        assert_eq!(l.lines[0].text, "\u{4e2d}\\nX");
+        let u = make_simple_label_cs("\u{4e2d}\\nX\\lY", "Times-Roman", 14.0, Charset::Utf8);
+        assert_eq!(u.lines.len(), 3);
+    }
+
+    #[test]
+    fn subst_leaves_inapplicable_escapes() {
+        let ctx = LabelSubstContext::for_node("n");
+        let l = make_text_label("\\N \\T \\L", &ctx, "Times-Roman", 14.0, Charset::Utf8);
+        assert_eq!(l.lines[0].text, "n T L");
     }
 }

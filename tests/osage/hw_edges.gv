@@ -1,0 +1,3 @@
+digraph e {
+layout=osage;
+ a -> b -> c -> a; b -> b; a -> c [label=x]; }

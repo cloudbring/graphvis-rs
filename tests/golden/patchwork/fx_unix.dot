@@ -1,0 +1,181 @@
+digraph unix {
+	graph [bb="0,0,202.48,202.48",
+		layout=patchwork,
+		size="6,6"
+	];
+	node [label="\N",
+		shape=box
+	];
+	"5th Edition"	[height=0.48015,
+		pos="188.02,17.285",
+		width=0.40176];
+	"6th Edition"	[height=0.41155,
+		pos="50.621,187.67",
+		width=0.46871];
+	"5th Edition" -> "6th Edition";
+	"PWB 1.0"	[height=0.41155,
+		pos="84.369,187.67",
+		width=0.46871];
+	"5th Edition" -> "PWB 1.0";
+	LSX	[height=0.41155,
+		pos="118.12,187.67",
+		width=0.46871];
+	"6th Edition" -> LSX;
+	"1 BSD"	[height=0.41155,
+		pos="151.86,187.67",
+		width=0.46871];
+	"6th Edition" -> "1 BSD";
+	"Mini Unix"	[height=0.41155,
+		pos="185.61,187.67",
+		width=0.46871];
+	"6th Edition" -> "Mini Unix";
+	Wollongong	[height=0.48015,
+		pos="14.463,155.57",
+		width=0.40176];
+	"6th Edition" -> Wollongong;
+	Interdata	[height=0.48015,
+		pos="14.463,121",
+		width=0.40176];
+	"6th Edition" -> Interdata;
+	"PWB 1.2"	[height=0.48015,
+		pos="159.1,121",
+		width=0.40176];
+	"PWB 1.0" -> "PWB 1.2";
+	"USG 1.0"	[height=0.48015,
+		pos="188.02,121",
+		width=0.40176];
+	"PWB 1.0" -> "USG 1.0";
+	"2 BSD"	[height=0.48015,
+		pos="130.17,155.57",
+		width=0.40176];
+	"1 BSD" -> "2 BSD";
+	"Unix/TS 3.0"	[height=0.48015,
+		pos="14.463,86.426",
+		width=0.40176];
+	Interdata -> "Unix/TS 3.0";
+	"PWB 2.0"	[height=0.48015,
+		pos="14.463,51.856",
+		width=0.40176];
+	Interdata -> "PWB 2.0";
+	"7th Edition"	[height=0.48015,
+		pos="14.463,17.285",
+		width=0.40176];
+	Interdata -> "7th Edition";
+	"TS 4.0"	[height=0.48015,
+		pos="159.1,51.856",
+		width=0.40176];
+	"Unix/TS 3.0" -> "TS 4.0";
+	"PWB 2.0" -> "Unix/TS 3.0";
+	"8th Edition"	[height=0.48015,
+		pos="43.39,155.57",
+		width=0.40176];
+	"7th Edition" -> "8th Edition";
+	"32V"	[height=0.48015,
+		pos="43.39,121",
+		width=0.40176];
+	"7th Edition" -> "32V";
+	V7M	[height=0.48015,
+		pos="43.39,86.426",
+		width=0.40176];
+	"7th Edition" -> V7M;
+	"Ultrix-11"	[height=0.48015,
+		pos="43.39,51.856",
+		width=0.40176];
+	"7th Edition" -> "Ultrix-11";
+	Xenix	[height=0.48015,
+		pos="43.39,17.285",
+		width=0.40176];
+	"7th Edition" -> Xenix;
+	"UniPlus+"	[height=0.48015,
+		pos="72.316,155.57",
+		width=0.40176];
+	"7th Edition" -> "UniPlus+";
+	"9th Edition"	[height=0.48015,
+		pos="101.24,155.57",
+		width=0.40176];
+	"8th Edition" -> "9th Edition";
+	"3 BSD"	[height=0.48015,
+		pos="72.316,121",
+		width=0.40176];
+	"32V" -> "3 BSD";
+	V7M -> "Ultrix-11";
+	"2.8 BSD"	[height=0.48015,
+		pos="159.1,155.57",
+		width=0.40176];
+	"2 BSD" -> "2.8 BSD";
+	"2.8 BSD" -> "Ultrix-11";
+	"2.9 BSD"	[height=0.48015,
+		pos="188.02,155.57",
+		width=0.40176];
+	"2.8 BSD" -> "2.9 BSD";
+	"4 BSD"	[height=0.48015,
+		pos="72.316,86.426",
+		width=0.40176];
+	"3 BSD" -> "4 BSD";
+	"4.1 BSD"	[height=0.48015,
+		pos="72.316,51.856",
+		width=0.40176];
+	"4 BSD" -> "4.1 BSD";
+	"4.1 BSD" -> "8th Edition";
+	"4.1 BSD" -> "2.8 BSD";
+	"4.2 BSD"	[height=0.48015,
+		pos="72.316,17.285",
+		width=0.40176];
+	"4.1 BSD" -> "4.2 BSD";
+	"4.3 BSD"	[height=0.48015,
+		pos="101.24,121",
+		width=0.40176];
+	"4.2 BSD" -> "4.3 BSD";
+	"Ultrix-32"	[height=0.48015,
+		pos="130.17,121",
+		width=0.40176];
+	"4.2 BSD" -> "Ultrix-32";
+	"PWB 1.2" -> "PWB 2.0";
+	"CB Unix 1"	[height=0.48015,
+		pos="101.24,86.426",
+		width=0.40176];
+	"USG 1.0" -> "CB Unix 1";
+	"USG 2.0"	[height=0.48015,
+		pos="101.24,51.856",
+		width=0.40176];
+	"USG 1.0" -> "USG 2.0";
+	"CB Unix 2"	[height=0.48015,
+		pos="101.24,17.285",
+		width=0.40176];
+	"CB Unix 1" -> "CB Unix 2";
+	"USG 3.0"	[height=0.48015,
+		pos="130.17,51.856",
+		width=0.40176];
+	"USG 2.0" -> "USG 3.0";
+	"CB Unix 3"	[height=0.48015,
+		pos="130.17,86.426",
+		width=0.40176];
+	"CB Unix 2" -> "CB Unix 3";
+	"Unix/TS++"	[height=0.48015,
+		pos="159.1,86.426",
+		width=0.40176];
+	"CB Unix 3" -> "Unix/TS++";
+	"PDP-11 Sys V"	[height=0.48015,
+		pos="188.02,86.426",
+		width=0.40176];
+	"CB Unix 3" -> "PDP-11 Sys V";
+	"CB Unix 3" -> "TS 4.0";
+	"Unix/TS++" -> "TS 4.0";
+	"USG 3.0" -> "Unix/TS 3.0";
+	"Unix/TS 1.0"	[height=0.48015,
+		pos="130.17,17.285",
+		width=0.40176];
+	"Unix/TS 1.0" -> "Unix/TS 3.0";
+	"System V.0"	[height=0.48015,
+		pos="188.02,51.856",
+		width=0.40176];
+	"TS 4.0" -> "System V.0";
+	"System V.2"	[height=0.48015,
+		pos="159.1,17.285",
+		width=0.40176];
+	"System V.0" -> "System V.2";
+	"System V.3"	[height=0.41155,
+		pos="16.874,187.67",
+		width=0.46871];
+	"System V.2" -> "System V.3";
+}

@@ -1,0 +1,26 @@
+graph {
+	graph [bb="0,0,244.56,180",
+		layout=fdp
+	];
+	node [label="\N"];
+	Triangle	[height=0.68889,
+		pos="87.493,81",
+		shape=polygon,
+		sides=3,
+		width=2.4304];
+	Rectangle	[height=0.5,
+		pos="68.493,162",
+		shape=polygon,
+		sides=4,
+		width=0.99962];
+	Pentagon	[height=0.5,
+		pos="186.49,146",
+		shape=polygon,
+		sides=5,
+		width=1.613];
+	Hexagon	[height=0.5,
+		pos="141.49,18",
+		shape=polygon,
+		sides=6,
+		width=1.4721];
+}

@@ -1,0 +1,113 @@
+name: Pages
+
+# Builds the documentation site (site/, Astro Starlight) with the WASM package for its live
+# checks and rustdoc under /api/, and deploys it to GitHub Pages.
+# The site's fidelity data, gallery outputs and C references are committed (they need the C
+# oracle, which CI does not have); this workflow only runs the steps that do not.
+
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: "true"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Run sccache-cache
+        uses: Mozilla-Actions/sccache-action@v0.0.7
+      - name: Fall back to no sccache if its cache is unavailable
+        run: |
+          if ! sccache --start-server; then
+            echo "::warning::sccache could not start; building without it"
+            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
+          fi
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      # wasm-bindgen-cli must match the wasm-bindgen crate in Cargo.lock exactly.
+      - name: Read wasm-bindgen version from Cargo.lock
+        id: wb
+        run: |
+          v=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Cache wasm-bindgen-cli
+        id: wb-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-${{ runner.os }}-${{ steps.wb.outputs.version }}
+      - name: Install wasm-bindgen-cli
+        if: steps.wb-cache.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version "${{ steps.wb.outputs.version }}" --locked
+
+      # Same build as the npm package (opt-level z, fat LTO); wasm-opt is skipped when absent.
+      - name: Build the WASM package for the live checks
+        run: scripts/site-wasm.sh
+
+      - name: Build rustdoc
+        run: cargo doc --workspace --no-deps
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      # prebuild copies docs/porting into the site and the issue manifest into What's left;
+      # postbuild checks every internal link.
+      - name: Build the site
+        working-directory: site
+        run: npm run build
+
+      - name: Add rustdoc under /api/
+        run: |
+          mkdir -p site/dist/api
+          cp -R target/doc/. site/dist/api/
+          rm -f site/dist/api/.lock
+          cat > site/dist/api/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>graphvis-rs API</title>
+          <meta http-equiv="refresh" content="0; url=gv_engine/index.html">
+          <link rel="canonical" href="gv_engine/index.html">
+          <p><a href="gv_engine/index.html">gv_engine</a>, the pipeline. Other crates are listed in its sidebar.</p>
+          EOF
+          node scripts/site-check-links.mjs site/dist
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

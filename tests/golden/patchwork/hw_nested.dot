@@ -1,0 +1,66 @@
+graph nested {
+	graph [bb="0,0,149.16,149.16",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_1 {
+		graph [area=2,
+			bb="78.25,46.928,149.16,149.16"
+		];
+		subgraph cluster_11 {
+			graph [bb="78.25,103.33,149.16,149.16"];
+			c	[area=2,
+				height=0.63653,
+				pos="100.07,126.25",
+				width=0.6061];
+			d	[height=0.50922,
+				pos="135.53,130.83",
+				width=0.37882];
+			e	[area=0.25,
+				height=0.12731,
+				pos="135.53,107.92",
+				width=0.37882];
+		}
+		a	[area=3,
+			height=0.78342,
+			pos="104.84,75.131",
+			width=0.73869];
+		b	[area=1,
+			height=0.78342,
+			pos="140.3,75.131",
+			width=0.24623];
+	}
+	subgraph cluster_2 {
+		graph [bb="0.0001676,46.928,78.25,149.16"];
+		subgraph cluster_21 {
+			graph [bb="0.0001676,46.928,39.125,72.487"];
+			g	[height=0.35499,
+				pos="19.563,59.708",
+				width=0.5434];
+		}
+		subgraph cluster_22 {
+			graph [bb="39.125,46.928,78.25,72.487"];
+		}
+		f	[area=6,
+			height=1.065,
+			pos="39.125,110.83",
+			width=1.0868];
+	}
+	subgraph plain {
+		h	[height=0.65178,
+			pos="138.51,23.464",
+			width=0.29596];
+		i	[area=2,
+			height=0.65178,
+			pos="106.55,23.464",
+			width=0.59192];
+	}
+	a -- f;
+	j	[area=4,
+		height=0.65178,
+		pos="42.619,23.464",
+		width=1.1838];
+	g -- j;
+}

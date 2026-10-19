@@ -1,0 +1,22 @@
+graph many {
+layout=osage;
+
+
+n0 [width=0.3, height=0.3];
+n1 [width=0.5, height=0.44999999999999996];
+n2 [width=0.7, height=0.6];
+n3 [width=0.9000000000000001, height=0.3];
+n4 [width=0.3, height=0.44999999999999996];
+n5 [width=0.5, height=0.6];
+n6 [width=0.7, height=0.3];
+n7 [width=0.9000000000000001, height=0.44999999999999996];
+n8 [width=0.3, height=0.6];
+n9 [width=0.5, height=0.3];
+n10 [width=0.7, height=0.44999999999999996];
+n11 [width=0.9000000000000001, height=0.6];
+n12 [width=0.3, height=0.3];
+n13 [width=0.5, height=0.44999999999999996];
+n14 [width=0.7, height=0.6];
+n15 [width=0.9000000000000001, height=0.3];
+n16 [width=0.3, height=0.44999999999999996];
+}

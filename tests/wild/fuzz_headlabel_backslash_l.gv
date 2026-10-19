@@ -1,0 +1,3 @@
+digraph "G" {
+"n3" -> "n15" [label="αβγ", headlabel="\L", class="ecls"];
+}

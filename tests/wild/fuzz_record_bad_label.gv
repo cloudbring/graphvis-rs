@@ -1,0 +1,3 @@
+graph "G" {
+r1 [shape=record, label="{a|b"];
+}

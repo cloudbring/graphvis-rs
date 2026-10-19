@@ -1,0 +1,11 @@
+graph G {
+	graph [bb="0,0,86,68",
+		layout=sfdp
+	];
+	node [label="\N"];
+	a	[height=0.94444,
+		label="",
+		pos="43,34",
+		shape=tripleoctagon,
+		width=1.1944];
+}

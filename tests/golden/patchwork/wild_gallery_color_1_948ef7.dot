@@ -1,0 +1,21 @@
+digraph G {
+	graph [bb="0,0,44.722,44.722",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box
+	];
+	subgraph cluster_yellow {
+		graph [bb="0.00055901,0.00055901,44.722,44.722",
+			color=yellow
+		];
+		a	[color=red,
+			height=0.62113,
+			pos="11.181,22.361",
+			width=0.31056];
+		b	[color=green,
+			height=0.62113,
+			pos="33.542,22.361",
+			width=0.31056];
+	}
+}

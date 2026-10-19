@@ -1,0 +1,17 @@
+digraph deep {
+layout=fdp;
+
+
+subgraph cluster_l1 {
+  a;
+  subgraph cluster_l2 {
+    b;
+    subgraph cluster_l3 { c -> d; }
+  }
+}
+subgraph cluster_r { e -> f; }
+a -> b -> c;
+d -> e;
+f -> a;
+g -> d;
+}

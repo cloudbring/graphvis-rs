@@ -1,0 +1,10 @@
+graph cross {
+layout=fdp;
+
+maxiter=50;
+subgraph cluster_0 { a -- b -- c; }
+subgraph cluster_1 { d -- e -- f; }
+subgraph cluster_2 { g -- h; }
+a -- d; b -- e; c -- f;
+a -- g; f -- h; c -- h;
+}

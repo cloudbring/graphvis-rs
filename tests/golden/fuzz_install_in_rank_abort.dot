@@ -1,0 +1,17 @@
+graph G {
+	graph [bb="0,0,0,0"];
+	node [label="\N"];
+	subgraph cluster3 {
+		graph [bb="0,0,0,0"];
+		n8	[height=0.5,
+			pos="0,0",
+			width=0.75];
+	}
+	{
+		graph [rank=source];
+		n9	[height=0.5,
+			pos="0,0",
+			width=0.75];
+	}
+	n8 -- n9;
+}

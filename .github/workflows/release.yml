@@ -1,4 +1,4 @@
-name: Publish & Release (Crates.io, NPM, JSR, WASI, GitHub Releases)
+name: Build WASM Packages (no publishing)
 
 on:
   push:

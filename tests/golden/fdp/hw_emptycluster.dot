@@ -1,0 +1,24 @@
+graph emptyc {
+	graph [bb="0,0,168.84,130.93",
+		layout=fdp
+	];
+	node [label="\N"];
+	subgraph cluster_empty {
+		graph [bb="98.835,54.135,168.84,130.93",
+			label=nothing,
+			lheight=0.23,
+			lp="133.84,118.53",
+			lwidth=0.59
+		];
+	}
+	subgraph cluster_one {
+		graph [bb="3.9968e-15,2.677,70,54.677"];
+		a	[height=0.5,
+			pos="35,28.677",
+			width=0.75];
+	}
+	b	[height=0.5,
+		pos="106.46,18",
+		width=0.75];
+	a -- b	[pos="61.61,24.701 67.642,23.8 74.046,22.843 80.069,21.943"];
+}

@@ -1,0 +1,8 @@
+graph G {
+layout=neato;
+mode="KK";
+model="circuit";
+a -- b;
+b -- c;
+c -- a;
+}

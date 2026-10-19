@@ -27,6 +27,50 @@ pub fn render(
     gv_engine::render_dot(dot_source, engine, format).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
+/// Renders every graph in a DOT string (a file may hold several), one output string per graph,
+/// like the `dot` command line does for a multi-graph input file.
+#[wasm_bindgen(js_name = renderAll)]
+pub fn render_all(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+) -> std::result::Result<Vec<String>, JsValue> {
+    gv_engine::render_dot_all(
+        dot_source,
+        engine,
+        format,
+        &gv_engine::GlobalAttrs::default(),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+/// [`render_all`] for a file's raw bytes, as the `dot` command line reads them: bytes that are
+/// not UTF-8 (a `charset=latin1` file, say) are kept rather than replaced, and the result is
+/// the bytes the command line writes, every graph's output concatenated. A JS string cannot
+/// carry such bytes, so `renderAll` cannot reproduce C on these inputs.
+///
+/// Like `dot`, the graphs read before a syntax error are still rendered and returned; it
+/// throws only when the error leaves nothing to render.
+#[wasm_bindgen(js_name = renderAllBytes)]
+pub fn render_all_bytes(
+    dot_source: &[u8],
+    engine: &str,
+    format: &str,
+) -> std::result::Result<Vec<u8>, JsValue> {
+    let src = gv_core::charset::decode_slice(dot_source);
+    let (parts, err) = gv_engine::render_dot_all_partial(
+        &src,
+        engine,
+        format,
+        &gv_engine::GlobalAttrs::default(),
+        gv_engine::LayoutOptions::default(),
+    );
+    match err {
+        Some(e) if parts.is_empty() => Err(JsValue::from_str(&e.to_string())),
+        _ => Ok(gv_core::charset::encode(&parts.concat()).into_owned()),
+    }
+}
+
 /// Convenience helper to render a DOT graph directly to an SVG string using the specified layout engine.
 #[wasm_bindgen(js_name = renderSvg)]
 pub fn render_svg(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
@@ -76,5 +120,5 @@ pub fn supported_formats() -> String {
 /// Returns the version of `graphvis-rs` (compatible with Graphviz 16.1.0).
 #[wasm_bindgen]
 pub fn version() -> String {
-    "graphvis-rs 0.1.0 (Graphviz 16.1.0 pure-Rust WASM)".to_string()
+    "graphvis-rs 0.1.0 (Rust port of Graphviz 16.1.0)".to_string()
 }

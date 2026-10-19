@@ -9,12 +9,13 @@ members = [
     "crates/gv-engine",
     "crates/gv-wasm",
     "crates/gv-cli",
+    "crates/gv-diff",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-license = "EPL-2.0 OR MIT"
+license = "EPL-2.0"
 repository = "https://github.com/cloudbring/graphvis-rs"
 authors = ["graphvis-rs contributors"]
 rust-version = "1.85"
@@ -30,6 +31,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 wasm-bindgen = "0.2.100"
+libm = "0.2.16"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

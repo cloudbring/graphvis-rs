@@ -1,23 +1,116 @@
 //! High-level Graphviz orchestration engine (`gv-engine`).
 
 pub use gv_core::{Graph, GraphvizError, Result};
-pub use gv_layout::{LayoutEngine, layout_graph};
-pub use gv_parser::parse_dot;
-pub use gv_render::{OutputFormat, render_graph};
+pub use gv_layout::{LayoutEngine, LayoutOptions, layout_graph, layout_graph_with_options};
+pub use gv_parser::{GlobalAttrs, parse_dot, parse_dot_all};
+pub use gv_render::{OutputFormat, render_graph, render_graph_named};
 
-/// End-to-end DOT rendering pipeline for any supported engine and output format.
+/// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
+/// first graph in `dot_source`.
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
-    let layout_engine = LayoutEngine::parse(engine)?;
     let output_format = OutputFormat::parse(format)?;
-    let mut graph = parse_dot(dot_source)?;
-    if output_format != OutputFormat::Canon {
-        layout_graph(&mut graph, layout_engine)?;
+    // Each call is one C process: per-process counters (gradient and anchor ids) restart.
+    gv_render::reset_render_state();
+    let graph = parse_dot(dot_source)?;
+    render_parsed(
+        graph,
+        engine,
+        output_format,
+        format,
+        LayoutOptions::default(),
+    )
+}
+
+/// Renders every graph in `dot_source`, applying `globals` (`-G`/`-N`/`-E`) before each graph body.
+pub fn render_dot_all(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+    globals: &GlobalAttrs,
+) -> Result<Vec<String>> {
+    render_dot_all_with_options(
+        dot_source,
+        engine,
+        format,
+        globals,
+        LayoutOptions::default(),
+    )
+}
+
+/// [`render_dot_all`] with engine options such as `-n` (keep input positions).
+pub fn render_dot_all_with_options(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+    globals: &GlobalAttrs,
+    options: LayoutOptions,
+) -> Result<Vec<String>> {
+    let output_format = OutputFormat::parse(format)?;
+    gv_render::reset_render_state();
+    parse_dot_all(dot_source, globals)?
+        .into_iter()
+        .map(|graph| render_parsed(graph, engine, output_format, format, options))
+        .collect()
+}
+
+/// [`render_dot_all_with_options`] that renders the graphs read before a syntax error
+/// and returns that error alongside, as `dot` does.
+pub fn render_dot_all_partial(
+    dot_source: &str,
+    engine: &str,
+    format: &str,
+    globals: &GlobalAttrs,
+    options: LayoutOptions,
+) -> (Vec<String>, Option<gv_core::GraphvizError>) {
+    let output_format = match OutputFormat::parse(format) {
+        Ok(f) => f,
+        Err(e) => return (Vec::new(), Some(e)),
+    };
+    gv_render::reset_render_state();
+    let (graphs, parse_err) = gv_parser::parse_dot_all_partial(dot_source, globals);
+    let mut out = Vec::with_capacity(graphs.len());
+    for graph in graphs {
+        match render_parsed(graph, engine, output_format, format, options) {
+            Ok(s) => out.push(s),
+            Err(e) => return (out, Some(e)),
+        }
     }
-    render_graph(&graph, output_format)
+    (out, parse_err)
+}
+
+fn render_parsed(
+    mut graph: Graph,
+    engine: &str,
+    output_format: OutputFormat,
+    format_name: &str,
+    options: LayoutOptions,
+) -> Result<String> {
+    // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
+    let layout_engine = match graph.graph_attrs.get("layout") {
+        Some(name) if !name.trim().is_empty() => LayoutEngine::parse(name.trim())?,
+        _ => LayoutEngine::parse(engine)?,
+    };
+    let lname = format_name.to_ascii_lowercase();
+    if output_format != OutputFormat::Canon && lname != "dot_json" && lname != "xdot_json" {
+        layout_graph_with_options(&mut graph, layout_engine, options)?;
+    }
+    render_graph_named(&graph, output_format, format_name)
 }
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn repeated_renders_are_identical() {
+        // Gradient and HTML anchor ids are per-process statics in C; a library call must
+        // not see the counts left by an earlier call.
+        let src = r#"digraph { a [style=filled, fillcolor="red:blue"];
+            b [label=<<TABLE><TR><TD HREF="x">c</TD></TR></TABLE>>]; a -> b }"#;
+        let first = render_dot(src, "dot", "svg").unwrap();
+        assert_eq!(first, render_dot(src, "dot", "svg").unwrap());
+        assert!(first.contains("_l_0"));
+    }
+
     use super::*;
     use std::fs;
     use std::path::PathBuf;
@@ -26,6 +119,22 @@ mod tests {
     fn smoke_render_svg() {
         let svg = render_dot("digraph G { a -> b; }", "dot", "svg").unwrap();
         assert!(svg.contains("<svg"));
+    }
+
+    #[test]
+    fn render_dot_all_renders_every_graph_with_globals() {
+        let mut globals = GlobalAttrs::default();
+        globals.node.insert("shape".into(), "box".into());
+        let outs = render_dot_all(
+            "digraph G { a -> b }\ndigraph H { c -> d }",
+            "dot",
+            "svg",
+            &globals,
+        )
+        .unwrap();
+        assert_eq!(outs.len(), 2);
+        assert!(outs[0].contains("<title>a</title>") && !outs[0].contains("<ellipse"));
+        assert!(outs[1].contains("<title>c</title>"));
     }
 
     #[test]
@@ -72,7 +181,7 @@ mod tests {
         );
 
         for path in entries {
-            let src = fs::read_to_string(&path).unwrap();
+            let src = gv_core::charset::decode(fs::read(&path).unwrap());
             let svg = render_dot(&src, "dot", "svg")
                 .unwrap_or_else(|e| panic!("Failed rendering SVG for {}: {e}", path.display()));
             assert!(svg.contains("<svg"), "Missing <svg in {}", path.display());

@@ -1,0 +1,15 @@
+graph G {
+layout=circo;
+
+	Marden--ldt;
+	Marden--kg;
+	Marden--hg;
+	Cannon--ldt;
+	Cannon--kg;
+	Cannon--ggt;
+	Epstein--kg;
+	Epstein--ldt;
+	Epstein--ggt;
+	Epstein--hg;
+	Conway--ggt;
+}

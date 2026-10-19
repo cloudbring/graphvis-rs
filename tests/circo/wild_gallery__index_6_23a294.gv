@@ -1,0 +1,5 @@
+graph G {
+layout=circo;
+
+  yen [label="¥"]
+}

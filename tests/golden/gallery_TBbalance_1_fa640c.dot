@@ -1,0 +1,30 @@
+digraph {
+	graph [TBbalance=min,
+		bb="0,0,283.49,180",
+		layout=dot
+	];
+	node [label="\N"];
+	{
+		graph [rank=min];
+		min	[height=0.5,
+			pos="37.857,162",
+			width=0.75];
+	}
+	{
+		graph [rank=max];
+		max	[height=0.5,
+			pos="37.857,18",
+			width=0.76841];
+	}
+	middle	[height=0.5,
+		pos="37.857,90",
+		width=1.0516];
+	min -> middle	[pos="e,37.857,108.1 37.857,143.7 37.857,136.41 37.857,127.73 37.857,119.54"];
+	middle -> max	[pos="e,37.857,36.104 37.857,71.697 37.857,64.407 37.857,55.726 37.857,47.536"];
+	"Floater 1"	[height=0.5,
+		pos="128.86,162",
+		width=1.2676];
+	"Floater 2"	[height=0.5,
+		pos="237.86,162",
+		width=1.2676];
+}

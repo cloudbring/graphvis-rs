@@ -1,0 +1,1 @@
+digraph G { packmode=clust; label="root label"; subgraph cluster_x { label="X"; a -> b; c; } b -> d; subgraph cluster_y { e -> f; subgraph cluster_z { label="Z"; g; } } f -> g; h -> i; j; }

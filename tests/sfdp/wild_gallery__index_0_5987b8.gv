@@ -1,0 +1,11 @@
+digraph G {
+layout=sfdp;
+
+  graph [fontsize=24]
+  edge [fontsize=24]
+  node [fontsize=24]
+  ranksep = 1.5
+  nodesep = .25
+  edge [style="setlinewidth(3)"]
+  a -> b -> c
+}

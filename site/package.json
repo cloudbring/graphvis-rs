@@ -1,0 +1,26 @@
+{
+  "name": "graphvis-rs-site",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "sync": "node ../scripts/site-sync-docs.mjs && node ../scripts/site-issues.mjs",
+    "predev": "npm run sync",
+    "dev": "astro dev",
+    "prebuild": "npm run sync",
+    "build": "astro build",
+    "postbuild": "node ../scripts/site-check-links.mjs dist",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.6",
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/fragment-mono": "^5.3.0",
+    "astro": "^7.4.0",
+    "diff": "^9.0.0",
+    "marked": "^18.1.1",
+    "sharp": "^0.35.5",
+    "starlight-links-validator": "^0.27.0"
+  }
+}

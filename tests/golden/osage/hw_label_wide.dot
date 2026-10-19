@@ -1,0 +1,26 @@
+graph emptyc {
+	graph [bb="0,0,257,85.6",
+		layout=osage
+	];
+	node [label="\N"];
+	subgraph cluster_empty {
+		graph [bb="219,9,237,27"];
+	}
+	subgraph cluster_lbl {
+		graph [bb="0,40,195.26,85.6",
+			label="a very very very long cluster label",
+			lheight=0.23,
+			lp="97.628,73.2",
+			lwidth=2.66
+		];
+	}
+	subgraph cluster_one {
+		graph [bb="199,43,257,83"];
+		a	[height=0.5,
+			pos="228,63",
+			width=0.75];
+	}
+	b	[height=0.5,
+		pos="98,18",
+		width=0.75];
+}

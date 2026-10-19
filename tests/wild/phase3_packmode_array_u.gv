@@ -1,0 +1,1 @@
+graph G { packmode="array_u"; pack=4; subgraph s1 { sortv=3; a -- b; } subgraph s2 { sortv=1; c -- d; } e; f -- g -- h; }

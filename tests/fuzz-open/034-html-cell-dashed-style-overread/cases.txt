@@ -1,0 +1,1 @@
+Not a fuzz case: found while porting the renderer (docs/porting/render.md, Known differences).

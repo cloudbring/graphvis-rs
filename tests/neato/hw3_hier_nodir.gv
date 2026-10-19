@@ -1,0 +1,3 @@
+graph nd {
+layout=neato;
+ mode=hier; edge [dir=none]; a -- b -- c -- a; c -- d; }

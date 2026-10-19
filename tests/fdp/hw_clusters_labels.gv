@@ -1,0 +1,9 @@
+graph clus {
+layout=fdp;
+
+
+subgraph cluster_a { label=A; a1 -- a2 -- a3 -- a1; }
+subgraph cluster_b { label="cluster B"; labelloc=b; b1 -- b2 -- b3; }
+a1 -- b1;
+c -- a2;
+}

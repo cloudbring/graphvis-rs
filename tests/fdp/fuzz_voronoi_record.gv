@@ -1,0 +1,6 @@
+strict graph "G" {
+layout=fdp;
+overlap="voronoi";
+"n0" [shape="record"];
+"n0" -- "n1" [];
+}

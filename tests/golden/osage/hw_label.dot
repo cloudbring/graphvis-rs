@@ -1,0 +1,64 @@
+graph clus {
+	graph [bb="0,0,388,169.6",
+		label="root label",
+		layout=osage,
+		lheight=0.23,
+		lp="194,12.4",
+		lwidth=0.74
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="210,64.8,326,169.6",
+			lheight=0.23,
+			lp="268,157.2",
+			lwidth=0.74
+		];
+		a1	[height=0.5,
+			pos="239,124.8",
+			width=0.75];
+		a2	[height=0.5,
+			pos="297,124.8",
+			width=0.75];
+		a1 -- a2	[pos="266.3,124.8 267.48,124.8 268.66,124.8 269.83,124.8"];
+		a3	[height=0.5,
+			pos="239,84.8",
+			width=0.75];
+	}
+	subgraph cluster_b {
+		graph [bb="0,64.8,206,169.6",
+			lheight=0.23,
+			lp="103,157.2",
+			lwidth=0.74
+		];
+		b1	[height=0.5,
+			pos="177,124.8",
+			width=0.75];
+		b2	[height=0.5,
+			pos="74,124.8",
+			shape=box,
+			width=2];
+		b3	[height=0.5,
+			pos="74,84.8",
+			width=0.75];
+	}
+	subgraph cluster_c {
+		graph [bb="330,84.8,388,149.6",
+			label=C,
+			lheight=0.23,
+			lp="359,137.2",
+			lwidth=0.13
+		];
+		c1	[height=0.5,
+			pos="359,104.8",
+			width=0.75];
+	}
+	a1 -- b1	[pos="211.63,124.8 209.16,124.8 206.66,124.8 204.2,124.8"];
+	d	[height=0.5,
+		pos="103,42.8",
+		width=0.75];
+	e	[height=0.5,
+		pos="268,42.8",
+		shape=circle,
+		width=0.5];
+	d -- e	[pos="130.25,42.8 164.11,42.8 220.97,42.8 249.9,42.8"];
+}

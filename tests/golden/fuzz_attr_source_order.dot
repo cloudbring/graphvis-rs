@@ -1,0 +1,14 @@
+graph {
+	graph [bb="0,0,126,45.735"];
+	node [label="\N"];
+	v0	[height=0.5,
+		penwidth=4.05,
+		pos="27,27.735",
+		width=0.75,
+		zzz=9];
+	v2	[height=0.5,
+		pos="99,27.735",
+		width=0.75];
+	v0:se -- v2	[constraint=false,
+		pos="45.834,9.9012 56.798,-6.758 74.776,1.2047 86.5,11.579"];
+}

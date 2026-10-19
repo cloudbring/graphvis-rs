@@ -1,0 +1,7 @@
+digraph G {
+layout=fdp;
+
+graph [charset=latin1]
+node [fontsize=10]
+a [label = "���������������������������"];
+}

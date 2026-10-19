@@ -1,0 +1,9 @@
+graph "G" {
+layout=neato;
+splines="polyline";
+node [width="2.46"];
+"n8" [height="1.47"];
+"n1" -- subgraph "s8" {"n8" "n4"};
+"n1" -- "n8" [];
+"n0" -- "n6" [];
+}

@@ -1,0 +1,7 @@
+graph G {
+layout=circo;
+splines=spline;
+n7 [shape=record];
+n1 -- n7:n;
+n2;
+}

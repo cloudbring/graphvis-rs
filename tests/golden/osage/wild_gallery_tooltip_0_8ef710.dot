@@ -1,0 +1,31 @@
+digraph {
+	graph [bb="0,0,155.56,89.6",
+		label="Graph Label",
+		layout=osage,
+		lheight=0.23,
+		lp="77.782,12.4",
+		lwidth=0.98,
+		tooltip="Graph Tooltip"
+	];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="0,24.8,155.56,89.6",
+			label="Cluster Label",
+			lheight=0.23,
+			lp="77.782,77.2",
+			lwidth=1.05,
+			tooltip="Cluster Tooltip"
+		];
+		Node1	[height=0.5,
+			pos="38.782,44.8",
+			tooltip="Node1 Tooltip",
+			width=1.0217];
+		Node2	[height=0.5,
+			pos="116.78,44.8",
+			width=1.0217];
+		Node1 -> Node2	[label="Edge",
+			lp="90.573,53.2",
+			pos="e,79.724,44.8 75.955,44.8 76.111,44.8 76.268,44.8 76.426,44.8",
+			tooltip="Edge Tooltip"];
+	}
+}

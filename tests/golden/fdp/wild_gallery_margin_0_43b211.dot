@@ -1,0 +1,21 @@
+graph {
+	graph [bb="0,0,566,364.8",
+		layout=fdp
+	];
+	node [label="\N"];
+	"1.5x0.5"	[height=1.2333,
+		margin="1.5,0.5",
+		pos="437,44.4",
+		shape=rect,
+		width=3.5833];
+	"0.5x1.5"	[height=3.2333,
+		margin="0.5,1.5",
+		pos="365,248.4",
+		shape=rect,
+		width=1.5833];
+	"1.5x1.5"	[height=3.2333,
+		margin=1.5,
+		pos="129,182.4",
+		shape=rect,
+		width=3.5833];
+}

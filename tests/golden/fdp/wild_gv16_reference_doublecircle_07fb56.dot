@@ -1,0 +1,11 @@
+graph G {
+	graph [bb="0,0,52,52",
+		layout=fdp
+	];
+	node [label="\N"];
+	a	[height=0.72222,
+		label="",
+		pos="26,26",
+		shape=doublecircle,
+		width=0.72222];
+}

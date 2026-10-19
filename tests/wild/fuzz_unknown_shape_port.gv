@@ -1,0 +1,4 @@
+graph "G" {
+"n0" [shape=bogus];
+"n0" -- "n7" [tailport="sw"];
+}

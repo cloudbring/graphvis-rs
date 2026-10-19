@@ -1,0 +1,6 @@
+digraph ce2 {
+layout=fdp;
+ splines=true;
+subgraph cluster_o { o1; subgraph cluster_i { i1 -> i2; } }
+cluster_i -> z; z -> cluster_o; o1 -> i1;
+}

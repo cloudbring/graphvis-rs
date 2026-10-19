@@ -1,0 +1,6 @@
+digraph "fuzz 12951" {
+splines="none";
+pack="true";
+"n2" [];
+"n1" -> "n9";
+}

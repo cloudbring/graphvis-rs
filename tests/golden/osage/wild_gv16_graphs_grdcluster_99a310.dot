@@ -1,0 +1,65 @@
+digraph G {
+	graph [bb="0,0,182,84",
+		layout=osage
+	];
+	node [label="\N"];
+	subgraph cluster0 {
+		graph [bb="0,44,58,84",
+			fillcolor="blue:red",
+			style="filled,rounded"
+		];
+		0	[height=0.5,
+			pos="29,64",
+			width=0.75];
+	}
+	subgraph cluster1 {
+		graph [bb="62,44,120,84",
+			fillcolor="blue:red",
+			peripheries=0,
+			style=filled
+		];
+		1	[height=0.5,
+			pos="91,64",
+			width=0.75];
+	}
+	subgraph cluster2 {
+		graph [bb="124,44,182,84",
+			fillcolor=blue,
+			style=filled
+		];
+		2	[height=0.5,
+			pos="153,64",
+			width=0.75];
+	}
+	subgraph cluster3 {
+		graph [bb="0,0,58,40",
+			fillcolor=red,
+			peripheries=0,
+			style="filled,rounded"
+		];
+		3	[height=0.5,
+			pos="29,20",
+			width=0.75];
+	}
+	subgraph cluster4 {
+		graph [bb="62,0,120,40",
+			bgcolor="red:blue",
+			peripheries=0
+		];
+		4	[height=0.5,
+			pos="91,20",
+			width=0.75];
+	}
+	subgraph cluster5 {
+		graph [bb="124,0,182,40",
+			bgcolor="red:blue"
+		];
+		5	[height=0.5,
+			pos="153,20",
+			width=0.75];
+	}
+	0 -> 1	[pos="e,63.8,64 56.375,64 56.529,64 56.683,64 56.837,64"];
+	1 -> 2	[pos="e,125.8,64 118.37,64 118.53,64 118.68,64 118.84,64"];
+	2 -> 3	[pos="e,53.142,28.566 128.8,55.412 110.28,48.84 84.48,39.686 63.754,32.332"];
+	3 -> 4	[pos="e,63.8,20 56.375,20 56.529,20 56.683,20 56.837,20"];
+}

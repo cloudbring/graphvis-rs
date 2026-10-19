@@ -1,0 +1,5 @@
+strict digraph "G" {
+"n11" -> "n51" [taillabel="x", arrowhead="box"];
+"n58" -> "n21" [penwidth="3.34"];
+"n41" -> "n18" [headport="se", minlen="0"];
+}

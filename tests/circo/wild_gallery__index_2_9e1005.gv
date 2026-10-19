@@ -1,0 +1,5 @@
+graph {
+layout=circo;
+
+  B -- A [taillabel = "tail"]
+}

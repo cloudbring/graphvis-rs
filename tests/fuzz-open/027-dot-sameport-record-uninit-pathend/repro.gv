@@ -1,0 +1,14 @@
+digraph "fuzz 1278" {
+"n3" [shape="record", label="{{{\N}|<p0> long field text|<p1> long field text}}"];
+subgraph "cluster_0" {
+"n2" [];
+"n6" [];
+"n4" [];
+}
+"n0" -> "n3" [penwidth="2.25", weight="1"];
+"n2" -> "n4" [label="中文标签\rfoo_bar\rthen", dir="none"];
+"n3" -> "n2":"w" [weight="1", sametail="st1"];
+"n3" -> "n6" [headport="e", weight="2", sametail="st1"];
+{"n1" "n6" "n0"} -> "n0":"nw";
+"n4" -> "n6" [headclip="false", lhead="cluster_0"];
+}

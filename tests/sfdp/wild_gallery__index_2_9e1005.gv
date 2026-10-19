@@ -1,0 +1,5 @@
+graph {
+layout=sfdp;
+
+  B -- A [taillabel = "tail"]
+}

@@ -1,0 +1,15 @@
+digraph mainmap {
+	graph [URL="http://www.research.att.com/base.html",
+		bb="0,0,98.235,108"
+	];
+	node [label="\N"];
+	command	[URL="http://www.research.att.com/command.html",
+		height=0.5,
+		pos="49.117,90",
+		width=1.3644];
+	output	[height=0.5,
+		pos="49.117,18",
+		width=0.99212];
+	command -> output	[URL="colors.html",
+		pos="e,49.117,36.104 49.117,71.697 49.117,64.407 49.117,55.726 49.117,47.536"];
+}

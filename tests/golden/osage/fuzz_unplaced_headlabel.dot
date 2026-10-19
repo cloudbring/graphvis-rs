@@ -1,0 +1,16 @@
+graph G {
+	graph [bb="0,0,112,36",
+		forcelabels=false,
+		layout=osage
+	];
+	node [label="\N"];
+	v0	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	v1	[height=0.5,
+		pos="85,18",
+		width=0.75];
+	v0 -- v1	[head_lp="0,0",
+		headlabel=中文标签,
+		pos="54.302,18 55.477,18 56.656,18 57.831,18"];
+}
