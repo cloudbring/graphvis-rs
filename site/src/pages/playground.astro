@@ -42,7 +42,7 @@ const initial = `digraph proof {
 		<div class="panes">
 			<div class="editor">
 				<label class="label" for="pg-src">DOT source</label>
-				<textarea id="pg-src" spellcheck="false" autocapitalize="off" autocomplete="off" data-src>{initial}</textarea>
+				<textarea id="pg-src" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" data-src>{initial}</textarea>
 				<div class="starters">
 					<span class="label">Start from</span>
 					{starters.map((s) => <button type="button" class="chip" data-load={url(`samples/${s.name}/input.gv`)} data-load-engine={s.engine}>{s.name}</button>)}
@@ -110,6 +110,9 @@ const initial = `digraph proof {
 		border: 0.5px solid var(--control-border);
 		border-radius: var(--r-control);
 		tab-size: 2;
+		white-space: pre;
+		overflow-wrap: normal;
+		overflow-x: auto;
 	}
 	textarea:focus-visible {
 		outline: 2px solid var(--focus);
