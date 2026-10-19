@@ -9,12 +9,14 @@ static RAND: Mutex<CRand> = Mutex::new(CRand::new_unseeded());
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rand() -> c_int {
-    RAND.lock().unwrap().rand()
+    // A panic here would abort the process (it cannot unwind out of `extern "C"`), so a
+    // poisoned lock is recovered rather than unwrapped.
+    RAND.lock().unwrap_or_else(|e| e.into_inner()).rand()
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn srand(seed: c_uint) {
-    RAND.lock().unwrap().srand(seed);
+    RAND.lock().unwrap_or_else(|e| e.into_inner()).srand(seed);
 }
 
 /// Apple's `qsort`. The algorithm only compares and moves elements, so sorting element
@@ -34,7 +36,11 @@ pub unsafe extern "C" fn qsort(
     if n < 2 || size == 0 {
         return;
     }
-    let bytes = n * size;
+    // C requires `n * size` to be a valid object size; a caller that breaks that gets an
+    // abort rather than a slice of the wrong length.
+    let Some(bytes) = n.checked_mul(size) else {
+        std::process::abort();
+    };
     // SAFETY: the caller guarantees `base` holds `n * size` bytes.
     let array = unsafe { std::slice::from_raw_parts_mut(base.cast::<u8>(), bytes) };
     let copy = array.to_vec();

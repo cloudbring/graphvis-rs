@@ -250,6 +250,11 @@ tests/golden/e2e.libm-matched.json` records C's output with the portable functio
 | macOS `portable-math`, Linux | 2470 / 2589 | **2590 / 2590** |
 | wasm32 (`scripts/wasm-e2e.mjs --golden tests/golden/e2e.libm-matched.json`) | 2470 / 2589 | **2590 / 2590** |
 
+The denominators differ because each oracle has its own set of stable inputs: an input counts
+only if C gave the same output on every run of that oracle, and C with Apple's libm and C with
+the portable functions are unstable on slightly different files (12 and 11). The same holds for
+the Linux table below.
+
 So with the same math functions on both sides, the portable build and the browser build are
 byte-identical to C on every stable input, including all 119 files that differ from stock C.
 The ratchet `e2e_svg_identity_with_matched_libm_does_not_regress`
