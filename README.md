@@ -2,7 +2,7 @@
 
 # graphvis-rs
 
-**A Rust + WebAssembly port of Graphviz 16.1.0** (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS its output is byte-identical to C Graphviz on every input in the project's test corpora.
+**A Rust + WebAssembly port of Graphviz 16.1.0** ([documentation and evidence](https://cloudbring.github.io/graphvis-rs/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS its output is byte-identical to C Graphviz on every input in the project's test corpora.
 
 ---
 
@@ -19,14 +19,15 @@ Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fa
 
 | Check | macOS (Apple libm, as C uses) | Linux and WASM |
 | :--- | :---: | :---: |
-| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora | 2,589 / 2,589 | 2,470 / 2,589 |
+| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (12 inputs skipped because C's own output changes between runs) | 2,589 / 2,589 | 2,470 / 2,589 |
 | Layout geometry, main corpus (565 files: wild graphs, upstream fixtures, fuzz reproducers) | 565 / 565 exact | 564 / 565 |
 | Per-engine corpora, exact | neato 442/442, sfdp 297/297, circo 280/280, fdp 386/386, osage 180/180, patchwork 141/141, twopi 282/289 | see `tests/golden/*.portable.json` |
-| Renderers given C's layout (`gv-diff render`, svg/xdot/dot/json) | all identical | all identical |
+| Renderers given C's layout (`gv-diff render`, 547 layouts, 7 formats) | svg, xdot, dot, json, json0 all identical; plain and plain-ext 535/537 | same |
 | C's own test graphs (`graphs/`, `tests/graphs/`, `tests/regression_tests/`), dot with base, LR, ortho, concentrate and newrank variants | 379 / 379 per variant (376 for ortho, where C times out on 3) | not measured |
 | Differential fuzzing (6,000 random graphs, all engines, final round) | 98.8% identical | not measured |
 
 - **Linux and WASM** use a portable math library. Apple's `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit (see `docs/porting/libm.md`). Linux on aarch64 and x86_64 and the WASM build give exactly the same output as each other.
+- **plain/plain-ext:** in two Latin-1 files C prints an empty label where the port prints the text, because C reads the label from freed memory (`lib/common/output.c`); the same C bug makes 10 other references unstable.
 - **twopi:** the 7 inexact files are a floating-point tie in edge routing that C itself breaks differently from build to build.
 - **Fuzzing:** the remaining differences are documented in `docs/porting/fuzzing.md`. Most are C nondeterminism (results that depend on memory addresses) and C crashes.
 
