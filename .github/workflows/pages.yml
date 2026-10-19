@@ -19,7 +19,6 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # Overrides the macOS sccache path in .cargo/config.toml.
   RUSTC_WRAPPER: sccache
   SCCACHE_GHA_ENABLED: "true"
 
@@ -33,6 +32,12 @@ jobs:
           targets: wasm32-unknown-unknown
       - name: Run sccache-cache
         uses: Mozilla-Actions/sccache-action@v0.0.7
+      - name: Fall back to no sccache if its cache is unavailable
+        run: |
+          if ! sccache --start-server; then
+            echo "::warning::sccache could not start; building without it"
+            echo "RUSTC_WRAPPER=" >> "$GITHUB_ENV"
+          fi
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v7
         with:

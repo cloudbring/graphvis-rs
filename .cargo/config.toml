@@ -1,10 +1,8 @@
-# Shared build and caching configuration for graphvis-rs
-# Uses sccache for cross-worktree, cross-branch incremental compilation caching
-# and caps build parallelism so local system resources remain responsive.
-
-[build]
-rustc-wrapper = "/opt/homebrew/bin/sccache"
-jobs = 6
+# Shared build configuration for graphvis-rs.
+#
+# A compiler cache helps when working in several worktrees; set it outside the repository,
+# e.g. `rustc-wrapper = "sccache"` under [build] in ~/.cargo/config.toml or in a
+# .cargo/config.toml in the directory that holds your worktrees.
 
 [target.wasm32-unknown-unknown]
 rustflags = ["-C", "opt-level=3"]
