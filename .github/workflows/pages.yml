@@ -4,14 +4,21 @@ name: Pages
 # checks and rustdoc under /api/, and deploys it to GitHub Pages.
 # The site's fidelity data, gallery outputs and C references are committed (they need the C
 # oracle, which CI does not have); this workflow only runs the steps that do not.
+#
+# It runs after the Cross-platform workflow finishes on master, and builds the site's
+# Cross-platform page from that run's outputs, so the page shows what CI produced for the
+# commit being deployed.
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Cross-platform"]
+    types: [completed]
     branches: ["master"]
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: pages
@@ -25,8 +32,12 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'cancelled'
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The commit the Cross-platform run tested, not whatever master is now.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -68,6 +79,12 @@ jobs:
 
       - name: Build rustdoc
         run: cargo doc --workspace --no-deps
+
+      # A failed comparison is still published: the page then shows the differences.
+      - name: Fetch the cross-platform results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/site-cross-platform.sh ${{ github.event.workflow_run.id }}
 
       - name: Install site dependencies
         working-directory: site

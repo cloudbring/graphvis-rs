@@ -28,7 +28,7 @@ def main():
         sys.exit(f"need at least two platform directories in {a.root}, found {dirs}")
     plats = [json.load(open(os.path.join(a.root, d, "platform.json"))) | {"dir": d} for d in dirs]
     hashes = {d: json.load(open(os.path.join(a.root, d, "hashes.json"))) for d in dirs}
-    ref = dirs[0]
+    ref = "linux-x86_64" if "linux-x86_64" in dirs else dirs[0]
 
     keys = sorted(set().union(*hashes.values()))
     corpus_diff = []
