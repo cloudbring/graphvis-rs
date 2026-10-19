@@ -1,0 +1,171 @@
+---
+/**
+ * Renders a sample with the port's WASM build in the reader's browser and compares the
+ * result with C's stored output, generator comment aside. Runs when scrolled into view.
+ */
+import Mark from './Mark.astro';
+import { url } from '../lib/data';
+
+interface Props {
+	input: string;
+	c: string;
+	engine: string;
+	/** Whether the portable-math build matched C when the sample was made. */
+	expectIdentical: boolean;
+	/** id of the DiffViewer that can show the browser's output */
+	viewer?: string;
+	injected?: string[];
+}
+const { input, c, engine, expectIdentical, viewer, injected = [] } = Astro.props;
+---
+
+<aside class="live not-content" data-live data-input={input} data-c={c} data-engine={engine} data-expect={String(expectIdentical)} data-viewer={viewer}>
+	<div class="live-head">
+		<span class="label">Live check, in this browser</span>
+		<button type="button" class="btn" data-run>Run again</button>
+	</div>
+	<p class="live-status" data-status aria-live="polite">
+		<Mark kind="pending" label="Waiting to load the WASM build (1.7 MB, about 700 KB compressed)" />
+	</p>
+	<p class="live-detail mono" data-detail></p>
+	<div class="live-actions" data-actions hidden>
+		<button type="button" class="btn" data-show>Compare the browser's output in the viewer</button>
+	</div>
+	<p class="live-note">
+		The browser runs <code>renderAllBytes(input, "{engine}", "svg")</code> on the same bytes the C reference read. WASM uses the portable math
+		library, not Apple's libm, so a layout that depends on the last bit of <code>sin</code> or <code>pow</code> can legitimately differ (<a
+			href={url('porting/libm/')}>why</a
+		>).
+		{injected.length > 0 && <>The WASM API takes no <code>-G</code> flags, so this check reads a copy with <code>{injected.join(' ')}</code> written at the top of the graph; C gives the same bytes for that copy (checked when the sample was built).</>}
+	</p>
+</aside>
+
+<style>
+	.live {
+		margin-block: 1.5rem;
+		padding: 1rem;
+		border: 0.5px solid var(--rule-default);
+		border-left: 2px solid var(--register);
+		border-radius: var(--r-panel);
+		background: var(--stock-raised);
+	}
+	.live[data-state='off'] {
+		border-left-color: var(--plate-m);
+	}
+	.live[data-state='expected'] {
+		border-left-color: var(--plate-y);
+	}
+	.live-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+	}
+	.live-status {
+		margin: 0.75rem 0 0;
+		font-size: var(--sl-text-lg);
+	}
+	.live-status :global(.mark) {
+		font-size: var(--sl-text-base);
+		font-weight: 600;
+		white-space: normal;
+		line-height: 1.35;
+	}
+	.live-status :global(.mark svg) {
+		width: 1.125rem;
+		height: 1.125rem;
+	}
+	.live-detail {
+		margin: 0.5rem 0 0;
+		font-size: var(--sl-text-2xs);
+		color: var(--key-3);
+		min-height: 1em;
+	}
+	.live-actions {
+		margin-top: 0.75rem;
+	}
+	.live-note {
+		margin: 0.75rem 0 0;
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+		line-height: 1.55;
+	}
+	.live-note code {
+		font-size: 0.95em;
+	}
+</style>
+
+<script>
+	import { markHTML, normalise } from '../lib/marks';
+	import { renderBytes, wasmVersion } from '../lib/wasm';
+
+	async function run(el: HTMLElement) {
+		const status = el.querySelector<HTMLElement>('[data-status]')!;
+		const detail = el.querySelector<HTMLElement>('[data-detail]')!;
+		const actions = el.querySelector<HTMLElement>('[data-actions]')!;
+		const btn = el.querySelector<HTMLButtonElement>('[data-run]')!;
+		btn.disabled = true;
+		actions.hidden = true;
+		el.dataset.state = 'running';
+		status.innerHTML = markHTML('pending', 'Loading the WASM build…');
+		try {
+			const [src, cText] = await Promise.all([
+				fetch(el.dataset.input!).then((r) => r.arrayBuffer()),
+				fetch(el.dataset.c!).then((r) => r.text()),
+			]);
+			const version = await wasmVersion();
+			status.innerHTML = markHTML('pending', 'Rendering…');
+			await new Promise((r) => setTimeout(r, 16));
+			const res = await renderBytes(new Uint8Array(src), el.dataset.engine!);
+			const ms = `${res.ms.toFixed(res.ms < 10 ? 1 : 0)} ms`;
+			if (!res.ok) {
+				el.dataset.state = 'off';
+				status.innerHTML = markHTML('off', `The WASM build failed: ${res.error}`);
+				detail.textContent = `${version} · ${ms}`;
+				return;
+			}
+			const same = normalise(res.text) === normalise(cText);
+			const bytes = new Blob([normalise(res.text)]).size.toLocaleString('en-US');
+			detail.textContent = `${version}, wasm32, portable math · ${ms} · ${bytes} bytes compared`;
+			if (same) {
+				el.dataset.state = 'register';
+				status.innerHTML = markHTML('register', "Your browser just reproduced C's output byte for byte.");
+			} else {
+				const expected = el.dataset.expect === 'false';
+				el.dataset.state = expected ? 'expected' : 'off';
+				status.innerHTML = expected
+					? markHTML('upstream', "Your browser's output differs from C here, as expected: this sample depends on Apple's libm, which the portable build does not reproduce.")
+					: markHTML('off', "Your browser's output differs from C. This sample matched under portable math when it was built, so this is worth reporting.");
+				const viewer = el.dataset.viewer && document.getElementById(el.dataset.viewer);
+				if (viewer) {
+					actions.hidden = false;
+					el.querySelector<HTMLButtonElement>('[data-show]')!.onclick = () => {
+						viewer.dispatchEvent(new CustomEvent('gv:replace-right', { detail: { text: res.text, label: 'graphvis-rs (this browser, WASM)' } }));
+						viewer.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+					};
+				}
+			}
+		} catch (e) {
+			el.dataset.state = 'off';
+			status.innerHTML = markHTML('off', `Could not run the check: ${(e as Error).message}`);
+		} finally {
+			btn.disabled = false;
+		}
+	}
+
+	const io = new IntersectionObserver(
+		(entries) => {
+			for (const e of entries) {
+				if (e.isIntersecting) {
+					io.unobserve(e.target);
+					run(e.target as HTMLElement);
+				}
+			}
+		},
+		{ rootMargin: '200px' },
+	);
+	for (const el of document.querySelectorAll<HTMLElement>('[data-live]')) {
+		el.querySelector('[data-run]')!.addEventListener('click', () => run(el));
+		io.observe(el);
+	}
+</script>

@@ -1,0 +1,608 @@
+---
+/**
+ * Compares C's output with the port's: overprint (the two plates, with an opacity slider),
+ * side by side, blink, a pixel diff of both rasterised at the same size, and a line diff
+ * of the source. SVG sources are compared after dropping the generator comment, exactly
+ * as gv-diff does.
+ *
+ * Listens for `gv:replace-right` ({ text, label }) to swap in another right-hand output
+ * (the live WASM check uses it).
+ */
+interface Props {
+	c: string;
+	rust: string;
+	/** svg | png | text */
+	kind?: 'svg' | 'png' | 'text';
+	leftLabel?: string;
+	rightLabel?: string;
+	id?: string;
+}
+const { c, rust, kind = 'svg', leftLabel = 'C Graphviz 16.1.0', rightLabel = 'graphvis-rs', id } = Astro.props;
+const visual = kind !== 'text';
+const modes = [
+	...(visual
+		? [
+				['overprint', 'Overprint'],
+				['side', 'Side by side'],
+				['blink', 'Blink'],
+				['pixels', 'Pixel diff'],
+			]
+		: []),
+	...(kind !== 'png' ? [['source', 'Source diff']] : []),
+];
+---
+
+<section class="dv not-content" data-dv data-c={c} data-r={rust} data-kind={kind} data-left={leftLabel} data-right={rightLabel} id={id}>
+	<div class="dv-bar">
+		<div class="seg" role="group" aria-label="Comparison view">
+			{modes.map(([m, l], i) => <button type="button" data-mode={m} aria-pressed={i === 0 ? 'true' : 'false'}>{l}</button>)}
+		</div>
+		<div class="dv-verdict" data-verdict aria-live="polite">
+			<span class="mark is-pending"><span>Comparing…</span></span>
+		</div>
+	</div>
+
+	<div class="dv-stage">
+		{visual && (
+			<div class="dv-pane" data-pane="overprint">
+				<div class="dv-sheetwrap">
+					<div class="sheet crop dv-sheet">
+						<div class="plates" data-plates>
+							<span class="plate plate-c"><img data-img="c" alt={`${leftLabel} output, cyan plate`} /></span>
+							<span class="plate plate-m" data-mplate><img data-img="r" alt={`${rightLabel} output, magenta plate`} /></span>
+						</div>
+					</div>
+				</div>
+				<div class="dv-controls">
+					<label class="dv-slider">
+						<span class="label">Magenta plate</span>
+						<input type="range" min="0" max="100" value="100" data-opacity aria-label={`${rightLabel} plate opacity`} />
+						<output class="mono" data-opacity-out>100%</output>
+					</label>
+					<p class="dv-legend">
+						<span class="chip c">C only</span>
+						<span class="chip m">port only</span>
+						<span class="chip reg">both: in register</span>
+					</p>
+				</div>
+			</div>
+		)}
+		{visual && (
+			<div class="dv-pane" data-pane="side" hidden>
+				<div class="dv-side">
+					<figure>
+						<figcaption><span class="chip c">C</span> {leftLabel}</figcaption>
+						<div class="sheet dv-sheet"><img data-img="c" alt={`${leftLabel} output`} /></div>
+					</figure>
+					<figure>
+						<figcaption><span class="chip m">Rust</span> <span data-right-label>{rightLabel}</span></figcaption>
+						<div class="sheet dv-sheet"><img data-img="r" alt={`${rightLabel} output`} /></div>
+					</figure>
+				</div>
+			</div>
+		)}
+		{visual && (
+			<div class="dv-pane" data-pane="blink" hidden>
+				<div class="dv-sheetwrap">
+					<div class="sheet crop dv-sheet dv-blink">
+						<img data-img="c" data-blink="c" alt={`${leftLabel} output`} />
+						<img data-img="r" data-blink="r" alt={`${rightLabel} output`} />
+					</div>
+				</div>
+				<div class="dv-controls">
+					<button type="button" class="btn" data-blink-toggle>Pause</button>
+					<button type="button" class="btn" data-blink-step>Show the other</button>
+					<p class="dv-legend" data-blink-now aria-live="polite"></p>
+				</div>
+			</div>
+		)}
+		{visual && (
+			<div class="dv-pane" data-pane="pixels" hidden>
+				<div class="dv-sheetwrap">
+					<div class="sheet crop dv-sheet"><canvas data-canvas aria-label="Pixel difference"></canvas></div>
+				</div>
+				<div class="dv-controls">
+					<p class="dv-legend" data-pixels-report><span class="mark is-pending"><span>Rasterising…</span></span></p>
+					<p class="dv-legend">
+						<span class="chip c">C ink only</span>
+						<span class="chip m">port ink only</span>
+						<span class="chip">same pixel, faded</span>
+					</p>
+				</div>
+			</div>
+		)}
+		{kind !== 'png' && (
+			<div class="dv-pane" data-pane="source" hidden={visual}>
+				<div class="dv-source" data-source></div>
+			</div>
+		)}
+	</div>
+</section>
+
+<style>
+	.dv {
+		margin-block: 1.5rem;
+		border: 0.5px solid var(--rule-default);
+		border-radius: var(--r-panel);
+		background: var(--stock-raised);
+	}
+	.dv-bar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.75rem;
+		border-bottom: 0.5px solid var(--rule-default);
+	}
+	.dv-verdict {
+		font-size: var(--sl-text-xs);
+	}
+	.dv-stage {
+		padding: 1.5rem 1rem 1rem;
+	}
+	.dv-sheetwrap {
+		display: flex;
+		justify-content: center;
+		overflow: auto;
+		max-height: 72vh;
+		padding: 0.5rem;
+	}
+	.dv-sheet {
+		width: fit-content;
+		max-width: 100%;
+		padding: 0.75rem;
+		margin: 0;
+	}
+	.dv-sheet img,
+	.dv-sheet canvas {
+		display: block;
+		max-width: 100%;
+		height: auto;
+	}
+	.dv :global(.plates) {
+		width: fit-content;
+		max-width: 100%;
+	}
+	.dv-blink {
+		display: grid;
+	}
+	.dv-blink img {
+		grid-area: 1 / 1;
+	}
+	.dv-blink img[data-hidden] {
+		visibility: hidden;
+	}
+	.dv-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem 1.5rem;
+		margin-top: 1rem;
+	}
+	.dv-controls p {
+		margin: 0;
+	}
+	.dv-legend {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+	}
+	.dv-slider {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	.dv-slider input {
+		width: 10rem;
+		accent-color: var(--plate-m);
+	}
+	.dv-slider output {
+		width: 3rem;
+		font-size: var(--sl-text-xs);
+		color: var(--key-2);
+	}
+	.dv-side {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+		gap: 1rem;
+	}
+	.dv-side figure {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+	.dv-side figcaption {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: var(--sl-text-xs);
+		color: var(--key-2);
+	}
+	.dv-side .dv-sheet {
+		width: auto;
+		display: flex;
+		justify-content: center;
+		overflow: auto;
+		max-height: 60vh;
+	}
+	.dv :global(.dv-empty) {
+		padding: 2rem 1rem;
+		font-size: var(--sl-text-sm);
+		color: #646a76;
+		text-align: center;
+	}
+	.dv-source {
+		font-family: var(--face-mono);
+		font-size: var(--sl-text-2xs);
+		line-height: 1.6;
+	}
+	.dv-source :global(.ds-ok) {
+		font-family: var(--face);
+		font-size: var(--sl-text-sm);
+		color: var(--key-2);
+		display: grid;
+		gap: 0.75rem;
+	}
+	.dv-source :global(.ds-ok p) {
+		margin: 0;
+	}
+	.dv-source :global(.ds-gen) {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.25rem 0.75rem;
+		font-family: var(--face-mono);
+		font-size: var(--sl-text-2xs);
+		padding: 0.75rem;
+		border: 0.5px solid var(--rule);
+		border-radius: var(--r-control);
+		background: var(--stock-sunk);
+		overflow-x: auto;
+		white-space: pre;
+	}
+	.dv-source :global(.ds-gen b) {
+		font-weight: 400;
+		color: var(--key-3);
+	}
+	.dv-source :global(.ds-table) {
+		display: block;
+		overflow: auto;
+		max-height: 70vh;
+		border: 0.5px solid var(--rule);
+		border-radius: var(--r-control);
+		background: var(--stock-sunk);
+	}
+	.dv-source :global(.ds-row) {
+		display: grid;
+		grid-template-columns: 3.5rem 3.5rem 1.25rem 1fr;
+		white-space: pre;
+		min-width: max-content;
+	}
+	.dv-source :global(.ds-row > span:nth-child(-n + 2)) {
+		color: var(--key-4);
+		text-align: right;
+		padding-right: 0.5rem;
+		user-select: none;
+	}
+	.dv-source :global(.ds-row > span:nth-child(3)) {
+		text-align: center;
+		user-select: none;
+	}
+	.dv-source :global(.ds-del) {
+		background: var(--c-wash);
+		color: var(--c-ink);
+	}
+	.dv-source :global(.ds-add) {
+		background: var(--m-wash);
+		color: var(--m-ink);
+	}
+	.dv-source :global(.ds-ctx) {
+		color: var(--key-2);
+	}
+	.dv-source :global(.ds-skip) {
+		padding: 0.25rem 0.5rem;
+		color: var(--key-4);
+		border-block: 0.5px dashed var(--rule-default);
+		font-family: var(--face);
+	}
+	.dv-source :global(.ds-head) {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1rem;
+		align-items: center;
+		margin-bottom: 0.75rem;
+		font-family: var(--face);
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+	}
+	:global([data-theme='dark']) .dv-sheet,
+	:global(:root:not([data-theme='light'])) .dv-sheet {
+		filter: brightness(0.94);
+	}
+</style>
+
+<script>
+	import { diffLines } from 'diff';
+	import { escapeHTML, generatorLines, markHTML, normalise } from '../lib/marks';
+
+	type State = {
+		el: HTMLElement;
+		kind: string;
+		cText: string;
+		rText: string;
+		cUrl: string;
+		rUrl: string;
+		rightLabel: string;
+		pixelsDone: boolean;
+		blinkTimer?: number;
+		blinkShowing: 'c' | 'r';
+	};
+
+	const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	async function fetchText(u: string) {
+		const res = await fetch(u);
+		if (!res.ok) throw new Error(`${u}: HTTP ${res.status}`);
+		return res.text();
+	}
+
+	function svgUrl(text: string, kind: string, fallback: string) {
+		if (kind === 'png') return fallback;
+		return URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
+	}
+
+	function setImages(s: State) {
+		for (const img of s.el.querySelectorAll<HTMLImageElement>('img[data-img]')) {
+			const which = img.dataset.img;
+			const text = which === 'c' ? s.cText : s.rText;
+			const u = which === 'c' ? s.cUrl : s.rUrl;
+			const holder = img.parentElement!;
+			holder.querySelector('.dv-empty')?.remove();
+			const plate = img.closest<HTMLElement>('.plate');
+			const empty = !text.trim() && s.kind !== 'png';
+			img.style.display = empty ? 'none' : '';
+			if (plate) plate.style.display = empty ? 'none' : '';
+			if (empty) {
+				if (!plate && !img.closest('.dv-blink')) {
+					const p = document.createElement('p');
+					p.className = 'dv-empty';
+					p.textContent = which === 'c' ? 'C wrote no output.' : 'The port wrote no output.';
+					holder.append(p);
+				}
+			} else {
+				img.src = u;
+			}
+		}
+	}
+
+	function verdict(s: State) {
+		const v = s.el.querySelector<HTMLElement>('[data-verdict]')!;
+		const a = normalise(s.cText);
+		const b = normalise(s.rText);
+		if (a === b && a.length) {
+			v.innerHTML = markHTML('register', 'Byte-identical, generator comment aside');
+			return true;
+		}
+		if (!b.trim()) {
+			v.innerHTML = markHTML('off', 'Differs: the port wrote no output');
+			return false;
+		}
+		const changes = diffLines(a, b);
+		let del = 0, add = 0;
+		for (const c of changes) {
+			if (c.removed) del += c.count ?? 0;
+			else if (c.added) add += c.count ?? 0;
+		}
+		v.innerHTML = markHTML('off', `Differs: ${del} line${del === 1 ? '' : 's'} only in C, ${add} only in the port`);
+		return false;
+	}
+
+	function renderSource(s: State) {
+		const host = s.el.querySelector<HTMLElement>('[data-source]');
+		if (!host) return;
+		const a = normalise(s.cText);
+		const b = normalise(s.rText);
+		const ga = generatorLines(s.cText);
+		const gb = generatorLines(s.rText);
+		if (a === b) {
+			host.innerHTML = `<div class="ds-ok">${markHTML('register', `${a.split('\n').length - 1} lines, ${new Blob([a]).size.toLocaleString('en-US')} bytes, identical`)}
+				<p>The only lines that differ are the generator comments, which name the program and are dropped before comparing:</p>
+				<div class="ds-gen"><b>C</b><span>${escapeHTML(ga.join(' ') || '(none)')}</span><b>port</b><span>${escapeHTML(gb.join(' ') || '(none)')}</span></div></div>`;
+			return;
+		}
+		const changes = diffLines(a, b);
+		const rows: string[] = [];
+		let ln = 1, rn = 1;
+		const CONTEXT = 3;
+		const LIMIT = 4000;
+		let shown = 0;
+		const row = (cls: string, l: string, r: string, sign: string, text: string) =>
+			`<div class="ds-row ${cls}"><span>${l}</span><span>${r}</span><span>${sign}</span><span>${escapeHTML(text)}</span></div>`;
+		changes.forEach((c, i) => {
+			const lines = c.value.replace(/\n$/, '').split('\n');
+			if (c.added || c.removed) {
+				for (const t of lines) {
+					if (shown++ > LIMIT) return;
+					rows.push(c.removed ? row('ds-del', String(ln++), '', '−', t) : row('ds-add', '', String(rn++), '+', t));
+				}
+				return;
+			}
+			const first = i === 0, last = i === changes.length - 1;
+			const head = first ? 0 : CONTEXT;
+			const tail = last ? 0 : CONTEXT;
+			if (lines.length <= head + tail + 1) {
+				for (const t of lines) rows.push(row('ds-ctx', String(ln++), String(rn++), '', t));
+				return;
+			}
+			for (const t of lines.slice(0, head)) rows.push(row('ds-ctx', String(ln++), String(rn++), '', t));
+			const skip = lines.length - head - tail;
+			rows.push(`<div class="ds-skip">${skip.toLocaleString('en-US')} identical line${skip === 1 ? '' : 's'}</div>`);
+			ln += skip;
+			rn += skip;
+			for (const t of lines.slice(lines.length - tail)) rows.push(row('ds-ctx', String(ln++), String(rn++), '', t));
+		});
+		if (shown > LIMIT) rows.push(`<div class="ds-skip">Diff truncated after ${LIMIT} changed lines.</div>`);
+		host.innerHTML = `<div class="ds-head"><span class="chip c">− C</span><span class="chip m">+ ${escapeHTML(s.rightLabel)}</span><span>Generator comments dropped from both sides. Unchanged runs are folded.</span></div><div class="ds-table" role="table" aria-label="Line diff">${rows.join('')}</div>`;
+	}
+
+	function loadImage(u: string) {
+		return new Promise<HTMLImageElement>((resolve, reject) => {
+			const img = new Image();
+			img.onload = () => resolve(img);
+			img.onerror = () => reject(new Error('could not rasterise'));
+			img.src = u;
+		});
+	}
+
+	async function renderPixels(s: State) {
+		if (s.pixelsDone) return;
+		s.pixelsDone = true;
+		const report = s.el.querySelector<HTMLElement>('[data-pixels-report]')!;
+		const canvas = s.el.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+		if (!s.rText.trim() && s.kind !== 'png') {
+			report.innerHTML = markHTML('off', 'Nothing to compare: the port wrote no output');
+			return;
+		}
+		try {
+			const [ci, ri] = await Promise.all([loadImage(s.cUrl), loadImage(s.rUrl)]);
+			const cw = ci.naturalWidth, ch = ci.naturalHeight, rw = ri.naturalWidth, rh = ri.naturalHeight;
+			const w0 = Math.max(cw, rw), h0 = Math.max(ch, rh);
+			const scale = Math.min(2, 2400 / Math.max(w0, h0, 1));
+			const W = Math.max(1, Math.round(w0 * scale)), H = Math.max(1, Math.round(h0 * scale));
+			const draw = (img: HTMLImageElement, w: number, h: number) => {
+				const cv = document.createElement('canvas');
+				cv.width = W;
+				cv.height = H;
+				const x = cv.getContext('2d', { willReadFrequently: true })!;
+				x.fillStyle = '#fff';
+				x.fillRect(0, 0, W, H);
+				x.drawImage(img, 0, 0, Math.round(w * scale), Math.round(h * scale));
+				return x.getImageData(0, 0, W, H);
+			};
+			const A = draw(ci, cw, ch), B = draw(ri, rw, rh);
+			canvas.width = W;
+			canvas.height = H;
+			canvas.style.width = `${Math.round(W / scale)}px`;
+			const ctx = canvas.getContext('2d')!;
+			const out = ctx.createImageData(W, H);
+			const a = A.data, b = B.data, o = out.data;
+			let differ = 0;
+			for (let i = 0; i < a.length; i += 4) {
+				const la = 0.2126 * a[i] + 0.7152 * a[i + 1] + 0.0722 * a[i + 2];
+				const lb = 0.2126 * b[i] + 0.7152 * b[i + 1] + 0.0722 * b[i + 2];
+				const same = a[i] === b[i] && a[i + 1] === b[i + 1] && a[i + 2] === b[i + 2] && a[i + 3] === b[i + 3];
+				if (same) {
+					const g = 255 - (255 - la) * 0.22;
+					o[i] = o[i + 1] = o[i + 2] = g;
+				} else {
+					differ++;
+					if (la < lb) { o[i] = 0; o[i + 1] = 147; o[i + 2] = 208; }
+					else { o[i] = 212; o[i + 1] = 0; o[i + 2] = 122; }
+				}
+				o[i + 3] = 255;
+			}
+			ctx.putImageData(out, 0, 0);
+			const total = W * H;
+			const size = cw === rw && ch === rh ? '' : ` The drawings differ in size (C ${cw}×${ch}, port ${rw}×${rh}); both are drawn from the top left.`;
+			report.innerHTML =
+				(differ === 0
+					? markHTML('register', `0 of ${total.toLocaleString('en-US')} pixels differ`)
+					: markHTML('off', `${differ.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} pixels differ (${((100 * differ) / total).toFixed(3)}%)`)) +
+				`<span>Rasterised by this browser at ${W}×${H}.${size}</span>`;
+		} catch (e) {
+			report.innerHTML = markHTML('off', `Could not rasterise: ${(e as Error).message}`);
+		}
+	}
+
+	function blink(s: State, on: boolean) {
+		const pane = s.el.querySelector<HTMLElement>('[data-pane="blink"]');
+		if (!pane) return;
+		const toggle = pane.querySelector<HTMLButtonElement>('[data-blink-toggle]')!;
+		window.clearInterval(s.blinkTimer);
+		s.blinkTimer = undefined;
+		if (on && !reduced) {
+			s.blinkTimer = window.setInterval(() => step(s), 650);
+			toggle.textContent = 'Pause';
+		} else {
+			toggle.textContent = reduced ? 'Auto blink is off (reduced motion)' : 'Play';
+			toggle.disabled = reduced;
+		}
+		show(s);
+	}
+	function step(s: State) {
+		s.blinkShowing = s.blinkShowing === 'c' ? 'r' : 'c';
+		show(s);
+	}
+	function show(s: State) {
+		const pane = s.el.querySelector<HTMLElement>('[data-pane="blink"]');
+		if (!pane) return;
+		for (const img of pane.querySelectorAll<HTMLImageElement>('[data-blink]')) {
+			img.toggleAttribute('data-hidden', img.dataset.blink !== s.blinkShowing);
+		}
+		pane.querySelector<HTMLElement>('[data-blink-now]')!.innerHTML =
+			s.blinkShowing === 'c' ? '<span class="chip c">C</span> showing C Graphviz 16.1.0' : `<span class="chip m">Rust</span> showing ${escapeHTML(s.rightLabel)}`;
+	}
+
+	function setMode(s: State, mode: string) {
+		for (const b of s.el.querySelectorAll<HTMLButtonElement>('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
+		for (const p of s.el.querySelectorAll<HTMLElement>('[data-pane]')) p.hidden = p.dataset.pane !== mode;
+		if (mode === 'pixels') renderPixels(s);
+		blink(s, mode === 'blink');
+	}
+
+	function refresh(s: State) {
+		setImages(s);
+		verdict(s);
+		renderSource(s);
+		s.pixelsDone = false;
+		const current = s.el.querySelector<HTMLButtonElement>('[data-mode][aria-pressed="true"]')?.dataset.mode;
+		if (current === 'pixels') renderPixels(s);
+		for (const l of s.el.querySelectorAll('[data-right-label]')) l.textContent = s.rightLabel;
+	}
+
+	async function init(el: HTMLElement) {
+		const kind = el.dataset.kind ?? 'svg';
+		const s: State = {
+			el, kind, cText: '', rText: '', cUrl: el.dataset.c!, rUrl: el.dataset.r!,
+			rightLabel: el.dataset.right ?? 'graphvis-rs', pixelsDone: false, blinkShowing: 'c',
+		};
+		try {
+			if (kind !== 'png') {
+				[s.cText, s.rText] = await Promise.all([fetchText(el.dataset.c!), fetchText(el.dataset.r!)]);
+				s.cUrl = svgUrl(s.cText, kind, el.dataset.c!);
+				s.rUrl = svgUrl(s.rText, kind, el.dataset.r!);
+			} else {
+				s.cText = s.rText = ' ';
+			}
+		} catch (e) {
+			el.querySelector<HTMLElement>('[data-verdict]')!.innerHTML = markHTML('off', `Could not load the outputs: ${(e as Error).message}`);
+			return;
+		}
+		refresh(s);
+		for (const b of el.querySelectorAll<HTMLButtonElement>('[data-mode]')) b.addEventListener('click', () => setMode(s, b.dataset.mode!));
+		const range = el.querySelector<HTMLInputElement>('[data-opacity]');
+		const outp = el.querySelector<HTMLOutputElement>('[data-opacity-out]');
+		const mplate = el.querySelector<HTMLElement>('[data-mplate]');
+		range?.addEventListener('input', () => {
+			mplate!.style.opacity = String(Number(range.value) / 100);
+			outp!.textContent = `${range.value}%`;
+		});
+		el.querySelector('[data-blink-toggle]')?.addEventListener('click', () => blink(s, s.blinkTimer === undefined));
+		el.querySelector('[data-blink-step]')?.addEventListener('click', () => { blink(s, false); step(s); });
+		el.addEventListener('gv:replace-right', ((ev: CustomEvent<{ text: string; label: string }>) => {
+			s.rText = ev.detail.text;
+			s.rightLabel = ev.detail.label;
+			s.rUrl = svgUrl(s.rText, kind, s.rUrl);
+			refresh(s);
+		}) as EventListener);
+		const first = el.querySelector<HTMLButtonElement>('[data-mode]')?.dataset.mode;
+		if (first) setMode(s, first);
+	}
+
+	for (const el of document.querySelectorAll<HTMLElement>('[data-dv]')) init(el);
+</script>

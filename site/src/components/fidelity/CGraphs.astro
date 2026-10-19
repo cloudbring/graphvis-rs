@@ -1,0 +1,18 @@
+---
+import { fidelity, fmt } from '../../lib/data';
+const c = fidelity.c_graphs;
+---
+<div class="scroll-x"><table class="ledger">
+	<thead><tr><th>Variant</th><th>Flags</th><th class="n">Exact</th><th class="n">Compared</th><th>Note</th></tr></thead>
+	<tbody>
+		{c.variants.map((v) => (
+			<tr>
+				<td><strong>{v.name}</strong></td>
+				<td>{v.flags ? <code>{v.flags}</code> : '·'}</td>
+				<td class="n">{fmt(v.exact)}</td>
+				<td class="n">{fmt(v.total)}</td>
+				<td>{'note' in v ? v.note : ''}</td>
+			</tr>
+		))}
+	</tbody>
+</table></div>

@@ -1,0 +1,700 @@
+[
+ {
+  "name": "fsm",
+  "title": "Finite-state machine",
+  "engine": "dot",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/fsm.gv",
+  "features": [
+   "rankdir=LR",
+   "edge labels",
+   "doublecircle"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "c5f9528b6b9eea9a1338ae59b3e4334a104a7afd5d0966fa35966d021e684153",
+   "rust": "0c426629c6214e1a0cd817ff751794b4de5bc027d2fd6edffdbbebb8ebf0b076"
+  },
+  "bytes": {
+   "input": 605,
+   "c": 9758,
+   "rust": 9767
+  }
+ },
+ {
+  "name": "clust4",
+  "title": "Clusters",
+  "engine": "dot",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/clust4.gv",
+  "features": [
+   "clusters",
+   "filled styles"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "f8b33359aff39f67f4dfd45927c4853eecd4d57bff64e56bb0ab742cdfd12ec4",
+   "rust": "ea4eeca225a9eb13055c19ce31acbd6b51d3a299cdc495c112d6257c7bdccbd7"
+  },
+  "bytes": {
+   "input": 401,
+   "c": 8231,
+   "rust": 8240
+  }
+ },
+ {
+  "name": "unix",
+  "title": "Unix family tree",
+  "engine": "dot",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/unix.gv",
+  "features": [
+   "hierarchy",
+   "41 nodes"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "bf928876925234f7cfaab4683a753423508b74d3c040d2b31506c9752838dacf",
+   "rust": "25895f95ef7b56f40d52ce30595285a9123ac4eb05e156ef311422f66054bb31"
+  },
+  "bytes": {
+   "input": 1433,
+   "c": 28453,
+   "rust": 28462
+  }
+ },
+ {
+  "name": "structs",
+  "title": "Record ports",
+  "engine": "dot",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/structs.gv",
+  "features": [
+   "records",
+   "ports"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "fc74dead1e83e86e827e1ff03055cc43fdcc51048093d6d99dcbebe2d4cc47d1",
+   "rust": "f8bd9579b177a9a34e928b0909ab950b53fd980eb9c3fef20c0a7039dc09adce"
+  },
+  "bytes": {
+   "input": 307,
+   "c": 3901,
+   "rust": 3910
+  }
+ },
+ {
+  "name": "html-tables",
+  "title": "HTML-like tables",
+  "engine": "dot",
+  "flags": [],
+  "source": "tests/fixtures/html2.gv",
+  "features": [
+   "HTML labels",
+   "ports",
+   "fonts"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "aa71f3a71869aff115f8535c8a3b99faff4b3478f71a45568fb39e4a4de15186",
+   "rust": "1a2af46bc45f582244c490885f3693dc248b44906e53ef135e09d30b45f4e81a"
+  },
+  "bytes": {
+   "input": 1414,
+   "c": 7749,
+   "rust": 7758
+  }
+ },
+ {
+  "name": "ortho-clusters",
+  "title": "Orthogonal routing in clusters",
+  "engine": "dot",
+  "flags": [
+   "-Gsplines=ortho"
+  ],
+  "source": "graphviz-16.1.0/graphs/directed/clust4.gv",
+  "features": [
+   "splines=ortho",
+   "clusters"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.wasm.gv",
+  "sha256": {
+   "c": "925e2f1a0872e3717cf89a4b2fd54f933aa8a3fe86c86f5a5fa6b734d033e357",
+   "rust": "3345e14b08f25779b352d7100438479c758b0e877d4d756cd774c2e3f83b870a"
+  },
+  "bytes": {
+   "input": 401,
+   "c": 8301,
+   "rust": 8310
+  }
+ },
+ {
+  "name": "ortho-switch",
+  "title": "Orthogonal switch network",
+  "engine": "dot",
+  "flags": [
+   "-Gsplines=ortho"
+  ],
+  "source": "graphviz-16.1.0/graphs/directed/switch.gv",
+  "features": [
+   "splines=ortho"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.wasm.gv",
+  "sha256": {
+   "c": "107d90c7e09990a2c635a859a31ee0874f648574732e5538990e1ac9555e4cc9",
+   "rust": "af0dcd569c14bf2543a12db05e89b0ae889c8161d9027530533f1b2caa4b6137"
+  },
+  "bytes": {
+   "input": 1344,
+   "c": 43301,
+   "rust": 43310
+  }
+ },
+ {
+  "name": "concentrate",
+  "title": "Concentrated edges",
+  "engine": "dot",
+  "flags": [
+   "-Gconcentrate=true"
+  ],
+  "source": "graphviz-16.1.0/graphs/directed/unix.gv",
+  "features": [
+   "concentrate=true"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.wasm.gv",
+  "sha256": {
+   "c": "cdc759350fbadca4e939896ef9621a115c225ce569fbd1df3b44147342bff21e",
+   "rust": "a0f04330402a9716bef107162a528eee4af76dfe2977d26285080aaa996e500b"
+  },
+  "bytes": {
+   "input": 1433,
+   "c": 28408,
+   "rust": 28417
+  }
+ },
+ {
+  "name": "polyline",
+  "title": "Polyline edges",
+  "engine": "dot",
+  "flags": [
+   "-Gsplines=polyline"
+  ],
+  "source": "graphviz-16.1.0/graphs/directed/abstract.gv",
+  "features": [
+   "splines=polyline"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.wasm.gv",
+  "sha256": {
+   "c": "43481b1b08c8a3dc8790d192be0b0f6efdd875b552fc5453e7336ec24ac54772",
+   "rust": "7e7e2ff6b7df153077ddf41a9da8bd4b6bc3d1a03bafa3a2cbceebd778fc35cb"
+  },
+  "bytes": {
+   "input": 770,
+   "c": 33703,
+   "rust": 33712
+  }
+ },
+ {
+  "name": "curved",
+  "title": "Curved edges",
+  "engine": "dot",
+  "flags": [
+   "-Gsplines=curved"
+  ],
+  "source": "graphviz-16.1.0/graphs/directed/fsm.gv",
+  "features": [
+   "splines=curved",
+   "edge labels"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.wasm.gv",
+  "sha256": {
+   "c": "8ef8591acf0ff0f30c5d938b7175c20b74fc3d50c51a1de61e6941f3cde55506",
+   "rust": "89fb55be15bb4a041c61209560cc5a4bdad6dd70ac078fe5c60440146867d527"
+  },
+  "bytes": {
+   "input": 605,
+   "c": 9149,
+   "rust": 9158
+  }
+ },
+ {
+  "name": "arrows",
+  "title": "Every arrowhead",
+  "engine": "dot",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/arrows.gv",
+  "features": [
+   "arrowhead",
+   "arrowtail",
+   "dir"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "7a0a928919f2b58d455c8133b509aacf6639e5ff0c52b5365d72693b7cee2848",
+   "rust": "888b765961532d87deef6bd47ec0b2f2032140740499339cad07ed613b9ec672"
+  },
+  "bytes": {
+   "input": 4766,
+   "c": 61212,
+   "rust": 61221
+  }
+ },
+ {
+  "name": "crazy",
+  "title": "Colours and fonts",
+  "engine": "dot",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/crazy.gv",
+  "features": [
+   "colours",
+   "fontname",
+   "styles"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "4117235e29e9c259c89497c3cababaef3698ef909af20caddacaeb92fbaa4779",
+   "rust": "3dab0d6987be292df11cf840772bfcc6218c766ca2b03e071386da9c9bcc70eb"
+  },
+  "bytes": {
+   "input": 5572,
+   "c": 33327,
+   "rust": 33336
+  }
+ },
+ {
+  "name": "gradients",
+  "title": "Radial gradients",
+  "engine": "dot",
+  "flags": [],
+  "source": "tests/wild/gv16_graphs_grdradial_f61057.gv",
+  "features": [
+   "radialgradient",
+   "HTML labels"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "9a31d0fccdeb4dea76faf4be4ae00cd336c0982a3c78837a89453b119c4c1a9a",
+   "rust": "88a2c8d0c6394cffedda686948f2436618f8e91631f6ea90440ff99b3a64e8b6"
+  },
+  "bytes": {
+   "input": 5369,
+   "c": 50236,
+   "rust": 50245
+  }
+ },
+ {
+  "name": "xlabels",
+  "title": "External labels",
+  "engine": "dot",
+  "flags": [],
+  "source": "tests/wild/gv16_graphs_xlabels_e9f1cf.gv",
+  "features": [
+   "xlabel",
+   "forcelabels"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "358735b1b133313dddda7a76121ccf239fc7e5121ecd660584f3d964237cbf60",
+   "rust": "974e4713a5c9f70f24a15ec9965cf8f48064784e34262e84cc853a62827ee9c4"
+  },
+  "bytes": {
+   "input": 402,
+   "c": 5519,
+   "rust": 5528
+  }
+ },
+ {
+  "name": "compound",
+  "title": "Edges between clusters",
+  "engine": "dot",
+  "flags": [],
+  "source": "tests/wild/gv16_graphs_compound_7ed9c4.gv",
+  "features": [
+   "compound",
+   "lhead",
+   "ltail"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "ead35a618f0f823b6b7ace2e2122be3f1dd99552ac42412ca1183efbef431e4a",
+   "rust": "f548ca511292e6862a1c99ac3d87a0f3f15c6e7b24b426f6d552bcfb2dc7fb16"
+  },
+  "bytes": {
+   "input": 286,
+   "c": 5580,
+   "rust": 5589
+  }
+ },
+ {
+  "name": "shapes",
+  "title": "Node shapes",
+  "engine": "dot",
+  "flags": [],
+  "source": "tests/fixtures/shapes.gv",
+  "features": [
+   "shapes",
+   "polygon"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "bdd24a6b9ea60ed29fc7bc193f71b357d81118612df3f801dd9c5eb8da1ffab0",
+   "rust": "47674b688cb0bb2ec40f740add6479cdba07f00a4a910a53e93f75a6430e2243"
+  },
+  "bytes": {
+   "input": 840,
+   "c": 21943,
+   "rust": 21952
+  }
+ },
+ {
+  "name": "japanese",
+  "title": "UTF-8 labels",
+  "engine": "dot",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/japanese.gv",
+  "features": [
+   "UTF-8",
+   "charset"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "111646627c5b6e300ef4bc79f199a466c04e8a747ee253f5b1355b922152bc05",
+   "rust": "e738303050e7e53b0a90b7ce5ef1e3ee06090230668b0f4884b7982b62be6ad6"
+  },
+  "bytes": {
+   "input": 789,
+   "c": 5793,
+   "rust": 5802
+  }
+ },
+ {
+  "name": "heawood",
+  "title": "Heawood graph",
+  "engine": "neato",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/undirected/Heawood.gv",
+  "features": [
+   "stress majorization"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "10f3d09204547e77b3ae40d3c47bbb2748d37d408cb2cc3972c8241e20db11f7",
+   "rust": "de6e6738552b26e13ee2cd0faeff771ecb62f9be159a04e81df07b07aad086ef"
+  },
+  "bytes": {
+   "input": 790,
+   "c": 8014,
+   "rust": 8023
+  }
+ },
+ {
+  "name": "process",
+  "title": "Process graph",
+  "engine": "neato",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/undirected/process.gv",
+  "features": [
+   "stress majorization",
+   "undirected"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "6613037f3d89d7090954206f408bcae7708dc71922c0ad17d6e93ecac60f268b",
+   "rust": "77a6028183ba449326e9af69dfb8b6b93b18620edc81e350515b50a1aee91630"
+  },
+  "bytes": {
+   "input": 234,
+   "c": 5903,
+   "rust": 5912
+  }
+ },
+ {
+  "name": "fdp-clusters",
+  "title": "fdp with clusters",
+  "engine": "fdp",
+  "flags": [],
+  "source": "tests/wild/gv16_graphs_fdp_8f3263.gv",
+  "features": [
+   "clusters",
+   "force-directed"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "26427746f89fa3156f70aed148fef35b852f9886eab4760d840bc2941ef365a8",
+   "rust": "faf3c909dc98d555aed109afd4bf7e5169e3907fb703bf6d658e18ab675f8adc"
+  },
+  "bytes": {
+   "input": 183,
+   "c": 4125,
+   "rust": 4134
+  }
+ },
+ {
+  "name": "fdp-clust4",
+  "title": "fdp on nested clusters",
+  "engine": "fdp",
+  "flags": [],
+  "source": "tests/fixtures/clust4.gv",
+  "features": [
+   "clusters"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "f52b2feb4aa6de4ad1e5444caa288b06739dd57e6dbd5563215d8b098bedd9cf",
+   "rust": "7dd90531b9b3e99cfd32c3da574e1ae5593e920884bd23e8d69acc9299aee27b"
+  },
+  "bytes": {
+   "input": 401,
+   "c": 8325,
+   "rust": 8334
+  }
+ },
+ {
+  "name": "sfdp-smoothing",
+  "title": "sfdp spring smoothing",
+  "engine": "sfdp",
+  "flags": [],
+  "source": "tests/sfdp/attr_smoothing_spring.gv",
+  "features": [
+   "smoothing=spring",
+   "multilevel"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "8de1b1192ef2b47b0f337b94b1fad1cab55ffb020b3bbef4338267921838a428",
+   "rust": "b232338e50416ada3e487ee786e3aeaf4f3fab47d253f9cd61c0a7371186de16"
+  },
+  "bytes": {
+   "input": 910,
+   "c": 25426,
+   "rust": 25435
+  }
+ },
+ {
+  "name": "sfdp-switch",
+  "title": "sfdp switch network",
+  "engine": "sfdp",
+  "flags": [],
+  "source": "tests/sfdp/wild_gv16_directed_switch_2841f8.gv",
+  "features": [
+   "multilevel",
+   "quadtree"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "6a9df0d676488aabf59191f450b059882fb36f20f9af3844164f668186b581f4",
+   "rust": "604f794537ce2a7805a909059e4c57ad250f967f3c6b8c64f8d969d6b74ca84b"
+  },
+  "bytes": {
+   "input": 1358,
+   "c": 38067,
+   "rust": 38076
+  }
+ },
+ {
+  "name": "sfdp-unix",
+  "title": "sfdp Unix tree",
+  "engine": "sfdp",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/unix.gv",
+  "features": [
+   "multilevel",
+   "portable-math difference"
+  ],
+  "identical": true,
+  "identical_portable": false,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "5522dd93323fb38fe8436d80636e39d9f89c627381ab4c1d0af6cd5c43559994",
+   "rust": "34419cbd3a762202514db5554c135ba29cf42623ef04316e606277ed53aefd91"
+  },
+  "bytes": {
+   "input": 1433,
+   "c": 28010,
+   "rust": 28019
+  }
+ },
+ {
+  "name": "circo-heawood",
+  "title": "Circular Heawood",
+  "engine": "circo",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/undirected/Heawood.gv",
+  "features": [
+   "biconnected blocks"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "bba3ea67c96f2bb09ba206913c10fd00a2e1e3284b9a148d68f73b83dfcbe055",
+   "rust": "77ba4237fe73a1899f5c4a387ce4b5004d80590b5ddb94cedbb2a2e2d568afba"
+  },
+  "bytes": {
+   "input": 790,
+   "c": 8051,
+   "rust": 8060
+  }
+ },
+ {
+  "name": "circo-fsm",
+  "title": "Circular state machine",
+  "engine": "circo",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/fsm.gv",
+  "features": [
+   "edge labels",
+   "self-loops"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "3d2f65dfae1ed8ddedbc3ad0e7b23354af70be56e143b5f4182eed929b8bdd4d",
+   "rust": "0d7e6d76f062ce3d4a28c12431a990ca69f5954dc3515f59c59f831f637f7a42"
+  },
+  "bytes": {
+   "input": 605,
+   "c": 9512,
+   "rust": 9521
+  }
+ },
+ {
+  "name": "twopi-unix",
+  "title": "Radial Unix tree",
+  "engine": "twopi",
+  "flags": [],
+  "source": "graphviz-16.1.0/graphs/directed/unix.gv",
+  "features": [
+   "root",
+   "radial"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "70845d20e57328a7839bfabbb67c620251b03aca2e990962b7c6b6d9f5a79dff",
+   "rust": "dd50f987aa07214d22059ab9f8c03ceecfb0379dfaed2d37a853b1a667ce216b"
+  },
+  "bytes": {
+   "input": 1433,
+   "c": 27960,
+   "rust": 27969
+  }
+ },
+ {
+  "name": "osage",
+  "title": "osage cluster packing",
+  "engine": "osage",
+  "flags": [],
+  "source": "tests/wild/gallery_osage_0_f6bd9e.gv",
+  "features": [
+   "clusters",
+   "pack"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "3f4731a24ef6669a9e1494792d069b305ff0d20aa5c1d0148979f03014edb973",
+   "rust": "2bc2018054849445df33e828b8ac005c5fd321c2bb0c32e34cd385e2b7daa536"
+  },
+  "bytes": {
+   "input": 294,
+   "c": 5587,
+   "rust": 5596
+  }
+ },
+ {
+  "name": "patchwork",
+  "title": "patchwork treemap",
+  "engine": "patchwork",
+  "flags": [],
+  "source": "tests/wild/gallery_patchwork_0_7dbf8c.gv",
+  "features": [
+   "area",
+   "clusters"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "a9512cb13821cee57fe175199f0953fb2b7e89d0cda1ccbce76e9837a618b0df",
+   "rust": "65cc556aff6a4c24b00470c59b888d82acb2a44696f9cef01b7141018521dd8e"
+  },
+  "bytes": {
+   "input": 255,
+   "c": 2369,
+   "rust": 2378
+  }
+ },
+ {
+  "name": "patchwork-unix",
+  "title": "Unix tree as treemap",
+  "engine": "patchwork",
+  "flags": [],
+  "source": "tests/fixtures/unix.gv",
+  "features": [
+   "treemap"
+  ],
+  "identical": true,
+  "identical_portable": true,
+  "wasm_input": "input.gv",
+  "sha256": {
+   "c": "b1da16dbc7abdccc1eb3c5a9687cb5ad08b7291e2a95e6dea80a7b3b6b2fac88",
+   "rust": "74a854114ecdc124193b43196aa31b2ffb177fbd26b22402e2f367c24e6ca3ba"
+  },
+  "bytes": {
+   "input": 1433,
+   "c": 13763,
+   "rust": 13772
+  }
+ }
+]

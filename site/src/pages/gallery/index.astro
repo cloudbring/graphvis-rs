@@ -1,0 +1,105 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import Mark from '../../components/Mark.astro';
+import Thumb from '../../components/Thumb.astro';
+import { ENGINES, cmdline, samples, url } from '../../lib/data';
+
+const groups = ENGINES.map((e) => ({ engine: e, items: samples.filter((s) => s.engine === e) })).filter((g) => g.items.length);
+const native = samples.filter((s) => s.identical).length;
+const portable = samples.filter((s) => s.identical_portable).length;
+---
+
+<StarlightPage frontmatter={{ title: 'Gallery: C and Rust', description: 'Curated inputs across all eight Graphviz engines, rendered by C Graphviz 16.1.0 and by graphvis-rs, with every comparison view.', tableOfContents: false }}>
+	<style is:global>:root { --sl-content-width: 64rem; }</style>
+	<p class="intro">
+		{samples.length} inputs chosen to cover each engine and the features that are hardest to get right: clusters, records and HTML tables,
+		orthogonal routing, concentrated edges, spline modes, arrowheads, colours, gradients and non-ASCII text. Each was rendered by the C
+		reference and by the port when the site was built. Every thumbnail is the two outputs overprinted, C in cyan and the port in magenta, so a
+		sample in register looks like a single blue drawing.
+	</p>
+	<div class="checkall not-content" data-checkall>
+		<div>
+			<p class="tally">
+				<Mark kind="register" label={`${native} of ${samples.length} byte-identical on macOS`} />
+				<Mark kind={portable === samples.length ? 'register' : 'upstream'} label={`${portable} of ${samples.length} under portable math`} />
+			</p>
+			<p class="status" data-status aria-live="polite">Re-render all of them with the WASM build, here, and compare with C's stored bytes.</p>
+		</div>
+		<button type="button" class="btn primary" data-go>Check all {samples.length} in this browser</button>
+	</div>
+
+	{groups.map((g) => (
+		<section class="group" id={g.engine}>
+			<h2><code>{g.engine}</code><span>{g.items.length}</span></h2>
+			<ul class="contact not-content">
+				{g.items.map((s) => (
+					<li data-sample={s.name} data-engine={s.engine} data-input={url(`samples/${s.name}/${s.wasm_input}`)} data-c={url(`samples/${s.name}/c.svg`)} data-expect={String(s.identical_portable)}>
+						<a href={url(`gallery/${s.name}/`)} class="item">
+							<Thumb s={s} />
+							<span class="title">{s.title}</span>
+						</a>
+						<code class="cmd">{cmdline(s).replace('input.gv', s.source.split('/').pop()!)}</code>
+						<span class="marks">
+							{s.identical ? <Mark kind="register" label="macOS" /> : <Mark kind="off" label="macOS" />}
+							{s.identical_portable ? <Mark kind="register" label="portable" /> : <Mark kind="upstream" label="portable differs" />}
+							<span data-live-mark></span>
+						</span>
+					</li>
+				))}
+			</ul>
+		</section>
+	))}
+</StarlightPage>
+
+<style>
+	.intro { max-width: 44rem; color: var(--key-2); }
+	.checkall { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem; margin-top: 1.5rem; border: 0.5px solid var(--rule-default); border-left: 2px solid var(--register); border-radius: var(--r-panel); background: var(--stock-raised); }
+	.checkall p { margin: 0; }
+	.tally { display: flex; flex-wrap: wrap; gap: 1rem; }
+	.status { margin-top: 0.5rem !important; font-size: var(--sl-text-xs); color: var(--key-3); }
+	.group { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 1.5rem; margin-top: 2.5rem; border-top: 0.5px solid var(--rule-strong); padding-top: 1rem; }
+	.group h2 { margin: 0; font-size: var(--sl-text-lg); display: flex; flex-direction: column; gap: 0.25rem; position: sticky; top: calc(var(--sl-nav-height) + 1rem); align-self: start; }
+	.group h2 code { font-size: 1em; border: 0; background: none; padding: 0; color: var(--key); }
+	.group h2 span { font-size: var(--sl-text-2xs); font-weight: 500; color: var(--key-3); font-family: var(--face-mono); }
+	.contact { list-style: none; margin: 0 !important; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 2rem 1.5rem; }
+	.contact li { margin: 0 !important; display: grid; gap: 0.375rem; align-content: start; min-width: 0; }
+	.item { display: grid; gap: 0.75rem; text-decoration: none; color: inherit; }
+	.item:hover .title { color: var(--register); text-decoration: underline; text-decoration-thickness: 1px; }
+	.item:hover :global(.thumb) { border-color: var(--rule-strong); }
+	.title { font-weight: 650; font-stretch: 112%; color: var(--key); font-size: var(--sl-text-sm); }
+	.cmd { font-size: var(--sl-text-2xs); color: var(--key-3); background: none; border: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.marks { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+	@media (max-width: 40rem) { .group { grid-template-columns: 1fr; gap: 0.75rem; } .group h2 { position: static; flex-direction: row; align-items: baseline; gap: 0.5rem; } }
+</style>
+
+<script>
+	import { markHTML, normalise } from '../../lib/marks';
+	import { renderBytes } from '../../lib/wasm';
+	const box = document.querySelector<HTMLElement>('[data-checkall]')!;
+	const btn = box.querySelector<HTMLButtonElement>('[data-go]')!;
+	const status = box.querySelector<HTMLElement>('[data-status]')!;
+	btn.addEventListener('click', async () => {
+		btn.disabled = true;
+		const items = [...document.querySelectorAll<HTMLElement>('[data-sample]')];
+		for (const li of items) li.querySelector('[data-live-mark]')!.innerHTML = markHTML('pending', 'browser');
+		let same = 0, expectedOff = 0, unexpected = 0;
+		const t0 = performance.now();
+		status.textContent = 'Loading the WASM build…';
+		for (const [i, li] of items.entries()) {
+			const [src, c] = await Promise.all([fetch(li.dataset.input!).then((r) => r.arrayBuffer()), fetch(li.dataset.c!).then((r) => r.text())]);
+			status.textContent = `Rendering ${i + 1} of ${items.length}: ${li.dataset.sample}`;
+			await new Promise((r) => setTimeout(r, 0));
+			const res = await renderBytes(new Uint8Array(src), li.dataset.engine!);
+			const ok = res.ok && normalise(res.text) === normalise(c);
+			const expected = li.dataset.expect === 'false';
+			if (ok) same++;
+			else if (expected) expectedOff++;
+			else unexpected++;
+			li.querySelector('[data-live-mark]')!.innerHTML = ok ? markHTML('register', 'your browser') : markHTML(expected ? 'upstream' : 'off', expected ? 'browser differs, as expected' : 'browser differs');
+		}
+		const secs = ((performance.now() - t0) / 1000).toFixed(1);
+		status.innerHTML = `${markHTML(unexpected ? 'off' : 'register', `${same} of ${items.length} reproduced byte for byte in your browser`)} <span>${expectedOff ? `${expectedOff} differ${expectedOff === 1 ? 's' : ''} as expected under portable math. ` : ''}${unexpected ? `${unexpected} differ unexpectedly. ` : ''}${secs} s including downloads.</span>`;
+		btn.disabled = false;
+		btn.textContent = 'Check again';
+	});
+</script>

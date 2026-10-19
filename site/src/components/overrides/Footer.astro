@@ -1,0 +1,40 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+import { fidelity, REPO } from '../../lib/data';
+const date = fidelity.generated.slice(0, 10);
+---
+
+<Default><slot /></Default>
+<footer class="colophon">
+	<p>
+		graphvis-rs is a port of <a href="https://graphviz.org/">Graphviz</a>, created at AT&amp;T Labs Research and maintained by the Graphviz
+		authors and contributors. Like Graphviz, it is distributed under the{' '}
+		<a href="https://www.eclipse.org/legal/epl-2.0/">Eclipse Public License 2.0</a>, as a derivative work of the Graphviz 16.1.0 C sources.
+	</p>
+	<p class="mono">
+		Figures from <a href={`${REPO}/commit/${fidelity.commit}`}>{fidelity.commit_short}</a>, generated {date}{' '}
+		{fidelity.source === 'measured' ? `by running gv-diff (${fidelity.measured_on})` : 'from the committed ratchet baselines'}.
+	</p>
+</footer>
+
+<style>
+	.colophon {
+		margin-top: 2rem;
+		padding-top: 1rem;
+		border-top: 0.5px solid var(--rule-default);
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+		display: grid;
+		gap: 0.5rem;
+	}
+	.colophon p {
+		margin: 0;
+		max-width: 40rem;
+	}
+	.colophon .mono {
+		font-size: var(--sl-text-2xs);
+	}
+	.colophon a {
+		color: var(--key-2);
+	}
+</style>

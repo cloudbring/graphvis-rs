@@ -1,0 +1,523 @@
+/*
+ * graphvis-rs site: a press proof.
+ *
+ * C's output and the port's are two printing plates. C is the cyan plate, the port the
+ * magenta plate; overprinted, they make the blue-violet of process C+M ("register"), and
+ * anything out of register shows as a cyan or magenta fringe. Process yellow marks upstream
+ * C behaviour. Everything else is key (ink) on coated stock, or a lightbox in dark mode.
+ *
+ * Depth: borders only. Spacing: 4px base. Radius: 2px controls, 4px panels.
+ */
+
+:root {
+	/* Lightbox (dark): the default theme in Starlight */
+	--stock: #0f1115;
+	--stock-raised: #15181d;
+	--stock-overlay: #1b1f25;
+	--stock-sunk: #0b0d10;
+	--key: #e7e9ed;
+	--key-2: #b4b9c2;
+	--key-3: #878d98;
+	--key-4: #5f6570;
+	--rule: rgba(231, 233, 237, 0.08);
+	--rule-default: rgba(231, 233, 237, 0.12);
+	--rule-strong: rgba(231, 233, 237, 0.2);
+
+	--plate-c: #38b6ec;
+	--plate-m: #ff4fa7;
+	--plate-y: #ffe45c;
+	--c-ink: #6fcbf3;
+	--m-ink: #ff86c1;
+	--y-ink: #ffe45c;
+	--register: #a9a5ff;
+	--register-wash: rgba(169, 165, 255, 0.12);
+	--m-wash: rgba(255, 79, 167, 0.12);
+	--c-wash: rgba(56, 182, 236, 0.12);
+	--y-wash: rgba(255, 228, 92, 0.12);
+
+	/* The sheet a drawing is printed on: always paper, also on the lightbox */
+	--sheet: #ffffff;
+	--sheet-rule: rgba(21, 23, 28, 0.14);
+
+	--control-bg: var(--stock-sunk);
+	--control-border: rgba(231, 233, 237, 0.14);
+	--control-hover: rgba(231, 233, 237, 0.06);
+	--focus: var(--register);
+
+	--r-control: 2px;
+	--r-panel: 4px;
+
+	--face: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
+	--face-mono: 'Fragment Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+	--wide: 125%;
+	--semi: 112%;
+
+	--sl-font: var(--face);
+	--sl-font-mono: var(--face-mono);
+	--sl-line-height: 1.65;
+
+	--sl-color-white: #ffffff;
+	--sl-color-gray-1: var(--key);
+	--sl-color-gray-2: var(--key-2);
+	--sl-color-gray-3: var(--key-3);
+	--sl-color-gray-4: var(--key-4);
+	--sl-color-gray-5: #262a31;
+	--sl-color-gray-6: var(--stock-raised);
+	--sl-color-black: var(--stock);
+	--sl-color-accent-low: #23214d;
+	--sl-color-accent: #8c87ff;
+	--sl-color-accent-high: var(--register);
+	--sl-color-bg-nav: var(--stock);
+	--sl-color-bg-sidebar: var(--stock);
+	--sl-color-hairline: var(--rule-default);
+	--sl-color-hairline-light: var(--rule);
+	--sl-color-hairline-shade: var(--rule-default);
+	--sl-color-text: var(--key-2);
+
+	--sl-content-width: 46rem;
+	--sl-sidebar-width: 17rem;
+}
+
+:root[data-theme='light'] {
+	/* Coated proof stock in daylight */
+	--stock: #fafafb;
+	--stock-raised: #ffffff;
+	--stock-overlay: #ffffff;
+	--stock-sunk: #f1f2f4;
+	--key: #15171c;
+	--key-2: #3b404a;
+	--key-3: #646a76;
+	--key-4: #959aa4;
+	--rule: rgba(21, 23, 28, 0.08);
+	--rule-default: rgba(21, 23, 28, 0.13);
+	--rule-strong: rgba(21, 23, 28, 0.24);
+
+	--plate-c: #0093d0;
+	--plate-m: #d4007a;
+	--plate-y: #ffe014;
+	--c-ink: #006e9e;
+	--m-ink: #a8005f;
+	--y-ink: #6b5a00;
+	--register: #26227f;
+	--register-wash: rgba(38, 34, 127, 0.07);
+	--m-wash: rgba(212, 0, 122, 0.07);
+	--c-wash: rgba(0, 147, 208, 0.08);
+	--y-wash: rgba(255, 224, 20, 0.22);
+
+	--sheet: #ffffff;
+
+	--control-bg: var(--stock-raised);
+	--control-border: rgba(21, 23, 28, 0.16);
+	--control-hover: rgba(21, 23, 28, 0.04);
+
+	--sl-color-white: var(--key);
+	--sl-color-gray-1: #252830;
+	--sl-color-gray-2: var(--key-2);
+	--sl-color-gray-3: var(--key-3);
+	--sl-color-gray-4: var(--key-4);
+	--sl-color-gray-5: #d5d8dd;
+	--sl-color-gray-6: #eceef1;
+	--sl-color-gray-7: #f4f5f7;
+	--sl-color-black: var(--stock);
+	--sl-color-accent-high: var(--register);
+	--sl-color-accent: #3f3ab8;
+	--sl-color-accent-low: #e4e3f6;
+	--sl-color-text-accent: var(--register);
+	--sl-color-bg-nav: var(--stock);
+	--sl-color-bg-sidebar: var(--stock);
+	--sl-color-bg-inline-code: var(--stock-sunk);
+	--sl-color-hairline: var(--rule-default);
+	--sl-color-hairline-light: var(--rule);
+	--sl-color-hairline-shade: var(--rule-default);
+	--sl-color-text: var(--key-2);
+}
+
+/* ---------- Typography ---------- */
+
+html {
+	/* Fragment Mono draws <!-- and --> as arrows; this site shows source, so no ligatures anywhere. */
+	font-variant-ligatures: none;
+}
+body {
+	font-stretch: 100%;
+	font-feature-settings: 'ss01' off;
+}
+
+h1,
+h2,
+h3,
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3 {
+	font-stretch: var(--semi);
+	letter-spacing: -0.012em;
+	color: var(--key);
+}
+h1,
+.sl-markdown-content h1 {
+	font-weight: 760;
+	font-stretch: var(--wide);
+	letter-spacing: -0.022em;
+}
+.sl-markdown-content h2 {
+	font-weight: 700;
+	font-size: var(--sl-text-2xl);
+	margin-top: 2.5em;
+}
+.sl-markdown-content h3 {
+	font-weight: 650;
+	font-size: var(--sl-text-lg);
+}
+.sl-markdown-content h4 {
+	font-weight: 650;
+	font-size: var(--sl-text-base);
+	color: var(--key);
+}
+
+code,
+kbd,
+samp,
+pre,
+.mono {
+	font-family: var(--face-mono);
+	font-variant-numeric: tabular-nums;
+	font-variant-ligatures: none;
+	font-feature-settings: 'liga' 0, 'calt' 0;
+}
+.expressive-code pre,
+.expressive-code code {
+	font-variant-ligatures: none;
+	font-feature-settings: 'liga' 0, 'calt' 0;
+}
+.sl-markdown-content :not(pre) > code {
+	font-size: 0.86em;
+	padding: 0.05em 0.25em;
+	border-radius: var(--r-control);
+	border: 0.5px solid var(--rule);
+	background: var(--stock-sunk);
+	color: var(--key);
+}
+
+.num {
+	font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Small caps-like labels: medium weight, open tracking, set wide */
+.label {
+	font-size: var(--sl-text-2xs);
+	font-weight: 560;
+	font-stretch: var(--semi);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--key-3);
+}
+
+.sl-markdown-content a,
+a.ink {
+	color: var(--register);
+	text-decoration-thickness: 0.5px;
+	text-underline-offset: 0.18em;
+	transition: text-decoration-thickness 150ms ease-out;
+}
+.sl-markdown-content a:hover {
+	text-decoration-thickness: 1.5px;
+}
+
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+
+/* ---------- Starlight chrome ---------- */
+
+.site-title {
+	font-stretch: var(--wide);
+	font-weight: 720;
+	letter-spacing: -0.01em;
+	color: var(--key);
+}
+.site-title img {
+	height: 1.5rem;
+	width: 1.5rem;
+}
+header.header {
+	border-bottom: 0.5px solid var(--rule-default);
+}
+.sidebar-pane {
+	border-inline-end: 0.5px solid var(--rule-default);
+}
+nav.sidebar a[aria-current='page'],
+nav.sidebar a[aria-current='page']:hover,
+nav.sidebar a[aria-current='page']:focus {
+	background: var(--register-wash);
+	color: var(--register);
+	font-weight: 600;
+	box-shadow: inset 2px 0 0 var(--register);
+}
+nav.sidebar .top-level > li > details > summary .group-label > span,
+nav.sidebar .top-level > li > details > summary {
+	font-stretch: var(--semi);
+}
+.sl-markdown-content table {
+	font-size: var(--sl-text-sm);
+}
+.sl-markdown-content th {
+	font-weight: 600;
+	color: var(--key);
+}
+.sl-markdown-content :is(th, td) {
+	border-bottom: 0.5px solid var(--rule-default);
+}
+.source-note {
+	font-size: var(--sl-text-xs);
+	color: var(--key-3);
+}
+.source-note code {
+	font-size: 1em !important;
+}
+
+/* ---------- Shared proof vocabulary ---------- */
+
+/* A drawing on its sheet, with crop marks at the corners */
+.sheet {
+	position: relative;
+	background: var(--sheet);
+	border: 0.5px solid var(--sheet-rule);
+	border-radius: var(--r-panel);
+	color: #15171c;
+}
+.crop::before,
+.crop::after {
+	content: '';
+	position: absolute;
+	width: 8px;
+	height: 8px;
+	pointer-events: none;
+	border-color: var(--key-4);
+	border-style: solid;
+}
+.crop::before {
+	top: -6px;
+	left: -6px;
+	border-width: 0 0.5px 0.5px 0;
+}
+.crop::after {
+	bottom: -6px;
+	right: -6px;
+	border-width: 0.5px 0 0 0.5px;
+}
+
+/*
+ * Plates: an <img> of an SVG over a plate colour with `screen` turns its ink into that
+ * colour; the magenta plate is multiplied onto the cyan one. Ink in register comes out
+ * as the C+M overprint, ink on one plate only stays cyan or magenta.
+ */
+.plates {
+	position: relative;
+	isolation: isolate;
+	display: grid;
+}
+.plates > .plate {
+	grid-area: 1 / 1;
+	isolation: isolate;
+	display: block;
+}
+.plates > .plate > img {
+	display: block;
+	/* Graphviz's background polygon can stop a fraction short of the canvas edge. */
+	background: #fff;
+	width: 100%;
+	height: auto;
+	mix-blend-mode: screen;
+}
+.plate-c {
+	background: #0093d0;
+}
+.plate-m {
+	background: #d4007a;
+	mix-blend-mode: multiply;
+}
+
+/* Status marks */
+.mark {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-size: var(--sl-text-xs);
+	font-weight: 560;
+	white-space: nowrap;
+	line-height: 1;
+}
+.mark svg {
+	flex: none;
+	width: 0.875rem;
+	height: 0.875rem;
+}
+.mark.is-register {
+	color: var(--register);
+}
+.mark.is-off {
+	color: var(--m-ink);
+}
+.mark.is-upstream {
+	color: var(--y-ink);
+}
+.mark.is-pending {
+	color: var(--key-3);
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.125rem 0.375rem;
+	font-family: var(--face-mono);
+	font-size: var(--sl-text-2xs);
+	line-height: 1.4;
+	border-radius: var(--r-control);
+	border: 0.5px solid var(--rule-default);
+	color: var(--key-2);
+	background: var(--stock-sunk);
+	white-space: nowrap;
+}
+.chip.c {
+	color: var(--c-ink);
+	border-color: color-mix(in srgb, var(--plate-c) 40%, transparent);
+	background: var(--c-wash);
+}
+.chip.m {
+	color: var(--m-ink);
+	border-color: color-mix(in srgb, var(--plate-m) 40%, transparent);
+	background: var(--m-wash);
+}
+.chip.y {
+	color: var(--y-ink);
+	border-color: color-mix(in srgb, var(--plate-y) 60%, transparent);
+	background: var(--y-wash);
+}
+.chip.reg {
+	color: var(--register);
+	border-color: color-mix(in srgb, var(--register) 35%, transparent);
+	background: var(--register-wash);
+}
+
+/* Buttons and segmented controls */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.75rem;
+	font: inherit;
+	font-size: var(--sl-text-xs);
+	font-weight: 560;
+	white-space: nowrap;
+	color: var(--key);
+	background: var(--control-bg);
+	border: 0.5px solid var(--control-border);
+	border-radius: var(--r-control);
+	cursor: pointer;
+	text-decoration: none;
+	transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+.btn:hover {
+	background: var(--control-hover);
+	border-color: var(--rule-strong);
+}
+.btn:active {
+	transform: translateY(0.5px);
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.btn.primary {
+	color: var(--stock);
+	background: var(--register);
+	border-color: var(--register);
+}
+.btn.primary:hover {
+	background: color-mix(in srgb, var(--register) 88%, var(--key));
+}
+
+.seg {
+	display: inline-flex;
+	flex-wrap: wrap;
+	max-width: 100%;
+	padding: 2px;
+	gap: 2px;
+	border: 0.5px solid var(--control-border);
+	border-radius: var(--r-panel);
+	background: var(--stock-sunk);
+}
+.seg button {
+	padding: 0.3125rem 0.625rem;
+	font: inherit;
+	font-size: var(--sl-text-xs);
+	font-weight: 540;
+	white-space: nowrap;
+	color: var(--key-3);
+	background: transparent;
+	border: 0;
+	border-radius: var(--r-control);
+	cursor: pointer;
+	transition: color 150ms ease-out, background-color 150ms ease-out;
+}
+.seg button:hover {
+	color: var(--key);
+}
+.seg button[aria-pressed='true'] {
+	color: var(--key);
+	background: var(--stock-raised);
+	box-shadow: 0 0 0 0.5px var(--rule-strong);
+}
+
+.scroll-x {
+	overflow-x: auto;
+	max-width: 100%;
+}
+
+/* Plain data table used by the fidelity and issue pages */
+.ledger {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--sl-text-sm);
+	display: table !important;
+}
+.ledger :is(th, td) {
+	padding: 0.5rem 0.75rem 0.5rem 0;
+	border-bottom: 0.5px solid var(--rule-default);
+	text-align: left;
+	vertical-align: baseline;
+}
+.ledger thead th {
+	font-size: var(--sl-text-2xs);
+	font-weight: 560;
+	font-stretch: var(--semi);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--key-3);
+	border-bottom-color: var(--rule-strong);
+}
+.ledger th.n {
+	text-align: right;
+	white-space: nowrap;
+}
+.ledger td.n {
+	text-align: right;
+	font-family: var(--face-mono);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.ledger tbody tr:hover {
+	background: var(--control-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0ms !important;
+		animation-duration: 0ms !important;
+	}
+}

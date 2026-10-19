@@ -1,0 +1,20 @@
+---
+/** A sample as a small overprint of its two plates, on a sheet with crop marks. */
+import { url, type Sample } from '../lib/data';
+import { svgSize } from '../lib/svgsize';
+interface Props { s: Sample; }
+const { s } = Astro.props;
+const { width, height } = svgSize(`samples/${s.name}/c.svg`);
+---
+<span class="thumb sheet crop">
+	<span class="plates">
+		<span class="plate plate-c"><img src={url(`samples/${s.name}/c.svg`)} alt="" width={width} height={height} loading="lazy" decoding="async" /></span>
+		<span class="plate plate-m"><img src={url(`samples/${s.name}/rust.svg`)} alt="" width={width} height={height} loading="lazy" decoding="async" /></span>
+	</span>
+</span>
+<style>
+	.thumb { display: flex; align-items: center; justify-content: center; height: 10rem; padding: 0.5rem; overflow: hidden; }
+	.thumb .plates { max-height: 100%; max-width: 100%; }
+	.thumb img { width: auto !important; max-width: 100%; max-height: 9rem; object-fit: contain; }
+	:global([data-theme='dark']) .thumb { filter: brightness(0.94); }
+</style>
