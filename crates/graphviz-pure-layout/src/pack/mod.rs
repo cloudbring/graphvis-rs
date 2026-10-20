@@ -496,6 +496,9 @@ fn fill_edge<P: PackGraph + ?Sized>(
         return;
     }
     for bz in spl.unwrap() {
+        if bz.list.is_empty() {
+            continue;
+        }
         // A one-point spline (polyline between overlapping nodes) makes C read
         // bz.list[1] past the end of the list (undefined); take the point itself.
         let (mut pt, mut hpt, mut k) = if bz.sflag != 0 {
