@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Packages one release binary: graphviz-pure-VERSION-TARGET.{tar.gz,zip} in OUT, holding the
+binary, LICENSE, NOTICE and README.md in a directory of the same name.
+
+The archive is deterministic: sorted entries, fixed permissions and the commit's timestamp
+(SOURCE_DATE_EPOCH), so the same build always gives the same archive bytes.
+
+Usage: scripts/release-package.py TARGET VERSION OUT
+"""
+import gzip
+import io
+import os
+import sys
+import tarfile
+import zipfile
+
+target, version, out = sys.argv[1:4]
+root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+windows = "windows" in target
+exe = "graphviz-pure.exe" if windows else "graphviz-pure"
+name = f"graphviz-pure-{version}-{target}"
+epoch = int(os.environ.get("SOURCE_DATE_EPOCH", "0"))
+files = [
+    (os.path.join(root, "target", target, "release", exe), exe, 0o755),
+    (os.path.join(root, "LICENSE"), "LICENSE", 0o644),
+    (os.path.join(root, "NOTICE"), "NOTICE", 0o644),
+    (os.path.join(root, "README.md"), "README.md", 0o644),
+]
+os.makedirs(out, exist_ok=True)
+if windows:
+    path = os.path.join(out, name + ".zip")
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        for src, arc, mode in sorted(files, key=lambda f: f[1]):
+            info = zipfile.ZipInfo(f"{name}/{arc}", date_time=(1980, 1, 1, 0, 0, 0))
+            info.external_attr = (mode | 0o100000) << 16
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, open(src, "rb").read())
+else:
+    path = os.path.join(out, name + ".tar.gz")
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w", format=tarfile.PAX_FORMAT) as t:
+        for src, arc, mode in sorted(files, key=lambda f: f[1]):
+            data = open(src, "rb").read()
+            info = tarfile.TarInfo(f"{name}/{arc}")
+            info.size, info.mode, info.mtime = len(data), mode, epoch
+            info.uid = info.gid = 0
+            info.uname = info.gname = ""
+            t.addfile(info, io.BytesIO(data))
+    with open(path, "wb") as f, gzip.GzipFile(fileobj=f, mode="wb", mtime=epoch, filename="") as g:
+        g.write(buf.getvalue())
+print(path)
