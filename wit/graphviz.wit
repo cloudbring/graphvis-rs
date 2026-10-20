@@ -6,7 +6,7 @@ interface renderer {
     /// and output format (`svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`).
     render: func(dot-source: string, engine: string, format: string) -> result<string, string>;
 
-    /// Return the version string of `graphvis-rs`.
+    /// Return the version string of `graphviz-pure`.
     version: func() -> string;
 }
 

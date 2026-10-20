@@ -49,7 +49,7 @@ for (const theme of ['light', 'dark'] as const)
 			.replace(/\sid="[^"]*"/g, '')
 			.replace(
 				/<svg width="[^"]*" height="[^"]*"/,
-				`<svg class="static v-${id}" role="img" aria-label="The graph of this site, drawn by graphvis-rs at build time" style="max-width:${((+w * 4) / 3).toFixed(0)}px;max-height:${((+h * 4) / 3).toFixed(0)}px"`,
+				`<svg class="static v-${id}" role="img" aria-label="The graph of this site, drawn by graphviz-pure at build time" style="max-width:${((+w * 4) / 3).toFixed(0)}px;max-height:${((+h * 4) / 3).toFixed(0)}px"`,
 			);
 		variants.push(html);
 	}
@@ -70,7 +70,7 @@ const host = `${buildHost} (${buildRuntime})`;
 >
 	<div class="cmd" role="toolbar" aria-label="The command that draws the graph">
 		<span class="prompt" aria-hidden="true">$</span>
-		<code class="bin">dot-rs</code>
+		<code class="bin">graphviz-pure</code>
 		<span class="flag" aria-hidden="true">-K</span>
 		<span class="opts" role="group" aria-label="Layout engine (-K)">
 			{ENGINES.map((e, i) => <button type="button" class="node-btn" data-k={e} aria-pressed={i === 0 ? 'true' : 'false'} disabled>{e}</button>)}
@@ -90,7 +90,7 @@ const host = `${buildHost} (${buildRuntime})`;
 	</div>
 
 	<div class="readout">
-		<p class="status mono" data-status aria-live="polite">Rendered by graphvis-rs when this site was built.</p>
+		<p class="status mono" data-status aria-live="polite">Rendered by graphviz-pure when this site was built.</p>
 		<p class="proof" data-proof aria-live="polite"></p>
 		<div class="tools">
 			<button type="button" class="btn" data-unpin hidden>Unpin all <kbd>Esc</kbd></button>

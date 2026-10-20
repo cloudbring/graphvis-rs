@@ -102,7 +102,7 @@ export function homeSource(f: Figures, o: SourceOptions): string {
 
 	const dragging = !!o.positions;
 	const portrait = o.rankdir === 'TB' && o.engine === 'dot';
-	return `digraph graphvis_rs {
+	return `digraph graphviz_pure {
   graph [rankdir=${o.rankdir}, bgcolor=${q(p.bg)}, fontname="Times-Roman", fontsize=14, fontcolor=${q(p.ink)}, pad="0.2",
          nodesep=0.22, ranksep=0.42, overlap=${dragging ? 'true' : 'false'}, splines=true, outputorder=edgesfirst${dragging ? ', inputscale=72' : ''}]
   node [fontname="Times-Roman", fontsize=${pw ? 10 : 14}, height=0.4, color=${q(p.ink)}, fontcolor=${q(p.ink)}]
@@ -115,10 +115,10 @@ export function homeSource(f: Figures, o: SourceOptions): string {
     ${nd('c', '', 'dot -Tsvg')}
   }
   subgraph cluster_rs {
-    label="graphvis-rs"; color=${q(p.rsPen)};
+    label="graphviz-pure"; color=${q(p.rsPen)};
     node [style=filled, fillcolor=${q(p.rsFill)}];
-    ${nd('rs', '', 'dot-rs -Tsvg')}
-    ${nd('wasm', '', 'gv_wasm, in this tab')}
+    ${nd('rs', '', 'graphviz-pure -Tsvg')}
+    ${nd('wasm', '', 'graphviz_pure_wasm, in this tab')}
     subgraph cluster_k {
       label="-K"; style=dashed; color=${q(p.kPen)}; fontsize=11;
       node [fontsize=${pw ? 10 : 12}, height=0.3, width=0.6, margin="0.05,0.02"];

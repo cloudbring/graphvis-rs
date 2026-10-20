@@ -22,8 +22,8 @@ import subprocess
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GVBINDIR = os.environ.get("GVBINDIR", str(pathlib.Path.home() / "src/gv-ref/lutplugins"))
 C_BIN = os.environ.get("C_DOT", "dot")
-REL = os.environ.get("PORT_BIN", str(ROOT / "target/release/dot-rs"))
-DBG = os.environ.get("PORT_DEBUG_BIN", str(ROOT / "target/debug/dot-rs"))
+REL = os.environ.get("PORT_BIN", str(ROOT / "target/release/graphviz-pure"))
+DBG = os.environ.get("PORT_DEBUG_BIN", str(ROOT / "target/debug/graphviz-pure"))
 TIMEOUT = float(os.environ.get("FUZZ_TIMEOUT", "30"))
 
 

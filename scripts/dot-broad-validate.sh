@@ -6,7 +6,7 @@
 #
 # Usage: scripts/dot-broad-validate.sh c|port [OUT_DIR] [TIMEOUT_SECONDS]
 #   c     runs C dot (GVBINDIR=~/src/gv-ref/lutplugins: built-in text metrics)
-#   port  runs target/release/dot-rs
+#   port  runs target/release/graphviz-pure
 # Outputs: OUT_DIR/<side>/<variant>/<stem>.dot, plus OUT_DIR/<side>/times.tsv
 # (variant, stem, exit status, seconds). Then:
 #   target/release/gv-diff pairs OUT_DIR/c/<variant> OUT_DIR/port/<variant>
@@ -21,7 +21,7 @@ JOBS="${JOBS:-6}"
 
 case "$SIDE" in
   c) BIN="dot"; export GVBINDIR="${GVBINDIR:-$HOME/src/gv-ref/lutplugins}" ;;
-  port) BIN="${PORT_BIN:-$REPO_ROOT/target/release/dot-rs}" ;;
+  port) BIN="${PORT_BIN:-$REPO_ROOT/target/release/graphviz-pure}" ;;
   *) echo "side must be c or port" >&2; exit 1 ;;
 esac
 

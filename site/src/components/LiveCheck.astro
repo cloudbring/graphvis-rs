@@ -140,7 +140,7 @@ const { input, c, engine, expectIdentical, viewer, injected = [] } = Astro.props
 				if (viewer) {
 					actions.hidden = false;
 					el.querySelector<HTMLButtonElement>('[data-show]')!.onclick = () => {
-						viewer.dispatchEvent(new CustomEvent('gv:replace-right', { detail: { text: res.text, label: 'graphvis-rs (this browser, WASM)' } }));
+						viewer.dispatchEvent(new CustomEvent('gv:replace-right', { detail: { text: res.text, label: 'graphviz-pure (this browser, WASM)' } }));
 						viewer.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 					};
 				}

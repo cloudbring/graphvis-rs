@@ -1,25 +1,25 @@
 {
-  "name": "@graphvis-rs/wasm",
+  "name": "@graphviz-pure/wasm",
   "version": "0.1.0",
   "description": "Rust + WebAssembly port of Graphviz 16.1.0 (all 8 layout engines; byte-identical SVG to C Graphviz on the project's corpus) for browsers, Node.js, Deno, Bun and Workers",
   "type": "module",
-  "main": "./pkg/gv_wasm.js",
-  "types": "./pkg/gv_wasm.d.ts",
+  "main": "./pkg/graphviz_pure_wasm.js",
+  "types": "./pkg/graphviz_pure_wasm.d.ts",
   "files": [
-    "pkg/gv_wasm.js",
-    "pkg/gv_wasm.d.ts",
-    "pkg/gv_wasm_bg.wasm",
-    "pkg/gv_wasm_bg.wasm.d.ts",
+    "pkg/graphviz_pure_wasm.js",
+    "pkg/graphviz_pure_wasm.d.ts",
+    "pkg/graphviz_pure_wasm_bg.wasm",
+    "pkg/graphviz_pure_wasm_bg.wasm.d.ts",
     "index.html"
   ],
   "exports": {
     ".": {
-      "types": "./pkg/gv_wasm.d.ts",
-      "default": "./pkg/gv_wasm.js"
+      "types": "./pkg/graphviz_pure_wasm.d.ts",
+      "default": "./pkg/graphviz_pure_wasm.js"
     }
   },
   "scripts": {
-    "build:wasm": "cd .. && CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS='-C opt-level=z' CARGO_PROFILE_RELEASE_LTO=fat cargo build --release --target wasm32-unknown-unknown -p gv-wasm && wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/release/gv_wasm.wasm && wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals web/pkg/gv_wasm_bg.wasm -o web/pkg/gv_wasm_bg.wasm",
+    "build:wasm": "cd .. && CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS='-C opt-level=z' CARGO_PROFILE_RELEASE_LTO=fat cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm && wasm-bindgen --target web --out-dir web/pkg target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm && wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals web/pkg/graphviz_pure_wasm_bg.wasm -o web/pkg/graphviz_pure_wasm_bg.wasm",
     "serve": "python3 -m http.server 8765"
   },
   "keywords": [
@@ -39,6 +39,6 @@
   "license": "EPL-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cloudbring/graphvis-rs.git"
+    "url": "https://github.com/graphviz-pure/graphviz-pure.git"
   }
 }

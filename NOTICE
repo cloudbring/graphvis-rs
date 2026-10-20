@@ -1,26 +1,26 @@
-graphvis-rs
+graphviz-pure
 ===========
 
-graphvis-rs is a Rust port of Graphviz 16.1.0 (https://graphviz.org,
+graphviz-pure is a Rust port of Graphviz 16.1.0 (https://graphviz.org,
 https://gitlab.com/graphviz/graphviz). It follows the Graphviz C sources
 closely, function by function, and is a derivative work of Graphviz.
 
 Graphviz is Copyright (c) AT&T Corp. and the Graphviz authors, and is
 distributed under the Eclipse Public License 2.0. Its primary authors are
 John Ellson, Emden Gansner, Yifan Hu and Stephen North; the full list is in
-the AUTHORS file of the Graphviz distribution. graphvis-rs is distributed
+the AUTHORS file of the Graphviz distribution. graphviz-pure is distributed
 under the same licence; see LICENSE.
 
-The font metric tables in crates/gv-core/src/font_tables.rs are generated
+The font metric tables in crates/graphviz-pure-core/src/font_tables.rs are generated
 from Graphviz's own textspan tables (lib/common/textspan_lut.c and lib/common/ps_font_equiv.h).
 
 Third-party code
 ----------------
 
-crates/gv-core/src/math/portable/pow/
+crates/graphviz-pure-core/src/math/portable/pow/
     A Rust port of CORE-MATH's binary64 pow (Tom Hubrecht, Paul Zimmermann;
     Copyright (c) 2022-2025 CERN and Inria), MIT licence. The licence text is
-    kept in crates/gv-core/src/math/portable/pow/mod.rs.
+    kept in crates/graphviz-pure-core/src/math/portable/pow/mod.rs.
 
 The libm crate (dependency)
     rust-lang/compiler-builtins' ports of musl/fdlibm and CORE-MATH, MIT

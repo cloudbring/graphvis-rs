@@ -7,10 +7,12 @@ name: Cross-platform
 # is byte-identical. The comparison is published on the site's Cross-platform page, where the
 # reader's browser draws each platform's SVG with one renderer and diffs the pixels.
 #
-# The last two jobs build the documentation site (site/, Astro Starlight, with the WASM package
-# for its live checks and rustdoc under /api/) from this run's results, on every run, and deploy
-# it to GitHub Pages on pushes to master only. The site's fidelity data, gallery outputs and C
-# references are committed, since they need the C oracle, which CI does not have.
+# The last job builds the documentation site (site/, Astro Starlight, with the WASM package for
+# its live checks and rustdoc under /api/) from this run's results, on every run, and uploads it
+# as the `site` artifact. The graphviz-pure.github.io repository publishes it: its workflow polls
+# for the latest successful run on master and deploys that artifact, so neither repository holds
+# a credential for the other. The site's fidelity data, gallery outputs and C references are
+# committed, since they need the C oracle, which CI does not have.
 
 on:
   pull_request:
@@ -42,7 +44,7 @@ jobs:
           - { id: windows-x86_64, label: "Windows x86-64", runner: windows-latest, cargo: "" }
           # macOS defaults to Apple's libm (to match C on macOS); the feature selects the
           # portable profile the other platforms use.
-          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: macos-latest, cargo: "--features gv-core/portable-math" }
+          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: macos-latest, cargo: "--features graphviz-pure-core/portable-math" }
     defaults:
       run:
         shell: bash
@@ -110,8 +112,8 @@ jobs:
         run: cargo install wasm-bindgen-cli --version "$WB_VERSION" --locked
       - name: Build the wasm package
         run: |
-          cargo build --release --target wasm32-unknown-unknown -p gv-wasm
-          wasm-bindgen --target nodejs --out-dir "$RUNNER_TEMP/pkg" target/wasm32-unknown-unknown/release/gv_wasm.wasm
+          cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm
+          wasm-bindgen --target nodejs --out-dir "$RUNNER_TEMP/pkg" target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm
       - name: Render the corpus and the samples
         run: |
           node scripts/cross-platform-wasm.mjs "$RUNNER_TEMP/pkg" out/wasm32
@@ -162,6 +164,9 @@ jobs:
     needs: compare
     if: always() && needs.compare.result != 'cancelled'
     runs-on: ubuntu-latest
+    env:
+      # Served at the root of https://graphviz-pure.github.io/ (the graphviz-pure.github.io repo).
+      SITE_BASE: /
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -231,32 +236,17 @@ jobs:
           cat > site/dist/api/index.html <<'EOF'
           <!doctype html>
           <meta charset="utf-8">
-          <title>graphvis-rs API</title>
-          <meta http-equiv="refresh" content="0; url=gv_engine/index.html">
-          <link rel="canonical" href="gv_engine/index.html">
-          <p><a href="gv_engine/index.html">gv_engine</a>, the pipeline. Other crates are listed in its sidebar.</p>
+          <title>graphviz-pure API</title>
+          <meta http-equiv="refresh" content="0; url=graphviz_pure/index.html">
+          <link rel="canonical" href="graphviz_pure/index.html">
+          <p><a href="graphviz_pure/index.html">graphviz_pure</a>, the pipeline. Other crates are listed in its sidebar.</p>
           EOF
           node scripts/site-check-links.mjs site/dist
 
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      - name: Upload the site
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          name: site
           path: site/dist
+          retention-days: 30
 
-  deploy:
-    name: Deploy the site to GitHub Pages
-    needs: site
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write # deploy-pages publishes the site artifact
-      id-token: write # deploy-pages authenticates to Pages with an OIDC token
-    concurrency:
-      group: pages
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

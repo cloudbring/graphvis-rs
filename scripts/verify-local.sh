@@ -18,6 +18,6 @@ echo "==> [3/4] Running workspace tests..."
 ./scripts/cargo-locked.sh test --workspace
 
 echo "==> [4/4] Verifying wasm32-unknown-unknown build..."
-./scripts/cargo-locked.sh check --target wasm32-unknown-unknown -p gv-wasm
+./scripts/cargo-locked.sh check --target wasm32-unknown-unknown -p graphviz-pure-wasm
 
 echo "==> Local verification complete."

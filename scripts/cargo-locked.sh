@@ -6,14 +6,14 @@ set -euo pipefail
 
 export PATH="/opt/homebrew/opt/rustup/bin:/opt/homebrew/bin:$PATH"
 export RUSTC_WRAPPER="/opt/homebrew/bin/sccache"
-export SCCACHE_DIR="${HOME}/.cache/sccache-graphvis-rs"
+export SCCACHE_DIR="${HOME}/.cache/sccache-graphviz-pure"
 export SCCACHE_CACHE_SIZE="20G"
-export CARGO_TARGET_DIR="${HOME}/.cache/cargo-target-graphvis-rs"
+export CARGO_TARGET_DIR="${HOME}/.cache/cargo-target-graphviz-pure"
 export CARGO_BUILD_JOBS=6
 
 mkdir -p "$SCCACHE_DIR" "$CARGO_TARGET_DIR"
 
-LOCK_DIR="/tmp/graphvis-rs-cargo.lock"
+LOCK_DIR="/tmp/graphviz-pure-cargo.lock"
 WAIT_SEC=0
 while ! mkdir "$LOCK_DIR" 2>/dev/null; do
   sleep 1

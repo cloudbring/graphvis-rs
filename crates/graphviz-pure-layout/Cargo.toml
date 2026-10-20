@@ -1,0 +1,18 @@
+[package]
+name = "graphviz-pure-layout"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+readme.workspace = true
+homepage.workspace = true
+description = "The Graphviz layout engines in pure Rust: dot, neato, fdp, sfdp, twopi, circo, osage, patchwork"
+
+[dependencies]
+graphviz-pure-core.workspace = true
+graphviz-pure-geom.workspace = true
+
+[lints]
+workspace = true

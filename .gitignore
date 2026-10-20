@@ -10,3 +10,6 @@ node_modules/
 # Unpacked from tests/golden/render.tar.xz by gv-diff render (see tests/golden/README.md)
 /tests/golden/render/*/
 /tests/golden/render/.unpacked
+
+# Built by wasm-bindgen (web/package.json build:wasm); never committed
+/web/pkg/

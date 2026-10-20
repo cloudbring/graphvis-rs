@@ -1,9 +1,9 @@
-# Renderer port (`crates/gv-render`)
+# Renderer port (`crates/graphviz-pure-render`)
 
 The output formats are produced by a function-by-function port of the Graphviz
 16.1.0 emit pipeline, so SVG, xdot and JSON share one traversal exactly as in C.
-Node, label, record and HTML geometry come from `gv_geom::node_size` /
-`gv_geom::html_label` (the init half of `shapes.c`, `labels.c`, `htmltable.c`);
+Node, label, record and HTML geometry come from `graphviz_pure_geom::node_size` /
+`graphviz_pure_geom::html_label` (the init half of `shapes.c`, `labels.c`, `htmltable.c`);
 positions come from the layout.
 
 ## Module map
@@ -27,7 +27,7 @@ positions come from the layout.
 | `agwrite.rs` | `lib/cgraph/write.c` (`-Tdot`, `-Txdot`, `-Tcanon`) over the cgraph dictionaries recorded by the parser (`Graph::dicts`: `bindattrs`, `attrstmt`/`setattr`, `unviewsubgraphsattr`, `sym->print`, ProtoGraph `label`) |
 | `lib.rs` | format dispatch, `safe_dcl`/`agxset` bookkeeping (`sync_dicts`), dot's `mark_lowclusters` edge membership |
 
-`gv-layout/src/nop.rs` ports neato's `Nop` path (`init_nop`, `user_pos`,
+`graphviz-pure-layout/src/nop.rs` ports neato's `Nop` path (`init_nop`, `user_pos`,
 `user_spline`, `nop_init_graphs`, `nop_init_edges`, `chkBB`, `compute_bb`,
 `neato_translate`, `neato_set_aspect`, `place_graph_label`) for `-n`, `-n1`,
 `-n2`, `-Knop`/`nop1`/`nop2`. Edges without a usable `pos` go through the
@@ -40,8 +40,8 @@ The render corpus isolates the renderers: C lays every `tests/wild`,
 `tests/fixtures` and `tests/render` graph out (`dot -Tdot`), then both C and
 the port render that file in no-layout mode (`neato -n2`). See
 `scripts/gen-render-golden.sh` and `gv-diff render`
-(`crates/gv-diff/src/render.rs`, ratchet `tests/golden/render/baseline.json`,
-test `crates/gv-diff/tests/render_fidelity.rs`). The SVG generator comment is
+(`crates/graphviz-pure-diff/src/render.rs`, ratchet `tests/golden/render/baseline.json`,
+test `crates/graphviz-pure-diff/tests/render_fidelity.rs`). The SVG generator comment is
 the only line ignored. `tests/render/*.gv` are 21 feature graphs (all arrow
 types, styles, shapes, gradients, HTML, records, URLs, labels, rotation,
 size/ratio, layers, output order).
@@ -77,13 +77,13 @@ parsed input) matches C on 493 of 508 inputs (454 before).
   behaviour); not reproduced (`tests/fuzz-open/034-html-cell-dashed-style-overread`).
 - Images (`image=`, `shapefile=`, `<IMG>`) are never loaded; C draws them only
   when the file exists.
-- The SVG generator comment names graphvis-rs.
+- The SVG generator comment names graphviz-pure.
 - Gradient and HTML anchor ids are numbered per `render_dot_all` call, like C's
   process-wide statics for a single invocation.
 
 ## Charset
 
-C keeps the input's bytes and converts only label text. `gv_core::charset`
+C keeps the input's bytes and converts only label text. `graphviz_pure_core::charset`
 gives the port the same model with `String`s: bytes that are not part of valid
 UTF-8 become the code points `U+10FF00 + byte` (`decode`), and `encode` turns
 them back into bytes. The CLI decodes its input and encodes its output, and

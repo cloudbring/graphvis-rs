@@ -63,7 +63,7 @@ def layout_file(corpus, portable):
 
 
 def exact(r):
-    # gv_diff::FileReport::exact
+    # graphviz_pure_diff::FileReport::exact
     return (
         r.get("error") is None
         and r["missing"] == 0
@@ -107,7 +107,7 @@ def fuzz_rounds():
 
 def measure(portable):
     """Runs gv-diff e2e for one math profile; returns the set of identical files."""
-    feat = ["--features", "gv-core/portable-math", "--target-dir", "target/portable"] if portable else []
+    feat = ["--features", "graphviz-pure-core/portable-math", "--target-dir", "target/portable"] if portable else []
     subprocess.run(["cargo", "build", "--release", "-p", "gv-diff", *feat], cwd=ROOT, check=True)
     exe = ROOT / ("target/portable/release/gv-diff" if portable else "target/release/gv-diff")
     golden = load(GOLDEN / "e2e.json")["files"]

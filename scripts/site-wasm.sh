@@ -12,12 +12,12 @@ have=$(wasm-bindgen --version | awk '{print $2}')
 [ "$want" = "$have" ] || { echo "wasm-bindgen-cli $have, Cargo.lock wants $want" >&2; exit 1; }
 
 CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS='-C opt-level=z' CARGO_PROFILE_RELEASE_LTO=fat \
-  cargo build --release --target wasm32-unknown-unknown -p gv-wasm
+  cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm
 rm -rf "$OUT"
-wasm-bindgen --target web --out-dir "$OUT" target/wasm32-unknown-unknown/release/gv_wasm.wasm
+wasm-bindgen --target web --out-dir "$OUT" target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm
 if command -v wasm-opt >/dev/null; then
   wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext \
-    --enable-mutable-globals "$OUT/gv_wasm_bg.wasm" -o "$OUT/gv_wasm_bg.wasm"
+    --enable-mutable-globals "$OUT/graphviz_pure_wasm_bg.wasm" -o "$OUT/graphviz_pure_wasm_bg.wasm"
 fi
 git rev-parse --short HEAD > "$OUT/COMMIT"
 ls -l "$OUT"

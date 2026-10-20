@@ -14,7 +14,7 @@ const waiting = new Map<number, (r: Response) => void>();
 
 function get(): Worker {
 	if (!worker) {
-		worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'graphvis-rs' });
+		worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'graphviz-pure' });
 		worker.onmessage = (ev: MessageEvent<Response>) => {
 			waiting.get(ev.data.id)?.(ev.data);
 			waiting.delete(ev.data.id);

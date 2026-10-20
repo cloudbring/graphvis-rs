@@ -1,4 +1,4 @@
-# Transcendental functions off macOS (`gv_core::math`)
+# Transcendental functions off macOS (`graphviz_pure_core::math`)
 
 The native aarch64-apple-darwin build matches C Graphviz byte for byte on the whole corpus.
 The wasm32 build did not: 279 of the 2526 corpus files rendered differently (counting
@@ -42,7 +42,7 @@ Findings:
 
 ### Which function moves which corpus
 
-On macOS with `--features gv-core/portable-math`, one function at a time was swapped for the
+On macOS with `--features graphviz-pure-core/portable-math`, one function at a time was swapped for the
 `libm` crate's version, which is the code wasm32 runs. With every function swapped, the native
 build failed on the same 135 files the wasm build does. Swapping one function at a time:
 
@@ -79,12 +79,12 @@ Candidates were compared with the system results on the inputs above:
 
 ## Approach
 
-`gv_core::math` (`crates/gv-core/src/math/`) is the single entry point. Every `.hypot(`,
+`graphviz_pure_core::math` (`crates/graphviz-pure-core/src/math/`) is the single entry point. Every `.hypot(`,
 `.powf(`, `.sin(`, ... call in the workspace became `math::hypot(a, b)` and so on, the way C
 writes `hypot(a, b)`. The rewrite was mechanical, done with a `syn`-based rewriter.
 
 - On Apple targets the functions call the `f64` methods, so native output is unchanged.
-- On every other target, or with `--features gv-core/portable-math` on macOS, they use
+- On every other target, or with `--features graphviz-pure-core/portable-math` on macOS, they use
   `math::portable`:
   - `hypot`: the formula above, with exact power-of-two scaling outside `[2^-500, 2^500]`.
   - `pow`: a Rust port of CORE-MATH's correctly rounded `pow` (`portable/pow/`, see below).
@@ -94,13 +94,13 @@ writes `hypot(a, b)`. The rewrite was mechanical, done with a `syn`-based rewrit
     code compiler-builtins uses for wasm32. Linux gets the same bits as wasm (glibc's
     `pow`/`exp` pick FMA or non-FMA paths by CPU), and `Cargo.lock` pins the results rather
     than the toolchain.
-- `crates/gv-core/src/math/tests.rs` (macOS only) checks the portable `hypot` against the
+- `crates/graphviz-pure-core/src/math/tests.rs` (macOS only) checks the portable `hypot` against the
   system libm on 1,000,000 random and edge inputs.
 
 ## Results
 
 `node scripts/wasm-e2e.mjs` (see its header for the build steps) checks the wasm build against
-C's hashes, rendering every graph in multi-graph files. The first `gv_core::math` change (musl
+C's hashes, rendering every graph in multi-graph files. The first `graphviz_pure_core::math` change (musl
 `pow`, corpus of 2526 files at the time) moved wasm from "before" to "after":
 
 | corpus | files | before | after | native |
@@ -130,7 +130,7 @@ the remaining gap was entirely `pow`, `sin`, `cos` and `atan2`. Two ways to clos
 
 ### The CORE-MATH `pow` port
 
-`crates/gv-core/src/math/portable/pow/` ports `src/binary64/pow/pow.c`, `pow.h`, `dint.h` and
+`crates/graphviz-pure-core/src/math/portable/pow/` ports `src/binary64/pow/pow.c`, `pow.h`, `dint.h` and
 `qint.h` from CORE-MATH (as vendored by `core-math-sys` 1.4.0) line by line: the double-double
 first phase, the 128-bit second phase with the exact/midpoint test of Lauter and Lefèvre, and
 the 256-bit third phase. `tables.rs` was converted from the C initializers by a script.
@@ -172,10 +172,10 @@ C, by corpus (`gv-diff e2e`):
 
 ## Ratchet baselines per math profile
 
-`gv_core::math::PROFILE` is `Profile::Apple` when the platform libm is used (Apple targets
+`graphviz_pure_core::math::PROFILE` is `Profile::Apple` when the platform libm is used (Apple targets
 without `portable-math`) and `Profile::Portable` otherwise. Every corpus ratchet keeps one
 baseline per profile: `gv-diff` maps `--baseline X.json` to `X.portable.json` on portable
-builds (`gv_diff::profile_baseline`), for reading and for `--update`, and prints which file it
+builds (`graphviz_pure_diff::profile_baseline`), for reading and for `--update`, and prints which file it
 used. The Apple files stay the record of exact C parity; the portable files guard regressions
 on Linux and wasm, and their numbers document the gap to C. `scripts/update-baselines.sh
 [--portable]` refreshes all of them for one profile.
@@ -212,12 +212,12 @@ corpus output through the whole pipeline, matching C or not:
 | wasm32 (node, `scripts/wasm-e2e.mjs --hashes`) | n/a | n/a | all 2538 hashes identical |
 
 So Linux and wasm compute the same bits as macOS with `portable-math`: no platform dependence
-was found (the math goes through `gv_core::math`, `sqrt`/`mul_add` are exact everywhere, and
+was found (the math goes through `graphviz_pure_core::math`, `sqrt`/`mul_add` are exact everywhere, and
 the `libm` crate has no CPU-dependent paths on these targets). Two harness issues were fixed:
 
 - `scripts/wasm-e2e.mjs` read inputs as JS strings, which replaced the non-UTF-8 bytes of the
   charset corpus files, so 9 of them differed from native. The new `renderAllBytes` binding
-  (`gv-wasm`) takes and returns raw bytes like the native harness (`gv_core::charset`).
+  (`graphviz-pure-wasm`) takes and returns raw bytes like the native harness (`graphviz_pure_core::charset`).
 - `.cargo/config.toml` used to set `rustc-wrapper = "/opt/homebrew/bin/sccache"`, which does
   not exist on Linux; the containers used `RUSTC_WRAPPER=` (empty). The setting has since moved
   out of the repository.
@@ -231,10 +231,10 @@ check. The `wasm-e2e` job installs `wasm-bindgen-cli` at the `wasm-bindgen` vers
 ## Is the gap only libm? C with the port's math functions
 
 The claim above, that every portable difference comes from libm, can be tested directly: run C
-with the port's portable math functions and compare. `crates/gv-portable-libm` is a small
+with the port's portable math functions and compare. `crates/graphviz-pure-portable-libm` is a small
 library that replaces every transcendental function C Graphviz imports (`sin`, `cos`, `tan`,
 `asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `log2`, `log10`, `pow`, `hypot`, `cbrt`, and
-clang's combined `__sincos_stret`) with the ones `gv_core::math` uses off macOS. It is loaded
+clang's combined `__sincos_stret`) with the ones `graphviz_pure_core::math` uses off macOS. It is loaded
 into the unmodified C `dot` with `DYLD_INSERT_LIBRARIES` on macOS (dyld interposition) and
 `LD_PRELOAD` on Linux; `scripts/dot-portable-libm.sh` does this. The remaining libm imports
 (`sqrt`, `sqrtf`, `fmod`) are exact in IEEE arithmetic.
@@ -258,7 +258,7 @@ the Linux table below.
 So with the same math functions on both sides, the portable build and the browser build are
 byte-identical to C on every stable input, including all 119 files that differ from stock C.
 The ratchet `e2e_svg_identity_with_matched_libm_does_not_regress`
-(`crates/gv-diff/tests/e2e_fidelity.rs`, portable builds only, so it runs in CI) keeps it so.
+(`crates/graphviz-pure-diff/tests/e2e_fidelity.rs`, portable builds only, so it runs in CI) keeps it so.
 11 inputs are unstable in C (its output changed within 5 runs): the twopi `arrows` graphs and a
 few fdp/sfdp files whose C layout depends on heap addresses (issues #34, #41). `--runs 5`
 replaced the two-run check because two runs of `twopi/fx_arrows` sometimes agree by chance.
@@ -283,7 +283,7 @@ sources:
 - **libm** (glibc's functions are not Apple's): 145 files.
 - **libc** (338 files): glibc's `qsort` leaves equal elements in a different order than Apple's, and its
   `rand` is a different generator. With Apple's (the port's reproductions in
-  `gv_layout::cutil`, exported by `gv-portable-libm --features apple-libc`) circo, osage,
+  `graphviz_pure_layout::cutil`, exported by `graphviz-pure-portable-libm --features apple-libc`) circo, osage,
   patchwork, sfdp and twopi match on every file.
 - **the rest**: 102 files, 97 of them neato. The ones checked differ by 0.01 in a spline
   control point, a last-bit rounding difference with every node in the same place; the likely
@@ -298,7 +298,7 @@ Dockerfile now checks that GTS is configured.
 
 ## Provenance and licences
 
-Everything under `crates/gv-core/src/math/`:
+Everything under `crates/graphviz-pure-core/src/math/`:
 
 | file | what | origin | licence |
 |---|---|---|---|

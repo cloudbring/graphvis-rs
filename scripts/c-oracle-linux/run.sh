@@ -24,7 +24,7 @@ docker run --rm -v gv-c-linux-src:/repo -v "$IMAGE-target":/target --name gv-c-l
   -e CARGO_TARGET_DIR=/target -w /repo "$IMAGE" bash -c '
     set -e
     mkdir -p /repo/out
-    cargo build --release -q -p gv-diff -p gv-portable-libm
+    cargo build --release -q -p graphviz-pure-diff -p graphviz-pure-portable-libm
     /target/release/gv-diff e2e --generate --runs 5 --golden /repo/out/e2e.linux-c.json
     echo "{\"identical\":[]}" > /tmp/none.json
     /target/release/gv-diff e2e --golden /repo/out/e2e.linux-c.json --baseline /tmp/none.json \
@@ -33,8 +33,8 @@ docker run --rm -v gv-c-linux-src:/repo -v "$IMAGE-target":/target --name gv-c-l
       --golden /repo/out/e2e.linux-c-libm-matched.json
     /target/release/gv-diff e2e --golden /repo/out/e2e.linux-c-libm-matched.json --baseline /tmp/none.json \
       --list > /repo/out/port-vs-linux-c-libm-matched.txt 2>/dev/null || true
-    CARGO_TARGET_DIR=/target/apple-libc cargo build --release -q -p gv-portable-libm --features apple-libc
-    GV_PORTABLE_LIBM=/target/apple-libc/release/libgv_portable_libm.so /target/release/gv-diff e2e \
+    CARGO_TARGET_DIR=/target/apple-libc cargo build --release -q -p graphviz-pure-portable-libm --features apple-libc
+    GV_PORTABLE_LIBM=/target/apple-libc/release/libgraphviz_pure_portable_libm.so /target/release/gv-diff e2e \
       --generate --runs 5 --c-dot scripts/dot-portable-libm.sh --golden /repo/out/e2e.linux-c-apple-libc.json
     /target/release/gv-diff e2e --golden /repo/out/e2e.linux-c-apple-libc.json --baseline /tmp/none.json \
       --list > /repo/out/port-vs-linux-c-apple-libc.txt 2>/dev/null || true

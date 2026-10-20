@@ -31,7 +31,7 @@ const others = i.files.filter((f) => !['repro.gv', 'cmd.txt', 'cases.txt'].inclu
 ---
 
 <StarlightPage
-	frontmatter={{ title: i.title, description: `${i.upstream_c ? 'Upstream C behaviour' : 'Open difference in graphvis-rs'}: ${i.title}`, tableOfContents: false }}
+	frontmatter={{ title: i.title, description: `${i.upstream_c ? 'Upstream C behaviour' : 'Open difference in graphviz-pure'}: ${i.title}`, tableOfContents: false }}
 >
 	<style is:global>
 		:root {
@@ -61,7 +61,7 @@ const others = i.files.filter((f) => !['repro.gv', 'cmd.txt', 'cases.txt'].inclu
 	<h2 id="compare">C and the port</h2>
 	{
 		p ? (
-			<DiffViewer c={url(`${dir}c.${p.ext}`)} rust={url(`${dir}rust.${p.ext}`)} kind={p.kind} rightLabel="graphvis-rs" />
+			<DiffViewer c={url(`${dir}c.${p.ext}`)} rust={url(`${dir}rust.${p.ext}`)} kind={p.kind} rightLabel="graphviz-pure" />
 		) : (
 			<p class="empty">No pair of C and port outputs in this reproducer.</p>
 		)

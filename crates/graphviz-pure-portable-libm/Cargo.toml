@@ -1,0 +1,27 @@
+[package]
+name = "graphviz-pure-portable-libm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Test tool: runs C Graphviz with graphviz-pure's portable math functions (macOS)"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+graphviz-pure-core.workspace = true
+graphviz-pure-layout = { workspace = true, optional = true }
+libm.workspace = true
+
+[features]
+# Linux only: also export `qsort`, `rand` and `srand` with Apple libc's behaviour (the port's
+# reproductions in graphviz_pure_layout::cutil), to separate libm from the other platform differences.
+apple-libc = ["dep:graphviz-pure-layout"]
+
+# Interposing C's libm needs `extern` declarations and a `__DATA,__interpose` section, so this
+# crate cannot forbid unsafe code like the rest of the workspace. It is a test tool, never
+# linked into the port.
+[lints.rust]
+unsafe_code = "allow"

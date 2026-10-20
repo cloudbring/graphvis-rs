@@ -1,9 +1,9 @@
-# dotgen port (`crates/gv-layout/src/dotgen/`)
+# dotgen port (`crates/graphviz-pure-layout/src/dotgen/`)
 
 Faithful, function-by-function port of Graphviz 16.1.0 `lib/dotgen` plus
 `lib/common/ns.c` and the parts of `lib/common` that dot uses. It is the `dot`
-engine (`crates/gv-layout/src/lib.rs`); the old approximate engine (`dot.rs`,
-`GV_DOT_LEGACY`) and its helpers (gv-geom's old spline router and node sizing,
+engine (`crates/graphviz-pure-layout/src/lib.rs`); the old approximate engine (`dot.rs`,
+`GV_DOT_LEGACY`) and its helpers (graphviz-pure-geom's old spline router and node sizing,
 `force_circular.rs`) are deleted.
 
 Functions keep their C names (snake_case) so the two can be read side by side.
@@ -16,7 +16,7 @@ C file-scope statics live as fields on `Dot` (`cmark`, `min_quit`, `max_iter`,
 |---|---|---|
 | `types.rs` | `common/types.h`, `common/const.h` | `Agraphinfo_t`/`Agnodeinfo_t`/`Agedgeinfo_t`, `rank_t`, `port`, `textlabel_t`, `bezier` |
 | `cg.rs` | `lib/cgraph` (subset) | iteration order, `agdelete` (node, recursive into subgraphs), `agsubedge`, `agsubnode`, strict `agedge`, `agsubg`, `agdegree` |
-| `init.rs` | `dotinit.c` (`dot_init_subg`, `dot_init_node_edge`), `common/input.c` (`graph_init`, `do_graph_label`), `common/utils.c` (`common_init_edge`) | ported; node and label sizes come from `gv_geom::node_geometry` / `edge_label_geometry` / `graph_label_geometry`; ports via the shared `common::ports::chk_port`; nodes carry a `common::shapes::NodeShape` for `insidefn` clipping |
+| `init.rs` | `dotinit.c` (`dot_init_subg`, `dot_init_node_edge`), `common/input.c` (`graph_init`, `do_graph_label`), `common/utils.c` (`common_init_edge`) | ported; node and label sizes come from `graphviz_pure_geom::node_geometry` / `edge_label_geometry` / `graph_label_geometry`; ports via the shared `common::ports::chk_port`; nodes carry a `common::shapes::NodeShape` for `insidefn` clipping |
 | `utils.rs` | `common/utils.c` (`late_int`, `late_double`, `mapBool`, `UF_*`, `is_a_cluster`), `class1.c` (`nonconstraint_edge`), `util/gv_math.h` (`scale_clamp`) | ported |
 | `qsort.rs` | Apple Libc `qsort` | thin wrapper over the single implementation `crate::cutil::qsort_by` (qsort is unstable; tie order leaks into `TB_balance`, `medians`, `restore_best`, `do_ordering_node`, `edgecmp`). `qsort_vectors.txt` holds recorded system permutations |
 | `fastgr.rs` | `fastgr.c` | ported (all functions) |
@@ -37,7 +37,7 @@ C file-scope statics live as fields on `Dot` (`cmark`, `min_quit`, `max_iter`,
 | `splinegraph.rs` | glue | `SplineGraph`/`PortGraph`/`XLabelGraph`/`OrthoGraph` for `Dot` (the `ND_*`/`ED_*` view the shared `lib/common` and `lib/ortho` code uses), `record_path` (`pboxfn`), `arrow_flags` with `ED_conc_opp_flag` |
 | `postproc.rs` | `common/postproc.c` (`gv_postprocess`, `place_graph_label`, `place_flip_graph_label`, `place_root_label`, `translate_drawing`, `map_edge`, `translate_bb`, `map_point`), `dotinit.c` (`removeFill`) | ported; `addXLabels` is the shared `common::xlabels::add_xlabels` |
 | `pack.rs` | `dotinit.c` (`doDot`'s pack branch, `initSubg`, `attachPos`, `resetCoord`, `copyCluster`, `copyClusterInfo`) | ported, see "Phase 3" |
-| `output.rs` | `common/output.c` (`attach_attrs_and_arrows`, the parts the IR needs) | write-back into `gv_core::Graph`: positions, splines with `sflag`/`eflag`, `lp`/`head_lp`/`tail_lp`/`xlp` with C's emission rules, graph/cluster label positions (`nop::LABEL_POS_KEY`) |
+| `output.rs` | `common/output.c` (`attach_attrs_and_arrows`, the parts the IR needs) | write-back into `graphviz_pure_core::Graph`: positions, splines with `sflag`/`eflag`, `lp`/`head_lp`/`tail_lp`/`xlp` with C's emission rules, graph/cluster label positions (`nop::LABEL_POS_KEY`) |
 
 Shared code outside `dotgen/` that dot uses (one implementation per C function):
 
@@ -130,12 +130,12 @@ match C (pos/lp/head_lp/tail_lp/xlp within 2pt) except where C itself exceeds a
 
 ## Validation
 
-* `cargo run --release -p gv-diff -- --baseline tests/golden/baseline.json`.
+* `cargo run --release -p graphviz-pure-diff -- --baseline tests/golden/baseline.json`.
   At the switch to dotgen: nodes ok 73.5% (old engine 14.7%), edges 22%, bb 84%.
   After phase 2: exact 499/508, nodes ok 99.1%, edges ok 99.6%, bb ok 98.2%,
   clusters 98.9%, score 98.8%. The dot files left are the four `pack` files;
   the others are non-dot engines (fdp, osage).
-* State dumps: `GVDUMP=1 dot-rs -Tdot f.gv` prints rank (`R`), mincross order
+* State dumps: `GVDUMP=1 graphviz-pure -Tdot f.gv` prints rank (`R`), mincross order
   (`M r: ...`), aux graph (`A idx name r= o= t= rw= lw=: head/minlen/weight`),
   final x (`P`), TB_balance (`TBPRE`, `TBORDER`, `TB`), decompose (`SC`) and label
   vnodes (`LV`). An instrumented C build with the same dumps lives in
@@ -162,7 +162,7 @@ its nodes by name, as `agnode(dg, name, 1)` does, so a node named like a
 cluster shares (and takes over) the cluster's derived node; `unionNodes` then
 drops the cluster's other nodes, which can turn the graph into one component
 (`b145`, `fdp.gv`). With one component, or a `ratio`, dot lays the root out
-as usual. Otherwise each component becomes a standalone `gv_core::Graph`
+as usual. Otherwise each component becomes a standalone `graphviz_pure_core::Graph`
 (`CComp::to_graph`: root graph attributes, induced edges, the projected
 subgraphs with their attributes) laid out by its own `Dot` with
 `Dot::new_component`, which reproduces what C sees through `agroot`:
@@ -184,7 +184,7 @@ subgraphs) and `lib/pack` packs through the `PackGraph` trait (`DotPack`:
 `resetCoord` and `copyClusterInfo` (later components win) follow, and
 postprocessing runs with `EDGE_TYPE(root) = EDGETYPE_NONE` (the root never
 had `setEdgeType`), so edge labels and xlabels stay unplaced as in C: the
-output marks them (`label_unplaced`, `gv_core::UNPLACED_PORT_LABELS_KEY`) and
+output marks them (`label_unplaced`, `graphviz_pure_core::UNPLACED_PORT_LABELS_KEY`) and
 the renderers do not draw them.
 
 Other fixes found on the way: command-line `-G/-N/-E` attributes are `fixed`

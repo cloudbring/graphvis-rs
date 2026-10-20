@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generate crates/gv-core/src/font_tables.rs from the Graphviz C sources.
+"""Generate crates/graphviz-pure-core/src/font_tables.rs from the Graphviz C sources.
 
 Sources (Graphviz 16.1.0):
   lib/common/textspan_lut.c   -> FONT_METRICS (per-family ASCII advance widths)
   lib/common/ps_font_equiv.h  -> POSTSCRIPT_ALIASES (postscript_alias[] in textspan.c)
   lib/common/entities.h       -> HTML_ENTITIES, ENTITY_NAME_LENGTH_MAX (used by htmlEntityUTF8)
 
-Usage: scripts/gen-font-tables.py [GRAPHVIZ_SRC_DIR] > crates/gv-core/src/font_tables.rs
+Usage: scripts/gen-font-tables.py [GRAPHVIZ_SRC_DIR] > crates/graphviz-pure-core/src/font_tables.rs
        (default GRAPHVIZ_SRC_DIR: ~/src/gv-ref/graphviz-16.1.0)
 
 The script is deterministic: rerunning it on the same C sources yields a byte-identical file,

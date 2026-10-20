@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate crates/gv-core/src/color_table.rs from the Graphviz color sources.
+"""Generate crates/graphviz-pure-core/src/color_table.rs from the Graphviz color sources.
 
 Usage: scripts/gen_color_table.py [GRAPHVIZ_SRC] [OUTPUT]
 
@@ -18,7 +18,7 @@ ENTRY = re.compile(r"^(\S+) (\d+) (\d+) (\d+) (\d+)\s*$")
 def main(argv):
     src = os.path.expanduser(argv[1] if len(argv) > 1 else "~/src/gv-ref/graphviz-16.1.0")
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    out_path = argv[2] if len(argv) > 2 else os.path.join(root, "crates/gv-core/src/color_table.rs")
+    out_path = argv[2] if len(argv) > 2 else os.path.join(root, "crates/graphviz-pure-core/src/color_table.rs")
 
     entries = {}
     for name in ("brewer_colors", "svgcolor_names", "color_names"):
