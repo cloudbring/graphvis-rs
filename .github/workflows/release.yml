@@ -211,7 +211,9 @@ jobs:
           sha256sum --check --ignore-missing SHA256SUMS
           \`\`\`
           EOF
-          gh release create "$TAG" --repo "$REPO" --verify-tag --title "graphviz-pure $VERSION" --notes-file notes.md dist/*
+          # Releases are immutable once published, so every file is attached to a draft first.
+          gh release create "$TAG" --repo "$REPO" --verify-tag --draft --title "graphviz-pure $VERSION" --notes-file notes.md dist/*
+          gh release edit "$TAG" --repo "$REPO" --draft=false
 
   crates-io:
     name: Publish to crates.io
