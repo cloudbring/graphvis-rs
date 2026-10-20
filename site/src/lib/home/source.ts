@@ -126,8 +126,8 @@ export function homeSource(f: Figures, o: SourceOptions): string {
     }
   }
   ${nd('same', `shape=diamond, style=filled, fillcolor=${q(p.ask)}`, 'same\\nbytes?')}
-  ${nd('mac', 'shape=record', rec('macOS', `${n(f.apple)} of ${n(f.total)}`))}
-  ${nd('lin', 'shape=record', rec('Linux, Windows, WASM', `${n(f.portable)} of ${n(f.total)}`))}
+  ${nd('mac', 'shape=record', rec('macOS, Apple Silicon', `${n(f.apple)} of ${n(f.total)}`))}
+  ${nd('lin', 'shape=record', rec('Linux, Windows, Intel Mac, WASM', `${n(f.portable)} of ${n(f.total)}`))}
 
   input -> c; input -> rs;
   rs -> {${ENGINES.map((e) => engineNode(e)).join(' ')}} [arrowhead=none, color=${q(p.spoke)}];

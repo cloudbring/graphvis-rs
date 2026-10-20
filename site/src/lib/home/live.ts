@@ -5,12 +5,16 @@
  * pos="x,y!" on the node, re-run for as long as the pointer moves.
  */
 import { latest, render } from './client';
-import { between, css, drawCanvas, fontFamily, inkBox, paletteOf, pathData, quantize, sceneFromJson, translate, type Item, type Prim, type Scene } from './scene';
+import { between, css, drawCanvas, fontFamily, inkBox, pathData, sceneFromJson, translate, type Item, type Prim, type Scene } from './scene';
 import { ENGINES, engineNode, homeSource, nodeEngine, type Engine, type Figures, type SourceOptions } from './source';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
 /** Graphviz draws 1pt as 4/3 px (96 dpi); the sheet never magnifies beyond that. */
 const MAX_SCALE = 4 / 3;
+/** -Tpng draws at this multiple of the screen's pixel density, then downsamples. */
+const RASTER_SUPERSAMPLE = 2;
+/** Largest side of the -Tpng canvas, in canvas pixels. */
+const RASTER_MAX_PX = 6144;
 const PAD = 14.4; // the graph's pad="0.2", in points
 const PORTRAIT = '(max-width: 45rem)';
 
@@ -335,31 +339,31 @@ export function mountLive(root: HTMLElement) {
 	}
 
 	/**
-	 * -Tpng: the same frame rasterised at Graphviz's 96 dpi (4/3 pixel per point), without
-	 * antialiasing, then shown at the sheet's size with the pixels left square.
+	 * -Tpng: the same frame rasterised on a canvas at twice the screen's pixel density, then
+	 * shown at the sheet's size, so the browser averages four drawn pixels into each screen pixel.
 	 */
 	function raster(s: Scene) {
-		// Never more pixels than the sheet has CSS pixels: zoomed out, the pixels show.
-		const k96 = Math.min(MAX_SCALE, sheet.clientWidth / view[2]);
-		const cw = Math.max(1, Math.round(view[2] * k96)),
-			ch = Math.max(1, Math.round(view[3] * k96));
+		const dpr = window.devicePixelRatio || 1;
+		// Capped, so a drag still renders each frame in time on large, dense screens.
+		const k = Math.min((sheet.clientWidth / view[2]) * dpr * RASTER_SUPERSAMPLE, RASTER_MAX_PX / view[2], RASTER_MAX_PX / view[3]);
+		const cw = Math.max(1, Math.round(view[2] * k)),
+			ch = Math.max(1, Math.round(view[3] * k));
 		if (canvas.width !== cw || canvas.height !== ch) {
 			canvas.width = cw;
 			canvas.height = ch;
 		}
-		const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-		const k = cw / view[2];
+		const ctx = canvas.getContext('2d')!;
+		ctx.imageSmoothingEnabled = true;
+		ctx.imageSmoothingQuality = 'high';
 		const bgPrim = s.items[0]?.kind === 'graph' ? s.items[0].prims.find((p) => p.t === 'poly') : undefined;
 		const bg = bgPrim && bgPrim.t === 'poly' ? bgPrim.fill : null;
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.fillStyle = css(bg) === 'none' ? getComputedStyle(sheet).backgroundColor : css(bg);
 		ctx.fillRect(0, 0, cw, ch);
 		ctx.setTransform(k, 0, 0, k, -view[0] * k, -view[1] * k);
-		drawCanvas(ctx, s, 1 / k);
+		// Hairlines stay one screen pixel wide: RASTER_SUPERSAMPLE canvas pixels.
+		drawCanvas(ctx, s, RASTER_SUPERSAMPLE / k);
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
-		const img = ctx.getImageData(0, 0, cw, ch);
-		quantize(img, paletteOf(s), bg);
-		ctx.putImageData(img, 0, 0);
 	}
 
 	/* ---------- Words ---------- */
