@@ -53,13 +53,11 @@ pub fn make_obstacle(g: &LGraph<'_>, n: usize, pmargin: &Expand) -> Option<Vec<P
     let nd = &g.nodes[n];
     let sh = &nd.shape;
     let c = nd.coord;
-    // shapeOf() is SH_UNSET for star and cylinder (own shape_functions): no obstacle.
-    if sh.name == "cylinder" {
-        return None;
-    }
+    // shapeOf() is SH_POLY for star and cylinder too: `star_fns` and
+    // `cylinder_fns` both use `poly_init` (lib/common/shapes.c), so they get a
+    // polygon obstacle from their outline vertices like any other polygon.
     match sh.inside {
-        InsideFn::Star => None,
-        InsideFn::Poly | InsideFn::Point => {
+        InsideFn::Poly | InsideFn::Star | InsideFn::Point => {
             let is_poly = sh.inside != InsideFn::Point && sh.sides >= 3;
             let sides = if is_poly { sh.sides } else { 8 };
             let mut ps = vec![Point::default(); sides];
