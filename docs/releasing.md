@@ -2,8 +2,9 @@
 
 ## How a release works
 
-1. Bump `version` in `[workspace.package]` (`Cargo.toml`) and in `web/package.json`, merge to
-   `master`.
+1. Run `scripts/bump-version.sh X.Y.Z --pr`: it sets the version in `Cargo.toml`,
+   `Cargo.lock` and `web/package.json`, dates the changelog's "Unreleased" entries, and opens the
+   release pull request. Merge it. The version follows [the versioning policy](versioning.md).
 2. A maintainer pushes the tag: `git tag -s v0.1.0 && git push origin v0.1.0`. Only maintainers
    can create `v*` tags (tag ruleset).
 3. `.github/workflows/release.yml` runs on GitHub-hosted runners, with no caches, the pinned

@@ -93,3 +93,7 @@ document.getElementById('diagram').innerHTML = svg;
 ## Licence
 
 [EPL-2.0](LICENSE), the licence of Graphviz. The port follows the Graphviz C sources closely and is a derivative work of Graphviz; [NOTICE](NOTICE) credits the Graphviz authors and lists the third-party code in the math module (MIT), whose provenance is detailed in `docs/porting/libm.md`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), the [code of conduct](CODE_OF_CONDUCT.md), the [changelog](CHANGELOG.md) and the [versioning policy](docs/versioning.md). Security problems: [SECURITY.md](SECURITY.md).

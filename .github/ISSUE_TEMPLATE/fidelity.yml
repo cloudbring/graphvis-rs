@@ -1,0 +1,44 @@
+name: Output differs from C Graphviz
+description: graphviz-pure writes different output than C Graphviz 16.1.0 for an input.
+labels: [fidelity]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Compare against C Graphviz 16.1.0 run as in [Verify it yourself](https://graphviz-pure.github.io/verify/#the-c-reference). A stock `dot` measures text with Pango and the installed fonts, so its label sizes differ from both the reference and the port; that alone is not a bug. Check [What's left](https://graphviz-pure.github.io/whats-left/) first.
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: The smallest DOT input that shows the difference.
+      render: dot
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      placeholder: graphviz-pure -Kneato -Tsvg input.gv
+    validations:
+      required: true
+  - type: textarea
+    id: c-output
+    attributes:
+      label: C Graphviz output (or the relevant part)
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: port-output
+    attributes:
+      label: graphviz-pure output (or the relevant part)
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions and platform
+      placeholder: graphviz-pure 0.1.0 on macOS arm64; C Graphviz 16.1.0 without Pango
+    validations:
+      required: true

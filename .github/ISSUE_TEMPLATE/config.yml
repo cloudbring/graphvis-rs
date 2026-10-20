@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/graphviz-pure/graphviz-pure/security/advisories/new
+    about: Report security problems privately, not in a public issue.
+  - name: Known differences from C Graphviz
+    url: https://graphviz-pure.github.io/whats-left/
+    about: Check whether a difference is already known and tracked.
+  - name: Documentation and fidelity evidence
+    url: https://graphviz-pure.github.io/
+    about: How the port is checked against C, and how to verify it yourself.
