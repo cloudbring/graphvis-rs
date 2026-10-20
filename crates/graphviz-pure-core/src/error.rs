@@ -24,6 +24,9 @@ pub enum GraphvizError {
 
     #[error("Invalid attribute '{attr}': {message}")]
     AttributeError { attr: String, message: String },
+
+    #[error("Rendering error: {0}")]
+    RenderError(String),
 }
 
 pub type Result<T> = std::result::Result<T, GraphvizError>;

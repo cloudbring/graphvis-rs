@@ -11,7 +11,8 @@ graphviz-pure is an independent port. It is not affiliated with or endorsed by t
 ## Status
 
 - All eight layout engines (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`) are function-by-function ports of the Graphviz 16.1.0 C code, together with the libraries they use: network simplex, `pathplan`, `ortho`, `pack`, `vpsc`, the `neatogen` solvers, `lib/label` and the shape, label and HTML-table code. `docs/porting/` maps each Rust module to its C file and lists every known difference.
-- Output formats: `svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`, `plain-ext`. `-n`/`-n2` (use positions from the input) is supported.
+- Output formats: `svg`, `json`, `json0`, `dot`, `xdot`, `canon`, `plain`, `plain-ext`, and the raster formats `png` and `jpg` (`jpeg`, `jpe`). `-n`/`-n2` (use positions from the input) is supported.
+- Raster output is the SVG drawn by [resvg](https://github.com/linebender/resvg) (`crates/graphviz-pure-raster`), at Graphviz's sizes (96 dpi, or the graph's `dpi`). Its layout is the port's, so it matches C under the reference setup; its pixels do not match C's, which draws with cairo and measures text with Pango and the installed fonts. Text is drawn with bundled Tinos, Arimo and Cousine (the metrics of Times, Arial and Courier), never with system fonts. JPEG output is based in part on the work of the Independent JPEG Group. PDF output is not supported yet.
 - Text is measured with Graphviz's built-in font metric tables, which is what C does when built without Pango. The reference outputs come from C 16.1.0 run that way (see `scripts/gen-golden.sh`).
 - C behaviour is reproduced where output depends on it, including C bugs and platform details: the macOS `qsort` and `rand`, `drand48`, clang's fused multiply-adds, cdt's splay trees, and C's error counting and exit status. `docs/c-bugs-ledger.md` lists the reproduced C bugs.
 

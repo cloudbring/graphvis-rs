@@ -191,7 +191,8 @@ fn main() -> ExitCode {
         Parsed::Exit(code) => return code,
     };
 
-    if OutputFormat::parse(&opts.format).is_err() {
+    let raster = graphviz_pure_raster::RasterFormat::parse(&opts.format);
+    if raster.is_none() && OutputFormat::parse(&opts.format).is_err() {
         eprintln!("Format: \"{}\" not recognized.", opts.format);
         return ExitCode::FAILURE;
     }
@@ -228,13 +229,42 @@ fn main() -> ExitCode {
                 continue;
             }
         };
-        let (outputs, err) = graphviz_pure::render_dot_all_partial(
-            &source,
-            &opts.engine,
-            &opts.format,
-            &opts.globals,
-            opts.layout,
-        );
+        // Raster formats are drawn from the SVG (graphviz-pure-raster); the rest are text.
+        let (outputs, err): (Vec<Vec<u8>>, _) = match raster {
+            Some(fmt) => {
+                let (svgs, mut err) = graphviz_pure::render_svg_all_partial(
+                    &source,
+                    &opts.engine,
+                    &opts.globals,
+                    opts.layout,
+                );
+                let mut images = Vec::with_capacity(svgs.len());
+                for (svg, explicit_dpi) in svgs {
+                    match graphviz_pure_raster::rasterize(&svg, fmt, explicit_dpi) {
+                        Ok(b) => images.push(b),
+                        Err(e) => {
+                            err = Some(graphviz_pure_core::GraphvizError::RenderError(e));
+                            break;
+                        }
+                    }
+                }
+                (images, err)
+            }
+            None => {
+                let (texts, err) = graphviz_pure::render_dot_all_partial(
+                    &source,
+                    &opts.engine,
+                    &opts.format,
+                    &opts.globals,
+                    opts.layout,
+                );
+                let bytes = texts
+                    .iter()
+                    .map(|t| graphviz_pure_core::charset::encode(t).into_owned())
+                    .collect();
+                (bytes, err)
+            }
+        };
         if let Some(e) = &err {
             failed = true;
             if outputs.is_empty() {
@@ -260,8 +290,8 @@ fn main() -> ExitCode {
             (Some(w), _) | (None, Some(w)) => w.as_mut(),
             (None, None) => &mut stdout,
         };
-        for text in outputs {
-            if let Err(e) = out.write_all(&graphviz_pure_core::charset::encode(&text)) {
+        for bytes in outputs {
+            if let Err(e) = out.write_all(&bytes) {
                 eprintln!("{argv0}: write error: {e}");
                 return ExitCode::FAILURE;
             }

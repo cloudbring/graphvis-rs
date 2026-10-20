@@ -1,0 +1,20 @@
+[package]
+name = "graphviz-pure-raster"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+readme.workspace = true
+homepage.workspace = true
+description = "PNG and JPEG output for graphviz-pure: rasterizes its SVG with resvg and bundled metric-compatible fonts"
+# The bundled fonts (fonts/) are under the SIL Open Font License 1.1; see fonts/OFL-*.txt.
+include = ["src/**", "fonts/*.ttf", "fonts/OFL-*.txt", "fonts/SHA256SUMS", "Cargo.toml"]
+
+[dependencies]
+resvg = { version = "0.48.1", default-features = false, features = ["text"] }
+jpeg-encoder = { version = "0.7.1", default-features = false, features = ["std"] }
+
+[lints]
+workspace = true

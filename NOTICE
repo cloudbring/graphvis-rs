@@ -30,3 +30,16 @@ docs/porting/libm.md lists the provenance of everything in the math module.
 Early commits in this repository's history contained a port of Apple Libm's
 cbrt.c (from an APSL release); it was replaced and is not part of any current
 source file.
+
+crates/graphviz-pure-raster/fonts/
+    Tinos, Arimo and Cousine (https://github.com/googlefonts), Copyright 2026
+    The Tinos, Arimo and Cousine Project Authors, under the SIL Open Font
+    License 1.1 (fonts/OFL-*.txt). They are compiled into the graphviz-pure
+    binary to draw text in PNG and JPEG output.
+
+JPEG output
+    This software is based in part on the work of the Independent JPEG Group
+    (through the jpeg-encoder crate).
+
+PNG and JPEG output are drawn with resvg and tiny-skia (linebender, MIT OR
+Apache-2.0 and BSD-3-Clause).
