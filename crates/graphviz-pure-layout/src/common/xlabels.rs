@@ -696,7 +696,10 @@ fn hilbert(x0: i32, y0: i32, n: u32) -> u32 {
 /// `placeLabels(objs, n_objs, params)`.
 fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bool) {
     let order = (math::log2((bb.ur.x.max(bb.ur.y)).round()).floor() as i64 + 1) as u32;
-    let mut keyed: Vec<(u32, usize, Rect)> = Vec::with_capacity(objs.len());
+    // `HDict_t.key` is an `int`, and `Hdisc`'s `icompare` compares the keys
+    // as `int`, so the unsigned Hilbert index is reinterpreted as signed:
+    // keys with bit 31 set (coordinates reaching 2^15) sort first, not last.
+    let mut keyed: Vec<(i32, usize, Rect)> = Vec::with_capacity(objs.len());
     for (i, o) in objs.iter().enumerate() {
         let p = o.lbl.map(|l| lbls[l].sz).unwrap_or_default();
         let r = Rect {
@@ -709,7 +712,7 @@ fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bo
         };
         let x = r.b[0] + (r.b[2] - r.b[0]) / 2.0;
         let y = r.b[1] + (r.b[3] - r.b[1]) / 2.0;
-        keyed.push((hilbert(x as i32, y as i32, order), i, r));
+        keyed.push((hilbert(x as i32, y as i32, order) as i32, i, r));
     }
     // Dtobag puts a new element before an equal one found at the splay root,
     // so runs of equal keys come out in reverse insertion order.

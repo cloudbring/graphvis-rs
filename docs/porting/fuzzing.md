@@ -199,6 +199,11 @@ neato family
   (`neato_record_obstacle_uses_field_box`, `circo_record_obstacle_falls_back_like_c`).
 * patchwork places xlabels around the shape size `common_init_node` gives the node, not
   its patch.
+* `placeLabels` orders the Hilbert keys as C's `int` (`HDict_t.key`, `icompare`), not as
+  unsigned, so drawings over 32768pt build C's R-tree. This was open case
+  `005-xlabels-hilbert-key-signed-order` (16 fuzz cases); its fdp and circo repros are in
+  the corpora as `fuzz_xlabels_hilbert_signed_key.gv`, and
+  `crates/graphviz-pure-cli/tests/cli.rs` (`xlabel_hilbert_keys_are_ordered_as_signed_int`).
 
 Robustness (debug overflow and panics)
 * pack's perimeter sum wraps like C's int; a one-point spline no longer panics
@@ -257,7 +262,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 |---|---|---:|---|
 | [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
 | [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
-| [`005-xlabels-hilbert-key-signed-order`](../../tests/fuzz-open/005-xlabels-hilbert-key-signed-order) | medium | 16 | port |
 | [`006-fdp-cluster-port-sincos-fusion`](../../tests/fuzz-open/006-fdp-cluster-port-sincos-fusion) | medium | 12 | port |
 | [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
 | [`009-xlabels-dtobag-equal-key-order`](../../tests/fuzz-open/009-xlabels-dtobag-equal-key-order) | medium | 7 | port |
