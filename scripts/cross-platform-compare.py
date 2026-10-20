@@ -58,7 +58,7 @@ def main():
         if not same:
             sample_diff.append(n)
 
-    # PNG (native platforms only): reported, not yet part of the pass/fail verdict.
+    # PNG (native platforms only; the WASM build has no raster output).
     png_names = sorted({f[:-4] for d in dirs for f in os.listdir(os.path.join(a.root, d, "samples")) if f.endswith(".png")})
     png = []
     for n in png_names:
@@ -80,7 +80,7 @@ def main():
         "samples": samples,
         "missing_platforms": missing,
         "png": png,
-        "identical": not corpus_diff and not sample_diff and not missing,
+        "identical": not corpus_diff and not sample_diff and not missing and all(p["identical"] for p in png),
     }
     json.dump(manifest, open(os.path.join(a.root, "manifest.json"), "w"), indent=1)
 
@@ -93,7 +93,10 @@ def main():
         print(f"| {p['label']} | {p['runtime']} | {p['corpus_agree']} / {len(keys)} | {same_s} / {len(names)} |")
     if png:
         same = sum(1 for p in png if p["identical"])
-        print(f"\nPNG (reported only): {same} of {len(png)} samples byte-identical across the native platforms.")
+        print(f"\nPNG: {same} of {len(png)} samples byte-identical across the native platforms.")
+        for p in png:
+            if not p["identical"]:
+                print(f"- PNG `{p['name']}` differs")
     if missing:
         print(f"\n**Missing platforms** (their jobs produced no outputs): {', '.join(missing)}.")
     if manifest["identical"]:
