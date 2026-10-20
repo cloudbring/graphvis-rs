@@ -164,7 +164,7 @@ impl Dot<'_> {
                 i += 1;
             }
         }
-        self.init_mincross(g);
+        self.init_mincross(g)?;
         let mut nc: i64 = 0;
         for comp in 0..self.graphs[g].comp.len() {
             self.init_mccomp(g, comp);
@@ -756,18 +756,19 @@ impl Dot<'_> {
         self.real_fill_ranks(g, &mut rnks, None);
     }
 
-    fn init_mincross(&mut self, g: G) {
+    fn init_mincross(&mut self, g: G) -> Result<(), String> {
         self.remincross = false;
         self.mincross_options(g);
         if self.graphs[g].flags & NEW_RANK != 0 {
             self.fill_ranks(g);
         }
-        self.class2(g);
+        self.class2(g)?;
         self.decompose(g, 1);
         self.allocate_ranks(g);
         self.ordered_edges(g);
         self.global_min_rank = self.graphs[g].minrank;
         self.global_max_rank = self.graphs[g].maxrank;
+        Ok(())
     }
 
     pub fn flat_rev(&mut self, g: G, e: E) {

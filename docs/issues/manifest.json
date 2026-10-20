@@ -1,27 +1,5 @@
 [
   {
-    "slug": "dot-cluster-rank-max-build-skeleton-panic",
-    "dir": "tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic",
-    "title": "dot: a node of a cluster in a rank=max set panics build_skeleton (cluster.rs:328) where C reads a NULL rank leader",
-    "labels": [
-      "bug",
-      "fidelity",
-      "fuzz",
-      "engine:dot",
-      "crash"
-    ],
-    "engine": "dot",
-    "category": "layout",
-    "severity": "high",
-    "seeds": [
-      24180
-    ],
-    "case_count": 1,
-    "upstream_c": false,
-    "close_as_wontfix": false,
-    "body": "The port panics (`called Option::unwrap() on a None value` at `crates/graphviz-pure-layout/src/dotgen/cluster.rs:328`) on this graph, where a cluster node (`n235`) is also in a top-level `rank=max` set. With `pack=8` (as generated), C draws the graph and exits 0. Without `pack`, the same graph crashes C with SIGSEGV: `build_skeleton` reads `GD_rankleader(subg)[ND_rank(v)]` for a node whose rank has no leader, and dereferences NULL. C survives with `pack` only because of the `_cc_0` subgraph side effect (issue #19, `dot-pack-single-component-ignores-cc-subgraph`, now fixed in the port): the component subgraph's cloned clusters change the ranking (\"n235 was already in a rankset, deleted from cluster G\").\n\n**Reproducer**\n\n```dot\nstrict digraph \"G\" {\npack=\"8\";\n\"n148\";\nsubgraph \"cluster_1\" {\n\"n165\";\n\"n181\" [];\n\"n235\";\nsubgraph \"cluster4\" {\n\"n102\" [];\n\"n225\" [];\n}\n}\n{\nrank=max;\n\"n235\";\n\"n148\";\n}\n{\"n15\" \"n181\" \"n205\"} -> \"n102\";\n\"n148\" -> \"n164\";\n\"n164\" -> \"n165\";\n}\n```\n\n```sh\nGVBINDIR=<pango-free plugins> dot -Kdot -Tsvg repro.gv   # C Graphviz 16.1.0\ngraphviz-pure -Kdot -Tsvg repro.gv                              # port\n```\n\n**C output vs port**\n\n```diff\n--- c.stderr\n+++ rust.stderr\n@@ -1,2 +1,5 @@\n-Warning: n235 was already in a rankset, deleted from cluster G\n-exit status 0\n+\n+thread 'main' panicked at crates/graphviz-pure-layout/src/dotgen/cluster.rs:328:80:\n+called `Option::unwrap()` on a `None` value\n+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n+exit status 101\n(C writes the SVG, c.svg; the port writes nothing)\n```\n\n**Root cause**\n\nC: `build_skeleton` (`lib/dotgen/cluster.c:343`), at line 365-366: `rl = GD_rankleader(subg)[ND_rank(v)]; ND_UF_size(rl)++;`. `rl` is NULL when `ND_rank(v)` has no leader. Without pack that is undefined behaviour, a crash in practice.\n\nPort: `build_skeleton` (`crates/graphviz-pure-layout/src/dotgen/cluster.rs:310-328`) has the same indexing and `unwrap()`s the `None`.\n\nTwo things to do: (1) done: with the fix for `dot-pack-single-component-ignores-cc-subgraph` (issue #19) the fuzz case (with `pack`) matches C, SVG and stderr. (2) The port should not panic where C has undefined behaviour. Skip the node, or fail the layout with an error like other C-crash paths, rather than unwrapping. The exit status and output for the pack-less input cannot be matched, because C crashes there.\n\n**Cases**\n\n1 fuzz case(s), seeds 24180. Regenerate one with `python3 -I scripts/fuzz-gen.py --seed N` (checked byte for byte for seed 24180); run it with `-Kdot -Tsvg`.\n\n**Files**\n\n`tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic`\n\nVisual diff: {{SITE}}/whats-left/dot-cluster-rank-max-build-skeleton-panic/\n"
-  },
-  {
     "slug": "neato-polyline-compass-port-endpoint",
     "dir": "tests/fuzz-open/019-neato-polyline-compass-port-endpoint",
     "title": "neato splines=polyline: route to a compass port on the node boundary ends 0.1pt off from C's for some node widths",
