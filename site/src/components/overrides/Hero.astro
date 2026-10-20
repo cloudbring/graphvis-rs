@@ -1,76 +1,77 @@
 ---
 /**
- * The home page's hero: the claim, and one real sample printed as two plates that slide
- * into register on load.
+ * The home page's hero: the claim, set in Times-Roman (the face Graphviz has defaulted to
+ * since 1991), over a live graph of this site that the port lays out in the reader's browser.
  */
-import { fidelity, fmt, samples, url } from '../../lib/data';
-import { svgSize } from '../../lib/svgsize';
+import { fidelity, fmt, pct, url } from '../../lib/data';
+import LiveGraph from '../home/LiveGraph.astro';
 
 const hero = Astro.locals.starlightRoute.entry.data.hero!;
-const s = samples.find((x) => x.name === 'fsm') ?? samples[0];
 const e2e = fidelity.e2e;
-const { width, height } = svgSize(`samples/${s.name}/c.svg`);
 ---
 
 <section class="hero">
 	<div class="claim">
 		<p class="label">Graphviz 16.1.0, ported to Rust and WebAssembly</p>
-		<h1 id="_top">{hero.title}</h1>
-		<p class="lead">
-			On macOS, graphvis-rs writes the same <code>-Tsvg</code> bytes as C Graphviz 16.1.0 for{' '}
-			<strong class="num">{fmt(e2e.apple)} of {fmt(e2e.total)}</strong> test inputs. On Linux and in the browser, where Apple's libm is not
-			available, <strong class="num">{fmt(e2e.portable)}</strong>.
-		</p>
-		<div class="actions">
-			<a class="btn primary" href={url('fidelity/')}>Read the evidence</a>
-			<a class="btn" href={url('gallery/')}>Compare C and Rust</a>
-			<a class="btn" href={url('whats-left/')}>What's left</a>
-		</div>
-	</div>
-	<figure class="proof">
-		<div class="sheet crop">
-			<div class="plates registering">
-				<span class="plate plate-c"><img src={url(`samples/${s.name}/c.svg`)} alt="" width={width} height={height} /></span>
-				<span class="plate plate-m"><img src={url(`samples/${s.name}/rust.svg`)} alt="" width={width} height={height} /></span>
+		<h1 id="_top">{hero.title} <em>{hero.tagline}</em></h1>
+		<div class="side">
+			<p class="lead">
+				The same <code>-Tsvg</code> bytes as C Graphviz on <strong class="num">{fmt(e2e.apple)} of {fmt(e2e.total)}</strong> test inputs on
+				macOS. Everywhere else one set of bytes on every platform, equal to C on macOS for <strong class="num">{fmt(e2e.portable)}</strong>{' '}
+				({pct(e2e.portable, e2e.total)}).
+			</p>
+			<div class="actions">
+				<a class="btn primary" href={url('fidelity/')}>Read the evidence</a>
+				<a class="btn" href={url('gallery/')}>Compare C and Rust</a>
 			</div>
 		</div>
-		<figcaption>
-			<span><span class="chip c">C</span> plate: <code>dot -Tsvg fsm.gv</code>, C Graphviz 16.1.0</span>
-			<span><span class="chip m">Rust</span> plate: the same command, graphvis-rs</span>
-			<span class="why">
-				Overprinted. Every line is on both plates, so all of it comes out the blue of cyan and magenta; a difference would show as a cyan or
-				magenta fringe. <a href={url(`gallery/${s.name}/`)}>Inspect this sample</a>
-			</span>
-		</figcaption>
-	</figure>
+	</div>
+	<LiveGraph />
 </section>
 
 <style>
+	:global(:root[data-has-hero]:not([data-has-sidebar])) {
+		--sl-content-width: 80rem;
+	}
 	.hero {
+		padding-block: 0.5rem 0;
+	}
+	.claim {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-		gap: 3rem;
-		align-items: center;
-		padding-block: 2.5rem 1.5rem;
+		grid-template-columns: auto minmax(0, 1fr);
+		column-gap: 3rem;
+		align-items: end;
 	}
 	.claim .label {
-		margin: 0 0 1rem;
+		grid-column: 1 / -1;
+		margin: 0 0 0.75rem;
 	}
 	h1 {
 		margin: 0;
-		font-size: clamp(2.5rem, 5.2vw, 4.25rem);
-		line-height: 0.98;
-		font-weight: 780;
-		font-stretch: 125%;
-		letter-spacing: -0.03em;
+		font-family: Times, Tinos, 'Times New Roman', serif;
+		font-weight: 400;
+		font-stretch: 100%;
+		font-size: clamp(2.5rem, 4.3vw, 3.875rem);
+		line-height: 1;
+		letter-spacing: -0.018em;
 		color: var(--key);
+		white-space: nowrap;
+	}
+	h1 em {
+		display: block;
+		margin-top: 0.08em;
+		font-style: italic;
+		color: var(--key-3);
+	}
+	.side {
+		padding-bottom: 0.375rem;
 	}
 	.lead {
-		margin: 1.5rem 0 0;
-		font-size: var(--sl-text-lg);
-		line-height: 1.55;
+		margin: 0;
+		font-size: var(--sl-text-sm);
+		line-height: 1.6;
 		color: var(--key-2);
-		max-width: 32rem;
+		max-width: 28rem;
 	}
 	.lead strong {
 		color: var(--key);
@@ -83,73 +84,22 @@ const { width, height } = svgSize(`samples/${s.name}/c.svg`);
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;
-		margin-top: 2rem;
+		margin-top: 1rem;
 	}
 	.actions .btn {
 		font-size: var(--sl-text-sm);
 		padding: 0.5rem 1rem;
 	}
-	.proof {
-		margin: 0;
-	}
-	.proof .sheet {
-		padding: 1rem;
-	}
-	.proof .plates img {
-		max-width: 100%;
-		height: auto;
-	}
-	figcaption {
-		display: grid;
-		gap: 0.375rem;
-		margin-top: 1rem;
-		font-size: var(--sl-text-xs);
-		color: var(--key-3);
-		line-height: 1.5;
-	}
-	figcaption code {
-		font-size: 0.95em;
-	}
-	figcaption .why {
-		color: var(--key-2);
-		margin-top: 0.25rem;
-	}
-	figcaption a {
-		color: var(--register);
-	}
-
-	/* The one orchestrated moment: the plates start out of register and settle. */
-	@keyframes register-c {
-		from {
-			transform: translate(-7px, 5px);
-		}
-	}
-	@keyframes register-m {
-		from {
-			transform: translate(7px, -5px);
-		}
-	}
-	.registering .plate-c {
-		animation: register-c 1100ms cubic-bezier(0.2, 0.7, 0.1, 1) 450ms both;
-	}
-	.registering .plate-m {
-		animation: register-m 1100ms cubic-bezier(0.2, 0.7, 0.1, 1) 450ms both;
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.registering .plate-c,
-		.registering .plate-m {
-			animation: none;
-		}
-	}
-	:global([data-theme='dark']) .proof .sheet {
-		filter: brightness(0.94);
-	}
-
-	@media (max-width: 50rem) {
-		.hero {
+	@media (max-width: 64rem) {
+		.claim {
 			grid-template-columns: minmax(0, 1fr);
-			gap: 2rem;
-			padding-top: 1rem;
+		}
+		h1 {
+			white-space: normal;
+			text-wrap: balance;
+		}
+		.side {
+			margin-top: 1.5rem;
 		}
 	}
 </style>

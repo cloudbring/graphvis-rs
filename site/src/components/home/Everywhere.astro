@@ -1,0 +1,562 @@
+---
+/**
+ * "Same picture everywhere": one gallery input, the sha256 of the -Tsvg every CI platform
+ * wrote for it, and the reader's browser computing its own. Platform hashes come from the
+ * Cross-platform workflow's manifest (public/cross-platform/manifest.json) when the build
+ * has it; without it, from the gallery build (src/data/samples.json).
+ */
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fidelity, fmt, pct, samples, url } from '../../lib/data';
+import platforms from '../../data/platforms.json';
+
+type Manifest = {
+	run_url: string;
+	commit: string;
+	platforms: { dir: string; label: string; runtime: string; build: string; corpus_files: number; corpus_agree: number }[];
+	corpus_files: number;
+	samples: { name: string; sha256: Record<string, string | null>; identical: boolean }[];
+	identical: boolean;
+};
+const mPath = join(process.cwd(), 'public/cross-platform/manifest.json');
+const m: Manifest | null = existsSync(mPath) ? JSON.parse(readFileSync(mPath, 'utf8')) : null;
+const hasPage = existsSync(join(process.cwd(), 'src/pages/cross-platform.astro'));
+const ORDER = ['linux-x86_64', 'linux-arm64', 'windows-x86_64', 'macos-arm64', 'wasm32'];
+const plats = m ? [...m.platforms].sort((a, b) => ORDER.indexOf(a.dir) - ORDER.indexOf(b.dir)) : [];
+
+// Inputs the browser can re-derive exactly: identical across platforms and, under portable math, equal to C.
+const list = samples
+	.filter((s) => s.identical_portable && (!m || m.samples.find((x) => x.name === s.name)?.identical))
+	.map((s) => {
+		const ms = m?.samples.find((x) => x.name === s.name);
+		const rows = ms
+			? plats.map((p) => ({ label: p.label.replace(' (portable-math)', '').replace(' (Node.js)', ''), note: p.build === 'wasm' ? p.runtime.replace(/ v(\d+).*/, ' $1') : p.label.includes('portable') ? 'portable math' : 'native', sha: ms.sha256[p.dir] ?? '' }))
+			: [{ label: 'macOS arm64', note: 'gallery build', sha: s.sha256.rust }];
+		return { name: s.name, title: s.title, engine: s.engine, input: url(`samples/${s.name}/${s.wasm_input}`), c: url(`samples/${s.name}/c.svg`), bytes: s.bytes.rust, rows };
+	});
+const first = list.find((s) => s.name === 'fsm') ?? list[0];
+const corpus = m ? m.corpus_files : fidelity.e2e.total;
+const cc = platforms.c_linux_vs_macos;
+const cp = platforms.c_portable_math;
+const e2e = fidelity.e2e;
+const bars = [
+	{ k: 'C Graphviz on Linux', d: 'built the way Homebrew builds it on macOS', a: cc.agree, b: cc.total, cls: 'c' },
+	{ k: 'graphvis-rs, portable build', d: 'Linux, Windows, WASM, your browser', a: e2e.portable, b: e2e.total, cls: 'rs' },
+	{ k: 'graphvis-rs, portable build', d: 'against C running the same math functions', a: cp.agree, b: cp.total, cls: 'rs' },
+];
+const cells = Array.from({ length: 64 });
+---
+
+<section class="everywhere not-content" data-everywhere data-list={JSON.stringify(list)} data-start={first?.name}>
+	<header class="head">
+		<p class="label">Same picture everywhere</p>
+		<h2>One input, one set of bytes, on every machine.</h2>
+		<p class="intro">
+			Off macOS the port does its floating-point math with functions compiled into it, so its output does not depend on the operating system,
+			the CPU or the browser. CI renders all {fmt(corpus)} corpus inputs and {samples.length} gallery samples on{' '}
+			{m ? plats.map((p) => p.label.replace(' (portable-math)', '')).join(', ') : 'Linux, Windows, macOS and WebAssembly'}, and fails unless
+			every file comes out the same. Your browser is one more machine:
+		</p>
+	</header>
+
+	{
+		first && (
+			<div class="bench">
+				<figure class="paper">
+					<img data-figure src={first.c} alt={`${first.title}, drawn by Graphviz`} loading="lazy" decoding="async" />
+					<figcaption>
+						<span data-caption>
+							<code>{first.name}.gv</code>, C Graphviz's drawing
+						</span>
+					</figcaption>
+				</figure>
+
+				<div class="record" role="table" aria-label="sha256 of each machine's -Tsvg output">
+					<div class="rec-head" role="row">
+						<span role="cell">
+							<code data-name>{first.name}.gv</code> <span class="eng" data-engine>-K{first.engine}</span>
+						</span>
+						<button type="button" class="node-btn" data-next>Another input</button>
+					</div>
+					<div data-rows>
+						{first.rows.map((r) => (
+							<div class="rec-row" role="row">
+								<span class="who" role="cell">
+									{r.label}
+									<small>{r.note}</small>
+								</span>
+								<span class="hash" role="cell" title={r.sha}>
+									<span class="strip" aria-hidden="true" data-sha={r.sha}>
+										{cells.map((_, i) => <i style={`--g:${parseInt(r.sha[i] ?? '0', 16)}`} />)}
+									</span>
+									<code>{r.sha.slice(0, 12)}…</code>
+								</span>
+							</div>
+						))}
+					</div>
+					<div class="rec-row you" role="row" data-you data-state="waiting">
+						<span class="who" role="cell">
+							This tab
+							<small data-ua>your browser, WASM</small>
+						</span>
+						<span class="hash" role="cell">
+							<span class="strip" aria-hidden="true" data-mine>
+								{cells.map(() => <i />)}
+							</span>
+							<code data-mine-hex>waiting…</code>
+						</span>
+					</div>
+					<p class="verdict" data-verdict aria-live="polite">Your browser renders this when the section scrolls into view.</p>
+				</div>
+			</div>
+		)
+	}
+
+	<div class="contrast">
+		<p class="lede">
+			C Graphviz itself is not the same everywhere. Compiled on Linux, it follows that platform's math library and drifts from C on macOS:
+		</p>
+		<ul class="bars">
+			{
+				bars.map((b) => (
+					<li class={b.cls}>
+						<span class="k">
+							{b.k}
+							<small>{b.d}</small>
+						</span>
+						<span class="bar" aria-hidden="true">
+							<span style={`width:${(100 * b.a) / b.b}%`} />
+						</span>
+						<span class="fig num">
+							{fmt(b.a)}
+							<small>
+								/{fmt(b.b)} · {pct(b.a, b.b)}
+							</small>
+						</span>
+					</li>
+				))
+			}
+		</ul>
+		<p class="foot">
+			Inputs whose <code>-Tsvg</code> equals C Graphviz 16.1.0 on macOS, the first two; the third against C linked with the port's portable
+			math. {hasPage ? <a href={url('cross-platform/')}>Every platform's files, side by side</a> : <a href={url('fidelity/')}>Every check, per corpus</a>}
+			{m && (
+				<>
+					{' · '}
+					<a href={m.run_url}>the CI run</a>
+				</>
+			)}
+		</p>
+	</div>
+</section>
+
+<script>
+	import { call } from '../../lib/home/client';
+	import { normalise } from '../../lib/marks';
+
+	type Row = { label: string; note: string; sha: string };
+	type S = { name: string; title: string; engine: string; input: string; c: string; bytes: number; rows: Row[] };
+
+	const hex = async (b: Uint8Array) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', b as BufferSource))].map((x) => x.toString(16).padStart(2, '0')).join('');
+	const fmt = (n: number) => n.toLocaleString('en-US');
+
+	function browserName() {
+		const ua = navigator.userAgent;
+		const b = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'your browser';
+		const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : '';
+		return os ? `${b} on ${os}` : b;
+	}
+
+	function mount(root: HTMLElement) {
+		const list: S[] = JSON.parse(root.dataset.list!);
+		let cur = list.findIndex((s) => s.name === root.dataset.start);
+		const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
+		const fig = $<HTMLImageElement>('[data-figure]');
+		const caption = $<HTMLElement>('[data-caption]');
+		const rowsEl = $<HTMLElement>('[data-rows]');
+		const you = $<HTMLElement>('[data-you]');
+		const mine = $<HTMLElement>('[data-mine]');
+		const mineHex = $<HTMLElement>('[data-mine-hex]');
+		const verdict = $<HTMLElement>('[data-verdict]');
+		const next = $<HTMLButtonElement>('[data-next]');
+		const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+		$<HTMLElement>('[data-ua]').textContent = `${browserName()}, WASM`;
+		let blobUrl = '';
+		let run = 0;
+
+		const strip = (el: HTMLElement, sha: string) =>
+			el.querySelectorAll('i').forEach((c, i) => {
+				if (sha) (c as HTMLElement).style.setProperty('--g', String(parseInt(sha[i], 16)));
+				else (c as HTMLElement).style.removeProperty('--g');
+				(c as HTMLElement).style.transitionDelay = reduce.matches || !sha ? '0ms' : `${i * 9}ms`;
+			});
+
+		function showRows(s: S) {
+			rowsEl.innerHTML = s.rows
+				.map(
+					(r) =>
+						`<div class="rec-row" role="row"><span class="who" role="cell">${r.label}<small>${r.note}</small></span><span class="hash" role="cell" title="${r.sha}"><span class="strip" aria-hidden="true">${[...r.sha.slice(0, 64)].map((h) => `<i style="--g:${parseInt(h, 16)}"></i>`).join('')}</span><code>${r.sha.slice(0, 12)}…</code></span></div>`,
+				)
+				.join('');
+		}
+
+		async function check() {
+			const id = ++run;
+			const s = list[cur];
+			next.disabled = true;
+			you.dataset.state = 'waiting';
+			strip(mine, '');
+			mineHex.textContent = 'rendering…';
+			verdict.textContent = `Rendering ${s.name}.gv with -K${s.engine} in this tab…`;
+			try {
+				const [input, cText] = await Promise.all([fetch(s.input).then((r) => r.arrayBuffer()), fetch(s.c).then((r) => r.text())]);
+				const r = await call({ op: 'bytes', src: new Uint8Array(input), engine: s.engine, format: 'svg' });
+				if (id !== run) return;
+				if (!r.ok) throw new Error(r.error);
+				const out = r.out as Uint8Array;
+				const h = await hex(out);
+				const text = new TextDecoder().decode(out);
+				URL.revokeObjectURL(blobUrl);
+				blobUrl = URL.createObjectURL(new Blob([out as BlobPart], { type: 'image/svg+xml' }));
+				fig.src = blobUrl;
+				fig.alt = `${s.title}, drawn by graphvis-rs in this browser`;
+				caption.innerHTML = `<code>${s.name}.gv</code>, drawn by your browser in ${r.ms < 10 ? r.ms.toFixed(1) : Math.round(r.ms)} ms`;
+				strip(mine, h);
+				mineHex.textContent = `${h.slice(0, 12)}…`;
+				mineHex.title = h;
+				const same = s.rows.every((x) => x.sha === h);
+				const sameC = normalise(text) === normalise(cText);
+				you.dataset.state = same ? 'same' : 'differs';
+				const n = s.rows.length;
+				verdict.textContent = same
+					? `Same ${fmt(out.length)} bytes as ${n > 1 ? `all ${n} machines above` : 'the gallery build'}${sameC ? ", and as C Graphviz's, but for the line that names the program." : '.'}`
+					: `Your browser's bytes differ from ${n > 1 ? 'the CI platforms' : 'the gallery build'}. That should not happen; please report it with your browser and OS.`;
+			} catch (e) {
+				if (id !== run) return;
+				you.dataset.state = 'differs';
+				mineHex.textContent = 'failed';
+				verdict.textContent = `Could not run the check: ${(e as Error).message}`;
+			} finally {
+				if (id === run) next.disabled = false;
+			}
+		}
+
+		next.addEventListener('click', () => {
+			let k = cur;
+			while (list.length > 1 && k === cur) k = Math.floor(Math.random() * list.length);
+			cur = k;
+			const s = list[cur];
+			root.querySelector('[data-name]')!.textContent = `${s.name}.gv`;
+			root.querySelector('[data-engine]')!.textContent = `-K${s.engine}`;
+			showRows(s);
+			check();
+		});
+
+		const io = new IntersectionObserver(
+			(es) => {
+				if (es.some((e) => e.isIntersecting)) {
+					io.disconnect();
+					check();
+				}
+			},
+			{ rootMargin: '150px' },
+		);
+		io.observe(root.querySelector('.bench')!);
+	}
+	for (const el of document.querySelectorAll<HTMLElement>('[data-everywhere]')) mount(el);
+</script>
+
+<style is:global>
+	.everywhere {
+		--gv-times: Times, Tinos, 'Times New Roman', serif;
+		--rec-ink: var(--key);
+		--x11-lightgrey: #d3d3d3;
+		--x11-lightblue2: #b2dfee;
+		--x11-lightgoldenrod1: #ffec8b;
+		margin-top: 4rem;
+	}
+	[data-theme='dark'] .everywhere {
+		--x11-lightgrey: #5a5a5a;
+		--x11-lightblue2: #4a708b; /* skyblue4, as in the dark graph */
+		--x11-lightgoldenrod1: #cd9b1d;
+	}
+	.everywhere .head .label {
+		margin: 0 0 0.75rem;
+	}
+	.everywhere h2 {
+		margin: 0;
+		font-family: var(--gv-times);
+		font-weight: 400;
+		font-size: clamp(1.75rem, 3vw, 2.5rem);
+		line-height: 1.1;
+		letter-spacing: -0.01em;
+		color: var(--key);
+	}
+	.everywhere .intro {
+		margin: 1rem 0 0;
+		max-width: 46rem;
+		color: var(--key-2);
+		line-height: 1.6;
+	}
+
+	.everywhere .bench {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+		gap: 2rem;
+		align-items: start;
+		margin-top: 1.5rem;
+	}
+	.everywhere .paper {
+		margin: 0;
+		display: grid;
+		gap: 0.5rem;
+	}
+	.everywhere .paper img {
+		display: block;
+		width: 100%;
+		height: 20rem;
+		object-fit: contain;
+		background: #fff;
+		border: 0.5px solid var(--rule-strong);
+		border-radius: var(--r-panel);
+		padding: 1rem;
+	}
+	[data-theme='dark'] .everywhere .paper img {
+		filter: brightness(0.94);
+	}
+	.everywhere figcaption {
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+	}
+	.everywhere figcaption code {
+		font-size: 0.95em;
+	}
+
+	/* A record shape: hairline box, fields split by rules, Times labels. */
+	.everywhere .record {
+		border: 1px solid var(--rec-ink);
+		font-family: var(--gv-times);
+		color: var(--key);
+		background: var(--stock-raised);
+	}
+	.everywhere .rec-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.5rem 0.75rem;
+		border-bottom: 1px solid var(--rec-ink);
+		font-size: 1.0625rem;
+	}
+	.everywhere .rec-head code {
+		font-size: 0.875rem;
+		background: none;
+		border: 0;
+		padding: 0;
+	}
+	.everywhere .eng {
+		font-family: var(--face-mono);
+		font-size: 0.8125rem;
+		color: var(--key-3);
+	}
+	.everywhere .rec-row {
+		display: grid;
+		grid-template-columns: 11rem minmax(0, 1fr);
+		border-bottom: 1px solid var(--rec-ink);
+	}
+	.everywhere .who {
+		display: grid;
+		padding: 0.5rem 0.75rem;
+		border-right: 1px solid var(--rec-ink);
+		font-size: 1rem;
+		line-height: 1.2;
+	}
+	.everywhere .who small {
+		font-style: italic;
+		font-size: 0.8125rem;
+		color: var(--key-3);
+	}
+	.everywhere .hash {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0.75rem;
+	}
+	.everywhere .hash code {
+		font-size: var(--sl-text-2xs);
+		color: var(--key-2);
+		background: none;
+		border: 0;
+		padding: 0;
+	}
+	/* sha256 as 64 cells, one per hex digit, in sixteen grays: equal hashes are equal stripes. */
+	.everywhere .strip {
+		display: grid;
+		grid-template-columns: repeat(64, minmax(0, 1fr));
+		height: 1.125rem;
+		border: 0.5px solid var(--rule-default);
+	}
+	.everywhere .strip i {
+		background: hsl(0 0% calc(100% - var(--g, 16) * 6.25%));
+		transition: background-color 150ms ease-out;
+	}
+	.everywhere .strip:not([data-sha]) i:not([style*='--g']) {
+		background: transparent;
+	}
+	.everywhere .you {
+		border-bottom: 0;
+	}
+	.everywhere .you[data-state='same'] .who {
+		background: var(--x11-lightgoldenrod1);
+		color: #000;
+	}
+	.everywhere .you[data-state='same'] .who small {
+		color: #3b3b3b;
+	}
+	.everywhere .you[data-state='differs'] .who {
+		box-shadow: inset 3px 0 0 var(--plate-m);
+	}
+	.everywhere .verdict {
+		margin: 0;
+		padding: 0.625rem 0.75rem;
+		border-top: 1px solid var(--rec-ink);
+		font-family: var(--face);
+		font-size: var(--sl-text-sm);
+		line-height: 1.5;
+		color: var(--key-2);
+	}
+	.everywhere .node-btn {
+		font-family: var(--gv-times);
+		font-size: 0.9375rem;
+		line-height: 1;
+		padding: 0.375rem 0.875rem;
+		border-radius: 50%;
+		border: 1px solid var(--key-3);
+		color: var(--key);
+		background: transparent;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: background-color 150ms ease-out, border-color 150ms ease-out;
+	}
+	.everywhere .node-btn:hover:not(:disabled):not([aria-pressed='true']) {
+		border-color: var(--key);
+		background: var(--control-hover);
+	}
+	.everywhere .node-btn:active:not(:disabled) {
+		transform: translateY(0.5px);
+	}
+	.everywhere .node-btn:disabled {
+		cursor: progress;
+		opacity: 0.55;
+	}
+	.everywhere .node-btn:focus-visible {
+		outline: 1px dashed var(--key);
+		outline-offset: 3px;
+	}
+
+	.everywhere .contrast {
+		margin-top: 2.5rem;
+		padding-top: 1.5rem;
+		border-top: 0.5px solid var(--rule-strong);
+	}
+	.everywhere .lede {
+		margin: 0;
+		color: var(--key-2);
+		max-width: 46rem;
+	}
+	.everywhere .bars {
+		list-style: none;
+		padding: 0;
+		margin: 1rem 0 0;
+		display: grid;
+		gap: 0.75rem;
+	}
+	.everywhere .bars li {
+		display: grid;
+		grid-template-columns: 17rem minmax(0, 1fr) 11rem;
+		gap: 1.25rem;
+		align-items: center;
+		margin: 0;
+	}
+	.everywhere .bars .k {
+		display: grid;
+		font-family: var(--gv-times);
+		font-size: 1.0625rem;
+		color: var(--key);
+		line-height: 1.25;
+	}
+	.everywhere .bars .k small {
+		font-style: italic;
+		font-size: 0.875rem;
+		color: var(--key-3);
+	}
+	.everywhere .bars .bar {
+		display: block;
+		height: 1.25rem;
+		border: 1px solid var(--key);
+	}
+	.everywhere .bars .bar span {
+		display: block;
+		height: 100%;
+	}
+	.everywhere .bars .c .bar span {
+		background: var(--x11-lightgrey);
+	}
+	.everywhere .bars .rs .bar span {
+		background: var(--x11-lightblue2);
+	}
+	.everywhere .bars .fig {
+		font-size: 1.375rem;
+		font-weight: 700;
+		font-stretch: 112%;
+		color: var(--key);
+		white-space: nowrap;
+	}
+	.everywhere .bars .fig small {
+		font-size: 0.6em;
+		font-weight: 500;
+		font-stretch: 100%;
+		color: var(--key-3);
+	}
+	.everywhere .foot {
+		margin: 1rem 0 0;
+		font-size: var(--sl-text-xs);
+		color: var(--key-3);
+	}
+	.everywhere .foot a {
+		color: var(--register);
+	}
+	.everywhere .foot code {
+		font-size: 0.95em;
+	}
+
+	@media (max-width: 56rem) {
+		.everywhere .bench {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.everywhere .paper img {
+			height: 14rem;
+		}
+		.everywhere .bars li {
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 0.375rem 1rem;
+		}
+		.everywhere .bars .bar {
+			grid-column: 1 / -1;
+			grid-row: 2;
+		}
+	}
+	@media (max-width: 30rem) {
+		.everywhere .rec-row {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.everywhere .who {
+			border-right: 0;
+			grid-template-columns: auto 1fr;
+			gap: 0.5rem;
+			align-items: baseline;
+			padding-bottom: 0;
+		}
+	}
+</style>
