@@ -175,7 +175,9 @@ neato family
 
 Robustness (debug overflow and panics)
 * pack's perimeter sum wraps like C's int; a one-point spline no longer panics
-  `fillEdge`, and an empty one (on which C crashes) is skipped.
+  `fillEdge`, and an empty one (on which C crashes) is skipped. The second was open case
+  `003-pack-filledge-zero-point-spline-panic`; with no C output to compare, its repro is kept
+  in `crates/graphviz-pure-cli/tests/cli.rs` (`packed_edges_with_empty_splines_do_not_panic`).
 * Unknown shapes are boxes for compass ports (`IS_BOX`).
 
 ## Differences that remain: the open issues

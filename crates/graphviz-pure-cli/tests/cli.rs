@@ -125,18 +125,27 @@ fn png_and_jpeg_output_are_images_at_graphviz_sizes() {
     assert_eq!(&std::fs::read(&jpg).unwrap()[..2], &[0xFF, 0xD8]);
 }
 
-// Issue #12: clipping leaves these packed edges with an empty spline. C crashes (SIGBUS) and
-// so has no reference output for the fidelity ratchets; the port must still draw the graph.
+// Fuzz case 003-pack-filledge-zero-point-spline-panic (issue #12), its repro.gv verbatim.
+// Clipping leaves both edges between the overlapping pinned nodes with an empty spline. C
+// crashes on it (exit 138, SIGBUS), so there is no C reference output and the fidelity
+// ratchets never render it: this test is the regression check. Without the empty-list guard
+// in `pack::fill_edge` the port panics with "index out of bounds: the len is 0 but the index
+// is 0" and exits 101.
 #[test]
 fn packed_edges_with_empty_splines_do_not_panic() {
-    let src = r#"graph G {
-        layout=neato; splines=polyline; pack=true;
-        n1 [pos="0,0!"]; n9 [pos="0.2,0.1!"];
-        n1 -- n9; n9 -- n1;
-        n14;
-    }"#;
+    let src = "graph G {
+layout=neato;
+splines=polyline;
+pack=true;
+n1 [pos=\"0,0!\"];
+n9 [pos=\"0.2,0.1!\"];
+n1 -- n9;
+n9 -- n1;
+n14;
+}
+";
     for fmt in ["-Tsvg", "-Tdot", "-Tpng"] {
         let (_, err, ok) = run(&[fmt], src);
-        assert!(ok, "{fmt}: {err}");
+        assert!(ok && !err.contains("panicked"), "{fmt}: {err}");
     }
 }
