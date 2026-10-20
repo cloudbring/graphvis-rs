@@ -9,7 +9,7 @@ const native = samples.filter((s) => s.identical).length;
 const portable = samples.filter((s) => s.identical_portable).length;
 ---
 
-<StarlightPage frontmatter={{ title: 'Gallery: C and Rust', description: 'Curated inputs across all eight Graphviz engines, rendered by C Graphviz 16.1.0 and by graphvis-rs, with every comparison view.', tableOfContents: false }}>
+<StarlightPage frontmatter={{ title: 'Gallery: C and Rust', description: 'Curated inputs across all eight Graphviz engines, rendered by C Graphviz 16.1.0 and by graphviz-pure, with every comparison view.', tableOfContents: false }}>
 	<style is:global>:root { --sl-content-width: 64rem; }</style>
 	<p class="intro">
 		{samples.length} inputs chosen to cover each engine and the features that are hardest to get right: clusters, records and HTML tables,

@@ -4,8 +4,8 @@
 function-by-function ports of `lib/circogen` and `lib/twopigen`. The old
 approximations (`force_circular::layout_circo`, `layout_twopi`) are removed.
 
-Entry points: `gv_layout::circogen::circularinit::circo_layout(&mut Graph)` and
-`gv_layout::twopigen::twopiinit::twopi_layout(&mut Graph)`.
+Entry points: `graphviz_pure_layout::circogen::circularinit::circo_layout(&mut Graph)` and
+`graphviz_pure_layout::twopigen::twopiinit::twopi_layout(&mut Graph)`.
 
 Both reuse the shared neato-family infrastructure (`common::LGraph`, `pack`,
 `neatogen::adjust::adjust_nodes`, `neatogen::neatosplines::spline_edges`,
@@ -38,7 +38,7 @@ Remaining differences, all in shared code:
 
 ## Module ↔ C file map
 
-### `gv_layout::twopigen`
+### `graphviz_pure_layout::twopigen`
 
 | Rust | C |
 |---|---|
@@ -50,7 +50,7 @@ Remaining differences, all in shared code:
 | `circle::RData` | `rdata` (`ND_alg`) |
 | `twopiinit::twopi_layout` | `twopi_layout`, `twopi_init_graph`, `findRootNode` |
 
-### `gv_layout::circogen`
+### `graphviz_pure_layout::circogen`
 
 | Rust | C |
 |---|---|
@@ -107,7 +107,7 @@ Remaining differences, all in shared code:
 
 ## Shared fixes made on this branch
 
-- `gv-geom` `poly_init`: the polygon vertex walk and `1 - SQR(r)` use the
+- `graphviz-pure-geom` `poly_init`: the polygon vertex walk and `1 - SQR(r)` use the
   fused multiply-adds clang emits (checked against the libgvc disassembly);
   `ND_ht` was one ulp off for shapes like `invhouse`, moving pack cells.
 - `neatogen::delaunay`: exact-sign `orient2d`/`incircle`
@@ -124,8 +124,8 @@ Remaining differences, all in shared code:
 
 ## Validation
 
-- `cargo run --release -p gv-diff -- --golden tests/golden/circo --baseline tests/golden/circo-baseline.json tests/circo`
-  and the same for `twopi` (ratchet tests: `crates/gv-diff/tests/circo_fidelity.rs`,
+- `cargo run --release -p graphviz-pure-diff -- --golden tests/golden/circo --baseline tests/golden/circo-baseline.json tests/circo`
+  and the same for `twopi` (ratchet tests: `crates/graphviz-pure-diff/tests/circo_fidelity.rs`,
   `twopi_fidelity.rs`).
 - Corpora: `scripts/gen-circo-corpus.py` and `scripts/gen-twopi-corpus.py`
   force `layout=` on the fixtures and undirected wild graphs and add

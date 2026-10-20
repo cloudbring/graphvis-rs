@@ -45,7 +45,7 @@ const out = manifest.map((issue) => {
 	if (!files.length) console.warn(`warning: ${issue.slug}: no files in ${issue.dir}`);
 	for (const f of files) copyFileSync(join(src, f), join(dst, f));
 	// The body is written for GitHub; on the site its own page is the visual diff.
-	const body = issue.body.replace(/^Visual diff: \{\{SITE\}\}\S*\n?/m, '').replace(/\{\{SITE\}\}/g, '/graphvis-rs');
+	const body = issue.body.replace(/^Visual diff: \{\{SITE\}\}\S*\n?/m, '').replace(/\{\{SITE\}\}/g, '/graphviz-pure');
 	const entry = { ...issue, body, files };
 	if (filed[issue.slug]) entry.issue_url = filed[issue.slug];
 	return entry;

@@ -1,5 +1,5 @@
 {
-  "dataset": "graphvis-rs-wild-corpus",
+  "dataset": "graphviz-pure-wild-corpus",
   "count": 545,
   "sources": [
     "https://gitlab.com/graphviz/graphviz.git (16.1.0 tests/graphs, regression_tests/shapes, graphs/directed, graphs/undirected)",

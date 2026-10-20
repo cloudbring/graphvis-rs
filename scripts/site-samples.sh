@@ -27,10 +27,10 @@ OUT="site/public/samples"
 DATA="site/src/data/samples.json"
 
 "$C_DOT" -V 2>&1 | grep -q 'version 16.1.0' || { echo "need C Graphviz 16.1.0 as $C_DOT" >&2; exit 1; }
-cargo build --release -p gv-cli --bin dot-rs
-cargo build --release -p gv-cli --bin dot-rs --features gv-core/portable-math --target-dir target/portable
-RUST="target/release/dot-rs"
-PORTABLE="target/portable/release/dot-rs"
+cargo build --release -p graphviz-pure-cli --bin graphviz-pure
+cargo build --release -p graphviz-pure-cli --bin graphviz-pure --features graphviz-pure-core/portable-math --target-dir target/portable
+RUST="target/release/graphviz-pure"
+PORTABLE="target/portable/release/graphviz-pure"
 
 # name | engine | extra flags | source (gv: = Graphviz source tree) | title | features (comma list)
 SAMPLES=$(cat <<'EOF'

@@ -8,7 +8,7 @@
 //   libm-probe gen  <fn> <n> <out.bin>                  random inputs (pairs of f64)
 //   libm-probe eval <fn> <in.bin> <apple.bin> <cr.bin>  system and correctly rounded results
 // Input files are pairs of little-endian f64 (y = 0 for one-argument functions), as written
-// by the `math-trace` feature of gv-core (`GV_MATH_TRACE=dir`). fn is one of
+// by the `math-trace` feature of graphviz-pure-core (`GV_MATH_TRACE=dir`). fn is one of
 // hypot pow atan2 sin cos tan asin acos exp log log2 cbrt.
 
 #include <stdio.h>

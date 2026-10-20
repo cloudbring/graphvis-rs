@@ -13,7 +13,7 @@ const lastFuzz = f.fuzz.rounds[f.fuzz.rounds.length - 1];
 const portBugs = issues.filter((i) => !i.upstream_c).length;
 const upstream = issues.length - portBugs;
 const live = samples.filter((s) => s.identical_portable).length;
-const usage = `import init, { render } from '@graphvis-rs/wasm';
+const usage = `import init, { render } from '@graphviz-pure/wasm';
 
 await init();
 const svg = render('digraph { a -> b [label="fast"] }', 'dot', 'svg');`;
@@ -32,13 +32,13 @@ const svg = render('digraph { a -> b [label="fast"] }', 'dot', 'svg');`;
 			<ul class="facts">
 				<li><code>#![forbid(unsafe_code)]</code>; no C, no FFI, no system Graphviz.</li>
 				<li>Runs natively and in the browser (<code>wasm32-unknown-unknown</code>, 1.7&nbsp;MB, about 700&nbsp;KB compressed).</li>
-				<li><code>dot-rs</code> takes the same flags as <code>dot</code> and exits with C's status.</li>
+				<li><code>graphviz-pure</code> takes the same flags as <code>dot</code> and exits with C's status.</li>
 				<li>Writes <code>svg</code>, <code>json</code>, <code>json0</code>, <code>dot</code>, <code>xdot</code>, <code>canon</code>, <code>plain</code> and <code>plain-ext</code>.</li>
 			</ul>
 		</div>
 		<div class="code">
 			<Code code={usage} lang="js" title="Browser, Node, Deno, Bun or Workers" />
-			<Code code={'cargo build --release -p gv-cli\ntarget/release/dot-rs -Kneato -Tsvg graph.gv'} lang="sh" title="Command line" />
+			<Code code={'cargo build --release -p graphviz-pure-cli\ntarget/release/graphviz-pure -Kneato -Tsvg graph.gv'} lang="sh" title="Command line" />
 		</div>
 	</section>
 

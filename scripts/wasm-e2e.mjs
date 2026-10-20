@@ -4,9 +4,9 @@
 // for the native build. No npm packages are needed.
 //
 // Build the package first (see docs/porting/libm.md):
-//   cargo build --release --target wasm32-unknown-unknown -p gv-wasm
+//   cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm
 //   wasm-bindgen --target nodejs --out-dir /tmp/gvwasm/pkg \
-//     target/wasm32-unknown-unknown/release/gv_wasm.wasm
+//     target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm
 // then run from the repository root:
 //   node scripts/wasm-e2e.mjs [--pkg /tmp/gvwasm/pkg] [--baseline FILE] [--filter SUBSTR]
 //                             [--list] [--hashes FILE] [--golden FILE]
@@ -41,14 +41,14 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 const require = createRequire(import.meta.url);
-const gv = require(path.resolve(pkg, 'gv_wasm.js'));
+const gv = require(path.resolve(pkg, 'graphviz_pure_wasm.js'));
 
 const root = process.cwd();
 const golden = JSON.parse(fs.readFileSync(path.resolve(root, goldenPath), 'utf8')).files;
 const baseline = new Set(
   JSON.parse(fs.readFileSync(path.resolve(root, baselinePath), 'utf8')).identical,
 );
-// Same table as crates/gv-diff/src/e2e.rs.
+// Same table as crates/graphviz-pure-diff/src/e2e.rs.
 const corpora = {
   main: ['tests/wild', 'tests/fixtures'],
   neato: ['tests/neato'],

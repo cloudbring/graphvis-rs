@@ -43,11 +43,11 @@ def body_for(entry, repo, branch, site):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--repo", default="cloudbring/graphvis-rs")
+    ap.add_argument("--repo", default="graphviz-pure/graphviz-pure")
     ap.add_argument("--branch", default="master")
     ap.add_argument("--owner", default="cloudbring")
     ap.add_argument("--project", default="4")
-    ap.add_argument("--site", default="https://cloudbring.github.io/graphvis-rs")
+    ap.add_argument("--site", default="https://graphviz-pure.github.io")
     a = ap.parse_args()
 
     manifest = json.load(open(MANIFEST))

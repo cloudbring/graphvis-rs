@@ -25,8 +25,8 @@ function load() {
 	mod ??= (async () => {
 		// After a trap, a new query string gives a new module and so a new instance.
 		const q = generation ? `?i=${generation}` : '';
-		const m = (await import(/* @vite-ignore */ `${base}wasm/gv_wasm.js${q}`)) as Mod;
-		await m.default({ module_or_path: `${base}wasm/gv_wasm_bg.wasm` });
+		const m = (await import(/* @vite-ignore */ `${base}wasm/graphviz_pure_wasm.js${q}`)) as Mod;
+		await m.default({ module_or_path: `${base}wasm/graphviz_pure_wasm_bg.wasm` });
 		return m;
 	})();
 	mod.catch(() => (mod = undefined));

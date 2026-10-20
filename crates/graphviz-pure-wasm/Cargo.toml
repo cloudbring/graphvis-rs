@@ -1,0 +1,22 @@
+[package]
+name = "graphviz-pure-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "WebAssembly bindings for graphviz-pure to run Graphviz directly in the browser"
+# Shipped on npm as @graphviz-pure/wasm, not on crates.io.
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+graphviz-pure-core.workspace = true
+graphviz-pure.workspace = true
+wasm-bindgen.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

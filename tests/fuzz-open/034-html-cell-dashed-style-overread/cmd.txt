@@ -1,2 +1,2 @@
 GVBINDIR=$HOME/src/gv-ref/lutplugins dot -Txdot repro.gv
-dot-rs -Txdot repro.gv
+graphviz-pure -Txdot repro.gv

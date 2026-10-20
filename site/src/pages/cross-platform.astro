@@ -107,7 +107,7 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 				</table>
 				<p class="note">
 					A corpus input counts as equal when the hash of its <code>-Tsvg</code> output (every graph in the file) is the same; a sample, when the whole SVG
-					file is. macOS appears with <code>--features gv-core/portable-math</code>: by default the macOS build uses Apple's libm, to match C on macOS
+					file is. macOS appears with <code>--features graphviz-pure-core/portable-math</code>: by default the macOS build uses Apple's libm, to match C on macOS
 					byte for byte (<a href={url('porting/libm/')}>why</a>).
 				</p>
 

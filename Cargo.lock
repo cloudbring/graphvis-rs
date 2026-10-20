@@ -15,16 +15,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
-name = "gv-cli"
+name = "graphviz-pure"
 version = "0.1.0"
 dependencies = [
- "gv-core",
- "gv-engine",
- "gv-parser",
+ "graphviz-pure-core",
+ "graphviz-pure-geom",
+ "graphviz-pure-layout",
+ "graphviz-pure-parser",
+ "graphviz-pure-render",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]
-name = "gv-core"
+name = "graphviz-pure-cli"
+version = "0.1.0"
+dependencies = [
+ "graphviz-pure",
+ "graphviz-pure-core",
+ "graphviz-pure-parser",
+]
+
+[[package]]
+name = "graphviz-pure-core"
 version = "0.1.0"
 dependencies = [
  "libm",
@@ -33,80 +47,66 @@ dependencies = [
 ]
 
 [[package]]
-name = "gv-diff"
+name = "graphviz-pure-diff"
 version = "0.1.0"
 dependencies = [
- "gv-core",
- "gv-engine",
- "gv-parser",
+ "graphviz-pure",
+ "graphviz-pure-core",
+ "graphviz-pure-parser",
  "roxmltree",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "gv-engine"
+name = "graphviz-pure-geom"
 version = "0.1.0"
 dependencies = [
- "gv-core",
- "gv-geom",
- "gv-layout",
- "gv-parser",
- "gv-render",
- "serde",
- "serde_json",
+ "graphviz-pure-core",
+]
+
+[[package]]
+name = "graphviz-pure-layout"
+version = "0.1.0"
+dependencies = [
+ "graphviz-pure-core",
+ "graphviz-pure-geom",
+]
+
+[[package]]
+name = "graphviz-pure-parser"
+version = "0.1.0"
+dependencies = [
+ "graphviz-pure-core",
  "thiserror",
 ]
 
 [[package]]
-name = "gv-geom"
+name = "graphviz-pure-portable-libm"
 version = "0.1.0"
 dependencies = [
- "gv-core",
-]
-
-[[package]]
-name = "gv-layout"
-version = "0.1.0"
-dependencies = [
- "gv-core",
- "gv-geom",
-]
-
-[[package]]
-name = "gv-parser"
-version = "0.1.0"
-dependencies = [
- "gv-core",
- "thiserror",
-]
-
-[[package]]
-name = "gv-portable-libm"
-version = "0.1.0"
-dependencies = [
- "gv-core",
- "gv-layout",
+ "graphviz-pure-core",
+ "graphviz-pure-layout",
  "libm",
 ]
 
 [[package]]
-name = "gv-render"
+name = "graphviz-pure-render"
 version = "0.1.0"
 dependencies = [
- "gv-core",
- "gv-geom",
- "gv-parser",
+ "graphviz-pure-core",
+ "graphviz-pure-geom",
+ "graphviz-pure-parser",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "gv-wasm"
+name = "graphviz-pure-wasm"
 version = "0.1.0"
 dependencies = [
- "gv-core",
- "gv-engine",
+ "graphviz-pure",
+ "graphviz-pure-core",
  "serde",
  "serde_json",
  "wasm-bindgen",

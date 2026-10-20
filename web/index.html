@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graphvis-rs • Pure Rust + WASM Graphviz 16.1.0 Playground</title>
+  <title>graphviz-pure • Pure Rust + WASM Graphviz 16.1.0 Playground</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -163,7 +163,7 @@
 <body>
   <header>
     <div class="brand">
-      <span>graphvis-rs</span>
+      <span>graphviz-pure</span>
       <span class="badge" id="wasm-version">Loading WASM...</span>
     </div>
     <div class="controls">
@@ -227,7 +227,7 @@
   </main>
 
   <script type="module">
-    import init, { render, inspectGraph, version } from './pkg/gv_wasm.js';
+    import init, { render, inspectGraph, version } from './pkg/graphviz_pure_wasm.js';
 
     const PRESETS = {
       fsm: `digraph finite_state_machine {

@@ -1,2 +1,2 @@
 GVBINDIR=$HOME/src/gv-ref/lutplugins dot -Ktwopi -Tsvg repro.gv   # run it several times: 3 different outputs
-dot-rs -Ktwopi -Tsvg repro.gv
+graphviz-pure -Ktwopi -Tsvg repro.gv

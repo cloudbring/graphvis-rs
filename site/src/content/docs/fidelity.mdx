@@ -1,6 +1,6 @@
 ---
 title: Fidelity
-description: Every check that compares graphvis-rs with C Graphviz 16.1.0, per corpus and per math profile, generated from the harness's own data.
+description: Every check that compares graphviz-pure with C Graphviz 16.1.0, per corpus and per math profile, generated from the harness's own data.
 ---
 
 import Provenance from '../../components/fidelity/Provenance.astro';
@@ -16,7 +16,7 @@ import FuzzRounds from '../../components/fidelity/FuzzRounds.astro';
 
 The port is checked against C Graphviz 16.1.0 in four ways, from the strictest to the broadest. All the corpus checks run in `cargo test --workspace` as ratchets: each has a committed baseline listing the files that match, and a file that stops matching fails the build. The numbers on this page are read from those runs and baselines by `scripts/site-data.py`; none are typed in by hand, except where marked.
 
-Two math profiles are reported. **macOS** uses Apple's libm, as C does on the reference machine. **Linux and WASM** use a portable math library, because Apple's `pow`, `sin`, `cos` and `atan2` are closed source and not reproduced bit for bit there; Linux on aarch64, Linux on x86_64 and the WASM build give the same bytes as each other ([why](/graphvis-rs/porting/libm/)).
+Two math profiles are reported. **macOS** uses Apple's libm, as C does on the reference machine. **Linux and WASM** use a portable math library, because Apple's `pow`, `sin`, `cos` and `atan2` are closed source and not reproduced bit for bit there; Linux on aarch64, Linux on x86_64 and the WASM build give the same bytes as each other ([why](../porting/libm/)).
 
 ## Full pipeline
 
@@ -41,7 +41,7 @@ Yes. Running C itself with the port's portable math functions (`scripts/dot-port
 | Linux and WASM build | 2,470 / 2,589 | **2,590 / 2,590** |
 | C Graphviz built on Linux, for comparison | 2,005 / 2,586 | — |
 
-With the same math functions on both sides, the browser build is byte-identical to C on every stable input; a ratchet in CI keeps it that way. C itself is less consistent across platforms than the port: built on Linux the way Homebrew builds it on macOS, it matches macOS C on 77.5% of the corpus, against 95.4% for the port in the browser. The details, and what makes Linux C differ (glibc's math, `qsort` and `rand`), are in [Math off macOS](/graphvis-rs/porting/libm/).
+With the same math functions on both sides, the browser build is byte-identical to C on every stable input; a ratchet in CI keeps it that way. C itself is less consistent across platforms than the port: built on Linux the way Homebrew builds it on macOS, it matches macOS C on 77.5% of the corpus, against 95.4% for the port in the browser. The details, and what makes Linux C differ (glibc's math, `qsort` and `rand`), are in [Math off macOS](../porting/libm/).
 
 ## Layout
 
@@ -75,8 +75,8 @@ Identity is the share of comparable cases whose output and exit status both matc
 
 <FuzzRounds />
 
-Read from the rounds table in [the fuzzing notes](/graphvis-rs/porting/fuzzing/), which also break down the remaining differences: mostly C nondeterminism (layouts that depend on heap addresses), C undefined behaviour on inputs it reports as invalid, and a few open differences, which are tracked in [What's left](/graphvis-rs/whats-left/).
+Read from the rounds table in [the fuzzing notes](../porting/fuzzing/), which also break down the remaining differences: mostly C nondeterminism (layouts that depend on heap addresses), C undefined behaviour on inputs it reports as invalid, and a few open differences, which are tracked in [What's left](../whats-left/).
 
 ## The reference
 
-C Graphviz 16.1.0, run with `GVBINDIR` pointing at a plugin directory that holds only its core, dot and neato plugins. With no Pango text-layout plugin available, C measures text with its built-in font metric tables, as the port does. A default installation, which measures text with Pango and cairo, will not match. [Set it up yourself](/graphvis-rs/verify/#the-c-reference).
+C Graphviz 16.1.0, run with `GVBINDIR` pointing at a plugin directory that holds only its core, dot and neato plugins. With no Pango text-layout plugin available, C measures text with its built-in font metric tables, as the port does. A default installation, which measures text with Pango and cairo, will not match. [Set it up yourself](../verify/#the-c-reference).

@@ -1,0 +1,24 @@
+[package]
+name = "graphviz-pure-diff"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Geometric differential testing of graphviz-pure layouts against C Graphviz golden output"
+publish = false
+
+# The harness keeps its short command name.
+[[bin]]
+name = "gv-diff"
+path = "src/main.rs"
+
+[dependencies]
+graphviz-pure-core.workspace = true
+graphviz-pure-parser.workspace = true
+graphviz-pure.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+roxmltree = "0.21.1"
+
+[lints]
+workspace = true

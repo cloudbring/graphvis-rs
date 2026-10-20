@@ -10,9 +10,10 @@ import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'nod
 import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const BASE = process.env.SITE_BASE ?? '/'; // as in site/astro.config.mjs
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'site/src/content/docs/porting');
-const repo = 'https://github.com/cloudbring/graphvis-rs/blob/master/';
+const repo = 'https://github.com/graphviz-pure/graphviz-pure/blob/master/';
 
 // Sidebar order and short labels; files not listed here sort after them by name.
 const order = {
@@ -46,7 +47,7 @@ const yaml = (s) => JSON.stringify(s); // JSON strings are valid YAML scalars
 // Relative links in the docs point into the repository. On the site, a ported doc links to
 // its page, an issue directory (tests/fuzz-open/NNN-slug) to its What's left page, and
 // anything else to the file on GitHub.
-const tree = 'https://github.com/cloudbring/graphvis-rs/tree/master/';
+const tree = 'https://github.com/graphviz-pure/graphviz-pure/tree/master/';
 const ported = new Set(sources.map(([r]) => r));
 function relink(text, rel) {
 	return text.replace(/\]\(([^)\s]+)\)/g, (all, href) => {
@@ -55,10 +56,10 @@ function relink(text, rel) {
 		const target = posix.normalize(posix.join(posix.dirname(rel), path)).replace(/\/$/, '');
 		const frag = hash ? '#' + hash : '';
 		const issue = target.match(/^tests\/fuzz-open\/\d+-([^/]+)$/);
-		if (issue) return `](/graphvis-rs/whats-left/${issue[1]}/${frag})`;
+		if (issue) return `](${BASE}whats-left/${issue[1]}/${frag})`;
 		if (ported.has(target)) {
 			const page = posix.basename(target, '.md');
-			return `](/graphvis-rs/porting/${page}/${frag})`;
+			return `](${BASE}porting/${page}/${frag})`;
 		}
 		return `](${tree}${target}${frag})`;
 	});

@@ -9,7 +9,7 @@ source, and one reproducer per bug is kept in the corpus (`tests/wild/fuzz_*.gv`
 ## Running it
 
 ```sh
-cargo build --release -p gv-cli --bin dot-rs && cargo build -p gv-cli --bin dot-rs
+cargo build --release -p graphviz-pure-cli --bin graphviz-pure && cargo build -p graphviz-pure-cli --bin graphviz-pure
 python3 -I scripts/fuzz-run.py run --seed 1 --count 2000 --out /tmp/fuzz/r1   # parallel
 python3 -I scripts/fuzz-run.py summary /tmp/fuzz/r1
 python3 -I scripts/fuzz-run.py min /tmp/fuzz/r1/diff/s17.gv -o /tmp/fuzz/s17.min.gv
@@ -109,7 +109,7 @@ Parser and input
   patchwork leave labels at the origin).
 
 Errors and exit status
-* `gv_core::diag` keeps C's error level: any `agerrorf` makes the exit status 1 while
+* `graphviz_pure_core::diag` keeps C's error level: any `agerrorf` makes the exit status 1 while
   the output is still written. It is reported where C reports it: routesplines and
   checkpath failures, lost edges, fdp's non-comparable clusters, bad record labels,
   rejected HTML labels (expat's messages with `error_context` and `in label of ...`;

@@ -2,7 +2,7 @@
 """Differential fuzzing harness: C Graphviz 16.1.0 versus the port.
 
   run      generate cases with scripts/fuzz-gen.py and compare C `dot -Tsvg` with
-           the port's release and debug `dot-rs -Tsvg` (stdout minus the generator
+           the port's release and debug `graphviz-pure -Tsvg` (stdout minus the generator
            comment, exit status, stderr), recording every outcome
   min      delta-debug one case to a small input that keeps the same kind of difference
   check    print the outcome for each given file
@@ -39,8 +39,8 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GVBINDIR = os.environ.get("GVBINDIR", str(pathlib.Path.home() / "src/gv-ref/lutplugins"))
 C_BIN = os.environ.get("C_DOT", "dot")
-REL = os.environ.get("PORT_BIN", str(ROOT / "target/release/dot-rs"))
-DBG = os.environ.get("PORT_DEBUG_BIN", str(ROOT / "target/debug/dot-rs"))
+REL = os.environ.get("PORT_BIN", str(ROOT / "target/release/graphviz-pure"))
+DBG = os.environ.get("PORT_DEBUG_BIN", str(ROOT / "target/debug/graphviz-pure"))
 TIMEOUT = float(os.environ.get("FUZZ_TIMEOUT", "30"))
 ACTIONABLE = {"svg_diff", "exit_diff", "port_crash", "port_timeout", "debug_diff"}
 
@@ -58,7 +58,7 @@ def normalize(out):
 
 def norm_err(err, path):
     s = err.decode("utf-8", "replace").replace(str(path), "FILE")
-    return re.sub(r"^(dot|dot-rs): ", "PROG: ", s, flags=re.M)
+    return re.sub(r"^(dot|graphviz-pure): ", "PROG: ", s, flags=re.M)
 
 
 def run(cmd, path, timeout=TIMEOUT, env=None):

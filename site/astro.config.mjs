@@ -3,18 +3,23 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import starlightLinksValidator from 'starlight-links-validator';
 
+// Where the site is served: the root of https://graphviz-pure.github.io/ (the graphviz-pure.github.io
+// repo publishes the build). SITE_BASE serves it under a path instead, e.g. /graphviz-pure/.
+const SITE_URL = process.env.SITE_URL ?? 'https://graphviz-pure.github.io';
+const BASE = process.env.SITE_BASE ?? '/';
+
 export default defineConfig({
-	site: 'https://cloudbring.github.io',
-	base: '/graphvis-rs/',
+	site: SITE_URL,
+	base: BASE,
 	trailingSlash: 'always',
 	integrations: [
 		starlight({
-			title: 'graphvis-rs',
+			title: 'graphviz-pure',
 			description:
 				'A Rust + WebAssembly port of Graphviz 16.1.0, byte-identical to C Graphviz on its test corpora. The evidence, and what is left.',
 			logo: { light: './src/assets/mark-light.svg', dark: './src/assets/mark-dark.svg', alt: '' },
 			favicon: '/favicon.svg',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/cloudbring/graphvis-rs' }],
+			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/graphviz-pure/graphviz-pure' }],
 			customCss: [
 				'@fontsource-variable/archivo/wdth.css',
 				'@fontsource/fragment-mono/400.css',
@@ -65,9 +70,11 @@ export default defineConfig({
 			],
 			plugins: [
 				starlightLinksValidator({
+					// Content links are relative, so they work under any base path.
+					errorOnRelativeLinks: false,
 					// Custom pages (src/pages) and rustdoc (copied into dist/api by CI) are not in
 					// the docs collection; scripts/site-check-links.mjs checks every built link.
-					exclude: ['/graphvis-rs/gallery/**', '/graphvis-rs/whats-left/**', '/graphvis-rs/playground/', '/graphvis-rs/cross-platform/', '/graphvis-rs/api/**', '/graphvis-rs/samples/**'],
+					exclude: ['gallery/**', 'whats-left/**', 'playground/', 'cross-platform/', 'api/**', 'samples/**'].map((p) => BASE + p),
 				}),
 			],
 		}),

@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 
 const [pkg, out] = process.argv.slice(2);
 const require = createRequire(import.meta.url);
-const wasm = require(path.resolve(pkg, 'gv_wasm.js'));
+const wasm = require(path.resolve(pkg, 'graphviz_pure_wasm.js'));
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 fs.mkdirSync(path.join(out, 'samples'), { recursive: true });
 const samples = JSON.parse(fs.readFileSync(path.join(root, 'site/src/data/samples.json'), 'utf8'));

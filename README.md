@@ -1,8 +1,10 @@
 <img src="assets/icon.svg" width="64" height="64" alt="">
 
-# graphvis-rs
+# graphviz-pure
 
-**A Rust + WebAssembly port of Graphviz 16.1.0** ([documentation and evidence](https://cloudbring.github.io/graphvis-rs/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS its output is byte-identical to C Graphviz on every input in the project's test corpora.
+**A Rust + WebAssembly port of Graphviz 16.1.0** ([documentation and evidence](https://graphviz-pure.github.io/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS its output is byte-identical to C Graphviz on every input in the project's test corpora.
+
+graphviz-pure is an independent port. It is not affiliated with or endorsed by the Graphviz project; "Graphviz" in the name says what it is a port of.
 
 ---
 
@@ -35,10 +37,10 @@ Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fa
 
 ```sh
 cargo test --workspace                                         # every ratchet
-cargo run --release -p gv-diff -- e2e --list                   # full-SVG identity, list differences
-cargo run --release -p gv-diff -- --filter clust --worst 20    # layout geometry, a subset
-cargo run --release -p gv-diff -- render                       # renderers on C's own layouts
-cargo run --release -p gv-diff -- structure                    # same nodes, edges and labels as C, on canvas
+cargo run --release -p graphviz-pure-diff -- e2e --list                   # full-SVG identity, list differences
+cargo run --release -p graphviz-pure-diff -- --filter clust --worst 20    # layout geometry, a subset
+cargo run --release -p graphviz-pure-diff -- render                       # renderers on C's own layouts
+cargo run --release -p graphviz-pure-diff -- structure                    # same nodes, edges and labels as C, on canvas
 node scripts/wasm-e2e.mjs --pkg <wasm-bindgen nodejs output>   # the same check under WASM
 scripts/update-baselines.sh [--portable]                       # after an improvement
 ```
@@ -49,7 +51,7 @@ Regenerating the C references needs Graphviz 16.1.0 installed: `scripts/gen-gold
 
 Measured with one process per run on both sides on the same machine (Apple M-series), taking the minimum of 3 runs of `-Tsvg`. The machine was shared with other work, so treat these as rough:
 
-| Graph | C `dot` | `dot-rs` |
+| Graph | C `dot` | `graphviz-pure` |
 | :--- | ---: | ---: |
 | `b100` (Graphviz test graph) | 4.5 s | 4.7 s |
 | `b103` | 0.73 s | 0.69 s |
@@ -63,22 +65,22 @@ Output is identical in every row. The ortho speedup comes from data structures w
 
 ## Crates
 
-- [`gv-core`](crates/gv-core): graph IR, geometry, font metric tables, colour tables with `colorxlate` semantics, charset handling, and the math module (`math::PROFILE` selects Apple or portable).
-- [`gv-parser`](crates/gv-parser): DOT lexer and parser with cgraph's attribute, subgraph and ordering semantics, and the canonical writer.
-- [`gv-geom`](crates/gv-geom): node sizing (`shapes.c`, records, HTML tables, `labels.c`) and `pathplan`.
-- [`gv-layout`](crates/gv-layout): the engines (`dotgen`, `neatogen`, `fdpgen`, `sfdpgen`, `twopigen`, `circogen`, `osage`, `patchwork`), the shared `lib/common` code, plus `ortho`, `pack`, `vpsc`, `sparse` and no-layout mode.
-- [`gv-render`](crates/gv-render): a port of C's emit code and output plugins, and of cgraph's writer.
-- [`gv-engine`](crates/gv-engine): the pipeline (`render_dot`, `render_dot_all`, `render_dot_all_partial`).
-- [`gv-cli`](crates/gv-cli): `dot-rs`, a drop-in `dot` command line (`-T`, `-K`, `-o`, `-O`, `-G`/`-N`/`-E`, `-n`, several files, every graph in a file, C's exit status).
-- [`gv-diff`](crates/gv-diff): the differential harness and ratchets.
-- [`gv-wasm`](crates/gv-wasm): `wasm-bindgen` bindings.
+- [`graphviz-pure-core`](crates/graphviz-pure-core): graph IR, geometry, font metric tables, colour tables with `colorxlate` semantics, charset handling, and the math module (`math::PROFILE` selects Apple or portable).
+- [`graphviz-pure-parser`](crates/graphviz-pure-parser): DOT lexer and parser with cgraph's attribute, subgraph and ordering semantics, and the canonical writer.
+- [`graphviz-pure-geom`](crates/graphviz-pure-geom): node sizing (`shapes.c`, records, HTML tables, `labels.c`) and `pathplan`.
+- [`graphviz-pure-layout`](crates/graphviz-pure-layout): the engines (`dotgen`, `neatogen`, `fdpgen`, `sfdpgen`, `twopigen`, `circogen`, `osage`, `patchwork`), the shared `lib/common` code, plus `ortho`, `pack`, `vpsc`, `sparse` and no-layout mode.
+- [`graphviz-pure-render`](crates/graphviz-pure-render): a port of C's emit code and output plugins, and of cgraph's writer.
+- [`graphviz-pure`](crates/graphviz-pure): the pipeline (`render_dot`, `render_dot_all`, `render_dot_all_partial`).
+- [`graphviz-pure-cli`](crates/graphviz-pure-cli): `graphviz-pure`, a drop-in `dot` command line (`-T`, `-K`, `-o`, `-O`, `-G`/`-N`/`-E`, `-n`, several files, every graph in a file, C's exit status).
+- [`gv-diff`](crates/graphviz-pure-diff): the differential harness and ratchets.
+- [`graphviz-pure-wasm`](crates/graphviz-pure-wasm): `wasm-bindgen` bindings.
 
 ---
 
-## Browser usage (`@graphvis-rs/wasm`)
+## Browser usage (`@graphviz-pure/wasm`)
 
 ```js
-import init, { render, renderAll } from '@graphvis-rs/wasm';
+import init, { render, renderAll } from '@graphviz-pure/wasm';
 
 await init();
 const svg = render('digraph G { a -> b [label="fast"]; }', 'dot', 'svg');

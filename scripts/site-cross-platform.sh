@@ -6,7 +6,7 @@
 # Usage: scripts/site-cross-platform.sh [RUN_ID]   (default: the latest run on master)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REPO="${GITHUB_REPOSITORY:-cloudbring/graphvis-rs}"
+REPO="${GITHUB_REPOSITORY:-graphviz-pure/graphviz-pure}"
 RUN="${1:-$(gh run list -R "$REPO" --workflow cross-platform.yml --branch master --status completed \
   --limit 1 --json databaseId --jq '.[0].databaseId')}"
 [ -n "$RUN" ] || { echo "no Cross-platform run found" >&2; exit 1; }

@@ -1,14 +1,14 @@
 {
-  "name": "@graphvis/graphviz",
+  "name": "@graphviz-pure/wasm",
   "version": "0.1.0",
-  "exports": "./web/pkg/gv_wasm.js",
+  "exports": "./web/pkg/graphviz_pure_wasm.js",
   "publish": {
     "include": [
       "README.md",
-      "web/pkg/gv_wasm.js",
-      "web/pkg/gv_wasm.d.ts",
-      "web/pkg/gv_wasm_bg.wasm",
-      "web/pkg/gv_wasm_bg.wasm.d.ts"
+      "web/pkg/graphviz_pure_wasm.js",
+      "web/pkg/graphviz_pure_wasm.d.ts",
+      "web/pkg/graphviz_pure_wasm_bg.wasm",
+      "web/pkg/graphviz_pure_wasm_bg.wasm.d.ts"
     ]
   }
 }

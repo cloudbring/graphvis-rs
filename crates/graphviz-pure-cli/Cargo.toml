@@ -1,0 +1,25 @@
+[package]
+name = "graphviz-pure-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+readme.workspace = true
+homepage.workspace = true
+description = "graphviz-pure, a dot-compatible command line for the pure-Rust port of Graphviz 16.1.0"
+
+[[bin]]
+name = "graphviz-pure"
+path = "src/main.rs"
+# The library crate graphviz-pure owns the rustdoc name.
+doc = false
+
+[dependencies]
+graphviz-pure-core.workspace = true
+graphviz-pure-parser.workspace = true
+graphviz-pure.workspace = true
+
+[lints]
+workspace = true

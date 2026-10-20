@@ -1,3 +1,3 @@
-cargo build --release -p gv-cli --features gv-core/portable-math   # or any Linux/WASM build
+cargo build --release -p graphviz-pure-cli --features graphviz-pure-core/portable-math   # or any Linux/WASM build
 GVBINDIR=$HOME/src/gv-ref/lutplugins dot -Tsvg repro.gv
-dot-rs -Tsvg repro.gv
+graphviz-pure -Tsvg repro.gv

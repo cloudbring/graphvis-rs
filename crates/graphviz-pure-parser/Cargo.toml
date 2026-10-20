@@ -1,0 +1,18 @@
+[package]
+name = "graphviz-pure-parser"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+readme.workspace = true
+homepage.workspace = true
+description = "DOT and HTML-label lexer, parser and canonical writer for graphviz-pure, following cgraph"
+
+[dependencies]
+graphviz-pure-core.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

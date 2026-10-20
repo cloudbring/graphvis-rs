@@ -15,12 +15,12 @@ let mod: Promise<Mod | null> | undefined;
 function load() {
 	mod ??= (async () => {
 		const dir = join(process.cwd(), 'public/wasm');
-		if (!existsSync(join(dir, 'gv_wasm_bg.wasm'))) {
+		if (!existsSync(join(dir, 'graphviz_pure_wasm_bg.wasm'))) {
 			console.warn('[home] public/wasm is missing: run scripts/site-wasm.sh. The front page will have no static drawing.');
 			return null;
 		}
-		const m = (await import(/* @vite-ignore */ pathToFileURL(join(dir, 'gv_wasm.js')).href)) as Mod;
-		m.initSync({ module: readFileSync(join(dir, 'gv_wasm_bg.wasm')) });
+		const m = (await import(/* @vite-ignore */ pathToFileURL(join(dir, 'graphviz_pure_wasm.js')).href)) as Mod;
+		m.initSync({ module: readFileSync(join(dir, 'graphviz_pure_wasm_bg.wasm')) });
 		return m;
 	})();
 	return mod;

@@ -1,2 +1,2 @@
 C:    GVBINDIR=<pango-free plugins> dot -Kneato -Tsvg repro.gv
-port: dot-rs -Kneato -Tsvg repro.gv
+port: graphviz-pure -Kneato -Tsvg repro.gv

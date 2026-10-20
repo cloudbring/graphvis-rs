@@ -26,7 +26,7 @@ const file = s.source.split('/').pop()!;
 <StarlightPage
 	frontmatter={{
 		title: s.title,
-		description: `${s.title}: C Graphviz 16.1.0 and graphvis-rs output for ${s.source}, compared byte for byte and pixel for pixel.`,
+		description: `${s.title}: C Graphviz 16.1.0 and graphviz-pure output for ${s.source}, compared byte for byte and pixel for pixel.`,
 		tableOfContents: false,
 	}}
 >
@@ -66,7 +66,7 @@ const file = s.source.split('/').pop()!;
 		)
 	}
 
-	<DiffViewer id="viewer" c={url(dir + 'c.svg')} rust={url(dir + 'rust.svg')} rightLabel="graphvis-rs, native macOS build" />
+	<DiffViewer id="viewer" c={url(dir + 'c.svg')} rust={url(dir + 'rust.svg')} rightLabel="graphviz-pure, native macOS build" />
 
 	<LiveCheck
 		input={url(dir + s.wasm_input)}

@@ -7,7 +7,7 @@ postprocessing), neato's `spline_edges`, `removeOverlapWith` (adjust.c) and the
 prism overlap removal (`overlap.c`, `call_tri.c`, `delaunay.c`). The old
 stand-in (the `is_sfdp` branch of `force_circular::layout_fdp`) is removed.
 
-Entry point: `gv_layout::sfdpgen::sfdpinit::sfdp_layout(&mut Graph)`.
+Entry point: `graphviz_pure_layout::sfdpgen::sfdpinit::sfdp_layout(&mut Graph)`.
 
 ## How Homebrew's 16.1.0 is built
 
@@ -69,8 +69,8 @@ sfdp uses libc `rand()` only (`cutil::CRand`, threaded through `LGraph::crand`):
 
 ### Validation
 
-- `cargo run --release -p gv-diff -- --golden tests/golden/sfdp --baseline tests/golden/sfdp-baseline.json tests/sfdp`
-  (ratchet test: `crates/gv-diff/tests/sfdp_fidelity.rs`).
+- `cargo run --release -p graphviz-pure-diff -- --golden tests/golden/sfdp --baseline tests/golden/sfdp-baseline.json tests/sfdp`
+  (ratchet test: `crates/graphviz-pure-diff/tests/sfdp_fidelity.rs`).
 - Corpus: `tests/sfdp/*.gv` from `scripts/gen-sfdp-corpus.py`: fixtures and
   undirected wild graphs with `layout=sfdp` forced; grids up to 20×20 and
   8×40, binary/ternary trees up to 1023 nodes, connected random graphs of
@@ -89,7 +89,7 @@ sfdp uses libc `rand()` only (`cutil::CRand`, threaded through `LGraph::crand`):
 
 ## Module ↔ C file map
 
-### `gv_layout::sfdpgen`
+### `graphviz_pure_layout::sfdpgen`
 
 | Rust | C |
 |---|---|
@@ -99,7 +99,7 @@ sfdp uses libc `rand()` only (`cutil::CRand`, threaded through `LGraph::crand`):
 | `post_process` | `post_process.c`: `ideal_distance_matrix`, `StressMajorizationSmoother2_new`, `SparseStressMajorizationSmoother_new`, `StressMajorizationSmoother_smooth` (`smooth`/`smooth_with`, incl. `SM_SCHEME_NORMAL_ELABEL`), `get_edge_label_matrix`, `TriangleSmoother_new`, `SpringSmoother_new`/`_smooth`, `post_process_smoothing`; `sparse_solve.c` (`SparseMatrix_solve`, CG with diagonal preconditioner) |
 | `stress_model` | `stress_model.c` (`stress_model`; not called by `sfdp_layout`) |
 
-### `gv_layout::sparse`
+### `graphviz_pure_layout::sparse`
 
 | Rust | C |
 |---|---|

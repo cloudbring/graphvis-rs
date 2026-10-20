@@ -6,7 +6,7 @@
 # (`dot -Tdot`, honouring any `layout` attribute), and the result is re-read in
 # no-layout mode (`neato -n2`), which keeps the node, edge, cluster and label
 # positions from the input. The port renders the same laid-out file with
-# `dot-rs -Kneato -n2`, so the two outputs differ only where the renderers do.
+# `graphviz-pure -Kneato -n2`, so the two outputs differ only where the renderers do.
 #
 #   tests/golden/render/laid/STEM.dot     C layout with any `layout` attribute blanked
 #   tests/golden/render/FORMAT/STEM.EXT   C `neato -n2 -TFORMAT` of the laid-out file

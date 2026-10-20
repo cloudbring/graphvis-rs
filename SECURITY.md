@@ -9,7 +9,7 @@ released, the advisory is published with credit to the reporter unless you prefe
 
 Relevant reports include crashes or hangs on crafted input (the port parses untrusted DOT and
 runs in browsers), memory-safety problems (the port forbids `unsafe` outside the test-only
-`gv-portable-libm` crate), and anything in the build and distribution pipeline.
+`graphviz-pure-portable-libm` crate), and anything in the build and distribution pipeline.
 
 ## Supported versions
 

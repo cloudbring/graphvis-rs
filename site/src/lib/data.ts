@@ -3,9 +3,9 @@ import samplesJson from '../data/samples.json';
 import issuesJson from '../data/issues.json';
 
 export const BASE = import.meta.env.BASE_URL.replace(/\/?$/, '/');
-/** A root-relative URL under the site's base: url('gallery/') -> /graphvis-rs/gallery/ */
+/** A root-relative URL under the site's base: url('gallery/') -> /graphviz-pure/gallery/ */
 export const url = (path = '') => BASE + path.replace(/^\//, '');
-export const REPO = 'https://github.com/cloudbring/graphvis-rs';
+export const REPO = 'https://github.com/graphviz-pure/graphviz-pure';
 export const blob = (path: string, commit = 'master') => `${REPO}/blob/${commit}/${path}`;
 
 export type Fidelity = typeof fidelityJson;

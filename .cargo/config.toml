@@ -1,4 +1,4 @@
-# Shared build configuration for graphvis-rs.
+# Shared build configuration for graphviz-pure.
 #
 # A compiler cache helps when working in several worktrees; set it outside the repository,
 # e.g. `rustc-wrapper = "sccache"` under [build] in ~/.cargo/config.toml or in a

@@ -33,12 +33,12 @@ case, `sfdp/fx_abstract`, has 14 against C's 10.
 ## Running it
 
 ```sh
-cargo run --release -p gv-diff -- structure                                       # Apple profile on macOS
-cargo run --release -p gv-diff --features gv-core/portable-math -- structure      # portable profile
-cargo run --release -p gv-diff -- structure --filter sfdp/                        # a subset
+cargo run --release -p graphviz-pure-diff -- structure                                       # Apple profile on macOS
+cargo run --release -p graphviz-pure-diff --features graphviz-pure-core/portable-math -- structure      # portable profile
+cargo run --release -p graphviz-pure-diff -- structure --filter sfdp/                        # a subset
 ```
 
-`cargo test --workspace` runs it (`crates/gv-diff/tests/structure_fidelity.rs`), so CI checks
+`cargo test --workspace` runs it (`crates/graphviz-pure-diff/tests/structure_fidelity.rs`), so CI checks
 it on Linux, and the cross-platform workflow on Windows, arm64 Linux and macOS.
 
 The reference is `tests/golden/structure.json`, a summary per input: the counts and hashes of
@@ -46,7 +46,7 @@ the four multisets, the canvas size, and C's own non-finite, off-canvas and over
 Regenerate it after adding corpus inputs or changing what a summary records:
 
 ```sh
-GVBINDIR=~/src/gv-ref/lutplugins cargo run --release -p gv-diff -- structure --generate
+GVBINDIR=~/src/gv-ref/lutplugins cargo run --release -p graphviz-pure-diff -- structure --generate
 ```
 
 This needs the C reference build (see `scripts/gen-golden.sh`). `--c-dot PROG` runs another C
@@ -55,7 +55,7 @@ skipped: C writes a control character into its SVG, which is not valid XML.
 
 ## Adding a check
 
-Everything lives in `crates/gv-diff/src/structure.rs`.
+Everything lives in `crates/graphviz-pure-diff/src/structure.rs`.
 
 1. **If the check needs something the summary does not record**, add a field to `Doc` and fill
    it in `summarize_one`, which walks one SVG document. Keep it small and deterministic: the
@@ -78,6 +78,6 @@ Everything lives in `crates/gv-diff/src/structure.rs`.
 ## Adding inputs
 
 The checks cover every input of the corpora `gv-diff e2e` uses (`CORPORA` in
-`crates/gv-diff/src/e2e.rs`): put new `.gv` files in one of those directories, regenerate
+`crates/graphviz-pure-diff/src/e2e.rs`): put new `.gv` files in one of those directories, regenerate
 `tests/golden/structure.json` and `tests/golden/e2e.json`, and refresh the baselines
 (`scripts/update-baselines.sh` and `scripts/update-baselines.sh --portable`).

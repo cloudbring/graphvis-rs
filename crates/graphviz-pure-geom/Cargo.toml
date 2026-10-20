@@ -1,0 +1,17 @@
+[package]
+name = "graphviz-pure-geom"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+readme.workspace = true
+homepage.workspace = true
+description = "Node shapes, labels, HTML tables and pathplan for graphviz-pure"
+
+[dependencies]
+graphviz-pure-core.workspace = true
+
+[lints]
+workspace = true

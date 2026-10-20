@@ -4,13 +4,13 @@
 //
 //   node scripts/site-check-links.mjs site/dist
 //
-// Links under /graphvis-rs/api/ are only checked when dist/api exists (CI copies rustdoc
+// Links under /graphviz-pure/api/ are only checked when dist/api exists (CI copies rustdoc
 // there after the Astro build).
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const dist = resolve(process.argv[2] ?? 'dist');
-const BASE = '/graphvis-rs/';
+const BASE = process.env.SITE_BASE ?? '/'; // as in site/astro.config.mjs
 const haveApi = existsSync(join(dist, 'api'));
 
 function* html(dir) {

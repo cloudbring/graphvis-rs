@@ -13,7 +13,7 @@ const twopi = fidelity.layout.find((l) => l.name === 'twopi')!;
 const lastFuzz = fidelity.fuzz.rounds[fidelity.fuzz.rounds.length - 1];
 ---
 
-<StarlightPage frontmatter={{ title: "What's left", description: 'Open differences between graphvis-rs and C Graphviz 16.1.0: bugs in the port, and C behaviour the port does not or should not reproduce.' }} headings={[{ depth: 2, slug: 'port', text: 'In the port' }, { depth: 2, slug: 'upstream', text: 'Upstream C behaviour' }, { depth: 2, slug: 'known', text: 'In numbers' }]}>
+<StarlightPage frontmatter={{ title: "What's left", description: 'Open differences between graphviz-pure and C Graphviz 16.1.0: bugs in the port, and C behaviour the port does not or should not reproduce.' }} headings={[{ depth: 2, slug: 'port', text: 'In the port' }, { depth: 2, slug: 'upstream', text: 'Upstream C behaviour' }, { depth: 2, slug: 'known', text: 'In numbers' }]}>
 	<p class="intro">
 		Everything known not to match, each with a minimised reproducer, C's output and the port's. <strong>In the port</strong> means the port
 		should change. <strong>Upstream C behaviour</strong> means C's output comes from undefined behaviour, a crash path or nondeterminism, so it

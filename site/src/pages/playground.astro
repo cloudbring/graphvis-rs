@@ -7,7 +7,7 @@ const initial = `digraph proof {
   rankdir=LR;
   node [shape=box, style=rounded];
   oracle [label="C Graphviz 16.1.0"];
-  port [label="graphvis-rs"];
+  port [label="graphviz-pure"];
   input [shape=note, label="input.gv"];
   input -> oracle;
   input -> port;
@@ -18,7 +18,7 @@ const initial = `digraph proof {
 `;
 ---
 
-<StarlightPage frontmatter={{ title: 'Playground', description: 'Lay out your own DOT with the graphvis-rs WASM build, in the browser.', tableOfContents: false }}>
+<StarlightPage frontmatter={{ title: 'Playground', description: 'Lay out your own DOT with the graphviz-pure WASM build, in the browser.', tableOfContents: false }}>
 	<style is:global>
 		:root {
 			--sl-content-width: 72rem;
