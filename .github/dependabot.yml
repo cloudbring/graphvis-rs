@@ -1,0 +1,29 @@
+# Dependency updates. Each update is a pull request that CI (tests, cargo-deny, zizmor, the
+# cross-platform check) must pass. The cooldown keeps freshly published versions out for a few
+# days, the window in which most malicious releases are found and yanked.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      actions: { patterns: ["*"] }
+  - package-ecosystem: cargo
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      cargo: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /site
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      site: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      web: { patterns: ["*"] }

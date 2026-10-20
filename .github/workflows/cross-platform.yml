@@ -6,6 +6,11 @@ name: Cross-platform
 # gallery samples (full SVG bytes), and the compare job fails unless every platform's output
 # is byte-identical. The comparison is published on the site's Cross-platform page, where the
 # reader's browser draws each platform's SVG with one renderer and diffs the pixels.
+#
+# The last two jobs build the documentation site (site/, Astro Starlight, with the WASM package
+# for its live checks and rustdoc under /api/) from this run's results, on every run, and deploy
+# it to GitHub Pages on pushes to master only. The site's fidelity data, gallery outputs and C
+# references are committed, since they need the C oracle, which CI does not have.
 
 on:
   pull_request:
@@ -15,6 +20,11 @@ on:
 
 permissions:
   contents: read
+
+# A newer push to the same pull request cancels the older run; master runs all complete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -37,36 +47,48 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Install the stable Rust toolchain (rustup is on every runner)
+        shell: bash
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: ${{ matrix.id }}
       - name: Render the corpus and the samples
         env:
           PYTHON: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
-        run: scripts/cross-platform-render.sh "out/${{ matrix.id }}" "${{ matrix.id }}" "${{ matrix.label }}" ${{ matrix.cargo }}
-      - uses: actions/upload-artifact@v4
+          ID: ${{ matrix.id }}
+          LABEL: ${{ matrix.label }}
+          CARGO_ARGS: ${{ matrix.cargo }}
+        # CARGO_ARGS is deliberately unquoted: it holds zero or more cargo arguments.
+        run: scripts/cross-platform-render.sh "out/$ID" "$ID" "$LABEL" $CARGO_ARGS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: xp-${{ matrix.id }}
           path: out/${{ matrix.id }}
       # The full test suite, so Windows and arm64 Linux are tested like x86-64 Linux in ci.yml.
       - name: Run the workspace tests
         if: matrix.id != 'linux-x86_64'
-        run: cargo test --workspace --release ${{ matrix.cargo }}
+        env:
+          CARGO_ARGS: ${{ matrix.cargo }}
+        run: cargo test --workspace --release $CARGO_ARGS
 
   wasm:
     name: WebAssembly (Node.js)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
+          persist-credentials: false
+      - name: Install the stable Rust toolchain (rustup is on every runner)
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown && rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: wasm32
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Read wasm-bindgen version from Cargo.lock
@@ -77,13 +99,15 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
       - name: Cache wasm-bindgen-cli
         id: wb-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cargo/bin/wasm-bindgen
           key: wasm-bindgen-cli-${{ runner.os }}-${{ steps.wb.outputs.version }}
       - name: Install wasm-bindgen-cli
         if: steps.wb-cache.outputs.cache-hit != 'true'
-        run: cargo install wasm-bindgen-cli --version "${{ steps.wb.outputs.version }}" --locked
+        env:
+          WB_VERSION: ${{ steps.wb.outputs.version }}
+        run: cargo install wasm-bindgen-cli --version "$WB_VERSION" --locked
       - name: Build the wasm package
         run: |
           cargo build --release --target wasm32-unknown-unknown -p gv-wasm
@@ -92,7 +116,7 @@ jobs:
         run: |
           node scripts/cross-platform-wasm.mjs "$RUNNER_TEMP/pkg" out/wasm32
           node scripts/wasm-e2e.mjs --pkg "$RUNNER_TEMP/pkg" --hashes out/wasm32/hashes.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: xp-wasm32
           path: out/wasm32
@@ -103,8 +127,10 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: xp-*
           path: xp
@@ -112,15 +138,17 @@ jobs:
         run: for d in xp/xp-*; do mv "$d" "xp/${d#xp/xp-}"; done
       - name: Compare
         shell: bash  # -eo pipefail, so a difference fails the step through the tee
+        env:
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           # Every platform must have uploaded its outputs; a failed job shows up as missing.
           python3 scripts/cross-platform-compare.py xp \
             --expect linux-x86_64,linux-arm64,windows-x86_64,macos-arm64,wasm32 \
-            --commit "${{ github.event.pull_request.head.sha || github.sha }}" \
-            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --commit "$COMMIT" --run-url "$RUN_URL" \
             | tee -a "$GITHUB_STEP_SUMMARY"
-      # The site's Cross-platform page is built from this (see pages.yml).
-      - uses: actions/upload-artifact@v4
+      # The site's Cross-platform page is built from this (the site job below).
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: cross-platform-site
@@ -128,3 +156,107 @@ jobs:
             xp/manifest.json
             xp/*/platform.json
             xp/*/samples/
+
+  site:
+    name: Build the documentation site
+    needs: compare
+    if: always() && needs.compare.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the stable Rust toolchain (rustup is on every runner)
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown && rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      # wasm-bindgen-cli must match the wasm-bindgen crate in Cargo.lock exactly.
+      - name: Read wasm-bindgen version from Cargo.lock
+        id: wb
+        run: |
+          v=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Cache wasm-bindgen-cli
+        id: wb-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-${{ runner.os }}-${{ steps.wb.outputs.version }}
+      - name: Install wasm-bindgen-cli
+        if: steps.wb-cache.outputs.cache-hit != 'true'
+        env:
+          WB_VERSION: ${{ steps.wb.outputs.version }}
+        run: cargo install wasm-bindgen-cli --version "$WB_VERSION" --locked
+
+      # Same build as the npm package (opt-level z, fat LTO); wasm-opt is skipped when absent.
+      - name: Build the WASM package for the live checks
+        run: scripts/site-wasm.sh
+
+      - name: Build rustdoc
+        run: cargo doc --workspace --no-deps
+
+      # A failed comparison is still published: the page then shows the differences.
+      - name: Use this run's cross-platform results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: cross-platform-site
+          path: site/public/cross-platform
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+      # Every installed package must carry a valid registry signature (and provenance, if any).
+      - name: Verify npm package signatures
+        working-directory: site
+        run: npm audit signatures
+
+      # prebuild copies docs/porting into the site and the issue manifest into What's left;
+      # postbuild checks every internal link.
+      - name: Build the site
+        working-directory: site
+        run: npm run build
+
+      - name: Add rustdoc under /api/
+        run: |
+          mkdir -p site/dist/api
+          cp -R target/doc/. site/dist/api/
+          rm -f site/dist/api/.lock
+          cat > site/dist/api/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>graphvis-rs API</title>
+          <meta http-equiv="refresh" content="0; url=gv_engine/index.html">
+          <link rel="canonical" href="gv_engine/index.html">
+          <p><a href="gv_engine/index.html">gv_engine</a>, the pipeline. Other crates are listed in its sidebar.</p>
+          EOF
+          node scripts/site-check-links.mjs site/dist
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy the site to GitHub Pages
+    needs: site
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # deploy-pages publishes the site artifact
+      id-token: write # deploy-pages authenticates to Pages with an OIDC token
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
