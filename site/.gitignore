@@ -7,3 +7,5 @@ src/data/issues.json
 public/whats-left/
 public/wasm/
 .starlight-links-validator/
+# Downloaded from the Cross-platform workflow (pages.yml, ../scripts/site-cross-platform.sh)
+public/cross-platform/
