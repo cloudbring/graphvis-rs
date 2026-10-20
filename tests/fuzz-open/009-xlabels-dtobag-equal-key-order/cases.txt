@@ -1,7 +1,0 @@
-r1/diff/s148.gv seed=148
-r3/diff/s20944.gv seed=20944
-r3/diff/s21894.gv seed=21894
-r3/diff/s23581.gv seed=23581
-r3/diff/s24260.gv seed=24260
-r4/diff/s30114.gv seed=30114
-r4/diff/s34933.gv seed=34933

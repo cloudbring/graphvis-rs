@@ -135,6 +135,11 @@ Labels, HTML, records
   from its position in the record, not from geometry, so a port touching all four
   sides resolves to the field centre.
 * A node with an empty name has an empty `\N`.
+* `placeLabels` loads the R-tree in the order of C's `Dtobag` (the `cutil::DtTree` splay
+  tree), not a sort: a duplicate Hilbert key lands just before the equal element the splay
+  search stops at, which is not always reverse insertion order. This was open case
+  `009-xlabels-dtobag-equal-key-order` (7 neato fuzz cases); its repro is kept in
+  `crates/graphviz-pure-cli/tests/cli.rs` (`xlabels_equal_hilbert_keys_follow_dtobag_order`).
 
 Rendering
 * A color list whose first entry is a known SVG name is written out whole
@@ -271,7 +276,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
 | [`006-fdp-cluster-port-sincos-fusion`](../../tests/fuzz-open/006-fdp-cluster-port-sincos-fusion) | medium | 12 | port |
 | [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
-| [`009-xlabels-dtobag-equal-key-order`](../../tests/fuzz-open/009-xlabels-dtobag-equal-key-order) | medium | 7 | port |
 | [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`012-dot-flat-adj-labelfloat`](../../tests/fuzz-open/012-dot-flat-adj-labelfloat) | medium | 2 | port |

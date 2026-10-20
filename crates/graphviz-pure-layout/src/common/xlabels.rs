@@ -10,6 +10,7 @@ use super::splines::{
     update_bb_label,
 };
 use super::types::{EdgeType, LGraph};
+use crate::cutil::DtTree;
 use graphviz_pure_core::math;
 use graphviz_pure_core::{BoundingBox, Point};
 
@@ -699,8 +700,8 @@ fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bo
     // `HDict_t.key` is an `int`, and `Hdisc`'s `icompare` compares the keys
     // as `int`, so the unsigned Hilbert index is reinterpreted as signed:
     // keys with bit 31 set (coordinates reaching 2^15) sort first, not last.
-    let mut keyed: Vec<(i32, usize, Rect)> = Vec::with_capacity(objs.len());
-    for (i, o) in objs.iter().enumerate() {
+    let mut keyed: Vec<(i32, Rect)> = Vec::with_capacity(objs.len());
+    for o in objs {
         let p = o.lbl.map(|l| lbls[l].sz).unwrap_or_default();
         let r = Rect {
             b: [
@@ -712,14 +713,20 @@ fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bo
         };
         let x = r.b[0] + (r.b[2] - r.b[0]) / 2.0;
         let y = r.b[1] + (r.b[3] - r.b[1]) / 2.0;
-        keyed.push((hilbert(x as i32, y as i32, order) as i32, i, r));
+        keyed.push((hilbert(x as i32, y as i32, order) as i32, r));
     }
-    // Dtobag puts a new element before an equal one found at the splay root,
-    // so runs of equal keys come out in reverse insertion order.
-    keyed.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+    // xlnew/xlhdxload: `hdx` is a Dtobag keyed by the Hilbert index. Where
+    // equal keys land depends on the splay tree's shape (dttree.c inserts a
+    // duplicate just before the equal element its search stops at), so the
+    // tree is reproduced rather than sorted.
+    let mut hdx = DtTree::new(true);
+    for i in 0..keyed.len() {
+        hdx.insert(i, |a, b| keyed[a].0.cmp(&keyed[b].0));
+    }
+    // xlspdxload: dtfirst/dtnext walk the dictionary in order.
     let mut tree = RTree::new();
-    for (_, i, r) in &keyed {
-        tree.insert(*r, *i);
+    for i in hdx.flatten() {
+        tree.insert(keyed[i].1, i);
     }
     let mut ctx = Ctx { objs, lbls, tree };
     for i in 0..objs.len() {
