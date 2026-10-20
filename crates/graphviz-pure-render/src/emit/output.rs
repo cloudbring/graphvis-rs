@@ -69,6 +69,19 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
         if e.bz.is_empty() {
             continue;
         }
+        // `if (ED_edge_type(e) == IGNORED) continue;`: the layout's label positions,
+        // written for the renderer, give way to the input values.
+        let src = &m.g.edges[i].attrs;
+        if src.contains_key(graphviz_pure_core::IGNORED_EDGE_KEY) {
+            let a = &mut g.edges[i].attrs;
+            for k in ["head_lp", "tail_lp", "xlp"] {
+                match src.get(&format!("{}{k}", graphviz_pure_core::IGNORED_EDGE_KEY)) {
+                    Some(v) => a.insert(k.into(), v.clone()),
+                    None => a.remove(k),
+                };
+            }
+            continue;
+        }
         let mut s = String::new();
         for (k, b) in e.bz.iter().enumerate() {
             if k > 0 {

@@ -100,12 +100,15 @@ impl Output {
         let fmt = |p: Point| format!("{:?},{:?}", p.x, p.y);
         // attach_attrs_and_arrows: edges without splines (or IGNORED) get no
         // attributes; with splines, lp/head_lp/tail_lp are written whether
-        // set or not and xlp only when set.
+        // set or not and xlp only when set. An IGNORED edge can still carry a
+        // spline (orthoEdges under concentrate routes the first edge of each
+        // node pair whatever its type), which emit_edge_graphics draws: the
+        // renderer gets it, marked so that attach_attrs writes no attributes.
         let pos_of = |l: Option<L>| l.map(|l| d.labels[l].pos);
         for ei in 0..d.input.edges.len() {
             let ed = &d.edges[ei];
             let mut extra = Vec::new();
-            let Some(bzs) = ed.spl.as_ref().filter(|_| ed.edge_type != IGNORED) else {
+            let Some(bzs) = ed.spl.as_ref() else {
                 edge_attrs.push(extra);
                 // A lost edge (no spline) still draws its placed label (emit_edge);
                 // the output writer skips edges without splines. `routed` is false
@@ -138,12 +141,19 @@ impl Output {
             if !unplaced.is_empty() {
                 extra.push((graphviz_pure_core::UNPLACED_PORT_LABELS_KEY, unplaced));
             }
-            for (k, p) in [
-                ("head_lp", pos_of(ed.head_label)),
-                ("tail_lp", pos_of(ed.tail_label)),
-                ("xlp", lp_of(ed.xlabel)),
+            let ignored = ed.edge_type == IGNORED;
+            if ignored {
+                extra.push((graphviz_pure_core::IGNORED_EDGE_KEY, String::new()));
+            }
+            for (k, ik, p) in [
+                ("head_lp", "\u{1}ignorededgehead_lp", pos_of(ed.head_label)),
+                ("tail_lp", "\u{1}ignorededgetail_lp", pos_of(ed.tail_label)),
+                ("xlp", "\u{1}ignorededgexlp", lp_of(ed.xlabel)),
             ] {
                 if let Some(p) = p {
+                    if ignored && let Some(v) = d.input.edges[ei].attrs.get(k) {
+                        extra.push((ik, v.clone()));
+                    }
                     extra.push((k, fmt(p)));
                 }
             }

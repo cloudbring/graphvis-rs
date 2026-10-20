@@ -1029,8 +1029,15 @@ pub fn ortho_edges<S: OrthoGraph + ?Sized>(g: &mut S, use_lbls: bool) -> bool {
 pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
     g: &mut S,
     nodes: Vec<usize>,
-    _use_lbls: bool,
+    use_lbls: bool,
 ) -> bool {
+    // lib/ortho/ortho.c:orthoEdges: label routing is not implemented, so useLbls
+    // only warns and is then cleared.
+    if use_lbls {
+        graphviz_pure_core::diag::agwarningf(
+            "Orthogonal edges do not currently handle edge labels. Try using xlabels.\n",
+        );
+    }
     let node_cell: std::collections::HashMap<usize, usize> =
         nodes.iter().enumerate().map(|(i, &n)| (n, i)).collect();
     let boxes: Vec<(Point, f64, f64)> = nodes

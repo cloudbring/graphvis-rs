@@ -175,6 +175,11 @@ Rendering
 
 dot
 * A lost edge (routing failed) still draws its placed label.
+* With `splines=ortho` and `concentrate`, an `IGNORED` edge that `orthoEdges` routes (the
+  first of its node pair) is drawn, but gets no `pos` or label positions in `-Tdot`; and
+  `orthoEdges(g, true)` warns that orthogonal edges do not handle edge labels. This was open
+  case `002-dot-ortho-concentrate-ignored-edge`; its repro is kept in
+  `crates/graphviz-pure-cli/tests/cli.rs` (`ortho_concentrate_draws_routed_ignored_edge`).
 * With `splines=curved`, a node with self-loops is drawn with the loop space: a double
   `ND_rw`/`ND_mval` swap.
 * `fixedsize=shape` clipping swaps extents under a flipped rankdir.
@@ -318,7 +323,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | Issue | Severity | Fuzz cases | Status |
 |---|---|---:|---|
 | [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
-| [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
 | [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
