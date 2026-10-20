@@ -114,7 +114,7 @@ const cells = Array.from({ length: 64 });
 
 	<div class="contrast">
 		<p class="lede">
-			C Graphviz itself is not the same everywhere. Compiled on Linux, it follows that platform's math library and drifts from C on macOS:
+			C Graphviz itself is not the same everywhere. Compiled on Linux, it takes that platform's math library, <code>qsort</code> and <code>rand</code>, and drifts from C on macOS:
 		</p>
 		<ul class="bars">
 			{
