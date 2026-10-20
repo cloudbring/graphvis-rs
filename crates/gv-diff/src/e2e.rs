@@ -74,7 +74,7 @@ pub fn hash(s: &str) -> String {
     format!("{h:016x}")
 }
 
-fn inputs(root: &Path) -> Vec<(String, PathBuf)> {
+pub(crate) fn inputs(root: &Path) -> Vec<(String, PathBuf)> {
     let mut v = Vec::new();
     for (name, dirs) in CORPORA {
         for d in *dirs {
@@ -94,7 +94,7 @@ fn inputs(root: &Path) -> Vec<(String, PathBuf)> {
     v
 }
 
-fn run_c(dot: &str, path: &Path) -> Option<String> {
+pub(crate) fn run_c(dot: &str, path: &Path) -> Option<String> {
     let mut child = Command::new(dot)
         .arg("-Tsvg")
         .arg(path)
@@ -125,7 +125,7 @@ fn run_c(dot: &str, path: &Path) -> Option<String> {
     (!bytes.is_empty()).then(|| normalize(&gv_core::charset::decode(bytes)))
 }
 
-fn run_port(src: &str) -> Option<String> {
+pub(crate) fn run_port(src: &str) -> Option<String> {
     let src = src.to_string();
     // As dot does, the graphs read before a syntax error are rendered.
     let out = std::panic::catch_unwind(move || {
@@ -143,7 +143,7 @@ fn run_port(src: &str) -> Option<String> {
     }
 }
 
-fn parallel<T: Send>(
+pub(crate) fn parallel<T: Send>(
     items: &[(String, PathBuf)],
     f: impl Fn(&Path) -> T + Sync,
 ) -> BTreeMap<String, T> {

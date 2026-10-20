@@ -38,6 +38,7 @@ cargo test --workspace                                         # every ratchet
 cargo run --release -p gv-diff -- e2e --list                   # full-SVG identity, list differences
 cargo run --release -p gv-diff -- --filter clust --worst 20    # layout geometry, a subset
 cargo run --release -p gv-diff -- render                       # renderers on C's own layouts
+cargo run --release -p gv-diff -- structure                    # same nodes, edges and labels as C, on canvas
 node scripts/wasm-e2e.mjs --pkg <wasm-bindgen nodejs output>   # the same check under WASM
 scripts/update-baselines.sh [--portable]                       # after an improvement
 ```
