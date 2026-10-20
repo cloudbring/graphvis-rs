@@ -1,0 +1,31 @@
+name: Bug report
+description: A crash, hang, error or other wrong behaviour that is not an output difference from C.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the error message or panic, if any.
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: The smallest DOT input that reproduces it.
+      render: dot
+  - type: input
+    id: command
+    attributes:
+      label: Command or API call
+      placeholder: graphviz-pure -Tpng input.gv -o out.png
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Version and platform
+      description: Output of `graphviz-pure -V`, and the OS (or browser, for the WASM package).
+    validations:
+      required: true

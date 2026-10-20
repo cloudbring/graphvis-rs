@@ -1,0 +1,15 @@
+name: Feature request
+description: A Graphviz feature the port does not support yet, or something new.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What you would like
+      description: For a Graphviz feature, name the option, format or attribute, and how C Graphviz behaves.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What you would use it for
