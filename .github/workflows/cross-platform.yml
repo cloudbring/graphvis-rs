@@ -39,12 +39,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { id: linux-x86_64, label: "Linux x86-64", runner: ubuntu-latest, cargo: "" }
-          - { id: linux-arm64, label: "Linux arm64", runner: ubuntu-24.04-arm, cargo: "" }
-          - { id: windows-x86_64, label: "Windows x86-64", runner: windows-latest, cargo: "" }
+          - { id: linux-x86_64, label: "Linux x86-64", runner: blacksmith-4vcpu-ubuntu-2404, cargo: "" }
+          - { id: linux-arm64, label: "Linux arm64", runner: blacksmith-4vcpu-ubuntu-2404-arm, cargo: "" }
+          - { id: windows-x86_64, label: "Windows x86-64", runner: blacksmith-8vcpu-windows-2025, cargo: "" }
           # macOS defaults to Apple's libm (to match C on macOS); the feature selects the
           # portable profile the other platforms use.
-          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: macos-latest, cargo: "--features graphviz-pure-core/portable-math" }
+          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: blacksmith-6vcpu-macos-15, cargo: "--features graphviz-pure-core/portable-math" }
     defaults:
       run:
         shell: bash
@@ -79,7 +79,7 @@ jobs:
 
   wasm:
     name: WebAssembly (Node.js)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -129,7 +129,7 @@ jobs:
     # Runs when a platform job failed (a missing platform fails the comparison), not when the
     # run was cancelled.
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -166,7 +166,7 @@ jobs:
     needs: compare
     # A failed comparison is still published, so the page shows it; a cancelled run is not.
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       # Served at the root of https://graphviz-pure.github.io/ (the graphviz-pure.github.io repo).
       SITE_BASE: /
