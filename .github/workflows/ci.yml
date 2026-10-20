@@ -121,3 +121,25 @@ jobs:
       # Security lint of every workflow: injection, credential persistence, triggers, pinning.
       - name: zizmor
         run: zizmor --persona=pedantic --offline .github/workflows
+
+  # What in a pull request needs a careful read (sensitive files, new dependencies, weakened
+  # baselines, process and network calls, Trojan Source characters); see docs/pull-requests.md.
+  # The scanner comes from the base branch, so a pull request cannot edit what checks it, and it
+  # only reads git objects: nothing from the pull request runs here.
+  pr-risk:
+    name: PR risk report
+    if: github.event_name == 'pull_request'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Scan the change against the base branch
+        shell: bash
+        run: |
+          if git show HEAD^1:scripts/pr-risk.py > "$RUNNER_TEMP/pr-risk.py"; then
+            python3 -I "$RUNNER_TEMP/pr-risk.py" HEAD^1 HEAD | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "The base branch has no scripts/pr-risk.py yet." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
