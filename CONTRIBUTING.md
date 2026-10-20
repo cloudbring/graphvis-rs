@@ -60,4 +60,4 @@ licensed under the same terms.
 
 ## Conduct
 
-Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
+Be adults: see the [code of conduct](CODE_OF_CONDUCT.md). It is four lines.
