@@ -168,6 +168,8 @@ const cells = Array.from({ length: 64 });
 	}
 
 	function mount(root: HTMLElement) {
+		// The proof bench is only rendered when there is a sample to show.
+		if (!root.querySelector('.bench')) return;
 		const list: S[] = JSON.parse(root.dataset.list!);
 		let cur = list.findIndex((s) => s.name === root.dataset.start);
 		const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
@@ -209,7 +211,13 @@ const cells = Array.from({ length: 64 });
 			mineHex.textContent = 'rendering…';
 			verdict.textContent = `Rendering ${s.name}.gv with -K${s.engine} in this tab…`;
 			try {
-				const [input, cText] = await Promise.all([fetch(s.input).then((r) => r.arrayBuffer()), fetch(s.c).then((r) => r.text())]);
+				const res = await fetch(s.input);
+				if (!res.ok) throw new Error(`${s.name}.gv: HTTP ${res.status}`);
+				const input = await res.arrayBuffer();
+				// C's SVG only adds the "and as C Graphviz's" remark; the hash check works without it.
+				const cText = await fetch(s.c)
+					.then((r) => (r.ok ? r.text() : ''))
+					.catch(() => '');
 				const r = await call({ op: 'bytes', src: new Uint8Array(input), engine: s.engine, format: 'svg' });
 				if (id !== run) return;
 				if (!r.ok) throw new Error(r.error);

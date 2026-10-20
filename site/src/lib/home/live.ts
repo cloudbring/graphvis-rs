@@ -426,7 +426,19 @@ export function mountLive(root: HTMLElement) {
 		else {
 			const eng = nodeEngine(d.name);
 			if (eng) choose(eng);
+			else follow(d.name, ev);
 		}
+	};
+	// Pointer capture retargets the click to the <svg>, so a link node's <a> may never see it:
+	// a press without a drag follows the link here, and the native click is swallowed.
+	const follow = (name: string, ev: PointerEvent) => {
+		const g = svg.querySelector<SVGGraphicsElement>(`.node[data-name="${CSS.escape(name)}"]`);
+		const a = g?.closest('a') ?? g?.querySelector('a');
+		const href = a?.getAttribute('href') ?? a?.getAttribute('xlink:href');
+		if (!href) return;
+		suppressClick = true;
+		if (ev.metaKey || ev.ctrlKey || ev.shiftKey) window.open(href, '_blank', 'noopener');
+		else location.assign(href);
 	};
 	svg.addEventListener('pointerup', endDrag);
 	svg.addEventListener('pointercancel', endDrag);
@@ -436,8 +448,7 @@ export function mountLive(root: HTMLElement) {
 			suppressClick = false;
 		}
 	});
-	// Touch: a finger on a node drags it; anywhere else scrolls the page.
-	svg.addEventListener('touchstart', (ev) => nodeAt(ev.target) && ev.preventDefault(), { passive: false });
+	// Touch: a finger on a node drags it (nodes have touch-action: none); anywhere else scrolls.
 
 	// Removing a focused element fires focusout in the middle of draw(): only schedule here.
 	svg.addEventListener('focusin', (ev) => {
