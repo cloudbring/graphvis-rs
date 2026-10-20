@@ -172,6 +172,8 @@ dot
     (`port_endpoint_declares_its_edge_attribute_like_mkport`). 9 of its 11 fuzz cases now
     match C. Seeds 10107 and 33649 still differ in one flat-edge spline (C warns
     `Unable to reclaim box space` on 33649), a separate cause: issue #84.
+  * `E_label_float` is looked up as `label_float`, so `labelfloat` is ignored there (was
+    open case `012-dot-flat-adj-labelfloat`, issue #21).
 * In the pack branch, edges are mapped only when a component routed splines.
 * An edge without a spline keeps its unset label's position (moved by `shiftEdge` in
   the pack branch), which `edge_in_box` tests without looking at `set`: with `pack` and
@@ -281,7 +283,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
 | [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
-| [`012-dot-flat-adj-labelfloat`](../../tests/fuzz-open/012-dot-flat-adj-labelfloat) | medium | 2 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`018-render-interpolate-points-fma`](../../tests/fuzz-open/018-render-interpolate-points-fma) | low | 1 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
