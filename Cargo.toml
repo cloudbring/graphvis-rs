@@ -9,6 +9,7 @@ members = [
     "crates/graphviz-pure",
     "crates/graphviz-pure-wasm",
     "crates/graphviz-pure-cli",
+    "crates/graphviz-pure-raster",
     "crates/graphviz-pure-diff",
     "crates/graphviz-pure-portable-libm",
 ]
@@ -32,6 +33,7 @@ graphviz-pure-geom = { path = "crates/graphviz-pure-geom", version = "0.1.0" }
 graphviz-pure-layout = { path = "crates/graphviz-pure-layout", version = "0.1.0" }
 graphviz-pure-render = { path = "crates/graphviz-pure-render", version = "0.1.0" }
 graphviz-pure = { path = "crates/graphviz-pure", version = "0.1.0" }
+graphviz-pure-raster = { path = "crates/graphviz-pure-raster", version = "0.1.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"

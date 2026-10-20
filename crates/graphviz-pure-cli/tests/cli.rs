@@ -102,3 +102,25 @@ fn no_layout_mode_keeps_positions() {
     let (out, _, ok) = run(&["-Knop2", "-Tplain"], laid);
     assert!(ok && out.starts_with("graph 1 "), "{out}");
 }
+
+#[test]
+fn png_and_jpeg_output_are_images_at_graphviz_sizes() {
+    let png = tmp("raster.png");
+    let (_, err, ok) = run(
+        &["-Tpng", "-o", png.to_str().unwrap()],
+        "digraph { a -> b }",
+    );
+    assert!(ok, "{err}");
+    let bytes = std::fs::read(&png).unwrap();
+    assert_eq!(&bytes[1..4], b"PNG");
+    // 62 x 116 pt at 96 dpi, as C's -Tpng.
+    assert_eq!(u32::from_be_bytes(bytes[16..20].try_into().unwrap()), 83);
+    assert_eq!(u32::from_be_bytes(bytes[20..24].try_into().unwrap()), 155);
+    let jpg = tmp("raster.jpg");
+    let (_, err, ok) = run(
+        &["-Tjpg", "-o", jpg.to_str().unwrap()],
+        "digraph { a -> b }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(&std::fs::read(&jpg).unwrap()[..2], &[0xFF, 0xD8]);
+}

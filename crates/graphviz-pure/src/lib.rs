@@ -80,6 +80,38 @@ pub fn render_dot_all_partial(
     (out, parse_err)
 }
 
+/// Lays out and renders every graph in `dot_source` as SVG, for raster output: each SVG comes
+/// with whether its graph sets `dpi` (or `resolution`), since Graphviz then scales the drawing
+/// to that resolution instead of drawing raster formats at 96 dpi. Like
+/// [`render_dot_all_partial`], the graphs read before a syntax error are returned with it.
+pub fn render_svg_all_partial(
+    dot_source: &str,
+    engine: &str,
+    globals: &GlobalAttrs,
+    options: LayoutOptions,
+) -> (
+    Vec<(String, bool)>,
+    Option<graphviz_pure_core::GraphvizError>,
+) {
+    graphviz_pure_render::reset_render_state();
+    let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
+    let mut out = Vec::with_capacity(graphs.len());
+    for graph in graphs {
+        let explicit_dpi = ["dpi", "resolution"].iter().any(|k| {
+            graph
+                .graph_attrs
+                .get(*k)
+                .and_then(|v| v.trim().parse::<f64>().ok())
+                .is_some_and(|d| d > 0.0)
+        });
+        match render_parsed(graph, engine, OutputFormat::Svg, "svg", options) {
+            Ok(s) => out.push((s, explicit_dpi)),
+            Err(e) => return (out, Some(e)),
+        }
+    }
+    (out, parse_err)
+}
+
 fn render_parsed(
     mut graph: Graph,
     engine: &str,

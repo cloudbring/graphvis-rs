@@ -3,6 +3,7 @@
 #   platform.json   which platform, toolchain and math profile produced them
 #   hashes.json     gv-diff e2e --hashes: the -Tsvg hash of every corpus input
 #   samples/NAME.svg  graphviz-pure -Tsvg of each site gallery sample, byte for byte as written
+#   samples/NAME.png  its -Tpng (compared and reported, not yet required to match)
 #   samples/NAME.exit its exit status (C's: some inputs exit 1 with a drawing, like structs)
 # scripts/cross-platform-compare.py then requires every platform's files to be identical.
 #
@@ -29,6 +30,10 @@ for s in json.load(open("site/src/data/samples.json")):
         sys.exit(f"{s['name']}: graphviz-pure wrote no output (exit {r.returncode}): {r.stderr.decode(errors='replace')}")
     open(f"{out}/samples/{s['name']}.svg", "wb").write(r.stdout)
     open(f"{out}/samples/{s['name']}.exit", "w").write(f"{r.returncode}\n")
+    # PNG too (graphviz-pure-raster); reported by the comparison, not yet required to match.
+    png = subprocess.run([f"target/release/graphviz-pure{exe}", f"-K{s['engine']}", "-Tpng", src], capture_output=True).stdout
+    if png:
+        open(f"{out}/samples/{s['name']}.png", "wb").write(png)
 PY
 "${PYTHON:-python3}" - "$OUT" "$ID" "$LABEL" <<'PY'
 import json, platform, subprocess, sys

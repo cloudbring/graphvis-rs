@@ -1,0 +1,209 @@
+//! PNG and JPEG output for graphviz-pure (`-Tpng`, `-Tjpg`).
+//!
+//! C Graphviz draws raster formats with cairo and measures text with Pango. The port does
+//! neither: it lays out and renders SVG exactly as C does with its built-in font tables, and
+//! this crate rasterizes that SVG with [resvg]. So the layout of a PNG is the port's (and C's,
+//! under the reference setup), and the pixels are resvg's: antialiasing and glyph shapes are not
+//! cairo's.
+//!
+//! Text is drawn with fonts compiled into the crate (`fonts/`, SIL Open Font License 1.1): Tinos,
+//! Arimo and Cousine, which have the metrics of Times New Roman, Arial and Courier New, the
+//! families the port measures labels with. Graphviz's names for them (`Times-Roman`,
+//! `Helvetica`, `Courier`, ...) resolve to these faces; any other name falls back to Tinos, as
+//! the port's text measurement falls back to Times. No system font is read, so a PNG is the same
+//! on every machine.
+//!
+//! Pixel size follows Graphviz: without a `dpi` (or `resolution`) attribute, raster output is
+//! at 96 dpi (1pt = 4/3 px); with one, the SVG is already scaled to that resolution and is
+//! rasterized at one pixel per point.
+
+use resvg::{tiny_skia, usvg};
+use std::sync::{Arc, OnceLock};
+
+/// A raster output format.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RasterFormat {
+    Png,
+    Jpeg,
+}
+
+impl RasterFormat {
+    /// Graphviz's `-T` names for the formats this crate writes.
+    pub fn parse(name: &str) -> Option<Self> {
+        match name.to_ascii_lowercase().as_str() {
+            "png" => Some(Self::Png),
+            "jpg" | "jpeg" | "jpe" => Some(Self::Jpeg),
+            _ => None,
+        }
+    }
+}
+
+const FONTS: &[(&[u8], &[&str])] = &[
+    (
+        include_bytes!("../fonts/Tinos-Regular.ttf"),
+        &["Times", "Times-Roman", "Times New Roman"],
+    ),
+    (
+        include_bytes!("../fonts/Tinos-Bold.ttf"),
+        &["Times", "Times-Roman", "Times New Roman"],
+    ),
+    (
+        include_bytes!("../fonts/Tinos-Italic.ttf"),
+        &["Times", "Times-Roman", "Times New Roman"],
+    ),
+    (
+        include_bytes!("../fonts/Tinos-BoldItalic.ttf"),
+        &["Times", "Times-Roman", "Times New Roman"],
+    ),
+    (
+        include_bytes!("../fonts/Arimo[wght].ttf"),
+        &["Helvetica", "Arial"],
+    ),
+    (
+        include_bytes!("../fonts/Arimo-Italic[wght].ttf"),
+        &["Helvetica", "Arial"],
+    ),
+    (
+        include_bytes!("../fonts/Cousine-Regular.ttf"),
+        &["Courier", "Courier New"],
+    ),
+    (
+        include_bytes!("../fonts/Cousine-Bold.ttf"),
+        &["Courier", "Courier New"],
+    ),
+    (
+        include_bytes!("../fonts/Cousine-Italic.ttf"),
+        &["Courier", "Courier New"],
+    ),
+    (
+        include_bytes!("../fonts/Cousine-BoldItalic.ttf"),
+        &["Courier", "Courier New"],
+    ),
+];
+
+/// The bundled fonts, with Graphviz's family names added as aliases.
+fn fontdb() -> Arc<usvg::fontdb::Database> {
+    static DB: OnceLock<Arc<usvg::fontdb::Database>> = OnceLock::new();
+    DB.get_or_init(|| {
+        let mut db = usvg::fontdb::Database::new();
+        for (data, aliases) in FONTS {
+            let source = usvg::fontdb::Source::Binary(Arc::new(data.to_vec()));
+            for id in db.load_font_source(source) {
+                let Some(mut info) = db.face(id).cloned() else {
+                    continue;
+                };
+                db.remove_face(id);
+                let lang = info
+                    .families
+                    .first()
+                    .map_or(usvg::fontdb::Language::English_UnitedStates, |f| f.1);
+                for a in *aliases {
+                    info.families.push(((*a).to_string(), lang));
+                }
+                db.push_face_info(info);
+            }
+        }
+        db.set_serif_family("Tinos");
+        db.set_sans_serif_family("Arimo");
+        db.set_monospace_family("Cousine");
+        db.set_cursive_family("Tinos");
+        db.set_fantasy_family("Tinos");
+        Arc::new(db)
+    })
+    .clone()
+}
+
+/// Rasterizes the port's SVG for one graph. `explicit_dpi` says whether the graph set `dpi`
+/// or `resolution` (then the SVG is already scaled and is drawn at one pixel per point).
+pub fn rasterize(svg: &str, format: RasterFormat, explicit_dpi: bool) -> Result<Vec<u8>, String> {
+    let opt = usvg::Options {
+        fontdb: fontdb(),
+        font_family: "Tinos".to_string(),
+        ..usvg::Options::default()
+    };
+    let tree = usvg::Tree::from_str(svg, &opt).map_err(|e| format!("rasterizing the SVG: {e}"))?;
+    // usvg reads the SVG's `pt` sizes as CSS pixels at 96 dpi (1pt = 4/3 px), Graphviz's default
+    // raster resolution. With an explicit dpi the SVG's points are already the pixels.
+    let scale = if explicit_dpi { 0.75 } else { 1.0 };
+    let size = tree.size();
+    let (w, h) = (
+        (size.width() * scale).round().max(1.0) as u32,
+        (size.height() * scale).round().max(1.0) as u32,
+    );
+    let mut pixmap = tiny_skia::Pixmap::new(w, h).ok_or("the drawing is too large to rasterize")?;
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+    match format {
+        RasterFormat::Png => pixmap
+            .encode_png()
+            .map_err(|e| format!("encoding the PNG: {e}")),
+        RasterFormat::Jpeg => {
+            // JPEG has no alpha: composite onto white, as Graphviz's background is.
+            let mut rgb = Vec::with_capacity((w * h * 3) as usize);
+            for p in pixmap.pixels() {
+                let c = p.demultiply();
+                let a = u32::from(c.alpha());
+                let over = |v: u8| ((u32::from(v) * a + 255 * (255 - a) + 127) / 255) as u8;
+                rgb.extend([over(c.red()), over(c.green()), over(c.blue())]);
+            }
+            let mut out = Vec::new();
+            jpeg_encoder::Encoder::new(&mut out, 90)
+                .encode(&rgb, w as u16, h as u16, jpeg_encoder::ColorType::Rgb)
+                .map_err(|e| format!("encoding the JPEG: {e}"))?;
+            Ok(out)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SVG: &str = r#"<svg width="62pt" height="116pt" viewBox="0.00 0.00 62.00 116.00" xmlns="http://www.w3.org/2000/svg">
+<g transform="scale(1 1) rotate(0) translate(4 112)"><polygon fill="white" stroke="none" points="-4,4 -4,-112 58,-112 58,4 -4,4"/>
+<ellipse fill="none" stroke="black" cx="27" cy="-90" rx="27" ry="18"/>
+<text text-anchor="middle" x="27" y="-85.8" font-family="Times,serif" font-size="14.00">a</text></g></svg>"#;
+
+    #[test]
+    fn png_has_graphviz_default_size() {
+        let png = rasterize(SVG, RasterFormat::Png, false).unwrap();
+        assert_eq!(&png[1..4], b"PNG");
+        // IHDR width and height: 62pt and 116pt at 96 dpi, as C's -Tpng.
+        assert_eq!(u32::from_be_bytes(png[16..20].try_into().unwrap()), 83);
+        assert_eq!(u32::from_be_bytes(png[20..24].try_into().unwrap()), 155);
+    }
+
+    #[test]
+    fn explicit_dpi_draws_one_pixel_per_point() {
+        let png = rasterize(SVG, RasterFormat::Png, true).unwrap();
+        assert_eq!(u32::from_be_bytes(png[16..20].try_into().unwrap()), 62);
+    }
+
+    #[test]
+    fn graphviz_font_names_resolve_to_the_bundled_faces() {
+        let db = fontdb();
+        for name in [
+            "Times",
+            "Times-Roman",
+            "Helvetica",
+            "Arial",
+            "Courier",
+            "Courier New",
+        ] {
+            let q = usvg::fontdb::Query {
+                families: &[usvg::fontdb::Family::Name(name)],
+                ..Default::default()
+            };
+            assert!(db.query(&q).is_some(), "{name}");
+        }
+    }
+
+    #[test]
+    fn jpeg_encodes() {
+        let jpg = rasterize(SVG, RasterFormat::Jpeg, false).unwrap();
+        assert_eq!(&jpg[..2], &[0xFF, 0xD8]);
+    }
+}
