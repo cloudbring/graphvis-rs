@@ -124,7 +124,9 @@ jobs:
   compare:
     name: Compare every platform's output
     needs: [native, wasm]
-    if: always()
+    # Runs when a platform job failed (a missing platform fails the comparison), not when the
+    # run was cancelled.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -149,7 +151,7 @@ jobs:
             | tee -a "$GITHUB_STEP_SUMMARY"
       # The site's Cross-platform page is built from this (the site job below).
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
+        if: ${{ !cancelled() }}
         with:
           name: cross-platform-site
           path: |
@@ -160,7 +162,8 @@ jobs:
   site:
     name: Build the documentation site
     needs: compare
-    if: always() && needs.compare.result != 'cancelled'
+    # A failed comparison is still published, so the page shows it; a cancelled run is not.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -209,13 +212,17 @@ jobs:
           name: cross-platform-site
           path: site/public/cross-platform
 
-      - name: Install site dependencies
+      # Install without running any package's lifecycle scripts, check every package's registry
+      # signature (and provenance, where published), and only then run the scripts.
+      - name: Install site dependencies (no scripts)
         working-directory: site
-        run: npm ci
-      # Every installed package must carry a valid registry signature (and provenance, if any).
+        run: npm ci --ignore-scripts
       - name: Verify npm package signatures
         working-directory: site
         run: npm audit signatures
+      - name: Run the dependencies' install scripts
+        working-directory: site
+        run: npm rebuild
 
       # prebuild copies docs/porting into the site and the issue manifest into What's left;
       # postbuild checks every internal link.

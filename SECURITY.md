@@ -9,21 +9,22 @@ released, the advisory is published with credit to the reporter unless you prefe
 
 Relevant reports include crashes or hangs on crafted input (the port parses untrusted DOT and
 runs in browsers), memory-safety problems (the port forbids `unsafe` outside the test-only
-`gv-portable-libm` crate), and anything in the release and distribution pipeline.
+`gv-portable-libm` crate), and anything in the build and distribution pipeline.
 
 ## Supported versions
 
-Only the latest release receives fixes.
+There has been no release yet. Once there is, only the latest release receives fixes.
 
-## How releases are built
+## Supply chain
 
-Release artifacts are built on GitHub-hosted runners from a tagged commit, with
-`cargo build --locked`, and each carries a signed build-provenance attestation. Verify a
-download with:
+- Every GitHub Action is pinned to a full commit SHA; only GitHub-owned actions and
+  `Swatinem/rust-cache` are used. Workflows run with read-only tokens by default and are linted
+  with zizmor in CI.
+- Rust dependencies come from crates.io only, through `Cargo.lock`, and are checked in CI by
+  `cargo deny` (RustSec advisories, licences, sources). npm dependencies are installed from
+  `package-lock.json` without lifecycle scripts until their registry signatures are verified.
+- Dependabot proposes updates with a 7-day cooldown.
 
-```sh
-gh attestation verify <file> --repo graphviz-pure/graphviz-pure
-```
-
-Packages on crates.io and npm are published from the same workflow through trusted publishing
-(OpenID Connect), without long-lived tokens.
+The release process (artifacts built on GitHub-hosted runners with build-provenance
+attestations, and trusted publishing to crates.io and npm) will be documented here when the
+first release workflow lands.
