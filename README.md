@@ -2,7 +2,7 @@
 
 # graphviz-pure
 
-**A Rust + WebAssembly port of Graphviz 16.1.0** ([documentation and evidence](https://graphviz-pure.github.io/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS its output is byte-identical to C Graphviz on every input in the project's test corpora.
+**A Rust + WebAssembly port of Graphviz 16.1.0** ([documentation and evidence](https://graphviz-pure.github.io/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS with Apple Silicon its output is byte-identical to C Graphviz on every input in the project's test corpora. Everywhere else (Linux, Windows, Intel Macs, the browser) it writes one set of bytes, the same on every platform.
 
 graphviz-pure is an independent port. It is not affiliated with or endorsed by the Graphviz project; "Graphviz" in the name says what it is a port of.
 
@@ -20,7 +20,7 @@ graphviz-pure is an independent port. It is not affiliated with or endorsed by t
 
 Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fail on any regression:
 
-| Check | macOS (Apple libm, as C uses) | Linux and WASM |
+| Check | macOS on Apple Silicon (Apple libm, as C uses) | Linux, Windows, Intel Macs and WASM |
 | :--- | :---: | :---: |
 | Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (12 inputs skipped because C's own output changes between runs) | 2,589 / 2,589 | 2,470 / 2,589 |
 | Layout geometry, main corpus (565 files: wild graphs, upstream fixtures, fuzz reproducers) | 565 / 565 exact | 564 / 565 |
