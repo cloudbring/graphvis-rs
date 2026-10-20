@@ -31,6 +31,8 @@ const figures: Figures = {
 };
 
 const variants = [];
+/** The portrait drawing's proportions, so the sheet is exactly its shape before any script runs. */
+let tbAspect = '440 / 855';
 const builds: Record<string, { bytes: number; sha256: string }> = {};
 for (const theme of ['light', 'dark'] as const)
 	for (const rankdir of ['LR', 'TB'] as const) {
@@ -39,6 +41,7 @@ for (const theme of ['light', 'dark'] as const)
 		const id = `${theme}-${rankdir}`;
 		builds[id] = { bytes: r.bytes, sha256: r.sha256 };
 		const [, w, h] = r.svg.match(/<svg width="([\d.]+)pt" height="([\d.]+)pt"/) ?? [];
+		if (rankdir === 'TB') tbAspect = `${w} / ${h}`;
 		// Graphviz's own SVG, inline: its <a> elements are the links, its <title>s the tooltips.
 		const html = r.svg
 			.replace(/^[\s\S]*?(?=<svg)/, '')
@@ -62,6 +65,7 @@ const host = `${buildHost} (${buildRuntime})`;
 	data-figures={JSON.stringify(figures)}
 	data-builds={JSON.stringify(builds)}
 	data-host={host}
+	style={`--tb-aspect: ${tbAspect}`}
 	aria-label="Live graph"
 >
 	<div class="cmd" role="toolbar" aria-label="The command that draws the graph">
@@ -320,8 +324,9 @@ const host = `${buildHost} (${buildRuntime})`;
 		color: var(--key-3);
 		line-height: 1.55;
 	}
+	/* Reserve the line the proof will fill, so it does not push the page down. */
 	.proof:empty {
-		display: none;
+		min-height: 1.55em;
 	}
 	.proof[data-state='same']::before {
 		content: '';
@@ -364,23 +369,22 @@ const host = `${buildHost} (${buildRuntime})`;
 	.src summary:hover {
 		color: var(--key);
 	}
-	.src[open] {
-		grid-column: 1 / -1;
-	}
 	.src pre {
 		position: absolute;
-		right: 1rem;
-		left: 1rem;
+		right: -0.5px;
+		left: -0.5px;
+		top: 100%;
 		z-index: 2;
 		max-height: 22rem;
 		overflow: auto;
-		margin: 0.5rem 0 0;
-		padding: 0.75rem;
+		margin: 0;
+		padding: 0.75rem 1rem;
 		font-size: var(--sl-text-2xs);
 		line-height: 1.5;
 		background: var(--stock-sunk);
-		border: 0.5px solid var(--rule-default);
-		border-radius: var(--r-panel);
+		border: 0.5px solid var(--rule-strong);
+		border-top: 0;
+		border-radius: 0 0 var(--r-panel) var(--r-panel);
 		color: var(--key-2);
 	}
 	.readout {
@@ -390,7 +394,7 @@ const host = `${buildHost} (${buildRuntime})`;
 	@media (max-width: 45rem) {
 		.paper {
 			height: auto;
-			aspect-ratio: 440 / 855;
+			aspect-ratio: var(--tb-aspect);
 			max-height: 52rem;
 		}
 		:global(:root:not([data-theme='dark'])) .paper > :global(.v-light-LR),
@@ -417,10 +421,7 @@ const host = `${buildHost} (${buildRuntime})`;
 			grid-row: auto;
 		}
 		.hint {
-			left: 0.75rem;
-			right: 0.75rem;
-			top: auto;
-			bottom: 0.5rem;
+			display: none;
 		}
 	}
 </style>

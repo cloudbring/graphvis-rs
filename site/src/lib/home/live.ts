@@ -92,6 +92,8 @@ export function mountLive(root: HTMLElement) {
 	/** set when a drag or nudge starts from a plain engine layout */
 	let slack = false;
 	let slackUntil = 0;
+	/** the next layout lands without animation (a theme switch: the page around it is instant) */
+	let instant = false;
 
 	/* ---------- Layout requests ---------- */
 
@@ -171,7 +173,8 @@ export function mountLive(root: HTMLElement) {
 		from = shown ?? s;
 		to = s;
 		t0 = now;
-		dur = reduce.matches ? 0 : duration;
+		dur = reduce.matches || instant ? 0 : duration;
+		instant = false;
 		viewFrom = view;
 		viewTo = refit && !drag ? fitBox(s) : view;
 		if (!shown) view = viewFrom = viewTo;
@@ -501,7 +504,8 @@ export function mountLive(root: HTMLElement) {
 		const th = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
 		if (th !== state.theme) {
 			state.theme = th;
-			if (live) relayout();
+			instant = true;
+			if (live) relayout(false);
 		}
 	}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 	portrait.addEventListener('change', () => {
@@ -538,6 +542,8 @@ export function mountLive(root: HTMLElement) {
 		live = true;
 		for (const b of [...kButtons, ...tButtons]) b.disabled = false;
 		say();
+		// A phone has no room for the hint on the sheet; it goes in the first status line.
+		if (portrait.matches) status.textContent += ' Drag any node; tap a box to follow it.';
 		// The proof: this tab's bytes against the bytes the build wrote for the same source.
 		const variant = `${state.theme}-${state.rankdir}`;
 		const want = builds[variant];

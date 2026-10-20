@@ -151,7 +151,7 @@ export function homeSource(f: Figures, o: SourceOptions): string {
 ${portrait ? `
   // Portrait only: push siblings into lower ranks so the drawing fits a phone's width.
   K_dot -> K_sfdp -> K_osage [style=invis]; K_neato -> K_twopi -> K_patchwork [style=invis]; K_fdp -> K_circo [style=invis];
-  wasm -> c [style=invis]; Gallery -> Verify [style=invis]; mac -> lin [style=invis]; API -> notes [style=invis];` : ''}
+  wasm -> c [style=invis]; Gallery -> Verify [style=invis]; mac -> lin [style=invis]; API -> notes [style=invis];${f.links.platforms ? ' Verify -> xp [style=invis];' : ''}` : ''}
 }
 `;
 }

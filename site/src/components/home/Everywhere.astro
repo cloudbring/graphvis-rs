@@ -418,6 +418,8 @@ const cells = Array.from({ length: 64 });
 		box-shadow: inset 3px 0 0 var(--plate-m);
 	}
 	.everywhere .verdict {
+		/* two lines reserved: the verdict replaces a one-line placeholder */
+		min-height: calc(3em + 1.25rem);
 		margin: 0;
 		padding: 0.625rem 0.75rem;
 		border-top: 1px solid var(--rec-ink);
