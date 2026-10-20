@@ -1,8 +1,8 @@
 r1/diff/s401.gv seed=401
-r1/diff/s443.gv seed=443  # full case also needs neato-record-obstacle-height
+r1/diff/s443.gv seed=443  # full case also needed neato-record-obstacle-height (#13, fixed)
 r1/diff/s1704.gv seed=1704
-r2/diff/s11977.gv seed=11977  # full case also needs neato-record-obstacle-height
+r2/diff/s11977.gv seed=11977  # full case also needed neato-record-obstacle-height (#13, fixed)
 r2/diff/s12642.gv seed=12642
-r4/diff/s30082.gv seed=30082  # full case needs both this fix and neato-record-obstacle-height
+r4/diff/s30082.gv seed=30082  # full case needs both this fix and neato-record-obstacle-height (#13, fixed)
 r4/diff/s31554.gv seed=31554
 r4/diff/s31899.gv seed=31899

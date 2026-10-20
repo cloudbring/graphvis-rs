@@ -997,6 +997,16 @@ fn finish_edge(g: &mut LGraph<'_>, e: usize, mut spl: Vec<Point>, flip: bool) {
 }
 
 /// `genroute(trip, t, e, doPolyline)`: `true` on failure.
+/// genroute's `agwarningf("Could not create control points ...")` and `rv = 1`
+/// (multispline.c:703, :723, :740, :759, :778).
+fn route_failed(g: &LGraph<'_>, e: usize) -> bool {
+    eprintln!(
+        "Warning: Could not create control points for multiple spline for edge ({},{})",
+        g.src.nodes[g.edges[e].tail].name, g.src.nodes[g.edges[e].head].name
+    );
+    true
+}
+
 fn genroute(
     g: &mut LGraph<'_>,
     sub: &Sub,
@@ -1023,7 +1033,7 @@ fn genroute(
         if dump {
             eprintln!("MFAIL sp1");
         }
-        return true;
+        return route_failed(g, e);
     };
     if dump {
         let mut l = String::from("MPL");
@@ -1041,7 +1051,7 @@ fn genroute(
         let medges = poly_edges(poly);
         tweak_path(poly, t, &mut pl);
         let Ok(spl) = proutespline(&medges, &pl, [Point::default(), Point::default()]) else {
-            return true;
+            return route_failed(g, e);
         };
         finish_edge(g, e, spl, false);
         return false;
@@ -1051,7 +1061,7 @@ fn genroute(
     for i in 0..pl.len() - 2 {
         match mk_ctrl_pts(t, mult + 1, pl[i], pl[i + 1], pl[i + 2], trip) {
             Some(c) => cpts.push(c),
-            None => return true,
+            None => return route_failed(g, e),
         }
     }
     let mut poly = vec![Point::default(); pn];
@@ -1065,7 +1075,7 @@ fn genroute(
             poly[pn - j] = cpts[j - 1][i + 1];
         }
         let Ok(mut mmpl) = pshortestpath(&poly, eps) else {
-            return true;
+            return route_failed(g, e);
         };
         let spl = if do_polyline {
             make_polyline(&mmpl)
@@ -1074,7 +1084,7 @@ fn genroute(
             tweak_path(&poly, pl.len() - 1, &mut mmpl);
             match proutespline(&medges, &mmpl, [Point::default(), Point::default()]) {
                 Ok(s) => s,
-                Err(_) => return true,
+                Err(_) => return route_failed(g, e),
             }
         };
         let flip = g.edges[e].head != head;
