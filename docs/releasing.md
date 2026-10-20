@@ -18,7 +18,9 @@
 4. The publishing jobs wait for a maintainer to approve the `release` environment, then:
    - create the GitHub release with all files;
    - publish the eight crates to crates.io (trusted publishing, `cargo publish --workspace`);
-   - publish `@graphviz-pure/wasm` to npm (trusted publishing, with npm provenance).
+   - stage `@graphviz-pure/wasm` on npm (trusted publishing, with npm provenance). The trusted
+     publisher may only stage, so the version goes live only when a maintainer approves it with
+     2FA: the package's **Staged Packages** tab on npmjs.com, or `npm stage approve <stage-id>`.
 5. Within hours, `graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the
    release, verify each asset's attestation and checksum, and commit the new formula and
    manifest. `graphviz-pure/graphviz-pure.github.io` deploys the site from `master` builds the
@@ -72,7 +74,9 @@ once with placeholder releases:
 2. `npm login`, then `scripts/reserve-npm.sh` publishes a `0.0.0` placeholder of
    `@graphviz-pure/wasm`, and deprecates it.
 3. Package settings → Trusted publishers → GitHub Actions: organization `graphviz-pure`,
-   repository `graphviz-pure`, workflow `release.yml`, environment `release`.
+   repository `graphviz-pure`, workflow `release.yml`, environment `release`. Under **Allowed
+   actions**, leave both `npm publish` and `npm dist-tag` unchecked: the workflow can then only
+   stage a release, and each one waits for your 2FA approval.
 4. Package settings → Publishing access → **"Require two-factor authentication and disallow
    tokens"**. `npm logout`.
 
