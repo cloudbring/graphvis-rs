@@ -50,7 +50,24 @@ no C installation. Regenerating the C references does; see
   user would notice, including changes to output bytes.
 - **Pull requests** need the CI checks to pass (tests in both math profiles, the supply-chain
   check, and the cross-platform check that every platform writes the same bytes) and all review
-  threads resolved.
+  threads resolved. The "PR risk report" job lists what a maintainer will read most closely:
+  changes to workflows, scripts, build scripts and dependencies
+  ([how pull requests are reviewed](docs/pull-requests.md)).
+
+## Review and maintainers
+
+- **CI waits for a maintainer.** If you are not a maintainer, each CI run on your pull request
+  starts only after a maintainer has read the diff and approved it, and that applies to every
+  push, not just the first. A pull request with no checks yet is waiting for that, not broken.
+- **Some areas are maintainer-only.** Changes from contributors to the workflows in `.github/`,
+  the release pipeline, `deny.toml`, `CODEOWNERS`, `SECURITY.md` or the licence are declined
+  unless a maintainer asked for them. Open an issue instead.
+- **Maintainers** are [@cloudbring](https://github.com/cloudbring). Maintainers' CI runs start
+  without approval, but their changes still go through pull requests with the same required
+  checks; nobody pushes to `master` directly.
+- **Becoming a maintainer** is by invitation, after a track record of substantial merged pull
+  requests that follow the C and prove it, and of helpful reviews or issue reports. The
+  organisation requires two-factor authentication for everyone with access.
 
 ## Licence
 
