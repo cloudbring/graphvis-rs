@@ -14,7 +14,7 @@ have=$(wasm-bindgen --version | awk '{print $2}')
 CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS='-C opt-level=z' CARGO_PROFILE_RELEASE_LTO=fat \
   cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm
 rm -rf "$OUT"
-wasm-bindgen --target web --out-dir "$OUT" target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm
+wasm-bindgen --target web --remove-name-section --remove-producers-section --out-dir "$OUT" target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm
 if command -v wasm-opt >/dev/null; then
   wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext \
     --enable-mutable-globals "$OUT/graphviz_pure_wasm_bg.wasm" -o "$OUT/graphviz_pure_wasm_bg.wasm"
