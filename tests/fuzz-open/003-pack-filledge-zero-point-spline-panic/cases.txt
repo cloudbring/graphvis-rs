@@ -1,1 +1,0 @@
-# no fuzz case: found while minimising r3/diff/s21147.gv (seed 21147), see pack-filledge-one-point-spline

@@ -175,7 +175,7 @@ neato family
 
 Robustness (debug overflow and panics)
 * pack's perimeter sum wraps like C's int; a one-point spline no longer panics
-  `fillEdge`.
+  `fillEdge`, and an empty one (on which C crashes) is skipped.
 * Unknown shapes are boxes for compass ports (`IS_BOX`).
 
 ## Differences that remain: the open issues
@@ -228,7 +228,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 |---|---|---:|---|
 | [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
 | [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
-| [`003-pack-filledge-zero-point-spline-panic`](../../tests/fuzz-open/003-pack-filledge-zero-point-spline-panic) | high | — | port; C crashes too |
 | [`004-neato-router-record-obstacle-height`](../../tests/fuzz-open/004-neato-router-record-obstacle-height) | medium | 20 | port |
 | [`005-xlabels-hilbert-key-signed-order`](../../tests/fuzz-open/005-xlabels-hilbert-key-signed-order) | medium | 16 | port |
 | [`006-fdp-cluster-port-sincos-fusion`](../../tests/fuzz-open/006-fdp-cluster-port-sincos-fusion) | medium | 12 | port |

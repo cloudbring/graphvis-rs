@@ -496,6 +496,8 @@ fn fill_edge<P: PackGraph + ?Sized>(
         return;
     }
     for bz in spl.unwrap() {
+        // Clipping can leave a bezier with no points (two overlapping pinned nodes joined by a
+        // multi-edge, issue #12). C reads bz.list[0] anyway and crashes; skip it instead.
         if bz.list.is_empty() {
             continue;
         }

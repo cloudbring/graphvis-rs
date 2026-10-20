@@ -10,8 +10,6 @@ The first release.
 
 ### Added
 
-- Skip empty edge splines while rasterising packed components, avoiding a panic in neato.
-
 - A function-by-function Rust port of Graphviz 16.1.0: the DOT parser, all eight layout engines
   (dot, neato, fdp, sfdp, twopi, circo, osage, patchwork) and the `svg`, `json`, `json0`, `dot`,
   `xdot`, `canon`, `plain` and `plain-ext` renderers. On macOS with Apple Silicon, `-Tsvg` is
