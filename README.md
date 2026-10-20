@@ -2,6 +2,8 @@
 
 # graphviz-pure
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/graphviz-pure/graphviz-pure/badge)](https://scorecard.dev/viewer/?uri=github.com/graphviz-pure/graphviz-pure)
+
 **A Rust + WebAssembly port of Graphviz 16.1.0** ([documentation and evidence](https://graphviz-pure.github.io/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS with Apple Silicon its output is byte-identical to C Graphviz on every input in the project's test corpora. Everywhere else (Linux, Windows, Intel Macs, the browser) it writes one set of bytes, the same on every platform.
 
 graphviz-pure is an independent port. It is not affiliated with or endorsed by the Graphviz project; "Graphviz" in the name says what it is a port of.
