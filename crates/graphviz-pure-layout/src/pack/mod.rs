@@ -496,6 +496,12 @@ fn fill_edge<P: PackGraph + ?Sized>(
         return;
     }
     for bz in spl.unwrap() {
+        // Not in C. Clipping can leave a bezier with no points (two overlapping pinned nodes
+        // joined by a multi-edge: fuzz case 003, issue #12). C reads bz.list[0] past the end
+        // and crashes; skip it instead. Test: cli.rs packed_edges_with_empty_splines_do_not_panic.
+        if bz.list.is_empty() {
+            continue;
+        }
         // A one-point spline (polyline between overlapping nodes) makes C read
         // bz.list[1] past the end of the list (undefined); take the point itself.
         let (mut pt, mut hpt, mut k) = if bz.sflag != 0 {
