@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# One-time: publishes 0.0.0 placeholders of the seven graphviz-pure crate names, so that trusted
+# One-time: publishes 0.0.0 placeholders of the eight graphviz-pure crate names, so that trusted
 # publishing can be configured for them (crates.io only allows it for existing crates). Run
 # after `cargo login` with a short-lived "publish-new" token; see docs/releasing.md.
 # crates.io rate-limits new crate names; the script waits and retries when told to.
 set -euo pipefail
 crates=(graphviz-pure-core graphviz-pure-parser graphviz-pure-geom graphviz-pure-layout
-        graphviz-pure-render graphviz-pure graphviz-pure-cli)
+        graphviz-pure-render graphviz-pure-raster graphviz-pure graphviz-pure-cli)
 work=$(mktemp -d)
 for c in "${crates[@]}"; do
   if curl -fsS -A "graphviz-pure reserve script" "https://crates.io/api/v1/crates/$c" >/dev/null 2>&1; then

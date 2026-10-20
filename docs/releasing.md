@@ -17,7 +17,7 @@
      attests the build provenance of every file (Sigstore, stored on GitHub).
 4. The publishing jobs wait for a maintainer to approve the `release` environment, then:
    - create the GitHub release with all files;
-   - publish the seven crates to crates.io (trusted publishing, `cargo publish --workspace`);
+   - publish the eight crates to crates.io (trusted publishing, `cargo publish --workspace`);
    - publish `@graphviz-pure/wasm` to npm (trusted publishing, with npm provenance).
 5. Within hours, `graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the
    release, verify each asset's attestation and checksum, and commit the new formula and
@@ -60,7 +60,7 @@ once with placeholder releases:
 1. Log in to crates.io with GitHub; verify your email address.
 2. Account settings → API tokens → new token, scope **publish-new**, crates `graphviz-pure*`,
    expiry 1 day. Run `cargo login` and paste it there (not in chat).
-3. `scripts/reserve-crates.sh` publishes `0.0.0` placeholders of the seven crate names.
+3. `scripts/reserve-crates.sh` publishes `0.0.0` placeholders of the eight crate names.
 4. For each crate: Settings → Trusted Publishing → add GitHub: owner `graphviz-pure`,
    repository `graphviz-pure`, workflow `release.yml`, environment `release`. Then enable
    **"Require trusted publishing"** for the crate.
