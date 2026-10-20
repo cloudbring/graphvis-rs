@@ -16,7 +16,7 @@ use super::types::*;
 use crate::common::geom::{expandbb, expandbp};
 use crate::common::splines::add_label_bb_dims;
 use crate::common::types::EdgeType;
-use crate::pack::cccomps::{CompGraph, cccomps};
+use crate::pack::cccomps::{CComp, CompGraph, cccomps};
 use crate::pack::{
     PackGraph, PackInfo, PackMode, PkClust, PkGraph, get_pack, get_pack_mode_info, pack_graphs_in,
     shift_beziers,
@@ -65,6 +65,63 @@ impl<'a> Dot<'a> {
         pinfo.margin = pack as u32;
         pinfo.fixed = None;
         DoDot::Pack(pinfo)
+    }
+
+    /// The subgraphs `cccomps(g, &ncc, 0)` leaves in the root: for component
+    /// `i`, `out = agsubg(g, "_cc_<i>", 1)` holding its nodes and induced
+    /// edges (`unionNodes`, `graphviz_node_induce(out, NULL)`), with the
+    /// root's subgraphs projected into it (`subGInduce`: `projectG` clones,
+    /// `agcopyattr` of the original's values). Returns the `_cc_<i>` graphs.
+    fn attach_cc_subgraphs(&mut self, graph: &Graph, ccs: &[CComp]) -> Vec<G> {
+        // A new subgraph of the root takes the root dictionary's defaults.
+        let defaults: graphviz_pure_core::AttrMap = match graph.dicts.first() {
+            Some(dict) => dict
+                .graph
+                .iter()
+                .map(|(k, s)| (k.clone(), s.defval.clone()))
+                .collect(),
+            None => graph.graph_attrs.clone(),
+        };
+        let mut out = Vec::with_capacity(ccs.len());
+        for (i, cc) in ccs.iter().enumerate() {
+            let set: std::collections::BTreeSet<N> = cc.nodes.iter().copied().collect();
+            let edges = self.graphs[0]
+                .edges
+                .iter()
+                .copied()
+                .filter(|&e| set.contains(&self.edges[e].tail) && set.contains(&self.edges[e].head))
+                .collect();
+            let g = self.graphs.len();
+            self.graphs.push(GraphInfo {
+                name: format!("_cc_{i}"),
+                root: 0,
+                cg_parent: Some(0),
+                nodes: set,
+                edges,
+                attrs: defaults.clone(),
+                ..GraphInfo::default()
+            });
+            self.graphs[0].subgs.push(g);
+            // Projected subgraphs, preorder (parents first).
+            let mut ids: Vec<G> = Vec::with_capacity(cc.subgraphs.len());
+            for p in &cc.subgraphs {
+                let parent = p.parent.map_or(g, |k| ids[k]);
+                let s = self.graphs.len();
+                self.graphs.push(GraphInfo {
+                    name: graph.subgraphs[p.orig].name.clone(),
+                    root: 0,
+                    cg_parent: Some(parent),
+                    nodes: p.nodes.iter().copied().collect(),
+                    edges: p.edges.iter().copied().collect(),
+                    attrs: graph.subgraphs[p.orig].graph_attrs.clone(),
+                    ..GraphInfo::default()
+                });
+                self.graphs[parent].subgs.push(s);
+                ids.push(s);
+            }
+            out.push(g);
+        }
+        out
     }
 
     /// `initSubg(sg, g)` + `dotLayout(sg)` state for a component of `root`.
@@ -406,7 +463,16 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
     };
     let ccs = cccomps(graph);
     if ccs.len() == 1 || d.graphs[0].drawing.ratio_kind != RatioKind::None {
-        return d.dot_layout();
+        // `dotLayout(g)` runs while the `_cc_<i>` subgraphs cccomps created
+        // are still children of g, so dot sees them (e.g. a root `rank` value
+        // they inherit makes each one a rank set). They are deleted only after
+        // the layout succeeded (`dot_cleanup_graph` + `agdelete`).
+        let ccsubs = d.attach_cc_subgraphs(graph, &ccs);
+        d.dot_layout()?;
+        if !d.aborted {
+            d.graphs[0].subgs.retain(|s| !ccsubs.contains(s));
+        }
+        return Ok(());
     }
     pinfo.do_splines = true;
     // original subgraph index -> root graph id

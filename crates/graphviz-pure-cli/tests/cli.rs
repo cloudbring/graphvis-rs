@@ -650,3 +650,69 @@ fn neato_polyline_compass_port_routes_like_c() {
         "{out}"
     );
 }
+
+// Fuzz case 010-dot-pack-single-component-ignores-cc-subgraph (issue #19). With pack set and a
+// single connected component, C's doDot (lib/dotgen/dotinit.c:466-475) lays out the root with
+// `dotLayout(g)` while the `_cc_0` subgraph made by `cccomps` is still a child of the root.
+// `_cc_0` inherits the root's `rank=max` and holds every node, so it is a rank set and a and b
+// share a rank (C: 134x44pt, side by side). The port used to lay out the plain root, where the
+// root's own `rank` is ignored (62x116pt, b below a).
+#[test]
+fn pack_single_component_lays_out_with_cc_subgraph() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G {\npack=true;\nrank=max;\na -> b;\n}\n",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"134pt\" height=\"44pt\""),
+        "{out}"
+    );
+    assert!(out.contains("cx=\"27\" cy=\"-18\""), "{out}");
+    assert!(out.contains("cx=\"99\" cy=\"-18\""), "{out}");
+}
+
+// Fuzz case 001-dot-cluster-rank-max-build-skeleton-panic (issue #10) as generated, with
+// `pack="8"`. Through the `_cc_0` subgraph of issue #19 C ranks the clusters so that
+// build_skeleton finds every rank leader; it exits 0 with the mark_clusters warning
+// (lib/dotgen/cluster.c:318) and this layout. The pack-less input crashes C.
+#[test]
+fn pack_single_component_cluster_node_in_rank_max_set_lays_out_like_c() {
+    let src = "strict digraph \"G\" {
+pack=\"8\";
+\"n148\";
+subgraph \"cluster_1\" {
+\"n165\";
+\"n181\" [];
+\"n235\";
+subgraph \"cluster4\" {
+\"n102\" [];
+\"n225\" [];
+}
+}
+{
+rank=max;
+\"n235\";
+\"n148\";
+}
+{\"n15\" \"n181\" \"n205\"} -> \"n102\";
+\"n148\" -> \"n164\";
+\"n164\" -> \"n165\";
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: n235 was already in a rankset, deleted from cluster G\n"
+    );
+    assert!(
+        out.contains("<svg width=\"418pt\" height=\"212pt\""),
+        "{out}"
+    );
+    assert!(
+        out.contains("points=\"79.35,-16 79.35,-68 234.35,-68 234.35,-16 79.35,-16\""),
+        "cluster4: {out}"
+    );
+    assert!(out.contains("cx=\"379.35\" cy=\"-114\""), "n235: {out}");
+}

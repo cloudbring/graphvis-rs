@@ -158,6 +158,7 @@ impl Dot<'_> {
         while i < self.graphs[g].clust.len() {
             let c = self.graphs[g].clust[i];
             if self.agfstnode(c).is_none() {
+                graphviz_pure_core::diag::agwarningf("removing empty cluster\n");
                 self.graphs[g].clust.remove(i);
             } else {
                 i += 1;
