@@ -218,15 +218,83 @@ the `libm` crate has no CPU-dependent paths on these targets). Two harness issue
 - `scripts/wasm-e2e.mjs` read inputs as JS strings, which replaced the non-UTF-8 bytes of the
   charset corpus files, so 9 of them differed from native. The new `renderAllBytes` binding
   (`gv-wasm`) takes and returns raw bytes like the native harness (`gv_core::charset`).
-- `.cargo/config.toml` sets `rustc-wrapper = "/opt/homebrew/bin/sccache"`, which does not exist
-  on Linux; CI overrides it with `RUSTC_WRAPPER=sccache`, and the containers used
-  `RUSTC_WRAPPER=` (empty).
+- `.cargo/config.toml` used to set `rustc-wrapper = "/opt/homebrew/bin/sccache"`, which does
+  not exist on Linux; the containers used `RUSTC_WRAPPER=` (empty). The setting has since moved
+  out of the repository.
 
 CI (`.github/workflows/ci.yml`, `ubuntu-latest`): the `verify` job runs fmt, clippy,
 `cargo test --workspace` (so every ratchet against its portable baseline) and the wasm32
 check. The `wasm-e2e` job installs `wasm-bindgen-cli` at the `wasm-bindgen` version in
 `Cargo.lock` (0.2.129, cached), builds the package, runs `scripts/wasm-e2e.mjs` against
 `e2e-baseline.portable.json`, and `cmp`s the wasm output hashes with native Linux's.
+
+## Is the gap only libm? C with the port's math functions
+
+The claim above, that every portable difference comes from libm, can be tested directly: run C
+with the port's portable math functions and compare. `crates/gv-portable-libm` is a small
+library that replaces every transcendental function C Graphviz imports (`sin`, `cos`, `tan`,
+`asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `log2`, `log10`, `pow`, `hypot`, `cbrt`, and
+clang's combined `__sincos_stret`) with the ones `gv_core::math` uses off macOS. It is loaded
+into the unmodified C `dot` with `DYLD_INSERT_LIBRARIES` on macOS (dyld interposition) and
+`LD_PRELOAD` on Linux; `scripts/dot-portable-libm.sh` does this. The remaining libm imports
+(`sqrt`, `sqrtf`, `fmod`) are exact in IEEE arithmetic.
+
+### macOS: the gap is libm, all of it
+
+`gv-diff e2e --generate --runs 5 --c-dot scripts/dot-portable-libm.sh --golden
+tests/golden/e2e.libm-matched.json` records C's output with the portable functions. Against it:
+
+| build | vs C with Apple's libm (`e2e.json`) | vs C with the portable functions (`e2e.libm-matched.json`) |
+|---|---:|---:|
+| macOS, Apple profile | 2589 / 2589 | — |
+| macOS `portable-math`, Linux | 2470 / 2589 | **2590 / 2590** |
+| wasm32 (`scripts/wasm-e2e.mjs --golden tests/golden/e2e.libm-matched.json`) | 2470 / 2589 | **2590 / 2590** |
+
+The denominators differ because each oracle has its own set of stable inputs: an input counts
+only if C gave the same output on every run of that oracle, and C with Apple's libm and C with
+the portable functions are unstable on slightly different files (12 and 11). The same holds for
+the Linux table below.
+
+So with the same math functions on both sides, the portable build and the browser build are
+byte-identical to C on every stable input, including all 119 files that differ from stock C.
+The ratchet `e2e_svg_identity_with_matched_libm_does_not_regress`
+(`crates/gv-diff/tests/e2e_fidelity.rs`, portable builds only, so it runs in CI) keeps it so.
+11 inputs are unstable in C (its output changed within 5 runs): the twopi `arrows` graphs and a
+few fdp/sfdp files whose C layout depends on heap addresses (issues #34, #41). `--runs 5`
+replaced the two-run check because two runs of `twopi/fx_arrows` sometimes agree by chance.
+
+### Linux: C does not agree with itself
+
+`scripts/c-oracle-linux/` builds C Graphviz 16.1.0 on Linux (Debian, arm64, in Docker) the way
+Homebrew builds it on macOS: clang, LLVM's libc++ for the C++ parts, GTS for triangulation, and
+the same three plugins. `run.sh` records C's output three ways and compares the port's Linux
+build with each (`gv-diff e2e`, inputs stable over 5 runs):
+
+| C on Linux | vs stock C on macOS | vs the port (portable) |
+|---|---:|---:|
+| stock (glibc libm, `qsort`, `rand`) | 2005 / 2586 | 2005 / 2590 |
+| with the port's math functions | 2150 / 2589 | 2150 / 2591 |
+| with the port's math functions and Apple's `qsort`, `rand`, `srand` (feature `apple-libc`) | 2488 / 2589 | 2488 / 2590 |
+
+Stock C on Linux matches stock C on macOS on 77.5% of the corpus; the port's portable build
+(the browser build) matches stock C on macOS on 95.4%. The Linux differences come from three
+sources:
+
+- **libm** (glibc's functions are not Apple's): 145 files.
+- **libc** (338 files): glibc's `qsort` leaves equal elements in a different order than Apple's, and its
+  `rand` is a different generator. With Apple's (the port's reproductions in
+  `gv_layout::cutil`, exported by `gv-portable-libm --features apple-libc`) circo, osage,
+  patchwork, sfdp and twopi match on every file.
+- **the rest**: 102 files, 97 of them neato. The ones checked differ by 0.01 in a spline
+  control point, a last-bit rounding difference with every node in the same place; the likely
+  cause is the compilers contracting `a*b + c` into fused multiply-adds in different places
+  (Apple clang 21 against Debian clang 14 and 19). Not confirmed.
+
+Two things that were checked and are not the cause: the clang version (14 and 19 give the same
+results), and `long double`, which is 128-bit on Linux aarch64 and 64-bit on Apple arm64 (the
+only use, neato's `stress_majorization_kD_mkernel` accumulator, makes no difference on the
+corpus). The first Linux build lacked GTS, which changes neato's and sfdp's overlap removal; the
+Dockerfile now checks that GTS is configured.
 
 ## Provenance and licences
 

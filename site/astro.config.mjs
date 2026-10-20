@@ -55,6 +55,7 @@ export default defineConfig({
 					label: 'Evidence',
 					items: [
 						{ label: 'Gallery: C and Rust', link: '/gallery/' },
+						{ label: 'Cross-platform', link: '/cross-platform/' },
 						{ label: 'Playground', link: '/playground/' },
 					],
 				},
@@ -66,7 +67,7 @@ export default defineConfig({
 				starlightLinksValidator({
 					// Custom pages (src/pages) and rustdoc (copied into dist/api by CI) are not in
 					// the docs collection; scripts/site-check-links.mjs checks every built link.
-					exclude: ['/graphvis-rs/gallery/**', '/graphvis-rs/whats-left/**', '/graphvis-rs/playground/', '/graphvis-rs/api/**', '/graphvis-rs/samples/**'],
+					exclude: ['/graphvis-rs/gallery/**', '/graphvis-rs/whats-left/**', '/graphvis-rs/playground/', '/graphvis-rs/cross-platform/', '/graphvis-rs/api/**', '/graphvis-rs/samples/**'],
 				}),
 			],
 		}),

@@ -6,10 +6,13 @@
 //!
 //! Only hashes of C's output are stored (`tests/golden/e2e.json`), written by
 //! `gv-diff e2e --generate` with the pango-free C build (`GVBINDIR`, see
-//! `scripts/gen-golden.sh`). Inputs whose C output changes between two runs are recorded
-//! as unstable and skipped. The baseline (`tests/golden/e2e-baseline.json`, or
+//! `scripts/gen-golden.sh`). Inputs whose C output changes from run to run are recorded
+//! as unstable and skipped (`--runs N` runs C N times instead of twice). The baseline (`tests/golden/e2e-baseline.json`, or
 //! `e2e-baseline.portable.json` for the portable math profile) lists the files that match; a
 //! file in it that stops matching fails the check.
+//!
+//! `--c-dot PROG` runs PROG instead of `dot` for the C side, e.g.
+//! `scripts/dot-portable-libm.sh`, which runs C with the port's portable math functions.
 //!
 //! `--hashes FILE` also writes the hash of every output (matching C or not), to compare two
 //! builds bit for bit.
@@ -71,7 +74,7 @@ pub fn hash(s: &str) -> String {
     format!("{h:016x}")
 }
 
-fn inputs(root: &Path) -> Vec<(String, PathBuf)> {
+pub(crate) fn inputs(root: &Path) -> Vec<(String, PathBuf)> {
     let mut v = Vec::new();
     for (name, dirs) in CORPORA {
         for d in *dirs {
@@ -91,8 +94,8 @@ fn inputs(root: &Path) -> Vec<(String, PathBuf)> {
     v
 }
 
-fn run_c(path: &Path) -> Option<String> {
-    let mut child = Command::new("dot")
+pub(crate) fn run_c(dot: &str, path: &Path) -> Option<String> {
+    let mut child = Command::new(dot)
         .arg("-Tsvg")
         .arg(path)
         .stdout(Stdio::piped())
@@ -122,7 +125,7 @@ fn run_c(path: &Path) -> Option<String> {
     (!bytes.is_empty()).then(|| normalize(&gv_core::charset::decode(bytes)))
 }
 
-fn run_port(src: &str) -> Option<String> {
+pub(crate) fn run_port(src: &str) -> Option<String> {
     let src = src.to_string();
     // As dot does, the graphs read before a syntax error are rendered.
     let out = std::panic::catch_unwind(move || {
@@ -140,7 +143,7 @@ fn run_port(src: &str) -> Option<String> {
     }
 }
 
-fn parallel<T: Send>(
+pub(crate) fn parallel<T: Send>(
     items: &[(String, PathBuf)],
     f: impl Fn(&Path) -> T + Sync,
 ) -> BTreeMap<String, T> {
@@ -174,6 +177,8 @@ pub fn main(args: Vec<String>) -> ExitCode {
     let (mut generate, mut update, mut list) = (false, false, false);
     let mut filter: Option<String> = None;
     let mut hashes_path: Option<PathBuf> = None;
+    let mut c_dot = String::from("dot");
+    let mut runs = 2usize;
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -184,6 +189,14 @@ pub fn main(args: Vec<String>) -> ExitCode {
             "--golden" => golden_path = it.next().expect("--golden FILE").into(),
             "--baseline" => baseline_path = it.next().expect("--baseline FILE").into(),
             "--filter" => filter = it.next(),
+            "--c-dot" => c_dot = it.next().expect("--c-dot PROG"),
+            "--runs" => {
+                runs = it
+                    .next()
+                    .and_then(|n| n.parse::<usize>().ok())
+                    .expect("--runs N (at least 1)")
+                    .max(1)
+            }
             other => {
                 eprintln!("unknown argument {other}");
                 return ExitCode::FAILURE;
@@ -197,17 +210,21 @@ pub fn main(args: Vec<String>) -> ExitCode {
     }
 
     if generate {
-        let first = parallel(&items, run_c);
-        let second = parallel(&items, run_c);
+        let first = parallel(&items, |p| run_c(&c_dot, p));
+        let others: Vec<_> = (1..runs)
+            .map(|_| parallel(&items, |p| run_c(&c_dot, p)))
+            .collect();
         let mut g = Golden::default();
         for (k, a) in &first {
-            match (a, second.get(k).and_then(Option::as_ref)) {
-                (Some(a), Some(b)) if a == b => {
-                    g.files.insert(k.clone(), hash(a));
-                }
-                _ => {
-                    g.unstable.insert(k.clone());
-                }
+            let stable = a.as_ref().is_some_and(|a| {
+                others
+                    .iter()
+                    .all(|o| o.get(k).and_then(Option::as_ref) == Some(a))
+            });
+            if stable {
+                g.files.insert(k.clone(), hash(a.as_ref().unwrap()));
+            } else {
+                g.unstable.insert(k.clone());
             }
         }
         let json = serde_json::to_string_pretty(&g).expect("serialize");

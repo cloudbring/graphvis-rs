@@ -25,6 +25,7 @@ const order = {
 	'libm.md': ['Math off macOS', 'Why Linux and WASM use a portable math library, and what that costs.'],
 	'fuzzing.md': ['Differential fuzzing', 'Random graphs against C, round by round.'],
 	'c-bugs-ledger.md': ['C bug ledger', 'C bugs and hazards found while porting.'],
+	'structure-checks.md': ['Structural checks', 'What gv-diff structure checks, and how to add a check.'],
 };
 
 const sources = [
@@ -32,6 +33,7 @@ const sources = [
 		.filter((f) => f.endsWith('.md'))
 		.map((f) => ['docs/porting/' + f, f]),
 	['docs/c-bugs-ledger.md', 'c-bugs-ledger.md'],
+	['docs/testing/structure-checks.md', 'structure-checks.md'],
 ];
 const keys = Object.keys(order);
 sources.sort(([, a], [, b]) => {

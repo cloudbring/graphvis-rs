@@ -13,6 +13,7 @@ gv-parser.workspace = true
 gv-engine.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+roxmltree = "0.21.1"
 
 [lints]
 workspace = true

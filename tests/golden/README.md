@@ -13,6 +13,7 @@ as ratchets that fail on any regression.
 | `<engine>/`, `<engine>-baseline.json` | the same for each engine corpus (`tests/<engine>/`) | `scripts/gen-golden.sh`, `scripts/update-baselines.sh` |
 | `e2e.json` | hashes of C's `-Tsvg` for every corpus input, plus inputs whose C output is unstable | `gv-diff e2e --generate` |
 | `e2e-baseline.json` | the inputs whose port `-Tsvg` equals C's byte for byte | `gv-diff e2e --update` |
+| `structure.json` | a structural summary of C's `-Tsvg` for every corpus input (`docs/testing/structure-checks.md`) | `gv-diff structure --generate` |
 | `render.tar.xz` | the render corpus, compressed (see below) | `scripts/gen-render-golden.sh` |
 | `render/baseline.json` | render ratchet | `gv-diff render --update` |
 

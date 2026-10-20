@@ -1,0 +1,130 @@
+name: Cross-platform
+
+# Off macOS the port uses its portable math profile, which is pure Rust and should give the
+# same bits on every platform. This workflow checks that it does: each platform renders the
+# whole corpus (the -Tsvg hash of every input, through all eight engines) and the site's
+# gallery samples (full SVG bytes), and the compare job fails unless every platform's output
+# is byte-identical. The comparison is published on the site's Cross-platform page, where the
+# reader's browser draws each platform's SVG with one renderer and diffs the pixels.
+
+on:
+  pull_request:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  native:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: linux-x86_64, label: "Linux x86-64", runner: ubuntu-latest, cargo: "" }
+          - { id: linux-arm64, label: "Linux arm64", runner: ubuntu-24.04-arm, cargo: "" }
+          - { id: windows-x86_64, label: "Windows x86-64", runner: windows-latest, cargo: "" }
+          # macOS defaults to Apple's libm (to match C on macOS); the feature selects the
+          # portable profile the other platforms use.
+          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: macos-latest, cargo: "--features gv-core/portable-math" }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.id }}
+      - name: Render the corpus and the samples
+        env:
+          PYTHON: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
+        run: scripts/cross-platform-render.sh "out/${{ matrix.id }}" "${{ matrix.id }}" "${{ matrix.label }}" ${{ matrix.cargo }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xp-${{ matrix.id }}
+          path: out/${{ matrix.id }}
+      # The full test suite, so Windows and arm64 Linux are tested like x86-64 Linux in ci.yml.
+      - name: Run the workspace tests
+        if: matrix.id != 'linux-x86_64'
+        run: cargo test --workspace --release ${{ matrix.cargo }}
+
+  wasm:
+    name: WebAssembly (Node.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm32
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read wasm-bindgen version from Cargo.lock
+        id: wb
+        run: |
+          v=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Cache wasm-bindgen-cli
+        id: wb-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-${{ runner.os }}-${{ steps.wb.outputs.version }}
+      - name: Install wasm-bindgen-cli
+        if: steps.wb-cache.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version "${{ steps.wb.outputs.version }}" --locked
+      - name: Build the wasm package
+        run: |
+          cargo build --release --target wasm32-unknown-unknown -p gv-wasm
+          wasm-bindgen --target nodejs --out-dir "$RUNNER_TEMP/pkg" target/wasm32-unknown-unknown/release/gv_wasm.wasm
+      - name: Render the corpus and the samples
+        run: |
+          node scripts/cross-platform-wasm.mjs "$RUNNER_TEMP/pkg" out/wasm32
+          node scripts/wasm-e2e.mjs --pkg "$RUNNER_TEMP/pkg" --hashes out/wasm32/hashes.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xp-wasm32
+          path: out/wasm32
+
+  compare:
+    name: Compare every platform's output
+    needs: [native, wasm]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: xp-*
+          path: xp
+      - name: Rename the platform directories
+        run: for d in xp/xp-*; do mv "$d" "xp/${d#xp/xp-}"; done
+      - name: Compare
+        shell: bash  # -eo pipefail, so a difference fails the step through the tee
+        run: |
+          # Every platform must have uploaded its outputs; a failed job shows up as missing.
+          python3 scripts/cross-platform-compare.py xp \
+            --expect linux-x86_64,linux-arm64,windows-x86_64,macos-arm64,wasm32 \
+            --commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      # The site's Cross-platform page is built from this (see pages.yml).
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cross-platform-site
+          path: |
+            xp/manifest.json
+            xp/*/platform.json
+            xp/*/samples/

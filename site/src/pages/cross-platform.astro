@@ -1,0 +1,265 @@
+---
+/**
+ * Cross-platform: the portable build's output on every platform CI runs, drawn by the
+ * reader's browser. The SVGs and manifest come from the Cross-platform workflow's
+ * `cross-platform-site` artifact (scripts/cross-platform-compare.py), which pages.yml copies
+ * into public/cross-platform/ before building; scripts/site-cross-platform.sh fetches it for
+ * a local preview.
+ */
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import DiffViewer from '../components/DiffViewer.astro';
+import Mark from '../components/Mark.astro';
+import { REPO, fmt, samples, url } from '../lib/data';
+
+type Platform = { id: string; dir: string; label: string; runtime: string; os: string; arch: string; corpus_files: number; corpus_agree: number };
+type Manifest = {
+	commit: string;
+	run_url: string;
+	reference: string;
+	platforms: Platform[];
+	corpus_files: number;
+	corpus_differences: { file: string }[];
+	samples: { name: string; sha256: Record<string, string | null>; identical: boolean }[];
+	missing_platforms?: string[];
+	identical: boolean;
+};
+const path = join(process.cwd(), 'public/cross-platform/manifest.json');
+const m: Manifest | null = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null;
+const order = ['linux-x86_64', 'linux-arm64', 'windows-x86_64', 'macos-arm64', 'wasm32'];
+const plats = m ? [...m.platforms].sort((a, b) => order.indexOf(a.dir) - order.indexOf(b.dir)) : [];
+const ref = m?.reference ?? 'linux-x86_64';
+const other = plats.find((p) => p.dir === 'windows-x86_64') ?? plats.find((p) => p.dir !== ref);
+const svg = (dir: string, name: string) => url(`cross-platform/${dir}/samples/${name}.svg`);
+const title = (name: string) => samples.find((s) => s.name === name)?.title ?? name;
+const byName = new Map((m?.samples ?? []).map((s) => [s.name, s]));
+const list = samples.filter((s) => byName.has(s.name));
+const first = list[0]?.name ?? '';
+const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Cross-platform',
+		description: "The portable build's output on Linux, Windows, macOS and WebAssembly, compared byte for byte by CI and drawn by your browser.",
+		tableOfContents: false,
+	}}
+>
+	<style is:global>
+		:root {
+			--sl-content-width: 72rem;
+		}
+	</style>
+
+	<p class="intro">
+		Off macOS the port computes with its own math functions, written in Rust and compiled into the program, so the result should not depend on the
+		operating system, the CPU or the browser. CI checks it on every push: each platform below renders every corpus input and the gallery samples, and the
+		check fails unless all of them write the same bytes. The drawings on this page are those platforms' files, all drawn by your browser, so one
+		renderer and one set of fonts: any difference you could see would be a difference in the files.
+	</p>
+
+	{
+		!m ? (
+			<p class="empty">
+				No cross-platform results in this build. The deployed site gets them from the latest Cross-platform workflow run; for a local preview, run{' '}
+				<code>scripts/site-cross-platform.sh</code>.
+			</p>
+		) : (
+			<>
+				<div class="verdict not-content">
+					{m.missing_platforms?.length ? (
+						<Mark kind="off" label={`Missing platforms: ${m.missing_platforms.join(', ')} (their CI jobs produced no outputs)`} />
+					) : null}
+					{m.identical ? (
+						<Mark kind="register" label={`Every platform wrote byte-identical output: ${fmt(m.corpus_files)} corpus inputs and ${m.samples.length} samples`} />
+					) : (
+						<Mark kind="off" label={`${m.corpus_differences.length} corpus inputs and ${m.samples.length - sameAll} samples differ between platforms`} />
+					)}
+					<p class="src">
+						From <a href={m.run_url}>this CI run</a> at commit <a href={`${REPO}/commit/${m.commit}`}><code>{m.commit.slice(0, 7)}</code></a>.
+					</p>
+				</div>
+
+				<table class="plats">
+					<thead>
+						<tr>
+							<th>Platform</th>
+							<th>Toolchain</th>
+							<th class="n">Corpus inputs equal to {plats.find((p) => p.dir === ref)?.label}</th>
+							<th class="n">Samples</th>
+						</tr>
+					</thead>
+					<tbody>
+						{plats.map((p) => (
+							<tr>
+								<td>{p.label}</td>
+								<td class="mono">{p.runtime}</td>
+								<td class="n mono">
+									{fmt(p.corpus_agree)} / {fmt(m.corpus_files)}
+								</td>
+								<td class="n mono">
+									{m.samples.filter((s) => s.sha256[p.dir] && s.sha256[p.dir] === s.sha256[ref]).length} / {m.samples.length}
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+				<p class="note">
+					A corpus input counts as equal when the hash of its <code>-Tsvg</code> output (every graph in the file) is the same; a sample, when the whole SVG
+					file is. macOS appears with <code>--features gv-core/portable-math</code>: by default the macOS build uses Apple's libm, to match C on macOS
+					byte for byte (<a href={url('porting/libm/')}>why</a>).
+				</p>
+
+				<h2 id="compare">Compare two platforms</h2>
+				<div class="pick not-content" data-xp-pick>
+					<label>
+						<span class="label">Sample</span>
+						<select data-xp="sample">
+							{list.map((s) => (
+								<option value={s.name}>{s.title}</option>
+							))}
+						</select>
+					</label>
+					<label>
+						<span class="label">Left</span>
+						<select data-xp="left">
+							{plats.map((p) => (
+								<option value={p.dir} selected={p.dir === ref}>
+									{p.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label>
+						<span class="label">Right</span>
+						<select data-xp="right">
+							{plats.map((p) => (
+								<option value={p.dir} selected={p.dir === other?.dir}>
+									{p.label}
+								</option>
+							))}
+						</select>
+					</label>
+				</div>
+				<DiffViewer
+					id="xp-viewer"
+					c={svg(ref, first)}
+					rust={svg(other!.dir, first)}
+					leftLabel={plats.find((p) => p.dir === ref)!.label}
+					rightLabel={other!.label}
+					leftChip="A"
+					rightChip="B"
+					leftName="A"
+					rightName="B"
+				/>
+
+				<h2 id="samples">Every sample, every platform</h2>
+				<p>Select a row to load it into the viewer. Each cell is that platform's file, with the start of its SHA-256.</p>
+				<div class="grid not-content" style={`--cols: ${plats.length}`}>
+					<div class="head">Sample</div>
+					{plats.map((p) => (
+						<div class="head">{p.label}</div>
+					))}
+					{list.map((s) => {
+						const row = byName.get(s.name)!;
+						return (
+							<>
+								<button type="button" class="name" data-xp-row={s.name}>
+									<span>{title(s.name)}</span>
+									<code>{s.engine}</code>
+								</button>
+								{plats.map((p) => {
+									const h = row.sha256[p.dir];
+									const same = h && h === row.sha256[ref];
+									return (
+										<figure class="cell">
+											<div class="sheet">
+												<img loading="lazy" src={svg(p.dir, s.name)} alt={`${s.title}, ${p.label}`} />
+											</div>
+											<figcaption class={same ? 'ok' : 'bad'}>
+												<code>{h ? h.slice(0, 10) : 'missing'}</code>
+											</figcaption>
+										</figure>
+									);
+								})}
+							</>
+						);
+					})}
+				</div>
+
+				<h2 id="how">How this is made</h2>
+				<ul>
+					<li>
+						<a href={`${REPO}/blob/master/.github/workflows/cross-platform.yml`}><code>.github/workflows/cross-platform.yml</code></a> runs{' '}
+						<code>scripts/cross-platform-render.sh</code> on GitHub's Linux x86-64, Linux arm64, Windows and macOS runners, and{' '}
+						<code>scripts/cross-platform-wasm.mjs</code> with the WASM package under Node.js.
+					</li>
+					<li>
+						<code>scripts/cross-platform-compare.py</code> compares every platform's corpus hashes and sample files, fails the run on any difference, and
+						writes the data for this page.
+					</li>
+					<li>
+						Test inputs are checked out byte for byte on every platform (<code>.gitattributes</code>), since Windows would otherwise convert their line
+						endings.
+					</li>
+				</ul>
+			</>
+		)
+	}
+</StarlightPage>
+
+<script>
+	const pick = document.querySelector<HTMLElement>('[data-xp-pick]');
+	const viewer = document.getElementById('xp-viewer');
+	if (pick && viewer) {
+		const sel = (k: string) => pick.querySelector<HTMLSelectElement>(`[data-xp="${k}"]`)!;
+		const base = viewer.dataset.c!.replace(/[^/]+\/samples\/[^/]+$/, '');
+		const load = async (side: 'left' | 'right') => {
+			const s = sel(side);
+			const u = `${base}${s.value}/samples/${sel('sample').value}.svg`;
+			const res = await fetch(u);
+			// A platform without this sample (its job failed) must not feed a 404 page to the viewer.
+			const text = res.ok ? await res.text() : '';
+			viewer.dispatchEvent(new CustomEvent(`gv:replace-${side}`, { detail: { text, label: s.selectedOptions[0].textContent!.trim() } }));
+		};
+		sel('left').addEventListener('change', () => load('left'));
+		sel('right').addEventListener('change', () => load('right'));
+		sel('sample').addEventListener('change', () => Promise.all([load('left'), load('right')]));
+		for (const b of document.querySelectorAll<HTMLButtonElement>('[data-xp-row]')) {
+			b.addEventListener('click', () => {
+				sel('sample').value = b.dataset.xpRow!;
+				sel('sample').dispatchEvent(new Event('change'));
+				pick.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			});
+		}
+	}
+</script>
+
+<style>
+	.intro { color: var(--key-2); }
+	.empty { border: 1px dashed var(--key-4, #ccc); padding: 1rem; }
+	.verdict { margin: 1.5rem 0 1rem; }
+	.verdict .src { margin: 0.25rem 0 0; font-size: var(--sl-text-sm); color: var(--key-3); }
+	.plats .n { text-align: right; }
+	.plats .mono, .mono { font-family: var(--face-mono); font-size: var(--sl-text-sm); }
+	.note { font-size: var(--sl-text-sm); color: var(--key-3); }
+	.pick { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+	.pick label { display: flex; flex-direction: column; gap: 0.25rem; }
+	.pick select { font: inherit; padding: 0.3rem 0.5rem; border: 1px solid var(--sl-color-gray-5); background: var(--sl-color-bg); color: var(--sl-color-text); }
+	.grid { display: grid; grid-template-columns: minmax(9rem, 1.2fr) repeat(var(--cols), minmax(0, 1fr)); gap: 0.5rem; align-items: center; margin-top: 1rem; }
+	.grid .head { font-size: var(--sl-text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--key-3); }
+	.grid .name { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; font-size: var(--sl-text-sm); }
+	.grid .name:hover span, .grid .name:focus-visible span { text-decoration: underline; }
+	.grid .name code { font-size: var(--sl-text-xs); align-self: flex-start; }
+	.cell { margin: 0; }
+	.cell .sheet { background: #fff; border: 1px solid var(--sl-color-gray-5); aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; padding: 0.25rem; }
+	.cell img { max-width: 100%; max-height: 100%; }
+	.cell figcaption { font-size: var(--sl-text-xs); margin-top: 0.2rem; }
+	.cell figcaption.bad { color: var(--magenta, #d4007a); }
+	@media (max-width: 50rem) {
+		.grid { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+		.grid .head:first-child { display: none; }
+		.grid .name { grid-column: 1 / -1; margin-top: 0.75rem; }
+	}
+</style>

@@ -1,0 +1,7 @@
+# Test inputs and references are compared byte for byte; never convert their line endings
+# (GitHub's Windows runners check out text files with CRLF otherwise).
+tests/** -text
+site/public/samples/** -text
+*.gv -text
+*.dot -text
+*.svg -text
