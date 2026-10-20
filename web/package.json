@@ -1,7 +1,7 @@
 {
   "name": "@graphviz-pure/wasm",
   "version": "0.1.0",
-  "description": "Rust + WebAssembly port of Graphviz 16.1.0 (all 8 layout engines; byte-identical SVG to C Graphviz on the project's corpus) for browsers, Node.js, Deno, Bun and Workers",
+  "description": "A byte-exact Rust + WebAssembly port of Graphviz 16.1.0 (all eight layout engines) for browsers, Node.js, Deno, Bun and Workers. Not affiliated with the Graphviz project.",
   "type": "module",
   "main": "./pkg/graphviz_pure_wasm.js",
   "types": "./pkg/graphviz_pure_wasm.d.ts",
@@ -10,7 +10,7 @@
     "pkg/graphviz_pure_wasm.d.ts",
     "pkg/graphviz_pure_wasm_bg.wasm",
     "pkg/graphviz_pure_wasm_bg.wasm.d.ts",
-    "index.html"
+    "README.md"
   ],
   "exports": {
     ".": {
@@ -40,5 +40,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/graphviz-pure/graphviz-pure.git"
+  },
+  "homepage": "https://graphviz-pure.github.io/",
+  "bugs": {
+    "url": "https://github.com/graphviz-pure/graphviz-pure/issues"
   }
 }

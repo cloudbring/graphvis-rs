@@ -1,0 +1,261 @@
+name: Release
+
+# Builds and publishes a release when a version tag (v0.1.0, ...) is pushed. Run it by hand
+# (workflow_dispatch) to build and attest everything without publishing anything.
+#
+# Security model:
+# - Everything is built on GitHub-hosted runners from the tagged commit, with no caches (a
+#   poisoned cache cannot reach a release), `cargo build --locked` and a pinned Rust toolchain.
+# - Every binary and the npm package must reproduce the gallery samples byte for byte before
+#   anything is published (scripts/release-smoke.*).
+# - Every artifact gets a signed build-provenance attestation (Sigstore), verifiable with
+#   `gh attestation verify FILE --repo graphviz-pure/graphviz-pure`.
+# - Publishing happens only in jobs bound to the `release` environment, which needs a
+#   maintainer's approval and accepts only v* tags. crates.io and npm are published with
+#   trusted publishing (OIDC): no registry token exists anywhere. The tokens these jobs can mint
+#   live for one job.
+# - The Homebrew tap, the Scoop bucket and the website pull new releases themselves and verify
+#   the attestations before updating; this repository holds no credential for them.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  # The release toolchain, pinned: a new Rust release cannot change a release build silently.
+  RUST_VERSION: "1.99.1"
+
+jobs:
+  check:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The tag matches the crate version and is on master
+        id: v
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(awk -F'"' '/^\[workspace.package\]/{p=1} p && /^version =/{print $2; exit}' Cargo.toml)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT" = push ]; then
+            test "$REF_NAME" = "v$version" || { echo "::error::tag $REF_NAME but Cargo.toml says $version"; exit 1; }
+            git merge-base --is-ancestor HEAD origin/master || { echo "::error::$REF_NAME is not on master"; exit 1; }
+          fi
+
+  binaries:
+    name: Build ${{ matrix.target }}
+    needs: check
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-musl, runner: ubuntu-24.04 }
+          - { target: aarch64-unknown-linux-musl, runner: ubuntu-24.04-arm }
+          - { target: aarch64-apple-darwin, runner: macos-15 }
+          - { target: x86_64-apple-darwin, runner: macos-15-intel }
+          - { target: x86_64-pc-windows-msvc, runner: windows-2025 }
+          - { target: aarch64-pc-windows-msvc, runner: windows-11-arm }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust ${{ env.RUST_VERSION }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target "$TARGET"
+          rustup default "$RUST_VERSION"
+      - name: Build
+        env:
+          TARGET: ${{ matrix.target }}
+          # Windows: link the C runtime statically, so the binary needs no VC++ redistributable.
+          RUSTFLAGS: ${{ contains(matrix.target, 'windows') && '-C target-feature=+crt-static' || '' }}
+        run: cargo build --release --locked --target "$TARGET" -p graphviz-pure-cli
+      - name: Smoke test (byte-identical gallery samples)
+        env:
+          TARGET: ${{ matrix.target }}
+          PYTHON: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
+        run: |
+          exe=target/$TARGET/release/graphviz-pure
+          case "$TARGET" in *windows*) exe=$exe.exe ;; esac
+          "$PYTHON" scripts/release-smoke.py "$exe"
+      - name: Package
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.check.outputs.version }}
+          PYTHON: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
+        run: |
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          export SOURCE_DATE_EPOCH
+          "$PYTHON" scripts/release-package.py "$TARGET" "$VERSION" dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bin-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+
+  npm-package:
+    name: Build the npm package
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust ${{ env.RUST_VERSION }}
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target wasm32-unknown-unknown
+          rustup default "$RUST_VERSION"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false # no caches in a release
+      # wasm-bindgen-cli is built from crates.io at exactly the version in Cargo.lock; wasm-opt
+      # comes from Ubuntu's signed archive.
+      - name: Install wasm-bindgen-cli and wasm-opt
+        run: |
+          v=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
+          cargo install --locked wasm-bindgen-cli --version "$v"
+          sudo apt-get update -q && sudo apt-get install -y -q binaryen
+      - name: Build
+        working-directory: web
+        run: npm run build:wasm
+      - name: Smoke test (byte-identical gallery samples)
+        run: node scripts/release-smoke-wasm.mjs
+      - name: Check the package version
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: test "$(node -p "require('./web/package.json').version")" = "$VERSION"
+      - name: Pack
+        working-directory: web
+        run: mkdir -p ../dist && npm pack --pack-destination ../dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: npm-package
+          path: dist/
+          if-no-files-found: error
+
+  attest:
+    name: Checksums and provenance
+    needs: [binaries, npm-package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Sigstore signing certificate for the attestation
+      attestations: write # store the attestation in this repository
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: dist
+          merge-multiple: true
+      - name: SHA256SUMS
+        working-directory: dist
+        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release
+          path: dist/
+          if-no-files-found: error
+
+  github-release:
+    name: Publish the GitHub release
+    if: github.event_name == 'push'
+    needs: [check, attest]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write # create the release and upload its assets
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release
+          path: dist
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.check.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          cat > notes.md <<EOF
+          graphviz-pure $VERSION, a byte-exact Rust port of Graphviz 16.1.0.
+
+          Every file below was built by GitHub Actions from \`$TAG\` and has a signed build-provenance attestation. Verify a download with:
+
+          \`\`\`sh
+          gh attestation verify FILE --repo $REPO
+          sha256sum --check --ignore-missing SHA256SUMS
+          \`\`\`
+          EOF
+          # Releases are immutable once published, so every file is attached to a draft first.
+          gh release create "$TAG" --repo "$REPO" --verify-tag --draft --title "graphviz-pure $VERSION" --notes-file notes.md dist/*
+          gh release edit "$TAG" --repo "$REPO" --draft=false
+
+  crates-io:
+    name: Publish to crates.io
+    if: github.event_name == 'push'
+    needs: github-release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # trusted publishing: exchange the OIDC token for a short-lived crates.io token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust ${{ env.RUST_VERSION }}
+        run: rustup toolchain install "$RUST_VERSION" --profile minimal && rustup default "$RUST_VERSION"
+      - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        id: auth
+      # Publishes the seven published crates in dependency order (the others have publish = false).
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish --locked --workspace
+
+  npm:
+    name: Publish to npm
+    if: github.event_name == 'push'
+    needs: github-release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # trusted publishing; npm adds provenance from the same token
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24 # npm 11, which supports trusted publishing
+          package-manager-cache: false # no caches in a release
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: npm-package
+          path: dist
+      # The tarball the attest job signed is the one published.
+      - name: npm publish
+        run: npm publish --access public dist/*.tgz
