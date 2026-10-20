@@ -857,12 +857,23 @@ impl Parser {
         if is_new {
             self.anon_ctr += 2;
         }
-        if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
+        if let Some(edge) = self.graph.edges.get(edge_id.0 as usize) {
             // grammar.y `newedge`: an existing undirected edge found the other way round
             // takes the endpoint ports swapped.
             if edge.tail != edge.head && edge.head == tail {
                 std::mem::swap(&mut tail_port, &mut head_port);
             }
+            // `mkport` declares the `tailport`/`headport` edge symbol (default "") the
+            // first time an `n:port` endpoint is seen, tail then head, after `bindattrs`
+            // bound this statement's list. Symbol ids count it at that point, which the
+            // nested flat-edge layout's stale `E_arrowsz` lookup depends on.
+            for (key, endpoint) in [("tailport", &tail_port), ("headport", &head_port)] {
+                if *endpoint != Port::default() {
+                    self.bind_attr(DictKind::Edge, key);
+                }
+            }
+        }
+        if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
             // `newedge` sets the endpoint ports (`mkport`) after `agedge` applied the edge
             // defaults and before `applyattrs` applies the statement's attribute list, so
             // an explicit `tailport`/`headport` in the list wins over `n:port`, which wins

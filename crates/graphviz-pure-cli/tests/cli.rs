@@ -261,3 +261,32 @@ pack=\"8\";
         "{out}"
     );
 }
+
+// Fuzz case 007-dot-port-endpoint-attr-sym-id (issue #16), its repro.gv verbatim. The flat
+// edge `a:sw -> b` is routed by the nested layout of `make_flat_adj_edges`, where C's stale
+// `E_arrowsz` reads the aux graph attribute whose id equals the main `arrowsize` id. C's
+// `mkport` (lib/cgraph/grammar.y) declares `tailport` when it meets `a:sw`, so that id lands
+// on `tailport` ("sw", not a number: arrow size 1). Without the declaration the id lands on
+// `fontsize` (27.3), the edge is clipped to almost nothing and the graph is 44pt tall.
+#[test]
+fn port_endpoint_declares_its_edge_attribute_like_mkport() {
+    let src = "digraph G {
+edge [constraint=false];
+a:sw -> b [fontsize=27.3];
+c -> d [arrowsize=2];
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"278pt\" height=\"56pt\""),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "<path fill=\"none\" stroke=\"black\" \
+             d=\"M12.98,-14.75C-4.84,8.98 37.44,-1.06 68.55,-13.3\"/>"
+        ),
+        "{out}"
+    );
+}
