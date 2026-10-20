@@ -25,9 +25,9 @@ Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fa
 
 | Check | macOS on Apple Silicon (Apple libm, as C uses) | Linux, Windows, Intel Macs and WASM |
 | :--- | :---: | :---: |
-| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (12 inputs skipped because C's own output changes between runs) | 2,589 / 2,589 | 2,470 / 2,589 |
+| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (12 inputs skipped because C's own output changes between runs) | 2,590 / 2,590 | 2,470 / 2,590 |
 | Layout geometry, main corpus (565 files: wild graphs, upstream fixtures, fuzz reproducers) | 565 / 565 exact | 564 / 565 |
-| Per-engine corpora, exact | neato 442/442, sfdp 297/297, circo 280/280, fdp 386/386, osage 180/180, patchwork 141/141, twopi 282/289 | see `tests/golden/*.portable.json` |
+| Per-engine corpora, exact | neato 442/442, sfdp 297/297, circo 280/280, fdp 387/387, osage 180/180, patchwork 141/141, twopi 282/289 | see `tests/golden/*.portable.json` |
 | Renderers given C's layout (`gv-diff render`, 547 layouts, 7 formats) | svg, xdot, dot, json, json0 all identical; plain and plain-ext 535/537 | same |
 | C's own test graphs (`graphs/`, `tests/graphs/`, `tests/regression_tests/`), dot with base, LR, ortho, concentrate and newrank variants | 379 / 379 per variant | not measured |
 | Differential fuzzing (6,000 random graphs, all engines, final round) | 98.8% identical | not measured |

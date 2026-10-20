@@ -475,8 +475,13 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
         for i in 0..dg.ports.len() {
             let (np, alpha) = (dg.ports[i].n, dg.ports[i].alpha);
             let nd = &mut dg.nodes[np];
+            // C (tlayout.c:501-502) calls `cos` and `sin` separately here: the store to
+            // `ND_pos(np)[0]` may alias `pp->alpha`, so clang reloads it and cannot merge the
+            // two into `__sincos_stret`, whose sine differs from `sin()` in the last bit on
+            // some inputs (issue #15). `black_box` keeps LLVM from merging them in the port.
+            // (The `atan2` block above and the random placement below are merged in C too.)
             nd.pos[0] = wd.mul_add(math::cos(alpha), ctr.x);
-            nd.pos[1] = ht.mul_add(math::sin(alpha), ctr.y);
+            nd.pos[1] = ht.mul_add(math::sin(std::hint::black_box(alpha)), ctr.y);
             nd.pinned = P_SET;
         }
         for &np in &comp.nodes {

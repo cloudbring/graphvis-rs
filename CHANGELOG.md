@@ -13,7 +13,7 @@ The first release.
 - A function-by-function Rust port of Graphviz 16.1.0: the DOT parser, all eight layout engines
   (dot, neato, fdp, sfdp, twopi, circo, osage, patchwork) and the `svg`, `json`, `json0`, `dot`,
   `xdot`, `canon`, `plain` and `plain-ext` renderers. On macOS with Apple Silicon, `-Tsvg` is
-  byte-identical to C Graphviz on all 2,589 inputs of the test corpora; on every other platform
+  byte-identical to C Graphviz on all 2,590 inputs of the test corpora; on every other platform
   the output is one set of bytes, the same everywhere.
 - `-Tpng` and `-Tjpg` raster output, drawn from the SVG with resvg and bundled fonts.
 - The `graphviz-pure` command line, compatible with `dot`'s options and exit status.

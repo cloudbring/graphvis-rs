@@ -1,5 +1,20 @@
 {
   "files": {
+    "fuzz_cluster_port_sincos": {
+      "nodes": 11,
+      "nodes_ok": 11,
+      "edges": 10,
+      "edges_ok": 10,
+      "clusters": 3,
+      "clusters_ok": 3,
+      "bb_ok": true,
+      "node_err": 0.20000000000004547,
+      "edge_err": 1.019803902718566,
+      "missing": 0,
+      "sizes_ok": 11,
+      "rank_ok": true,
+      "order_ok": true
+    },
     "fuzz_noncomparable_clusters": {
       "nodes": 1,
       "nodes_ok": 1,
