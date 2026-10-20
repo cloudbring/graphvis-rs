@@ -23,5 +23,8 @@
     "marked": "^18.1.1",
     "sharp": "^0.35.5",
     "starlight-links-validator": "^0.27.0"
+  },
+  "overrides": {
+    "postcss-selector-parser": "7.1.6"
   }
 }
