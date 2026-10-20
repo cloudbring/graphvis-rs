@@ -131,13 +131,13 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false # no caches in a release
-      # wasm-bindgen-cli is built from crates.io at exactly the version in Cargo.lock; wasm-opt
-      # comes from Ubuntu's signed archive.
-      - name: Install wasm-bindgen-cli and wasm-opt
+      # wasm-bindgen-cli is built from crates.io at exactly the version in Cargo.lock. No
+      # wasm-opt: Ubuntu's binaryen (108) breaks the module's function table, and the build
+      # already optimizes for size (opt-level z, fat LTO).
+      - name: Install wasm-bindgen-cli
         run: |
           v=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
           cargo install --locked wasm-bindgen-cli --version "$v"
-          sudo apt-get update -q && sudo apt-get install -y -q binaryen
       - name: Build
         working-directory: web
         run: npm run build:wasm
