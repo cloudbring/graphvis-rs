@@ -21,3 +21,31 @@ fn e2e_svg_identity_does_not_regress() {
         "e2e SVG identity regressed; see gv-diff output above"
     );
 }
+
+/// With the math library taken out of the equation, the portable build must match C on every
+/// input: `tests/golden/e2e.libm-matched.json` holds C's outputs when C runs with the port's
+/// portable math functions (`scripts/dot-portable-libm.sh`). Portable builds only (Linux, wasm32,
+/// or macOS with `--features gv-core/portable-math`); on Apple builds the main check above
+/// already compares against C with the same (Apple) libm.
+#[test]
+fn e2e_svg_identity_with_matched_libm_does_not_regress() {
+    if !gv_core::math::PORTABLE {
+        return;
+    }
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+    let status = Command::new(env!("CARGO_BIN_EXE_gv-diff"))
+        .current_dir(root)
+        .args([
+            "e2e",
+            "--golden",
+            "tests/golden/e2e.libm-matched.json",
+            "--baseline",
+            "tests/golden/e2e-baseline.libm-matched.json",
+        ])
+        .status()
+        .expect("run gv-diff e2e");
+    assert!(
+        status.success(),
+        "e2e SVG identity against C with the portable libm regressed; see gv-diff output above"
+    );
+}

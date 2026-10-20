@@ -11,7 +11,9 @@
 //!
 //! `sqrt` and `mul_add` are correctly rounded everywhere and stay `f64` methods.
 
-mod portable;
+/// The pure-Rust functions behind the portable profile, exposed for `gv-portable-libm`.
+#[doc(hidden)]
+pub mod portable;
 #[cfg(feature = "math-trace")]
 mod trace;
 #[cfg(not(feature = "math-trace"))]
