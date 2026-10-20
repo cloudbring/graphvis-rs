@@ -16,10 +16,12 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
 
+# Jobs run on Blacksmith runners (ephemeral microVMs, the same images as GitHub's); the release
+# workflow stays on GitHub-hosted runners (see .github/workflows/release.yml).
 jobs:
   verify:
     name: Format, Clippy, Test & WASM Check
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -41,7 +43,7 @@ jobs:
 
   wasm-e2e:
     name: WASM end-to-end (Node)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -93,7 +95,7 @@ jobs:
 
   supply-chain:
     name: Supply chain (cargo-deny, zizmor)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
