@@ -5,8 +5,12 @@
 1. Run `scripts/bump-version.sh X.Y.Z --pr`: it sets the version in `Cargo.toml`,
    `Cargo.lock` and `web/package.json`, dates the changelog's "Unreleased" entries, and opens the
    release pull request. Merge it. The version follows [the versioning policy](versioning.md).
-2. A maintainer pushes the tag: `git tag -s v0.1.0 && git push origin v0.1.0`. Only maintainers
-   can create `v*` tags (tag ruleset).
+2. A maintainer pushes a signed tag: `git tag -s v0.1.0 -m v0.1.0 && git push origin v0.1.0`.
+   Only maintainers can create `v*` tags (tag ruleset), and the workflow refuses a tag that is
+   not on `master` or not signed with a key in [`.github/allowed_signers`](../.github/allowed_signers)
+   (read from `master`, not from the tagged commit). To sign with SSH: `git config gpg.format ssh`,
+   `git config user.signingkey ~/.ssh/id_ed25519.pub`; add the key to GitHub as a signing key
+   and, in a reviewed pull request, to `.github/allowed_signers`.
 3. `.github/workflows/release.yml` runs on GitHub-hosted runners, with no caches, the pinned
    Rust toolchain and `cargo build --locked`:
    - builds `graphviz-pure` for six targets (Linux x86-64 and arm64 as static musl binaries,
