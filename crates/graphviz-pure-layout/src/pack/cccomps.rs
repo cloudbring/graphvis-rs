@@ -280,6 +280,10 @@ impl CComp {
         graph.node_defaults = root.node_defaults.clone();
         graph.edge_defaults = root.edge_defaults.clone();
         graph.html_strings = root.html_strings.clone();
+        // A component is a subgraph of the root (`agsubg`), so it shares the root's
+        // attribute dictionaries and symbol ids. make_flat_adj_edges' setState keeps some
+        // main-graph Agsyms and reads them by id; it needs the root's declarations.
+        graph.dicts = root.dicts.first().cloned().into_iter().collect();
         let mut local = vec![usize::MAX; root.nodes.len()];
         for (i, &n) in self.nodes.iter().enumerate() {
             local[n] = i;
