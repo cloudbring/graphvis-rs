@@ -212,7 +212,8 @@ fn get_metrics_for_font_family(font_name: &str) -> &'static FontFamilyMetrics {
             let warning = format!(
                 "Warning: no hard-coded metrics for '{font_name}'.  Falling back to 'Times' metrics\n"
             );
-            if crate::diag::emit_once(&warning) {
+            // A quiet repeat leaves the warning to the measurement C makes.
+            if crate::diag::reporting() && crate::diag::emit_once(&warning) {
                 crate::diag::agwarningf(&warning);
             }
             &font_tables::FONT_METRICS[0]
@@ -245,7 +246,7 @@ fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) ->
     static NON_ASCII_WARNED: AtomicBool = AtomicBool::new(false);
     static NO_WIDTH_WARNED: AtomicBool = AtomicBool::new(false);
     let character = if byte >= 128 {
-        if !NON_ASCII_WARNED.swap(true, Ordering::Relaxed) {
+        if crate::diag::reporting() && !NON_ASCII_WARNED.swap(true, Ordering::Relaxed) {
             eprintln!(
                 "Warning: Warning: no value for width of non-ASCII character {byte}. Falling \
                  back to width of space character"
@@ -257,7 +258,7 @@ fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) ->
     };
     let width = variant_metrics[usize::from(character)];
     if width == -1 {
-        if !NO_WIDTH_WARNED.swap(true, Ordering::Relaxed) {
+        if crate::diag::reporting() && !NO_WIDTH_WARNED.swap(true, Ordering::Relaxed) {
             eprintln!(
                 "Warning: Warning: no value for width of ASCII character {character}. Falling \
                  back to 0"

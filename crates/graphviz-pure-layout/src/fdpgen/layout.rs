@@ -523,6 +523,15 @@ impl Fdp<'_, '_> {
 
         for c in self.tree.kids(g).to_vec() {
             self.labeled[c] = true;
+            // do_graph_label(subg): the label's diagnostics print here, a graph's clusters
+            // before their own; register_clusters made the labels quietly.
+            let sg = &src.subgraphs[self.tree.subgraph[c]];
+            let _ = crate::common::init::graph_label(
+                &sg.graph_attrs,
+                &sg.name,
+                false,
+                &src.html_strings,
+            );
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));
@@ -1115,7 +1124,9 @@ fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool, hier: &Hier<'_>) {
         }
         if try_failed || et != EdgeType::CompoundEdge {
             if has_clust_edge {
-                // "splines and cluster edges not supported - using line segments"
+                graphviz_pure_core::diag::agwarningf(
+                    "splines and cluster edges not supported - using line segments\n",
+                );
                 et = EdgeType::Line;
             } else {
                 // With Nop = 2 after a failed compoundEdges, edges that
@@ -1167,7 +1178,7 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
     let ndim = late_int(attrs, "dim", 2, 2).min(MAXDIM as i64) as usize;
     let mut g = LGraph::new(&src, ndim, EdgeType::Line);
     let tree = mk_clusters(&src);
-    register_clusters(&mut g, &tree);
+    graphviz_pure_core::diag::quietly(|| register_clusters(&mut g, &tree));
     let st = fdp_init_params(attrs);
     init_edges(&mut g, st.d.k);
     let inputscale = get_inputscale(&g);

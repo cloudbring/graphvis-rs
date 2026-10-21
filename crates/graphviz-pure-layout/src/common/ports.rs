@@ -375,17 +375,23 @@ pub fn shape_port<S: PortGraph + ?Sized>(
     let compass = compass.unwrap_or("_");
     let all = BOTTOM | RIGHT | TOP | LEFT;
     let src = g.port_node(n);
-    let geom = graphviz_pure_geom::node_geometry(src, &g.port_env());
+    // The node was sized, and its diagnostics reported, by common_init_node.
+    let geom =
+        graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::node_geometry(src, &g.port_env()));
     let mut rv = PortInfo::default();
     let is_record = g.shape(n).is_some_and(|s| s.inside == InsideFn::Record);
     if is_record && let Some(rec) = geom.record.as_ref() {
         match rec.find_port(portname) {
             Some(f) => {
                 let (fb, sides) = (f.bbox, f.sides);
-                compass_port(g, n, Some(fb), &mut rv, compass, sides, false);
+                if compass_port(g, n, Some(fb), &mut rv, compass, sides, false) {
+                    bad_compass(src, portname, compass);
+                }
             }
             None => {
-                compass_port(g, n, Some(rec.bbox), &mut rv, portname, all, false);
+                if compass_port(g, n, Some(rec.bbox), &mut rv, portname, all, false) {
+                    unrecognized(src, portname);
+                }
             }
         }
         return rv;
@@ -394,7 +400,9 @@ pub fn shape_port<S: PortGraph + ?Sized>(
         geom.label.html_label.as_deref()
         && let Some((bp, sides)) = port_to_tbl(tbl, portname)
     {
-        compass_port(g, n, Some(bp), &mut rv, compass, sides, false);
+        if compass_port(g, n, Some(bp), &mut rv, compass, sides, false) {
+            bad_compass(src, portname, compass);
+        }
         rv.name = None;
         return rv;
     }
@@ -409,9 +417,31 @@ pub fn shape_port<S: PortGraph + ?Sized>(
     let custom = shape_name != "epsf" && src.attrs.get("shapefile").is_some_and(|f| !f.is_empty());
     let is_box = custom
         || graphviz_pure_geom::ShapeKind::parse(shape_name) == graphviz_pure_geom::ShapeKind::Box;
-    compass_port(g, n, None, &mut rv, portname, all, !is_box);
+    if compass_port(g, n, None, &mut rv, portname, all, !is_box) {
+        unrecognized(src, portname);
+    }
     rv.name = None;
     rv
+}
+
+/// `unrecognized(n, p)` (`lib/common/shapes.c:362-365`).
+fn unrecognized(n: &NodeData, p: &str) {
+    if !graphviz_pure_core::diag::reporting_ports() {
+        return;
+    }
+    graphviz_pure_core::diag::agwarningf(&format!("node {}, port {p} unrecognized\n", n.name));
+}
+
+/// The compass warning of `poly_port` and `record_port` (`shapes.c:2894-2896`,
+/// `3748-3749`).
+fn bad_compass(n: &NodeData, portname: &str, compass: &str) {
+    if !graphviz_pure_core::diag::reporting_ports() {
+        return;
+    }
+    graphviz_pure_core::diag::agwarningf(&format!(
+        "node {}, port {portname}, unrecognized compass point '{compass}' - ignored\n",
+        n.name
+    ));
 }
 
 /// `chkPort(portfn, n, s)` for a parsed port (`name[:compass]`).
@@ -525,23 +555,22 @@ impl PortGraph for LGraph<'_> {
     }
 }
 
-/// Resolves `tailport`/`headport` of every edge, keeping `*clip=false`.
-pub fn resolve_all_ports(g: &mut LGraph<'_>) {
-    for ei in 0..g.edges.len() {
-        let src = &g.src.edges[ei];
-        let (t, h) = (g.edges[ei].tail, g.edges[ei].head);
-        let (tsrc, hsrc) = (src.tail_port.clone(), src.head_port.clone());
-        let tclip = g.edges[ei].tail_port.clip;
-        let hclip = g.edges[ei].head_port.clip;
-        let mut tp = chk_port(g, t, &tsrc);
-        let mut hp = chk_port(g, h, &hsrc);
-        if !tclip {
-            tp.clip = false;
-        }
-        if !hclip {
-            hp.clip = false;
-        }
-        g.edges[ei].tail_port = tp;
-        g.edges[ei].head_port = hp;
+/// Resolves `tailport`/`headport` of edge `ei` (`chkPort` in `common_init_edge`), keeping
+/// `*clip=false`.
+pub fn resolve_edge_ports(g: &mut LGraph<'_>, ei: usize) {
+    let src = &g.src.edges[ei];
+    let (t, h) = (g.edges[ei].tail, g.edges[ei].head);
+    let (tsrc, hsrc) = (src.tail_port.clone(), src.head_port.clone());
+    let tclip = g.edges[ei].tail_port.clip;
+    let hclip = g.edges[ei].head_port.clip;
+    let mut tp = chk_port(g, t, &tsrc);
+    let mut hp = chk_port(g, h, &hsrc);
+    if !tclip {
+        tp.clip = false;
     }
+    if !hclip {
+        hp.clip = false;
+    }
+    g.edges[ei].tail_port = tp;
+    g.edges[ei].head_port = hp;
 }

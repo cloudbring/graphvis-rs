@@ -65,32 +65,7 @@ pub(crate) fn gvprintnum(number: f64) -> String {
 
 /// C `printf("%.{prec}g", v)`.
 pub(crate) fn fmt_g(v: f64, prec: usize) -> String {
-    if v.is_nan() {
-        // macOS libc prints `nan` for either sign.
-        return "nan".to_string();
-    }
-    if v.is_infinite() {
-        return if v < 0.0 { "-inf" } else { "inf" }.to_string();
-    }
-    let p = prec.max(1);
-    if v == 0.0 {
-        return if v.is_sign_negative() { "-0" } else { "0" }.to_string();
-    }
-    // The exponent after rounding to `p` significant digits.
-    let e_form = format!("{:.*e}", p - 1, v);
-    let exp: i32 = e_form
-        .rsplit_once('e')
-        .and_then(|(_, e)| e.parse().ok())
-        .unwrap_or(0);
-    if exp < -4 || exp >= p as i32 {
-        let (mant, _) = e_form.rsplit_once('e').unwrap_or((&e_form, "0"));
-        let mant = trim_zeros(mant.to_string());
-        let sign = if exp < 0 { '-' } else { '+' };
-        format!("{mant}e{sign}{:02}", exp.abs())
-    } else {
-        let decimals = (p as i32 - 1 - exp).max(0) as usize;
-        trim_zeros(format!("{v:.decimals$}"))
-    }
+    graphviz_pure_core::diag::fmt_g(v, prec)
 }
 
 /// `%f` (six decimals).

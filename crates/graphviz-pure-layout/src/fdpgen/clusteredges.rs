@@ -200,6 +200,30 @@ fn make_spline(lg: &mut LGraph<'_>, e: usize, obs: &[Vec<Point>]) {
     add_edge_labels(lg, e);
 }
 
+/// The first failure's message in `compoundEdges` (`clusteredges.c:238-246`); `expand_t`
+/// holds floats, `pack` an int.
+fn touch_warning(lg: &LGraph<'_>, pm: &Expand) {
+    let margin = crate::neatogen::adjust::sep_factor(lg);
+    let off = crate::neatogen::neatoinit::CL_OFFSET;
+    let pack = crate::pack::get_pack(lg.gattr("pack"), off, off);
+    let f = |v: f64| f64::from(v as f32);
+    let (px, py) = (f(pm.x), f(pm.y));
+    graphviz_pure_core::diag::agwarningf(
+        "compoundEdges: nodes touch - falling back to straight line edges\n",
+    );
+    if pack as f64 <= px || pack as f64 <= py {
+        graphviz_pure_core::diag::agerr_prev(&format!(
+            "pack value {pack} is smaller than esep ({px:.3},{py:.3})\n"
+        ));
+    } else if f(margin.x) <= px || f(margin.y) <= py {
+        graphviz_pure_core::diag::agerr_prev(&format!(
+            "sep value ({:.3},{:.3}) is smaller than esep ({px:.3},{py:.3})\n",
+            f(margin.x),
+            f(margin.y)
+        ));
+    }
+}
+
 /// `compoundEdges(g, pm, edgetype)`; returns true on success (C returns 0).
 pub fn compound_edges(lg: &mut LGraph<'_>, sub: &Sub, h: &Hier<'_>, pm: &Expand) -> bool {
     let mut ok = true;
@@ -217,7 +241,9 @@ pub fn compound_edges(lg: &mut LGraph<'_>, sub: &Sub, h: &Hier<'_>, pm: &Expand)
             }
             let objl = object_list(lg, h, e, pm);
             if !plegal_arrangement(&objl) {
-                // "compoundEdges: nodes touch - falling back to straight line edges"
+                if ok {
+                    touch_warning(lg, pm);
+                }
                 ok = false;
                 continue;
             }

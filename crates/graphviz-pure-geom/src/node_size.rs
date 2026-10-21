@@ -487,6 +487,13 @@ fn get_pen_color(attrs: &AttrMap) -> Option<&str> {
         .find(|s| !s.is_empty())
 }
 
+/// `lp->text` of a non-record label made by [`make_label`] from attribute value `raw`: the
+/// substituted, charset-converted text of a plain label, the source of an HTML label without
+/// its delimiters, or `"<TABLE>"` for an HTML table.
+pub fn label_text(l: &LabelGeometry, raw: &str) -> String {
+    label_l_text(l, raw, false)
+}
+
 /// `lp->text` of a made label, which a later label's `\L` expands to (`make_label`):
 /// the raw string for a record, the substituted text for plain text, the HTML source
 /// for HTML text and `<TABLE>` for a table (`make_html_label`).
@@ -581,6 +588,20 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     // bind_shape: a `shapefile` (except with epsf) makes the shape `custom`, a user shape
     // that copies `Shapes[0]` (box).
     let custom = shape_name != "epsf" && attrs.get("shapefile").is_some_and(|f| !f.is_empty());
+    // user_shape (shapes.c:3955-3962): a name outside the Shapes table becomes a copy of
+    // `box`, with a warning the first time the name is seen.
+    if !custom
+        && shape_name != "custom"
+        && shape_name != "epsf"
+        && ShapeKind::parse(shape_name) == ShapeKind::Box
+        && !matches!(shape_name, "box" | "rect" | "rectangle")
+        && graphviz_pure_core::diag::reporting()
+        && graphviz_pure_core::diag::emit_once(&format!("\0shape\0{shape_name}"))
+    {
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "using box for unknown shape {shape_name}\n"
+        ));
+    }
     let shape = if custom {
         ShapeKind::Box
     } else {
@@ -1062,6 +1083,21 @@ fn poly_init(
         bb = Point::new(width, height);
         fixedshape = true;
     } else if mapbool(Some(fxd)) {
+        // check only label, as images we can scale to fit
+        if (width < label_dimen.x || height < label_dimen.y)
+            && graphviz_pure_core::diag::reporting()
+        {
+            // shapes.c:2115-2118; agraphof(n) is the root graph
+            let g = if env.graph_name.is_empty() {
+                "%1"
+            } else {
+                env.graph_name
+            };
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "node '{}', graph '{g}' size too small for label\n",
+                node.name
+            ));
+        }
         bb = Point::new(width, height);
     } else {
         width = width.max(bb.x);
@@ -1695,7 +1731,9 @@ fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
     if let Some(f) = p.parse(lr, true) {
         return f;
     }
-    graphviz_pure_core::diag::agerrorf(&format!("bad label format {src}\n"));
+    if graphviz_pure_core::diag::reporting() {
+        graphviz_pure_core::diag::agerrorf(&format!("bad label format {src}\n"));
+    }
     let mut p = RecParser {
         src: b"\\N",
         pos: 0,

@@ -58,15 +58,15 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
     }
 
     let src = graph.clone();
-    let mut g = LGraph::new(&src, 2, EdgeType::Line);
-    // patchwork_init_edge binds the edge record without common_init_edge, so
-    // edges carry no labels.
-    for e in &mut g.edges {
-        e.label = None;
-        e.xlabel = None;
-        e.head_label = None;
-        e.tail_label = None;
+    // finishNode's common_init_node runs in walkTree order, so the label diagnostics do;
+    // LGraph's own sizing below does not repeat them.
+    let env = graphviz_pure_geom::NodeSizeEnv::from_graph(&src);
+    for &n in &res.walk_order {
+        let _ = graphviz_pure_geom::node_geometry(&src.nodes[n], &env);
     }
+    let mut g = graphviz_pure_core::diag::quietly(|| LGraph::new_unported(&src, 2, EdgeType::Line));
+    // patchwork_init_edge binds the edge record without common_init_edge, so
+    // edges carry no labels (new_unported makes none).
     for (i, r) in res.nodes.iter().enumerate() {
         let Some((center, size)) = *r else { continue };
         let nd = &mut g.nodes[i];

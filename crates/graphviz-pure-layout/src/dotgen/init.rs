@@ -189,13 +189,22 @@ impl<'a> Dot<'a> {
         let flip = self.graphs[0].flip();
         let name = self.graphs[sg].name.clone();
         let env = graphviz_pure_geom::NodeSizeEnv::from_graph(self.input);
-        let Some(gl) = graphviz_pure_geom::graph_label_geometry_in(
-            &name,
-            &self.graphs[sg].attrs,
-            sg == 0,
-            flip,
-            &env,
-        ) else {
+        let make = || {
+            graphviz_pure_geom::graph_label_geometry_in(
+                &name,
+                &self.graphs[sg].attrs,
+                sg == 0,
+                flip,
+                &env,
+            )
+        };
+        // layout_graph_with_options made the root label first, as graph_init does.
+        let gl = if sg == 0 {
+            graphviz_pure_core::diag::quietly(make)
+        } else {
+            make()
+        };
+        let Some(gl) = gl else {
             return;
         };
         self.graphs[0].has_labels |= GRAPH_LABEL;
@@ -208,8 +217,14 @@ impl<'a> Dot<'a> {
     }
 
     fn push_label(&mut self, lg: &graphviz_pure_geom::LabelGeometry) -> L {
+        self.push_label_text(lg, String::new())
+    }
+
+    /// [`Self::push_label`] keeping `lp->text` (`text`), which `addXLabels` reports.
+    fn push_label_text(&mut self, lg: &graphviz_pure_geom::LabelGeometry, text: String) -> L {
         let l = self.labels.len();
         self.labels.push(TextLabel {
+            text,
             fontname: lg.font_name.clone(),
             fontsize: lg.font_size,
             dimen: lg.dimen,
@@ -297,11 +312,16 @@ impl<'a> Dot<'a> {
     }
 
     fn common_init_edge(&mut self, e: E) {
+        let label_text =
+            |lg: &graphviz_pure_geom::LabelGeometry, a: &graphviz_pure_core::AttrMap, key: &str| {
+                graphviz_pure_geom::label_text(lg, a.get(key).map_or("", String::as_str))
+            };
         let r = self.edges[e].real.unwrap();
         let (t, h) = (self.edges[e].tail, self.edges[e].head);
         let env = graphviz_pure_geom::NodeSizeEnv::from_graph(self.input);
         let directed = self.input.kind == GraphKind::Directed;
-        let ie = &self.input.edges[r];
+        let input = self.input;
+        let ie = &input.edges[r];
         let geo = graphviz_pure_geom::edge_label_geometry(
             &ie.attrs,
             &self.nodes[t].name,
@@ -310,23 +330,27 @@ impl<'a> Dot<'a> {
             &env,
         );
         if let Some(lg) = &geo.label {
-            let l = self.push_label(lg);
+            let text = label_text(lg, &ie.attrs, "label");
+            let l = self.push_label_text(lg, text);
             self.edges[e].label = Some(l);
             self.graphs[0].has_labels |= EDGE_LABEL;
             self.edges[e].label_ontop = geo.label_float;
         }
         if let Some(lg) = &geo.xlabel {
-            let l = self.push_label(lg);
+            let text = label_text(lg, &ie.attrs, "xlabel");
+            let l = self.push_label_text(lg, text);
             self.edges[e].xlabel = Some(l);
             self.graphs[0].has_labels |= EDGE_XLABEL;
         }
         if let Some(lg) = &geo.head_label {
-            let l = self.push_label(lg);
+            let text = label_text(lg, &ie.attrs, "headlabel");
+            let l = self.push_label_text(lg, text);
             self.edges[e].head_label = Some(l);
             self.graphs[0].has_labels |= HEAD_LABEL;
         }
         if let Some(lg) = &geo.tail_label {
-            let l = self.push_label(lg);
+            let text = label_text(lg, &ie.attrs, "taillabel");
+            let l = self.push_label_text(lg, text);
             self.edges[e].tail_label = Some(l);
             self.graphs[0].has_labels |= TAIL_LABEL;
         }

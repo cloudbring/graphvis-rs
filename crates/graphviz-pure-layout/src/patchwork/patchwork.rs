@@ -37,6 +37,8 @@ pub struct PatchworkResult {
     /// Per cluster of the [`ClusterTree`].
     pub clusters: Vec<BoundingBox>,
     pub root_bb: BoundingBox,
+    /// The nodes in `walkTree` order, in which `finishNode` calls `common_init_node`.
+    pub walk_order: Vec<usize>,
 }
 
 struct Builder<'a> {
@@ -195,6 +197,7 @@ impl Builder<'_> {
                     Point::new(rr.x[0], rr.x[1]),
                     Point::new(rr.size[0], rr.size[1]),
                 ));
+                out.walk_order.push(n);
             }
         }
     }
@@ -220,6 +223,7 @@ pub fn patchwork_layout_tree(graph: &Graph, tree: &ClusterTree) -> PatchworkResu
         nodes: vec![None; graph.nodes.len()],
         clusters: vec![BoundingBox::default(); tree.subgraph.len()],
         root_bb: BoundingBox::default(),
+        walk_order: Vec::new(),
     };
     b.walk_tree(root, &mut out);
     out

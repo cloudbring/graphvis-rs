@@ -254,7 +254,8 @@ impl<'a> Dot<'a> {
 
 /// Lays out `graph` with the dotgen port.
 pub fn layout_dot(graph: &mut Graph) -> Result<()> {
-    graphviz_pure_geom::size_graph_nodes(graph);
+    // dot_init_node's common_init_node reports the node diagnostics, in C's place.
+    graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::size_graph_nodes(graph));
     let mut aborted = false;
     let result = {
         let mut d = Dot::new(graph);

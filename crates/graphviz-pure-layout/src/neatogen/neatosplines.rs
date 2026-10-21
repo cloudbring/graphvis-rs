@@ -166,7 +166,9 @@ pub fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edget
 
 /// `makeObstacle(n, pmargin, isOrtho=true)`: polygon nodes (`SH_POLY`, which
 /// includes star and cylinder, and `SH_POINT`) become their outline box
-/// (without margin); other shapes as for splines.
+/// (without margin); other shapes as for splines. The ortho branch leaves
+/// `margin` at `{0}`, so a scaling (not `+`) margin multiplies every vertex by
+/// zero and the box shrinks to the node's centre (`neatosplines.c:431-433`).
 fn ortho_obstacle(lg: &LGraph<'_>, n: usize, pm: &Expand) -> Option<Vec<Point>> {
     use crate::common::shapes::InsideFn;
     let nd = &lg.nodes[n];
@@ -174,21 +176,34 @@ fn ortho_obstacle(lg: &LGraph<'_>, n: usize, pm: &Expand) -> Option<Vec<Point>> 
     if !matches!(sh.inside, InsideFn::Poly | InsideFn::Star | InsideFn::Point) {
         return super::routing::make_obstacle(lg, n, pm);
     }
-    let width = nd.lw + nd.rw;
-    let outline_width = sh.outline_width;
-    let outline_lw = nd.lw * outline_width / width;
-    let outline_ht = sh.outline_height;
-    let vs = [
-        Point::new(-outline_lw, -outline_ht / 2.0),
-        Point::new(outline_lw, -outline_ht / 2.0),
-        Point::new(outline_lw, outline_ht / 2.0),
-        Point::new(-outline_lw, outline_ht / 2.0),
-    ];
+    let vs = if sh.fixedshape && sh.sides > 0 && !sh.vertices.is_empty() {
+        // fixedsize=shape: the polygon's own box, not the node size with its label
+        // (neatosplines.c:351-358).
+        let b = sh.poly_bb();
+        [
+            b.ll,
+            Point::new(b.ur.x, b.ll.y),
+            b.ur,
+            Point::new(b.ll.x, b.ur.y),
+        ]
+    } else {
+        let width = nd.lw + nd.rw;
+        let outline_width = sh.outline_width;
+        let outline_lw = nd.lw * outline_width / width;
+        let outline_ht = sh.outline_height;
+        [
+            Point::new(-outline_lw, -outline_ht / 2.0),
+            Point::new(outline_lw, -outline_ht / 2.0),
+            Point::new(outline_lw, outline_ht / 2.0),
+            Point::new(-outline_lw, outline_ht / 2.0),
+        ]
+    };
     let c = nd.coord;
+    let k = if pm.do_add { 1.0 } else { 0.0 };
     Some(
         vs.iter()
             .rev()
-            .map(|p| Point::new(p.x + c.x, p.y + c.y))
+            .map(|p| Point::new(p.x * k + c.x, p.y * k + c.y))
             .collect(),
     )
 }
@@ -205,6 +220,11 @@ fn ortho_spline_edges(lg: &mut LGraph<'_>, sub: &Sub, pm: &Expand, et: EdgeType)
     if super::legal::plegal_arrangement(&obs) {
         crate::ortho::ortho_edges_of(lg, sub.nodes.clone(), false);
         use_edges = true;
+    } else {
+        // neatosplines.c:623
+        graphviz_pure_core::diag::agwarningf(
+            "the bounding boxes of some nodes touch - falling back to straight line edges\n",
+        );
     }
     for &n in &sub.nodes {
         let outs: Vec<usize> = lg.outs(sub, n).collect();

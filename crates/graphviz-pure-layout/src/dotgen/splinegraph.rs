@@ -203,6 +203,11 @@ impl SplineGraph for Dot<'_> {
 }
 
 impl crate::common::xlabels::XLabelGraph for Dot<'_> {
+    fn xl_label_text(&self, e: usize, k: LabelKind) -> String {
+        self.label_index(e, k)
+            .map(|l| self.labels[l].text.clone())
+            .unwrap_or_default()
+    }
     fn xl_nodes(&self) -> Vec<usize> {
         self.nodes_of(0)
     }

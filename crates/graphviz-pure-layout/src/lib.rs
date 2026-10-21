@@ -80,6 +80,16 @@ pub fn layout_graph_with_options(
     for s in &mut graph.subgraphs {
         s.graph_attrs.remove(key);
     }
+    // graph_init's do_graph_label(g) (lib/common/input.c:711) makes the root label before
+    // any engine's node and edge init, so its diagnostics come first; the engines' own
+    // calls do not repeat them.
+    let _ = graphviz_pure_geom::graph_label_geometry_in(
+        &graph.name,
+        &graph.graph_attrs,
+        true,
+        false,
+        &graphviz_pure_geom::NodeSizeEnv::from_graph(graph),
+    );
     let effective_engine = if engine == LayoutEngine::Dot
         && let Some(attr_layout) = graph.graph_attrs.get("layout")
         && let Ok(parsed) = LayoutEngine::parse(attr_layout)

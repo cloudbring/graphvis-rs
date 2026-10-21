@@ -271,7 +271,13 @@ impl<'g> Model<'g> {
         self.root_attrs().mapbool("center")
     }
 
+    /// The render model of `g`. Its node, edge and cluster labels are sized again here
+    /// (`diag::quietly`): C made them in layout, and reported their diagnostics there.
     pub fn build(g: &'g Graph) -> Self {
+        graphviz_pure_core::diag::quietly(|| Self::build_quiet(g))
+    }
+
+    fn build_quiet(g: &'g Graph) -> Self {
         let directed = g.kind == GraphKind::Directed;
         let env = NodeSizeEnv::from_graph(g);
         let ga = Attrs(&g.graph_attrs);
