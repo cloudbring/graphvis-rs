@@ -8,6 +8,7 @@
       "README.md",
       "LICENSE",
       "NOTICE",
+      "THIRD-PARTY-LICENSES.md",
       "pkg/graphviz_pure_wasm.js",
       "pkg/graphviz_pure_wasm.d.ts",
       "pkg/graphviz_pure_wasm_bg.wasm",

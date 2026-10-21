@@ -2,12 +2,13 @@
 # Builds the linux/amd64 + linux/arm64 container image from a release's two static musl
 # archives (graphviz-pure-VERSION-{x86_64,aarch64}-unknown-linux-musl.tar.gz in DIST, as
 # scripts/release-package.py writes them). Nothing is compiled: the image holds the binary,
-# LICENSE and NOTICE from those archives (scripts/release-image.Dockerfile).
+# LICENSE and NOTICE from those archives, and THIRD-PARTY-LICENSES.md from the checkout, which
+# the archives do not carry (scripts/release-image.Dockerfile).
 #
 # Writes OUT/graphviz-pure-image.tar, an OCI image layout tagged IMAGE:VERSION, and
 # OUT/graphviz-pure-image.digest, the digest of its image index (what gets pushed and attested).
 # The build is reproducible: timestamps come from SOURCE_DATE_EPOCH (default: the last
-# commit's), so the same archives give the same digest.
+# commit's), so with the same BuildKit and revision the same files give the same digest.
 #
 # Needs Docker with buildx and the containerd image store (multi-platform builds).
 #
@@ -33,6 +34,7 @@ for arch in amd64:x86_64 arm64:aarch64; do
 done
 tar -xzf "$dist/graphviz-pure-$version-x86_64-unknown-linux-musl.tar.gz" -C "$ctx" --strip-components=1 \
   "graphviz-pure-$version-x86_64-unknown-linux-musl/LICENSE" "graphviz-pure-$version-x86_64-unknown-linux-musl/NOTICE"
+cp "$root/THIRD-PARTY-LICENSES.md" "$ctx/"
 
 # The labels are repeated as index annotations: a registry shows a multi-platform image's
 # description, source and licence from its index. No buildx provenance or SBOM: the release

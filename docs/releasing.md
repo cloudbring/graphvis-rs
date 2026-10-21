@@ -86,7 +86,8 @@ if you need the check and the pull to refer to the same bytes.
 
 ## Using the container image
 
-The image holds the static binary and its licence, nothing else (no shell), and runs as
+The image holds the static binary and its licence files (LICENSE, NOTICE and
+THIRD-PARTY-LICENSES.md in `/usr/share/doc/graphviz-pure`), nothing else (no shell), and runs as
 `nobody`:
 
 ```sh
@@ -153,8 +154,8 @@ the same fields just before pushing the first tag, then release within 48 hours.
 
 JSR has no staged-approval step like npm's: `deno publish` makes the version live, and the
 `release` environment's approval is the only gate. The JSR package holds the npm tarball's
-files as listed in `web/jsr.json` (README.md, LICENSE, NOTICE and `pkg/`), so both registries
-show `web/README.md`; npm's `package.json` is not part of it.
+files as listed in `web/jsr.json` (README.md, LICENSE, NOTICE, THIRD-PARTY-LICENSES.md and
+`pkg/`), so both registries show `web/README.md`; npm's `package.json` is not part of it.
 In Deno, `init()` fetches the `.wasm` next to the module, so a script importing
 `jsr:@graphviz-pure/wasm` needs `--allow-net=jsr.io` (or passes the bytes to `init`).
 

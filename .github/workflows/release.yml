@@ -181,7 +181,7 @@ jobs:
       # The tarball also carries jsr.json, so the jsr job publishes exactly its files.
       - name: Pack
         working-directory: web
-        run: cp ../LICENSE ../NOTICE . && mkdir -p ../dist && npm pack --pack-destination ../dist
+        run: cp ../LICENSE ../NOTICE ../THIRD-PARTY-LICENSES.md . && mkdir -p ../dist && npm pack --pack-destination ../dist
       - name: Install Deno ${{ env.DENO_VERSION }}
         working-directory: ${{ runner.temp }}
         run: |
@@ -476,8 +476,9 @@ jobs:
       - name: npm stage publish
         run: npm stage publish --access public dist/*.tgz
 
-  # The attested npm tarball, published to JSR as it is (it carries jsr.json, README.md, LICENSE
-  # and NOTICE) by a pinned, checksum-verified Deno: nothing in this job is resolved at run time.
+  # The attested npm tarball, published to JSR as it is (it carries jsr.json, README.md, LICENSE,
+  # NOTICE and THIRD-PARTY-LICENSES.md) by a pinned, checksum-verified Deno: nothing in this job
+  # is resolved at run time.
   # JSR has no staging, so the `release` environment's approval is the only gate.
   jsr:
     name: Publish to JSR

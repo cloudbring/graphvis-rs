@@ -1,6 +1,6 @@
-# The graphviz-pure container image: a release's static musl binary and its licence, nothing
-# else. scripts/release-image.sh builds it from the release archives; it cannot be built from a
-# checkout. The binary needs no files at runtime (the fonts for raster output are compiled in)
+# The graphviz-pure container image: a release's static musl binary and its licence files,
+# nothing else. scripts/release-image.sh builds it from the release archives; it cannot be built
+# from a checkout. The binary needs no files at runtime (the fonts for raster output are compiled in)
 # and never opens a network connection, so the image has no base, shell, libc or CA bundle.
 FROM scratch
 ARG TARGETARCH
@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.title="graphviz-pure" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.created="${CREATED}"
-COPY LICENSE NOTICE /usr/share/doc/graphviz-pure/
+COPY LICENSE NOTICE THIRD-PARTY-LICENSES.md /usr/share/doc/graphviz-pure/
 COPY ${TARGETARCH}/graphviz-pure /usr/local/bin/graphviz-pure
 # Mount the files to render here: docker run -v "$PWD:/data" ... -o out.svg in.dot
 WORKDIR /data
