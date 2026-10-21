@@ -182,10 +182,13 @@ pub fn get_adjust_mode(g: &LGraph<'_>, s: &str) -> AdjustData {
         return dp;
     }
     for &(mode, attrib) in TABLE {
+        // `strncasecmp` compares bytes: slicing the `str` at `attrib.len()` would panic
+        // when that byte falls inside a multi-byte character ("prisé").
         let matches = s.eq_ignore_ascii_case(attrib)
             || (mode == AdjustMode::Prism
-                && s.len() >= attrib.len()
-                && s[..attrib.len()].eq_ignore_ascii_case(attrib));
+                && s.as_bytes()
+                    .get(..attrib.len())
+                    .is_some_and(|p| p.eq_ignore_ascii_case(attrib.as_bytes())));
         if matches {
             dp.mode = mode;
             if mode == AdjustMode::Prism {
@@ -196,6 +199,9 @@ pub fn get_adjust_mode(g: &LGraph<'_>, s: &str) -> AdjustData {
     }
     let mut v = mapbool(Some(s));
     if v != map_bool(Some(s), true) {
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "Unrecognized overlap value \"{s}\" - using false\n"
+        ));
         v = false;
     }
     if v {

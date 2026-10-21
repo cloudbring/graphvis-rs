@@ -219,7 +219,11 @@ fn majorization(
         let s = g.gattr("diredgeconstraints");
         opt.diredges = if mapbool(s) {
             1
-        } else if s.is_some_and(|s| s.len() >= 4 && s[..4].eq_ignore_ascii_case("hier")) {
+        } else if s.is_some_and(|s| {
+            s.as_bytes()
+                .get(..4)
+                .is_some_and(|p| p.eq_ignore_ascii_case(b"hier"))
+        }) {
             2
         } else {
             0

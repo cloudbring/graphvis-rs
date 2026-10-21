@@ -126,6 +126,35 @@ fn png_and_jpeg_output_are_images_at_graphviz_sizes() {
     assert_eq!(&std::fs::read(&jpg).unwrap()[..2], &[0xFF, 0xD8]);
 }
 
+// Issue #166: getAdjustMode (lib/neatogen/adjust.c) matches the "prism" prefix with
+// strncasecmp, a byte comparison. The port sliced the `str` at byte 5 and panicked when that
+// byte fell inside a multi-byte character. C's stderr is Graphviz 16.1.0's.
+#[test]
+fn overlap_prism_prefix_with_multibyte_char_does_not_panic() {
+    for engine in ["neato", "fdp", "sfdp", "twopi", "circo"] {
+        let (err, ok) = warnings(engine, "graph { overlap=\"prisé\"; a -- b }");
+        assert!(ok, "{engine}: {err}");
+        assert_eq!(
+            err, "Warning: Unrecognized overlap value \"prisé\" - using false\n",
+            "{engine}"
+        );
+        // A real "prism" prefix still matches whatever follows it.
+        let (err, ok) = warnings(engine, "graph { overlap=\"PRISMé\"; a -- b }");
+        assert!(ok, "{engine}: {err}");
+        assert_eq!(err, "", "{engine}");
+    }
+}
+
+// Issue #166, same root cause: neato's ipsep mode matches diredgeconstraints="hier..." with
+// strncasecmp(str, "hier", 4) (lib/neatogen/neatoinit.c, majorization).
+#[test]
+fn diredgeconstraints_hier_prefix_with_multibyte_char_does_not_panic() {
+    let src = "digraph { mode=ipsep; diredgeconstraints=\"hieé\"; a -> b; b -> c }";
+    let (err, ok) = warnings("neato", src);
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+}
+
 // Fuzz case 003-pack-filledge-zero-point-spline-panic (issue #12), its repro.gv verbatim.
 // Clipping leaves both edges between the overlapping pinned nodes with an empty spline. C
 // crashes on it (exit 138, SIGBUS), so there is no C reference output and the fidelity
