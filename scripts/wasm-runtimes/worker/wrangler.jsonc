@@ -1,0 +1,6 @@
+// run.mjs starts this with wrangler's local runtime (workerd); it is never deployed.
+{
+  "name": "graphviz-pure-wasm-check",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-01"
+}

@@ -27,3 +27,9 @@ updates:
     cooldown: { default-days: 7 }
     groups:
       web: { patterns: ["*"] }
+  - package-ecosystem: npm
+    directory: /scripts/wasm-runtimes
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      wasm-runtimes: { patterns: ["*"] }

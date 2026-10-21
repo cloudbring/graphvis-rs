@@ -17,6 +17,10 @@ const usage = `import init, { render } from '@graphviz-pure/wasm';
 
 await init();
 const svg = render('digraph { a -> b [label="fast"] }', 'dot', 'svg');`;
+const workers = `import { initSync, render } from '@graphviz-pure/wasm';
+import wasm from '@graphviz-pure/wasm/graphviz_pure_wasm_bg.wasm';
+
+initSync({ module: wasm });`;
 ---
 
 <div class="home">
@@ -37,7 +41,8 @@ const svg = render('digraph { a -> b [label="fast"] }', 'dot', 'svg');`;
 			</ul>
 		</div>
 		<div class="code">
-			<Code code={usage} lang="js" title="Browser, Node, Deno, Bun or Workers" />
+			<Code code={usage} lang="js" title="Browser, Node.js, Deno or Bun" />
+			<Code code={workers} lang="js" title="Cloudflare Workers" />
 			<Code code={'cargo build --release -p graphviz-pure-cli\ntarget/release/graphviz-pure -Kneato -Tsvg graph.gv'} lang="sh" title="Command line" />
 		</div>
 	</section>

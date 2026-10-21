@@ -6,6 +6,7 @@
   "main": "./pkg/graphviz_pure_wasm.js",
   "types": "./pkg/graphviz_pure_wasm.d.ts",
   "files": [
+    "node.js",
     "pkg/graphviz_pure_wasm.js",
     "pkg/graphviz_pure_wasm.d.ts",
     "pkg/graphviz_pure_wasm_bg.wasm",
@@ -15,8 +16,10 @@
   "exports": {
     ".": {
       "types": "./pkg/graphviz_pure_wasm.d.ts",
+      "node": "./node.js",
       "default": "./pkg/graphviz_pure_wasm.js"
-    }
+    },
+    "./graphviz_pure_wasm_bg.wasm": "./pkg/graphviz_pure_wasm_bg.wasm"
   },
   "scripts": {
     "build:wasm": "cd .. && CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS='-C opt-level=z' CARGO_PROFILE_RELEASE_LTO=fat cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm && wasm-bindgen --target web --remove-name-section --remove-producers-section --out-dir web/pkg target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm && if command -v wasm-opt >/dev/null; then wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals web/pkg/graphviz_pure_wasm_bg.wasm -o web/pkg/graphviz_pure_wasm_bg.wasm; fi",
