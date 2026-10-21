@@ -49,6 +49,11 @@ pub struct Dot<'a> {
     pub comp: bool,
     /// `i` of the component subgraph `_cc_<i>` when `comp`.
     pub comp_index: usize,
+    /// `GD_bb(agroot(g))` while a pack component is laid out. `clip_and_install`
+    /// and `addEdgeLabels` grow `GD_bb(agraphof(tail))`, the root graph rather
+    /// than the component, and `packSubgraphs` recomputes the root's box
+    /// (`compute_bb`), so these updates never reach the component's `GD_bb`.
+    pub root_bb: BoxF,
     /// Edge attribute names declared in `root_input` (`agattr(g, AGEDGE, k, NULL)`).
     pub edge_decls: std::cell::OnceCell<std::collections::BTreeSet<String>>,
     pub nodes: Vec<NodeInfo>,
@@ -89,6 +94,7 @@ impl<'a> Dot<'a> {
             root_input: input,
             comp: false,
             comp_index: 0,
+            root_bb: BoxF::default(),
             edge_decls: std::cell::OnceCell::new(),
             nodes: Vec::new(),
             edges: Vec::new(),

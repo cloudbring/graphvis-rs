@@ -168,6 +168,10 @@ dot
   `_cc_<i>` in messages, and `mark_clusters` prints C's "already in a rankset" warning.
   This was open case `014-dot-pack-failed-component-not-absorbed`; its repro is kept in
   `crates/graphviz-pure-cli/tests/cli.rs` (`failed_pack_component_keeps_its_node_sizes`).
+* In a pack component, `clip_and_install` and `addEdgeLabels` grow the root's bounding
+  box (`agraphof(tail)`), not the component's, so a later curved edge bends towards the
+  component's box without the earlier splines (open case
+  `017-dot-pack-curved-edge-subpoint`, issue #26).
 
 neato family
 * `resolvePorts` drops `tailclip=false` on `_` ports.
@@ -253,7 +257,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`013-dot-pack-component-missing-attr-dicts`](../../tests/fuzz-open/013-dot-pack-component-missing-attr-dicts) | medium | 1 | port |
 | [`015-dot-pack-unplaced-edge-label-shifted-off-page`](../../tests/fuzz-open/015-dot-pack-unplaced-edge-label-shifted-off-page) | low | 6 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
-| [`017-dot-pack-curved-edge-subpoint`](../../tests/fuzz-open/017-dot-pack-curved-edge-subpoint) | low | 1 | port |
 | [`018-render-interpolate-points-fma`](../../tests/fuzz-open/018-render-interpolate-points-fma) | low | 1 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
 | [`020-parser-keyword-as-attribute-value`](../../tests/fuzz-open/020-parser-keyword-as-attribute-value) | medium | — | port |

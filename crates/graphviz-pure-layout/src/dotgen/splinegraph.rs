@@ -138,8 +138,14 @@ impl SplineGraph for Dot<'_> {
     fn spl_mut(&mut self, e: usize) -> &mut Option<Vec<Bezier>> {
         &mut self.edges[e].spl
     }
+    /// `GD_bb(agraphof(n))`: the root graph's box, which is not the layout
+    /// graph's when this is a pack component.
     fn bb_mut(&mut self) -> &mut BoxF {
-        &mut self.graphs[0].bb
+        if self.comp {
+            &mut self.root_bb
+        } else {
+            &mut self.graphs[0].bb
+        }
     }
     fn label(&self, e: usize, k: LabelKind) -> Option<LabelView> {
         let l = &self.labels[self.label_index(e, k)?];
