@@ -301,62 +301,6 @@ fn cylinder_port_endpoint_does_not_hang_the_router() {
     assert_eq!(svg.matches("class=\"edge\"").count(), 2, "{svg}");
 }
 
-/// Issue #174 (found by cargo-fuzz): a component taller than INT_MAX polyomino steps.
-/// C's `computeStep` (`lib/pack/pack.c:86`) saturates a step of ~1e29 to INT_MAX, and
-/// `genPoly`/`genBox` then fill ~1e22 cells per side: C Graphviz 16.1.0 never finishes on
-/// these inputs. The port gives a saturated step a cell budget, warns when it runs out and
-/// leaves the components unpacked. A node pinned near 1e30 (C hangs too) packs. Each run gets
-/// 30 s (it takes well under a second) so a regression fails instead of hanging CI.
-#[test]
-fn oversized_component_does_not_hang_the_packer() {
-    let warning = "Warning: components too large to pack; packing skipped\n";
-    let cases = [
-        ("graph { layout=fdp; a [height=\"1e30\"]; b }", warning),
-        (
-            "graph { layout=fdp; quantum=\"1e40\"; a -- b; c -- d }",
-            warning,
-        ),
-        (
-            "graph { layout=neato; pack=false; a [height=\"1e30\"]; b }",
-            warning,
-        ),
-        ("graph { layout=fdp; a [height=\"1e300\"]; b }", warning),
-        ("graph { layout=fdp; a [pos=\"1e30,1e30!\"]; b; c }", ""),
-    ];
-    for (src, expected) in cases {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
-            .arg("-Tsvg")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap();
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(src.as_bytes())
-            .unwrap();
-        // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
-        while child.try_wait().unwrap().is_none() {
-            if std::time::Instant::now() > deadline {
-                child.kill().unwrap();
-                panic!("packing must terminate: {src}");
-            }
-            std::thread::sleep(std::time::Duration::from_millis(20));
-        }
-        let out = child.wait_with_output().unwrap();
-        let (svg, err) = (
-            String::from_utf8_lossy(&out.stdout),
-            String::from_utf8_lossy(&out.stderr),
-        );
-        assert!(out.status.success(), "{src}: {err}");
-        assert_eq!(err, expected, "{src}");
-        assert!(svg.contains("</svg>"), "{src}: {svg}");
-    }
-}
-
 // Fuzz case 004-neato-router-record-obstacle-height (issue #13), its repro.gv verbatim. C's
 // `makeObstacle` (lib/neatogen/neatosplines.c:447-449) builds a record's obstacle from the
 // root field box `fld->b`, not from `ND_height`, which carries record_init's +1pt. With the
@@ -1052,6 +996,62 @@ fn input_cluster_list_key_is_ignored() {
             ["cluster_a", "cluster_b"],
             "{engine}"
         );
+    }
+}
+
+/// Issue #174 (found by cargo-fuzz): a component taller than INT_MAX polyomino steps.
+/// C's `computeStep` (`lib/pack/pack.c:86`) saturates a step of ~1e29 to INT_MAX, and
+/// `genPoly`/`genBox` then fill ~1e22 cells per side: C Graphviz 16.1.0 never finishes on
+/// these inputs. The port gives a saturated step a cell budget, warns when it runs out and
+/// leaves the components unpacked. A node pinned near 1e30 (C hangs too) packs. Each run gets
+/// 30 s (it takes well under a second) so a regression fails instead of hanging CI.
+#[test]
+fn oversized_component_does_not_hang_the_packer() {
+    let warning = "Warning: components too large to pack; packing skipped\n";
+    let cases = [
+        ("graph { layout=fdp; a [height=\"1e30\"]; b }", warning),
+        (
+            "graph { layout=fdp; quantum=\"1e40\"; a -- b; c -- d }",
+            warning,
+        ),
+        (
+            "graph { layout=neato; pack=false; a [height=\"1e30\"]; b }",
+            warning,
+        ),
+        ("graph { layout=fdp; a [height=\"1e300\"]; b }", warning),
+        ("graph { layout=fdp; a [pos=\"1e30,1e30!\"]; b; c }", ""),
+    ];
+    for (src, expected) in cases {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+            .arg("-Tsvg")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(src.as_bytes())
+            .unwrap();
+        // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while child.try_wait().unwrap().is_none() {
+            if std::time::Instant::now() > deadline {
+                child.kill().unwrap();
+                panic!("packing must terminate: {src}");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let out = child.wait_with_output().unwrap();
+        let (svg, err) = (
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+        assert!(out.status.success(), "{src}: {err}");
+        assert_eq!(err, expected, "{src}");
+        assert!(svg.contains("</svg>"), "{src}: {svg}");
     }
 }
 
