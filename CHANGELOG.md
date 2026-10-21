@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- neato `mode=ipsep`: a graph whose clusters sit in different connected components no longer
+  panics; each component is laid out with the cluster members it contains. C Graphviz fails an
+  assertion on this input (#168).
+
 ## [0.1.0] - 2026-10-21
 
 The first release.
