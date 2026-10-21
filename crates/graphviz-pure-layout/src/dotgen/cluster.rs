@@ -335,8 +335,9 @@ impl Dot<'_> {
     /// `build_skeleton` (cluster.c). C indexes `GD_rankleader(subg)[ND_rank(v)]` for every
     /// node of `subg` and dereferences the result; a node whose rank lies outside the
     /// cluster's `minrank..=maxrank` has no leader and C crashes on the NULL pointer (issue
-    /// #10: a cluster node also in a top-level `rank=max` set, without `pack`). The port
-    /// fails the layout there instead of panicking.
+    /// #10: a cluster node also in a top-level `rank=max` set, without `pack`). It also reads
+    /// the leader's first out-edge, which the maxrank leader lacks. The port fails the layout
+    /// in both cases instead of panicking.
     pub fn build_skeleton(&mut self, g: G, subg: G) -> Result<(), String> {
         let (minr, maxr) = (self.graphs[subg].minrank, self.graphs[subg].maxrank);
         self.graphs[subg].rankleader = vec![None; (maxr + 2).max(0) as usize];
@@ -372,7 +373,14 @@ impl Dot<'_> {
                 );
                 let mut r = tr;
                 while r < hr {
-                    let oe = self.nodes[rl].out[0];
+                    // C reads `ND_out(rl).list[0]`, NULL for the maxrank leader.
+                    let Some(&oe) = self.nodes[rl].out.first() else {
+                        return Err(format!(
+                            "build_skeleton: no skeleton edge below rank {rank} of node {} in \
+                             cluster {}",
+                            self.nodes[v].name, self.graphs[subg].name
+                        ));
+                    };
                     self.edges[oe].count = short(self.edges[oe].count + 1);
                     r += 1;
                 }
