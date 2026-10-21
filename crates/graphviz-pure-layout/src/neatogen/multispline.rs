@@ -508,8 +508,11 @@ impl MRouter {
         })
     }
 
-    /// `addEndpoint(rtr, p, v, v_id, sides)`.
-    fn add_endpoint(&mut self, p: Point, obs_id: usize, v_id: usize, sides: u8) {
+    /// `addEndpoint(rtr, p, v, v_id, sides)`; `false` where C aborts: a
+    /// side of the obstacle in no triangle (`findMap`'s `assert(ip)`, e.g. the
+    /// zero-length sides of a cylinder's repeated vertices) or no edge added
+    /// (`assert(ne > 0)`). Routing the endpoint anyway made `mk_poly` loop.
+    fn add_endpoint(&mut self, p: Point, obs_id: usize, v_id: usize, sides: u8) -> bool {
         use crate::common::ports::{BOTTOM, LEFT, RIGHT, TOP};
         let starti = self.obs[obs_id];
         let endi = self.obs[obs_id + 1];
@@ -546,7 +549,7 @@ impl MRouter {
             };
             let key = (seg.i.min(seg.j), seg.i.max(seg.j));
             let Some(&t) = self.trimap.get(&key) else {
-                continue;
+                return false;
             };
             let (pi, pj) = (self.ps[seg.i as usize], self.ps[seg.j as usize]);
             if sides != 0
@@ -558,6 +561,7 @@ impl MRouter {
             }
             self.tg.add_tri_edge(v_id, t, seg);
         }
+        !self.tg.nodes[v_id].edges.is_empty()
     }
 
     /// `edgeToSeg(tg, i, j)`.
@@ -1123,9 +1127,12 @@ pub fn make_multi_spline(
     let ecnt = rtr.tg.edges.len();
     let orig: Vec<usize> = rtr.tg.nodes.iter().map(|n| n.edges.len()).collect();
     let (ts, hs) = (g.edges[e].tail_port.side, g.edges[e].head_port.side);
-    rtr.add_endpoint(t_p, tl, t_id, ts);
-    rtr.add_endpoint(h_p, hl, h_id, hs);
-    let sp = rtr.tri_path(rtr.tn + 2, h_id, t_id);
+    let added = rtr.add_endpoint(t_p, tl, t_id, ts) && rtr.add_endpoint(h_p, hl, h_id, hs);
+    let sp = if added {
+        rtr.tri_path(rtr.tn + 2, h_id, t_id)
+    } else {
+        None
+    };
     let ret = match sp {
         Some(sp) => {
             let (poly, idx) = mk_poly(rtr, &sp, h_id, t_id, h_p, t_p);

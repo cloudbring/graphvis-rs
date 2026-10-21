@@ -255,6 +255,21 @@ neato family
   other two also need the star/cylinder-obstacle and multispline face-order fixes). Its
   repros are kept in `crates/graphviz-pure-cli/tests/cli.rs`
   (`neato_record_obstacle_uses_field_box`, `circo_record_obstacle_falls_back_like_c`).
+* Star and cylinder nodes are spline-router obstacles too: `shapeOf` is `SH_POLY` for
+  both (their shape functions use `poly_init`), so `makeObstacle` builds their outline
+  polygon, and with `splines=ortho` their outline box. This was open case
+  `008-neato-router-star-cylinder-no-obstacle` (issue #17, 8 fuzz cases). All 8 now draw
+  the same SVG as C: fdp seeds 401, 1704, 12642, 31554 and 31899 with this fix alone,
+  circo seeds 443, 11977 and 30082 together with the record-obstacle fix. Four of them
+  (seeds 401, 443, 31554, 31899) still lack C's `port ... unrecognized` warnings
+  (issue #30). Case `004`'s seed 35697 also matches now. Its repros are kept in
+  `crates/graphviz-pure-cli/tests/cli.rs`
+  (`neato_splines_route_around_star_and_cylinder_nodes`,
+  `circo_star_obstacle_falls_back_to_straight_edge_with_warning`,
+  `ortho_star_and_cylinder_obstacles_are_outline_boxes`). A cylinder's repeated vertices
+  leave obstacle sides in no triangle, so a port endpoint on one makes C abort in
+  `addEndpoint` (`findMap`'s `assert(ip)`); the port treats it as a failed multispline
+  and falls back (`cylinder_port_endpoint_does_not_hang_the_router`).
 * patchwork places xlabels around the shape size `common_init_node` gives the node, not
   its patch.
 * fdp places a cluster's boundary ports with separate `cos` and `sin` calls, as C does,
@@ -323,7 +338,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | Issue | Severity | Fuzz cases | Status |
 |---|---|---:|---|
 | [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
-| [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
 | [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |

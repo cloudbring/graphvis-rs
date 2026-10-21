@@ -164,13 +164,14 @@ pub fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edget
     }
 }
 
-/// `makeObstacle(n, pmargin, isOrtho=true)`: polygon nodes become their
-/// outline box (without margin); other shapes as for splines.
+/// `makeObstacle(n, pmargin, isOrtho=true)`: polygon nodes (`SH_POLY`, which
+/// includes star and cylinder, and `SH_POINT`) become their outline box
+/// (without margin); other shapes as for splines.
 fn ortho_obstacle(lg: &LGraph<'_>, n: usize, pm: &Expand) -> Option<Vec<Point>> {
     use crate::common::shapes::InsideFn;
     let nd = &lg.nodes[n];
     let sh = &nd.shape;
-    if sh.name == "cylinder" || !matches!(sh.inside, InsideFn::Poly | InsideFn::Point) {
+    if !matches!(sh.inside, InsideFn::Poly | InsideFn::Star | InsideFn::Point) {
         return super::routing::make_obstacle(lg, n, pm);
     }
     let width = nd.lw + nd.rw;

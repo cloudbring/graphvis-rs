@@ -151,6 +151,156 @@ n14;
     }
 }
 
+/// Issue #17 (fuzz case `008-neato-router-star-cylinder-no-obstacle`): star and
+/// cylinder nodes are `SH_POLY` in C (`star_fns` and `cylinder_fns` use
+/// `poly_init`), so `makeObstacle` gives them a polygon obstacle and the
+/// neato-family spline router routes edges around them. The expected paths are
+/// C Graphviz 16.1.0's output.
+#[test]
+fn neato_splines_route_around_star_and_cylinder_nodes() {
+    let src = "graph G {
+layout=neato;
+splines=true;
+a [pos=\"0,0!\"];
+b [pos=\"3,0!\"];
+s [shape=star, pos=\"1.5,0!\"];
+c [pos=\"0,1.5!\"];
+d [pos=\"3,1.5!\"];
+y [shape=cylinder, pos=\"1.5,1.5!\"];
+a -- b;
+c -- d;
+}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"278pt\" height=\"188pt\""),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "d=\"M42.81,-67.3C62.71,-84.29 98.7,-109.87 135,-109.87 171.3,-109.87 207.29,-84.29 227.19,-67.3\""
+        ),
+        "a -- b must go around the star:\n{out}"
+    );
+    assert!(
+        out.contains("d=\"M52.33,-167.2C67.41,-170.83 87,-174.94 104.68,-176.77 "),
+        "c -- d must go around the cylinder:\n{out}"
+    );
+}
+
+/// Issue #17, circo variant: with the star's obstacle, C's guiding polygon
+/// makes `Pshortestpath` fail in `genroute` (`lib/neatogen/multispline.c`),
+/// which warns and falls back to a straight edge.
+#[test]
+fn circo_star_obstacle_falls_back_to_straight_edge_with_warning() {
+    let src = "graph G {
+layout=circo;
+splines=true;
+n16 [shape=star];
+n2:w -- n13;
+}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "lib/pathplan/shortest.c:193: destination point not in any triangle\n\
+         Warning: Could not create control points for multiple spline for edge (n2,n13)\n"
+    );
+    assert!(
+        out.contains("<svg width=\"344pt\" height=\"150pt\""),
+        "{out}"
+    );
+    assert!(
+        out.contains("d=\"M155.98,-18C155.98,-18 237.75,-18 281.83,-18\""),
+        "{out}"
+    );
+}
+
+/// Issue #17, ortho: with `isOrtho`, C's `makeObstacle` gives every `SH_POLY`
+/// node, star and cylinder included, its outline box without the margin
+/// (`lib/neatogen/neatosplines.c:345-376`). Grown star and cylinder outlines
+/// made the touch test fall back to straight lines (osage), or let a star whose
+/// box overlaps a point reach the ortho router, which panicked (neato).
+#[test]
+fn ortho_star_and_cylinder_obstacles_are_outline_boxes() {
+    let src = "graph G {
+layout=osage;
+splines=ortho;
+a [shape=cylinder];
+s [shape=star];
+a -- b -- c -- a;
+s -- b;
+}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "d=\"M168.47,-111C177.84,-111 186,-111 186,-111 186,-111 186,0 186,0 186,0 55,0 55,0 55,0 55,-8.72 55,-17.58\""
+        ),
+        "c -- a must be routed orthogonally:\n{out}"
+    );
+
+    let src = "graph G {
+layout=neato;
+splines=ortho;
+s [shape=star, pos=\"0,0!\"];
+p [shape=point, width=0.05, pos=\"0.4,0.42!\"];
+q [pos=\"2,0!\"];
+r [pos=\"0,2!\"];
+s -- q;
+p -- r;
+q -- r;
+}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(
+        out.contains("d=\"M94.2,-52.53C118.85,-52.53 150.11,-52.53 172.09,-52.53\""),
+        "touching boxes fall back to straight edges:\n{out}"
+    );
+}
+
+/// Issue #17: a cylinder's obstacle repeats vertices, so some of its sides are
+/// in no triangle. C's `addEndpoint` (`lib/neatogen/multispline.c:889`, `:897`)
+/// then aborts on `findMap`'s `assert(ip)`; the port looped in `mk_poly`. It
+/// now treats this as a failed multispline and falls back like other failures.
+#[test]
+fn cylinder_port_endpoint_does_not_hang_the_router() {
+    let src = "graph G { layout=neato; splines=true; a [shape=cylinder]; a:n -- b; c -- a:w; }";
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .arg("-Tsvg")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(src.as_bytes())
+        .unwrap();
+    // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    while child.try_wait().unwrap().is_none() {
+        if std::time::Instant::now() > deadline {
+            child.kill().unwrap();
+            panic!("the router must terminate");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let out = child.wait_with_output().unwrap();
+    let (svg, err) = (
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    assert!(out.status.success(), "{err}");
+    assert_eq!(svg.matches("class=\"edge\"").count(), 2, "{svg}");
+}
+
 // Fuzz case 004-neato-router-record-obstacle-height (issue #13), its repro.gv verbatim. C's
 // `makeObstacle` (lib/neatogen/neatosplines.c:447-449) builds a record's obstacle from the
 // root field box `fld->b`, not from `ND_height`, which carries record_init's +1pt. With the

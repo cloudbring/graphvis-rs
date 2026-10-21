@@ -87,8 +87,8 @@ fn add_graph_objs(
     };
     for n in nodes {
         if h.parent[n] == g && Ex::Node(n) != tex && Ex::Node(n) != hex && !h.is_clust[n] {
-            // makeObstacle can return NULL (star, cylinder); C then appends
-            // a NULL entry, which the port leaves out.
+            // makeObstacle returns NULL only for a shape it does not know;
+            // C then appends a NULL entry, which the port leaves out.
             if let Some(o) = make_obstacle(lg, n, pm) {
                 l.push(o);
             }
