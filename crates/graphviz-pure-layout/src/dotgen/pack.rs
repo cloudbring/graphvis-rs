@@ -73,7 +73,9 @@ impl<'a> Dot<'a> {
     /// root's subgraphs projected into it (`subGInduce`: `projectG` clones,
     /// `agcopyattr` of the original's values). Returns the `_cc_<i>` graphs.
     fn attach_cc_subgraphs(&mut self, graph: &Graph, ccs: &[CComp]) -> Vec<G> {
-        // A new subgraph of the root takes the root dictionary's defaults.
+        // A new subgraph of the root takes the root dictionary's defaults. A
+        // parsed graph always has dictionaries; a graph built without them has
+        // no declared defaults, so its own values stand in.
         let defaults: graphviz_pure_core::AttrMap = match graph.dicts.first() {
             Some(dict) => dict
                 .graph
@@ -82,15 +84,24 @@ impl<'a> Dot<'a> {
                 .collect(),
             None => graph.graph_attrs.clone(),
         };
-        let mut out = Vec::with_capacity(ccs.len());
+        // Induced edges (`graphviz_node_induce(out, NULL)`), in one pass over the root.
+        let mut comp_of = vec![None; self.nodes.len()];
         for (i, cc) in ccs.iter().enumerate() {
+            for &n in &cc.nodes {
+                comp_of[n] = Some(i);
+            }
+        }
+        let mut comp_edges = vec![std::collections::BTreeSet::new(); ccs.len()];
+        for &e in &self.graphs[0].edges {
+            if let Some(c) = comp_of[self.edges[e].tail]
+                && comp_of[self.edges[e].head] == Some(c)
+            {
+                comp_edges[c].insert(e);
+            }
+        }
+        let mut out = Vec::with_capacity(ccs.len());
+        for ((i, cc), edges) in ccs.iter().enumerate().zip(comp_edges) {
             let set: std::collections::BTreeSet<N> = cc.nodes.iter().copied().collect();
-            let edges = self.graphs[0]
-                .edges
-                .iter()
-                .copied()
-                .filter(|&e| set.contains(&self.edges[e].tail) && set.contains(&self.edges[e].head))
-                .collect();
             let g = self.graphs.len();
             self.graphs.push(GraphInfo {
                 name: format!("_cc_{i}"),
@@ -470,6 +481,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         let ccsubs = d.attach_cc_subgraphs(graph, &ccs);
         d.dot_layout()?;
         if !d.aborted {
+            let ccsubs: std::collections::BTreeSet<G> = ccsubs.into_iter().collect();
             d.graphs[0].subgs.retain(|s| !ccsubs.contains(s));
         }
         return Ok(());
