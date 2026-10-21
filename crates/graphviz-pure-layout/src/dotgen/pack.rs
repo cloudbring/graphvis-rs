@@ -84,24 +84,17 @@ impl<'a> Dot<'a> {
                 .collect(),
             None => graph.graph_attrs.clone(),
         };
-        // Induced edges (`graphviz_node_induce(out, NULL)`), in one pass over the root.
-        let mut comp_of = vec![None; self.nodes.len()];
-        for (i, cc) in ccs.iter().enumerate() {
-            for &n in &cc.nodes {
-                comp_of[n] = Some(i);
-            }
-        }
-        let mut comp_edges = vec![std::collections::BTreeSet::new(); ccs.len()];
-        for &e in &self.graphs[0].edges {
-            if let Some(c) = comp_of[self.edges[e].tail]
-                && comp_of[self.edges[e].head] == Some(c)
-            {
-                comp_edges[c].insert(e);
-            }
-        }
         let mut out = Vec::with_capacity(ccs.len());
-        for ((i, cc), edges) in ccs.iter().enumerate().zip(comp_edges) {
+        for (i, cc) in ccs.iter().enumerate() {
             let set: std::collections::BTreeSet<N> = cc.nodes.iter().copied().collect();
+            // Induced edges (`graphviz_node_induce(out, NULL)`). Components can share a
+            // node of two non-nested clusters, so membership is tested per component.
+            let edges = self.graphs[0]
+                .edges
+                .iter()
+                .copied()
+                .filter(|&e| set.contains(&self.edges[e].tail) && set.contains(&self.edges[e].head))
+                .collect();
             let g = self.graphs.len();
             self.graphs.push(GraphInfo {
                 name: format!("_cc_{i}"),
