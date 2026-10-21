@@ -327,6 +327,8 @@ jobs:
           git -C $app fetch -q --depth 1 https://github.com/ScoopInstaller/Scoop.git $env:SCOOP_COMMIT
           git -C $app checkout -q FETCH_HEAD
           if ((git -C $app rev-parse HEAD) -ne $env:SCOOP_COMMIT) { throw "Scoop is not at $env:SCOOP_COMMIT" }
+          # The directories the installer creates, which Scoop's commands expect to exist.
+          New-Item -ItemType Directory "$scoop\shims", "$scoop\buckets" | Out-Null
           "SCOOP=$scoop" >> $env:GITHUB_ENV
       - name: scoop install
         shell: pwsh
