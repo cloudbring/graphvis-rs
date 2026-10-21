@@ -280,6 +280,7 @@
     "circo/wild_wild_graphs_b278_ab7732",
     "circo/wild_wild_graphs_b993_80226a",
     "circo/wild_wild_graphs_complex_edges_71191c",
+    "fdp/fuzz_cluster_port_sincos",
     "fdp/fuzz_noncomparable_clusters",
     "fdp/fuzz_voronoi_record",
     "fdp/fuzz_voronoi_shape",

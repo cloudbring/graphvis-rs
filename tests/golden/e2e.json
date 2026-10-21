@@ -2588,7 +2588,8 @@
     "main/fuzz_newrank_pack_sink": "462ec06563aa941f",
     "main/fuzz_lost_edge_label": "42e40ecd749f1088",
     "main/fuzz_subgraph_splines_root": "18ba622ad58bcf37",
-    "main/fuzz_xlabel_empty_label": "c28766bc580b1ab3"
+    "main/fuzz_xlabel_empty_label": "c28766bc580b1ab3",
+    "fdp/fuzz_cluster_port_sincos": "fe89d28575e85739"
   },
   "unstable": [
     "fdp/wild_gv16_graphs_badvoro_2e8cb8",

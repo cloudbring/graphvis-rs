@@ -2589,7 +2589,8 @@
     "twopi/wild_gv16_undirected_ngk10_4_793340": "e088cfb2115f6ce5",
     "twopi/wild_wild_graphs_b278_ab7732": "eb1e58522b006c0a",
     "twopi/wild_wild_graphs_b993_80226a": "92e0e5dabf388832",
-    "twopi/wild_wild_graphs_complex_edges_71191c": "15c664bc0ce8d8c6"
+    "twopi/wild_wild_graphs_complex_edges_71191c": "15c664bc0ce8d8c6",
+    "fdp/fuzz_cluster_port_sincos": "cc2e610be9ed917d"
   },
   "unstable": [
     "fdp/wild_gv16_infosrc_plugins_1a797f",

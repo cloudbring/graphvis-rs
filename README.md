@@ -25,14 +25,14 @@ Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fa
 
 | Check | macOS on Apple Silicon (Apple libm, as C uses) | Linux, Windows, Intel Macs and WASM |
 | :--- | :---: | :---: |
-| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (12 inputs skipped because C's own output changes between runs) | 2,589 / 2,589 | 2,470 / 2,589 |
+| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (12 inputs skipped because C's own output changes between runs) | 2,590 / 2,590 | 2,470 / 2,590 |
 | Layout geometry, main corpus (565 files: wild graphs, upstream fixtures, fuzz reproducers) | 565 / 565 exact | 564 / 565 |
-| Per-engine corpora, exact | neato 442/442, sfdp 297/297, circo 280/280, fdp 386/386, osage 180/180, patchwork 141/141, twopi 282/289 | see `tests/golden/*.portable.json` |
+| Per-engine corpora, exact | neato 442/442, sfdp 297/297, circo 281/281, fdp 388/388, osage 180/180, patchwork 141/141, twopi 282/289 | see `tests/golden/*.portable.json` |
 | Renderers given C's layout (`gv-diff render`, 547 layouts, 7 formats) | svg, xdot, dot, json, json0 all identical; plain and plain-ext 535/537 | same |
 | C's own test graphs (`graphs/`, `tests/graphs/`, `tests/regression_tests/`), dot with base, LR, ortho, concentrate and newrank variants | 379 / 379 per variant | not measured |
 | Differential fuzzing (6,000 random graphs, all engines, final round) | 98.8% identical | not measured |
 
-- **Linux and WASM** use a portable math library. Apple's `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit (see `docs/porting/libm.md`). Linux on aarch64 and x86_64 and the WASM build give exactly the same output as each other. Run C with the same portable math functions (`scripts/dot-portable-libm.sh`) and the Linux and WASM builds match it on 2,590 of 2,590 inputs, so every one of those differences is the math library. For comparison, C Graphviz built on Linux matches C on macOS on only 2,005 of 2,586.
+- **Linux and WASM** use a portable math library. Apple's `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit (see `docs/porting/libm.md`). Linux on aarch64 and x86_64 and the WASM build give exactly the same output as each other. Run C with the same portable math functions (`scripts/dot-portable-libm.sh`) and the Linux and WASM builds match it on 2,591 of 2,591 inputs, so every one of those differences is the math library. For comparison, C Graphviz built on Linux matches C on macOS on only 2,005 of 2,586.
 - **plain/plain-ext:** in two Latin-1 files C prints an empty label where the port prints the text, because C reads the label from freed memory (`lib/common/output.c`); the same C bug makes 10 other references unstable.
 - **twopi:** the 7 inexact files are a floating-point tie in edge routing that C itself breaks differently from run to run.
 - **Fuzzing:** the remaining differences are documented in `docs/porting/fuzzing.md`. Most are C nondeterminism (results that depend on memory addresses) and C crashes.
