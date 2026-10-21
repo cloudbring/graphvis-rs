@@ -433,7 +433,8 @@ struct GInfo {
 type PointSet = HashSet<(i64, i64)>;
 
 /// Not in C: the most cells genBox/genPoly may fill when computeStep saturated (issue #174).
-/// C finishes about this many in under a second.
+/// C takes a few seconds for this many, and the cell set uses about 0.5 GB; C still finishes
+/// up to roughly 1e8 cells (30 s), where the port now warns instead.
 const MAX_CELLS: f64 = (1u64 << 24) as f64;
 
 /// Not in C. With a huge component (height="1e30", quantum="1e40") `l1` in computeStep
@@ -446,6 +447,8 @@ struct Budget(Option<f64>);
 
 impl Budget {
     fn for_step(step: i32) -> Self {
+        // A NaN `l1` (an `inf - inf` box) gives step 1 and no budget; no input is known to
+        // reach it.
         Self((step == i32::MAX).then_some(MAX_CELLS))
     }
 
@@ -735,16 +738,18 @@ fn fits(
     if info
         .cells
         .iter()
-        // Cells of a node pinned near 1e30 saturate to i64::MAX; wrap as C's int sum does
-        // (and as the release build already did) rather than panic.
+        // Not in C: C's cells are doubles and it hangs before this point. Cells of a node
+        // pinned near 1e30 saturate to i64::MAX, so wrap (as the release build did) rather
+        // than panic.
         .any(|&(cx, cy)| ps.contains(&(cx.wrapping_add(x), cy.wrapping_add(y))))
     {
         return None;
     }
     let ll = Point::new(bbs[info.index].ll.x.round(), bbs[info.index].ll.y.round());
     let place = Point::new(
-        (i64::from(step) * x) as f64 - ll.x,
-        (i64::from(step) * y) as f64 - ll.y,
+        // `step * x` is int * int in C and wraps once the step is large.
+        f64::from(step.wrapping_mul(x as i32)) - ll.x,
+        f64::from(step.wrapping_mul(y as i32)) - ll.y,
     );
     for &(cx, cy) in &info.cells {
         ps.insert((cx.wrapping_add(x), cy.wrapping_add(y)));

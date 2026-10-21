@@ -1020,6 +1020,11 @@ fn oversized_component_does_not_hang_the_packer() {
         ),
         ("graph { layout=fdp; a [height=\"1e300\"]; b }", warning),
         ("graph { layout=fdp; a [pos=\"1e30,1e30!\"]; b; c }", ""),
+        // A saturated step within the budget packs as C does.
+        (
+            "graph { layout=neato; pack=true; a [pos=\"1e9,1e9!\"]; b }",
+            "",
+        ),
     ];
     for (src, expected) in cases {
         let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
@@ -1052,6 +1057,37 @@ fn oversized_component_does_not_hang_the_packer() {
         assert!(out.status.success(), "{src}: {err}");
         assert_eq!(err, expected, "{src}");
         assert!(svg.contains("</svg>"), "{src}: {svg}");
+    }
+}
+
+/// Issue #174: C's `fits` (`lib/pack/pack.c:437`) computes `step * x` in int, which wraps
+/// once the step is large. With a saturated step (a 1e11-inch box) or a huge `pack` margin,
+/// C places `b` near the origin; the expected output is C 16.1.0's `-Tplain`.
+#[test]
+fn large_pack_step_wraps_placement_like_c() {
+    let cases = [
+        (
+            "graph { layout=fdp; node[shape=box fixedsize=true]; \
+             a [width=\"1e11\" height=\"1e11\"]; b }",
+            "graph 1 1e+11 1e+11
+node a 5e+10 5e+10 1e+11 1e+11 a solid box black lightgrey
+node b 0.375 0.27777 0.75 0.5 b solid box black lightgrey
+stop
+",
+        ),
+        (
+            "graph { layout=neato; pack=2000000000; a; b }",
+            "graph 1 4.5436e+07 1.2312e+07
+node a 4.5436e+07 1.2312e+07 0.75 0.5 a solid ellipse black lightgrey
+node b 0.375 0.25 0.75 0.5 b solid ellipse black lightgrey
+stop
+",
+        ),
+    ];
+    for (src, expected) in cases {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(ok && err.is_empty(), "{src}: {err}");
+        assert_eq!(out, expected, "{src}");
     }
 }
 
