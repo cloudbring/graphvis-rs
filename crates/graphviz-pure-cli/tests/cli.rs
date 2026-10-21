@@ -616,3 +616,36 @@ fn backslash_crlf_in_quoted_string_is_kept() {
     assert!(ok, "{err}");
     assert!(out.contains("label=\"x\\\r\ny\""), "{out}");
 }
+
+/// Fuzz case 019-neato-polyline-compass-port-endpoint (issue #28), minimised to fixed
+/// positions. The head port `10:n` lies on the node boundary, so `spline_edges_` sends the
+/// edge to the GTS router (`makeMultiSpline`, `lib/neatogen/multispline.c`). The two
+/// stacked octagon obstacles are mirror images, so the shortest triangle path from the
+/// head can pass either side of the `9`-bottom/`10`-top diagonal at an equal length.
+///
+/// Expected (C 16.1.0): in `triPath` both head edges have exactly the same length
+/// (20.005238055389295, from triangle centres summed in GTS's vertex order by
+/// `triCenter`, `multispline.c:391`), the first inserted (left) one is popped first and
+/// the guiding polygon is the left sleeve. Its bends are not corners next to the end
+/// points, so `tweakEnd` (`multispline.c:658`) leaves the head on the node centre:
+/// `e,29.16,36.482 29.126,71.526 ...`.
+///
+/// Actual (port): the port's constrained Delaunay triangulation has the same triangles but
+/// a different vertex rotation per face (GTS's `gts_triangle_vertices` order follows its
+/// incremental construction behind `tri`/`mkSurface`, `lib/neatogen/delaunay.c:140,454`),
+/// so the centres differ by an ulp, the right head edge is 1 ulp shorter and the path
+/// takes the right sleeve. Its last bend is the obstacle's top corner, so `tweakEnd` moves
+/// the head 0.1pt right: `e,29.26,36.483 29.026,71.859 ...`.
+#[test]
+#[ignore = "issue #28: triangle-path tie decided by GTS's face vertex order, which the port's CDT does not reproduce"]
+fn neato_polyline_compass_port_routes_like_c() {
+    let src = "digraph G { splines=\"polyline\"; \"10\" [width=0.81, pos=\"100,18\"]; \"9\" [pos=\"100,90\"]; \"9\" -> \"10\":\"n\"; }";
+    let (out, err, ok) = run(&["-Kneato", "-n", "-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "pos=\"e,29.16,36.482 29.126,71.526 29.134,63.677 29.142,54.763 29.149,47.889\""
+        ),
+        "{out}"
+    );
+}
