@@ -143,11 +143,11 @@ impl Dot<'_> {
         }
     }
 
-    pub fn class2(&mut self, g: G) {
+    pub fn class2(&mut self, g: G) -> Result<(), String> {
         self.graphs[g].nlist = None;
         self.mark_clusters(g);
         for c in self.graphs[g].clust.clone() {
-            self.build_skeleton(g, c);
+            self.build_skeleton(g, c)?;
         }
         for n in self.nodes_of(g) {
             for e in self.out_edges(g, n) {
@@ -273,6 +273,7 @@ impl Dot<'_> {
             let nl = self.graphs[g].nlist;
             self.graphs[g].comp = vec![nl];
         }
+        Ok(())
     }
 
     /// `ports_eq` (position.c)

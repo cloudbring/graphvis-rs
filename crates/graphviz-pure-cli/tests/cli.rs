@@ -1114,3 +1114,52 @@ subgraph cluster_0 {
     assert_eq!(out.matches("height=0.75").count(), 3, "{out}");
     assert_eq!(out.matches("width=0.5").count(), 3, "{out}");
 }
+
+// Fuzz case 001-dot-cluster-rank-max-build-skeleton-panic (issue #10), without its `pack="8"`
+// line. Node n235 of cluster_1 is also in a top-level rank=max set; ranking leaves n102 of
+// cluster4 on rank 2 while cluster4 spans rank 1 only. C's build_skeleton
+// (lib/dotgen/cluster.c:365-366) reads GD_rankleader(subg)[ND_rank(v)], gets NULL and crashes
+// (SIGSEGV, exit 139, no output) after printing mark_clusters' "already in a rankset"
+// warning, so only that line can be compared. The port used to panic on the same lookup
+// ("called `Option::unwrap()` on a `None` value", exit 101); it now fails the layout with an
+// error. The case as generated, with `pack="8"`, is
+// `pack_single_component_cluster_node_in_rank_max_set_lays_out_like_c` (issue #19).
+const ISSUE10_GRAPH: &str = "strict digraph \"G\" {
+\"n148\";
+subgraph \"cluster_1\" {
+\"n165\";
+\"n181\" [];
+\"n235\";
+subgraph \"cluster4\" {
+\"n102\" [];
+\"n225\" [];
+}
+}
+{
+rank=max;
+\"n235\";
+\"n148\";
+}
+{\"n15\" \"n181\" \"n205\"} -> \"n102\";
+\"n148\" -> \"n164\";
+\"n164\" -> \"n165\";
+}
+";
+
+#[test]
+fn cluster_node_in_rank_max_set_does_not_panic_build_skeleton() {
+    for fmt in ["-Tsvg", "-Tdot"] {
+        let (_, err, ok) = run(&["-Kdot", fmt], ISSUE10_GRAPH);
+        assert!(
+            !ok,
+            "{fmt}: C crashes here, the port reports a layout error"
+        );
+        assert_eq!(
+            err,
+            "Warning: n235 was already in a rankset, deleted from cluster G\n\
+             Error: <stdin>: Layout computation error in dot: build_skeleton: no rank leader \
+             for rank 2 of node n102 in cluster cluster4\n",
+            "{fmt}"
+        );
+    }
+}

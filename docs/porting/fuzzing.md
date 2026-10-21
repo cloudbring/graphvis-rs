@@ -235,6 +235,14 @@ dot
   `010-dot-pack-single-component-ignores-cc-subgraph` (issue #19); its tests are
   `pack_single_component_*` in `crates/graphviz-pure-cli/tests/cli.rs`. `dot_mincross`
   now prints C's "removing empty cluster" warning.
+* A cluster node that is also in a top-level `rank=max` set can leave a node of a
+  sub-cluster on a rank outside that cluster's ranks. C's `build_skeleton`
+  (`lib/dotgen/cluster.c:365-366`) then dereferences a NULL rank leader and crashes; the
+  port fails the layout with a `build_skeleton: no rank leader` error instead of
+  panicking. This was open case `001-dot-cluster-rank-max-build-skeleton-panic` (issue #10,
+  seed 24180). As generated, with `pack="8"`, it matches C through the `_cc_<i>` fix
+  above (`pack_single_component_cluster_node_in_rank_max_set_lays_out_like_c`); without
+  `pack` C itself segfaults (`cluster_node_in_rank_max_set_does_not_panic_build_skeleton`).
 * In the pack branch, clusters are drawn from the root's `GD_clust` as `copyClusterInfo`
   builds it: in component order, and once per component that kept the cluster, so a
   cluster sharing a node with a non-nested cluster is drawn twice. The renderer used to
@@ -342,7 +350,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 
 | Issue | Severity | Fuzz cases | Status |
 |---|---|---:|---|
-| [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
 | [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
 | [`023-neato-circuit-kk-agseq-index-crash`](../../tests/fuzz-open/023-neato-circuit-kk-agseq-index-crash) | high | 1 | upstream C, wontfix |

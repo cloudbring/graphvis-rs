@@ -263,7 +263,7 @@ impl Dot<'_> {
 
     /// `expand_cluster`: install the cluster contents in place of its skeleton.
     pub fn expand_cluster(&mut self, subg: G) -> Result<(), String> {
-        self.class2(subg);
+        self.class2(subg)?;
         let nl = self.graphs[subg].nlist;
         self.graphs[subg].comp = vec![nl];
         self.allocate_ranks(subg);
@@ -332,7 +332,13 @@ impl Dot<'_> {
         }
     }
 
-    pub fn build_skeleton(&mut self, g: G, subg: G) {
+    /// `build_skeleton` (cluster.c). C indexes `GD_rankleader(subg)[ND_rank(v)]` for every
+    /// node of `subg` and dereferences the result; a node whose rank lies outside the
+    /// cluster's `minrank..=maxrank` has no leader and C crashes on the NULL pointer (issue
+    /// #10: a cluster node also in a top-level `rank=max` set, without `pack`). It also reads
+    /// the leader's first out-edge, which the maxrank leader lacks. The port fails the layout
+    /// in both cases instead of panicking.
+    pub fn build_skeleton(&mut self, g: G, subg: G) -> Result<(), String> {
         let (minr, maxr) = (self.graphs[subg].minrank, self.graphs[subg].maxrank);
         self.graphs[subg].rankleader = vec![None; (maxr + 2).max(0) as usize];
         let mut prev: Option<N> = None;
@@ -349,7 +355,16 @@ impl Dot<'_> {
             prev = Some(v);
         }
         for v in self.nodes_of(subg) {
-            let rl = self.graphs[subg].rankleader[self.nodes[v].rank as usize].unwrap();
+            let rank = self.nodes[v].rank;
+            let Some(rl) = usize::try_from(rank)
+                .ok()
+                .and_then(|r| self.graphs[subg].rankleader.get(r).copied().flatten())
+            else {
+                return Err(format!(
+                    "build_skeleton: no rank leader for rank {rank} of node {} in cluster {}",
+                    self.nodes[v].name, self.graphs[subg].name
+                ));
+            };
             self.nodes[rl].uf_size += 1;
             for e in self.out_edges(subg, v) {
                 let (tr, hr) = (
@@ -358,7 +373,14 @@ impl Dot<'_> {
                 );
                 let mut r = tr;
                 while r < hr {
-                    let oe = self.nodes[rl].out[0];
+                    // C reads `ND_out(rl).list[0]`, NULL for the maxrank leader.
+                    let Some(&oe) = self.nodes[rl].out.first() else {
+                        return Err(format!(
+                            "build_skeleton: no skeleton edge below rank {rank} of node {} in \
+                             cluster {}",
+                            self.nodes[v].name, self.graphs[subg].name
+                        ));
+                    };
                     self.edges[oe].count = short(self.edges[oe].count + 1);
                     r += 1;
                 }
@@ -370,6 +392,7 @@ impl Dot<'_> {
                 self.nodes[rl].uf_size -= 1;
             }
         }
+        Ok(())
     }
 
     pub fn install_cluster(
