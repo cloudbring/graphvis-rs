@@ -843,12 +843,15 @@ pub fn update_bb_bz(bb: &mut BoundingBox, cp: &[Point; 4]) {
     if !out {
         return;
     }
-    // C has no finiteness test: a non-finite control point stays non-finite in every half
-    // `Bezier` splits off, so `check_control_points` never accepts one and C recurses
-    // until its stack overflows (#173: osage gives a repeated cluster a NaN box, and its
-    // edges inherit it). Take such a segment as refined instead.
-    let finite = cp.iter().all(|p| p.x.is_finite() && p.y.is_finite());
-    if !finite || check_control_points(cp) {
+    // C has no finiteness test. Every half `Bezier` splits off keeps the curve's midpoint,
+    // which is non-finite when any control point is, so `check_control_points` never
+    // accepts such a segment: C either stops on a half that is not `out`, leaving `bb` as
+    // it was, or recurses until its stack overflows (#173: osage gives a repeated cluster a
+    // NaN box, and its edges inherit it). Leave `bb` as it was.
+    if !cp.iter().all(|p| p.x.is_finite() && p.y.is_finite()) {
+        return;
+    }
+    if check_control_points(cp) {
         for p in cp {
             if p.x > bb.ur.x {
                 bb.ur.x = p.x;
@@ -1427,20 +1430,29 @@ pub fn edge_midpoint(et: EdgeType, spl: &[Bezier]) -> Point {
 mod tests {
     use super::*;
 
-    /// #173: a NaN control point outside `bb` used to make `update_bb_bz` split forever.
+    /// #173: C splits a segment with a non-finite control point until it stops on a half
+    /// inside `bb` (leaving `bb` as it was) or overflows its stack; the port returns.
     #[test]
-    fn update_bb_bz_takes_a_non_finite_segment_as_refined() {
-        let mut bb = BoundingBox::new(0.0, 0.0, 18.0, 18.0);
-        update_bb_bz(&mut bb, &[Point::new(f64::NAN, 20.0); 4]);
-        assert_eq!(bb, BoundingBox::new(0.0, 0.0, 18.0, 20.0));
-        let mut bb = BoundingBox::new(0.0, 0.0, 18.0, 18.0);
-        let cp = [
-            Point::new(0.0, 0.0),
-            Point::new(5.0, 30.0),
-            Point::new(10.0, -30.0),
-            Point::new(f64::INFINITY, 0.0),
-        ];
-        update_bb_bz(&mut bb, &cp);
-        assert_eq!(bb.ur.x, f64::INFINITY);
+    fn update_bb_bz_leaves_bb_for_a_non_finite_segment() {
+        let bb0 = BoundingBox::new(0.0, 0.0, 18.0, 18.0);
+        for cp in [
+            [Point::new(f64::NAN, 20.0); 4],
+            [
+                Point::new(0.0, 0.0),
+                Point::new(f64::NAN, f64::NAN),
+                Point::new(100.0, 0.0),
+                Point::new(0.0, 0.0),
+            ],
+            [
+                Point::new(0.0, 0.0),
+                Point::new(5.0, 30.0),
+                Point::new(10.0, -30.0),
+                Point::new(f64::INFINITY, 0.0),
+            ],
+        ] {
+            let mut bb = bb0;
+            update_bb_bz(&mut bb, &cp);
+            assert_eq!(bb, bb0, "{cp:?}");
+        }
     }
 }

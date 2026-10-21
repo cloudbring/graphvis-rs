@@ -1527,6 +1527,8 @@ fn osage_repeated_cluster_does_not_overflow_update_bb_bz() {
         );
         assert!(ok, "{fmt}: {err}");
         if fmt == "-Tdot" {
+            // The edges leave the root's 18x18 empty-graph box as it was.
+            assert!(out.contains("bb=\"0,0,18,18\""), "{out}");
             assert!(out.contains("j1 -> o1\t[pos="), "{out}");
         }
     }
