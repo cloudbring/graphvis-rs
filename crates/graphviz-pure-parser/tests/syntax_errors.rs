@@ -246,6 +246,15 @@ fn line_directives_renumber_lines() {
         "digraph G {\n# 2147483647\n\n a -> ;\n}\n",
         "syntax error in line -2147483648 near ';'",
     );
+    // a negative overflow saturates to INT64_MIN, whose low 32 bits are 0: ignored
+    check(
+        "digraph G {\n# -9223372036854775808\n a -> ;\n}\n",
+        "syntax error in line 3 near ';'",
+    );
+    check(
+        "digraph G {\n# -99999999999999999999\n a -> ;\n}\n",
+        "syntax error in line 3 near ';'",
+    );
     // `# N "file"` also renames the input
     let (_, err) = parse_dot_all_partial(
         "digraph G {\n# 100 \"other.gv\"\n a -> ;\n}\n",

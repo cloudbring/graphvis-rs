@@ -224,11 +224,18 @@ impl<'a> Lexer<'a> {
         if n_digits == 0 {
             return;
         }
-        let magnitude = digits[..n_digits].bytes().fold(0i64, |acc, d| {
-            acc.saturating_mul(10).saturating_add(i64::from(d - b'0'))
+        // `%d` into an `int`: the conversion saturates at 64 bits (to INT64_MIN when
+        // negative), the store keeps the low 32
+        let value = digits[..n_digits].bytes().fold(0i64, |acc, d| {
+            let d = i64::from(d - b'0');
+            let acc = acc.saturating_mul(10);
+            if neg {
+                acc.saturating_sub(d)
+            } else {
+                acc.saturating_add(d)
+            }
         });
-        // `%d` into an `int`: the conversion saturates at 64 bits, the store keeps the low 32
-        let lineno = if neg { -magnitude } else { magnitude } as i32;
+        let lineno = value as i32;
         // ignore if line number was out of range
         if lineno <= 0 {
             return;
