@@ -163,6 +163,11 @@ dot
 * In the pack branch, edges are mapped only when a component routed splines.
 * A pack component is not the root for `is_a_cluster`, so newrank ignores its top-level
   sink/source sets.
+* A pack component whose layout fails (`install_in_rank`) still hands its node and edge
+  records to the root, so the abandoned drawing has C's node sizes; components are named
+  `_cc_<i>` in messages, and `mark_clusters` prints C's "already in a rankset" warning.
+  This was open case `014-dot-pack-failed-component-not-absorbed`; its repro is kept in
+  `crates/graphviz-pure-cli/tests/cli.rs` (`failed_pack_component_keeps_its_node_sizes`).
 
 neato family
 * `resolvePorts` drops `tailclip=false` on `_` ports.
@@ -246,7 +251,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`012-dot-flat-adj-labelfloat`](../../tests/fuzz-open/012-dot-flat-adj-labelfloat) | medium | 2 | port |
 | [`013-dot-pack-component-missing-attr-dicts`](../../tests/fuzz-open/013-dot-pack-component-missing-attr-dicts) | medium | 1 | port |
-| [`014-dot-pack-failed-component-not-absorbed`](../../tests/fuzz-open/014-dot-pack-failed-component-not-absorbed) | medium | 1 | port |
 | [`015-dot-pack-unplaced-edge-label-shifted-off-page`](../../tests/fuzz-open/015-dot-pack-unplaced-edge-label-shifted-off-page) | low | 6 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`017-dot-pack-curved-edge-subpoint`](../../tests/fuzz-open/017-dot-pack-curved-edge-subpoint) | low | 1 | port |

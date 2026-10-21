@@ -431,14 +431,19 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
             );
         }
         let mut c = Dot::new_component(&cg.graph, graph, d);
+        c.comp_index = ci;
         c.dot_layout()?;
+        // The component's nodes and edges are the root's objects in C, so what
+        // its layout wrote before failing (dot_init_node_edge's sizes, ...)
+        // stays visible to the root.
+        let comp = d.absorb(&c, &cg, ci, &clust_of_sub, &mut pcl, &mut nclust);
         if c.aborted {
             // doDot returns the component's failure before packing
             d.aborted = true;
             return Ok(());
         }
         any_splines |= c.splines_done;
-        comps.push(d.absorb(&c, &cg, ci, &clust_of_sub, &mut pcl, &mut nclust));
+        comps.push(comp);
     }
     if (1..=3).contains(&maxphase) {
         return Ok(());

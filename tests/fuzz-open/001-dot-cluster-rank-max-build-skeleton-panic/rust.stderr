@@ -1,5 +1,6 @@
+Warning: n235 was already in a rankset, deleted from cluster G
 
-thread 'main' panicked at crates/graphviz-pure-layout/src/dotgen/cluster.rs:328:80:
+thread 'main' panicked at crates/graphviz-pure-layout/src/dotgen/cluster.rs:352:80:
 called `Option::unwrap()` on a `None` value
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 exit status 101
