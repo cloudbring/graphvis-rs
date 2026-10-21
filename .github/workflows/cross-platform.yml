@@ -21,6 +21,9 @@ name: Cross-platform
 
 on:
   pull_request:
+  # The merge queue's required checks (see ci.yml).
+  merge_group:
+    types: [checks_requested]
   push:
     branches: ["master"]
   workflow_dispatch:

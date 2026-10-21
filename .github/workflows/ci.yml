@@ -2,6 +2,10 @@ name: CI
 
 on:
   pull_request:
+  # The merge queue tests each pull request merged onto master and the PRs ahead of it; its
+  # required checks only report if they run on this event too.
+  merge_group:
+    types: [checks_requested]
   push:
     branches: ["master", "opus5.5/**"]
 
