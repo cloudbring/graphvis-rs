@@ -50,10 +50,9 @@ Done once per channel by a maintainer. Nothing here needs a long-lived token in 
 
 - Organization settings → Authentication security → **Require two-factor authentication**
   (the only setting the API cannot change).
-- Install the **Blacksmith** GitHub app on the organization (app.blacksmith.sh) before CI jobs
-  move to Blacksmith runners. Release builds stay on GitHub-hosted runners: npm trusted
-  publishing rejects self-hosted runners, and GitHub-hosted builders are the documented basis
-  for SLSA Build Level 3.
+- CI and release builds run on GitHub-hosted runners, which are free for a public repository.
+  Releases must stay there: npm trusted publishing rejects self-hosted runners, and
+  GitHub-hosted builders are the documented basis for SLSA Build Level 3.
 - Already configured by script (see the transfer PR): Actions restricted to GitHub-owned
   actions plus `Swatinem/rust-cache` and `rust-lang/crates-io-auth-action`, full-SHA pinning
   required, read-only default workflow token, members cannot create repositories.

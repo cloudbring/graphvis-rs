@@ -13,6 +13,10 @@ name: Cross-platform
 # for the latest successful run on master and deploys that artifact, so neither repository holds
 # a credential for the other. The site's fidelity data, gallery outputs and C references are
 # committed, since they need the C oracle, which CI does not have.
+#
+# Jobs run on GitHub-hosted runners, which are free for a public repository. A tree that already
+# passed this workflow skips the platform renders and the comparison (scripts/ci-result-cache.sh),
+# and the site job takes the cross-platform results from the run that passed it.
 
 on:
   pull_request:
@@ -32,19 +36,40 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  lookup:
+    name: Earlier result for this tree
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read # list the marker artifacts of earlier runs
+    outputs:
+      hit: ${{ steps.lookup.outputs.hit }}
+      run_id: ${{ steps.lookup.outputs.run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
+        run: scripts/ci-result-cache.sh lookup cross-platform
+
   native:
     name: ${{ matrix.label }}
+    needs: lookup
+    if: needs.lookup.outputs.hit != 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { id: linux-x86_64, label: "Linux x86-64", runner: blacksmith-4vcpu-ubuntu-2404, cargo: "" }
-          - { id: linux-arm64, label: "Linux arm64", runner: blacksmith-4vcpu-ubuntu-2404-arm, cargo: "" }
-          - { id: windows-x86_64, label: "Windows x86-64", runner: blacksmith-8vcpu-windows-2025, cargo: "" }
+          - { id: linux-x86_64, label: "Linux x86-64", runner: ubuntu-24.04, cargo: "" }
+          - { id: linux-arm64, label: "Linux arm64", runner: ubuntu-24.04-arm, cargo: "" }
+          - { id: windows-x86_64, label: "Windows x86-64", runner: windows-2025, cargo: "" }
           # macOS defaults to Apple's libm (to match C on macOS); the feature selects the
           # portable profile the other platforms use.
-          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: blacksmith-6vcpu-macos-15, cargo: "--features graphviz-pure-core/portable-math" }
+          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: macos-15, cargo: "--features graphviz-pure-core/portable-math" }
     defaults:
       run:
         shell: bash
@@ -79,7 +104,9 @@ jobs:
 
   wasm:
     name: WebAssembly (Node.js)
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: lookup
+    if: needs.lookup.outputs.hit != 'true'
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -125,11 +152,11 @@ jobs:
 
   compare:
     name: Compare every platform's output
-    needs: [native, wasm]
+    needs: [lookup, native, wasm]
     # Runs when a platform job failed (a missing platform fails the comparison), not when the
-    # run was cancelled.
-    if: ${{ !cancelled() }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # run was cancelled or the tree already passed.
+    if: ${{ !cancelled() && needs.lookup.outputs.hit != 'true' }}
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -163,10 +190,14 @@ jobs:
 
   site:
     name: Build the documentation site
-    needs: compare
-    # A failed comparison is still published, so the page shows it; a cancelled run is not.
+    needs: [lookup, compare]
+    # A failed comparison is still published, so the page shows it; a cancelled run is not. It
+    # also runs when the tree already passed: the site deploy takes master's latest `site`.
     if: ${{ !cancelled() }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read # download the cross-platform results of the run that passed this tree
     env:
       # Served at the root of https://graphviz-pure.github.io/ (the graphviz-pure.github.io repo).
       SITE_BASE: /
@@ -212,10 +243,19 @@ jobs:
 
       # A failed comparison is still published: the page then shows the differences.
       - name: Use this run's cross-platform results
+        if: needs.lookup.outputs.hit != 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cross-platform-site
           path: site/public/cross-platform
+      - name: Use the cross-platform results of the run that passed this tree
+        if: needs.lookup.outputs.hit == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cross-platform-site
+          path: site/public/cross-platform
+          run-id: ${{ needs.lookup.outputs.run_id }}
+          github-token: ${{ github.token }}
 
       # Install without running any package's lifecycle scripts, check every package's registry
       # signature (and provenance, where published), and only then run the scripts.
@@ -257,3 +297,21 @@ jobs:
           path: site/dist
           retention-days: 30
 
+  # Records that this tree passed, so a later run of the same tree skips the renders.
+  record:
+    name: Record the result for this tree
+    needs: [compare, site]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: marker
+        run: |
+          echo "name=$(scripts/ci-result-cache.sh name cross-platform)" >> "$GITHUB_OUTPUT"
+          echo "$GITHUB_RUN_ID" > "$RUNNER_TEMP/passed"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.marker.outputs.name }}
+          path: ${{ runner.temp }}/passed
+          retention-days: 30

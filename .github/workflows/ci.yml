@@ -16,12 +16,33 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
 
-# Jobs run on Blacksmith runners (ephemeral microVMs, the same images as GitHub's); the release
-# workflow stays on GitHub-hosted runners (see .github/workflows/release.yml).
+# GitHub-hosted runners, which are free for a public repository. A tree that already passed this
+# workflow skips the build and test jobs (scripts/ci-result-cache.sh); a skipped required check
+# counts as passed.
 jobs:
+  lookup:
+    name: Earlier result for this tree
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read # list the marker artifacts of earlier runs
+    outputs:
+      hit: ${{ steps.lookup.outputs.hit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
+        run: scripts/ci-result-cache.sh lookup ci
+
   verify:
     name: Format, Clippy, Test & WASM Check
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    needs: lookup
+    if: needs.lookup.outputs.hit != 'true'
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -43,7 +64,9 @@ jobs:
 
   wasm-e2e:
     name: WASM end-to-end (Node)
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: lookup
+    if: needs.lookup.outputs.hit != 'true'
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -95,7 +118,8 @@ jobs:
 
   supply-chain:
     name: Supply chain (cargo-deny, zizmor)
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # Always runs: the advisory database changes even when the tree does not.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -129,7 +153,7 @@ jobs:
   pr-risk:
     name: PR risk report
     if: github.event_name == 'pull_request'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -143,3 +167,22 @@ jobs:
           else
             echo "The base branch has no scripts/pr-risk.py yet." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
+
+  # Records that this tree passed, so a later run of the same tree skips verify and wasm-e2e.
+  record:
+    name: Record the result for this tree
+    needs: [verify, wasm-e2e]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: marker
+        run: |
+          echo "name=$(scripts/ci-result-cache.sh name ci)" >> "$GITHUB_OUTPUT"
+          echo "$GITHUB_RUN_ID" > "$RUNNER_TEMP/passed"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.marker.outputs.name }}
+          path: ${{ runner.temp }}/passed
+          retention-days: 30
