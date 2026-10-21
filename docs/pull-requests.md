@@ -87,8 +87,10 @@ The bar is CONTRIBUTING's:
 
 If the change is right but incomplete, either ask once or, when "maintainers can push" is true,
 push the missing test or changelog line to the contributor's branch yourself. That is often
-faster for small changes from automated agents. Merge with a squash so the history keeps one
-reviewed commit.
+faster for small changes from automated agents. Then approve it and add it to the merge queue
+(`gh pr review N --approve && gh pr merge N`). The queue tests it on top of `master` and the pull
+requests ahead of it, and squashes it, so the history keeps one reviewed commit; nobody needs to
+update the branch first.
 
 ## 5. Dependabot
 
@@ -103,7 +105,9 @@ Dependabot's branches live in this repository, and only Dependabot can push to t
 - Actions must be pinned to a full SHA, and only selected actions are allowed. zizmor lints
   every workflow.
 - The default workflow token is read-only. Workflows cannot approve pull requests.
-- `master` accepts changes only through pull requests, with required checks and every review
-  thread resolved. Force pushes and deletion are blocked. Only maintainers can create `v*` tags.
+- `master` accepts changes only through the merge queue: a pull request needs a code owner's
+  approval given after its last push, the required checks, and every review thread resolved.
+  Nobody can bypass this, admins included. Force pushes and deletion are blocked. Only
+  maintainers can create `v*` tags.
 - `cargo deny` checks advisories, licences and sources. Secret scanning with push protection is
   on, and vulnerabilities are reported privately (SECURITY.md).

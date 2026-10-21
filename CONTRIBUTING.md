@@ -70,6 +70,9 @@ no C installation. Regenerating the C references does; see
 - **Maintainers** are [@cloudbring](https://github.com/cloudbring). Maintainers' CI runs start
   without approval, but their changes still go through pull requests with the same required
   checks; nobody pushes to `master` directly.
+- **Automated agents** working for the maintainer open pull requests as
+  [@slystation](https://github.com/slystation). It can push branches but is not a maintainer:
+  its pull requests need a maintainer's approval like anyone else's.
 - **Becoming a maintainer** is by invitation, after a track record of substantial merged pull
   requests that follow the C and prove it, and of helpful reviews or issue reports. The
   organisation requires two-factor authentication for everyone with access.
