@@ -491,18 +491,41 @@ impl Dot<'_> {
             }
         }
         match self.rankset_kind(ug) {
+            // `set_parent`'s `node_induce` can empty a cluster after the `is_empty`
+            // check (e.g. a pack `_cc_<i>` clone whose nodes the original cluster
+            // already holds), so `union_all` gives NULL and C's
+            // `union_one(NULL, rep)` returns NULL. The rep is NULL then too: the
+            // emptied cluster's subgraphs lost the same nodes, so none set one.
             SOURCERANK | MINRANK => {
-                let leader = self.union_all(ug).unwrap();
+                let leader = self.union_all(ug);
                 if let Some(c) = clust {
                     let mr = self.graphs[c].minrep;
-                    self.graphs[c].minrep = Some(self.union_one(leader, mr));
+                    self.graphs[c].minrep = match leader {
+                        Some(l) => Some(self.union_one(l, mr)),
+                        None => {
+                            debug_assert!(
+                                mr.is_none(),
+                                "union_one(NULL, rep) dereferences NULL in C"
+                            );
+                            mr
+                        }
+                    };
                 }
             }
             SINKRANK | MAXRANK => {
-                let leader = self.union_all(ug).unwrap();
+                let leader = self.union_all(ug);
                 if let Some(c) = clust {
                     let mr = self.graphs[c].maxrep;
-                    self.graphs[c].maxrep = Some(self.union_one(leader, mr));
+                    self.graphs[c].maxrep = match leader {
+                        Some(l) => Some(self.union_one(l, mr)),
+                        None => {
+                            debug_assert!(
+                                mr.is_none(),
+                                "union_one(NULL, rep) dereferences NULL in C"
+                            );
+                            mr
+                        }
+                    };
                 }
             }
             SAMERANK => {

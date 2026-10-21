@@ -219,6 +219,12 @@ dot
   root), so `make_flat_adj_edges`' stale symbols resolve to the same ids as without pack.
   This was open case `013-dot-pack-component-missing-attr-dicts` (seed 23917); its repro is
   in `crates/graphviz-pure-cli/tests/cli.rs` (`pack_component_keeps_root_attribute_dictionaries`).
+* With `pack` and one component (or a `ratio`), the root is laid out while the `_cc_<i>`
+  subgraphs `cccomps` made are still its children, as in C's `doDot`: they inherit the
+  root's `rank` and hold clones of the clusters. This was open case
+  `010-dot-pack-single-component-ignores-cc-subgraph` (issue #19); its tests are
+  `pack_single_component_*` in `crates/graphviz-pure-cli/tests/cli.rs`. `dot_mincross`
+  now prints C's "removing empty cluster" warning.
 
 neato family
 * `resolvePorts` drops `tailclip=false` on `_` ports.
@@ -303,7 +309,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
 | [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
 | [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
-| [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |

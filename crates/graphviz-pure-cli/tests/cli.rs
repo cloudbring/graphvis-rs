@@ -650,3 +650,143 @@ fn neato_polyline_compass_port_routes_like_c() {
         "{out}"
     );
 }
+
+// Fuzz case 010-dot-pack-single-component-ignores-cc-subgraph (issue #19). With pack set and a
+// single connected component, C's doDot (lib/dotgen/dotinit.c:466-475) lays out the root with
+// `dotLayout(g)` while the `_cc_0` subgraph made by `cccomps` is still a child of the root.
+// `_cc_0` inherits the root's `rank=max` and holds every node, so it is a rank set and a and b
+// share a rank (C: 134x44pt, side by side). The port used to lay out the plain root, where the
+// root's own `rank` is ignored (62x116pt, b below a).
+#[test]
+fn pack_single_component_lays_out_with_cc_subgraph() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G {\npack=true;\nrank=max;\na -> b;\n}\n",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"134pt\" height=\"44pt\""),
+        "{out}"
+    );
+    assert!(out.contains("cx=\"27\" cy=\"-18\""), "{out}");
+    assert!(out.contains("cx=\"99\" cy=\"-18\""), "{out}");
+}
+
+// Fuzz case 001-dot-cluster-rank-max-build-skeleton-panic (issue #10) as generated, with
+// `pack="8"`. Through the `_cc_0` subgraph of issue #19 C ranks the clusters so that
+// build_skeleton finds every rank leader; it exits 0 with the mark_clusters warning
+// (lib/dotgen/cluster.c:318) and this layout. The pack-less input crashes C.
+#[test]
+fn pack_single_component_cluster_node_in_rank_max_set_lays_out_like_c() {
+    let src = "strict digraph \"G\" {
+pack=\"8\";
+\"n148\";
+subgraph \"cluster_1\" {
+\"n165\";
+\"n181\" [];
+\"n235\";
+subgraph \"cluster4\" {
+\"n102\" [];
+\"n225\" [];
+}
+}
+{
+rank=max;
+\"n235\";
+\"n148\";
+}
+{\"n15\" \"n181\" \"n205\"} -> \"n102\";
+\"n148\" -> \"n164\";
+\"n164\" -> \"n165\";
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: n235 was already in a rankset, deleted from cluster G\n"
+    );
+    assert!(
+        out.contains("<svg width=\"418pt\" height=\"212pt\""),
+        "{out}"
+    );
+    assert!(
+        out.contains("points=\"79.35,-16 79.35,-68 234.35,-68 234.35,-16 79.35,-16\""),
+        "cluster4: {out}"
+    );
+    assert!(out.contains("cx=\"379.35\" cy=\"-114\""), "n235: {out}");
+}
+
+// Issue #19 under newrank. `dot2_rank`'s compile_samerank also walks `_cc_0`'s clone of
+// cluster_a; `set_parent` → `node_induce` empties the clone (cluster_a already holds a and
+// b), so dot_mincross prints "removing empty cluster" (lib/dotgen/mincross.c:346).
+#[test]
+fn pack_single_component_newrank_removes_empty_cluster_clone() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G { pack=true; newrank=true; subgraph cluster_a { a -> b; } b -> c; }\n",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: removing empty cluster\n");
+    assert!(
+        out.contains("<svg width=\"94pt\" height=\"204pt\""),
+        "{out}"
+    );
+}
+
+// As above with a root rank=max, which the emptied clone inherits: its union_all finds no
+// node, and C's `union_one(NULL, GD_maxrep(clust))` returns NULL (lib/dotgen/rank.c:615-621,
+// 684). The port unwrapped the missing leader and panicked. C: one rank, 222x76pt.
+#[test]
+fn pack_single_component_newrank_rank_max_empty_clone_does_not_panic() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G { pack=true; newrank=true; rank=max; subgraph cluster_a { a -> b; } b -> c; }\n",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: removing empty cluster\n");
+    assert!(
+        out.contains("<svg width=\"222pt\" height=\"76pt\""),
+        "{out}"
+    );
+    for cx in ["43", "115", "187"] {
+        assert!(out.contains(&format!("cx=\"{cx}\" cy=\"-34\"")), "{out}");
+    }
+}
+
+// The same empty-cluster rank set without pack: cluster_b's nodes are already in
+// cluster_a, so node_induce empties it before its rank=max is compiled (newrank).
+#[test]
+fn newrank_rank_max_cluster_emptied_by_node_induce_does_not_panic() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G { newrank=true; subgraph cluster_a { a -> b } \
+         subgraph cluster_b { rank=max; a; b } b -> c; }\n",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: removing empty cluster\n");
+    assert!(
+        out.contains("<svg width=\"94pt\" height=\"204pt\""),
+        "{out}"
+    );
+}
+
+// With a non-default ratio C's doDot lays out the root with dotLayout(g) even with several
+// components (lib/dotgen/dotinit.c:466-494), and the `_cc_<i>` subgraphs exist meanwhile.
+// Each inherits rank=max, so a, b, c and d share one rank (C: 216x34pt). Without pack they
+// would take two ranks.
+#[test]
+fn pack_ratio_several_components_lays_out_with_cc_subgraphs() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G { pack=true; ratio=fill; size=\"3,3\"; rank=max; a -> b; c -> d; }\n",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"216pt\" height=\"34pt\""),
+        "{out}"
+    );
+    for cx in ["27", "99", "171", "243"] {
+        assert!(out.contains(&format!("cx=\"{cx}\" cy=\"-18\"")), "{out}");
+    }
+}

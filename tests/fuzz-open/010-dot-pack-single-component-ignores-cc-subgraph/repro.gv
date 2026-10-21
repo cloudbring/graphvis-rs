@@ -1,5 +1,0 @@
-digraph G {
-pack=true;
-rank=max;
-a -> b;
-}
