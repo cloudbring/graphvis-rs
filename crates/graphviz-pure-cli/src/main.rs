@@ -5,7 +5,11 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-const VERSION: &str = "graphviz-pure - graphviz-pure version 0.1.0 (Rust port of Graphviz 16.1.0)";
+const VERSION: &str = concat!(
+    "graphviz-pure - graphviz-pure version ",
+    env!("CARGO_PKG_VERSION"),
+    " (Rust port of Graphviz 16.1.0)"
+);
 
 const USAGE: &str = " -V          - Print version and exit
  -v[n]       - Enable verbose mode (accepted, ignored)

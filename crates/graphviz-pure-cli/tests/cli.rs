@@ -81,7 +81,8 @@ fn multiple_input_files_are_each_rendered() {
 #[test]
 fn version_and_help_exit_successfully() {
     let (_, err, ok) = run(&["-V"], "");
-    assert!(ok && err.contains("version"));
+    let version = concat!("graphviz-pure version ", env!("CARGO_PKG_VERSION"), " ");
+    assert!(ok && err.contains(version), "{err}");
     let (out, _, ok) = run(&["-?"], "");
     assert!(ok && out.contains("Usage:"));
 }
