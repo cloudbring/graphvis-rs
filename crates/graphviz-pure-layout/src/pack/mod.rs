@@ -420,6 +420,15 @@ fn compute_step(bbs: &[BoundingBox], margin: u32) -> i32 {
     let d = b.mul_add(b, -(4.0 * a * c));
     let r = d.sqrt();
     let l1 = (-b + r) / (2.0 * a);
+    // Not in C. With a huge component (height="1e30", quantum="1e40") `l1` is far above
+    // INT_MAX, and C's `(int)l1` saturates on the reference platform: the step is then much
+    // too small, and genBox/genPoly fill ~1e22 cells per side, so C hangs (issue #174).
+    // Return 0 instead, which takes putGraphs' and polyRects' existing `stepSize <= 0`
+    // exit and leaves the components unpacked. NaN (a degenerate box) still truncates to 0.
+    if l1 >= 2_147_483_648.0 {
+        graphviz_pure_core::diag::agwarningf("components too large to pack; packing skipped\n");
+        return 0;
+    }
     let root = l1 as i32;
     if root == 0 { 1 } else { root }
 }
@@ -1114,4 +1123,21 @@ pub fn pack_rects(bbs: &mut [BoundingBox], pinfo: &PackInfo) -> bool {
         b.ur = add(b.ur, p);
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Issue #174: a step that does not fit in an int is refused, not saturated to
+    /// INT_MAX; ordinary boxes keep C's step.
+    #[test]
+    fn compute_step_refuses_a_step_above_int_max() {
+        let small = BoundingBox::new(0.0, 0.0, 54.0, 36.0);
+        assert_eq!(compute_step(&[small, small], 8), 6);
+        let huge = BoundingBox::new(0.0, 0.0, 54.0, 7.2e31);
+        assert_eq!(compute_step(&[huge, small], 8), 0);
+        let inf = BoundingBox::new(0.0, 0.0, 54.0, f64::INFINITY);
+        assert_eq!(compute_step(&[inf, small], 8), 0);
+    }
 }
