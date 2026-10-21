@@ -790,3 +790,43 @@ fn pack_ratio_several_components_lays_out_with_cc_subgraphs() {
         assert!(out.contains(&format!("cx=\"{cx}\" cy=\"-18\"")), "{out}");
     }
 }
+
+/// The `<title>`s of the cluster groups of an SVG, in drawing order.
+fn svg_cluster_titles(svg: &str) -> Vec<&str> {
+    svg.split("class=\"cluster\">\n<title>")
+        .skip(1)
+        .map(|s| &s[..s.find("</title>").unwrap()])
+        .collect()
+}
+
+// Issue #25 (fuzz case 016-dot-pack-cluster-list-from-subgraph-tree). With pack/packmode,
+// dot's `copyClusterInfo` (lib/dotgen/dotinit.c) rebuilds `GD_clust(root)` in component
+// order, appending a cluster once per component that kept it, and `emit_clusters`
+// (lib/common/emit.c) draws that list as it is. A node of two non-nested clusters puts
+// both clusters in two components, each of which keeps `cluster_0`, so C draws it twice;
+// components whose clusters are not in declaration order are drawn in component order.
+// The renderer used to rebuild the list from the subgraph tree (once each, declaration
+// order).
+#[test]
+fn packed_dot_draws_the_root_cluster_list_of_copy_cluster_info() {
+    let (out, _, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G {\npack=8;\nsubgraph cluster_0 { a }\nsubgraph cluster_1 { a }\n}\n",
+    );
+    assert!(ok);
+    assert_eq!(svg_cluster_titles(&out), ["cluster_0", "cluster_0"]);
+    assert_eq!(
+        out.matches("<g id=\"clust1\" class=\"cluster\">").count(),
+        2
+    );
+    let (out, _, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "graph G {\npackmode=\"node\";\nsubgraph cluster_0 { a }\nsubgraph cluster_3 { b }\n\
+         subgraph cluster_5 { c }\nx -- a;\nx -- c;\n}\n",
+    );
+    assert!(ok);
+    assert_eq!(
+        svg_cluster_titles(&out),
+        ["cluster_0", "cluster_5", "cluster_3"]
+    );
+}

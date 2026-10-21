@@ -562,6 +562,29 @@ impl<'g> Model<'g> {
                 );
             }
         }
+        // A layout that exported its `GD_clust` lists (dot): walk them as they are,
+        // in their order and with their repeats (`copyClusterInfo` in the pack branch).
+        let mut of_sub: Vec<Option<usize>> = vec![None; g.subgraphs.len()];
+        for (ci, c) in clusters.iter().enumerate() {
+            of_sub[c.sub] = Some(ci);
+        }
+        let listed = |attrs: &AttrMap| -> Option<Vec<usize>> {
+            let list = attrs.get(graphviz_pure_core::CLUSTER_LIST_KEY)?;
+            Some(
+                list.split_ascii_whitespace()
+                    .filter_map(|si| si.parse::<usize>().ok())
+                    .filter_map(|si| of_sub.get(si).copied().flatten())
+                    .collect(),
+            )
+        };
+        if let Some(list) = listed(&g.graph_attrs) {
+            root_clusters = list;
+        }
+        for c in &mut clusters {
+            if let Some(list) = listed(&g.subgraphs[c.sub].graph_attrs) {
+                c.children = list;
+            }
+        }
 
         let bb = g.bb;
         let label = graph_label_geometry_in(&g.name, &g.graph_attrs, true, flip, &env).map(|gl| {
