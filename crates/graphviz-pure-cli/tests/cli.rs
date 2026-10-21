@@ -149,3 +149,53 @@ n14;
         assert!(ok && !err.contains("panicked"), "{fmt}: {err}");
     }
 }
+
+// Fuzz case 004-neato-router-record-obstacle-height (issue #13), its repro.gv verbatim. C's
+// `makeObstacle` (lib/neatogen/neatosplines.c:447-449) builds a record's obstacle from the
+// root field box `fld->b`, not from `ND_height`, which carries record_init's +1pt. With the
+// taller box the port routed `a -- b` as a curve around the record instead of C's straight
+// line.
+#[test]
+fn neato_record_obstacle_uses_field_box() {
+    let src = "graph G {
+layout=neato;
+splines=true;
+a [pos=\"0,0!\"];
+b [pos=\"3,0!\"];
+r [shape=record, label=\"a|b\", pos=\"1.5,0.3!\"];
+a -- b;
+}
+";
+    let (out, err, ok) = run(&["-Kneato", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(r#"d="M54.36,-18C95.79,-18 174.02,-18 215.53,-18""#),
+        "{out}"
+    );
+}
+
+// The circo variant of issue #13 (repro-circo.gv). With C's record box the guiding polygon
+// does not triangulate, so `Pshortestpath` fails, genroute warns (multispline.c:703) and
+// the edge falls back to a straight line.
+#[test]
+fn circo_record_obstacle_falls_back_like_c() {
+    let src = "graph G {
+layout=circo;
+splines=spline;
+n7 [shape=record];
+n1 -- n7:n;
+n2;
+}
+";
+    let (out, err, ok) = run(&["-Kcirco", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(r#"d="M126.28,-22.32C89.29,-27.6 27,-36.5 27,-36.5""#),
+        "{out}"
+    );
+    assert_eq!(
+        err,
+        "lib/pathplan/shortest.c:193: destination point not in any triangle\n\
+         Warning: Could not create control points for multiple spline for edge (n1,n7)\n"
+    );
+}

@@ -170,6 +170,13 @@ neato family
   unplaced head and tail labels are not drawn; an empty registered cluster is drawn.
 * fdp's overlap removal sees each node's real shape (derived nodes share `ND_shape`;
   cluster nodes are boxes) and a record's field box.
+* The spline router's record obstacle is the field box `fld->b` too, not `ND_height` with
+  record_init's +1pt (`makeObstacle`), and genroute prints C's `Could not create control
+  points for multiple spline` warning. This was open case
+  `004-neato-router-record-obstacle-height` (issue #13; 18 of its 20 seeds now match, the
+  other two also need the star/cylinder-obstacle and multispline face-order fixes). Its
+  repros are kept in `crates/graphviz-pure-cli/tests/cli.rs`
+  (`neato_record_obstacle_uses_field_box`, `circo_record_obstacle_falls_back_like_c`).
 * patchwork places xlabels around the shape size `common_init_node` gives the node, not
   its patch.
 
@@ -230,7 +237,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 |---|---|---:|---|
 | [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
 | [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
-| [`004-neato-router-record-obstacle-height`](../../tests/fuzz-open/004-neato-router-record-obstacle-height) | medium | 20 | port |
 | [`005-xlabels-hilbert-key-signed-order`](../../tests/fuzz-open/005-xlabels-hilbert-key-signed-order) | medium | 16 | port |
 | [`006-fdp-cluster-port-sincos-fusion`](../../tests/fuzz-open/006-fdp-cluster-port-sincos-fusion) | medium | 12 | port |
 | [`007-dot-port-endpoint-attr-sym-id`](../../tests/fuzz-open/007-dot-port-endpoint-attr-sym-id) | medium | 11 | port |

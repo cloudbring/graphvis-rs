@@ -105,12 +105,17 @@ pub fn make_obstacle(g: &LGraph<'_>, n: usize, pmargin: &Expand) -> Option<Vec<P
         }
         InsideFn::Record | InsideFn::Epsf => {
             let (llx, lly, urx, ury) = if sh.inside == InsideFn::Record {
-                (
-                    -nd.width * 36.0,
-                    -nd.height * 36.0,
-                    nd.width * 36.0,
-                    nd.height * 36.0,
-                )
+                // C `makeObstacle` (neatosplines.c:447): `b = fld->b`, the
+                // root field box, which excludes record_init's +1pt height.
+                match sh.record_box {
+                    Some(b) => (b.ll.x, b.ll.y, b.ur.x, b.ur.y),
+                    None => (
+                        -nd.width * 36.0,
+                        -nd.height * 36.0,
+                        nd.width * 36.0,
+                        nd.height * 36.0,
+                    ),
+                }
             } else {
                 (-nd.lw, -nd.ht, nd.rw, nd.ht)
             };
