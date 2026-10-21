@@ -487,6 +487,13 @@ fn get_pen_color(attrs: &AttrMap) -> Option<&str> {
         .find(|s| !s.is_empty())
 }
 
+/// `lp->text` of a non-record label made by [`make_label`] from attribute value `raw`: the
+/// substituted, charset-converted text of a plain label, the source of an HTML label without
+/// its delimiters, or `"<TABLE>"` for an HTML table.
+pub fn label_text(l: &LabelGeometry, raw: &str) -> String {
+    label_l_text(l, raw, false)
+}
+
 /// `lp->text` of a made label, which a later label's `\L` expands to (`make_label`):
 /// the raw string for a record, the substituted text for plain text, the HTML source
 /// for HTML text and `<TABLE>` for a table (`make_html_label`).
@@ -581,6 +588,19 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     // bind_shape: a `shapefile` (except with epsf) makes the shape `custom`, a user shape
     // that copies `Shapes[0]` (box).
     let custom = shape_name != "epsf" && attrs.get("shapefile").is_some_and(|f| !f.is_empty());
+    // user_shape (shapes.c:3955-3962): a name outside the Shapes table becomes a copy of
+    // `box`, with a warning the first time the name is seen.
+    if !custom
+        && shape_name != "custom"
+        && shape_name != "epsf"
+        && ShapeKind::parse(shape_name) == ShapeKind::Box
+        && !matches!(shape_name, "box" | "rect" | "rectangle")
+        && graphviz_pure_core::diag::emit_once(&format!("\0shape\0{shape_name}"))
+    {
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "using box for unknown shape {shape_name}\n"
+        ));
+    }
     let shape = if custom {
         ShapeKind::Box
     } else {
@@ -1062,6 +1082,21 @@ fn poly_init(
         bb = Point::new(width, height);
         fixedshape = true;
     } else if mapbool(Some(fxd)) {
+        // check only label, as images we can scale to fit
+        if (width < label_dimen.x || height < label_dimen.y)
+            && graphviz_pure_core::diag::emit_once(&format!("\0fixedsize\0{}", node.name))
+        {
+            // shapes.c:2115-2118; agraphof(n) is the root graph
+            let g = if env.graph_name.is_empty() {
+                "%1"
+            } else {
+                env.graph_name
+            };
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "node '{}', graph '{g}' size too small for label\n",
+                node.name
+            ));
+        }
         bb = Point::new(width, height);
     } else {
         width = width.max(bb.x);
@@ -1679,7 +1714,8 @@ fn to_record_field(f: &Field) -> RecordField {
 }
 
 /// `parse_reclbl` on `label` for `record_init`, falling back to `\N` on a syntax error.
-fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
+/// The error is reported once per node (`node`), as C sizes each node once.
+fn parse_record_label(label: &str, html: bool, lr: bool, node: &str) -> Field {
     let src = if html {
         &label[1..label.len() - 1]
     } else {
@@ -1695,7 +1731,9 @@ fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
     if let Some(f) = p.parse(lr, true) {
         return f;
     }
-    graphviz_pure_core::diag::agerrorf(&format!("bad label format {src}\n"));
+    if graphviz_pure_core::diag::emit_once(&format!("\0reclbl\0{node}\0{label}")) {
+        graphviz_pure_core::diag::agerrorf(&format!("bad label format {src}\n"));
+    }
     let mut p = RecParser {
         src: b"\\N",
         pos: 0,
@@ -1715,7 +1753,7 @@ fn record_init(
     let attrs = &node.attrs;
     let flip = !env.realflip;
     let html = geom.label.html;
-    let mut info = parse_record_label(label, html, flip);
+    let mut info = parse_record_label(label, html, flip, &node.name);
     let (font_name, font_size) = (geom.label.font_name.clone(), geom.label.font_size);
     label_fields(&mut info, html, obj, &font_name, font_size, env.charset);
     size_reclbl(attrs, &mut info);
@@ -1778,7 +1816,7 @@ mod tests {
 
     #[test]
     fn record_port_overwrites_text_like_c() {
-        let mut f = parse_record_label("abc <p> def|x", false, true);
+        let mut f = parse_record_label("abc <p> def|x", false, true, "n");
         assert_eq!(f.flds[0].text.as_deref(), Some(""));
         assert_eq!(f.flds[0].id.as_deref(), Some(""));
         label_fields(
@@ -1794,9 +1832,9 @@ mod tests {
 
     #[test]
     fn record_hard_spaces() {
-        let f = parse_record_label("a\\ \\ b  c|d", false, true);
+        let f = parse_record_label("a\\ \\ b  c|d", false, true, "n");
         assert_eq!(f.flds[0].text.as_deref(), Some("a  b  c"));
-        let f = parse_record_label("", false, true);
+        let f = parse_record_label("", false, true, "n");
         assert_eq!(f.flds[0].text.as_deref(), Some(" "));
     }
 

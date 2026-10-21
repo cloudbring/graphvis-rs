@@ -1163,3 +1163,202 @@ fn cluster_node_in_rank_max_set_does_not_panic_build_skeleton() {
         );
     }
 }
+
+// Issue #30 (tests/fuzz-open/021-stderr-missing-warnings): C warnings the port left out.
+// Every expected string below is C Graphviz 16.1.0's stderr for the same input.
+
+/// stderr of `-Tsvg -K<engine>` for `src`, with the run's success.
+fn warnings(engine: &str, src: &str) -> (String, bool) {
+    let k = format!("-K{engine}");
+    let (_, err, ok) = run(&["-Tsvg", &k], src);
+    (err, ok)
+}
+
+/// The issue's reproducer, verbatim: an illegal HTML attribute, an unknown port and an edge
+/// label with no spline to place it on.
+#[test]
+fn issue30_reproducer_warnings() {
+    let src = "graph G {
+ splines=none
+ a [xlabel=q, label=<<TABLE FOO=\"1\"><TR><TD>x</TD></TR></TABLE>>]
+ a:nosuch -- b [label=x]
+}
+";
+    let (err, ok) = warnings("dot", src);
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Illegal attribute FOO in <TABLE> - ignored\n\
+         in label of node a\n\
+         Warning: node a, port nosuch unrecognized\n\
+         Warning: no position for edge with label x\n"
+    );
+}
+
+/// `unrecognized` and the compass warnings of `poly_port` and `record_port`
+/// (`lib/common/shapes.c:362-365`, `2894-2896`, `2909-2910`, `3748-3752`), once per
+/// `chkPort` call of `common_init_edge`, in `agfstnode`/`agfstout` order.
+#[test]
+fn issue30_unknown_port_warnings() {
+    let src = "digraph G {
+ a -> b:nosuch
+ r [shape=record, label=\"<f0> x|<f1> y\"]
+ r:f0:zz -> r:bad
+ r:f1:s -> a:ne
+ h [label=<<TABLE><TR><TD PORT=\"p\">x</TD></TR></TABLE>>]
+ h:p:qq -> h:missing
+ c [shape=box]
+ c:wat -> a
+ a -> c:wat
+}
+";
+    let want = "Warning: node b, port nosuch unrecognized\n\
+                Warning: node c, port wat unrecognized\n\
+                Warning: node r, port f0, unrecognized compass point 'zz' - ignored\n\
+                Warning: node r, port bad unrecognized\n\
+                Warning: node h, port p, unrecognized compass point 'qq' - ignored\n\
+                Warning: node h, port missing unrecognized\n\
+                Warning: node c, port wat unrecognized\n";
+    for engine in ["dot", "neato", "fdp", "circo"] {
+        assert_eq!(warnings(engine, src).0, want, "{engine}");
+    }
+    // patchwork_init_edge never calls common_init_edge, so C resolves no ports.
+    assert_eq!(warnings("patchwork", src).0, "");
+}
+
+/// `doAttrs` and its attribute actions (`lib/common/htmllex.c:80-552`; the `doInt`
+/// messages have no newline), `size_html_cell`'s fixed-size check
+/// (`lib/common/htmltable.c:1141-1153`), then `make_label`'s `in label of ...`
+/// (`lib/common/labels.c:148-160`).
+#[test]
+fn issue30_html_attribute_warnings() {
+    let src = "digraph { a [label=<<TABLE BORDER=\"-1\" STYLE=\"rounded,wiggly\" SIDES=\"LTx\" \
+COLUMNS=\"x\"><TR><TD COLSPAN=\"0\" ALIGN=\"up\" FIXEDSIZE=\"TRUE\" WIDTH=\"3\" HEIGHT=\"3\">long \
+text</TD></TR></TABLE>>]; b [label=<<FONT POINT-SIZE=\"big\">f</FONT><BR CLEAR=\"all\"/>>]; \
+a -> b [label=<<TABLE FOO=\"1\"><TR><TD>x</TD></TR></TABLE>>] }";
+    let want = "Warning: BORDER value -1 < 0 - too small - ignored\
+                Warning: Illegal value wiggly for STYLE - ignored\n\
+                Warning: Unrecognized character 'x' (120) in sides attribute\n\
+                Warning: Unknown value x for COLUMNS - ignored\n\
+                Warning: COLSPAN value cannot be 0 - ignored\n\
+                Warning: Illegal value up for ALIGN in TD - ignored\n\
+                Warning: cell size too small for content\n\
+                in label of node a\n\
+                Warning: Improper POINT-SIZE value big - ignored\
+                Warning: Illegal attribute CLEAR in <BR> - ignored\n\
+                in label of node b\n\
+                Warning: Illegal attribute FOO in <TABLE> - ignored\n\
+                in label of edge a -> b\n";
+    for engine in ["dot", "neato"] {
+        let (err, ok) = warnings(engine, src);
+        assert!(ok, "{engine}");
+        assert_eq!(err, want, "{engine}");
+    }
+}
+
+/// A root graph label is made by `graph_init` (`lib/common/input.c:711`), before the
+/// engine's node and edge labels, so its diagnostics come first.
+#[test]
+fn issue30_root_label_warnings_come_first() {
+    let src = "digraph G { label=<<TABLE X=\"1\"><TR><TD>g</TD></TR></TABLE>>; \
+a [label=<<TABLE Y=\"1\"><TR><TD>a</TD></TR></TABLE>>] }";
+    let want = "Warning: Illegal attribute X in <TABLE> - ignored\n\
+                in label of graph G\n\
+                Warning: Illegal attribute Y in <TABLE> - ignored\n\
+                in label of node a\n";
+    for engine in ["dot", "neato", "patchwork"] {
+        assert_eq!(warnings(engine, src).0, want, "{engine}");
+    }
+}
+
+/// `addXLabels` (`lib/common/postproc.c:500-504`, `517`, `532`, `547`): an unset label of an
+/// edge without a spline is reported with its `lp->text` (escapes substituted, an HTML label
+/// without its delimiters), and the edge's remaining labels are skipped.
+#[test]
+fn issue30_unplaced_edge_label_warnings() {
+    let src = "digraph G { splines=none; a [xlabel=q]; a -> b [label=\"x\\E\", taillabel=t, \
+headlabel=h, xlabel=xx]; b -> c [headlabel=<<b>h2</b>>]; c -> d [taillabel=t3, xlabel=x3]; }";
+    let want = "Warning: no position for edge with label xa->b\n\
+                Warning: no position for edge with head label <b>h2</b>\n\
+                Warning: no position for edge with tail label t3\n";
+    for engine in ["dot", "neato", "fdp", "twopi", "osage"] {
+        assert_eq!(warnings(engine, src).0, want, "{engine}");
+    }
+}
+
+/// `spline_edges_` (`lib/neatogen/neatosplines.c:623`, `:625`) and `compoundEdges`
+/// (`lib/fdpgen/clusteredges.c:238-246`) when node obstacles overlap.
+#[test]
+fn issue30_touching_nodes_warnings() {
+    let pinned = "a [pos=\"0,0!\"]; b [pos=\"0.1,0!\"]; c [pos=\"2,0!\"]; a -- c;";
+    assert_eq!(
+        warnings("neato", &format!("graph G {{ splines=true; {pinned} }}")).0,
+        "Warning: some nodes with margin (3.20,3.20) touch - falling back to straight line \
+         edges\n"
+    );
+    assert_eq!(
+        warnings("neato", &format!("graph G {{ splines=ortho; {pinned} }}")).0,
+        "Warning: the bounding boxes of some nodes touch - falling back to straight line \
+         edges\n"
+    );
+    let compound = "graph G { splines=compound; pack=1; a [pos=\"0,0!\"]; b [pos=\"2,0!\"]; \
+d [pos=\"2.1,0!\"]; c [pos=\"4,0!\"]; a -- c; }";
+    assert_eq!(
+        warnings("fdp", compound).0,
+        "Warning: compoundEdges: nodes touch - falling back to straight line edges\n\
+         pack value 1 is smaller than esep (3.200,3.200)\n\
+         Warning: some nodes with margin (3.20,3.20) touch - falling back to straight line \
+         edges\n"
+    );
+}
+
+/// Node shape diagnostics of `common_init_node`: `user_shape`'s unknown-shape warning, once
+/// per name (`lib/common/shapes.c:3961`), `record_init`'s `bad label format` error, once
+/// per node (`shapes.c:3682`), and `poly_init`'s fixed-size check (`shapes.c:2115-2118`).
+#[test]
+fn issue30_node_shape_warnings() {
+    let src = "digraph Named { a [shape=foo]; a2 [shape=foo]; a3 [shape=Box]; \
+b [shape=record, label=\"{a|\"]; b2 [shape=record, label=\"{a|\"]; \
+c [fixedsize=true, width=0.1, label=\"long label\"]; c3 [fixedsize=true, width=3, label=ok] }";
+    let want = "Warning: using box for unknown shape foo\n\
+                Warning: using box for unknown shape Box\n\
+                Error: bad label format {a|\n\
+                Error: bad label format {a|\n\
+                Warning: node 'c', graph 'Named' size too small for label\n";
+    for engine in ["dot", "neato"] {
+        let (err, ok) = warnings(engine, src);
+        assert!(!ok, "{engine}: an error sets the exit status");
+        assert_eq!(err, want, "{engine}");
+    }
+}
+
+/// Not ported: HTML `<IMG>` sources are never loaded, so `size_html_img`'s error
+/// (`lib/common/htmltable.c:1088-1093`, after `gvusershape_file_access`'s warning at
+/// `lib/gvc/gvusershape.c:700`) is missing and the run exits 0 where C exits 1.
+#[test]
+#[ignore = "issue #30: HTML IMG file errors (No or improper image file)"]
+fn issue30_html_missing_image_error() {
+    let src = "digraph { a [label=<<TABLE><TR><TD><IMG SRC=\"nope.png\"/></TD></TR></TABLE>>] }";
+    let (err, ok) = warnings("dot", src);
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Warning: No such file or directory while opening nope.png\n\
+         Error: No or improper image file=\"nope.png\"\n\
+         in label of node a\n"
+    );
+}
+
+/// Not ported: user shapes are never loaded, so `poly_init`'s missing-shapefile warning
+/// (`lib/common/shapes.c:2030-2032`) and `epsf_init`'s (`lib/common/psusershape.c:118`)
+/// are missing.
+#[test]
+#[ignore = "issue #30: shapefile/epsf user-shape warnings"]
+fn issue30_missing_shapefile_warnings() {
+    let src = "digraph { a4 [shape=custom]; a5 [shape=epsf] }";
+    assert_eq!(
+        warnings("dot", src).0,
+        "Warning: No or improper shapefile=\"<nil>\" for node \"a4\"\n\
+         Warning: shapefile not set or not found for epsf node a5\n"
+    );
+}

@@ -388,6 +388,43 @@ fn overlap(i0: f64, i1: f64, j0: f64, j1: f64) -> f64 {
     i1 - j0
 }
 
+/// `printpath(pp)` (`routespl.c:758-771`): every one of the `nbox` boxes (the caller's
+/// count, so after `checkpath` squeezes out degenerate boxes the tail repeats the last
+/// originals) and the end ports.
+fn printpath(pp: &Path) {
+    eprint!("{}", printpath_text(pp));
+}
+
+/// The text [`printpath`] writes to stderr.
+fn printpath_text(pp: &Path) -> String {
+    use graphviz_pure_core::diag::fmt_g;
+    let g = |v: f64| fmt_g(v, 5);
+    let mut s = format!("{} boxes:\n", pp.boxes.len());
+    for (bi, b) in pp.boxes.iter().enumerate() {
+        s += &format!(
+            "{bi} ({}, {}), ({}, {})\n",
+            g(b.ll.x),
+            g(b.ll.y),
+            g(b.ur.x),
+            g(b.ur.y)
+        );
+    }
+    for (name, e) in [("start", &pp.start), ("end", &pp.end)] {
+        s += &format!(
+            "{name} port: ({}, {}), tangent angle: {}, {}\n",
+            g(e.p.x),
+            g(e.p.y),
+            g(e.theta),
+            if e.constrained {
+                "constrained"
+            } else {
+                "not constrained"
+            }
+        );
+    }
+    s
+}
+
 /// `checkpath(boxn, boxes, thepath)`: drop degenerate boxes, repair boxes that
 /// do not touch or that overlap, and clamp the end points into the end boxes.
 /// Returns true on failure.
@@ -409,10 +446,10 @@ pub fn checkpath(thepath: &mut Path) -> bool {
     if boxn == 0 {
         return true;
     }
-    // C's printpath dump that follows these errors is not reproduced.
     let ba = boxes[0];
     if ba.ll.x > ba.ur.x || ba.ll.y > ba.ur.y {
         agerrorf("in checkpath, box 0 has LL coord > UR coord\n");
+        printpath(thepath);
         return true;
     }
     for bi in 0..boxn.saturating_sub(1) {
@@ -424,6 +461,7 @@ pub fn checkpath(thepath: &mut Path) -> bool {
                 "in checkpath, box {} has LL coord > UR coord\n",
                 bi + 1
             ));
+            printpath(thepath);
             return true;
         }
         let mut l = i32::from(ba.ur.x < bb.ll.x);
@@ -610,6 +648,39 @@ mod tests {
         assert_eq!(overlap(1.0, 2.0, 0.0, 4.0), 4.0);
         assert_eq!(overlap(1.0, 3.0, 0.0, 2.0), 1.0);
         assert_eq!(overlap(0.0, 2.0, 1.0, 3.0), 1.0);
+    }
+
+    /// `checkpath` failures dump the path as C's `printpath` does (`%.5g` numbers, the
+    /// caller's box count). Issue #30.
+    #[test]
+    fn checkpath_failure_prints_the_path() {
+        let mut p = Path {
+            start: PathPort {
+                p: Point::new(10.25, 100.0),
+                theta: 1.25,
+                constrained: true,
+            },
+            end: PathPort {
+                p: Point::new(10.0, -0.000012345),
+                ..PathPort::default()
+            },
+            boxes: vec![
+                BoundingBox::new(0.0, 60.0, 20.0, 100.0),
+                BoundingBox::new(0.0, 60.0, 20.0, 60.0),
+                BoundingBox::new(30.0, 0.0, 20.0, 123456.7),
+            ],
+            data: 0,
+        };
+        assert!(checkpath(&mut p));
+        assert_eq!(
+            printpath_text(&p),
+            "3 boxes:\n\
+             0 (0, 60), (20, 100)\n\
+             1 (30, 0), (20, 1.2346e+05)\n\
+             2 (30, 0), (20, 1.2346e+05)\n\
+             start port: (10.25, 100), tangent angle: 1.25, constrained\n\
+             end port: (10, -1.2345e-05), tangent angle: 0, not constrained\n"
+        );
     }
 
     #[test]

@@ -11,6 +11,6 @@ pub mod shapes;
 pub use node_size::{
     EdgeLabelGeometry, GraphLabelGeometry, LabelGeometry, NodeGeometry, NodeSizeEnv,
     PolygonGeometry, edge_label_geometry, graph_label_geometry, graph_label_geometry_in,
-    make_label, node_geometry, size_graph_nodes,
+    label_text, make_label, node_geometry, size_graph_nodes,
 };
 pub use shapes::{RecordField, ShapeKind};

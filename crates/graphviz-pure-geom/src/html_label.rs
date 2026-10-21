@@ -264,6 +264,9 @@ struct Lexer {
     /// The token produced by the current `htmllex` unit (C's `ctx->tok`).
     cur: Option<Tok>,
     pending: Pending,
+    /// `doAttrs` warnings: the index of the token whose unit printed them, the message and
+    /// whether it sets `ctx->warn`.
+    warnings: Vec<(usize, String, bool)>,
 }
 
 /// Lexer errors carry expat's message (`XML_ErrorString`) or `htmllex.c`'s own.
@@ -394,8 +397,25 @@ fn is_ws(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\n' | b'\r')
 }
 
-/// `doInt` from `htmllex.c`.
-fn do_int(v: &str, min: i64, max: i64) -> Option<i64> {
+/// The `agwarningf` messages of `doAttrs` and its attribute actions for one element, each
+/// with whether it sets `ctx->warn` (which makes `make_label` add `in label of ...`).
+#[derive(Debug, Default)]
+struct AttrWarnings(Vec<(String, bool)>);
+
+impl AttrWarnings {
+    /// A warning whose action returns 1.
+    fn warn(&mut self, msg: String) {
+        self.0.push((msg, true));
+    }
+    /// A warning that leaves `ctx->warn` alone (`sidesfn`).
+    fn note(&mut self, msg: String) {
+        self.0.push((msg, false));
+    }
+}
+
+/// `doInt(v, s, min, max, &ul)` from `htmllex.c`: `strtol` base 10, then the range check.
+/// The messages have no trailing newline, as in C.
+fn do_int(v: &str, s: &str, min: i64, max: i64, w: &mut AttrWarnings) -> Option<i64> {
     let b = v.as_bytes();
     let mut i = 0;
     while i < b.len() && matches!(b[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
@@ -415,25 +435,64 @@ fn do_int(v: &str, min: i64, max: i64) -> Option<i64> {
         i += 1;
     }
     if i == ds {
+        w.warn(format!("Improper {s} value {v} - ignored"));
         return None;
     }
     let val = if neg { -val } else { val };
-    if val > max || val < min {
+    if val > max {
+        w.warn(format!("{s} value {v} > {max} - too large - ignored"));
+        return None;
+    }
+    if val < min {
+        w.warn(format!("{s} value {v} < {min} - too small - ignored"));
         return None;
     }
     Some(val)
 }
 
-fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
+/// `tok(v, " ,")` from `lib/util/tokenize.h`: unlike `split` it yields an empty first token
+/// for an empty or separator-led string and an empty last token after trailing separators.
+fn style_tokens(v: &str) -> Vec<&str> {
+    let is_sep = |c: char| c == ' ' || c == ',';
+    let mut out = Vec::new();
+    let mut start = 0;
+    loop {
+        let size = v[start..].find(is_sep).unwrap_or(v.len() - start);
+        out.push(&v[start..start + size]);
+        let mut next = start + size;
+        if next == v.len() {
+            return out;
+        }
+        next += v[next..].find(|c| !is_sep(c)).unwrap_or(v.len() - next);
+        start = next;
+    }
+}
+
+/// The actions of `tbl_items` (`cell = false`) and `cell_items` (`cell = true`) that act on
+/// the shared `htmldata_t`. Returns `false` for a name neither table has.
+fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool, w: &mut AttrWarnings) -> bool {
     let n = name.to_ascii_lowercase();
     match n.as_str() {
-        "align" => {
+        "align" if cell => {
+            // cell_halignfn
             if v.eq_ignore_ascii_case("LEFT") {
                 p.flags |= HALIGN_LEFT;
             } else if v.eq_ignore_ascii_case("RIGHT") {
                 p.flags |= HALIGN_RIGHT;
-            } else if cell && v.eq_ignore_ascii_case("TEXT") {
+            } else if v.eq_ignore_ascii_case("TEXT") {
                 p.flags |= HALIGN_TEXT;
+            } else if !v.eq_ignore_ascii_case("CENTER") {
+                w.warn(format!("Illegal value {v} for ALIGN in TD - ignored\n"));
+            }
+        }
+        "align" => {
+            // halignfn
+            if v.eq_ignore_ascii_case("LEFT") {
+                p.flags |= HALIGN_LEFT;
+            } else if v.eq_ignore_ascii_case("RIGHT") {
+                p.flags |= HALIGN_RIGHT;
+            } else if !v.eq_ignore_ascii_case("CENTER") {
+                w.warn(format!("Illegal value {v} for ALIGN - ignored\n"));
             }
         }
         "balign" if cell => {
@@ -441,23 +500,25 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
                 p.flags |= BALIGN_LEFT;
             } else if v.eq_ignore_ascii_case("RIGHT") {
                 p.flags |= BALIGN_RIGHT;
+            } else if !v.eq_ignore_ascii_case("CENTER") {
+                w.warn(format!("Illegal value {v} for BALIGN in TD - ignored\n"));
             }
         }
         "bgcolor" => p.bgcolor = Some(v.to_string()),
         "border" => {
-            if let Some(u) = do_int(v, 0, 255) {
+            if let Some(u) = do_int(v, "BORDER", 0, 255, w) {
                 p.border = u as u8;
                 p.flags |= BORDER_SET;
             }
         }
         "cellpadding" => {
-            if let Some(u) = do_int(v, 0, 255) {
+            if let Some(u) = do_int(v, "CELLPADDING", 0, 255, w) {
                 p.pad = u as u8;
                 p.flags |= PAD_SET;
             }
         }
         "cellspacing" => {
-            if let Some(u) = do_int(v, -128, 127) {
+            if let Some(u) = do_int(v, "CELLSPACING", -128, 127, w) {
                 p.space = u as i8;
                 p.flags |= SPACE_SET;
             }
@@ -466,20 +527,22 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
         "fixedsize" => {
             if v.eq_ignore_ascii_case("TRUE") {
                 p.flags |= FIXED_FLAG;
+            } else if !v.eq_ignore_ascii_case("FALSE") {
+                w.warn(format!("Illegal value {v} for FIXEDSIZE - ignored\n"));
             }
         }
         "gradientangle" => {
-            if let Some(u) = do_int(v, 0, 360) {
+            if let Some(u) = do_int(v, "GRADIENTANGLE", 0, 360, w) {
                 p.gradientangle = u as u16;
             }
         }
         "height" => {
-            if let Some(u) = do_int(v, 0, 65535) {
+            if let Some(u) = do_int(v, "HEIGHT", 0, 65535, w) {
                 p.height = u as u16;
             }
         }
         "width" => {
-            if let Some(u) = do_int(v, 0, 65535) {
+            if let Some(u) = do_int(v, "WIDTH", 0, 65535, w) {
                 p.width = u as u16;
             }
         }
@@ -496,7 +559,14 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
                     b't' => flags |= BORDER_TOP,
                     b'r' => flags |= BORDER_RIGHT,
                     b'b' => flags |= BORDER_BOTTOM,
-                    _ => {}
+                    _ => {
+                        // `%c` of the byte and `%d` of a signed `char` (the oracle's ABI).
+                        let shown = String::from_utf8_lossy(&[c]).into_owned();
+                        w.note(format!(
+                            "Unrecognized character '{shown}' ({}) in sides attribute\n",
+                            c as i8
+                        ));
+                    }
                 }
             }
             if flags != BORDER_MASK {
@@ -504,7 +574,7 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
             }
         }
         "style" => {
-            for tk in v.split([' ', ',']).filter(|t| !t.is_empty()) {
+            for tk in style_tokens(v) {
                 if tk.eq_ignore_ascii_case("ROUNDED") {
                     p.style.rounded = true;
                 } else if tk.eq_ignore_ascii_case("RADIAL") {
@@ -518,6 +588,8 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
                     p.style.dotted = true;
                 } else if tk.eq_ignore_ascii_case("DASHED") {
                     p.style.dashed = true;
+                } else {
+                    w.warn(format!("Illegal value {tk} for STYLE - ignored\n"));
                 }
             }
         }
@@ -526,6 +598,8 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
                 p.flags |= VALIGN_BOTTOM;
             } else if v.eq_ignore_ascii_case("TOP") {
                 p.flags |= VALIGN_TOP;
+            } else if !v.eq_ignore_ascii_case("MIDDLE") {
+                w.warn(format!("Illegal value {v} for VALIGN - ignored\n"));
             }
         }
         _ => return false,
@@ -533,7 +607,12 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool) -> bool {
     true
 }
 
-fn mk_tbl(atts: &[(String, String)]) -> HtmlTbl {
+/// `doAttrs`' message for a name the element's item table lacks.
+fn illegal_attr(w: &mut AttrWarnings, name: &str, elem: &str) {
+    w.warn(format!("Illegal attribute {name} in {elem} - ignored\n"));
+}
+
+fn mk_tbl(atts: &[(String, String)], w: &mut AttrWarnings) -> HtmlTbl {
     let mut tbl = HtmlTbl {
         cellborder: -1,
         ..HtmlTbl::default()
@@ -542,30 +621,35 @@ fn mk_tbl(atts: &[(String, String)]) -> HtmlTbl {
         let n = name.to_ascii_lowercase();
         match n.as_str() {
             "cellborder" => {
-                if let Some(u) = do_int(v, 0, 127) {
+                if let Some(u) = do_int(v, "CELLBORDER", 0, 127, w) {
                     tbl.cellborder = u as i8;
                 }
             }
             "columns" => {
                 if v.starts_with('*') {
                     tbl.vrule = true;
+                } else {
+                    w.warn(format!("Unknown value {v} for COLUMNS - ignored\n"));
                 }
             }
             "rows" => {
                 if v.starts_with('*') {
                     tbl.hrule = true;
+                } else {
+                    w.warn(format!("Unknown value {v} for ROWS - ignored\n"));
                 }
             }
-            "balign" => {}
             _ => {
-                data_attr(&mut tbl.data, name, v, false);
+                if !data_attr(&mut tbl.data, name, v, false, w) {
+                    illegal_attr(w, name, "<TABLE>");
+                }
             }
         }
     }
     tbl
 }
 
-fn mk_cell(atts: &[(String, String)]) -> HtmlCellData {
+fn mk_cell(atts: &[(String, String)], w: &mut AttrWarnings) -> HtmlCellData {
     let mut cell = HtmlCellData {
         data: HtmlData::default(),
         colspan: 1,
@@ -579,25 +663,27 @@ fn mk_cell(atts: &[(String, String)]) -> HtmlCellData {
     for (name, v) in atts {
         let n = name.to_ascii_lowercase();
         match n.as_str() {
-            "colspan" => {
-                if let Some(u) = do_int(v, 0, 65535).filter(|&u| u != 0) {
-                    cell.colspan = u as u16;
-                }
-            }
-            "rowspan" => {
-                if let Some(u) = do_int(v, 0, 65535).filter(|&u| u != 0) {
-                    cell.rowspan = u as u16;
-                }
-            }
+            "colspan" => match do_int(v, "COLSPAN", 0, 65535, w) {
+                Some(0) => w.warn("COLSPAN value cannot be 0 - ignored\n".to_string()),
+                Some(u) => cell.colspan = u as u16,
+                None => {}
+            },
+            "rowspan" => match do_int(v, "ROWSPAN", 0, 65535, w) {
+                Some(0) => w.warn("ROWSPAN value cannot be 0 - ignored\n".to_string()),
+                Some(u) => cell.rowspan = u as u16,
+                None => {}
+            },
             _ => {
-                data_attr(&mut cell.data, name, v, true);
+                if !data_attr(&mut cell.data, name, v, true, w) {
+                    illegal_attr(w, name, "<TD>");
+                }
             }
         }
     }
     cell
 }
 
-fn mk_font(atts: &[(String, String)], flags: u8) -> HtmlFont {
+fn mk_font(atts: &[(String, String)], flags: u8, w: &mut AttrWarnings) -> HtmlFont {
     let mut f = HtmlFont {
         size: -1.0,
         flags,
@@ -608,39 +694,44 @@ fn mk_font(atts: &[(String, String)], flags: u8) -> HtmlFont {
             "color" => f.color = Some(v.clone()),
             "face" => f.name = Some(v.clone()),
             "point-size" => {
-                if let Some(u) = do_int(v, 0, 255) {
+                if let Some(u) = do_int(v, "POINT-SIZE", 0, 255, w) {
                     f.size = u as f64;
                 }
             }
-            _ => {}
+            _ => illegal_attr(w, name, "<FONT>"),
         }
     }
     f
 }
 
-fn mk_img(atts: &[(String, String)]) -> HtmlImage {
+fn mk_img(atts: &[(String, String)], w: &mut AttrWarnings) -> HtmlImage {
     let mut img = HtmlImage::default();
     for (name, v) in atts {
         match name.to_ascii_lowercase().as_str() {
             "scale" => img.scale = Some(v.clone()),
             "src" => img.src = Some(v.clone()),
-            _ => {}
+            _ => illegal_attr(w, name, "<IMG>"),
         }
     }
     img
 }
 
-fn mk_br(atts: &[(String, String)]) -> char {
+fn mk_br(atts: &[(String, String)], w: &mut AttrWarnings) -> char {
     let mut just = '\0';
     for (name, v) in atts {
         if name.eq_ignore_ascii_case("align") {
+            // alignfn
             if v.eq_ignore_ascii_case("RIGHT") {
                 just = 'r';
             } else if v.eq_ignore_ascii_case("LEFT") {
                 just = 'l';
             } else if v.eq_ignore_ascii_case("CENTER") {
                 just = 'n';
+            } else {
+                w.warn(format!("Illegal value {v} for ALIGN - ignored\n"));
             }
+        } else {
+            illegal_attr(w, name, "<BR>");
         }
     }
     just
@@ -650,10 +741,12 @@ impl Lexer {
     fn start_element(&mut self, name: &str, atts: &[(String, String)]) -> LexResult<()> {
         let n = name.to_ascii_uppercase();
         self.pending = Pending::None;
+        let mut w = AttrWarnings::default();
+        let w = &mut w;
         let tok = match n.as_str() {
             "TABLE" => {
                 self.in_cell = false;
-                Tok::Table(Box::new(mk_tbl(atts)))
+                Tok::Table(Box::new(mk_tbl(atts, w)))
             }
             "TR" | "TH" => {
                 self.in_cell = false;
@@ -661,19 +754,19 @@ impl Lexer {
             }
             "TD" => {
                 self.in_cell = true;
-                Tok::Cell(Box::new(mk_cell(atts)))
+                Tok::Cell(Box::new(mk_cell(atts, w)))
             }
-            "FONT" => Tok::Font(mk_font(atts, 0)),
-            "B" => Tok::Bold(mk_font(&[], HTML_BF)),
-            "S" => Tok::S(mk_font(&[], HTML_S)),
-            "U" => Tok::Underline(mk_font(&[], HTML_UL)),
-            "O" => Tok::Overline(mk_font(&[], HTML_OL)),
-            "I" => Tok::Italic(mk_font(&[], HTML_IF)),
-            "SUP" => Tok::Sup(mk_font(&[], HTML_SUP)),
-            "SUB" => Tok::Sub(mk_font(&[], HTML_SUB)),
+            "FONT" => Tok::Font(mk_font(atts, 0, w)),
+            "B" => Tok::Bold(mk_font(&[], HTML_BF, w)),
+            "S" => Tok::S(mk_font(&[], HTML_S, w)),
+            "U" => Tok::Underline(mk_font(&[], HTML_UL, w)),
+            "O" => Tok::Overline(mk_font(&[], HTML_OL, w)),
+            "I" => Tok::Italic(mk_font(&[], HTML_IF, w)),
+            "SUP" => Tok::Sup(mk_font(&[], HTML_SUP, w)),
+            "SUB" => Tok::Sub(mk_font(&[], HTML_SUB, w)),
             "BR" => {
                 self.pending = Pending::Br;
-                Tok::Br(mk_br(atts))
+                Tok::Br(mk_br(atts, w))
             }
             "HR" => {
                 self.pending = Pending::Hr;
@@ -685,12 +778,15 @@ impl Lexer {
             }
             "IMG" => {
                 self.pending = Pending::Img;
-                Tok::Img(mk_img(atts))
+                Tok::Img(mk_img(atts, w))
             }
             "HTML" => Tok::Html,
             // lexerror
             _ => return Err(format!("\0Unknown HTML element <{name}>")),
         };
+        let at = self.toks.len();
+        self.warnings
+            .extend(w.0.drain(..).map(|(m, set)| (at, m, set)));
         self.cur = Some(tok);
         Ok(())
     }
@@ -941,6 +1037,8 @@ struct Lexed {
     toks: Vec<Tok>,
     tok_unit: Vec<usize>,
     units: Vec<String>,
+    /// [`Lexer::warnings`].
+    warnings: Vec<(usize, String, bool)>,
 }
 
 /// Splits a label into `findNext` units and lexes them.
@@ -953,6 +1051,7 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
         stack: Vec::new(),
         cur: None,
         pending: Pending::None,
+        warnings: Vec::new(),
     };
     let mut units: Vec<String> = Vec::new();
     let mut tok_unit: Vec<usize> = Vec::new();
@@ -1016,6 +1115,7 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
                 toks: lx.toks,
                 tok_unit,
                 units,
+                warnings: lx.warnings,
             },
             None,
         ),
@@ -1024,6 +1124,7 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
                 toks: lx.toks,
                 tok_unit,
                 units: units.clone(),
+                warnings: lx.warnings,
             },
             Some(HtmlError { msg, unit, units }),
         ),
@@ -1417,10 +1518,23 @@ pub fn parse_html_cs(text: &str, cs: Charset) -> Option<HtmlLabel> {
 /// [`parse_html_cs`] with the error C reports; `Err(None)` where the port does not
 /// reproduce the message (encodings).
 pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, Option<HtmlError>> {
+    parse_html_warn(text, cs).0
+}
+
+/// The attribute warnings `parseHTML` prints: each message (in order) and whether it sets
+/// `ctx->warn`, making `parseHTML` return 1.
+pub type HtmlWarnings = Vec<(String, bool)>;
+
+/// [`parse_html_report`] plus the `doAttrs` warnings of the tokens C's on-demand lexer
+/// reads before it succeeds or fails.
+pub fn parse_html_warn(
+    text: &str,
+    cs: Charset,
+) -> (Result<HtmlLabel, Option<HtmlError>>, HtmlWarnings) {
     let decoded;
     let text = match cs {
-        Charset::Big5 => return Err(None),
-        Charset::Utf8 if charset::has_raw(text) => return Err(None),
+        Charset::Big5 => return (Err(None), Vec::new()),
+        Charset::Utf8 if charset::has_raw(text) => return (Err(None), Vec::new()),
         Charset::Utf8 => text,
         Charset::Latin1 => {
             decoded = charset::encode(text)
@@ -1436,6 +1550,7 @@ pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, Option<Ht
         toks,
         tok_unit,
         units,
+        warnings,
     } = lexed;
     let ntoks = toks.len();
     let mut p = Parser {
@@ -1448,14 +1563,25 @@ pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, Option<Ht
         fspan_list: Vec::new(),
     };
     let res = p.html();
+    // A parse error leaves the tokens after yacc's lookahead unread.
+    let read = if res.is_err() && p.furthest.get() < ntoks {
+        p.furthest.get()
+    } else {
+        usize::MAX
+    };
+    let warnings = warnings
+        .into_iter()
+        .filter(|&(at, ..)| at <= read)
+        .map(|(_, m, set)| (m, set))
+        .collect();
     if let Some(e) = lex_err {
         if res.is_err() && p.furthest.get() < ntoks {
             // the parser failed on a token it was given
         } else {
-            return Err(Some(e));
+            return (Err(Some(e)), warnings);
         }
     }
-    res.map_err(|()| {
+    let res = res.map_err(|()| {
         // At end of input yacc's context is the last unit read (`</HTML>`).
         let unit = tok_unit
             .get(p.furthest.get())
@@ -1466,7 +1592,8 @@ pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, Option<Ht
             unit,
             units,
         })
-    })
+    });
+    (res, warnings)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1482,6 +1609,20 @@ struct Env<'a> {
     obj: &'a LabelSubstContext<'a>,
     /// `static textfont_t savef` of `size_html_tbl`, shared by every nesting level.
     savef: SaveFont,
+    /// Whether this sizing prints its warnings (the first for the object's label).
+    report: bool,
+    /// `make_html_label`'s non-zero `rv`: a warning was given.
+    warn: bool,
+}
+
+impl Env<'_> {
+    /// A sizing `agwarningf` that makes the size function return 1.
+    fn warning(&mut self, msg: &str) {
+        if self.report {
+            graphviz_pure_core::diag::agwarningf(msg);
+        }
+        self.warn = true;
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1673,8 +1814,17 @@ fn size_html_cell(cp: &mut HtmlCellData, parent: &HtmlTbl, env: &mut Env<'_>) {
     };
     let margin = 2.0 * (f64::from(cp.data.pad) + f64::from(cp.data.border));
     let mut sz = Point::new(child_sz.x + margin, child_sz.y + margin);
-    if cp.data.flags & FIXED_FLAG != 0 && cp.data.width != 0 && cp.data.height != 0 {
-        sz = Point::new(0.0, 0.0);
+    if cp.data.flags & FIXED_FLAG != 0 {
+        if cp.data.width != 0 && cp.data.height != 0 {
+            if (f64::from(cp.data.width) < sz.x || f64::from(cp.data.height) < sz.y)
+                && !matches!(cp.child, HtmlContent::Image(_))
+            {
+                env.warning("cell size too small for content\n");
+            }
+            sz = Point::new(0.0, 0.0);
+        } else {
+            env.warning("fixed cell size with unspecified width or height\n");
+        }
     }
     cp.data.bx = BoundingBox::new(
         0.0,
@@ -1844,9 +1994,16 @@ fn size_html_tbl(tbl: &mut HtmlTbl, _parent: Option<&HtmlData>, env: &mut Env<'_
     for h in &tbl.heights[..tbl.row_count] {
         ht += h;
     }
-    if tbl.data.flags & FIXED_FLAG != 0 && tbl.data.width != 0 && tbl.data.height != 0 {
-        wd = 0.0;
-        ht = 0.0;
+    if tbl.data.flags & FIXED_FLAG != 0 {
+        if tbl.data.width != 0 && tbl.data.height != 0 {
+            if f64::from(tbl.data.width) < wd || f64::from(tbl.data.height) < ht {
+                env.warning("table size too small for content\n");
+            }
+            wd = 0.0;
+            ht = 0.0;
+        } else {
+            env.warning("fixed table size with unspecified width or height\n");
+        }
     }
     tbl.data.bx = BoundingBox::new(
         0.0,
@@ -2078,14 +2235,9 @@ fn pos_html_tbl(tbl: &mut HtmlTbl, mut pos: BoundingBox, sides: u8, parent_pen: 
     tbl.data.bx = pos;
 }
 
-/// `make_html_label`: parses, sizes and positions an HTML label. `text` is the label without
-/// its outer `<`...`>` delimiters. `pencolor` is the owning object's `pencolor`/`color`
-/// (`getPenColor`), inherited by the outermost table.
-/// The messages of a rejected HTML label, then `make_label`'s `in label of ...`. Sizing
-/// runs more than once per object in the port (layout, then rendering), so each object's
-/// label is reported once.
-fn report_html_error(e: &HtmlError, obj: &LabelSubstContext<'_>, text: &str) {
-    let what = if obj.is_edge {
+/// `agnameof` of the label's object as `make_label`'s `in label of ...` names it.
+fn html_label_owner(obj: &LabelSubstContext<'_>) -> String {
+    if obj.is_edge {
         let op = if obj.is_directed { "->" } else { "--" };
         format!("edge {} {op} {}", obj.tail_name, obj.head_name)
     } else if !obj.node_name.is_empty() {
@@ -2095,18 +2247,17 @@ fn report_html_error(e: &HtmlError, obj: &LabelSubstContext<'_>, text: &str) {
         "graph %1".to_string()
     } else {
         format!("graph {}", obj.graph_name)
-    };
-    if !graphviz_pure_core::diag::emit_once(&format!("\0html\0{what}\0{text}")) {
-        return;
     }
-    let (msg, context) = e.report();
-    graphviz_pure_core::diag::agerrorf(&msg);
-    if let Some(c) = context {
-        graphviz_pure_core::diag::agerr_prev(&c);
-    }
-    graphviz_pure_core::diag::agerr_prev(&format!("in label of {what}\n"));
 }
 
+/// `make_html_label`: parses, sizes and positions an HTML label. `text` is the label without
+/// its outer `<`...`>` delimiters. `pencolor` is the owning object's `pencolor`/`color`
+/// (`getPenColor`), inherited by the outermost table.
+///
+/// Diagnostics, as C prints them: the lexer's warnings, the error of a rejected label, the
+/// sizing warnings, then `make_label`'s `in label of ...` when `make_html_label` returns
+/// non-zero. Sizing runs more than once per object in the port (layout, then rendering), so
+/// each object's label is reported once.
 pub fn make_html_label(
     text: &str,
     obj: &LabelSubstContext<'_>,
@@ -2116,11 +2267,24 @@ pub fn make_html_label(
     pencolor: Option<&str>,
     cs: Charset,
 ) -> HtmlLabelLayout {
-    let mut lbl = match parse_html_report(text, cs) {
+    let owner = html_label_owner(obj);
+    let report = graphviz_pure_core::diag::emit_once(&format!("\0html\0{owner}\0{text}"));
+    let (res, warnings) = parse_html_warn(text, cs);
+    if report {
+        for (m, _) in &warnings {
+            graphviz_pure_core::diag::agwarningf(m);
+        }
+    }
+    let mut lbl = match res {
         Ok(l) => l,
         Err(e) => {
-            if let Some(e) = e {
-                report_html_error(&e, obj, text);
+            if report && let Some(e) = e {
+                let (msg, context) = e.report();
+                graphviz_pure_core::diag::agerrorf(&msg);
+                if let Some(c) = context {
+                    graphviz_pure_core::diag::agerr_prev(&c);
+                }
+                graphviz_pure_core::diag::agerr_prev(&format!("in label of {owner}\n"));
             }
             return HtmlLabelLayout {
                 dimen: Point::new(0.0, 0.0),
@@ -2135,6 +2299,8 @@ pub fn make_html_label(
         flags: 0,
         obj,
         savef: SaveFont::default(),
+        report,
+        warn: warnings.iter().any(|&(_, set)| set),
     };
     let dimen = match &mut lbl {
         HtmlLabel::Table(tbl) => {
@@ -2164,6 +2330,9 @@ pub fn make_html_label(
             Point::new(b.ur.x - b.ll.x, b.ur.y - b.ll.y)
         }
     };
+    if report && env.warn {
+        graphviz_pure_core::diag::agerr_prev(&format!("in label of {owner}\n"));
+    }
     HtmlLabelLayout {
         dimen,
         label: Some(lbl),

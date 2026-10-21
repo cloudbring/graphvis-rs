@@ -758,6 +758,8 @@ pub trait XLabelGraph: SplineGraph {
     fn xl_edge_type(&self) -> EdgeType;
     /// `late_bool(gp, agfindgraphattr(gp, "forcelabels"), true)`.
     fn xl_forcelabels(&self) -> bool;
+    /// `lp->text` of edge label `k` of `e` (empty when the edge has no such label).
+    fn xl_label_text(&self, e: usize, k: LabelKind) -> String;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -886,8 +888,18 @@ pub fn add_xlabels<S: XLabelGraph + ?Sized>(g: &mut S) {
                         lbl: Some(li),
                     });
                 } else {
-                    // C warns "no position for edge with label" and skips the
-                    // edge's remaining labels.
+                    // postproc.c:500-504, 517, 532, 547: warn and skip the edge's
+                    // remaining labels.
+                    let what = match k {
+                        LabelKind::Main => "label",
+                        LabelKind::Tail => "tail label",
+                        LabelKind::Head => "head label",
+                        LabelKind::Xlabel => "xlabel",
+                    };
+                    graphviz_pure_core::diag::agwarningf(&format!(
+                        "no position for edge with {what} {}\n",
+                        g.xl_label_text(e, k)
+                    ));
                     continue 'edges;
                 }
             }
@@ -925,6 +937,17 @@ pub fn add_xlabels<S: XLabelGraph + ?Sized>(g: &mut S) {
 }
 
 impl XLabelGraph for LGraph<'_> {
+    fn xl_label_text(&self, e: usize, k: LabelKind) -> String {
+        let ed = &self.edges[e];
+        match k {
+            LabelKind::Main => ed.label.as_ref(),
+            LabelKind::Head => ed.head_label.as_ref(),
+            LabelKind::Tail => ed.tail_label.as_ref(),
+            LabelKind::Xlabel => ed.xlabel.as_ref(),
+        }
+        .map(|l| l.text.clone())
+        .unwrap_or_default()
+    }
     fn xl_nodes(&self) -> Vec<usize> {
         (0..self.nodes.len()).collect()
     }

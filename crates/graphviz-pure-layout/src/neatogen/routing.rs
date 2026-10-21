@@ -156,6 +156,12 @@ impl Router {
             }
         }
         if !plegal_arrangement(&obs) {
+            // neatosplines.c:625; expand_t holds floats.
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "some nodes with margin ({:.2},{:.2}) touch - falling back to straight line edges\n",
+                f64::from(margin.x as f32),
+                f64::from(margin.y as f32)
+            ));
             return None;
         }
         let vconfig = pobsopen(&obs);

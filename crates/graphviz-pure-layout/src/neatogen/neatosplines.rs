@@ -205,6 +205,11 @@ fn ortho_spline_edges(lg: &mut LGraph<'_>, sub: &Sub, pm: &Expand, et: EdgeType)
     if super::legal::plegal_arrangement(&obs) {
         crate::ortho::ortho_edges_of(lg, sub.nodes.clone(), false);
         use_edges = true;
+    } else {
+        // neatosplines.c:623
+        graphviz_pure_core::diag::agwarningf(
+            "the bounding boxes of some nodes touch - falling back to straight line edges\n",
+        );
     }
     for &n in &sub.nodes {
         let outs: Vec<usize> = lg.outs(sub, n).collect();

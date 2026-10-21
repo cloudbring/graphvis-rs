@@ -302,6 +302,27 @@ Robustness (debug overflow and panics)
   in `crates/graphviz-pure-cli/tests/cli.rs` (`packed_edges_with_empty_splines_do_not_panic`).
 * Unknown shapes are boxes for compass ports (`IS_BOX`).
 
+Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
+* Unknown ports and compass points warn from `poly_port`/`record_port`, once per `chkPort`
+  call, in `agfstnode`/`agfstout` order with each edge's label diagnostics; patchwork, which
+  never calls `common_init_edge`, resolves no ports and prints neither.
+* HTML labels print `doAttrs`' illegal-attribute and illegal-value warnings (the `doInt`
+  ones without a newline, as in C), only for the tokens C's on-demand lexer reads, then
+  the fixed-size cell and table warnings, then `in label of ...`. The root graph label is
+  made first, as `graph_init` does; patchwork makes node labels in `walkTree` order.
+* `addXLabels` reports edge labels it cannot place (`no position for edge with label`,
+  `tail label`, `head label`, `xlabel`) with the label's `lp->text`.
+* Overlapping node obstacles print the neato-family `touch - falling back to straight line
+  edges` warnings and fdp's `compoundEdges: nodes touch` with its `pack`/`sep` note.
+* A `checkpath` failure is followed by C's `printpath` dump.
+* Node shapes warn as `common_init_node` does: `using box for unknown shape` once per name,
+  `size too small for label` for a `fixedsize` node, and `bad label format` once per record
+  node (it was printed once per sizing pass).
+* The repros are in `crates/graphviz-pure-cli/tests/cli.rs` (`issue30_*`). Still missing,
+  with ignored tests there: HTML `<IMG>` file errors and the `shapefile`/`epsf` user-shape
+  warnings, because the port loads no images. The expat encoding errors of HTML labels
+  (invalid UTF-8, `charset=BIG-5`) are also missing.
+
 ## Differences that remain: the open issues
 
 The remaining differences are triaged into one issue draft per root cause. The drafts are
@@ -351,7 +372,7 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | Issue | Severity | Fuzz cases | Status |
 |---|---|---:|---|
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
-| [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
+| [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port (partly fixed) |
 | [`023-neato-circuit-kk-agseq-index-crash`](../../tests/fuzz-open/023-neato-circuit-kk-agseq-index-crash) | high | 1 | upstream C, wontfix |
 | [`024-neato-ipsep-node-in-two-clusters-size-max-alloc`](../../tests/fuzz-open/024-neato-ipsep-node-in-two-clusters-size-max-alloc) | high | 1 | upstream C, wontfix |
 | [`025-fdp-cluster-address-dependent-layout`](../../tests/fuzz-open/025-fdp-cluster-address-dependent-layout) | medium | 3 | upstream C, wontfix |
