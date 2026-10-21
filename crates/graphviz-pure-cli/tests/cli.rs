@@ -218,6 +218,51 @@ n2:w -- n13;
     );
 }
 
+/// Issue #17, ortho: with `isOrtho`, C's `makeObstacle` gives every `SH_POLY`
+/// node, star and cylinder included, its outline box without the margin
+/// (`lib/neatogen/neatosplines.c:345-376`). Grown star and cylinder outlines
+/// made the touch test fall back to straight lines (osage), or let a star whose
+/// box overlaps a point reach the ortho router, which panicked (neato).
+#[test]
+fn ortho_star_and_cylinder_obstacles_are_outline_boxes() {
+    let src = "graph G {
+layout=osage;
+splines=ortho;
+a [shape=cylinder];
+s [shape=star];
+a -- b -- c -- a;
+s -- b;
+}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "d=\"M168.47,-111C177.84,-111 186,-111 186,-111 186,-111 186,0 186,0 186,0 55,0 55,0 55,0 55,-8.72 55,-17.58\""
+        ),
+        "c -- a must be routed orthogonally:\n{out}"
+    );
+
+    let src = "graph G {
+layout=neato;
+splines=ortho;
+s [shape=star, pos=\"0,0!\"];
+p [shape=point, width=0.05, pos=\"0.4,0.42!\"];
+q [pos=\"2,0!\"];
+r [pos=\"0,2!\"];
+s -- q;
+p -- r;
+q -- r;
+}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(
+        out.contains("d=\"M94.2,-52.53C118.85,-52.53 150.11,-52.53 172.09,-52.53\""),
+        "touching boxes fall back to straight edges:\n{out}"
+    );
+}
+
 // Fuzz case 004-neato-router-record-obstacle-height (issue #13), its repro.gv verbatim. C's
 // `makeObstacle` (lib/neatogen/neatosplines.c:447-449) builds a record's obstacle from the
 // root field box `fld->b`, not from `ND_height`, which carries record_init's +1pt. With the
