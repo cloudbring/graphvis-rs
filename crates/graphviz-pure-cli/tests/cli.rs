@@ -461,3 +461,17 @@ edge [label_float=\"true\"];
     assert!(out.contains("translate(4 50.35)"), "{out}");
     assert!(out.contains("x=\"72\" y=\"-33.75\""), "{out}");
 }
+
+// Fuzz case 018-render-interpolate-points-fma (issue #27), its repro.gv verbatim. C's
+// `interpolate_pointf` (`lib/common/geomprocs.h:115`, called by `alloc_interpolation_points`
+// in `lib/common/shapes.c`) computes `p + t * (q - p)`, which Apple clang fuses (`fmla.2d`).
+// Unfused, the rarrow's shaft corners round to 10.48 instead of C's 10.47.
+#[test]
+fn round_corners_interpolation_is_fused_like_clang() {
+    let src = "digraph G{layout=neato; notranslate=true; \"n45\" [shape=\"rarrow\", height=\"1.73\", fontsize=\"27.3\", pos=\"0,0!\"];}\n";
+    let (out, err, ok) = run(&["-Kneato", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    let c_points = "points=\"10.47,-56.28 -28.48,-56.28 -28.48,56.28 10.47,56.28 \
+                    10.47,62.28 28.48,0 10.47,-62.28 10.47,-56.28\"";
+    assert!(out.contains(c_points), "{out}");
+}
