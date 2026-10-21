@@ -47,6 +47,7 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
     let (mut s_arrows, mut e_arrows) = (false, false);
     for (i, n) in m.nodes.iter().enumerate() {
         let a = &mut g.nodes[i].attrs;
+        a.remove(graphviz_pure_core::NODE_LW_RW_KEY);
         if a.remove(super::model::CLUST_NODE_KEY).is_some() {
             continue;
         }

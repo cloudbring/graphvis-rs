@@ -1064,3 +1064,55 @@ concentrate=\"true\";
 ";
     assert!(dot.contains(edge), "{dot}");
 }
+
+// Fuzz case 011-dot-render-node-lw-rw-ht (issue #20), its repro.gv verbatim. With
+// `splines=""` dot_splines_ returns before resetRW, so the self-loop space dot_position added
+// to ND_rw stays (lw=27, rw=45). Mcircle_hack draws the diagonals from ND_rw alone; C's
+// chords run from x+29.76 to x-29.76, and a renderer that halves `width` draws them from
+// x+23.81 to x-23.81.
+#[test]
+fn diagonals_use_the_self_loop_widened_right_width() {
+    let src = "graph \"G\" {
+splines=\"\";
+\"n7\" [style=\"diagonals\"];
+\"n7\" -- \"n7\":\"ne\" [];
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("points=\"56.76,-31.5 -2.76,-31.5\""), "{out}");
+    assert!(out.contains("points=\"56.76,-4.5 -2.76,-4.5\""), "{out}");
+}
+
+// Issue #20, minimised from fuzz seed 21064. mark_clusters deletes `0` from the cluster
+// with a warning, and install_in_rank then abandons the layout, so no postprocessing resets
+// the node sizes: ND_lw+ND_rw and ND_ht keep the rotated rankdir=RL values (36 and 54) and
+// C draws the ellipses rx=18 ry=27, and prints width=0.5 height=0.75.
+#[test]
+fn abandoned_flipped_layout_keeps_rotated_node_sizes() {
+    let src = "digraph G {
+rankdir=RL;
+2 [label=\"\"];
+subgraph cluster_0 {
+0;
+1 [shape=diamond];
+2 -> 2;
+}
+{rank=source; 0;}
+1 -> 2 [dir=back];
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok);
+    assert!(
+        err.contains("Warning: 0 was already in a rankset, deleted from cluster G\n"),
+        "{err}"
+    );
+    assert!(err.contains("Error: install_in_rank"), "{err}");
+    assert_eq!(out.matches("rx=\"18\" ry=\"27\"").count(), 2, "{out}");
+    let (out, _, _) = run(&["-Kdot", "-Tdot"], src);
+    assert!(
+        out.contains("height=0.75") && out.contains("width=0.5"),
+        "{out}"
+    );
+}

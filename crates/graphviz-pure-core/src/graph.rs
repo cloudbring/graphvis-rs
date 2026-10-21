@@ -134,6 +134,11 @@ pub const IGNORED_EDGE_INPUT_KEYS: [(&str, &str); 3] = [
     ("xlp", ignored_edge_key!("xlp")),
 ];
 
+/// Node attribute set by a layout whose node has `ND_lw != ND_rw` (dot keeps the self-loop
+/// space in `ND_rw` when no `resetRW` runs): `"lw,rw"` in points. Renderers split
+/// `width` with it instead of halving it (`Mcircle_hack` uses `ND_rw` alone).
+pub const NODE_LW_RW_KEY: &str = "\u{1}lwrw";
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {

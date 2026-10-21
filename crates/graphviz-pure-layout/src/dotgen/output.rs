@@ -11,9 +11,10 @@ use graphviz_pure_core::{BezierSegment, BoundingBox, Graph, Point, Spline};
 pub struct Output {
     node_pos: Vec<Option<Point>>,
     node_rank: Vec<(i32, i32)>,
-    /// `ND_lw + ND_rw`, which the output and the renderers take as the node width,
-    /// when `translate_drawing` did not reset it (`gv_nodesize` runs for rankdir != TB).
-    node_lwrw: Vec<Option<f64>>,
+    /// `ND_lw`, `ND_rw` and `ND_ht`, which the output and the renderers take as the node
+    /// size, when `translate_drawing` did not reset them (`gv_nodesize` runs for
+    /// rankdir != TB, unless the layout was abandoned and no postprocessing ran).
+    node_size: Vec<Option<(f64, f64, f64)>>,
     phase_attrs: Option<i32>,
     bb: BoundingBox,
     cluster_bb: Vec<(usize, BoundingBox)>,
@@ -37,7 +38,7 @@ impl Output {
             node_rank: (0..n)
                 .map(|i| (d.nodes[i].rank, d.nodes[i].order))
                 .collect(),
-            node_lwrw: vec![None; n],
+            node_size: vec![None; n],
             phase_attrs: Some(maxphase),
             bb: BoundingBox::new(0.0, 0.0, 0.0, 0.0),
             cluster_bb: Vec::new(),
@@ -59,9 +60,11 @@ impl Output {
         // With splines=curved, dot_splines_ swaps ND_rw and ND_mval twice (resetRW, then
         // the self-loop restore), so a node with self loops keeps the loop space in
         // ND_rw and is drawn wider.
-        let tb = d.graphs[0].rankdir & 3 == 0;
-        let node_lwrw = (0..n)
-            .map(|i| tb.then(|| d.nodes[i].lw + d.nodes[i].rw))
+        // An abandoned layout skips dotneato_postprocess, so a flipped rankdir keeps the
+        // rotated sizes of dot_init_node's gv_nodesize(n, GD_flip(g)).
+        let kept = d.graphs[0].rankdir & 3 == 0 || d.aborted;
+        let node_size = (0..n)
+            .map(|i| kept.then(|| (d.nodes[i].lw, d.nodes[i].rw, d.nodes[i].ht)))
             .collect();
         let b = d.graphs[0].bb;
         let bb = BoundingBox::new(b.ll.x, b.ll.y, b.ur.x, b.ur.y);
@@ -201,7 +204,7 @@ impl Output {
         Output {
             node_pos,
             node_rank,
-            node_lwrw,
+            node_size,
             phase_attrs: None,
             bb,
             cluster_bb,
@@ -219,10 +222,21 @@ impl Output {
             if let Some(p) = p {
                 graph.nodes[i].pos = p;
             }
-            if let Some(w) = self.node_lwrw[i]
-                && (w - graph.nodes[i].width * 72.0).abs() > 1e-9
-            {
-                graph.nodes[i].width = w / 72.0;
+            if let Some((lw, rw, ht)) = self.node_size[i] {
+                let nd = &mut graph.nodes[i];
+                let w = lw + rw;
+                if (w - nd.width * 72.0).abs() > 1e-9 {
+                    nd.width = w / 72.0;
+                }
+                if (ht - nd.height * 72.0).abs() > 1e-9 {
+                    nd.height = ht / 72.0;
+                }
+                if lw != rw {
+                    nd.attrs.insert(
+                        graphviz_pure_core::NODE_LW_RW_KEY.to_string(),
+                        format!("{lw:?},{rw:?}"),
+                    );
+                }
             }
             let (r, o) = self.node_rank[i];
             graph.nodes[i].rank = r;

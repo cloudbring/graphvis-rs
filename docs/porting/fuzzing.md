@@ -182,6 +182,11 @@ dot
   `crates/graphviz-pure-cli/tests/cli.rs` (`ortho_concentrate_draws_routed_ignored_edge`).
 * With `splines=curved`, a node with self-loops is drawn with the loop space: a double
   `ND_rw`/`ND_mval` swap.
+* The renderer takes `ND_lw`, `ND_rw` and `ND_ht` from the layout instead of halving
+  `width`: `style=diagonals` (`Mcircle_hack`) draws from the self-loop-widened `ND_rw`, and
+  an abandoned flipped-rankdir layout keeps the rotated sizes. This was open case
+  `011-dot-render-node-lw-rw-ht` (issue #20); regression tests in
+  `crates/graphviz-pure-cli/tests/cli.rs`.
 * `fixedsize=shape` clipping swaps extents under a flipped rankdir.
 * `GD_ranksep(g)/2` in beginpath/endpath is integer division.
 * The nested layout of adjacent flat edges with ports or labels (`make_flat_adj_edges`)
@@ -338,7 +343,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | Issue | Severity | Fuzz cases | Status |
 |---|---|---:|---|
 | [`001-dot-cluster-rank-max-build-skeleton-panic`](../../tests/fuzz-open/001-dot-cluster-rank-max-build-skeleton-panic) | high | 1 | port |
-| [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
 | [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
 | [`023-neato-circuit-kk-agseq-index-crash`](../../tests/fuzz-open/023-neato-circuit-kk-agseq-index-crash) | high | 1 | upstream C, wontfix |

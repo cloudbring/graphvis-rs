@@ -296,6 +296,13 @@ impl<'g> Model<'g> {
                 l
             });
             let w = n.width * 72.0;
+            // The layout's ND_lw/ND_rw when they differ (dot's self-loop space in ND_rw).
+            let (lw, rw) = n
+                .attrs
+                .get(graphviz_pure_core::NODE_LW_RW_KEY)
+                .and_then(|s| s.split_once(','))
+                .and_then(|(l, r)| Some((l.parse().ok()?, r.parse().ok()?)))
+                .unwrap_or((w / 2.0, w / 2.0));
             nodes.push(RNode {
                 name: &n.name,
                 attrs: a,
@@ -303,8 +310,8 @@ impl<'g> Model<'g> {
                 label,
                 xlabel,
                 coord: n.pos,
-                lw: w / 2.0,
-                rw: w / 2.0,
+                lw,
+                rw,
                 ht: n.height * 72.0,
             });
         }
