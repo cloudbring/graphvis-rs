@@ -1,0 +1,17 @@
+{
+  "name": "@graphviz-pure/wasm",
+  "version": "0.1.0",
+  "license": "EPL-2.0",
+  "exports": "./pkg/graphviz_pure_wasm.js",
+  "publish": {
+    "include": [
+      "README.md",
+      "LICENSE",
+      "NOTICE",
+      "pkg/graphviz_pure_wasm.js",
+      "pkg/graphviz_pure_wasm.d.ts",
+      "pkg/graphviz_pure_wasm_bg.wasm",
+      "pkg/graphviz_pure_wasm_bg.wasm.d.ts"
+    ]
+  }
+}

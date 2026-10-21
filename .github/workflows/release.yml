@@ -7,7 +7,8 @@ name: Release
 # - A release starts only from a tag on master signed with a key in .github/allowed_signers.
 # - Everything is built on GitHub-hosted runners from the tagged commit, with no caches (a
 #   poisoned cache cannot reach a release), `cargo build --locked` and a pinned Rust toolchain.
-# - Every binary and the npm package must reproduce the gallery samples byte for byte before
+# - Every binary and the npm package, the container image on both platforms, and the Windows
+#   zip installed through Scoop must reproduce the gallery samples byte for byte before
 #   anything is published (scripts/release-smoke.*).
 # - Every artifact gets a signed build-provenance attestation (Sigstore), verifiable with
 #   `gh attestation verify FILE --repo graphviz-pure/graphviz-pure`.
@@ -35,6 +36,12 @@ env:
   # The release toolchain, pinned: a new Rust release cannot change a release build silently.
   RUST_VERSION: "1.99.1"
   IMAGE: ghcr.io/graphviz-pure/graphviz-pure
+  # Deno publishes to JSR. The SHA-256 of deno-x86_64-unknown-linux-gnu.zip, as in that
+  # release's .sha256sum file.
+  DENO_VERSION: "2.9.7"
+  DENO_SHA256: c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490
+  # Scoop v0.6.0, for the Scoop manifest smoke test.
+  SCOOP_COMMIT: e6aa3b366bdee8ed138c1e0f7b85192ebdd35d0f
 
 jobs:
   check:
@@ -55,6 +62,8 @@ jobs:
         run: |
           version=$(awk -F'"' '/^\[workspace.package\]/{p=1} p && /^version =/{print $2; exit}' Cargo.toml)
           test -n "$version"
+          # SemVer build metadata (0.1.0+x) cannot be a container image tag.
+          case "$version" in *+*) echo "::error::version $version has build metadata (+...)"; exit 1 ;; esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [ "$EVENT" = push ]; then
             test "$REF_NAME" = "v$version" || { echo "::error::tag $REF_NAME but Cargo.toml says $version"; exit 1; }
@@ -168,10 +177,25 @@ jobs:
           VERSION: ${{ needs.check.outputs.version }}
         run: |
           test "$(node -p "require('./web/package.json').version")" = "$VERSION"
-          test "$(node -p "require('./jsr.json').version")" = "$VERSION"
+          test "$(node -p "require('./web/jsr.json').version")" = "$VERSION"
+      # The tarball also carries jsr.json, so the jsr job publishes exactly its files.
       - name: Pack
         working-directory: web
-        run: mkdir -p ../dist && npm pack --pack-destination ../dist
+        run: cp ../LICENSE ../NOTICE . && mkdir -p ../dist && npm pack --pack-destination ../dist
+      - name: Install Deno ${{ env.DENO_VERSION }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location --proto '=https' --output deno.zip \
+            "https://github.com/denoland/deno/releases/download/v$DENO_VERSION/deno-x86_64-unknown-linux-gnu.zip"
+          echo "$DENO_SHA256  deno.zip" | sha256sum --check --strict
+          unzip -q deno.zip deno
+      # What the jsr job will publish, checked now so a dry run exercises it (no token here).
+      - name: JSR publish dry run
+        run: |
+          mkdir "$RUNNER_TEMP/jsr"
+          tar -xzf dist/*.tgz -C "$RUNNER_TEMP/jsr"
+          cd "$RUNNER_TEMP/jsr/package"
+          "$RUNNER_TEMP/deno" publish --dry-run
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: npm-package
@@ -255,19 +279,88 @@ jobs:
           EOF
           sudo systemctl restart docker
           docker info -f '{{.DriverStatus}}' | grep -q io.containerd.snapshotter
+      # With the containerd store an image's ID is the digest of its index: the loaded image must
+      # be the one the image job built, and `--pull never` keeps docker from fetching another.
       - name: Load
-        run: docker load --input image/graphviz-pure-image.tar
-      - name: Smoke test (byte-identical gallery samples)
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          docker load --input image/graphviz-pure-image.tar
+          test "$(docker image inspect --format '{{.Id}}' "$IMAGE:$VERSION")" = "$(cat image/graphviz-pure-image.digest)"
+      - name: Smoke test (version, byte-identical gallery samples)
         env:
           PLATFORM: ${{ matrix.platform }}
           VERSION: ${{ needs.check.outputs.version }}
         run: |
           cat > "$RUNNER_TEMP/graphviz-pure" <<EOF
           #!/bin/sh
-          exec docker run --rm --network none --platform $PLATFORM -v "$PWD:$PWD:ro" $IMAGE:$VERSION "\$@"
+          exec docker run --rm --pull never --network none --platform $PLATFORM -v "$PWD:$PWD:ro" $IMAGE:$VERSION "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/graphviz-pure"
+          "$RUNNER_TEMP/graphviz-pure" -V 2>&1 | grep -F "graphviz-pure version $VERSION ("
           python3 scripts/release-smoke.py "$RUNNER_TEMP/graphviz-pure"
+
+  # Installs the x86_64 Windows zip with Scoop, from a manifest written like the one
+  # graphviz-pure/scoop-bucket's scripts/update.sh writes (same fields, extract_dir and bin) but
+  # pointing at the local zip, then runs the smoke test through Scoop's shim. Scoop's installer
+  # (get.scoop.sh) always installs Scoop's master branch, so Scoop is set up the way the
+  # installer does it (its repository in apps\scoop\current) from a pinned commit instead. The
+  # Main bucket is not needed for a manifest file and is not installed.
+  scoop-smoke:
+    name: Smoke test the Scoop manifest
+    needs: [check, binaries]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bin-x86_64-pc-windows-msvc
+          path: dist
+      - name: Install Scoop at ${{ env.SCOOP_COMMIT }}
+        shell: pwsh
+        run: |
+          $scoop = "$env:RUNNER_TEMP\scoop"
+          $app = "$scoop\apps\scoop\current"
+          git init -q $app
+          git -C $app fetch -q --depth 1 https://github.com/ScoopInstaller/Scoop.git $env:SCOOP_COMMIT
+          git -C $app checkout -q FETCH_HEAD
+          if ((git -C $app rev-parse HEAD) -ne $env:SCOOP_COMMIT) { throw "Scoop is not at $env:SCOOP_COMMIT" }
+          "SCOOP=$scoop" >> $env:GITHUB_ENV
+      - name: scoop install
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          $name = "graphviz-pure-$env:VERSION-x86_64-pc-windows-msvc"
+          $zip = (Resolve-Path "dist\$name.zip").Path
+          $manifest = [ordered]@{
+            version = $env:VERSION
+            description = 'Byte-exact Rust port of Graphviz 16.1.0 (not affiliated with Graphviz)'
+            homepage = 'https://graphviz-pure.github.io/'
+            license = 'EPL-2.0'
+            architecture = @{
+              '64bit' = [ordered]@{
+                url = 'file:///' + $zip.Replace('\', '/')
+                hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+                extract_dir = $name
+              }
+            }
+            bin = 'graphviz-pure.exe'
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Set-Content "$env:RUNNER_TEMP\graphviz-pure.json"
+          Get-Content "$env:RUNNER_TEMP\graphviz-pure.json"
+          & "$env:SCOOP\apps\scoop\current\bin\scoop.ps1" install --no-update-scoop "$env:RUNNER_TEMP\graphviz-pure.json"
+          if (!(Test-Path "$env:SCOOP\shims\graphviz-pure.exe")) { throw 'scoop install did not create the graphviz-pure shim' }
+      - name: Smoke test (version, byte-identical gallery samples)
+        shell: bash
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          shim="$(cygpath -u "$SCOOP")/shims/graphviz-pure.exe"
+          "$shim" -V 2>&1 | grep -F "graphviz-pure version $VERSION ("
+          python scripts/release-smoke.py "$shim"
 
   attest:
     name: Checksums and provenance
@@ -278,10 +371,16 @@ jobs:
       id-token: write # Sigstore signing certificate for the attestation
       attestations: write # store the attestation in this repository
     steps:
+      # By name and pattern: the image artifact is uploaded meanwhile and is not a release file.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          pattern: bin-*
           path: dist
           merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-package
+          path: dist
       - name: SHA256SUMS
         working-directory: dist
         run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
@@ -297,7 +396,8 @@ jobs:
   github-release:
     name: Publish the GitHub release
     if: github.event_name == 'push'
-    needs: [check, attest]
+    # Every smoke test must pass before anything is published.
+    needs: [check, attest, image-smoke, scoop-smoke]
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -374,47 +474,46 @@ jobs:
       - name: npm stage publish
         run: npm stage publish --access public dist/*.tgz
 
-  # The same attested npm tarball, published to JSR with tokenless OIDC. JSR has no staging, so
-  # the `release` environment's approval is the only gate before the version goes live.
+  # The attested npm tarball, published to JSR as it is (it carries jsr.json, README.md, LICENSE
+  # and NOTICE) by a pinned, checksum-verified Deno: nothing in this job is resolved at run time.
+  # JSR has no staging, so the `release` environment's approval is the only gate.
   jsr:
     name: Publish to JSR
     if: github.event_name == 'push'
     needs: github-release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: release
     permissions:
       contents: read
-      id-token: write # JSR's GitHub Actions OIDC publishing; JSR adds provenance from it
+      id-token: write # JSR's GitHub Actions OIDC publishing; deno publish adds provenance from it
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          package-manager-cache: false # no caches in a release
-      - name: jsr.json matches the tag
-        env:
-          REF_NAME: ${{ github.ref_name }}
-        run: |
-          v=$(node -p "require('./jsr.json').version")
-          test "v$v" = "$REF_NAME" || { echo "::error::tag $REF_NAME but jsr.json says $v"; exit 1; }
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: npm-package
           path: dist
-      # jsr.json publishes web/pkg/*, which the npm tarball holds as package/pkg/*. web/pkg is
-      # gitignored, so the checkout stays clean for `jsr publish`.
-      - name: Unpack the npm package
-        run: tar -xzf dist/*.tgz -C web --strip-components=1 package/pkg
-      # jsr pinned exactly; it downloads the Deno release it is built for and checks its SHA-256.
-      - name: jsr publish
-        run: npx --yes jsr@0.14.3 publish
+      - name: Install Deno ${{ env.DENO_VERSION }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location --proto '=https' --output deno.zip \
+            "https://github.com/denoland/deno/releases/download/v$DENO_VERSION/deno-x86_64-unknown-linux-gnu.zip"
+          echo "$DENO_SHA256  deno.zip" | sha256sum --check --strict
+          unzip -q deno.zip deno
+      - name: Unpack, and check jsr.json against the tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          mkdir "$RUNNER_TEMP/jsr"
+          tar -xzf dist/*.tgz -C "$RUNNER_TEMP/jsr"
+          v=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["version"])' "$RUNNER_TEMP/jsr/package/jsr.json")
+          test "v$v" = "$REF_NAME" || { echo "::error::tag $REF_NAME but jsr.json says $v"; exit 1; }
+      - name: deno publish
+        working-directory: ${{ runner.temp }}/jsr/package
+        run: '"$RUNNER_TEMP/deno" publish'
 
   ghcr:
     name: Publish the container image
     if: github.event_name == 'push'
-    needs: [check, image-smoke, github-release]
+    needs: [check, github-release]
     runs-on: ubuntu-24.04 # has skopeo
     environment: release
     permissions:
@@ -427,25 +526,21 @@ jobs:
         with:
           name: image
           path: image
-      # skopeo copies the smoke-tested OCI layout as it is, so every tag gets the digest the
-      # image job computed. Tags: 0.1.0, 0.1 and latest; a pre-release (0.2.0-rc.1) only its own.
-      - name: Push
+      # skopeo copies the smoke-tested OCI layout as it is, so the tag gets the digest the image
+      # job computed. Pushing it again (a re-run) changes nothing.
+      - name: Push ${{ needs.check.outputs.version }}
         id: push
         env:
           GH_TOKEN: ${{ github.token }}
           ACTOR: ${{ github.actor }}
           VERSION: ${{ needs.check.outputs.version }}
         run: |
+          trap 'rm -f "$RUNNER_TEMP/auth.json"' EXIT
           digest=$(cat image/graphviz-pure-image.digest)
-          tags=$VERSION
-          case "$VERSION" in *-*) ;; *) tags="$VERSION ${VERSION%.*} latest" ;; esac
           printenv GH_TOKEN | skopeo login --authfile "$RUNNER_TEMP/auth.json" --username "$ACTOR" --password-stdin ghcr.io
-          for tag in $tags; do
-            skopeo copy --all --preserve-digests --authfile "$RUNNER_TEMP/auth.json" --digestfile "$RUNNER_TEMP/pushed" \
-              oci-archive:image/graphviz-pure-image.tar "docker://$IMAGE:$tag"
-            test "$(cat "$RUNNER_TEMP/pushed")" = "$digest" || { echo "::error::$IMAGE:$tag was pushed as $(cat "$RUNNER_TEMP/pushed"), not $digest"; exit 1; }
-          done
-          rm "$RUNNER_TEMP/auth.json"
+          skopeo copy --all --preserve-digests --authfile "$RUNNER_TEMP/auth.json" --digestfile "$RUNNER_TEMP/pushed" \
+            oci-archive:image/graphviz-pure-image.tar "docker://$IMAGE:$VERSION"
+          test "$(cat "$RUNNER_TEMP/pushed")" = "$digest" || { echo "::error::$IMAGE:$VERSION was pushed as $(cat "$RUNNER_TEMP/pushed"), not $digest"; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
       # The attestation is pushed next to the image, so `gh attestation verify oci://...` and
       # registry-side policy tools find it. That push reads Docker's credentials.
@@ -459,6 +554,32 @@ jobs:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+      # Only once the version is attested, and only forward: `latest` moves to the highest stable
+      # v* tag and `X.Y` to the highest stable X.Y.*, so re-running an old release's job (or
+      # releasing a 0.1.x fix after 0.2.0) never moves a tag backwards. Pre-releases get neither.
+      - name: Move the X.Y and latest tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          VERSION: ${{ needs.check.outputs.version }}
+          REPO: ${{ github.repository }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          case "$VERSION" in *-*) echo "$VERSION is a pre-release: no other tags"; exit 0 ;; esac
+          stable=$(git ls-remote --tags --refs "https://github.com/$REPO.git" 'v*' \
+            | sed 's|.*refs/tags/v||' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V)
+          minor=${VERSION%.*}
+          tags=""
+          if [ "$(printf '%s\n' "$stable" | awk -F. -v m="$minor" '$1 "." $2 == m' | tail -n 1)" = "$VERSION" ]; then tags="$minor"; fi
+          if [ "$(printf '%s\n' "$stable" | tail -n 1)" = "$VERSION" ]; then tags="$tags latest"; fi
+          if [ -z "$tags" ]; then echo "newer releases hold $minor and latest"; exit 0; fi
+          trap 'rm -f "$RUNNER_TEMP/auth.json"' EXIT
+          printenv GH_TOKEN | skopeo login --authfile "$RUNNER_TEMP/auth.json" --username "$ACTOR" --password-stdin ghcr.io
+          for tag in $tags; do
+            skopeo copy --all --preserve-digests --authfile "$RUNNER_TEMP/auth.json" --digestfile "$RUNNER_TEMP/pushed" \
+              oci-archive:image/graphviz-pure-image.tar "docker://$IMAGE:$tag"
+            test "$(cat "$RUNNER_TEMP/pushed")" = "$DIGEST" || { echo "::error::$IMAGE:$tag was pushed as $(cat "$RUNNER_TEMP/pushed"), not $DIGEST"; exit 1; }
+          done
       - name: Log out
         if: always()
         run: docker logout ghcr.io

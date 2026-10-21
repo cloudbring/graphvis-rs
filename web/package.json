@@ -11,7 +11,10 @@
     "pkg/graphviz_pure_wasm.d.ts",
     "pkg/graphviz_pure_wasm_bg.wasm",
     "pkg/graphviz_pure_wasm_bg.wasm.d.ts",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "jsr.json"
   ],
   "exports": {
     ".": {

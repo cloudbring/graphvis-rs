@@ -3,7 +3,7 @@
 ## How a release works
 
 1. Run `scripts/bump-version.sh X.Y.Z --pr`: it sets the version in `Cargo.toml`,
-   `Cargo.lock`, `web/package.json` and `jsr.json`, dates the changelog's "Unreleased" entries,
+   `Cargo.lock`, `web/package.json` and `web/jsr.json`, dates the changelog's "Unreleased" entries,
    and opens the release pull request. Merge it. The version follows
    [the versioning policy](versioning.md).
 2. A maintainer pushes a signed tag: `git tag -s v0.1.0 -m v0.1.0 && git push origin v0.1.0`.
@@ -24,19 +24,26 @@
    - packages deterministic archives (`scripts/release-package.py`), writes `SHA256SUMS` and
      attests the build provenance of every file (Sigstore, stored on GitHub);
    - builds the container image for linux/amd64 and linux/arm64 from the two musl archives
-     (`scripts/release-image.sh`, no second compile; the same archives always give the same
-     digest) and runs the gallery smoke test through it on both platforms.
-4. The publishing jobs wait for a maintainer to approve the `release` environment, then:
+     (`scripts/release-image.sh`, no second compile; with the same BuildKit, commit time and
+     revision, the same archives give the same digest) and runs the version check and the
+     gallery smoke test through it on both platforms;
+   - installs the x86-64 Windows zip with Scoop, from a manifest written like the bucket's, and
+     runs the same checks through Scoop's shim;
+   - dry-runs the JSR publish of the npm tarball.
+4. The publishing jobs wait for every smoke test and for a maintainer to approve the `release`
+   environment, then:
    - create the GitHub release with all files;
    - publish the eight crates to crates.io (trusted publishing, `cargo publish --workspace`);
    - stage `@graphviz-pure/wasm` on npm (trusted publishing, with npm provenance). The trusted
      publisher may only stage, so the version goes live only when a maintainer approves it with
      2FA: the package's **Staged Packages** tab on npmjs.com, or `npm stage approve <stage-id>`;
-   - publish the same npm tarball to JSR (`jsr publish`, OIDC). JSR has no staging: the
-     version is live as soon as the job finishes, so the `release` approval is its only gate;
-   - push the smoke-tested image to `ghcr.io/graphviz-pure/graphviz-pure` as `0.1.0`, `0.1` and
-     `latest` (a pre-release gets only its own tag) and attest its digest, with the attestation
-     stored next to the image in the registry;
+   - publish the files of the npm tarball (which carries `web/jsr.json`) to JSR with a pinned
+     Deno (`deno publish`, OIDC). JSR has no staging: the version is live as soon as the job
+     finishes, so the `release` approval is its only gate;
+   - push the smoke-tested image to `ghcr.io/graphviz-pure/graphviz-pure` as `0.1.0`, attest its
+     digest (the attestation is stored next to the image in the registry), then point `0.1`
+     and `latest` at it if it is the newest stable `0.1.*` and the newest stable release. A
+     pre-release gets only its own tag.
 5. Within hours, `graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the
    release, verify each asset's attestation and checksum, and commit the new formula and
    manifest. `graphviz-pure/graphviz-pure.github.io` deploys the site from `master` builds the
@@ -44,6 +51,23 @@
 
 Run the workflow by hand (Actions → Release → Run workflow) to build, smoke-test and attest
 everything, the container image included, without publishing anything.
+
+### If a publishing job fails
+
+The publishing jobs are independent once the GitHub release exists, so a failure leaves the
+other channels published. Fix the cause (an expired trusted-publisher configuration, a
+registry outage), then **Re-run failed jobs** on the same run: never push a new tag for the
+same version.
+
+- `crates-io`: crates.io refuses a version that already exists. If no crate was published,
+  re-run the job. If it failed partway, the remaining crates need a `cargo publish -p` run
+  from `release.yml` in the `release` environment (trusted publishing accepts nothing else).
+- `npm`, `jsr`: a re-run is safe if the job failed before publishing. If the version went up,
+  there is nothing to re-run.
+- `ghcr`: safe to re-run. Pushing the same image again changes nothing, and `0.1`/`latest`
+  only ever move forward.
+- `github-release`: the release is immutable once published. If the job failed before
+  publishing, delete the draft release, then re-run.
 
 ## Verifying a download
 
@@ -127,8 +151,10 @@ the same fields just before pushing the first tag, then release within 48 hours.
    default), so a release publishes only when a member pushed the tag. Once the first version
    is out, also consider requiring every version to be published from CI.
 
-JSR has no staged-approval step like npm's: `jsr publish` makes the version live, and the
-`release` environment's approval is the only gate. The package is the same tarball as npm's.
+JSR has no staged-approval step like npm's: `deno publish` makes the version live, and the
+`release` environment's approval is the only gate. The JSR package holds the npm tarball's
+files as listed in `web/jsr.json` (README.md, LICENSE, NOTICE and `pkg/`), so both registries
+show `web/README.md`; npm's `package.json` is not part of it.
 In Deno, `init()` fetches the `.wasm` next to the module, so a script importing
 `jsr:@graphviz-pure/wasm` needs `--allow-net=jsr.io` (or passes the bytes to `init`).
 
@@ -156,6 +182,10 @@ Users run `brew install graphviz-pure/tap/graphviz-pure` and
 `scoop install graphviz-pure/graphviz-pure`. Submitting to homebrew-core and the Scoop main
 bucket comes later; both require a project with some adoption, and homebrew-core builds from
 source.
+
+The release workflow's `scoop-smoke` job installs each release's x86-64 zip with a manifest
+written the way the bucket's `scripts/update.sh` writes it, using Scoop v0.6.0 at a pinned
+commit. If the bucket's manifest format changes, change that job to match.
 
 ### Later channels
 
