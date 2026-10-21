@@ -8,7 +8,7 @@ ARG VERSION
 ARG REVISION
 ARG CREATED
 LABEL org.opencontainers.image.title="graphviz-pure" \
-      org.opencontainers.image.description="A byte-exact Rust port of Graphviz: a drop-in dot command line" \
+      org.opencontainers.image.description="A pure-Rust port of Graphviz with the same output on every platform: a drop-in dot command line" \
       org.opencontainers.image.source="https://github.com/graphviz-pure/graphviz-pure" \
       org.opencontainers.image.url="https://graphviz-pure.github.io/" \
       org.opencontainers.image.licenses="EPL-2.0" \

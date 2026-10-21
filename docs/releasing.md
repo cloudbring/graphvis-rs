@@ -27,13 +27,15 @@
      (`scripts/release-image.sh`, no second compile; with the same BuildKit, commit time and
      revision, the same archives give the same digest) and runs the version check and the
      gallery smoke test through it on both platforms;
-   - installs the x86-64 Windows zip with Scoop, from a manifest written like the bucket's, and
-     runs the same checks through Scoop's shim;
+   - installs the Windows zips with Scoop on x86-64 and on arm64, from a manifest written like
+     the bucket's, checks that each got its own architecture's exe, and runs the same checks
+     through Scoop's shim;
    - dry-runs the JSR publish of the npm tarball.
 4. The publishing jobs wait for every smoke test and for a maintainer to approve the `release`
    environment, then:
    - create the GitHub release with all files;
-   - publish the eight crates to crates.io (trusted publishing, `cargo publish --workspace`);
+   - publish the eight crates to crates.io (trusted publishing, `cargo publish --workspace`,
+     leaving out any crate whose version is already there);
    - stage `@graphviz-pure/wasm` on npm (trusted publishing, with npm provenance). The trusted
      publisher may only stage, so the version goes live only when a maintainer approves it with
      2FA: the package's **Staged Packages** tab on npmjs.com, or `npm stage approve <stage-id>`;
@@ -42,8 +44,8 @@
      finishes, so the `release` approval is its only gate;
    - push the smoke-tested image to `ghcr.io/graphviz-pure/graphviz-pure` as `0.1.0`, attest its
      digest (the attestation is stored next to the image in the registry), then point `0.1`
-     and `latest` at it if it is the newest stable `0.1.*` and the newest stable release. A
-     pre-release gets only its own tag.
+     and `latest` at it if it is the newest stable `0.1.*` and the newest stable version among
+     the image's tags. A pre-release gets only its own tag.
 5. Within hours, `graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the
    release, verify each asset's attestation and checksum, and commit the new formula and
    manifest. `graphviz-pure/graphviz-pure.github.io` deploys the site from `master` builds the
@@ -59,13 +61,14 @@ other channels published. Fix the cause (an expired trusted-publisher configurat
 registry outage), then **Re-run failed jobs** on the same run: never push a new tag for the
 same version.
 
-- `crates-io`: crates.io refuses a version that already exists. If no crate was published,
-  re-run the job. If it failed partway, the remaining crates need a `cargo publish -p` run
-  from `release.yml` in the `release` environment (trusted publishing accepts nothing else).
+- `crates-io`: safe to re-run, also after a partial publish. The job asks crates.io which
+  crates already have the version (`scripts/crates-to-publish.py`) and publishes only the
+  others, in dependency order; if all are there, it publishes nothing.
 - `npm`, `jsr`: a re-run is safe if the job failed before publishing. If the version went up,
   there is nothing to re-run.
 - `ghcr`: safe to re-run. Pushing the same image again changes nothing, and `0.1`/`latest`
-  only ever move forward.
+  only ever move forward: they follow the highest stable version among the image's tags on
+  ghcr.io, so a `v*` tag whose release was rejected never holds them.
 - `github-release`: the release is immutable once published. If the job failed before
   publishing, delete the draft release, then re-run.
 
@@ -186,9 +189,9 @@ Users run `brew install graphviz-pure/tap/graphviz-pure` and
 bucket comes later; both require a project with some adoption, and homebrew-core builds from
 source.
 
-The release workflow's `scoop-smoke` job installs each release's x86-64 zip with a manifest
-written the way the bucket's `scripts/update.sh` writes it, using Scoop v0.6.0 at a pinned
-commit. If the bucket's manifest format changes, change that job to match.
+The release workflow's `scoop-smoke` job installs each release's x86-64 and arm64 zips (on an
+x86-64 and an arm64 runner) with a manifest written the way the bucket's `scripts/update.sh`
+writes it, using Scoop v0.6.0 at a pinned commit. If the bucket's manifest format changes, change that job to match.
 
 ### Later channels
 

@@ -10,7 +10,7 @@
 pkgname=graphviz-pure
 pkgver=0.1.0
 pkgrel=1
-pkgdesc='Byte-exact Rust port of Graphviz 16.1.0, a dot-compatible command line (not affiliated with Graphviz)'
+pkgdesc='Pure-Rust port of Graphviz 16.1.0, a dot-compatible command line with the same output on every platform (not affiliated with Graphviz)'
 arch=('x86_64' 'aarch64')
 url='https://graphviz-pure.github.io/'
 # EPL-2.0: the port. OFL-1.1: the Tinos, Arimo and Cousine fonts compiled into the binary.

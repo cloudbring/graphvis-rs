@@ -1,5 +1,5 @@
 pkgbase = graphviz-pure
-	pkgdesc = Byte-exact Rust port of Graphviz 16.1.0, a dot-compatible command line (not affiliated with Graphviz)
+	pkgdesc = Pure-Rust port of Graphviz 16.1.0, a dot-compatible command line with the same output on every platform (not affiliated with Graphviz)
 	pkgver = 0.1.0
 	pkgrel = 1
 	url = https://graphviz-pure.github.io/
