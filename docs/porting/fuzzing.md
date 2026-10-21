@@ -125,6 +125,16 @@ Errors and exit status
   concentrate's `rebuild_vlists`. Pathplan's `prerror` lines, textspan_lut's metric
   fallback warnings, `addXLabels`' count warning and `deriveClusters`' message are
   printed too.
+* A DOT syntax error reads as scan.l's `aagerror` writes it: `syntax error in line N near
+  'TOKEN'` (the rejected token's `yytext`: `"` for a quoted string, `>` for an HTML string),
+  or, at end of input, nothing or the scanner state (`scanning a quoted string ...` with the
+  first 80 bytes of the string, HTML string, comment). N is the line where the rejected
+  token ends, renumbered by `# N "file"` directives, which also rename the file. The lexer
+  no longer fails: an unmatched character is a token the grammar rejects, `@` ends the
+  input, and an unterminated string or comment ends it in that state. This was open case
+  `022-stderr-syntax-error-message` (issue #31); the tests are in
+  `crates/graphviz-pure-parser/tests/syntax_errors.rs`. Not yet ported: `chkNum`'s
+  "badly delimited number" warning.
 * A concentrate failure, or an `install_in_rank` failure, abandons the layout as in C:
   no splines, no postprocessing. C then renders the half-made drawing (zero bounding
   box, empty cluster boxes, labels at the origin), and so does the port.
@@ -298,7 +308,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
 | [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
-| [`022-stderr-syntax-error-message`](../../tests/fuzz-open/022-stderr-syntax-error-message) | low | — | port |
 | [`023-neato-circuit-kk-agseq-index-crash`](../../tests/fuzz-open/023-neato-circuit-kk-agseq-index-crash) | high | 1 | upstream C, wontfix |
 | [`024-neato-ipsep-node-in-two-clusters-size-max-alloc`](../../tests/fuzz-open/024-neato-ipsep-node-in-two-clusters-size-max-alloc) | high | 1 | upstream C, wontfix |
 | [`025-fdp-cluster-address-dependent-layout`](../../tests/fuzz-open/025-fdp-cluster-address-dependent-layout) | medium | 3 | upstream C, wontfix |

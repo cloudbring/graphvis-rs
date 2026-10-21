@@ -42,7 +42,7 @@ const lastFuzz = fidelity.fuzz.rounds[fidelity.fuzz.rounds.length - 1];
 		<li><strong>{fmt(fidelity.e2e.total - fidelity.e2e.portable)} corpus files under portable math</strong> (Linux, WASM). Apple's libm is closed source; see <a href={url('whats-left/platform-libm-apple/')}>the issue</a>, <a href={url('porting/libm/')}>Math off macOS</a> and the <a href={url('fidelity/#full-pipeline')}>file list</a>.</li>
 		<li><strong>{twopi.total - twopi.apple} twopi layouts</strong>: C routes the arrows graphs differently from run to run (<a href={url('whats-left/twopi-arrows-c-nondeterministic-routing/')}>issue</a>).</li>
 		<li><strong>{(100 - lastFuzz.all).toFixed(1)}% of the last fuzzing round</strong>: every remaining case belongs to one of the issues above; the round-by-round record is in <a href={url('porting/fuzzing/')}>the fuzzing notes</a>.</li>
-		<li><strong>stderr</strong>: exit status matches; some warning texts and the wording of DOT syntax errors do not (<a href={url('whats-left/stderr-missing-warnings/')}>warnings</a>, <a href={url('whats-left/stderr-syntax-error-message/')}>syntax errors</a>).</li>
+		<li><strong>stderr</strong>: exit status and DOT syntax errors match; some warning texts do not (<a href={url('whats-left/stderr-missing-warnings/')}>warnings</a>).</li>
 	</ul>
 </StarlightPage>
 

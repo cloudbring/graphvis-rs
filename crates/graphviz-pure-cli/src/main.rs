@@ -178,6 +178,18 @@ fn read_input(path: Option<&str>) -> io::Result<String> {
     Ok(graphviz_pure_core::charset::decode(bytes))
 }
 
+/// `agerrorf` of an input's error, as C's bytes. A syntax error names the file `aagerror`
+/// knows: the input, or the one a `# N "file"` line directive named.
+fn report_error(name: &str, e: &graphviz_pure_core::GraphvizError) {
+    let name = match e {
+        graphviz_pure_core::GraphvizError::SyntaxError {
+            file: Some(file), ..
+        } => file.as_str(),
+        _ => name,
+    };
+    graphviz_pure_core::charset::eprint_bytes(&format!("Error: {name}: {e}\n"));
+}
+
 fn main() -> ExitCode {
     let raw: Vec<String> = env::args().collect();
     let argv0 = raw
@@ -268,7 +280,7 @@ fn main() -> ExitCode {
         if let Some(e) = &err {
             failed = true;
             if outputs.is_empty() {
-                eprintln!("Error: {name}: {e}");
+                report_error(name, e);
                 continue;
             }
         }
@@ -299,7 +311,7 @@ fn main() -> ExitCode {
         // The graphs read before a syntax error are written, then the error reported.
         if let Some(e) = err {
             let _ = out.flush();
-            eprintln!("Error: {name}: {e}");
+            report_error(name, &e);
         }
     }
 
