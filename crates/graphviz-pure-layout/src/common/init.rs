@@ -85,8 +85,14 @@ pub fn graph_label(
         html_strings: Some(html_strings),
         ..graphviz_pure_geom::NodeSizeEnv::new(name)
     };
-    let Some(geom) = graphviz_pure_geom::graph_label_geometry_in(name, attrs, is_root, false, &env)
-    else {
+    let make = || graphviz_pure_geom::graph_label_geometry_in(name, attrs, is_root, false, &env);
+    // layout_graph_with_options made the root label first, as graph_init does.
+    let geom = if is_root {
+        graphviz_pure_core::diag::quietly(make)
+    } else {
+        make()
+    };
+    let Some(geom) = geom else {
         return (None, 0);
     };
     let lbl = TextLabel {

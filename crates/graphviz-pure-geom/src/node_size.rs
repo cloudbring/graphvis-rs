@@ -595,6 +595,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
         && shape_name != "epsf"
         && ShapeKind::parse(shape_name) == ShapeKind::Box
         && !matches!(shape_name, "box" | "rect" | "rectangle")
+        && graphviz_pure_core::diag::reporting()
         && graphviz_pure_core::diag::emit_once(&format!("\0shape\0{shape_name}"))
     {
         graphviz_pure_core::diag::agwarningf(&format!(
@@ -1084,7 +1085,7 @@ fn poly_init(
     } else if mapbool(Some(fxd)) {
         // check only label, as images we can scale to fit
         if (width < label_dimen.x || height < label_dimen.y)
-            && graphviz_pure_core::diag::emit_once(&format!("\0fixedsize\0{}", node.name))
+            && graphviz_pure_core::diag::reporting()
         {
             // shapes.c:2115-2118; agraphof(n) is the root graph
             let g = if env.graph_name.is_empty() {
@@ -1714,8 +1715,7 @@ fn to_record_field(f: &Field) -> RecordField {
 }
 
 /// `parse_reclbl` on `label` for `record_init`, falling back to `\N` on a syntax error.
-/// The error is reported once per node (`node`), as C sizes each node once.
-fn parse_record_label(label: &str, html: bool, lr: bool, node: &str) -> Field {
+fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
     let src = if html {
         &label[1..label.len() - 1]
     } else {
@@ -1731,7 +1731,7 @@ fn parse_record_label(label: &str, html: bool, lr: bool, node: &str) -> Field {
     if let Some(f) = p.parse(lr, true) {
         return f;
     }
-    if graphviz_pure_core::diag::emit_once(&format!("\0reclbl\0{node}\0{label}")) {
+    if graphviz_pure_core::diag::reporting() {
         graphviz_pure_core::diag::agerrorf(&format!("bad label format {src}\n"));
     }
     let mut p = RecParser {
@@ -1753,7 +1753,7 @@ fn record_init(
     let attrs = &node.attrs;
     let flip = !env.realflip;
     let html = geom.label.html;
-    let mut info = parse_record_label(label, html, flip, &node.name);
+    let mut info = parse_record_label(label, html, flip);
     let (font_name, font_size) = (geom.label.font_name.clone(), geom.label.font_size);
     label_fields(&mut info, html, obj, &font_name, font_size, env.charset);
     size_reclbl(attrs, &mut info);
@@ -1816,7 +1816,7 @@ mod tests {
 
     #[test]
     fn record_port_overwrites_text_like_c() {
-        let mut f = parse_record_label("abc <p> def|x", false, true, "n");
+        let mut f = parse_record_label("abc <p> def|x", false, true);
         assert_eq!(f.flds[0].text.as_deref(), Some(""));
         assert_eq!(f.flds[0].id.as_deref(), Some(""));
         label_fields(
@@ -1832,9 +1832,9 @@ mod tests {
 
     #[test]
     fn record_hard_spaces() {
-        let f = parse_record_label("a\\ \\ b  c|d", false, true, "n");
+        let f = parse_record_label("a\\ \\ b  c|d", false, true);
         assert_eq!(f.flds[0].text.as_deref(), Some("a  b  c"));
-        let f = parse_record_label("", false, true, "n");
+        let f = parse_record_label("", false, true);
         assert_eq!(f.flds[0].text.as_deref(), Some(" "));
     }
 

@@ -44,7 +44,8 @@ pub fn decode_slice(bytes: &[u8]) -> String {
     out
 }
 
-fn raw_char(b: u8) -> char {
+/// The char that stands for the raw (non-UTF-8) byte `b`; [`encode`] turns it back.
+pub fn raw_char(b: u8) -> char {
     char::from_u32(RAW_BASE + u32::from(b)).expect("raw byte code point")
 }
 

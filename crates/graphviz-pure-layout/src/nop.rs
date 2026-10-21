@@ -233,8 +233,20 @@ fn user_spline(pos: &str, tail_arrow: bool, head_arrow: bool) -> Option<Spline> 
     Some(Spline { segments })
 }
 
-/// Size of a label in points (`make_label`).
+/// Size of a label in points (`make_label`), made again after `layout_nop`'s first
+/// `LGraph` reported its diagnostics.
 fn label_dimen(
+    text: &str,
+    html: bool,
+    fontname: &str,
+    fontsize: f64,
+    ctx: &LabelSubstContext<'_>,
+) -> Point {
+    graphviz_pure_core::diag::quietly(|| make_label_dimen(text, html, fontname, fontsize, ctx))
+}
+
+/// Size of a label in points (`make_label`).
+fn make_label_dimen(
     text: &str,
     html: bool,
     fontname: &str,
@@ -320,7 +332,13 @@ fn graph_label(
         graph_name: name,
         ..Default::default()
     };
-    let dimen = label_dimen(text, html.contains(text), fontname, fontsize, &ctx);
+    // nop_init_graphs' do_graph_label makes the cluster labels, after the node and edge init;
+    // the root label was made before the engine ran.
+    let dimen = if is_root {
+        label_dimen(text, html.contains(text), fontname, fontsize, &ctx)
+    } else {
+        make_label_dimen(text, html.contains(text), fontname, fontsize, &ctx)
+    };
     let loc = attrs.get("labelloc").map(String::as_str).unwrap_or("");
     let mut pos_flag = 0u8;
     if is_root {
@@ -364,7 +382,12 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
         .cloned()
         .unwrap_or_else(|| "TB".to_string());
     let _ = rankdir;
-    graphviz_pure_geom::node_size::size_graph_nodes(graph);
+    // neato_init_graph's neato_init_node_edge comes first: common_init_node for every node,
+    // then common_init_edge (labels, then ports) per edge. Their diagnostics are reported
+    // here, in that order. The sizings below repeat it quietly, apart from the cluster
+    // labels, which nop_init_graphs makes next.
+    let _ = crate::common::types::LGraph::new(graph, 2, crate::common::types::EdgeType::Line);
+    graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::node_size::size_graph_nodes(graph));
 
     // user_pos: positions in points, stored in inches as ND_pos.
     let mut npos: Vec<(f64, f64)> = Vec::with_capacity(graph.nodes.len());
@@ -839,7 +862,8 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
         let keep: Vec<bool> = (0..graph.edges.len())
             .map(|ei| !reroute_all && nop >= 2 && !graph.edges[ei].spline.segments.is_empty())
             .collect();
-        let routed = route_missing_edges(graph, &keep);
+        // The ports were resolved, and warned about, by the first LGraph.
+        let routed = graphviz_pure_core::diag::silently(|| route_missing_edges(graph, &keep));
         for (ei, (spline, labels)) in routed.into_iter().enumerate() {
             if keep[ei] {
                 continue;

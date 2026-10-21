@@ -189,13 +189,22 @@ impl<'a> Dot<'a> {
         let flip = self.graphs[0].flip();
         let name = self.graphs[sg].name.clone();
         let env = graphviz_pure_geom::NodeSizeEnv::from_graph(self.input);
-        let Some(gl) = graphviz_pure_geom::graph_label_geometry_in(
-            &name,
-            &self.graphs[sg].attrs,
-            sg == 0,
-            flip,
-            &env,
-        ) else {
+        let make = || {
+            graphviz_pure_geom::graph_label_geometry_in(
+                &name,
+                &self.graphs[sg].attrs,
+                sg == 0,
+                flip,
+                &env,
+            )
+        };
+        // layout_graph_with_options made the root label first, as graph_init does.
+        let gl = if sg == 0 {
+            graphviz_pure_core::diag::quietly(make)
+        } else {
+            make()
+        };
+        let Some(gl) = gl else {
             return;
         };
         self.graphs[0].has_labels |= GRAPH_LABEL;

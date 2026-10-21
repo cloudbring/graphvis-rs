@@ -801,7 +801,10 @@ impl Dot<'_> {
             }
             return Ok(());
         }
-        self.make_flat_adj_edges_aux(edges, tn, hn, et)
+        // The aux graph's dot_init_node_edge sizes copies of the nodes and edges again. C
+        // repeats some of their diagnostics there, through attribute symbols that are stale
+        // in the aux graph; the port reports each one once.
+        graphviz_pure_core::diag::quietly(|| self.make_flat_adj_edges_aux(edges, tn, hn, et))
     }
 
     /// The recursive-dot part of `make_flat_adj_edges` (edges with ports):

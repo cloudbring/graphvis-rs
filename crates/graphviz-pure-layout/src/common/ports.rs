@@ -375,7 +375,9 @@ pub fn shape_port<S: PortGraph + ?Sized>(
     let compass = compass.unwrap_or("_");
     let all = BOTTOM | RIGHT | TOP | LEFT;
     let src = g.port_node(n);
-    let geom = graphviz_pure_geom::node_geometry(src, &g.port_env());
+    // The node was sized, and its diagnostics reported, by common_init_node.
+    let geom =
+        graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::node_geometry(src, &g.port_env()));
     let mut rv = PortInfo::default();
     let is_record = g.shape(n).is_some_and(|s| s.inside == InsideFn::Record);
     if is_record && let Some(rec) = geom.record.as_ref() {
@@ -424,12 +426,18 @@ pub fn shape_port<S: PortGraph + ?Sized>(
 
 /// `unrecognized(n, p)` (`lib/common/shapes.c:362-365`).
 fn unrecognized(n: &NodeData, p: &str) {
+    if !graphviz_pure_core::diag::reporting_ports() {
+        return;
+    }
     graphviz_pure_core::diag::agwarningf(&format!("node {}, port {p} unrecognized\n", n.name));
 }
 
 /// The compass warning of `poly_port` and `record_port` (`shapes.c:2894-2896`,
 /// `3748-3749`).
 fn bad_compass(n: &NodeData, portname: &str, compass: &str) {
+    if !graphviz_pure_core::diag::reporting_ports() {
+        return;
+    }
     graphviz_pure_core::diag::agwarningf(&format!(
         "node {}, port {portname}, unrecognized compass point '{compass}' - ignored\n",
         n.name

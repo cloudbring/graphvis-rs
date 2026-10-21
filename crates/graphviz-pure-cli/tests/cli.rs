@@ -1332,11 +1332,137 @@ c [fixedsize=true, width=0.1, label=\"long label\"]; c3 [fixedsize=true, width=3
     }
 }
 
+/// Each label is made, and reported, once in C, even when two labels of one object, or two
+/// parallel edges, have the same text.
+#[test]
+fn issue30_identical_labels_each_warn() {
+    let font = "<<FONT Q=\"1\">x</FONT>>";
+    let src = format!(
+        "digraph G {{ a [label={font} xlabel={font}]; \
+         a -> b [label={font} headlabel={font} taillabel={font}] }}"
+    );
+    let node = "Warning: Illegal attribute Q in <FONT> - ignored\nin label of node a\n";
+    let edge = "Warning: Illegal attribute Q in <FONT> - ignored\nin label of edge a -> b\n";
+    let want = format!("{node}{node}{edge}{edge}{edge}");
+    for engine in ["dot", "neato", "circo"] {
+        assert_eq!(warnings(engine, &src).0, want, "{engine}");
+    }
+    let src = format!("digraph {{ a -> b [label={font}]; a -> b [label={font}] }}");
+    assert_eq!(warnings("dot", &src).0, format!("{edge}{edge}"));
+}
+
+/// Every graph of a file is laid out, and its labels reported, on its own. Only the
+/// unknown-shape warning is once per process (`user_shape` adds the name to `Shapes`).
+#[test]
+fn issue30_warnings_repeat_per_graph() {
+    let g = "digraph G { a [label=<<TABLE Q=\"1\"><TR><TD>x</TD></TR></TABLE>> shape=foo]; \
+a:zz -> b; c [shape=record label=\"{a|\"]; d [fixedsize=true width=0.1 label=\"long label\"] }\n";
+    let per_graph = "Warning: Illegal attribute Q in <TABLE> - ignored\n\
+                     in label of node a\n\
+                     Error: bad label format {a|\n\
+                     Warning: node 'd', graph 'G' size too small for label\n\
+                     Warning: node a, port zz unrecognized\n";
+    let want = format!("Warning: using box for unknown shape foo\n{per_graph}{per_graph}");
+    for engine in ["dot", "neato"] {
+        let (err, ok) = warnings(engine, &format!("{g}{g}"));
+        assert!(!ok, "{engine}");
+        assert_eq!(err, want, "{engine}");
+    }
+}
+
+/// `neato -n`: neato_init_node_edge runs first whatever the level, so each edge's label
+/// warnings are followed by its port warnings, and `-n2` warns about the ports of edges that
+/// keep their input splines.
+#[test]
+fn issue30_neato_nop_port_warnings() {
+    let src = "digraph G { node [pos=\"0,0\"]; a [pos=\"0,0\" label=<<FONT A=\"1\">a</FONT>>]; \
+b [pos=\"100,0\"]; c [pos=\"10,0\"]; a:zz -> b [label=x pos=\"0,0 30,0 60,0 100,0\" lp=\"50,10\"]; \
+b -> c:yy [label=<<FONT B=\"1\">y</FONT>>]; }";
+    let want = "Warning: Illegal attribute A in <FONT> - ignored\n\
+                in label of node a\n\
+                Warning: node a, port zz unrecognized\n\
+                Warning: Illegal attribute B in <FONT> - ignored\n\
+                in label of edge b -> c\n\
+                Warning: node c, port yy unrecognized\n";
+    for n in ["-n1", "-n2"] {
+        assert_eq!(run(&["-Kneato", n, "-Tsvg"], src).1, want, "{n}");
+    }
+    let src = "digraph G { a [pos=\"0,0\"]; b [pos=\"100,0\"]; \
+a:zz -> b:yy [pos=\"e,80,0 0,0 30,0 60,0 80,0\"]; b -> a [label=x pos=\"e,0,0 100,0 60,0 30,0 0,0\"] }";
+    let want = "Warning: node a, port zz unrecognized\nWarning: node b, port yy unrecognized\n";
+    for n in ["-n1", "-n2"] {
+        assert_eq!(run(&["-Kneato", n, "-Tsvg"], src).1, want, "{n}");
+    }
+}
+
+/// `sidesfn` prints each unrecognized byte with `%c`, so a UTF-8 character gives one warning
+/// per byte, written raw, with the byte's signed `char` value.
+#[test]
+fn issue30_sides_warning_raw_bytes() {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .args(["-Tsvg"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(
+            "digraph { a [label=<<TABLE SIDES=\"é\"><TR><TD>x</TD></TR></TABLE>>] }".as_bytes(),
+        )
+        .unwrap();
+    let out = child.wait_with_output().unwrap();
+    let mut want = b"Warning: Unrecognized character '\xC3' (-61) in sides attribute\n".to_vec();
+    want.extend_from_slice(b"Warning: Unrecognized character '\xA9' (-87) in sides attribute\n");
+    assert_eq!(out.stderr, want);
+}
+
+/// `lexerror` (`lib/common/htmllex.c:67-72`) does not stop expat, so an empty unknown
+/// element is reported by both `startElement` and `endElement`; other forms once.
+#[test]
+fn issue30_unknown_empty_html_element_reported_twice() {
+    let err = "Error: Unknown HTML element <FOO> on line 1 \n";
+    for (label, n) in [
+        (
+            "<TABLE A=\"1\"><FOO Z=\"1\"/><TR><TD>x</TD></TR></TABLE>",
+            2,
+        ),
+        ("<FOO/>", 2),
+        ("<FOO>x</FOO>", 1),
+    ] {
+        let warn = if label.contains("A=") {
+            "Warning: Illegal attribute A in <TABLE> - ignored\n"
+        } else {
+            ""
+        };
+        let want = format!("{warn}{}in label of node a\n", err.repeat(n));
+        let (got, ok) = warnings("dot", &format!("digraph {{ a [label=<{label}>] }}"));
+        assert!(!ok, "{label}");
+        assert_eq!(got, want, "{label}");
+    }
+}
+
+/// Issue #88: graph_init makes the root graph label before dot sizes the nodes, so the
+/// label's font warnings come first.
+#[test]
+fn issue88_root_label_font_warnings_first() {
+    let src = "graph G {\nlabel=\"tab\there\";\na [fontname=\"Bookman\"];\n}\n";
+    let want = "Warning: Warning: no value for width of ASCII character 9. Falling back to 0\n\
+                Warning: Warning: no hard-coded metrics for 'Bookman'.  Falling back to 'Times' \
+                metrics\n";
+    for engine in ["dot", "neato", "circo"] {
+        assert_eq!(warnings(engine, src).0, want, "{engine}");
+    }
+}
+
 /// Not ported: HTML `<IMG>` sources are never loaded, so `size_html_img`'s error
 /// (`lib/common/htmltable.c:1088-1093`, after `gvusershape_file_access`'s warning at
 /// `lib/gvc/gvusershape.c:700`) is missing and the run exits 0 where C exits 1.
 #[test]
-#[ignore = "issue #30: HTML IMG file errors (No or improper image file)"]
+#[ignore = "issue #130: HTML IMG file errors (No or improper image file)"]
 fn issue30_html_missing_image_error() {
     let src = "digraph { a [label=<<TABLE><TR><TD><IMG SRC=\"nope.png\"/></TD></TR></TABLE>>] }";
     let (err, ok) = warnings("dot", src);
@@ -1353,7 +1479,7 @@ fn issue30_html_missing_image_error() {
 /// (`lib/common/shapes.c:2030-2032`) and `epsf_init`'s (`lib/common/psusershape.c:118`)
 /// are missing.
 #[test]
-#[ignore = "issue #30: shapefile/epsf user-shape warnings"]
+#[ignore = "issue #130: shapefile/epsf user-shape warnings"]
 fn issue30_missing_shapefile_warnings() {
     let src = "digraph { a4 [shape=custom]; a5 [shape=epsf] }";
     assert_eq!(

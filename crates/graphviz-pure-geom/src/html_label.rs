@@ -553,7 +553,7 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool, w: &mut AttrWarn
         "title" | "tooltip" => p.title = Some(v.to_string()),
         "sides" => {
             let mut flags = 0;
-            for c in v.bytes() {
+            for c in graphviz_pure_core::charset::encode(v).iter().copied() {
                 match c.to_ascii_lowercase() {
                     b'l' => flags |= BORDER_LEFT,
                     b't' => flags |= BORDER_TOP,
@@ -561,7 +561,11 @@ fn data_attr(p: &mut HtmlData, name: &str, v: &str, cell: bool, w: &mut AttrWarn
                     b'b' => flags |= BORDER_BOTTOM,
                     _ => {
                         // `%c` of the byte and `%d` of a signed `char` (the oracle's ABI).
-                        let shown = String::from_utf8_lossy(&[c]).into_owned();
+                        let shown = if c.is_ascii() {
+                            char::from(c)
+                        } else {
+                            graphviz_pure_core::charset::raw_char(c)
+                        };
                         w.note(format!(
                             "Unrecognized character '{shown}' ({}) in sides attribute\n",
                             c as i8
@@ -974,7 +978,15 @@ impl Lexer {
             atts.push((an, String::from_utf8_lossy(&v).into_owned()));
         }
         self.stack.push(name.clone());
-        self.start_element(&name, &atts)?;
+        if let Err(e) = self.start_element(&name, &atts) {
+            // lexerror does not stop expat: for an empty element it goes on to endElement,
+            // which reports the unknown element a second time.
+            return Err(if empty && e.starts_with('\0') {
+                format!("\0{e}")
+            } else {
+                e
+            });
+        }
         if empty {
             self.stack.pop();
             self.end_element(&name)?;
@@ -1010,15 +1022,16 @@ pub struct HtmlError {
 }
 
 impl HtmlError {
-    /// The `agerrorf` text and its `AGPREV` context line (`error_context`), or only the
-    /// first for `lexerror`'s unknown elements.
-    pub fn report(&self) -> (String, Option<String>) {
+    /// The `agerrorf` texts and their `AGPREV` context line (`error_context`), or only the
+    /// first for `lexerror`'s unknown elements (twice for an empty one).
+    pub fn report(&self) -> (Vec<String>, Option<String>) {
         let line = 1 + self.units[..self.unit]
             .iter()
             .map(|u| u.bytes().filter(|&c| c == b'\n').count())
             .sum::<usize>();
         if let Some(m) = self.msg.strip_prefix('\0') {
-            return (format!("{m} on line {line} \n"), None);
+            let (m, n) = m.strip_prefix('\0').map_or((m, 1), |m| (m, 2));
+            return (vec![format!("{m} on line {line} \n"); n], None);
         }
         let prev = self
             .unit
@@ -1026,7 +1039,7 @@ impl HtmlError {
             .map_or("", |i| self.units[i].as_str());
         let cur = self.units.get(self.unit).map_or("", String::as_str);
         (
-            format!("{} in line {line} \n", self.msg),
+            vec![format!("{} in line {line} \n", self.msg)],
             Some(format!("... {prev}{cur} ...\n")),
         )
     }
@@ -2256,8 +2269,7 @@ fn html_label_owner(obj: &LabelSubstContext<'_>) -> String {
 ///
 /// Diagnostics, as C prints them: the lexer's warnings, the error of a rejected label, the
 /// sizing warnings, then `make_label`'s `in label of ...` when `make_html_label` returns
-/// non-zero. Sizing runs more than once per object in the port (layout, then rendering), so
-/// each object's label is reported once.
+/// non-zero. The port's repeat sizings run inside `diag::quietly`, which silences them.
 pub fn make_html_label(
     text: &str,
     obj: &LabelSubstContext<'_>,
@@ -2268,7 +2280,7 @@ pub fn make_html_label(
     cs: Charset,
 ) -> HtmlLabelLayout {
     let owner = html_label_owner(obj);
-    let report = graphviz_pure_core::diag::emit_once(&format!("\0html\0{owner}\0{text}"));
+    let report = graphviz_pure_core::diag::reporting();
     let (res, warnings) = parse_html_warn(text, cs);
     if report {
         for (m, _) in &warnings {
@@ -2279,8 +2291,10 @@ pub fn make_html_label(
         Ok(l) => l,
         Err(e) => {
             if report && let Some(e) = e {
-                let (msg, context) = e.report();
-                graphviz_pure_core::diag::agerrorf(&msg);
+                let (msgs, context) = e.report();
+                for msg in &msgs {
+                    graphviz_pure_core::diag::agerrorf(msg);
+                }
                 if let Some(c) = context {
                     graphviz_pure_core::diag::agerr_prev(&c);
                 }

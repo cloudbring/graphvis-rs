@@ -318,10 +318,17 @@ Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
 * Node shapes warn as `common_init_node` does: `using box for unknown shape` once per name,
   `size too small for label` for a `fixedsize` node, and `bad label format` once per record
   node (it was printed once per sizing pass).
+* The port sizes labels and nodes again after C's `common_init_node`/`common_init_edge`
+  (dot's first sizing, port resolution, the flat-edge aux graph, `neato -n`, rendering).
+  Those repeats run inside `diag::quietly`, so label, shape and font diagnostics print once
+  per C call, also for identical labels and for every graph of a file. `neato -n` reports
+  each edge's labels and then its ports first, as `neato_init_node_edge` does.
+* An unknown empty HTML element (`<FOO/>`) is reported twice, by expat's start and end
+  handlers.
 * The repros are in `crates/graphviz-pure-cli/tests/cli.rs` (`issue30_*`). Still missing,
   with ignored tests there: HTML `<IMG>` file errors and the `shapefile`/`epsf` user-shape
-  warnings, because the port loads no images. The expat encoding errors of HTML labels
-  (invalid UTF-8, `charset=BIG-5`) are also missing.
+  warnings, because the port loads no images (issue #130). The expat encoding errors of
+  HTML labels (invalid UTF-8, `charset=BIG-5`) are also missing (issue #131).
 
 ## Differences that remain: the open issues
 

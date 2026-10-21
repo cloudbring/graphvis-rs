@@ -11,6 +11,48 @@ use std::collections::HashSet;
 thread_local! {
     static ERRORS: Cell<usize> = const { Cell::new(0) };
     static EMITTED: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+    static QUIET: Cell<u32> = const { Cell::new(0) };
+    static SILENT: Cell<u32> = const { Cell::new(0) };
+}
+
+/// Increments `depth` for the life of the returned guard.
+fn enter(depth: &'static std::thread::LocalKey<Cell<u32>>) -> impl Drop {
+    struct Guard(&'static std::thread::LocalKey<Cell<u32>>);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            self.0.with(|q| q.set(q.get() - 1));
+        }
+    }
+    depth.with(|q| q.set(q.get() + 1));
+    Guard(depth)
+}
+
+/// Runs `f` as a repeat of work C does once. The port sizes labels and nodes again after
+/// C's `common_init_node`/`common_init_edge`/`do_graph_label` (for ports, splines and
+/// rendering), and the diagnostics of those calls (HTML label warnings and errors,
+/// `bad label format`, `size too small for label`) must not print a second time.
+///
+/// Port warnings still print: C resolves ports again in some of these places and warns again.
+pub fn quietly<R>(f: impl FnOnce() -> R) -> R {
+    let _guard = enter(&QUIET);
+    f()
+}
+
+/// [`quietly`], and port warnings too, for a repeat that C does not make at all.
+pub fn silently<R>(f: impl FnOnce() -> R) -> R {
+    let _guard = enter(&SILENT);
+    f()
+}
+
+/// False inside [`quietly`] and [`silently`]: label and node sizing diagnostics are reported
+/// only outside them.
+pub fn reporting() -> bool {
+    QUIET.with(|q| q.get() == 0) && reporting_ports()
+}
+
+/// False inside [`silently`]: port warnings are reported only outside it.
+pub fn reporting_ports() -> bool {
+    SILENT.with(|q| q.get() == 0)
 }
 
 /// `emit_once(str)`: true the first time `key` is seen on this thread.
@@ -20,18 +62,18 @@ pub fn emit_once(key: &str) -> bool {
 
 /// `agerrorf(msg)`: `msg` is the C format output, normally ending in a newline.
 pub fn agerrorf(msg: &str) {
-    eprint!("Error: {msg}");
+    crate::charset::eprint_bytes(&format!("Error: {msg}"));
     ERRORS.with(|c| c.set(c.get() + 1));
 }
 
 /// `agwarningf(msg)`.
 pub fn agwarningf(msg: &str) {
-    eprint!("Warning: {msg}");
+    crate::charset::eprint_bytes(&format!("Warning: {msg}"));
 }
 
 /// `agerr(AGPREV, msg)`: continues the previous message.
 pub fn agerr_prev(msg: &str) {
-    eprint!("{msg}");
+    crate::charset::eprint_bytes(msg);
 }
 
 /// C `printf("%.{prec}g", v)` on the reference platform (macOS libc), as diagnostics and
