@@ -13,3 +13,6 @@ node_modules/
 
 # Built by wasm-bindgen (web/package.json build:wasm); never committed
 /web/pkg/
+
+# Local scratch notes from the PR review/prepare skills (.local/review.md, .local/prep.md)
+/.local/
