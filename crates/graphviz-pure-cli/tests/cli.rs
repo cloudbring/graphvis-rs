@@ -360,6 +360,13 @@ a -> b [label=\"lbl\"];
     let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
     assert!(ok, "{err}");
     assert!(!out.contains("class=\"edge\""), "{out}");
+    // -Tplain writes the edge with the shifted, unset label position (C 16.1.0).
+    let (out, err, ok) = run(&["-Kdot", "-Tplain"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(" lbl -0.069444 -0.88889 solid black\n"),
+        "{out}"
+    );
     let (out, err, ok) = run(
         &["-Kdot", "-Tsvg"],
         "digraph G { splines=none; c; a -> b [label=\"lbl\"]; }",

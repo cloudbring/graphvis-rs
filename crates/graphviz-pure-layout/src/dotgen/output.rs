@@ -88,8 +88,9 @@ impl Output {
             let Some(bzs) = ed.spl.as_ref().filter(|_| ed.edge_type != IGNORED) else {
                 edge_attrs.push(extra);
                 // A lost edge (no spline) still draws its placed label (emit_edge);
-                // the output writer skips edges without splines.
-                // (not in the pack branch, whose root never routes: labels stay unplaced)
+                // the output writer skips edges without splines. `routed` is false
+                // when the root has no edge type: with `splines=none`, and in the pack
+                // branch, where only the components route.
                 let routed = d.et != crate::common::types::EdgeType::None;
                 match ed
                     .label
@@ -101,12 +102,11 @@ impl Output {
                     // without splines). `edge_in_box` (emit.c) tests
                     // `ED_label(e)` without looking at `set`, so the renderer
                     // needs that position to decide whether to emit the edge.
-                    None => match ed.label.filter(|&l| !d.labels[l].set) {
-                        Some(l) => {
-                            edges.push(Some((Spline::default(), Some(d.labels[l].pos), true)))
-                        }
-                        None => edges.push(None),
-                    },
+                    None => edges.push(
+                        ed.label
+                            .filter(|&l| !d.labels[l].set)
+                            .map(|l| (Spline::default(), Some(d.labels[l].pos), true)),
+                    ),
                 }
                 continue;
             };

@@ -170,8 +170,11 @@ dot
 * In the pack branch, edges are mapped only when a component routed splines.
 * An edge without a spline keeps its unset label's position (moved by `shiftEdge` in
   the pack branch), which `edge_in_box` tests without looking at `set`: with `pack` and
-  `splines=none` the label is off the page and the edge is not emitted. This was open case
-  `015-dot-pack-unplaced-edge-label-shifted-off-page` (issue #24, 6 fuzz cases).
+  `splines=none` (or `splines=""`) the label is off the page and the edge is not emitted,
+  and `-Tplain` writes the shifted position. This was open case
+  `015-dot-pack-unplaced-edge-label-shifted-off-page` (issue #24, 6 fuzz cases); its repro is
+  kept in `crates/graphviz-pure-cli/tests/cli.rs`
+  (`dot_pack_unplaced_edge_label_off_page_skips_edge`).
 * A pack component is not the root for `is_a_cluster`, so newrank ignores its top-level
   sink/source sets.
 * A pack component whose layout fails (`install_in_rank`) still hands its node and edge
