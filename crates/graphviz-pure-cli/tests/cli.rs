@@ -475,3 +475,39 @@ fn round_corners_interpolation_is_fused_like_clang() {
                     10.47,62.28 28.48,0 10.47,-62.28 10.47,-56.28\"";
     assert!(out.contains(c_points), "{out}");
 }
+
+/// Issue #29 (was open case `tests/fuzz-open/020-parser-keyword-as-attribute-value`).
+/// scan.l lexes `node`, `edge`, `graph`, `digraph`, `subgraph` and `strict`
+/// (case-insensitively) as keyword tokens, and grammar.y's `atom : T_atom | qatom`
+/// takes none of them, so C 16.1.0 reports a syntax error, writes no output and
+/// exits 1 when one appears unquoted as an attribute name, an attribute value or a
+/// port. The first input is the case's repro.gv verbatim; C says
+/// `syntax error in line 2 near 'node'`. The message wording is issue #31.
+#[test]
+fn unquoted_keyword_atoms_are_syntax_errors() {
+    for src in [
+        "digraph G {\npackmode=node;\na [label=edge];\na:graph -> b;\n}\n",
+        "digraph G { a [label=Edge] }\n",
+        "digraph G { a [node=1] }\n",
+        "digraph G { a:graph -> b }\n",
+        "digraph G { a -> b:c:SUBGRAPH }\n",
+    ] {
+        let (out, err, ok) = run(&["-Tsvg"], src);
+        assert!(!ok, "{src:?} should fail");
+        assert!(out.is_empty(), "{src:?} wrote output");
+        assert!(err.contains("syntax error"), "{src:?}: {err}");
+    }
+}
+
+/// Issue #29: the quoted keywords are `T_qatom` in C and keep working. The
+/// `-Tdot` writer quotes them again (`agcanonstr`), so the output reads back.
+#[test]
+fn quoted_keyword_atoms_still_parse() {
+    let src = "digraph G {\npackmode=\"node\";\na [label=\"edge\", \"node\"=\"1\"];\na:\"graph\" -> b;\n}\n";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("packmode=\"node\""), "{out}");
+    assert!(out.contains("label=\"edge\""), "{out}");
+    assert!(out.contains("\"node\"=1"), "{out}");
+    assert!(out.contains("a:\"graph\" -> b"), "{out}");
+}

@@ -168,6 +168,11 @@ impl Parser {
         )
     }
 
+    /// `atom : T_atom | qatom` (grammar.y). The keywords `node`, `edge`,
+    /// `graph`, `digraph`, `subgraph` and `strict` are their own tokens in
+    /// scan.l (matched case-insensitively), not `T_atom`, so an unquoted
+    /// keyword is a syntax error wherever an atom is expected: attribute
+    /// names and values, node names, ports and compass points (issue #29).
     fn parse_atom(&mut self) -> Result<String> {
         let tok = self.peek().clone();
         let mut is_html = false;
@@ -220,28 +225,6 @@ impl Parser {
             self.graph.html_strings.insert(val.clone());
         }
         Ok(val)
-    }
-
-    fn parse_value_or_port_atom(&mut self) -> Result<String> {
-        if Self::is_atom_token(&self.peek().kind) {
-            return self.parse_atom();
-        }
-        let tok = self.peek().clone();
-        let kw = match tok.kind {
-            TokenKind::Node => Some("node"),
-            TokenKind::Edge => Some("edge"),
-            TokenKind::Graph => Some("graph"),
-            TokenKind::Digraph => Some("digraph"),
-            TokenKind::Subgraph => Some("subgraph"),
-            TokenKind::Strict => Some("strict"),
-            _ => None,
-        };
-        if let Some(s) = kw {
-            self.advance();
-            Ok(s.to_string())
-        } else {
-            self.parse_atom()
-        }
     }
 
     /// Checks how many tokens an atom (including `+` concatenations) spans starting at `start_offset`,
@@ -377,7 +360,7 @@ impl Parser {
                 {
                     let key = self.parse_atom()?;
                     self.expect(&TokenKind::Equals)?;
-                    let val = self.parse_value_or_port_atom()?;
+                    let val = self.parse_atom()?;
                     if !self.fixed_at_root(DictKind::Graph, &key) {
                         self.attr_stmt(DictKind::Graph, &key, &val);
                         self.current_graph_attrs_mut().insert(key, val);
@@ -462,9 +445,9 @@ impl Parser {
             self.advance(); // consume `[`
             // attrdefs: `atom '=' atom` followed by at most one `,` or `;`.
             while self.peek().kind != TokenKind::RBracket && self.peek().kind != TokenKind::Eof {
-                let key = self.parse_value_or_port_atom()?;
+                let key = self.parse_atom()?;
                 self.expect(&TokenKind::Equals)?;
-                let val = self.parse_value_or_port_atom()?;
+                let val = self.parse_atom()?;
                 if !attrs.contains_key(&key) {
                     self.attr_order.push(key.clone());
                 }
@@ -583,10 +566,10 @@ impl Parser {
         let mut port = Port::default();
         if self.peek().kind == TokenKind::Colon {
             self.advance();
-            let p1 = self.parse_value_or_port_atom()?;
+            let p1 = self.parse_atom()?;
             if self.peek().kind == TokenKind::Colon {
                 self.advance();
-                let p2 = self.parse_value_or_port_atom()?;
+                let p2 = self.parse_atom()?;
                 port.name = Some(p1);
                 port.compass = Some(p2);
             } else {
