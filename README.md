@@ -93,6 +93,8 @@ document.getElementById('diagram').innerHTML = svg;
 
 `render` lays out the first graph in the input. `renderAll` returns one output per graph, and `renderAllBytes` takes and returns raw bytes the way the command line does, including non-UTF-8 input. Each call starts from fresh state, so repeated calls give identical output. `web/index.html` is a playground: `cd web && npm run build:wasm && npm run serve`.
 
+The same `await init()` works in Node.js, Bun and Deno (`jsr:@graphviz-pure/wasm` or `npm:@graphviz-pure/wasm`). Cloudflare Workers import the `.wasm` file as a module and call `initSync({ module })` instead; [web/README.md](web/README.md) has the setup for each runtime, and CI runs every one of them (`scripts/wasm-runtimes/`).
+
 ## Licence
 
 [EPL-2.0](LICENSE), the licence of Graphviz. The port follows the Graphviz C sources closely and is a derivative work of Graphviz; [NOTICE](NOTICE) credits the Graphviz authors and lists the third-party code in the math module (MIT), whose provenance is detailed in `docs/porting/libm.md`.

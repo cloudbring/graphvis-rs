@@ -116,6 +116,70 @@ jobs:
           target/release/gv-diff e2e --hashes "$RUNNER_TEMP/native-hashes.json"
           cmp "$RUNNER_TEMP/native-hashes.json" "$RUNNER_TEMP/wasm-hashes.json"
 
+  # The npm package (wasm-bindgen --target web, built as the release builds it) loaded the way a
+  # user of each runtime would, rendering the portable gallery samples byte for byte; see
+  # scripts/wasm-runtimes/run.mjs. Deno, Bun, wrangler and Playwright come from that
+  # directory's package-lock.json (third-party setup actions are not allowed); the browser is
+  # the runner image's Google Chrome.
+  wasm-runtimes:
+    name: WASM package (Node.js, Deno, Bun, Workers, Chrome)
+    needs: lookup
+    if: needs.lookup.outputs.hit != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the stable Rust toolchain (rustup is on every runner)
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown && rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: wasm-npm
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: scripts/wasm-runtimes/package-lock.json
+      # wasm-bindgen-cli must match the wasm-bindgen crate in Cargo.lock exactly.
+      - name: Read wasm-bindgen version from Cargo.lock
+        id: wb
+        run: |
+          v=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' Cargo.lock)
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Cache wasm-bindgen-cli
+        id: wb-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-${{ runner.os }}-${{ steps.wb.outputs.version }}
+      - name: Install wasm-bindgen-cli
+        if: steps.wb-cache.outputs.cache-hit != 'true'
+        env:
+          WB_VERSION: ${{ steps.wb.outputs.version }}
+        run: cargo install wasm-bindgen-cli --version "$WB_VERSION" --locked
+      # Same command as the release's npm-package job (no wasm-opt on the runner).
+      - name: Build the npm package
+        working-directory: web
+        run: npm run build:wasm
+      # Install without running any package's lifecycle scripts, check every package's registry
+      # signature, and only then run the scripts (which unpack the deno, bun and workerd binaries).
+      - name: Install the runtimes (no scripts)
+        working-directory: scripts/wasm-runtimes
+        run: npm ci --ignore-scripts
+      - name: Verify npm package signatures
+        working-directory: scripts/wasm-runtimes
+        run: npm audit signatures
+      - name: Run the runtimes' install scripts
+        working-directory: scripts/wasm-runtimes
+        run: npm rebuild
+      - name: Run the package in every runtime
+        working-directory: scripts/wasm-runtimes
+        env:
+          WRANGLER_SEND_METRICS: "false"
+        run: node run.mjs
+
   supply-chain:
     name: Supply chain (cargo-deny, zizmor)
     # Always runs: the advisory database changes even when the tree does not.
@@ -176,10 +240,11 @@ jobs:
             echo "The base branch has no scripts/pr-risk.py yet." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
 
-  # Records that this tree passed, so a later run of the same tree skips verify and wasm-e2e.
+  # Records that this tree passed, so a later run of the same tree skips verify, wasm-e2e and
+  # wasm-runtimes.
   record:
     name: Record the result for this tree
-    needs: [verify, wasm-e2e]
+    needs: [verify, wasm-e2e, wasm-runtimes]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

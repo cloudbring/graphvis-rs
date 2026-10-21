@@ -1,0 +1,15 @@
+{
+  "name": "graphviz-pure-wasm-runtimes",
+  "private": true,
+  "description": "Loads the packed @graphviz-pure/wasm in Node.js, Deno, Bun, workerd (wrangler) and headless Chrome, and checks the gallery samples byte for byte. See run.mjs.",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "devDependencies": {
+    "bun": "1.4.3",
+    "deno": "2.9.6",
+    "playwright-core": "1.64.1",
+    "wrangler": "4.151.0"
+  }
+}
