@@ -1,0 +1,115 @@
+name: Fuzzing
+
+# Coverage-guided fuzzing of the cargo-fuzz targets in fuzz/ with ClusterFuzzLite
+# (.clusterfuzzlite/): panics, hangs and running out of memory on crafted DOT. No C oracle; the
+# differential fuzzer against C Graphviz is separate (docs/porting/fuzzing.md).
+#
+# - pull_request: a short run of every target. A crash that the latest master build also has
+#   is not reported, so only crashes the change introduces fail the job.
+# - push to master: builds the targets and keeps the build for that comparison.
+# - schedule: a longer batch run that grows the corpus, then corpus pruning. The corpus, the
+#   crashes and the builds are kept as artifacts of this workflow.
+# A crash becomes an issue labelled `crash` with a minimised .gv reproducer.
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "fuzz/**"
+      - ".clusterfuzzlite/**"
+      - "Cargo.lock"
+      - ".github/workflows/fuzz.yml"
+  push:
+    branches: [master]
+    paths:
+      - "crates/**"
+      - "fuzz/**"
+      - ".clusterfuzzlite/**"
+      - "Cargo.lock"
+      - ".github/workflows/fuzz.yml"
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pr:
+    name: Fuzz the change
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read # the latest master build, to tell new crashes from old ones
+    steps:
+      - name: Build the fuzz targets
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: rust
+          github-token: ${{ github.token }}
+          sanitizer: address
+      - name: Fuzz every target (60 s each)
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ github.token }}
+          mode: code-change
+          sanitizer: address
+          fuzz-seconds: 600
+
+  build:
+    name: Keep the master build
+    if: github.event_name == 'push' && github.repository == 'graphviz-pure/graphviz-pure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read # the artifacts of earlier builds
+    steps:
+      - name: Build the fuzz targets and upload the build
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: rust
+          github-token: ${{ github.token }}
+          sanitizer: address
+          upload-build: true
+
+  batch:
+    name: Batch fuzzing and corpus pruning
+    if: >-
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      && github.repository == 'graphviz-pure/graphviz-pure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read # the corpus kept by earlier runs
+    steps:
+      - name: Build the fuzz targets
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: rust
+          github-token: ${{ github.token }}
+          sanitizer: address
+      - name: Fuzz every target (6 min each)
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ github.token }}
+          mode: batch
+          sanitizer: address
+          fuzz-seconds: 3600
+          minimize-crashes: true
+      # Batch runs only add to the corpus; pruning drops the inputs that add no coverage.
+      - name: Prune the corpus
+        if: ${{ !cancelled() }}
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ github.token }}
+          mode: prune
+          sanitizer: address
+          fuzz-seconds: 600

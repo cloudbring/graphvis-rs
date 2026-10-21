@@ -17,9 +17,10 @@ Only the latest release receives fixes.
 
 ## Supply chain
 
-- Every GitHub Action is pinned to a full commit SHA; only GitHub-owned actions and
-  `Swatinem/rust-cache` are used. Workflows run with read-only tokens by default and are linted
-  with zizmor in CI.
+- Every GitHub Action is pinned to a full commit SHA; only GitHub-owned actions,
+  `Swatinem/rust-cache`, `ossf/scorecard-action` and the ClusterFuzzLite actions
+  (`google/clusterfuzzlite`, for fuzzing) are used. The ClusterFuzzLite build image is pinned
+  by digest. Workflows run with read-only tokens by default and are linted with zizmor in CI.
 - Rust dependencies come from crates.io only, through `Cargo.lock`, and are checked in CI by
   `cargo deny` (RustSec advisories, licences, sources). npm dependencies are installed from
   `package-lock.json` without lifecycle scripts until their registry signatures are verified.

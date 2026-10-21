@@ -1,0 +1,91 @@
+# Coverage-guided fuzz targets (cargo-fuzz / libFuzzer); see docs/porting/fuzzing.md.
+# Its own workspace, excluded from the root one, so stable builds never see it:
+#   cargo +nightly fuzz run render_dot -- -max_total_time=60
+[package]
+name = "graphviz-pure-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "EPL-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+graphviz-pure = { path = "../crates/graphviz-pure" }
+graphviz-pure-parser = { path = "../crates/graphviz-pure-parser" }
+graphviz-pure-geom = { path = "../crates/graphviz-pure-geom" }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "parse"
+path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_html"
+path = "fuzz_targets/parse_html.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_dot"
+path = "fuzz_targets/render_dot.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_neato"
+path = "fuzz_targets/render_neato.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_fdp"
+path = "fuzz_targets/render_fdp.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_sfdp"
+path = "fuzz_targets/render_sfdp.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_twopi"
+path = "fuzz_targets/render_twopi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_circo"
+path = "fuzz_targets/render_circo.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_osage"
+path = "fuzz_targets/render_osage.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_patchwork"
+path = "fuzz_targets/render_patchwork.rs"
+test = false
+doc = false
+bench = false

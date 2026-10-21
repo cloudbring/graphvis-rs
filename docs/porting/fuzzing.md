@@ -46,6 +46,60 @@ python3 -I scripts/fuzz-gen.py --seed 17                                        
   subgraphs, then chunks of statements (ddmin), then subgraph braces, then single
   attributes.
 
+## Coverage-guided fuzzing (cargo-fuzz, ClusterFuzzLite)
+
+The differential fuzzer checks fidelity and needs C. A second fuzzer checks robustness
+only: the port must not panic, hang or run out of memory on any input. Returning an
+`Err` is fine. It needs no oracle, so it runs in CI. The targets are in `fuzz/`, which is
+its own cargo workspace, excluded from the root one so that stable builds never see it:
+
+| Target | What it runs |
+|---|---|
+| `parse` | `parse_dot_all_partial` and the canonical writer on every graph read before an error |
+| `parse_html` | the HTML-label parser on the text inside `label=<...>` |
+| `render_<engine>` | `render_dot(src, engine, "svg")` for dot, neato, fdp, sfdp, twopi, circo, osage and patchwork |
+
+Inputs are bytes decoded as UTF-8 with replacement, as the CLI reads files, and are at
+most 8 KiB. The render targets skip graphs with more than 50 nodes, 100 edges or 25
+subgraphs (`fuzz/src/lib.rs`), so layout's normal superlinear cost is not reported as a
+hang. The seed corpus is every `tests/**/*.gv` of at most 8 KiB, including the
+`fuzz_*.gv` reproducers above. The HTML seeds are the HTML labels in those files.
+`fuzz/dot.dict` lists DOT keywords, operators, attribute names, shapes, styles and HTML
+tags.
+
+```sh
+cargo install cargo-fuzz
+python3 -I fuzz/seed-corpus.py /tmp/gvseed            # /tmp/gvseed/dot, /tmp/gvseed/html
+cd fuzz
+cargo +nightly fuzz run render_dot corpus/render_dot /tmp/gvseed/dot -- \
+    -dict=dot.dict -max_len=8192 -max_total_time=60
+cargo +nightly fuzz run parse_html corpus/parse_html /tmp/gvseed/html -- -dict=dot.dict
+cargo +nightly fuzz run render_neato artifacts/render_neato/crash-<hash>   # reproduce
+cargo +nightly fuzz tmin render_neato artifacts/render_neato/crash-<hash> # minimise
+```
+
+New inputs go to the first directory (`fuzz/corpus/<target>`, not committed), and
+crashes go to `fuzz/artifacts/<target>/`. `cargo fuzz build -O -a` builds every target
+with optimisations and with debug assertions, as CI does, so an arithmetic overflow is a
+crash too. To keep fuzzing past a crash, run the built binary with
+`-fork=1 -ignore_crashes=1 -ignore_timeouts=1 -ignore_ooms=1`.
+
+In CI, `.github/workflows/fuzz.yml` runs the targets with
+[ClusterFuzzLite](https://google.github.io/clusterfuzzlite/), using
+`.clusterfuzzlite/build.sh` to build them in the OSS-Fuzz Rust image:
+
+* A pull request that touches `crates/`, `fuzz/` or `Cargo.lock` fuzzes every target for
+  60 s. A crash that the latest master build also has is not reported, so the job fails
+  only on crashes the change introduces.
+* Each push to master keeps a build for that comparison.
+* A daily batch run fuzzes every target for 6 minutes, starting from the corpus of the
+  previous runs, and then prunes the corpus. The corpus, the crashes (minimised) and the
+  builds are kept as artifacts of the workflow.
+
+A crash becomes an issue labelled `crash`, plus the engine label, with the minimised
+input as a `.gv` reproducer. The fix adds that reproducer to the corpus, as for a
+differential find (`tests/<engine>/fuzz_*.gv`), so it also seeds the next fuzzing runs.
+
 ## Rounds
 
 Identity is the share of comparable cases (excluding `c_unstable`, `c_timeout` and
