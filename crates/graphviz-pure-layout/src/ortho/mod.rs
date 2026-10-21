@@ -167,7 +167,9 @@ impl Chans {
     }
 
     /// `chanSearch(chans, seg)` for a segment that [`Ortho::assign_segs`]
-    /// has already placed in a channel.
+    /// has already placed in a channel. It cannot miss: segments are not moved
+    /// after `assign_segs`, and splaying reorders the dictionaries without
+    /// changing which channels they hold.
     fn search(&mut self, seg: &Segment) -> ChanKey {
         self.find(seg).expect("chanSearch: no channel")
     }
@@ -624,8 +626,8 @@ impl Ortho {
     }
 
     /// `assignSegs(nrtes, route_list, mp)`. Returns false where C's
-    /// `chanSearch` fails its `assert (cp)` and aborts (#170): a segment of a
-    /// route lies in no channel of the maze.
+    /// `chanSearch` fails `assert (chani)` or `assert (cp)` (ortho.c:388/390)
+    /// and aborts (#170): a segment of a route lies in no channel of the maze.
     fn assign_segs(&mut self) -> bool {
         for i in 0..self.routes.len() {
             for j in 0..self.routes[i].len() {
@@ -1154,9 +1156,10 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
     if !o.assign_segs() {
         // C asserts in chanSearch and aborts here (#170). Leave the edges
         // unrouted, as C's `goto orthofinish` does when shortPath or
-        // assignTracks fails, so the callers draw them as straight lines.
+        // assignTracks fails: the neato-family callers then draw them as
+        // straight lines, and dot loses them.
         graphviz_pure_core::diag::agwarningf(
-            "orthogonal routing found no channel for an edge segment - falling back to straight line edges\n",
+            "orthogonal routing found no channel for an edge segment - edges not routed orthogonally\n",
         );
         return true;
     }

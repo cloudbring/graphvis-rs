@@ -1165,8 +1165,8 @@ fn cluster_node_in_rank_max_set_does_not_panic_build_skeleton() {
 }
 
 // Issue #170 (cargo-fuzz render_circo): a route segment that lies in no channel of the
-// ortho maze. C's chanSearch (lib/ortho/ortho.c:390) fails `assert (cp)` and aborts (exit
-// 134, no output). The port used to panic on the same lookup ("chanSearch: no channel",
+// ortho maze. C's chanSearch (lib/ortho/ortho.c:388/390) fails `assert (chani)` or
+// `assert (cp)` (here `cp`) and aborts (exit 134, no output). The port used to panic on the same lookup ("chanSearch: no channel",
 // exit 101); it now abandons ortho routing, as C's orthoEdges does when shortPath or
 // assignTracks fails, and the edges are drawn as straight lines.
 const ISSUE170_GRAPH: &str = "graph{layout=circo
@@ -1186,9 +1186,19 @@ fn circo_ortho_segment_in_no_channel_does_not_panic_chan_search() {
     assert_eq!(
         err,
         "Warning: orthogonal routing found no channel for an edge segment - \
-         falling back to straight line edges\n"
+         edges not routed orthogonally\n"
     );
     assert_eq!(out.matches("class=\"edge\"").count(), 3, "{out}");
+    // Straight edges: each path is a single cubic, not an ortho polyline.
+    let paths: Vec<&str> = out
+        .split("<path fill=\"none\" stroke=\"black\" d=\"")
+        .skip(1)
+        .map(|p| p.split('"').next().unwrap())
+        .collect();
+    assert_eq!(paths.len(), 3, "{out}");
+    for d in paths {
+        assert_eq!(d.matches('C').count(), 1, "{d}");
+    }
 }
 
 // Issue #30 (tests/fuzz-open/021-stderr-missing-warnings): C warnings the port left out.
