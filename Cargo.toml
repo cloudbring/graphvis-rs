@@ -13,6 +13,8 @@ members = [
     "crates/graphviz-pure-diff",
     "crates/graphviz-pure-portable-libm",
 ]
+# The cargo-fuzz targets are their own workspace, built with nightly only.
+exclude = ["fuzz"]
 
 [workspace.package]
 version = "0.1.0"

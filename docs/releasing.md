@@ -115,7 +115,9 @@ Done once per channel by a maintainer. Nothing here needs a long-lived token in 
   GitHub-hosted builders are the documented basis for SLSA Build Level 3.
 - Already configured by script (see the transfer PR): Actions restricted to GitHub-owned
   actions plus `Swatinem/rust-cache` and `rust-lang/crates-io-auth-action`, full-SHA pinning
-  required, read-only default workflow token, members cannot create repositories.
+  required, read-only default workflow token, members cannot create repositories. The
+  organization's list has since added `ossf/scorecard-action` and the ClusterFuzzLite
+  `google/clusterfuzzlite/actions/build_fuzzers` and `run_fuzzers` (fuzz.yml).
 
 ### crates.io
 

@@ -37,6 +37,10 @@ ignored=(
   .github/dependabot.yml
   .github/workflows/release.yml
   .github/workflows/scorecard.yml
+  # The cargo-fuzz crate is its own workspace; fuzz.yml builds and runs it.
+  fuzz
+  .clusterfuzzlite
+  .github/workflows/fuzz.yml
   .gitignore
   about.toml
   deny.toml

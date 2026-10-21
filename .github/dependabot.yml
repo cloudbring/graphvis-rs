@@ -15,6 +15,18 @@ updates:
     cooldown: { default-days: 7 }
     groups:
       cargo: { patterns: ["*"] }
+  # The cargo-fuzz targets (fuzz/) are their own workspace, with their own Cargo.lock.
+  - package-ecosystem: cargo
+    directory: /fuzz
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      fuzz: { patterns: ["*"] }
+  # The ClusterFuzzLite build image (.clusterfuzzlite/Dockerfile), pinned by digest.
+  - package-ecosystem: docker
+    directory: /.clusterfuzzlite
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
   - package-ecosystem: npm
     directory: /site
     schedule: { interval: weekly }

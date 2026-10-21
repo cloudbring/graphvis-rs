@@ -1,0 +1,3 @@
+# libFuzzer options of every target in CI (.clusterfuzzlite/build.sh); MAX_INPUT in src/lib.rs.
+[libfuzzer]
+max_len = 8192

@@ -1,0 +1,8 @@
+# Build outputs and local fuzzing state stay out of the build context.
+target/
+fuzz/target/
+fuzz/corpus/
+fuzz/artifacts/
+node_modules/
+site/
+web/
