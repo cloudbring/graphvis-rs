@@ -211,6 +211,10 @@ jobs:
           tar -xzf dist/*.tgz -C "$RUNNER_TEMP/jsr"
           cd "$RUNNER_TEMP/jsr/package"
           "$RUNNER_TEMP/deno" publish --dry-run
+      # The npm job's command, as a dry run (no login needed). The ./ matters: npm reads a bare
+      # dist/NAME.tgz as a GitHub repository shorthand, not a file.
+      - name: npm publish dry run
+        run: npm stage publish --dry-run --access public ./dist/*.tgz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: npm-package
@@ -532,7 +536,7 @@ jobs:
       # The tarball the attest job signed is the one staged. The trusted publisher may only stage:
       # the version goes live when a maintainer approves it on npmjs.com with 2FA.
       - name: npm stage publish
-        run: npm stage publish --access public dist/*.tgz
+        run: npm stage publish --access public ./dist/*.tgz
 
   # The attested npm tarball, published to JSR as it is (it carries jsr.json, README.md, LICENSE,
   # NOTICE and THIRD-PARTY-LICENSES.md) by a pinned, checksum-verified Deno: nothing in this job
