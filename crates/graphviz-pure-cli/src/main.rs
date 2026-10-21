@@ -51,7 +51,31 @@ fn usage(argv0: &str) -> String {
 /// not valid UTF-8 are kept as raw-byte chars (`graphviz_pure_core::charset`): an attribute
 /// set with `-G` carries them into the output, and an error message names them as C does.
 fn arg_text(arg: &OsStr) -> String {
-    graphviz_pure_core::charset::decode_slice(&arg_bytes(arg))
+    bytes_text(&arg_bytes(arg))
+}
+
+/// [`arg_text`] of some of an argument's bytes.
+fn bytes_text(bytes: &[u8]) -> String {
+    use graphviz_pure_core::charset::raw_char;
+    // As `charset::decode`, but a char of the raw-byte range itself is kept as raw bytes
+    // too, so `charset::encode` gives back exactly the argument's bytes.
+    let mut text = String::new();
+    for chunk in bytes.utf8_chunks() {
+        for c in chunk.valid().chars() {
+            if c >= raw_char(0) {
+                text.extend(c.encode_utf8(&mut [0; 4]).bytes().map(raw_char));
+            } else {
+                text.push(c);
+            }
+        }
+        text.extend(chunk.invalid().iter().map(|&b| raw_char(b)));
+    }
+    text
+}
+
+/// Writes `msg` to stderr as its bytes, unescaped, as C's `fprintf(stderr, ...)` does.
+fn eprint_raw(msg: &str) {
+    let _ = io::stderr().write_all(&graphviz_pure_core::charset::encode(msg));
 }
 
 /// The bytes of an argument, as C's `argv` holds them (UTF-8 where the OS has UTF-16).
@@ -92,7 +116,7 @@ fn os_tail(arg: &OsStr) -> OsString {
 fn flag_value(args: &[OsString], i: &mut usize) -> Option<String> {
     let arg = arg_bytes(&args[*i]);
     if arg.len() > 2 {
-        return Some(graphviz_pure_core::charset::decode_slice(&arg[2..]));
+        return Some(bytes_text(&arg[2..]));
     }
     let next = arg_text(args.get(*i + 1)?);
     if !next.is_empty() && !next.starts_with('-') {
@@ -147,7 +171,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                 b if b.is_ascii() => b as char,
                 b => graphviz_pure_core::charset::raw_char(b),
             };
-            let rest = graphviz_pure_core::charset::decode_slice(&bytes[2..]);
+            let rest = bytes_text(&bytes[2..]);
             let rest = rest.as_str();
             match flag {
                 'G' | 'N' | 'E' | 'A' => {
@@ -193,7 +217,8 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                         opts.layout.nop = 1;
                     } else {
                         let digits: String = rest
-                            .trim_start()
+                            // atoi skips C's isspace only.
+                            .trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r'])
                             .chars()
                             .enumerate()
                             .take_while(|(i, c)| c.is_ascii_digit() || (*i == 0 && *c == '+'))
@@ -271,14 +296,12 @@ fn main() -> ExitCode {
 
     let raster = graphviz_pure_raster::RasterFormat::parse(&opts.format);
     if raster.is_none() && OutputFormat::parse(&opts.format).is_err() {
-        graphviz_pure_core::charset::eprint_bytes(&format!(
-            "Format: \"{}\" not recognized.\n",
-            opts.format
-        ));
+        // `dotneato_args_initialize` writes these two with `fprintf`, not `agerrorf`.
+        eprint_raw(&format!("Format: \"{}\" not recognized.\n", opts.format));
         return ExitCode::FAILURE;
     }
     if LayoutEngine::parse(&opts.engine).is_err() {
-        graphviz_pure_core::charset::eprint_bytes(&format!(
+        eprint_raw(&format!(
             "There is no layout engine support for \"{}\"\n",
             opts.engine
         ));

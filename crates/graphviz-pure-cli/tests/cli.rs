@@ -1697,6 +1697,20 @@ fn non_utf8_flag_values_keep_their_bytes() {
         "{err:?}"
     );
 
+    // `fprintf`, not `agerrorf`: control bytes are written as they are. A char of the
+    // range the port uses for raw bytes (U+10FF54) keeps its four bytes.
+    let (_, err, ok) = run_bytes(&[b"-T\x01\xf4\x8f\xbd\x94"], "digraph{a}");
+    assert!(!ok);
+    assert!(
+        err.starts_with(b"Format: \"\x01\xf4\x8f\xbd\x94\" not recognized."),
+        "{err:?}"
+    );
+
+    // atoi skips only C's white space, not U+00A0.
+    let (_, err, ok) = run_bytes(&[b"-n\xc2\xa01"], "digraph{a}");
+    assert!(!ok);
+    assert!(err.starts_with(b"Error: Invalid parameter \"\xc2\xa01\" for -n flag\n"));
+
     let (_, err, ok) = run_bytes(&[b"-K\xe9"], "digraph{a}");
     assert!(!ok);
     assert!(err.starts_with(b"There is no layout engine support for \"\xe9\""));
