@@ -627,9 +627,21 @@ fn constrained_majorization_new_with_gaps(
                         block.push(node);
                     }
                 }
+                // C tests `desired_place[node] == cur_place` here. When the
+                // Laplacian row is all zero (coincident start coordinates make
+                // the levels_gap scale ratio 0, so every weight inverts to 0),
+                // desired_place is 0/0 = NaN and fails all three tests. The
+                // block then misses nodes of [left, right), and C's
+                // `constrained_majorization_new_with_gaps` fails the
+                // `gv_list_get` bounds assertion when it reads the block's last
+                // element. Treat an unordered (NaN) desired place as equal, so
+                // the block always holds exactly the nodes of [left, right), as
+                // the rest of the pass assumes. Every split of such a block has
+                // a NaN movement, so no split is chosen and the block stays put.
                 for j in i..first_next_level {
                     let node = ordering[j] as usize;
-                    if desired_place[node] == cur_place {
+                    let ord = desired_place[node].partial_cmp(&cur_place);
+                    if ord.is_none_or(std::cmp::Ordering::is_eq) {
                         block.push(node);
                     }
                 }

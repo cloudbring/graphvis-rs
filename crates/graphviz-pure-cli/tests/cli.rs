@@ -1610,3 +1610,19 @@ fn issue30_missing_shapefile_warnings() {
          Warning: shapefile not set or not found for epsf node a5\n"
     );
 }
+
+/// Issue #169: with mode=hier the two nodes start coincident, so the levels_gap scale
+/// ratio is 0 and the stress Laplacian is all zero. Every desired place in
+/// `constrained_majorization_new_with_gaps` (`lib/neatogen/quad_prog_solve.c`) is then
+/// 0/0, the block comes out empty, and C fails the `gv_list_get` bounds assertion. The
+/// port indexed the empty block at `len - 1` and panicked; it must lay the graph out.
+#[test]
+fn neato_hier_zero_laplacian_does_not_panic() {
+    let (out, err, ok) = run(
+        &["-Tsvg"],
+        "graph{layout=neato\nmode=hier\nb--e[len=0.5]}\n",
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("<title>b&#45;&#45;e</title>"), "{out}");
+    assert!(!out.contains("NaN"), "{out}");
+}

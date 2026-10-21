@@ -6,6 +6,11 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- neato with `mode=hier` no longer panics when the stress weights are all zero, as when the
+  nodes start at one point (#169). C Graphviz fails an assertion on this input.
+
 ## [0.1.0] - 2026-10-21
 
 The first release.
