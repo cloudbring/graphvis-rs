@@ -1462,6 +1462,56 @@ c [shape=Mrecord] }";
     );
 }
 
+/// fdp's `deriveGraph` (`lib/fdpgen/layout.c:409-413`) labels a graph's clusters before it
+/// lays out each of them, so a cluster's label warnings come after all its siblings'.
+#[test]
+fn issue30_fdp_cluster_label_warning_order() {
+    let tbl = |a: &str| format!("<<TABLE {a}=\"1\"><TR><TD>x</TD></TR></TABLE>>");
+    let src = format!(
+        "graph G {{ subgraph cluster_a {{ label={}; subgraph cluster_a1 {{ label={}; p }} q }} \
+         subgraph cluster_b {{ label={}; subgraph cluster_b1 {{ label={}; r }} s }} x -- s; }}",
+        tbl("A1"),
+        tbl("A11"),
+        tbl("B1"),
+        tbl("B11")
+    );
+    let w = |a: &str, g: &str| {
+        format!("Warning: Illegal attribute {a} in <TABLE> - ignored\nin label of graph {g}\n")
+    };
+    let want = [
+        w("A1", "cluster_a"),
+        w("B1", "cluster_b"),
+        w("A11", "cluster_a1"),
+        w("B11", "cluster_b1"),
+    ]
+    .concat();
+    assert_eq!(warnings("fdp", &src).0, want);
+}
+
+/// fdp's `splines and cluster edges not supported` (`lib/fdpgen/layout.c:1048-1051`) and
+/// osage's array packing without `sortv` (`lib/osage/osageinit.c:100-106`, no newline).
+#[test]
+fn issue30_fdp_and_osage_layout_warnings() {
+    assert_eq!(
+        warnings(
+            "fdp",
+            "graph G { splines=true; subgraph cluster_a { x } y -- cluster_a }"
+        )
+        .0,
+        "Warning: splines and cluster edges not supported - using line segments\n"
+    );
+    let src = "graph G { packmode=\"array_u\"; subgraph cluster_a { packmode=\"array_u\"; x; \
+subgraph cluster_c { z } } subgraph cluster_b { y } }";
+    let w = |g: &str| {
+        format!(
+            "Warning: Graph {g} has array packing with user values but no \"sortv\" attributes \
+             are defined."
+        )
+    };
+    let want = ["cluster_c", "cluster_a", "cluster_b", "G"].map(w).concat();
+    assert_eq!(warnings("osage", src).0, want);
+}
+
 /// Issue #88: graph_init makes the root graph label before dot sizes the nodes, so the
 /// label's font warnings come first.
 #[test]

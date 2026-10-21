@@ -328,6 +328,9 @@ Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
 * dot's `make_flat_adj_edges` warns once per process when a flat edge between adjacent
   nodes has a record end (`flat edge between adjacent nodes one of which has a record
   shape`).
+* fdp reports cluster labels where `deriveGraph` makes them (a graph's clusters, then each
+  cluster's own), warns `splines and cluster edges not supported`, and osage warns about
+  array packing with user values but no `sortv`.
 * The repros are in `crates/graphviz-pure-cli/tests/cli.rs` (`issue30_*`). Still missing,
   with ignored tests there: HTML `<IMG>` file errors and the `shapefile`/`epsf` user-shape
   warnings, because the port loads no images (issue #130). The expat encoding errors of

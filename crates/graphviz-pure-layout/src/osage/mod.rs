@@ -107,6 +107,17 @@ impl Osage<'_, '_> {
         if pinfo.mode == PackMode::Array && pinfo.flags & PK_USER_VALS != 0 {
             cattr = self.sortv_graph;
             vattr = self.sortv_node;
+            if !cattr && !vattr {
+                // osageinit.c:104-105, without a newline.
+                let name = match c {
+                    None => self.g.src.name.as_str(),
+                    Some(c) => self.g.src.subgraphs[self.tree.subgraph[c]].name.as_str(),
+                };
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "Graph {name} has array packing with user values but no \"sortv\" attributes \
+                     are defined."
+                ));
+            }
         }
 
         let mut gs: Vec<BoundingBox> = Vec::new();
