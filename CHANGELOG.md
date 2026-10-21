@@ -20,5 +20,8 @@ The first release.
 - `@graphviz-pure/wasm`, the WebAssembly build for browsers, Node.js, Deno, Bun and Workers.
 - `THIRD-PARTY-LICENSES.md`: the licence text and copyright notices of every Rust crate compiled
   into the `graphviz-pure` binary and `@graphviz-pure/wasm`.
+- Release archives include a `LICENSES/` folder with the licence texts of third-party code
+  compiled into the binary: the MIT licence of the CORE-MATH `pow` port and the OFL licences of
+  the bundled Tinos, Arimo and Cousine fonts.
 
 [Unreleased]: https://github.com/graphviz-pure/graphviz-pure/commits/master
