@@ -780,7 +780,24 @@ impl Dot<'_> {
     fn make_flat_adj_edges(&mut self, edges: &[E], e0: E, et: EdgeType) -> Result<(), String> {
         let (tn, hn) = (self.edges[e0].tail, self.edges[e0].head);
         if self.nodes[tn].is_record || self.nodes[hn].is_record {
-            // C warns: flat edge between adjacent nodes one of which has a record shape.
+            // dotsplines.c:1144-1151: a `static atomic_flag`, so once per process.
+            static WARNED: std::sync::atomic::AtomicBool =
+                std::sync::atomic::AtomicBool::new(false);
+            if !WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                graphviz_pure_core::diag::agwarningf(
+                    "flat edge between adjacent nodes one of which has a record shape - replace \
+                     records with HTML-like labels\n",
+                );
+                let op = if self.input.kind == graphviz_pure_core::GraphKind::Directed {
+                    "->"
+                } else {
+                    "--"
+                };
+                graphviz_pure_core::diag::agerr_prev(&format!(
+                    "  Edge {} {op} {}\n",
+                    self.nodes[tn].name, self.nodes[hn].name
+                ));
+            }
             return Ok(());
         }
         let mut labels = 0;

@@ -1445,6 +1445,23 @@ fn issue30_unknown_empty_html_element_reported_twice() {
     }
 }
 
+/// `make_flat_adj_edges` (`lib/dotgen/dotsplines.c:1144-1151`) skips flat edges between
+/// adjacent nodes when one is a record, with a warning printed once per process.
+#[test]
+fn issue30_flat_adjacent_record_edge_warning() {
+    let src = "graph { {rank=same; a -- b [label=x]; c -- d [label=y];} b [shape=record]; \
+c [shape=Mrecord] }";
+    let (err, ok) = warnings("dot", src);
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Warning: flat edge between adjacent nodes one of which has a record shape - replace \
+         records with HTML-like labels\n  Edge a -- b\n\
+         Error: lost a b edge\n\
+         Error: lost c d edge\n"
+    );
+}
+
 /// Issue #88: graph_init makes the root graph label before dot sizes the nodes, so the
 /// label's font warnings come first.
 #[test]

@@ -325,6 +325,9 @@ Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
   each edge's labels and then its ports first, as `neato_init_node_edge` does.
 * An unknown empty HTML element (`<FOO/>`) is reported twice, by expat's start and end
   handlers.
+* dot's `make_flat_adj_edges` warns once per process when a flat edge between adjacent
+  nodes has a record end (`flat edge between adjacent nodes one of which has a record
+  shape`).
 * The repros are in `crates/graphviz-pure-cli/tests/cli.rs` (`issue30_*`). Still missing,
   with ignored tests there: HTML `<IMG>` file errors and the `shapefile`/`epsf` user-shape
   warnings, because the port loads no images (issue #130). The expat encoding errors of
