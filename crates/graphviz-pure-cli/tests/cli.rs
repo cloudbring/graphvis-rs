@@ -848,3 +848,69 @@ fn input_cluster_list_key_is_ignored() {
         );
     }
 }
+
+// Fuzz case 002-dot-ortho-concentrate-ignored-edge (issue #11), its repro.gv verbatim.
+// Under concentrate, class2 marks `13 -> 14` IGNORED, yet orthoEdges (lib/ortho/ortho.c)
+// routes it as the first edge of the {13, 14} pair. C draws it (emit_edge_graphics has no type
+// check) but attach_attrs_and_arrows (lib/common/output.c) gives it no `pos`. The port used to
+// drop its spline before rendering, so -Tsvg lost the edge. The expected bytes are C's.
+#[test]
+fn ortho_concentrate_draws_routed_ignored_edge() {
+    let src = "digraph G {
+splines=\"ortho\";
+concentrate=\"true\";
+\"8\" -> \"9\";
+\"8\" -> \"13\";
+\"9\" -> \"14\";
+\"14\" -> \"13\";
+\"13\" -> \"14\";
+}
+";
+    let (svg, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    let edge = "<!-- 13&#45;&gt;14 -->
+<g id=\"edge5\" class=\"edge\">
+<title>13&#45;&gt;14</title>
+<path fill=\"none\" stroke=\"black\" d=\"M40.5,-33.98C40.5,-33.98 40.5,-62.55 40.5,-62.55\"/>
+<polygon fill=\"black\" stroke=\"black\" points=\"37,-62.55 40.5,-72.55 44,-62.55 37,-62.55\"/>
+</g>
+";
+    assert!(svg.contains(edge), "{svg}");
+    assert!(!svg.contains("<title>14&#45;&gt;13</title>"), "{svg}");
+    let (dot, err, ok) = run(&["-Kdot", "-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        dot.contains("\t13 -> 14;\n") && dot.contains("\t14 -> 13;\n"),
+        "{dot}"
+    );
+    // The layout places the labels of the IGNORED edge to draw them, but C writes back no
+    // position for it: the input head_lp and xlp stay, and no pos appears.
+    let (dot, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        &src.replace(
+            "\"13\" -> \"14\";",
+            "\"13\" -> \"14\" [headlabel=H xlabel=X head_lp=\"1,2\" xlp=\"3,4\"];",
+        ),
+    );
+    assert!(ok, "{err}");
+    let edge = "\t13 -> 14\t[head_lp=\"1,2\",
+\t\theadlabel=H,
+\t\txlabel=X,
+\t\txlp=\"3,4\"];
+";
+    assert!(dot.contains(edge), "{dot}");
+    // Label positions with no label to place stay as well.
+    let (dot, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        &src.replace(
+            "\"13\" -> \"14\";",
+            "\"13\" -> \"14\" [head_lp=\"1,2\" tail_lp=\"5,6\" xlp=\"7,8\"];",
+        ),
+    );
+    assert!(ok, "{err}");
+    let edge = "\t13 -> 14\t[head_lp=\"1,2\",
+\t\ttail_lp=\"5,6\",
+\t\txlp=\"7,8\"];
+";
+    assert!(dot.contains(edge), "{dot}");
+}

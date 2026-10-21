@@ -100,12 +100,15 @@ impl Output {
         let fmt = |p: Point| format!("{:?},{:?}", p.x, p.y);
         // attach_attrs_and_arrows: edges without splines (or IGNORED) get no
         // attributes; with splines, lp/head_lp/tail_lp are written whether
-        // set or not and xlp only when set.
+        // set or not and xlp only when set. An IGNORED edge can still carry a
+        // spline (orthoEdges under concentrate routes the first edge of each
+        // node pair whatever its type), which emit_edge_graphics draws: the
+        // renderer gets it, marked so that attach_attrs writes no attributes.
         let pos_of = |l: Option<L>| l.map(|l| d.labels[l].pos);
         for ei in 0..d.input.edges.len() {
             let ed = &d.edges[ei];
             let mut extra = Vec::new();
-            let Some(bzs) = ed.spl.as_ref().filter(|_| ed.edge_type != IGNORED) else {
+            let Some(bzs) = ed.spl.as_ref() else {
                 edge_attrs.push(extra);
                 // A lost edge (no spline) still draws its placed label (emit_edge);
                 // the output writer skips edges without splines. `routed` is false
@@ -137,6 +140,16 @@ impl Output {
                 .collect();
             if !unplaced.is_empty() {
                 extra.push((graphviz_pure_core::UNPLACED_PORT_LABELS_KEY, unplaced));
+            }
+            if ed.edge_type == IGNORED {
+                // attach_attrs leaves every attribute of the edge as it was in
+                // the input, including those of labels the edge does not have.
+                extra.push((graphviz_pure_core::IGNORED_EDGE_KEY, String::new()));
+                for (k, ik) in graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS {
+                    if let Some(v) = d.input.edges[ei].attrs.get(k) {
+                        extra.push((ik, v.clone()));
+                    }
+                }
             }
             for (k, p) in [
                 ("head_lp", pos_of(ed.head_label)),
