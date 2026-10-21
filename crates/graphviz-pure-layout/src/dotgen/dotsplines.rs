@@ -848,6 +848,8 @@ impl Dot<'_> {
             "xlabel",
             "fontcolor",
             "labelfontcolor",
+            // E_label_float is looked up as "label_float"; fix_edge sets it per edge.
+            "labelfloat",
         ] {
             aux.edge_defaults.remove(k);
         }
@@ -911,6 +913,17 @@ impl Dot<'_> {
                 attrs,
                 &["arrowsize", "penwidth"],
             );
+            // setState looks E_label_float up as "label_float", not "labelfloat"
+            // (dotsplines.c:745), so ED_label_ontop of an aux edge is the value of
+            // an attribute `label_float`, and `labelfloat` is ignored. An edge made
+            // before `label_float` was declared holds "" (the edge got the defaults
+            // in scope when it was made), not the later default.
+            if main.edge.contains_key("label_float") {
+                let v = attrs.get("label_float").cloned().unwrap_or_default();
+                attrs.insert("labelfloat".to_string(), v);
+            } else {
+                attrs.remove("labelfloat");
+            }
         };
         let rightx = self.nodes[hn0].coord.x;
         let leftx = self.nodes[tn0].coord.x;
