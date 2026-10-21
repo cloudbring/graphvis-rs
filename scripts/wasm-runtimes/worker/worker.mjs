@@ -13,7 +13,9 @@ export default {
       const svg = renderAllBytes(new Uint8Array(await request.arrayBuffer()), engine, 'svg');
       return new Response(svg, { headers: { 'content-type': 'image/svg+xml' } });
     } catch (e) {
-      return new Response(String(e), { status: 500 });
+      // The full error goes to the Worker's log; the response carries only its message.
+      console.error(e);
+      return new Response(e instanceof Error ? e.message : 'render failed', { status: 500 });
     }
   },
 };
