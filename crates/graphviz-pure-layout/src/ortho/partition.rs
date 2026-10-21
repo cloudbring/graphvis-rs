@@ -205,10 +205,11 @@ impl Mono<'_> {
         // A vertex has 4 chain slots. On degenerate cells (touching, overlapping
         // or non-finite boxes, #171) C writes `vpos[nextfree]` and
         // `vnext[nextfree]` past the end of its `int[4]` arrays, into the rest of
-        // the vertex chain. That is bookkeeping only: the rectangles that
-        // `traverse_polygon` collects come from the trapezoids and segments. So
-        // skip the out-of-range writes and go on, as C's partition does. Where C
-        // later fails, `mk_maze_graph`'s `chkSgraph` check catches it.
+        // the vertex chain (and, once `nextfree` is overwritten, sometimes past
+        // `vert`: undefined behaviour). C's rectangles do not depend on this data:
+        // `traverse_polygon` builds them from the trapezoids and segments. So skip
+        // the out-of-range writes and go on. Where C later fails, `mk_maze_graph`'s
+        // `chkSgraph` check catches it.
         if let Some(slot) = vp0.vpos.get_mut(nf0) {
             *slot = i as i32;
             vp0.vnext[nf0] = inext;
