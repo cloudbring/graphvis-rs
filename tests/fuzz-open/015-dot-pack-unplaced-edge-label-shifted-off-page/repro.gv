@@ -1,6 +1,0 @@
-digraph G {
-splines=none;
-pack=true;
-c;
-a -> b [label="lbl"];
-}

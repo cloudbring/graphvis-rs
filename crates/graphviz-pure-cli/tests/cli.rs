@@ -341,3 +341,29 @@ fn xlabel_hilbert_keys_are_ordered_as_signed_int() {
         "circo: {out}"
     );
 }
+
+// Fuzz case 015-dot-pack-unplaced-edge-label-shifted-off-page (issue #24), its repro.gv
+// verbatim. With `splines=none` dot places no edge label (`set` stays false), but the label
+// keeps its position: `(0,0)`, moved by the pack offset in `shiftEdge` (lib/pack/pack.c).
+// `edge_in_box` (lib/common/emit.c) tests `ED_label(e)` without looking at `set`, so C finds
+// the packed label off the page and does not emit the edge, while without pack the label sits
+// at the origin and C writes an empty edge group. The port used to lose the unset position.
+#[test]
+fn dot_pack_unplaced_edge_label_off_page_skips_edge() {
+    let src = "digraph G {
+splines=none;
+pack=true;
+c;
+a -> b [label=\"lbl\"];
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(!out.contains("class=\"edge\""), "{out}");
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph G { splines=none; c; a -> b [label=\"lbl\"]; }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(out.matches("class=\"edge\"").count(), 1, "{out}");
+}

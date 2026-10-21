@@ -168,6 +168,10 @@ dot
     match C. Seeds 10107 and 33649 still differ in one flat-edge spline (C warns
     `Unable to reclaim box space` on 33649), a separate cause: issue #84.
 * In the pack branch, edges are mapped only when a component routed splines.
+* An edge without a spline keeps its unset label's position (moved by `shiftEdge` in
+  the pack branch), which `edge_in_box` tests without looking at `set`: with `pack` and
+  `splines=none` the label is off the page and the edge is not emitted. This was open case
+  `015-dot-pack-unplaced-edge-label-shifted-off-page` (issue #24, 6 fuzz cases).
 * A pack component is not the root for `is_a_cluster`, so newrank ignores its top-level
   sink/source sets.
 * A pack component whose layout fails (`install_in_rank`) still hands its node and edge
@@ -268,7 +272,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`012-dot-flat-adj-labelfloat`](../../tests/fuzz-open/012-dot-flat-adj-labelfloat) | medium | 2 | port |
-| [`015-dot-pack-unplaced-edge-label-shifted-off-page`](../../tests/fuzz-open/015-dot-pack-unplaced-edge-label-shifted-off-page) | low | 6 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`018-render-interpolate-points-fma`](../../tests/fuzz-open/018-render-interpolate-points-fma) | low | 1 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |

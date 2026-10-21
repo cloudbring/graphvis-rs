@@ -96,7 +96,17 @@ impl Output {
                     .filter(|&l| routed && ed.edge_type != IGNORED && d.labels[l].set)
                 {
                     Some(l) => edges.push(Some((Spline::default(), Some(d.labels[l].pos), false))),
-                    None => edges.push(None),
+                    // An unset label keeps its position (`(0,0)`, moved by
+                    // `shiftEdge` in the pack branch; `map_edge` skips edges
+                    // without splines). `edge_in_box` (emit.c) tests
+                    // `ED_label(e)` without looking at `set`, so the renderer
+                    // needs that position to decide whether to emit the edge.
+                    None => match ed.label.filter(|&l| !d.labels[l].set) {
+                        Some(l) => {
+                            edges.push(Some((Spline::default(), Some(d.labels[l].pos), true)))
+                        }
+                        None => edges.push(None),
+                    },
                 }
                 continue;
             };
