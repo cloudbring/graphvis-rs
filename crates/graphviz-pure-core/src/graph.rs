@@ -123,11 +123,11 @@ macro_rules! ignored_edge_key {
 /// (dot's `orthoEdges` under `concentrate`, which keeps the first edge of each node pair
 /// whatever its type): renderers draw its spline (`emit_edge_graphics` has no type check),
 /// but `attach_attrs_and_arrows` gives it no `pos`, `lp`, `xlp`, `head_lp` or `tail_lp`
-/// (`lib/common/output.c`). The layout keeps the input value of each label attribute it
-/// overwrote under [`IGNORED_EDGE_INPUT_KEYS`].
+/// (`lib/common/output.c`). The layout keeps the edge's input label positions under
+/// [`IGNORED_EDGE_INPUT_KEYS`], since it may overwrite them to draw the labels.
 pub const IGNORED_EDGE_KEY: &str = ignored_edge_key!("");
-/// `(attribute, key)`: where the layout keeps the input value of a label attribute it
-/// overwrote on an [`IGNORED_EDGE_KEY`] edge, for the renderer to put back.
+/// `(attribute, key)`: where the layout keeps the input value of a label position attribute
+/// of an [`IGNORED_EDGE_KEY`] edge, for the renderer to put back.
 pub const IGNORED_EDGE_INPUT_KEYS: [(&str, &str); 3] = [
     ("head_lp", ignored_edge_key!("head_lp")),
     ("tail_lp", ignored_edge_key!("tail_lp")),
