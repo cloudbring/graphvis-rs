@@ -769,11 +769,11 @@ fn backslash_crlf_in_quoted_string_is_kept() {
 }
 
 // Fuzz case for issue #171, verbatim. osage puts `i1ortho` at x=inf (C does too: the
-// repeated `cluster_inner4`, see #173), and that box breaks the ortho partition. C overruns
-// `vpos[4]` in `lib/ortho/partition.c:make_new_monotone_poly` and then fails
-// `assert(np->cells[1])` in `lib/ortho/maze.c:chkSgraph` (exit 134); the port panicked with
-// an index out of bounds there. Now the partition fails, as when a trapezoidation fails, and
-// the edges fall back to straight lines (`lib/neatogen/neatosplines.c:spline_edges_`).
+// repeated `cluster_inner4`, see #173). C overruns `vpos[4]` in
+// `lib/ortho/partition.c:make_new_monotone_poly` and then fails `assert(np->cells[1])` in
+// `lib/ortho/maze.c:chkSgraph` (exit 134); the port panicked with an index out of bounds in
+// the partition. Now the maze fails at `chkSgraph`, and the edges fall back to straight lines
+// (`lib/neatogen/neatosplines.c:spline_edges_`).
 #[test]
 fn ortho_partition_with_non_finite_node_does_not_panic() {
     let src = "digraph{layout=osage
@@ -789,6 +789,24 @@ cluster_outer{o1}subgraph cluster_inner4{j1 j2}}subgrapa}subgraph cluster_inner4
     assert!(
         out.contains("x -> i2\t[pos=\"e,153.78,58 85.298,58 102.1,58 123.89,58 142.44,58\"]"),
         "the edge falls back to a straight line:\n{out}"
+    );
+}
+
+// Issue #171: tiny touching dot nodes also make a vertex need a fifth chain slot in
+// `lib/ortho/partition.c:make_new_monotone_poly`. C writes past `vpos[4]`, but only into
+// bookkeeping, so its partition and routes are still right (exit 0). The port must route the
+// same, not fail the maze.
+#[test]
+fn ortho_partition_chain_slot_overflow_routes_like_c() {
+    let src = "digraph{splines=ortho nodesep=0 ranksep=0.02 node[shape=point width=0.02 height=0.01 fixedsize=true label=\"\"]
+n7->n7 n4->n0 n11->n1 n9->n4 n10->n7 n11->n1 n11->n4 n0->n4 n3->n11 n4->n11
+n10->n9 n0->n2 n5->n10 n8->n4 n1->n11 n10->n8 n3->n10 n4->n1 n1->n6 n3->n0}
+";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(
+        out.contains("n4 -> n0\t[pos=\"e,39.816,20 36.103,52 38.215,52 72,52 72,52 72,52 72,20 72,20 72,20 51.329,20 51.329,20\"]"),
+        "n4 -> n0 must be routed orthogonally, as C does:\n{out}"
     );
 }
 
