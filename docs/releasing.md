@@ -59,7 +59,9 @@ everything, the container image included, without publishing anything.
 The publishing jobs are independent once the GitHub release exists, so a failure leaves the
 other channels published. Fix the cause (an expired trusted-publisher configuration, a
 registry outage), then **Re-run failed jobs** on the same run: never push a new tag for the
-same version.
+same version. A re-run runs `release.yml` as it was in the tagged commit, and the release's tag
+cannot move, so a bug in the workflow itself is fixed on `master` and ships with the next
+version.
 
 - `crates-io`: safe to re-run, also after a partial publish. The job asks crates.io which
   crates already have the version (`scripts/crates-to-publish.py`) and publishes only the
