@@ -16,7 +16,7 @@ export default defineConfig({
 		starlight({
 			title: 'graphviz-pure',
 			description:
-				'A Rust + WebAssembly port of Graphviz 16.1.0, byte-identical to C Graphviz on its test corpora. The evidence, and what is left.',
+				'A pure-Rust port of Graphviz 16.1.0, native and WebAssembly, that writes the same output on every platform. The evidence, and what is left.',
 			logo: { light: './src/assets/mark-light.svg', dark: './src/assets/mark-dark.svg', alt: '' },
 			favicon: '/favicon.svg',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/graphviz-pure/graphviz-pure' }],
