@@ -33,3 +33,7 @@ updates:
     cooldown: { default-days: 7 }
     groups:
       wasm-runtimes: { patterns: ["*"] }
+  - package-ecosystem: docker
+    directory: /scripts/c-oracle-linux
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }

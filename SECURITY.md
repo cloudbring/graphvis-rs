@@ -2,9 +2,9 @@
 
 ## Reporting a vulnerability
 
-Please report vulnerabilities privately through GitHub's
-[private vulnerability reporting](../../security/advisories/new) ("Report a vulnerability" on
-the Security tab), not in a public issue. You should get a reply within a week. Once a fix is
+Please report vulnerabilities privately through GitHub's [private vulnerability
+reporting](https://github.com/graphviz-pure/graphviz-pure/security/advisories/new) ("Report a
+vulnerability" on the Security tab), not in a public issue. You should get a reply within a week. Once a fix is
 released, the advisory is published with credit to the reporter unless you prefer otherwise.
 
 Relevant reports include crashes or hangs on crafted input (the port parses untrusted DOT and
@@ -13,7 +13,7 @@ runs in browsers), memory-safety problems (the port forbids `unsafe` outside the
 
 ## Supported versions
 
-There has been no release yet. Once there is, only the latest release receives fixes.
+Only the latest release receives fixes.
 
 ## Supply chain
 
@@ -25,6 +25,13 @@ There has been no release yet. Once there is, only the latest release receives f
   `package-lock.json` without lifecycle scripts until their registry signatures are verified.
 - Dependabot proposes updates with a 7-day cooldown.
 
-The release process (artifacts built on GitHub-hosted runners with build-provenance
-attestations, and trusted publishing to crates.io and npm) will be documented here when the
-first release workflow lands.
+## Releases
+
+A release starts only from a signed tag on `master`. Every artifact is built on GitHub-hosted
+runners from the tagged commit, without caches, and gets a signed build-provenance attestation:
+
+    gh attestation verify FILE --repo graphviz-pure/graphviz-pure
+
+crates.io, npm and JSR are published through trusted publishing (OIDC), so no registry token
+exists. Publishing needs a maintainer's approval. The full model is at the top of
+[`.github/workflows/release.yml`](.github/workflows/release.yml).
