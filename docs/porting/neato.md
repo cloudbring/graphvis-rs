@@ -141,8 +141,6 @@ mode (C returns failure too).
   set matches for points in general position, but ties between co-circular
   points and the matrix entry order may differ (all prism corpus files are
   still exact).
-- xlabel placement inserts equal Hilbert keys in reverse insertion order,
-  approximating the cdt splay bag.
 - `start=random` without a seed uses seed 1 (C uses the clock).
 - `model=mds` with `mode=KK` indexes by layout id where C uses 1-based
   `AGSEQ` (undefined behaviour in C).

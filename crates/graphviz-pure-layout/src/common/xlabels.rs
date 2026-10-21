@@ -715,15 +715,15 @@ fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bo
         let y = r.b[1] + (r.b[3] - r.b[1]) / 2.0;
         keyed.push((hilbert(x as i32, y as i32, order) as i32, r));
     }
-    // xlnew/xlhdxload: `hdx` is a Dtobag keyed by the Hilbert index. Where
-    // equal keys land depends on the splay tree's shape (dttree.c inserts a
-    // duplicate just before the equal element its search stops at), so the
-    // tree is reproduced rather than sorted.
+    // lib/label/xlabels.c:xlnew/xlhdxload: `hdx` is a Dtobag keyed by the
+    // Hilbert index. Where equal keys land depends on the splay tree's shape
+    // (lib/cdt/dttree.c inserts a duplicate just before the equal element its
+    // search stops at), so the tree is reproduced rather than sorted.
     let mut hdx = DtTree::new(true);
     for i in 0..keyed.len() {
         hdx.insert(i, |a, b| keyed[a].0.cmp(&keyed[b].0));
     }
-    // xlspdxload: dtfirst/dtnext walk the dictionary in order.
+    // lib/label/xlabels.c:xlspdxload: dtfirst/dtnext walk the dictionary in order.
     let mut tree = RTree::new();
     for i in hdx.flatten() {
         tree.insert(keyed[i].1, i);
