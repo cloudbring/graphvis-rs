@@ -1,0 +1,34 @@
+# Maintainer: Emmanuel Mwangi (cloudbring) <TODO: AUR account email>
+#
+# Installs the static musl binaries from the GitHub release. The checksums below are
+# placeholders: run `packaging/aur/update.sh VERSION` after the release, which verifies each
+# asset's build-provenance attestation and SHA256SUMS before writing the real values.
+
+pkgname=graphviz-pure-bin
+_name=graphviz-pure
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Byte-exact Rust port of Graphviz 16.1.0, a dot-compatible command line (not affiliated with Graphviz)'
+arch=('x86_64' 'aarch64')
+url='https://graphviz-pure.github.io/'
+# EPL-2.0: the port. OFL-1.1: the Tinos, Arimo and Cousine fonts compiled into the binary.
+# MIT: the CORE-MATH pow port (see NOTICE).
+license=('EPL-2.0' 'OFL-1.1' 'MIT')
+depends=()
+provides=("$_name=$pkgver")
+conflicts=("$_name")
+# Keep the installed binary byte-identical to the attested release binary.
+options=('!strip' '!debug')
+_release="https://github.com/graphviz-pure/$_name/releases/download/v$pkgver"
+source_x86_64=("$_release/$_name-$pkgver-x86_64-unknown-linux-musl.tar.gz")
+source_aarch64=("$_release/$_name-$pkgver-aarch64-unknown-linux-musl.tar.gz")
+# TODO(release): placeholders, filled in by packaging/aur/update.sh. Never replace with 'SKIP'.
+sha256sums_x86_64=('0000000000000000000000000000000000000000000000000000000000000000')
+sha256sums_aarch64=('0000000000000000000000000000000000000000000000000000000000000000')
+
+package() {
+  cd "$_name-$pkgver-$CARCH-unknown-linux-musl"
+  install -Dm755 "$_name" "$pkgdir/usr/bin/$_name"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE NOTICE
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

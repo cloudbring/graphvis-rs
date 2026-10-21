@@ -1,0 +1,20 @@
+pkgbase = graphviz-pure-bin
+	pkgdesc = Byte-exact Rust port of Graphviz 16.1.0, a dot-compatible command line (not affiliated with Graphviz)
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://graphviz-pure.github.io/
+	arch = x86_64
+	arch = aarch64
+	license = EPL-2.0
+	license = OFL-1.1
+	license = MIT
+	provides = graphviz-pure=0.1.0
+	conflicts = graphviz-pure
+	options = !strip
+	options = !debug
+	source_x86_64 = https://github.com/graphviz-pure/graphviz-pure/releases/download/v0.1.0/graphviz-pure-0.1.0-x86_64-unknown-linux-musl.tar.gz
+	sha256sums_x86_64 = 0000000000000000000000000000000000000000000000000000000000000000
+	source_aarch64 = https://github.com/graphviz-pure/graphviz-pure/releases/download/v0.1.0/graphviz-pure-0.1.0-aarch64-unknown-linux-musl.tar.gz
+	sha256sums_aarch64 = 0000000000000000000000000000000000000000000000000000000000000000
+
+pkgname = graphviz-pure-bin
