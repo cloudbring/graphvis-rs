@@ -1111,8 +1111,6 @@ subgraph cluster_0 {
     assert!(err.contains("Error: install_in_rank"), "{err}");
     assert_eq!(out.matches("rx=\"18\" ry=\"27\"").count(), 2, "{out}");
     let (out, _, _) = run(&["-Kdot", "-Tdot"], src);
-    assert!(
-        out.contains("height=0.75") && out.contains("width=0.5"),
-        "{out}"
-    );
+    assert_eq!(out.matches("height=0.75").count(), 3, "{out}");
+    assert_eq!(out.matches("width=0.5").count(), 3, "{out}");
 }

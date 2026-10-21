@@ -88,6 +88,10 @@ pub fn layout_graph_with_options(
     } else {
         engine
     };
+    // A layout of the same graph must not keep an earlier dot layout's lw/rw split.
+    for n in &mut graph.nodes {
+        n.attrs.remove(graphviz_pure_core::NODE_LW_RW_KEY);
+    }
 
     match effective_engine {
         LayoutEngine::Dot => dotgen::layout_dot(graph),
@@ -117,6 +121,20 @@ mod tests {
         g.add_edge(a, b, AttrMap::new());
         g.add_edge(b, c, AttrMap::new());
         g
+    }
+
+    #[test]
+    fn relayout_drops_the_previous_lw_rw_split() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        let a = g.ensure_node("a");
+        g.add_edge(a, a, AttrMap::new());
+        let key = graphviz_pure_core::NODE_LW_RW_KEY;
+        g.graph_attrs.insert("splines".into(), String::new());
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert!(g.nodes[a.0 as usize].attrs.contains_key(key));
+        g.graph_attrs.insert("splines".into(), "true".into());
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert!(!g.nodes[a.0 as usize].attrs.contains_key(key));
     }
 
     #[test]
