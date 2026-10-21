@@ -490,7 +490,8 @@ impl<E: Engine> Emitter<'_, E> {
             b.push(interpolate(t, p0, p1));
             b.push(interpolate(1.0 - t, p0, p1));
             if rounded {
-                // `1.0 - RBCURVE * t`, contracted by clang to `fmadd(t, -0.5, 1.0)`.
+                // `1.0 - RBCURVE * t`, which clang contracts to `fmadd(t, -0.5, 1.0)`. `0.5 * t`
+                // is exact, so the result is the same unfused; the fma only mirrors C.
                 b.push(interpolate(t.mul_add(-0.5, 1.0), p0, p1));
             }
         }
