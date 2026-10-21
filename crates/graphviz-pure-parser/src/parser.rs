@@ -2,7 +2,7 @@
 //! with full lexical scoping for `graph`, `node`, and `edge` defaults across
 //! nested subgraphs and clusters.
 
-use crate::lexer::{Lexer, Token, TokenKind};
+use crate::lexer::{Lexer, ScanState, Token, TokenKind};
 type AttrMap2 = std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>;
 
 use graphviz_pure_core::{
@@ -149,15 +149,10 @@ impl Parser {
     }
 
     fn expect(&mut self, expected: &TokenKind) -> Result<Token> {
-        let tok = self.peek().clone();
-        if &tok.kind == expected {
+        if &self.peek().kind == expected {
             Ok(self.advance())
         } else {
-            Err(GraphvizError::SyntaxError {
-                line: tok.line,
-                col: tok.col,
-                message: format!("expected {:?}, found {:?}", expected, tok.kind),
-            })
+            Err(syntax_error(self.peek()))
         }
     }
 
@@ -186,16 +181,7 @@ impl Parser {
                 is_html = true;
                 s
             }
-            _ => {
-                return Err(GraphvizError::SyntaxError {
-                    line: tok.line,
-                    col: tok.col,
-                    message: format!(
-                        "expected identifier or string literal, found {:?}",
-                        tok.kind
-                    ),
-                });
-            }
+            _ => return Err(syntax_error(&tok)),
         };
 
         // Support string concatenation with `+` (`qatom '+' T_qatom` in grammar.y)
@@ -208,16 +194,7 @@ impl Parser {
                     is_html = false;
                     val.push_str(&s);
                 }
-                _ => {
-                    return Err(GraphvizError::SyntaxError {
-                        line: next_tok.line,
-                        col: next_tok.col,
-                        message: format!(
-                            "expected string literal after '+', found {:?}",
-                            next_tok.kind
-                        ),
-                    });
-                }
+                _ => return Err(syntax_error(&next_tok)),
             }
         }
 
@@ -262,13 +239,7 @@ impl Parser {
                 self.advance();
                 GraphKind::Directed
             }
-            _ => {
-                return Err(GraphvizError::SyntaxError {
-                    line: tok.line,
-                    col: tok.col,
-                    message: format!("expected 'graph' or 'digraph', found {:?}", tok.kind),
-                });
-            }
+            _ => return Err(syntax_error(&tok)),
         };
 
         let name = if Self::is_atom_token(&self.peek().kind) {
@@ -373,14 +344,7 @@ impl Parser {
                 }
                 self.parse_compound()
             }
-            _ => {
-                let tok = self.peek();
-                Err(GraphvizError::SyntaxError {
-                    line: tok.line,
-                    col: tok.col,
-                    message: format!("unexpected token in statement: {:?}", tok.kind),
-                })
-            }
+            _ => Err(syntax_error(self.peek())),
         }
     }
 
@@ -395,15 +359,7 @@ impl Parser {
         }
 
         if self.peek().kind != TokenKind::LBracket {
-            let tok = self.peek();
-            return Err(GraphvizError::SyntaxError {
-                line: tok.line,
-                col: tok.col,
-                message: format!(
-                    "expected '[' after {:?} attribute statement, found {:?}",
-                    attr_tok.kind, tok.kind
-                ),
-            });
+            return Err(syntax_error(self.peek()));
         }
 
         let attrs = self.parse_opt_attr_list()?;
@@ -468,24 +424,12 @@ impl Parser {
             let mut chain = vec![first.into_endpoints()];
             while matches!(self.peek().kind, TokenKind::Arrow | TokenKind::DashDash) {
                 let op_tok = self.advance();
-                match (op_tok.kind, self.graph.kind) {
-                    (TokenKind::Arrow, GraphKind::Undirected) => {
-                        return Err(GraphvizError::SyntaxError {
-                            line: op_tok.line,
-                            col: op_tok.col,
-                            message:
-                                "directed edge operator '->' is not allowed in undirected 'graph'"
-                                    .to_string(),
-                        });
-                    }
-                    (TokenKind::DashDash, GraphKind::Directed) => {
-                        return Err(GraphvizError::SyntaxError {
-                            line: op_tok.line,
-                            col: op_tok.col,
-                            message:
-                                "undirected edge operator '--' is not allowed in directed 'digraph'"
-                                    .to_string(),
-                        });
+                // scan.l returns the other graph type's edge operator as the token '-',
+                // which no rule accepts.
+                match (&op_tok.kind, self.graph.kind) {
+                    (TokenKind::Arrow, GraphKind::Undirected)
+                    | (TokenKind::DashDash, GraphKind::Directed) => {
+                        return Err(syntax_error(&op_tok));
                     }
                     _ => {}
                 }
@@ -595,9 +539,10 @@ impl Parser {
         if self.scope_stack.len() >= MAX_SUBGRAPH_DEPTH {
             let tok = self.peek();
             return Err(GraphvizError::SyntaxError {
-                line: tok.line,
+                line: tok.c_line,
                 col: tok.col,
                 message: format!("subgraphs nested more than {MAX_SUBGRAPH_DEPTH} deep"),
+                file: None,
             });
         }
 
@@ -610,12 +555,7 @@ impl Parser {
             self.expect(&TokenKind::RBrace)?;
             self.scope_stack.pop();
         } else if name.is_empty() {
-            let tok = self.peek();
-            return Err(GraphvizError::SyntaxError {
-                line: tok.line,
-                col: tok.col,
-                message: format!("expected '{{' for anonymous subgraph, found {:?}", tok.kind),
-            });
+            return Err(syntax_error(self.peek()));
         }
 
         Ok(subg_id)
@@ -949,6 +889,53 @@ impl Parser {
         } else {
             &mut self.graph.edge_defaults
         }
+    }
+}
+
+/// flex's `YY_BUF_SIZE`, which `aagerror` names as a possible cause.
+const YY_BUF_SIZE: usize = 16384;
+
+/// `aagerror` (`lib/cgraph/scan.l`) for bison's "syntax error" on lookahead token `tok`:
+/// the line the scanner is on once `tok` is read, then `near '<yytext>'`, or, when yytext
+/// is empty (end of input), the start condition the scanner was left in.
+fn syntax_error(tok: &Token) -> GraphvizError {
+    let mut message = format!("syntax error in line {}", tok.c_line);
+    if !tok.text.is_empty() {
+        message.push_str(&format!(" near '{}'", tok.text));
+    } else {
+        // `"%.80s"` of `Sbuf`: its first 80 bytes.
+        let first_80 = |s: &str| {
+            let bytes = graphviz_pure_core::charset::encode(s);
+            graphviz_pure_core::charset::decode_slice(&bytes[..bytes.len().min(80)])
+        };
+        match &tok.state {
+            ScanState::QString(sbuf) => {
+                message.push_str(&format!(
+                    " scanning a quoted string (missing endquote? longer than {YY_BUF_SIZE}?)"
+                ));
+                if !sbuf.is_empty() {
+                    message.push_str(&format!("\nString starting:\"{}", first_80(sbuf)));
+                }
+            }
+            ScanState::HString(sbuf) => {
+                message.push_str(&format!(
+                    " scanning a HTML string (missing '>'? bad nesting? longer than {YY_BUF_SIZE}?)"
+                ));
+                if !sbuf.is_empty() {
+                    message.push_str(&format!("\nString starting:<{}", first_80(sbuf)));
+                }
+            }
+            ScanState::Comment => message.push_str(&format!(
+                " scanning a /*...*/ comment (missing '*/? longer than {YY_BUF_SIZE}?)"
+            )),
+            ScanState::Initial => {}
+        }
+    }
+    GraphvizError::SyntaxError {
+        line: tok.c_line,
+        col: tok.col,
+        message,
+        file: tok.file.as_deref().map(str::to_string),
     }
 }
 

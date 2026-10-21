@@ -511,3 +511,108 @@ fn quoted_keyword_atoms_still_parse() {
     assert!(out.contains("\"node\"=1"), "{out}");
     assert!(out.contains("a:\"graph\" -> b"), "{out}");
 }
+
+// Issue #31, fuzz case 022-stderr-syntax-error-message: a DOT syntax error is reported in
+// the words of cgraph's `aagerror` (lib/cgraph/scan.l), on the line where bison read the
+// rejected lookahead token, and dot exits 1. Expected stderr is C Graphviz 16.1.0's.
+#[test]
+fn syntax_errors_are_reported_as_c_does() {
+    // repro.gv: the line is the end of input, where the unterminated string ends
+    let path = tmp("cli_syntax_repro.gv");
+    std::fs::write(&path, "digraph G {\n a -> b\n c [label=\"abc\n\n]\n d\n").unwrap();
+    let (out, err, ok) = run(&["-Tsvg", path.to_str().unwrap()], "");
+    assert!(!ok && out.is_empty());
+    assert_eq!(
+        err,
+        format!(
+            "Error: {}: syntax error in line 7 scanning a quoted string (missing endquote? \
+             longer than 16384?)\nString starting:\"abc\n\n]\n d\n\n",
+            path.display()
+        )
+    );
+    // repro2.gv, read from stdin
+    let (_, err, ok) = run(&["-Tsvg"], "digraph G {\n a -> b\n c -> ;\n}\n");
+    assert!(!ok);
+    assert_eq!(err, "Error: <stdin>: syntax error in line 3 near ';'\n");
+    let (_, err, ok) = run(&["-Tsvg"], "digraph G {\n a -> b\n");
+    assert!(!ok);
+    assert_eq!(err, "Error: <stdin>: syntax error in line 3\n");
+    // a `# N "file"` line directive renames the input
+    let (_, err, ok) = run(&["-Tsvg"], "digraph G {\n# 100 \"other.gv\"\n a -> ;\n}\n");
+    assert!(!ok);
+    assert_eq!(err, "Error: other.gv: syntax error in line 100 near ';'\n");
+    // the graphs before the error are rendered; line numbers restart with each graph
+    let (out, err, ok) = run(&["-Tsvg"], "digraph G { a }\ndigraph H { b -> ; }\n");
+    assert!(!ok);
+    assert_eq!(out.matches("<svg").count(), 1);
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near ';'\n");
+}
+
+// `%.80s` of the string read so far may end inside a UTF-8 sequence: C writes the bytes.
+#[test]
+fn unterminated_string_excerpt_is_cut_at_80_bytes() {
+    let src = format!("digraph G {{\n a [label=\"x{}\n", "\u{e9}".repeat(43));
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .arg("-Tsvg")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(src.as_bytes())
+        .unwrap();
+    let out = child.wait_with_output().unwrap();
+    let mut expected = b"Error: <stdin>: syntax error in line 3 scanning a quoted string \
+        (missing endquote? longer than 16384?)\nString starting:\"x"
+        .to_vec();
+    expected.extend("\u{e9}".repeat(39).as_bytes());
+    expected.extend(b"\xc3\n");
+    assert_eq!(out.stderr, expected);
+}
+
+// cgraph's `default_usererrf` (lib/cgraph/agerror.c) writes control characters other than
+// white space as `\ooo`: in the near text, the string excerpt and a directive's file name.
+#[test]
+fn syntax_error_escapes_control_characters() {
+    let (_, err, ok) = run(&["-Tsvg"], "digraph { a \u{1} }");
+    assert!(!ok);
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near '\\001'\n");
+    let (_, err, _) = run(&["-Tsvg"], "digraph { a \u{7f} }");
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near '\\177'\n");
+    let (_, err, _) = run(&["-Tsvg"], "digraph {\n a [label=\"a\u{1b}b\tc\r\n");
+    assert_eq!(
+        err,
+        "Error: <stdin>: syntax error in line 3 scanning a quoted string (missing endquote? \
+         longer than 16384?)\nString starting:\"a\\033b\tc\r\n\n"
+    );
+    let (_, err, _) = run(&["-Tsvg"], "digraph {\n# 3 \"a\u{1}b\"\n a -> ;\n}\n");
+    assert_eq!(err, "Error: a\\001b: syntax error in line 3 near ';'\n");
+}
+
+/// C: `Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits
+/// into two tokens` before the error (scan.l `chkNum`). The port splits the token the same way
+/// but does not warn.
+#[test]
+#[ignore = "issue #97: scan.l chkNum's badly-delimited-number warning is not ported"]
+fn badly_delimited_number_warns() {
+    let (_, err, _) = run(&["-Tsvg"], "digraph G {\n a -> b -> 1a ; c -> ;\n}\n");
+    assert_eq!(
+        err,
+        "Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits \
+         into two tokens\nError: <stdin>: syntax error in line 2 near ';'\n"
+    );
+}
+
+/// C: a backslash before CR LF in a quoted string is kept with the CR and LF (scan.l:140
+/// ignores only a backslash before LF; rule 142 keeps the backslash). The port drops all three.
+#[test]
+#[ignore = "issue #112: backslash + CRLF in a quoted string is dropped"]
+fn backslash_crlf_in_quoted_string_is_kept() {
+    let (out, err, ok) = run(&["-Tdot"], "digraph G { a [label=\"x\\\r\ny\"] }");
+    assert!(ok, "{err}");
+    assert!(out.contains("label=\"x\\\r\ny\""), "{out}");
+}
