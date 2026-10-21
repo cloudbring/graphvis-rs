@@ -120,8 +120,11 @@ fn add(a: Point, b: Point) -> Point {
     Point::new(a.x + b.x, a.y + b.y)
 }
 
+/// `interpolate_pointf` (`lib/common/geomprocs.h`): `p + t * (q - p)`, which
+/// Apple clang contracts into a fused multiply-add (`fmla.2d` in
+/// `alloc_interpolation_points`), so the port fuses it explicitly.
 fn interpolate(t: f64, p: Point, q: Point) -> Point {
-    Point::new(p.x + t * (q.x - p.x), p.y + t * (q.y - p.y))
+    Point::new(t.mul_add(q.x - p.x, p.x), t.mul_add(q.y - p.y, p.y))
 }
 
 impl<E: Engine> Emitter<'_, E> {
@@ -487,7 +490,9 @@ impl<E: Engine> Emitter<'_, E> {
             b.push(interpolate(t, p0, p1));
             b.push(interpolate(1.0 - t, p0, p1));
             if rounded {
-                b.push(interpolate(1.0 - 0.5 * t, p0, p1));
+                // `1.0 - RBCURVE * t`, which clang contracts to `fmadd(t, -0.5, 1.0)`. `0.5 * t`
+                // is exact, so the result is the same unfused; the fma only mirrors C.
+                b.push(interpolate(t.mul_add(-0.5, 1.0), p0, p1));
             }
         }
         b.push(b[0]);

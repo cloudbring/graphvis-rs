@@ -149,6 +149,11 @@ Rendering
 * `outputorder` carries over to later graphs of the same run (job flags are ORed).
 * NaN prints as `nan`, as macOS libc does.
 * Tapered edges subdivide with clang's fused multiply-add.
+* `round_corners` shapes (rounded, diagonals, note, tab, folder, box3d, component, the
+  arrows and SBOL shapes) interpolate their corner points with clang's fused
+  multiply-add, as `alloc_interpolation_points` does. Was open case
+  `018-render-interpolate-points-fma` (issue #27); its repro is kept in
+  `crates/graphviz-pure-cli/tests/cli.rs` (`round_corners_interpolation_is_fused_like_clang`).
 * `\E` uses the layout's final port names, which dot's `sameport` clears.
 
 dot
@@ -284,7 +289,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
-| [`018-render-interpolate-points-fma`](../../tests/fuzz-open/018-render-interpolate-points-fma) | low | 1 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
 | [`020-parser-keyword-as-attribute-value`](../../tests/fuzz-open/020-parser-keyword-as-attribute-value) | medium | — | port |
 | [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
