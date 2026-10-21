@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Prepares a release: sets VERSION in Cargo.toml (the workspace version and the version
-# requirements of the workspace's own crates), web/package.json and Cargo.lock, and moves the
+# requirements of the workspace's own crates), web/package.json, jsr.json and Cargo.lock, and moves the
 # "Unreleased" entries of CHANGELOG.md under "## [VERSION] - today". With --pr it commits that
 # on a release/vVERSION branch and opens the pull request. See docs/versioning.md.
 #
@@ -21,9 +21,10 @@ toml = open("Cargo.toml").read()
 toml = re.sub(r'(\[workspace\.package\][^\[]*?\nversion = ")[^"]+(")', rf"\g<1>{new}\g<2>", toml, count=1)
 toml = re.sub(r'(graphviz-pure[\w-]* = \{ path = "[^"]+", version = ")[^"]+(")', rf"\g<1>{new}\g<2>", toml)
 open("Cargo.toml", "w").write(toml)
-pkg = json.load(open("web/package.json"))
-pkg["version"] = new
-open("web/package.json", "w").write(json.dumps(pkg, indent=2) + "\n")
+for path in ("web/package.json", "jsr.json"):
+    pkg = json.load(open(path))
+    pkg["version"] = new
+    open(path, "w").write(json.dumps(pkg, indent=2) + "\n")
 log = open("CHANGELOG.md").read()
 today = datetime.date.today().isoformat()
 log = log.replace("## [Unreleased]\n", f"## [Unreleased]\n\n## [{new}] - {today}\n", 1)

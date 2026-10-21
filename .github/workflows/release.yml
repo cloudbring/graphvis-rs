@@ -14,7 +14,9 @@ name: Release
 # - Publishing happens only in jobs bound to the `release` environment, which needs a
 #   maintainer's approval and accepts only v* tags. crates.io and npm are published with
 #   trusted publishing (OIDC): no registry token exists anywhere. The tokens these jobs can mint
-#   live for one job.
+#   live for one job. The container image is pushed to ghcr.io with the job's GITHUB_TOKEN.
+# - The one stored credential is WINGET_TOKEN (a `release` environment secret), which can only
+#   open a pull request to microsoft/winget-pkgs from a fork. Without it the winget job skips.
 # - The Homebrew tap, the Scoop bucket and the website pull new releases themselves and verify
 #   the attestations before updating; this repository holds no credential for them.
 
@@ -34,6 +36,7 @@ env:
   CARGO_TERM_COLOR: always
   # The release toolchain, pinned: a new Rust release cannot change a release build silently.
   RUST_VERSION: "1.99.1"
+  IMAGE: ghcr.io/graphviz-pure/graphviz-pure
 
 jobs:
   check:
@@ -162,10 +165,12 @@ jobs:
         run: npm run build:wasm
       - name: Smoke test (byte-identical gallery samples)
         run: node scripts/release-smoke-wasm.mjs
-      - name: Check the package version
+      - name: Check the package versions (npm and JSR)
         env:
           VERSION: ${{ needs.check.outputs.version }}
-        run: test "$(node -p "require('./web/package.json').version")" = "$VERSION"
+        run: |
+          test "$(node -p "require('./web/package.json').version")" = "$VERSION"
+          test "$(node -p "require('./jsr.json').version")" = "$VERSION"
       - name: Pack
         working-directory: web
         run: mkdir -p ../dist && npm pack --pack-destination ../dist
@@ -174,6 +179,97 @@ jobs:
           name: npm-package
           path: dist/
           if-no-files-found: error
+
+  # The container image is assembled from the two musl archives above (no second compile) with
+  # the docker and buildx already on the runner: the organization allows no docker/* actions.
+  image:
+    name: Build the container image
+    needs: [check, binaries]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: bin-*-unknown-linux-musl
+          path: dist
+          merge-multiple: true
+      - name: Use the containerd image store (multi-platform builds)
+        # Merged into the runner's daemon.json, which holds settings of its own.
+        run: |
+          sudo mkdir -p /etc/docker
+          test -s /etc/docker/daemon.json || echo '{}' | sudo tee /etc/docker/daemon.json > /dev/null
+          sudo python3 - <<'EOF'
+          import json
+          p = "/etc/docker/daemon.json"
+          c = json.load(open(p))
+          c.setdefault("features", {})["containerd-snapshotter"] = True
+          json.dump(c, open(p, "w"))
+          EOF
+          sudo systemctl restart docker
+          docker info -f '{{.DriverStatus}}' | grep -q io.containerd.snapshotter
+      - name: Build
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+          REVISION: ${{ github.sha }}
+        run: |
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          export SOURCE_DATE_EPOCH
+          scripts/release-image.sh "$VERSION" dist image
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image
+          path: image/
+          if-no-files-found: error
+
+  # The image must reproduce the gallery samples byte for byte on each platform, like the
+  # binaries: release-smoke.py runs it through a wrapper that mounts the checkout read-only.
+  image-smoke:
+    name: Smoke test the image (${{ matrix.platform }})
+    needs: [check, image]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: linux/amd64, runner: ubuntu-24.04 }
+          - { platform: linux/arm64, runner: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image
+          path: image
+      - name: Use the containerd image store (multi-platform images)
+        # As in the image job.
+        run: |
+          sudo mkdir -p /etc/docker
+          test -s /etc/docker/daemon.json || echo '{}' | sudo tee /etc/docker/daemon.json > /dev/null
+          sudo python3 - <<'EOF'
+          import json
+          p = "/etc/docker/daemon.json"
+          c = json.load(open(p))
+          c.setdefault("features", {})["containerd-snapshotter"] = True
+          json.dump(c, open(p, "w"))
+          EOF
+          sudo systemctl restart docker
+          docker info -f '{{.DriverStatus}}' | grep -q io.containerd.snapshotter
+      - name: Load
+        run: docker load --input image/graphviz-pure-image.tar
+      - name: Smoke test (byte-identical gallery samples)
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          cat > "$RUNNER_TEMP/graphviz-pure" <<EOF
+          #!/bin/sh
+          exec docker run --rm --network none --platform $PLATFORM -v "$PWD:$PWD:ro" $IMAGE:$VERSION "\$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/graphviz-pure"
+          python3 scripts/release-smoke.py "$RUNNER_TEMP/graphviz-pure"
 
   attest:
     name: Checksums and provenance
@@ -279,3 +375,142 @@ jobs:
       # the version goes live when a maintainer approves it on npmjs.com with 2FA.
       - name: npm stage publish
         run: npm stage publish --access public dist/*.tgz
+
+  # The same attested npm tarball, published to JSR with tokenless OIDC. JSR has no staging, so
+  # the `release` environment's approval is the only gate before the version goes live.
+  jsr:
+    name: Publish to JSR
+    if: github.event_name == 'push'
+    needs: github-release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # JSR's GitHub Actions OIDC publishing; JSR adds provenance from it
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false # no caches in a release
+      - name: jsr.json matches the tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          v=$(node -p "require('./jsr.json').version")
+          test "v$v" = "$REF_NAME" || { echo "::error::tag $REF_NAME but jsr.json says $v"; exit 1; }
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-package
+          path: dist
+      # jsr.json publishes web/pkg/*, which the npm tarball holds as package/pkg/*. web/pkg is
+      # gitignored, so the checkout stays clean for `jsr publish`.
+      - name: Unpack the npm package
+        run: tar -xzf dist/*.tgz -C web --strip-components=1 package/pkg
+      # jsr pinned exactly; it downloads the Deno release it is built for and checks its SHA-256.
+      - name: jsr publish
+        run: npx --yes jsr@0.14.3 publish
+
+  ghcr:
+    name: Publish the container image
+    if: github.event_name == 'push'
+    needs: [check, image-smoke, github-release]
+    runs-on: ubuntu-24.04 # has skopeo
+    environment: release
+    permissions:
+      packages: write # push to ghcr.io/graphviz-pure/graphviz-pure
+      id-token: write # Sigstore signing certificate for the attestation
+      attestations: write # store the attestation in this repository
+      artifact-metadata: write # record where the attested image is stored
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image
+          path: image
+      # skopeo copies the smoke-tested OCI layout as it is, so every tag gets the digest the
+      # image job computed. Tags: 0.1.0, 0.1 and latest; a pre-release (0.2.0-rc.1) only its own.
+      - name: Push
+        id: push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          digest=$(cat image/graphviz-pure-image.digest)
+          tags=$VERSION
+          case "$VERSION" in *-*) ;; *) tags="$VERSION ${VERSION%.*} latest" ;; esac
+          printenv GH_TOKEN | skopeo login --authfile "$RUNNER_TEMP/auth.json" --username "$ACTOR" --password-stdin ghcr.io
+          for tag in $tags; do
+            skopeo copy --all --preserve-digests --authfile "$RUNNER_TEMP/auth.json" --digestfile "$RUNNER_TEMP/pushed" \
+              oci-archive:image/graphviz-pure-image.tar "docker://$IMAGE:$tag"
+            test "$(cat "$RUNNER_TEMP/pushed")" = "$digest" || { echo "::error::$IMAGE:$tag was pushed as $(cat "$RUNNER_TEMP/pushed"), not $digest"; exit 1; }
+          done
+          rm "$RUNNER_TEMP/auth.json"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      # The attestation is pushed next to the image, so `gh attestation verify oci://...` and
+      # registry-side policy tools find it. That push reads Docker's credentials.
+      - name: Log in to ghcr.io
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: printenv GH_TOKEN | docker login ghcr.io --username "$ACTOR" --password-stdin
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - name: Log out
+        if: always()
+        run: docker logout ghcr.io
+
+  # Opens the pull request to microsoft/winget-pkgs for the new version. komac reads the
+  # previous version's manifest and analyses both zips, which hold one portable exe each, so
+  # the nested installer entries (including the versioned directory) are filled in by it. The
+  # package's first version is submitted by hand (docs/releasing.md).
+  winget:
+    name: Open the winget update
+    if: github.event_name == 'push'
+    needs: [check, github-release]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions: {} # komac uses WINGET_TOKEN only, against its owner's winget-pkgs fork
+    env:
+      KOMAC_VERSION: "2.17.1"
+      # komac-2.17.1-x86_64-unknown-linux-gnu.tar.gz, as listed in that release's SHA256SUMS.
+      KOMAC_SHA256: e694e79cd451afabf47bead66ed34586fef4814f7b94e4b61a098f419978d5d7
+    steps:
+      - name: Check for WINGET_TOKEN
+        id: token
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          if [ -n "$WINGET_TOKEN" ]; then
+            echo "set=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::WINGET_TOKEN is not set in the release environment, so no winget pull request was opened (docs/releasing.md)"
+          fi
+      - name: Install komac ${{ env.KOMAC_VERSION }}
+        if: steps.token.outputs.set == 'true'
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location --proto '=https' --output komac.tar.gz \
+            "https://github.com/russellbanks/Komac/releases/download/v$KOMAC_VERSION/komac-$KOMAC_VERSION-x86_64-unknown-linux-gnu.tar.gz"
+          echo "$KOMAC_SHA256  komac.tar.gz" | sha256sum --check --strict
+          tar -xzf komac.tar.gz komac
+      - name: komac update
+        if: steps.token.outputs.set == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.check.outputs.version }}
+          REPO: ${{ github.repository }}
+        # In CI komac exits quietly if a pull request for this version already exists, so a
+        # re-run does not open a second one.
+        run: |
+          base="https://github.com/$REPO/releases/download/$TAG"
+          "$RUNNER_TEMP/komac" update GraphvizPure.GraphvizPure --version "$VERSION" \
+            --urls "$base/graphviz-pure-$VERSION-x86_64-pc-windows-msvc.zip" "$base/graphviz-pure-$VERSION-aarch64-pc-windows-msvc.zip" \
+            --release-notes-url "https://github.com/$REPO/releases/tag/$TAG" \
+            --submit

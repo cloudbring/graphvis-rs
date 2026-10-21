@@ -3,14 +3,18 @@
 ## How a release works
 
 1. Run `scripts/bump-version.sh X.Y.Z --pr`: it sets the version in `Cargo.toml`,
-   `Cargo.lock` and `web/package.json`, dates the changelog's "Unreleased" entries, and opens the
-   release pull request. Merge it. The version follows [the versioning policy](versioning.md).
+   `Cargo.lock`, `web/package.json` and `jsr.json`, dates the changelog's "Unreleased" entries,
+   and opens the release pull request. Merge it. The version follows
+   [the versioning policy](versioning.md).
 2. A maintainer pushes a signed tag: `git tag -s v0.1.0 -m v0.1.0 && git push origin v0.1.0`.
    Only maintainers can create `v*` tags (tag ruleset), and the workflow refuses a tag that is
    not on `master` or not signed with a key in [`.github/allowed_signers`](../.github/allowed_signers)
    (read from `master`, not from the tagged commit). To sign with SSH: `git config gpg.format ssh`,
    `git config user.signingkey ~/.ssh/id_ed25519.pub`; add the key to GitHub as a signing key
    and, in a reviewed pull request, to `.github/allowed_signers`.
+   **First release only:** npm drops a trusted-publisher configuration that has not published
+   within 48 hours of its creation. If it is older than that, delete and recreate it (same
+   fields, see [npm](#npm-organization-graphviz-pure)) just before pushing the tag.
 3. `.github/workflows/release.yml` runs on GitHub-hosted runners, with no caches, the pinned
    Rust toolchain and `cargo build --locked`:
    - builds `graphviz-pure` for six targets (Linux x86-64 and arm64 as static musl binaries,
@@ -18,20 +22,31 @@
    - requires every binary and the npm package to reproduce the gallery samples byte for byte
      (`scripts/release-smoke.py`, `scripts/release-smoke-wasm.mjs`);
    - packages deterministic archives (`scripts/release-package.py`), writes `SHA256SUMS` and
-     attests the build provenance of every file (Sigstore, stored on GitHub).
+     attests the build provenance of every file (Sigstore, stored on GitHub);
+   - builds the container image for linux/amd64 and linux/arm64 from the two musl archives
+     (`scripts/release-image.sh`, no second compile; the same archives always give the same
+     digest) and runs the gallery smoke test through it on both platforms.
 4. The publishing jobs wait for a maintainer to approve the `release` environment, then:
    - create the GitHub release with all files;
    - publish the eight crates to crates.io (trusted publishing, `cargo publish --workspace`);
    - stage `@graphviz-pure/wasm` on npm (trusted publishing, with npm provenance). The trusted
      publisher may only stage, so the version goes live only when a maintainer approves it with
-     2FA: the package's **Staged Packages** tab on npmjs.com, or `npm stage approve <stage-id>`.
+     2FA: the package's **Staged Packages** tab on npmjs.com, or `npm stage approve <stage-id>`;
+   - publish the same npm tarball to JSR (`jsr publish`, OIDC). JSR has no staging: the
+     version is live as soon as the job finishes, so the `release` approval is its only gate;
+   - push the smoke-tested image to `ghcr.io/graphviz-pure/graphviz-pure` as `0.1.0`, `0.1` and
+     `latest` (a pre-release gets only its own tag) and attest its digest, with the attestation
+     stored next to the image in the registry;
+   - open the winget update pull request on `microsoft/winget-pkgs` with komac, if
+     `WINGET_TOKEN` is set (otherwise the job logs a notice and does nothing). winget's
+     moderators merge it, usually within a day or two.
 5. Within hours, `graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the
    release, verify each asset's attestation and checksum, and commit the new formula and
    manifest. `graphviz-pure/graphviz-pure.github.io` deploys the site from `master` builds the
    same way. No repository holds a credential for another.
 
 Run the workflow by hand (Actions → Release → Run workflow) to build, smoke-test and attest
-everything without publishing anything.
+everything, the container image included, without publishing anything.
 
 ## Verifying a download
 
@@ -40,11 +55,28 @@ gh attestation verify graphviz-pure-0.1.0-x86_64-unknown-linux-musl.tar.gz \
   --repo graphviz-pure/graphviz-pure --signer-workflow graphviz-pure/graphviz-pure/.github/workflows/release.yml
 sha256sum --check --ignore-missing SHA256SUMS
 npm audit signatures   # in a project that depends on @graphviz-pure/wasm
+gh attestation verify oci://ghcr.io/graphviz-pure/graphviz-pure:0.1.0 \
+  --repo graphviz-pure/graphviz-pure --signer-workflow graphviz-pure/graphviz-pure/.github/workflows/release.yml
+```
+
+The image verification checks the multi-platform index digest that the tag points to, so
+verify by tag and then pull by digest (`docker pull ghcr.io/graphviz-pure/graphviz-pure@sha256:...`)
+if you need the check and the pull to refer to the same bytes.
+
+## Using the container image
+
+The image holds the static binary and its licence, nothing else (no shell), and runs as
+`nobody`:
+
+```sh
+docker run --rm -i ghcr.io/graphviz-pure/graphviz-pure -Tsvg < graph.dot > graph.svg
+docker run --rm -v "$PWD:/data" --user "$(id -u):$(id -g)" ghcr.io/graphviz-pure/graphviz-pure \
+  -Kneato -Tpng -o graph.png graph.dot
 ```
 
 ## One-time setup
 
-Done once per channel by a maintainer. Nothing here needs a long-lived token in GitHub.
+Done once per channel by a maintainer. Only winget needs a long-lived token in GitHub.
 
 ### GitHub (organization `graphviz-pure`)
 
@@ -83,6 +115,73 @@ once with placeholder releases:
 4. Package settings → Publishing access → **"Require two-factor authentication and disallow
    tokens"**. `npm logout`.
 
+Since 2026-10-02 npm expires a trusted-publisher configuration 48 hours after it is created
+unless it has published by then; the first successful (staged) publish validates it for good
+([changelog](https://github.blog/changelog/2026-10-02-unvalidated-npm-trusted-publishing-configurations-now-expire/)).
+If the configuration was created well before the first release, delete it and recreate it with
+the same fields just before pushing the first tag, then release within 48 hours.
+
+### JSR (scope `@graphviz-pure`)
+
+1. Log in to jsr.io with GitHub and create the scope `@graphviz-pure`, then the package `wasm`.
+2. Package settings → **GitHub repository**: link `graphviz-pure/graphviz-pure`. JSR accepts an
+   OIDC publish only from a workflow in the linked repository.
+3. Scope settings: keep publishing from GitHub Actions restricted to scope members (on by
+   default), so a release publishes only when a member pushed the tag. Once the first version
+   is out, also consider requiring every version to be published from CI.
+
+JSR has no staged-approval step like npm's: `jsr publish` makes the version live, and the
+`release` environment's approval is the only gate. The package is the same tarball as npm's.
+In Deno, `init()` fetches the `.wasm` next to the module, so a script importing
+`jsr:@graphviz-pure/wasm` needs `--allow-net=jsr.io` (or passes the bytes to `init`).
+
+### Container image (`ghcr.io/graphviz-pure/graphviz-pure`)
+
+No token: the `ghcr` job pushes with its own `GITHUB_TOKEN` (`packages: write` in that job
+only). GitHub's documentation gives two answers for the visibility of a package first pushed
+from a workflow: private, like every new package, or inherited from the repository. Check
+after the first release:
+
+1. `docker logout ghcr.io && docker pull ghcr.io/graphviz-pure/graphviz-pure:0.1.0`. If that
+   fails as unauthorized, the package is private: Organization → Packages → `graphviz-pure` →
+   Package settings → Danger Zone → **Change visibility** → Public. This cannot be undone. If
+   Public is not offered, allow it under Organization settings → Packages → Package creation.
+2. In the same settings, **Manage Actions access** should list only
+   `graphviz-pure/graphviz-pure` (a publishing repository gets the Admin role automatically), and
+   the package should show this repository as its source (the image's
+   `org.opencontainers.image.source` label).
+
+### winget (`GraphvizPure.GraphvizPure`)
+
+winget takes a new package only from a hand-made first submission; the release workflow then
+opens the update for every later version.
+
+1. A **classic** personal access token with the `public_repo` scope only, with an expiry date.
+   komac does not support fine-grained tokens: it can commit with one, but GitHub refuses the
+   pull request to `microsoft/winget-pkgs`
+   ([komac#310](https://github.com/russellbanks/Komac/issues/310)). `public_repo` can write to
+   every public repository its owner can, so create it on a separate account that is not a
+   member of the organization; the pull requests come from that account's fork of
+   `winget-pkgs`, which komac creates.
+2. First version, by hand, after the GitHub release exists (komac 2.17.1 or later, logged in
+   with that token):
+
+   ```sh
+   base=https://github.com/graphviz-pure/graphviz-pure/releases/download/v0.1.0
+   komac new GraphvizPure.GraphvizPure --version 0.1.0 \
+     --urls $base/graphviz-pure-0.1.0-x86_64-pc-windows-msvc.zip $base/graphviz-pure-0.1.0-aarch64-pc-windows-msvc.zip
+   ```
+
+   Each zip holds one `graphviz-pure.exe` (portable) inside a versioned directory, which komac
+   detects as the nested installer. Publisher `graphviz-pure`, licence `EPL-2.0`, command alias
+   `graphviz-pure` (the default). Submit and wait for the moderators to merge it.
+3. Store the token as the `WINGET_TOKEN` secret of the `release` environment (repository
+   Settings → Environments → release). Until it exists the `winget` job only logs a notice.
+   When it expires, the job fails and the winget update can be made by hand with
+   `komac update GraphvizPure.GraphvizPure --version X.Y.Z --urls ... --submit`.
+
+Users then run `winget install GraphvizPure.GraphvizPure`.
+
 ### Homebrew and Scoop
 
 Nothing to set up: the tap and bucket repositories update themselves after each release.
@@ -96,9 +195,7 @@ source.
 
 | channel | what it needs |
 | :--- | :--- |
-| winget | a manifest PR to `microsoft/winget-pkgs` per release (`wingetcreate` or `komac`); automating it needs a GitHub token able to open PRs there, kept in the `release` environment |
 | Debian/Ubuntu and Fedora repositories | Cloudsmith open-source plan (supports GitHub OIDC, so no stored token), or Fedora COPR and a Launchpad PPA, which build from source |
 | AUR | an AUR account and SSH key; the `graphviz-pure-bin` (release binaries) and `graphviz-pure` (from source) PKGBUILDs are in [`packaging/aur/`](../packaging/aur), filled in from a verified release by `packaging/aur/update.sh VERSION` ([steps](../packaging/README.md#aur)) |
 | nixpkgs, conda-forge | pull requests to their repositories; no account beyond GitHub. The recipes are in [`packaging/nixpkgs/`](../packaging/nixpkgs) and [`packaging/conda-forge/`](../packaging/conda-forge) ([steps](../packaging/README.md#nixpkgs)) |
-| Docker | an image on `ghcr.io/graphviz-pure/graphviz-pure`, signed and attested from the release workflow |
 | macOS notarization, Windows code signing | an Apple Developer ID (99 USD/year) and Azure Trusted Signing or an OV certificate; until then, binaries downloaded through a browser show a Gatekeeper or SmartScreen warning (Homebrew and Scoop installs do not) |
