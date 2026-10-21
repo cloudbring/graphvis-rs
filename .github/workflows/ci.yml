@@ -16,12 +16,13 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
 
-# GitHub-hosted runners, which are free for a public repository. A tree that already passed this
-# workflow skips the build and test jobs (scripts/ci-result-cache.sh); a skipped required check
-# counts as passed.
+# GitHub-hosted runners, which are free for a public repository. The build and test jobs are
+# skipped when the files they read already passed this workflow (scripts/ci-result-cache.sh), so a
+# change to documentation or the site's pages runs none of them; a skipped required check counts
+# as passed.
 jobs:
   lookup:
-    name: Earlier result for this tree
+    name: Earlier result for these inputs
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -240,10 +241,10 @@ jobs:
             echo "The base branch has no scripts/pr-risk.py yet." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
 
-  # Records that this tree passed, so a later run of the same tree skips verify, wasm-e2e and
-  # wasm-runtimes.
+  # Records that these inputs passed, so a later run with the same inputs skips verify, wasm-e2e
+  # and wasm-runtimes.
   record:
-    name: Record the result for this tree
+    name: Record the result for these inputs
     needs: [verify, wasm-e2e, wasm-runtimes]
     runs-on: ubuntu-24.04
     steps:
