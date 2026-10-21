@@ -906,7 +906,7 @@ impl Dot<'_> {
             let Some(v) = self.rv(g, r, 0) else {
                 graphviz_pure_core::diag::agerrorf(&format!(
                     "contain_nodes clust {} rank {r} missing node\n",
-                    self.graphs[g].name
+                    self.graph_name(g)
                 ));
                 continue;
             };

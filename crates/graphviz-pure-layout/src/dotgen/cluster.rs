@@ -274,6 +274,26 @@ impl Dot<'_> {
         Ok(())
     }
 
+    /// `agnameof(g)`: a pack component is `_cc_<i>`; an anonymous graph is
+    /// named by its cgraph id (`%<id>`; an anonymous root is `%1`).
+    pub(super) fn graph_name(&self, g: G) -> String {
+        if g == 0 && self.comp {
+            return format!("_cc_{}", self.comp_index);
+        }
+        let name = &self.graphs[g].name;
+        if !name.is_empty() {
+            return name.clone();
+        }
+        match (g, self.graphs[g].sub_index) {
+            (0, _) => "%1".to_string(),
+            (_, Some(si)) => match self.input.anon_subgraph_ids.get(&(si as u32)) {
+                Some(id) => format!("%{id}"),
+                None => String::new(),
+            },
+            _ => String::new(),
+        }
+    }
+
     /// `mark_clusters`: marks every node in `g` with its top-level cluster under `g`.
     pub fn mark_clusters(&mut self, g: G) {
         for n in self.nodes_of(g) {
@@ -287,7 +307,8 @@ impl Dot<'_> {
                 if self.nodes[n].ranktype != NORMAL {
                     graphviz_pure_core::diag::agwarningf(&format!(
                         "{} was already in a rankset, deleted from cluster {}\n",
-                        self.nodes[n].name, self.graphs[g].name
+                        self.nodes[n].name,
+                        self.graph_name(g)
                     ));
                     self.agdelnode(clust, n);
                     continue;

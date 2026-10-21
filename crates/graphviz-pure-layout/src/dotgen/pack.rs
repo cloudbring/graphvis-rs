@@ -67,18 +67,9 @@ impl<'a> Dot<'a> {
         DoDot::Pack(pinfo)
     }
 
-    /// `initSubg(sg, g)` + `dotLayout(sg)` state for component `ci` of `root`.
-    pub fn new_component(
-        input: &'a Graph,
-        root_input: &'a Graph,
-        root: &Dot<'_>,
-        ci: usize,
-    ) -> Self {
+    /// `initSubg(sg, g)` + `dotLayout(sg)` state for a component of `root`.
+    pub fn new_component(input: &'a Graph, root_input: &'a Graph, root: &Dot<'_>) -> Self {
         let mut c = Dot::new(input);
-        // cccomps names the component subgraphs `_cc_<i>` (setPrefix with no
-        // prefix), so messages naming the layout root (`agnameof(g)`) print it.
-        // Node and edge labels keep the root's name (`agroot`) through `input`.
-        c.graphs[0].name = format!("_cc_{ci}");
         c.root_input = root_input;
         c.comp = true;
         let (r, g) = (&root.graphs[0], &mut c.graphs[0]);
@@ -439,7 +430,8 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
                 cg.subgraphs.len()
             );
         }
-        let mut c = Dot::new_component(&cg.graph, graph, d, ci);
+        let mut c = Dot::new_component(&cg.graph, graph, d);
+        c.comp_index = ci;
         c.dot_layout()?;
         // The component's nodes and edges are the root's objects in C, so what
         // its layout wrote before failing (dot_init_node_edge's sizes, ...)
