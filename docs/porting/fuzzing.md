@@ -331,6 +331,10 @@ Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
 * fdp reports cluster labels where `deriveGraph` makes them (a graph's clusters, then each
   cluster's own), warns `splines and cluster edges not supported`, and osage warns about
   array packing with user values but no `sortv`.
+* fdp's cluster edges warn as `checkCompound` does (cluster cycles, a cluster or node inside
+  the other end's cluster), and `agcontains` looks at every ancestor, not only the parent.
+* neato's ortho obstacles shrink to the node centre under a scaling `sep`/`esep`, as
+  `makeObstacle` multiplies by its zero margin, so no touch warning is printed there.
 * The repros are in `crates/graphviz-pure-cli/tests/cli.rs` (`issue30_*`). Still missing,
   with ignored tests there: HTML `<IMG>` file errors and the `shapefile`/`epsf` user-shape
   warnings, because the port loads no images (issue #130). The expat encoding errors of

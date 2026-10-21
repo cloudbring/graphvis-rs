@@ -1512,6 +1512,52 @@ subgraph cluster_c { z } } subgraph cluster_b { y } }";
     assert_eq!(warnings("osage", src).0, want);
 }
 
+/// fdp's cluster edges (`checkCompound`, `lib/common/utils.c:855-900`): cycles and edges
+/// within one cluster tree are dropped with a warning. `agcontains` looks at every
+/// ancestor, so a cluster two levels down counts as inside.
+#[test]
+fn issue30_fdp_cluster_edge_warnings() {
+    for (src, want) in [
+        (
+            "graph G { subgraph cluster_b { b1 } cluster_b -- cluster_b; x -- cluster_b }",
+            "Warning: cluster cycle cluster_b -- cluster_b not supported\n",
+        ),
+        (
+            "graph G { subgraph cluster_a { a1; subgraph cluster_a2 { a2 } } \
+             cluster_a -- cluster_a2; cluster_a2 -- cluster_a; x -- cluster_a }",
+            "Warning: head cluster cluster_a2 inside tail cluster cluster_a\n\
+             Warning: tail cluster cluster_a2 inside head cluster cluster_a\n",
+        ),
+        (
+            "graph G { subgraph cluster_a { a1 } a1 -- cluster_a; cluster_a -- a1; x -- cluster_a }",
+            "Warning: tail node a1 inside head cluster cluster_a\n\
+             Warning: head node a1 inside tail cluster cluster_a\n",
+        ),
+        (
+            "graph G { subgraph cluster_a { subgraph cluster_b { subgraph cluster_c { c } } } \
+             cluster_a -- cluster_c; x -- cluster_a }",
+            "Warning: head cluster cluster_c inside tail cluster cluster_a\n",
+        ),
+    ] {
+        assert_eq!(warnings("fdp", src).0, want, "{src}");
+    }
+}
+
+/// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
+/// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
+#[test]
+fn issue30_neato_ortho_scaled_margin_does_not_touch() {
+    let src = "graph G { splines=ortho; esep=0.5; a [pos=\"0,0!\"]; b [pos=\"0.5,0!\"]; \
+c [pos=\"3,2!\"]; a -- c; b -- c }";
+    assert!(!warnings("neato", src).0.contains("touch"));
+    let src = src.replace("esep=0.5", "esep=\"+0.5\"");
+    assert!(
+        warnings("neato", &src)
+            .0
+            .contains("the bounding boxes of some nodes touch")
+    );
+}
+
 /// Issue #88: graph_init makes the root graph label before dot sizes the nodes, so the
 /// label's font warnings come first.
 #[test]

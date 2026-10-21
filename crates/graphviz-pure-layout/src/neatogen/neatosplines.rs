@@ -166,7 +166,9 @@ pub fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edget
 
 /// `makeObstacle(n, pmargin, isOrtho=true)`: polygon nodes (`SH_POLY`, which
 /// includes star and cylinder, and `SH_POINT`) become their outline box
-/// (without margin); other shapes as for splines.
+/// (without margin); other shapes as for splines. The ortho branch leaves
+/// `margin` at `{0}`, so a scaling (not `+`) margin multiplies every vertex by
+/// zero and the box shrinks to the node's centre (`neatosplines.c:431-433`).
 fn ortho_obstacle(lg: &LGraph<'_>, n: usize, pm: &Expand) -> Option<Vec<Point>> {
     use crate::common::shapes::InsideFn;
     let nd = &lg.nodes[n];
@@ -185,10 +187,11 @@ fn ortho_obstacle(lg: &LGraph<'_>, n: usize, pm: &Expand) -> Option<Vec<Point>> 
         Point::new(-outline_lw, outline_ht / 2.0),
     ];
     let c = nd.coord;
+    let k = if pm.do_add { 1.0 } else { 0.0 };
     Some(
         vs.iter()
             .rev()
-            .map(|p| Point::new(p.x + c.x, p.y + c.y))
+            .map(|p| Point::new(p.x * k + c.x, p.y * k + c.y))
             .collect(),
     )
 }
