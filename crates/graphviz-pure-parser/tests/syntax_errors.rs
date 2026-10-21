@@ -229,6 +229,23 @@ fn line_directives_renumber_lines() {
         "digraph G {\n a -> b # 7 \"z.gv\"\n c -> ;\n}\n",
         "syntax error in line 3 near ';'",
     );
+    // `line_num` is an `int`: `%d` keeps the low 32 bits, and the count wraps
+    check(
+        "digraph G {\n# 99999999999\n a -> ;\n}\n",
+        "syntax error in line 1215752191 near ';'",
+    );
+    check(
+        "digraph G {\n# 2147483648\n a -> ;\n}\n",
+        "syntax error in line 3 near ';'",
+    );
+    check(
+        "digraph G {\n# 4294967297\n a -> ;\n}\n",
+        "syntax error in line 1 near ';'",
+    );
+    check(
+        "digraph G {\n# 2147483647\n\n a -> ;\n}\n",
+        "syntax error in line -2147483648 near ';'",
+    );
     // `# N "file"` also renames the input
     let (_, err) = parse_dot_all_partial(
         "digraph G {\n# 100 \"other.gv\"\n a -> ;\n}\n",

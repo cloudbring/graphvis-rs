@@ -77,8 +77,8 @@ pub struct Token {
     pub text: String,
     /// cgraph's `line_num` once the token is read: the newlines read so far, renumbered by
     /// `# N` line directives (`ppDirective`). `aagerror` reports this line, so an error is
-    /// reported on the line where its lookahead token ends.
-    pub c_line: usize,
+    /// reported on the line where its lookahead token ends. An `int` in C, so it wraps.
+    pub c_line: i32,
     /// `InputFile` as set by a `# N "file"` line directive, if any.
     pub file: Option<Arc<str>>,
     /// Scanner state at the end of input (only an [`TokenKind::Eof`] token has another).
@@ -91,7 +91,7 @@ pub struct Lexer<'a> {
     line: usize,
     col: usize,
     /// cgraph's `line_num`.
-    c_line: usize,
+    c_line: i32,
     /// cgraph's `InputFile`, when a line directive named one.
     file: Option<Arc<str>>,
 }
@@ -141,7 +141,7 @@ impl<'a> Lexer<'a> {
         self.pos += ch.len_utf8();
         if ch == '\n' {
             self.line += 1;
-            self.c_line += 1;
+            self.c_line = self.c_line.wrapping_add(1);
             self.col = 1;
         } else {
             self.col += 1;
@@ -227,12 +227,13 @@ impl<'a> Lexer<'a> {
         let magnitude = digits[..n_digits].bytes().fold(0i64, |acc, d| {
             acc.saturating_mul(10).saturating_add(i64::from(d - b'0'))
         });
-        let lineno = if neg { -magnitude } else { magnitude };
+        // `%d` into an `int`: the conversion saturates at 64 bits, the store keeps the low 32
+        let lineno = if neg { -magnitude } else { magnitude } as i32;
         // ignore if line number was out of range
         if lineno <= 0 {
             return;
         }
-        self.c_line = usize::try_from(lineno - 1).unwrap_or(usize::MAX);
+        self.c_line = lineno - 1;
         let rest =
             digits[n_digits..].trim_start_matches(|c: char| c.is_ascii_whitespace() || c == '\x0b');
         if let Some(p) = rest.strip_prefix('"')

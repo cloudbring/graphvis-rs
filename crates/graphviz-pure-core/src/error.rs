@@ -4,10 +4,11 @@ use thiserror::Error;
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum GraphvizError {
     /// A DOT syntax error. `message` is worded as cgraph's `aagerror` (`lib/cgraph/scan.l`),
-    /// e.g. `syntax error in line 3 near ';'`, and `line` is the line it reports.
+    /// e.g. `syntax error in line 3 near ';'`, and `line` is the line it reports (cgraph's
+    /// `int line_num`).
     #[error("{message}")]
     SyntaxError {
-        line: usize,
+        line: i32,
         col: usize,
         message: String,
         /// The file name set by a `# N "file"` line directive, which C reports instead of

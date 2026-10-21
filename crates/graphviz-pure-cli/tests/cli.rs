@@ -574,6 +574,25 @@ fn unterminated_string_excerpt_is_cut_at_80_bytes() {
     assert_eq!(out.stderr, expected);
 }
 
+// cgraph's `default_usererrf` (lib/cgraph/agerror.c) writes control characters other than
+// white space as `\ooo`: in the near text, the string excerpt and a directive's file name.
+#[test]
+fn syntax_error_escapes_control_characters() {
+    let (_, err, ok) = run(&["-Tsvg"], "digraph { a \u{1} }");
+    assert!(!ok);
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near '\\001'\n");
+    let (_, err, _) = run(&["-Tsvg"], "digraph { a \u{7f} }");
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near '\\177'\n");
+    let (_, err, _) = run(&["-Tsvg"], "digraph {\n a [label=\"a\u{1b}b\tc\r\n");
+    assert_eq!(
+        err,
+        "Error: <stdin>: syntax error in line 3 scanning a quoted string (missing endquote? \
+         longer than 16384?)\nString starting:\"a\\033b\tc\r\n\n"
+    );
+    let (_, err, _) = run(&["-Tsvg"], "digraph {\n# 3 \"a\u{1}b\"\n a -> ;\n}\n");
+    assert_eq!(err, "Error: a\\001b: syntax error in line 3 near ';'\n");
+}
+
 /// C: `Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits
 /// into two tokens` before the error (scan.l `chkNum`). The port splits the token the same way
 /// but does not warn.

@@ -72,9 +72,22 @@ pub fn encode(s: &str) -> Cow<'_, [u8]> {
     Cow::Owned(out)
 }
 
-/// Writes `msg` to stderr as C's bytes.
+/// Writes `msg` to stderr as C's bytes, as cgraph's `default_usererrf`
+/// (`lib/cgraph/agerror.c`) does: up to the first NUL, with control characters other than
+/// white space written as `\ooo`.
 pub fn eprint_bytes(msg: &str) {
-    let _ = std::io::stderr().write_all(&encode(msg));
+    let bytes = encode(msg);
+    let bytes = bytes.split(|&b| b == 0).next().unwrap_or_default();
+    let mut out = Vec::with_capacity(bytes.len());
+    for &b in bytes {
+        // gv_iscntrl && !gv_isspace
+        if (b <= 31 || b == 127) && !matches!(b, b'\t' | b'\n' | 0x0b | 0x0c | b'\r') {
+            out.extend_from_slice(format!("\\{b:03o}").as_bytes());
+        } else {
+            out.push(b);
+        }
+    }
+    let _ = std::io::stderr().write_all(&out);
 }
 
 /// `GD_charset(g)`: the input character set of a graph (`CHAR_UTF8`, `CHAR_LATIN1`,

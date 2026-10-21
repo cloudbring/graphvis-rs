@@ -539,7 +539,7 @@ impl Parser {
         if self.scope_stack.len() >= MAX_SUBGRAPH_DEPTH {
             let tok = self.peek();
             return Err(GraphvizError::SyntaxError {
-                line: tok.line,
+                line: tok.c_line,
                 col: tok.col,
                 message: format!("subgraphs nested more than {MAX_SUBGRAPH_DEPTH} deep"),
                 file: None,
@@ -892,7 +892,6 @@ impl Parser {
     }
 }
 
-/// grammar.y `concatPort`: `name` or `name:compass`.
 /// flex's `YY_BUF_SIZE`, which `aagerror` names as a possible cause.
 const YY_BUF_SIZE: usize = 16384;
 
@@ -940,6 +939,7 @@ fn syntax_error(tok: &Token) -> GraphvizError {
     }
 }
 
+/// grammar.y `concatPort`: `name` or `name:compass`.
 fn port_to_str(p: &Port) -> String {
     match (&p.name, &p.compass) {
         (Some(n), Some(c)) => format!("{n}:{c}"),
