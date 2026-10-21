@@ -1,0 +1,91 @@
+schema_version: 1
+
+context:
+  version: "0.1.0"
+
+package:
+  name: graphviz-pure
+  version: ${{ version }}
+
+source:
+  # The source tarball of the signed release tag. It carries the workspace Cargo.lock and the
+  # release profile in .cargo/config.toml, which the crates.io crate does not.
+  url: https://github.com/graphviz-pure/graphviz-pure/archive/refs/tags/v${{ version }}.tar.gz
+  # TODO(release): replace with the value packaging/aur/update.sh prints ("source tarball sha256").
+  sha256: 0000000000000000000000000000000000000000000000000000000000000000
+
+build:
+  number: 0
+  script:
+    env:
+      CARGO_PROFILE_RELEASE_STRIP: symbols
+      CARGO_PROFILE_RELEASE_LTO: fat
+    content:
+      # The repository is a workspace: install only the command line.
+      - cd crates/graphviz-pure-cli
+      - if: unix
+        then:
+          - cargo auditable install --locked --no-track --bins --root ${{ PREFIX }} --path .
+        else:
+          - cargo auditable install --locked --no-track --bins --root %LIBRARY_PREFIX% --path .
+      - cargo-bundle-licenses --format yaml --output ../../THIRDPARTY.yml
+
+requirements:
+  build:
+    - ${{ compiler('rust') }}
+    - ${{ compiler('c') }}
+    - ${{ stdlib('c') }}
+    - cargo-bundle-licenses
+    - cargo-auditable
+
+tests:
+  # The input is written by the script rather than shipped as a test file, which would end up
+  # in the package and break the strict package_contents test. An undirected graph needs no
+  # escaping in either bash or cmd.
+  - script:
+      - graphviz-pure -V
+      - echo graph { a -- b } > tiny.gv
+      - graphviz-pure -Tsvg -o tiny.svg tiny.gv
+      - graphviz-pure -Tpng -o tiny.png tiny.gv
+      - if: unix
+        then:
+          - grep -q "<title>a&#45;&#45;b</title>" tiny.svg
+          - test -s tiny.png
+        else:
+          - findstr /C:"<title>a&#45;&#45;b</title>" tiny.svg
+          - if not exist tiny.png exit 1
+  - package_contents:
+      bin:
+        - graphviz-pure
+      strict: true
+
+about:
+  homepage: https://graphviz-pure.github.io/
+  repository: https://github.com/graphviz-pure/graphviz-pure
+  documentation: https://graphviz-pure.github.io/
+  summary: Byte-exact Rust port of Graphviz 16.1.0 with a dot-compatible command line
+  description: |
+    graphviz-pure is a function-by-function port of Graphviz 16.1.0 to safe Rust, with all
+    eight layout engines and the svg, json, dot, xdot, plain, png and jpg outputs. It installs
+    the `graphviz-pure` command, which takes the same arguments as `dot`. It is an independent
+    port, not affiliated with or endorsed by the Graphviz project, and does not conflict with
+    the `graphviz` package.
+  # EPL-2.0 for the port; OFL-1.1 for the Tinos, Arimo and Cousine fonts compiled into the
+  # binary (PNG/JPEG text); MIT for the CORE-MATH pow port. Crate dependencies: THIRDPARTY.yml.
+  license: EPL-2.0 AND OFL-1.1 AND MIT
+  license_file:
+    - LICENSE
+    - NOTICE
+    - LICENSES/MIT-CORE-MATH.txt
+    - crates/graphviz-pure-raster/fonts/OFL-Arimo.txt
+    - crates/graphviz-pure-raster/fonts/OFL-Cousine.txt
+    - crates/graphviz-pure-raster/fonts/OFL-Tinos.txt
+    # Both crate-licence bundles: THIRDPARTY.yml is what conda-forge requires, generated at
+    # build time from exactly the crates this build compiled; THIRD-PARTY-LICENSES.md is
+    # upstream's reviewed file (cargo-about), with each crate's copyright notices and authors.
+    - THIRD-PARTY-LICENSES.md
+    - THIRDPARTY.yml
+
+extra:
+  recipe-maintainers:
+    - cloudbring

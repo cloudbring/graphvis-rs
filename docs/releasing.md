@@ -98,7 +98,7 @@ source.
 | :--- | :--- |
 | winget | a manifest PR to `microsoft/winget-pkgs` per release (`wingetcreate` or `komac`); automating it needs a GitHub token able to open PRs there, kept in the `release` environment |
 | Debian/Ubuntu and Fedora repositories | Cloudsmith open-source plan (supports GitHub OIDC, so no stored token), or Fedora COPR and a Launchpad PPA, which build from source |
-| AUR | an AUR account and SSH key; `graphviz-pure-bin` (release binaries) and `graphviz-pure` (from source) PKGBUILDs |
-| nixpkgs, conda-forge | pull requests to their repositories; no account beyond GitHub |
+| AUR | an AUR account and SSH key; the `graphviz-pure-bin` (release binaries) and `graphviz-pure` (from source) PKGBUILDs are in [`packaging/aur/`](../packaging/aur), filled in from a verified release by `packaging/aur/update.sh VERSION` ([steps](../packaging/README.md#aur)) |
+| nixpkgs, conda-forge | pull requests to their repositories; no account beyond GitHub. The recipes are in [`packaging/nixpkgs/`](../packaging/nixpkgs) and [`packaging/conda-forge/`](../packaging/conda-forge) ([steps](../packaging/README.md#nixpkgs)) |
 | Docker | an image on `ghcr.io/graphviz-pure/graphviz-pure`, signed and attested from the release workflow |
 | macOS notarization, Windows code signing | an Apple Developer ID (99 USD/year) and Azure Trusted Signing or an OV certificate; until then, binaries downloaded through a browser show a Gatekeeper or SmartScreen warning (Homebrew and Scoop installs do not) |

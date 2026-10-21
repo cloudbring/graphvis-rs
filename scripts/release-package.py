@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Packages one release binary: graphviz-pure-VERSION-TARGET.{tar.gz,zip} in OUT, holding the
-binary, LICENSE, NOTICE and README.md in a directory of the same name.
+binary, LICENSE, NOTICE, THIRD-PARTY-LICENSES.md (the licences of the Rust crates compiled into
+it), README.md and LICENSES/ (the MIT licence of the CORE-MATH pow port and the OFL licences of
+the bundled fonts) in a directory of the same name.
 
 The archive is deterministic: sorted entries, fixed permissions and the commit's timestamp
 (SOURCE_DATE_EPOCH), so the same build always gives the same archive bytes.
@@ -20,12 +22,21 @@ windows = "windows" in target
 exe = "graphviz-pure.exe" if windows else "graphviz-pure"
 name = f"graphviz-pure-{version}-{target}"
 epoch = int(os.environ.get("SOURCE_DATE_EPOCH", "0"))
+fonts = os.path.join(root, "crates", "graphviz-pure-raster", "fonts")
 files = [
     (os.path.join(root, "target", target, "release", exe), exe, 0o755),
     (os.path.join(root, "LICENSE"), "LICENSE", 0o644),
     (os.path.join(root, "NOTICE"), "NOTICE", 0o644),
+    (os.path.join(root, "THIRD-PARTY-LICENSES.md"), "THIRD-PARTY-LICENSES.md", 0o644),
     (os.path.join(root, "README.md"), "README.md", 0o644),
+    # The licences of third-party code compiled into the binary (see NOTICE).
+    (os.path.join(root, "LICENSES", "MIT-CORE-MATH.txt"), "LICENSES/MIT-CORE-MATH.txt", 0o644),
+] + [
+    (os.path.join(fonts, f), f"LICENSES/{f}", 0o644)
+    for f in sorted(os.listdir(fonts))
+    if f.startswith("OFL-") and f.endswith(".txt")
 ]
+assert sum(arc.startswith("LICENSES/OFL-") for _, arc, _ in files) == 3, "expected 3 OFL files"
 os.makedirs(out, exist_ok=True)
 if windows:
     path = os.path.join(out, name + ".zip")
