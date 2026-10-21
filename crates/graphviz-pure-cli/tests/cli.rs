@@ -1164,6 +1164,33 @@ fn cluster_node_in_rank_max_set_does_not_panic_build_skeleton() {
     }
 }
 
+// Issue #170 (cargo-fuzz render_circo): a route segment that lies in no channel of the
+// ortho maze. C's chanSearch (lib/ortho/ortho.c:390) fails `assert (cp)` and aborts (exit
+// 134, no output). The port used to panic on the same lookup ("chanSearch: no channel",
+// exit 101); it now abandons ortho routing, as C's orthoEdges does when shortPath or
+// assignTracks fails, and the edges are drawn as straight lines.
+const ISSUE170_GRAPH: &str = "graph{layout=circo
+oneblock=true
+splines=ortho
+t5--t12--t13
+t6--t14}
+";
+
+#[test]
+fn circo_ortho_segment_in_no_channel_does_not_panic_chan_search() {
+    let (out, err, ok) = run(&["-Tsvg"], ISSUE170_GRAPH);
+    assert!(
+        ok,
+        "C crashes here, the port falls back to straight lines: {err}"
+    );
+    assert_eq!(
+        err,
+        "Warning: orthogonal routing found no channel for an edge segment - \
+         falling back to straight line edges\n"
+    );
+    assert_eq!(out.matches("class=\"edge\"").count(), 3, "{out}");
+}
+
 // Issue #30 (tests/fuzz-open/021-stderr-missing-warnings): C warnings the port left out.
 // Every expected string below is C Graphviz 16.1.0's stderr for the same input.
 

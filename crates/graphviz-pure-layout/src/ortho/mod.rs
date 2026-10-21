@@ -153,21 +153,23 @@ impl Chans {
             .insert(chp, &|c: &Channel| chancmpid(key, (c.p1, c.p2)));
     }
 
-    /// `chanSearch(chans, seg)`.
-    fn search(&mut self, seg: &Segment) -> ChanKey {
+    /// `chanSearch(chans, seg)`, with `None` where C's asserts fail.
+    fn find(&mut self, seg: &Segment) -> Option<ChanKey> {
         let v = seg.comm_coord;
-        let i = self
-            .items
-            .find(&|it: &ChanItem| fcmp(v, it.v))
-            .expect("chanSearch: no channel item");
+        let i = self.items.find(&|it: &ChanItem| fcmp(v, it.v))?;
         let key = (seg.p1, seg.p2);
         let c = self
             .items
             .get_mut(i)
             .chans
-            .find(&|c: &Channel| chancmpid(key, (c.p1, c.p2)))
-            .expect("chanSearch: no channel");
-        (i, c)
+            .find(&|c: &Channel| chancmpid(key, (c.p1, c.p2)))?;
+        Some((i, c))
+    }
+
+    /// `chanSearch(chans, seg)` for a segment that [`Ortho::assign_segs`]
+    /// has already placed in a channel.
+    fn search(&mut self, seg: &Segment) -> ChanKey {
+        self.find(seg).expect("chanSearch: no channel")
     }
 
     fn chan(&self, k: ChanKey) -> &Channel {
@@ -621,15 +623,20 @@ impl Ortho {
         }
     }
 
-    /// `assignSegs(nrtes, route_list, mp)`.
-    fn assign_segs(&mut self) {
+    /// `assignSegs(nrtes, route_list, mp)`. Returns false where C's
+    /// `chanSearch` fails its `assert (cp)` and aborts (#170): a segment of a
+    /// route lies in no channel of the maze.
+    fn assign_segs(&mut self) -> bool {
         for i in 0..self.routes.len() {
             for j in 0..self.routes[i].len() {
-                let (v, k) = self.chan_key((i, j));
-                let chans = if v {
+                let s = self.routes[i][j];
+                let chans = if s.is_vert {
                     &mut self.vchans
                 } else {
                     &mut self.hchans
+                };
+                let Some(k) = chans.find(&s) else {
+                    return false;
                 };
                 let chan = chans.chan_mut(k);
                 let ind = chan.seg_list.len();
@@ -646,6 +653,7 @@ impl Ortho {
                 self.routes[i][j].ind_no = Some(ind);
             }
         }
+        true
     }
 
     /// `add_edges_in_G(cp)`.
@@ -1143,7 +1151,15 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
     }
     o.hchans = extract_chans(&mut o.mp, true);
     o.vchans = extract_chans(&mut o.mp, false);
-    o.assign_segs();
+    if !o.assign_segs() {
+        // C asserts in chanSearch and aborts here (#170). Leave the edges
+        // unrouted, as C's `goto orthofinish` does when shortPath or
+        // assignTracks fails, so the callers draw them as straight lines.
+        graphviz_pure_core::diag::agwarningf(
+            "orthogonal routing found no channel for an edge segment - falling back to straight line edges\n",
+        );
+        return true;
+    }
     if !o.assign_tracks() {
         return true;
     }
