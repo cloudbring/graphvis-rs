@@ -1,5 +1,20 @@
 {
   "files": {
+    "fuzz_blockpath_edgeless_block": {
+      "nodes": 12,
+      "nodes_ok": 12,
+      "edges": 14,
+      "edges_ok": 14,
+      "clusters": 0,
+      "clusters_ok": 0,
+      "bb_ok": true,
+      "node_err": 0.0,
+      "edge_err": 0.0,
+      "missing": 0,
+      "sizes_ok": 12,
+      "rank_ok": true,
+      "order_ok": true
+    },
     "fuzz_xlabels_hilbert_signed_key": {
       "nodes": 75,
       "nodes_ok": 75,
