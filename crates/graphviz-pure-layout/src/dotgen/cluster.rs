@@ -285,7 +285,10 @@ impl Dot<'_> {
         for clust in self.graphs[g].clust.clone() {
             for n in self.nodes_of(clust) {
                 if self.nodes[n].ranktype != NORMAL {
-                    // agwarningf("%s was already in a rankset, deleted from cluster %s\n")
+                    graphviz_pure_core::diag::agwarningf(&format!(
+                        "{} was already in a rankset, deleted from cluster {}\n",
+                        self.nodes[n].name, self.graphs[g].name
+                    ));
                     self.agdelnode(clust, n);
                     continue;
                 }

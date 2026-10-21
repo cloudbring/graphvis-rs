@@ -199,3 +199,41 @@ n2;
          Warning: Could not create control points for multiple spline for edge (n1,n7)\n"
     );
 }
+
+// Fuzz case 014-dot-pack-failed-component-not-absorbed (issue #23), its repro.gv verbatim.
+// `n9` is both in `cluster3` and in a `rank=source` set, so mincross fails in the second
+// pack component (`_cc_1`; the empty `cluster0` is `_cc_0`). C (`doDot`, dotinit.c) returns
+// the failure and renders the half-made drawing: the component's nodes are the root's own
+// objects, so they keep the sizes `dot_init_node_edge` gave them (`rx="27"`), and the
+// messages name the component. The port used to drop the failed component's records
+// (`rx="0"`), name the root `G` and omit the warning.
+#[test]
+fn failed_pack_component_keeps_its_node_sizes() {
+    let src = "graph \"G\" {
+pack=\"true\";
+subgraph \"cluster0\" {
+}
+subgraph \"cluster3\" {
+\"n1\" [];
+\"n8\" [];
+\"n9\" [];
+}
+{
+rank=source;
+\"n7\";
+\"n9\";
+}
+\"n1\":\"c\" -- \"n7\";
+\"n8\" -- \"n9\" [];
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Warning: n9 was already in a rankset, deleted from cluster _cc_1\n\
+         Error: install_in_rank, line 1158: _cc_1 %0 rank 2 i = 0 an = 0\n"
+    );
+    let sized = r#"<ellipse fill="none" stroke="black" cx="0" cy="0" rx="27" ry="18"/>"#;
+    assert_eq!(out.matches(sized).count(), 4, "{out}");
+}
