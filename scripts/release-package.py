@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Packages one release binary: graphviz-pure-VERSION-TARGET.{tar.gz,zip} in OUT, holding the
-binary, LICENSE, NOTICE, README.md and LICENSES/ (the MIT licence of the CORE-MATH pow port and
-the OFL licences of the bundled fonts) in a directory of the same name.
+binary, LICENSE, NOTICE, THIRD-PARTY-LICENSES.md (the licences of the Rust crates compiled into
+it), README.md and LICENSES/ (the MIT licence of the CORE-MATH pow port and the OFL licences of
+the bundled fonts) in a directory of the same name.
 
 The archive is deterministic: sorted entries, fixed permissions and the commit's timestamp
 (SOURCE_DATE_EPOCH), so the same build always gives the same archive bytes.
@@ -26,6 +27,7 @@ files = [
     (os.path.join(root, "target", target, "release", exe), exe, 0o755),
     (os.path.join(root, "LICENSE"), "LICENSE", 0o644),
     (os.path.join(root, "NOTICE"), "NOTICE", 0o644),
+    (os.path.join(root, "THIRD-PARTY-LICENSES.md"), "THIRD-PARTY-LICENSES.md", 0o644),
     (os.path.join(root, "README.md"), "README.md", 0o644),
     # The licences of third-party code compiled into the binary (see NOTICE).
     (os.path.join(root, "LICENSES", "MIT-CORE-MATH.txt"), "LICENSES/MIT-CORE-MATH.txt", 0o644),

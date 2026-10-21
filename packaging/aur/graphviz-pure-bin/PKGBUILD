@@ -30,6 +30,7 @@ sha256sums_aarch64=('00000000000000000000000000000000000000000000000000000000000
 package() {
   cd "$_name-$pkgver-$CARCH-unknown-linux-musl"
   install -Dm755 "$_name" "$pkgdir/usr/bin/$_name"
-  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE NOTICE LICENSES/*
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE NOTICE THIRD-PARTY-LICENSES.md \
+    LICENSES/*
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }

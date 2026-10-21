@@ -80,6 +80,10 @@ about:
     - crates/graphviz-pure-raster/fonts/OFL-Arimo.txt
     - crates/graphviz-pure-raster/fonts/OFL-Cousine.txt
     - crates/graphviz-pure-raster/fonts/OFL-Tinos.txt
+    # Both crate-licence bundles: THIRDPARTY.yml is what conda-forge requires, generated at
+    # build time from exactly the crates this build compiled; THIRD-PARTY-LICENSES.md is
+    # upstream's reviewed file (cargo-about), with each crate's copyright notices and authors.
+    - THIRD-PARTY-LICENSES.md
     - THIRDPARTY.yml
 
 extra:
