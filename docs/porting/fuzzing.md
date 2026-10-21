@@ -232,12 +232,10 @@ dot
   `016-dot-pack-cluster-list-from-subgraph-tree` (issue #25); its two reproducers are in
   `crates/graphviz-pure-cli/tests/cli.rs`
   (`packed_dot_draws_the_root_cluster_list_of_copy_cluster_info`). Four of its five fuzz
-  cases now match C. Seed 1548 still differs, for another reason: `v0` and `v6` belong to
-  two non-nested clusters, so they are in both components, and the node positions differ
-  (C puts `v0` and `v6` on one rank, the port on two). A likely cause, not yet checked: in
-  C both components share these nodes' records, so the second layout sees what the first
-  left, while the port lays out each component from fresh records. It needs its own
-  triage.
+  cases now match C. Seed 1548 still differs: its nodes of two non-nested clusters are in
+  two components, so the components' boxes take in each other's edges (issue #100) and
+  share node and edge records in C (issue #101). Seeds 1062, 11551 and 35883 still write
+  some edges in a different subgraph in `-Tdot` (issue #102).
 
 neato family
 * `resolvePorts` drops `tailclip=false` on `_` ports.
