@@ -261,8 +261,9 @@ constraints) and GTS's hole rule (drop faces whose constraint edges run against
 the CCW face orientation; interior faces without a constraint side survive, as
 in C). GTS's own `triangulate_polygon` yields the same constrained Delaunay
 triangulation unless four points are co-circular. Face and neighbour numbering
-follow creation order, not GTS's hash order; that only matters for exact ties
-in the triangle shortest path. Validated with `Pshortestpath`/`Pobspath`
+follow creation order, not GTS's hash order (#35), and each face's corner order
+is the port's own, not GTS's (#28); both only matter for exact ties in the
+triangle shortest path. Validated with `Pshortestpath`/`Pobspath`
 interposed into Homebrew's `dot` (`DYLD_INSERT_LIBRARIES`): guiding polygons
 match C. 13 `hw3_ms_*` cases (fan-out of 2–4 multi-edges, failing fan-outs,
 compass ports, random graphs with multi-edges and ports).
@@ -291,14 +292,17 @@ exact and `hw3_ports_b15(_splines)` check the same ports through neato.
   only in printed digits (7 arrow graphs in e2e) and in chaotic cases.
 - `makeMultiSpline` triangle centres (issue #28): `triCenter`
   (`multispline.c:391`) sums a face's corners in the order
-  `gts_triangle_vertices` returns them. GTS documents only that this order is
-  counter-clockwise; which corner comes first depends on which edge GTS's
-  incremental construction stored as `t->e1`. The port's CDT starts at a
-  different corner on some faces, so a centre can differ by an ulp. When two
-  triangle paths tie exactly in C (mirror-image obstacles), that ulp picks the
-  other side and `tweakEnd` can move the end point 0.1pt. Matching it would
-  need GTS's construction internals (LGPL). Tracked by the ignored test
-  `neato_polyline_compass_port_routes_like_c`.
+  `gts_triangle_vertices` returns them. The GTS manual documents only that
+  this order "respects the orientation of t" and that `e1` joins `v1` and
+  `v2`; which corner comes first depends on which edge GTS's construction
+  stored as `t->e1`. That is deterministic in C, but it follows GTS's
+  insertion and flip history, which the port's CDT does not replay. The port
+  can start at a different corner on every face (all 22 in the repro), so a
+  centre can differ by an ulp. When two triangle paths tie exactly in C
+  (mirror-image obstacles), that ulp picks the other side and `tweakEnd` can
+  move the end point 0.1pt. With C's corner order the port's `tri_path`
+  picks C's path, so the tie-break itself matches. See also #35 (face order).
+  Tracked by the ignored test `neato_polyline_compass_port_routes_like_c`.
 - `splines=ortho` in neato is left to the dot-phase3 branch.
 - VPSC/IncVPSC pointer-ordered containers are approximated by allocation
   order; C itself is not reproducible on some `mode=ipsep` inputs.
