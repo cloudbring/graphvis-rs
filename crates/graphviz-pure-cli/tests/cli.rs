@@ -885,16 +885,32 @@ concentrate=\"true\";
     );
     // The layout places the labels of the IGNORED edge to draw them, but C writes back no
     // position for it: the input head_lp and xlp stay, and no pos appears.
-    let src = src.replace(
-        "\"13\" -> \"14\";",
-        "\"13\" -> \"14\" [headlabel=H xlabel=X head_lp=\"1,2\" xlp=\"3,4\"];",
+    let (dot, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        &src.replace(
+            "\"13\" -> \"14\";",
+            "\"13\" -> \"14\" [headlabel=H xlabel=X head_lp=\"1,2\" xlp=\"3,4\"];",
+        ),
     );
-    let (dot, err, ok) = run(&["-Kdot", "-Tdot"], &src);
     assert!(ok, "{err}");
     let edge = "\t13 -> 14\t[head_lp=\"1,2\",
 \t\theadlabel=H,
 \t\txlabel=X,
 \t\txlp=\"3,4\"];
+";
+    assert!(dot.contains(edge), "{dot}");
+    // Label positions with no label to place stay as well.
+    let (dot, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        &src.replace(
+            "\"13\" -> \"14\";",
+            "\"13\" -> \"14\" [head_lp=\"1,2\" tail_lp=\"5,6\" xlp=\"7,8\"];",
+        ),
+    );
+    assert!(ok, "{err}");
+    let edge = "\t13 -> 14\t[head_lp=\"1,2\",
+\t\ttail_lp=\"5,6\",
+\t\txlp=\"7,8\"];
 ";
     assert!(dot.contains(edge), "{dot}");
 }

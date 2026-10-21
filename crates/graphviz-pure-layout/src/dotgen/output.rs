@@ -141,24 +141,22 @@ impl Output {
             if !unplaced.is_empty() {
                 extra.push((graphviz_pure_core::UNPLACED_PORT_LABELS_KEY, unplaced));
             }
-            let ignored = ed.edge_type == IGNORED;
-            if ignored {
+            if ed.edge_type == IGNORED {
+                // attach_attrs leaves every attribute of the edge as it was in
+                // the input, including those of labels the edge does not have.
                 extra.push((graphviz_pure_core::IGNORED_EDGE_KEY, String::new()));
-            }
-            // In IGNORED_EDGE_INPUT_KEYS order: head_lp, tail_lp, xlp.
-            let label_pos = [
-                pos_of(ed.head_label),
-                pos_of(ed.tail_label),
-                lp_of(ed.xlabel),
-            ];
-            for ((k, ik), p) in graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS
-                .into_iter()
-                .zip(label_pos)
-            {
-                if let Some(p) = p {
-                    if ignored && let Some(v) = d.input.edges[ei].attrs.get(k) {
+                for (k, ik) in graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS {
+                    if let Some(v) = d.input.edges[ei].attrs.get(k) {
                         extra.push((ik, v.clone()));
                     }
+                }
+            }
+            for (k, p) in [
+                ("head_lp", pos_of(ed.head_label)),
+                ("tail_lp", pos_of(ed.tail_label)),
+                ("xlp", lp_of(ed.xlabel)),
+            ] {
+                if let Some(p) = p {
                     extra.push((k, fmt(p)));
                 }
             }
