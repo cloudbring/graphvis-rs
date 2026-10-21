@@ -1706,6 +1706,17 @@ fn non_utf8_flag_values_keep_their_bytes() {
         "{err:?}"
     );
 
+    // The same as a separate argument, and as a -G value.
+    let (_, err, ok) = run_bytes(&[b"-T", b"\xf4\x8f\xbd\x94"], "digraph{a}");
+    assert!(!ok);
+    assert!(err.starts_with(b"Format: \"\xf4\x8f\xbd\x94\" not recognized."));
+    let (out, _, ok) = run_bytes(&[b"-Tdot", b"-Gx=\xf4\x8f\xbd\x94"], "digraph{a}");
+    assert!(ok);
+    assert!(
+        out.windows(7).any(|w| w == b"x=\xf4\x8f\xbd\x94\n"),
+        "{out:?}"
+    );
+
     // atoi skips only C's white space, not U+00A0.
     let (_, err, ok) = run_bytes(&[b"-n\xc2\xa01"], "digraph{a}");
     assert!(!ok);
