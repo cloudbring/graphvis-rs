@@ -18,5 +18,7 @@ The first release.
 - `-Tpng` and `-Tjpg` raster output, drawn from the SVG with resvg and bundled fonts.
 - The `graphviz-pure` command line, compatible with `dot`'s options and exit status.
 - `@graphviz-pure/wasm`, the WebAssembly build for browsers, Node.js, Deno, Bun and Workers.
+- `THIRD-PARTY-LICENSES.md`: the licence text and copyright notices of every Rust crate compiled
+  into the `graphviz-pure` binary and `@graphviz-pure/wasm`.
 
 [Unreleased]: https://github.com/graphviz-pure/graphviz-pure/commits/master
