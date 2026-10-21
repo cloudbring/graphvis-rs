@@ -237,3 +237,27 @@ rank=source;
     let sized = r#"<ellipse fill="none" stroke="black" cx="0" cy="0" rx="27" ry="18"/>"#;
     assert_eq!(out.matches(sized).count(), 4, "{out}");
 }
+
+// Fuzz case 017-dot-pack-curved-edge-subpoint (issue #26), its repro.gv verbatim. In a pack
+// component, C's `clip_and_install` grows `GD_bb(agraphof(tail))`, the root graph, so the
+// component's box stays at its `dot_position` value (y up to 180) while its edges are routed.
+// The second curved edge bends towards that box's centre (`get_centroid`, routespl.c). The
+// port grew the component's box with the first edge's spline (to 180.32), which moved the
+// bend of `n59:sw -- n72`. C 16.1.0 output below.
+#[test]
+fn packed_curved_edge_bends_towards_component_box_without_splines() {
+    let src = "graph \"G\" {
+splines=\"curved\";
+pack=\"8\";
+\"n26\":\"n\" -- \"n59\":\"c\";
+\"n59\":\"sw\" -- \"n72\";
+\"n61\";
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("d=\"M26.98,-74.98C25.94,-53.57 25.46,-43.7 25.55,-36.45\""),
+        "{out}"
+    );
+}
