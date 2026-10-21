@@ -1,5 +1,6 @@
 use graphviz_pure::{GlobalAttrs, LayoutEngine, LayoutOptions, OutputFormat};
 use std::env;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::Path;
@@ -29,11 +30,11 @@ const USAGE: &str = " -V          - Print version and exit
 struct Options {
     engine: String,
     format: String,
-    output: Option<String>,
+    output: Option<OsString>,
     auto_output: bool,
     globals: GlobalAttrs,
     layout: LayoutOptions,
-    inputs: Vec<String>,
+    inputs: Vec<OsString>,
 }
 
 enum Parsed {
@@ -43,6 +44,34 @@ enum Parsed {
 
 fn usage(argv0: &str) -> String {
     format!("Usage: {argv0} [-Vv?] [-(GNEA)name=val] [-(KTo)<val>] <dot files>\n\n{USAGE}")
+}
+
+/// An argument as text. C's `main` gets each argument as bytes, so the bytes of one that is
+/// not valid UTF-8 are kept as raw-byte chars (`graphviz_pure_core::charset`): an attribute
+/// set with `-G` carries them into the output, and an error message names them as C does.
+fn arg_text(arg: &OsStr) -> String {
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        graphviz_pure_core::charset::decode_slice(arg.as_bytes())
+    }
+    #[cfg(not(unix))]
+    {
+        arg.to_string_lossy().into_owned()
+    }
+}
+
+/// The file name after a two-letter flag (`-ofile`), with the argument's own bytes.
+fn os_tail(arg: &OsStr) -> OsString {
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        OsStr::from_bytes(&arg.as_bytes()[2..]).to_os_string()
+    }
+    #[cfg(not(unix))]
+    {
+        OsString::from(&arg.to_string_lossy()[2..])
+    }
 }
 
 /// Mirrors `getFlagOpt`: the text after the flag letter, else the next argument unless it
@@ -68,7 +97,11 @@ fn global_def(spec: &str) -> (String, String) {
     }
 }
 
-fn parse_args(argv0: &str, args: &[String]) -> Parsed {
+/// Mirrors `dotneato_args_initialize`. File names (`-o` and the inputs) are kept as the OS
+/// gave them, so a name that is not valid UTF-8 still opens.
+fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
+    let args: Vec<String> = os_args.iter().map(|a| arg_text(a)).collect();
+    let args = args.as_slice();
     let mut opts = Options {
         engine: "dot".to_string(),
         format: "dot".to_string(),
@@ -94,8 +127,15 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
             print!("{}", usage(argv0));
             return Parsed::Exit(ExitCode::SUCCESS);
         } else if arg.starts_with('-') && arg.len() > 1 {
-            let flag = arg.as_bytes()[1] as char;
-            let rest = &arg[2..];
+            // `dotneato_args_initialize` switches on the byte `arg[1]`, which need not start
+            // a char: split the argument's bytes there.
+            let bytes = graphviz_pure_core::charset::encode(arg);
+            let flag = match bytes[1] {
+                b if b.is_ascii() => b as char,
+                b => graphviz_pure_core::charset::raw_char(b),
+            };
+            let rest = graphviz_pure_core::charset::decode_slice(&bytes[2..]);
+            let rest = rest.as_str();
             match flag {
                 'G' | 'N' | 'E' | 'A' => {
                     if rest.is_empty() {
@@ -120,10 +160,14 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
                     Some(v) => opts.engine = v,
                     None => return missing('K'),
                 },
-                'o' => match flag_value(args, &mut i) {
-                    Some(v) => opts.output = Some(v),
-                    None => return missing('o'),
-                },
+                'o' => {
+                    let at = i;
+                    match flag_value(args, &mut i) {
+                        Some(_) if i > at => opts.output = Some(os_args[i].clone()),
+                        Some(_) => opts.output = Some(os_tail(&os_args[i])),
+                        None => return missing('o'),
+                    }
+                }
                 'l' => {
                     if flag_value(args, &mut i).is_none() {
                         return missing('l');
@@ -145,7 +189,9 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
                         match digits.parse::<i64>() {
                             Ok(n) if n > 0 => opts.layout.nop = n.min(255) as u8,
                             _ => {
-                                eprintln!("Error: Invalid parameter \"{rest}\" for -n flag");
+                                graphviz_pure_core::charset::eprint_bytes(&format!(
+                                    "Error: Invalid parameter \"{rest}\" for -n flag\n"
+                                ));
                                 eprint!("{}", usage(argv0));
                                 return Parsed::Exit(ExitCode::FAILURE);
                             }
@@ -154,13 +200,15 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
                 }
                 'v' | 'q' | 's' | 'x' | 'y' | 'P' | 'c' | 'L' => {}
                 _ => {
-                    eprintln!("{argv0}: option -{flag} unrecognized\n");
+                    graphviz_pure_core::charset::eprint_bytes(&format!(
+                        "{argv0}: option -{flag} unrecognized\n\n"
+                    ));
                     eprint!("{}", usage(argv0));
                     return Parsed::Exit(ExitCode::FAILURE);
                 }
             }
         } else {
-            opts.inputs.push(args[i].clone());
+            opts.inputs.push(os_args[i].clone());
         }
         i += 1;
     }
@@ -170,7 +218,7 @@ fn parse_args(argv0: &str, args: &[String]) -> Parsed {
 /// Reads a DOT file. C reads bytes; bytes that are not part of valid UTF-8 are
 /// kept as raw-byte chars (`graphviz_pure_core::charset`), so labels are converted once,
 /// where C converts them, and the output carries C's bytes.
-fn read_input(path: Option<&str>) -> io::Result<String> {
+fn read_input(path: Option<&OsStr>) -> io::Result<String> {
     let bytes = match path {
         Some(p) => fs::read(p)?,
         None => {
@@ -195,7 +243,8 @@ fn report_error(name: &str, e: &graphviz_pure_core::GraphvizError) {
 }
 
 fn main() -> ExitCode {
-    let raw: Vec<String> = env::args().collect();
+    // `args_os`: `args` panics on an argument that is not valid UTF-8.
+    let raw: Vec<OsString> = env::args_os().collect();
     let argv0 = raw
         .first()
         .and_then(|a| Path::new(a).file_name())
@@ -209,11 +258,17 @@ fn main() -> ExitCode {
 
     let raster = graphviz_pure_raster::RasterFormat::parse(&opts.format);
     if raster.is_none() && OutputFormat::parse(&opts.format).is_err() {
-        eprintln!("Format: \"{}\" not recognized.", opts.format);
+        graphviz_pure_core::charset::eprint_bytes(&format!(
+            "Format: \"{}\" not recognized.\n",
+            opts.format
+        ));
         return ExitCode::FAILURE;
     }
     if LayoutEngine::parse(&opts.engine).is_err() {
-        eprintln!("There is no layout engine support for \"{}\"", opts.engine);
+        graphviz_pure_core::charset::eprint_bytes(&format!(
+            "There is no layout engine support for \"{}\"\n",
+            opts.engine
+        ));
         return ExitCode::FAILURE;
     }
 
@@ -221,26 +276,32 @@ fn main() -> ExitCode {
         (Some(path), false) => match fs::File::create(path) {
             Ok(f) => Some(Box::new(f)),
             Err(e) => {
-                eprintln!("{argv0}: can't open {path}: {e}");
+                let path = arg_text(path);
+                graphviz_pure_core::charset::eprint_bytes(&format!(
+                    "{argv0}: can't open {path}: {e}\n"
+                ));
                 return ExitCode::FAILURE;
             }
         },
         _ => None,
     };
 
-    let inputs: Vec<Option<&str>> = if opts.inputs.is_empty() {
+    let inputs: Vec<Option<&OsStr>> = if opts.inputs.is_empty() {
         vec![None]
     } else {
-        opts.inputs.iter().map(|s| Some(s.as_str())).collect()
+        opts.inputs.iter().map(|s| Some(s.as_os_str())).collect()
     };
 
     let mut failed = false;
     for input in inputs {
-        let name = input.unwrap_or("<stdin>");
+        let name = input.map_or_else(|| "<stdin>".to_string(), arg_text);
+        let name = name.as_str();
         let source = match read_input(input) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("{argv0}: can't open {name}: {e}");
+                graphviz_pure_core::charset::eprint_bytes(&format!(
+                    "{argv0}: can't open {name}: {e}\n"
+                ));
                 failed = true;
                 continue;
             }
@@ -291,11 +352,15 @@ fn main() -> ExitCode {
 
         let mut per_input: Option<Box<dyn Write>> = None;
         if let (true, Some(path)) = (opts.auto_output, input) {
-            let target = format!("{path}.{}", opts.format);
+            let mut target = path.to_os_string();
+            target.push(format!(".{}", opts.format));
             match fs::File::create(&target) {
                 Ok(f) => per_input = Some(Box::new(f)),
                 Err(e) => {
-                    eprintln!("{argv0}: can't open {target}: {e}");
+                    let target = arg_text(&target);
+                    graphviz_pure_core::charset::eprint_bytes(&format!(
+                        "{argv0}: can't open {target}: {e}\n"
+                    ));
                     failed = true;
                     continue;
                 }

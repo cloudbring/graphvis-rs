@@ -1610,3 +1610,110 @@ fn issue30_missing_shapefile_warnings() {
          Warning: shapefile not set or not found for epsf node a5\n"
     );
 }
+
+/// Runs the CLI on raw-byte arguments; returns stdout, stderr and the exit status.
+#[cfg(unix)]
+fn run_bytes(args: &[&[u8]], stdin: &str) -> (Vec<u8>, Vec<u8>, bool) {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .args(args.iter().map(|a| OsStr::from_bytes(a)))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    if let Err(e) = child.stdin.take().unwrap().write_all(stdin.as_bytes()) {
+        assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "{e}");
+    }
+    let out = child.wait_with_output().unwrap();
+    (out.stdout, out.stderr, out.status.success())
+}
+
+/// Issue #152: C's `main` takes its arguments as bytes; a file name that is not valid UTF-8
+/// (here Latin-1 `né.gv`) is opened, and named in errors with its own bytes.
+#[cfg(unix)]
+#[test]
+fn non_utf8_file_name_argument_is_opened() {
+    use std::os::unix::ffi::OsStrExt;
+    let dir = tmp("issue152");
+    std::fs::create_dir_all(&dir).unwrap();
+    let name = std::ffi::OsStr::from_bytes(b"n\xe9.gv");
+    let path = dir.join(name);
+    let path_bytes = path.as_os_str().as_bytes();
+
+    // macOS (APFS) refuses names that are not UTF-8; Linux keeps them.
+    if std::fs::write(&path, "digraph{a->b}").is_ok() {
+        let (out, err, ok) = run_bytes(&[b"-Tsvg", path_bytes], "");
+        assert!(ok, "{}", String::from_utf8_lossy(&err));
+        assert_eq!(String::from_utf8_lossy(&out).matches("<svg").count(), 1);
+
+        // -O writes `<input>.svg` next to the input, with the input's bytes.
+        let (_, err, ok) = run_bytes(&[b"-Tsvg", b"-O", path_bytes], "");
+        assert!(ok, "{}", String::from_utf8_lossy(&err));
+        let mut auto = path.clone().into_os_string();
+        auto.push(".svg");
+        assert!(std::fs::read(&auto).unwrap().starts_with(b"<?xml"));
+
+        // -o, separate and attached.
+        let target = dir.join(std::ffi::OsStr::from_bytes(b"out\xe9.svg"));
+        let target_bytes = target.as_os_str().as_bytes();
+        let (_, _, ok) = run_bytes(&[b"-Tsvg", b"-o", target_bytes, path_bytes], "");
+        assert!(ok);
+        assert!(std::fs::read(&target).unwrap().starts_with(b"<?xml"));
+        std::fs::remove_file(&target).unwrap();
+        let attached = [b"-o", target_bytes].concat();
+        let (_, _, ok) = run_bytes(&[b"-Tsvg", &attached, path_bytes], "");
+        assert!(ok);
+        assert!(std::fs::read(&target).unwrap().starts_with(b"<?xml"));
+    }
+
+    // A missing file is an error naming its bytes, not a panic.
+    let missing = dir.join(std::ffi::OsStr::from_bytes(b"missing\xe9.gv"));
+    let missing = missing.as_os_str().as_bytes();
+    let (_, err, ok) = run_bytes(&[b"-Tsvg", missing], "");
+    assert!(!ok);
+    let expected = [b"can't open ", missing, b": "].concat();
+    assert!(
+        err.windows(expected.len()).any(|w| w == expected),
+        "{}",
+        String::from_utf8_lossy(&err)
+    );
+}
+
+/// Issue #152: other flags with bytes that are not UTF-8 behave as C's do
+/// (`lib/common/input.c:dotneato_args_initialize`): the values keep their bytes.
+#[cfg(unix)]
+#[test]
+fn non_utf8_flag_values_keep_their_bytes() {
+    let (out, _, ok) = run_bytes(&[b"-Tdot", b"-Gx\xe9=1"], "digraph{a}");
+    assert!(ok);
+    assert!(out.windows(5).any(|w| w == b"x\xe9=1\n"), "{out:?}");
+
+    let (_, err, ok) = run_bytes(&[b"-T\xe9"], "digraph{a}");
+    assert!(!ok);
+    assert!(
+        err.starts_with(b"Format: \"\xe9\" not recognized."),
+        "{err:?}"
+    );
+
+    let (_, err, ok) = run_bytes(&[b"-K\xe9"], "digraph{a}");
+    assert!(!ok);
+    assert!(err.starts_with(b"There is no layout engine support for \"\xe9\""));
+
+    let (_, err, ok) = run_bytes(&[b"-n\xe9"], "digraph{a}");
+    assert!(!ok);
+    assert!(err.starts_with(b"Error: Invalid parameter \"\xe9\" for -n flag\n"));
+
+    // C switches on the byte after `-`, even inside a multi-byte UTF-8 char (`-é`).
+    for (arg, flag) in [(&b"-\xe9"[..], &b"-\xe9 "[..]), (b"-\xc3\xa9", b"-\xc3 ")] {
+        let (_, err, ok) = run_bytes(&[arg], "digraph{a}");
+        assert!(!ok);
+        let expected = [b"option ", flag, b"unrecognized"].concat();
+        assert!(
+            err.windows(expected.len()).any(|w| w == expected),
+            "{}",
+            String::from_utf8_lossy(&err)
+        );
+    }
+}
