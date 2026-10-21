@@ -290,3 +290,33 @@ c -> d [arrowsize=2];
         "{out}"
     );
 }
+
+// Fuzz case 013-dot-pack-component-missing-attr-dicts (issue #22), its repro.gv verbatim.
+// The flat adjacent edge `25:ne -> 26` is routed through make_flat_adj_edges' auxiliary
+// graph, whose setState keeps the main graph's N_penwidth/E_penwidth/E_arrowsz symbols and
+// reads them by id (lib/dotgen/dotsplines.c). A pack component is a subgraph of the root and
+// shares its dictionaries, so `xlabel` on 22 and `penwidth` on 24 (other components) shift
+// those ids. Without the root dictionaries in `CComp::to_graph` the edge moved by about 1pt.
+#[test]
+fn pack_component_keeps_root_attribute_dictionaries() {
+    let src = "digraph \"G\" {
+pack=\"true\";
+node [width=\"2.7\"];
+\"22\" [xlabel=\"\u{df}\"];
+\"24\" [penwidth=\"4.79\"];
+\"25\" [fontsize=\"2\"];
+\"25\":\"ne\" -> \"26\" [style=\"bold,dashed\", minlen=\"0\"];
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    // C Graphviz 16.1.0.
+    assert!(
+        out.contains("d=\"M114.95,-111.75C149.34,-141.07 206.35,-128.53 249.55,-113.61\""),
+        "{out}"
+    );
+    assert!(
+        out.contains("points=\"249.13,-117.47 257.37,-110.81 246.77,-110.88 249.13,-117.47\""),
+        "{out}"
+    );
+}

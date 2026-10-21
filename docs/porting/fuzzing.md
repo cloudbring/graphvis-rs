@@ -179,6 +179,10 @@ dot
   box (`agraphof(tail)`), not the component's, so a later curved edge bends towards the
   component's box without the earlier splines (open case
   `017-dot-pack-curved-edge-subpoint`, issue #26).
+* A pack component shares the root's attribute dictionaries (it is an `agsubg` of the
+  root), so `make_flat_adj_edges`' stale symbols resolve to the same ids as without pack.
+  This was open case `013-dot-pack-component-missing-attr-dicts` (seed 23917); its repro is
+  in `crates/graphviz-pure-cli/tests/cli.rs` (`pack_component_keeps_root_attribute_dictionaries`).
 
 neato family
 * `resolvePorts` drops `tailclip=false` on `_` ports.
@@ -260,7 +264,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`012-dot-flat-adj-labelfloat`](../../tests/fuzz-open/012-dot-flat-adj-labelfloat) | medium | 2 | port |
-| [`013-dot-pack-component-missing-attr-dicts`](../../tests/fuzz-open/013-dot-pack-component-missing-attr-dicts) | medium | 1 | port |
 | [`015-dot-pack-unplaced-edge-label-shifted-off-page`](../../tests/fuzz-open/015-dot-pack-unplaced-edge-label-shifted-off-page) | low | 6 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`018-render-interpolate-points-fma`](../../tests/fuzz-open/018-render-interpolate-points-fma) | low | 1 | port |
