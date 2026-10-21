@@ -127,7 +127,8 @@ jobs:
       - name: Install the stable Rust toolchain (rustup is on every runner)
         shell: bash
         run: rustup toolchain install stable --profile minimal && rustup default stable
-      # Both tools are built from crates.io at a pinned version with their own lockfiles.
+      # The tools are built from crates.io at a pinned version with their own lockfiles.
+      # cargo-about's version is also pinned in scripts/third-party-licenses.sh.
       - name: Cache the audit tools
         id: tools
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -135,13 +136,20 @@ jobs:
           path: |
             ~/.cargo/bin/cargo-deny
             ~/.cargo/bin/zizmor
-          key: audit-tools-${{ runner.os }}-cargo-deny-0.18.9-zizmor-1.31.1
-      - name: Install cargo-deny and zizmor
+            ~/.cargo/bin/cargo-about
+          key: audit-tools-${{ runner.os }}-cargo-deny-0.18.9-zizmor-1.31.1-cargo-about-0.9.2
+      - name: Install cargo-deny, zizmor and cargo-about
         if: steps.tools.outputs.cache-hit != 'true'
-        run: cargo install --locked cargo-deny@0.18.9 zizmor@1.31.1
+        run: |
+          cargo install --locked cargo-deny@0.18.9 zizmor@1.31.1
+          cargo install --locked --features cli cargo-about@0.9.2
       # RustSec advisories, licences (deny.toml), duplicate versions and allowed sources.
       - name: cargo deny check
         run: cargo deny check
+      # THIRD-PARTY-LICENSES.md must match Cargo.lock: the licences and copyright notices of every
+      # crate in the release binaries and the wasm package (about.toml).
+      - name: THIRD-PARTY-LICENSES.md is current
+        run: scripts/third-party-licenses.sh --check
       # Security lint of every workflow: injection, credential persistence, triggers, pinning.
       - name: zizmor
         run: zizmor --persona=pedantic --offline .github/workflows

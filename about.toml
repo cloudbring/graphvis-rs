@@ -1,0 +1,55 @@
+# cargo-about: generates THIRD-PARTY-LICENSES.md (scripts/third-party-licenses.sh, checked in CI).
+# https://embarkstudios.github.io/cargo-about/
+
+# The same licences as deny.toml's allow list, in the same order. For a crate offering a choice
+# (MIT OR Apache-2.0, ...) the first acceptable one in this list is the one reproduced.
+accepted = [
+    "EPL-2.0", "MIT", "Apache-2.0", "Unlicense", "Unicode-3.0",
+    "BSD-2-Clause", "BSD-3-Clause", "Zlib",
+    "IJG",
+]
+
+# Every target a release binary or the wasm package is built for (release.yml).
+targets = [
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "wasm32-unknown-unknown",
+]
+
+# Build scripts and their dependencies run on the build machine and are not linked into the
+# artifacts. Proc-macros are normal dependencies and stay in: their expansions are compiled in.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+
+# libm's LICENSE.txt combines the MIT and Apache-2.0 texts with the copyright notices of libm,
+# musl and fdlibm; the scanner cannot classify the combined file, so it is reproduced whole.
+[libm.clarify]
+license = "MIT"
+
+[[libm.clarify.files]]
+path = "LICENSE.txt"
+license = "MIT"
+checksum = "3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7"
+
+# The scanner does not recognise jpeg-encoder's LICENSE-IJG (the IJG README terms with a preamble).
+[jpeg-encoder.clarify]
+license = "(MIT OR Apache-2.0) AND IJG"
+
+[[jpeg-encoder.clarify.files]]
+path = "LICENSE-MIT"
+license = "MIT"
+checksum = "4d022727ea392ebba2fe5e9a5f78c610a0eae506b491f3db29c78b6d430d6503"
+
+[[jpeg-encoder.clarify.files]]
+path = "LICENSE-APACHE"
+license = "Apache-2.0"
+checksum = "85a884980abd6032fc6b5439ba918ab16db9ac9051b5cf18db9c27c587df07c0"
+
+[[jpeg-encoder.clarify.files]]
+path = "LICENSE-IJG"
+license = "IJG"
+checksum = "a21e92ec88aefc6823f0c51994783571a849e8d9b43d9ade61ec9d886776721e"

@@ -45,7 +45,12 @@ no C installation. Regenerating the C references does; see
 - **No `unsafe`.** The workspace forbids it; the only exception is the test-only
   `graphviz-pure-portable-libm` crate.
 - **Dependencies** are added only when necessary, and must pass `cargo deny check`
-  (`deny.toml`: licences, advisories, sources).
+  (`deny.toml`: licences, advisories, sources). After any change to `Cargo.lock` (a new,
+  removed or updated dependency), regenerate the licence notices that ship with the binaries
+  and the wasm package with `scripts/third-party-licenses.sh` and commit
+  `THIRD-PARTY-LICENSES.md`; it needs `cargo install --locked --features cli cargo-about@0.9.2`,
+  and CI fails when the file is stale. A licence added to `deny.toml`'s allow list goes into
+  `about.toml`'s `accepted` list too.
 - **Changelog:** add a line under "Unreleased" in [CHANGELOG.md](CHANGELOG.md) for anything a
   user would notice, including changes to output bytes.
 - **Pull requests** need the CI checks to pass (tests in both math profiles, the supply-chain

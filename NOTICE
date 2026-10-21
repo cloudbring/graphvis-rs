@@ -43,3 +43,9 @@ JPEG output
 
 PNG and JPEG output are drawn with resvg and tiny-skia (linebender, MIT OR
 Apache-2.0 and BSD-3-Clause).
+
+Rust crate dependencies
+    The graphviz-pure binary and the graphviz-pure-wasm module are built with
+    third-party Rust crates. THIRD-PARTY-LICENSES.md lists each of them with
+    the full text of its licence and the copyright notices it carries; it is
+    generated from Cargo.lock by scripts/third-party-licenses.sh.
