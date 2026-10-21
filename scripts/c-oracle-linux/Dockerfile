@@ -7,8 +7,7 @@
 #
 #   docker build -t gv-c-linux -f scripts/c-oracle-linux/Dockerfile <dir holding graphviz-16.1.0.tar.xz>
 #   scripts/c-oracle-linux/run.sh
-ARG BASE=rust:1-bookworm
-FROM ${BASE}
+FROM rust:1-bookworm@sha256:5c1a1732ac3f77635b24d397ceb67b4d9ea61de348f68c0aa54a79fd01e65c69
 RUN apt-get update && apt-get install -y --no-install-recommends \
       clang libc++-dev libc++abi-dev libgts-dev bison flex pkg-config libexpat1-dev zlib1g-dev \
       libltdl-dev xz-utils \

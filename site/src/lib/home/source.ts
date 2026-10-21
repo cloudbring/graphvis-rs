@@ -59,7 +59,11 @@ const PALETTE = {
 };
 
 const n = (v: number) => v.toLocaleString('en-US');
-/** A DOT string. Backslash escapes (\\n) are left alone: the labels here use them on purpose. */
+/**
+ * A DOT string. Backslash escapes (\\n) are left alone: the labels here use them on purpose.
+ * Every argument is a constant from this file or a link path fixed at build time, never user input.
+ */
+// codeql[js/incomplete-sanitization]
 const q = (s: string) => `"${s.replace(/"/g, '\\"')}"`;
 
 /** The ids of the nodes that are controls: link nodes navigate, engine nodes switch -K. */
