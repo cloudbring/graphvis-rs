@@ -320,3 +320,24 @@ node [width=\"2.7\"];
         "{out}"
     );
 }
+
+// Fuzz case 005-xlabels-hilbert-key-signed-order (issue #14). The drawings are wider than
+// 32768pt, so some objects' Hilbert keys have bit 31 set. C stores the key in an `int`
+// (`HDict_t.key`) and orders the keys with `icompare` on `int` (lib/label/xlabels.c:28-35),
+// so those keys sort first; sorting them as `u32` builds a different R-tree and moves the
+// label by about its width. The inputs are corpus files whose C -Tdot goldens the fdp and
+// circo ratchets also check; the coordinates below are C's.
+#[test]
+fn xlabel_hilbert_keys_are_ordered_as_signed_int() {
+    let fdp = include_str!("../../../tests/fdp/fuzz_xlabels_hilbert_signed_key.gv");
+    let (out, err, ok) = run(&["-Tdot"], fdp);
+    assert!(ok, "{err}");
+    assert!(out.contains("10 -> 0\t[lp=\"14095,11133\""), "fdp: {out}");
+    let circo = include_str!("../../../tests/circo/fuzz_xlabels_hilbert_signed_key.gv");
+    let (out, err, ok) = run(&["-Tdot"], circo);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("n68 -- n98\t[head_lp=\"34855,2663.7\""),
+        "circo: {out}"
+    );
+}

@@ -43,44 +43,6 @@
     "body": "With `concentrate=true`, a back edge that runs opposite a forward edge between the same two nodes is marked `IGNORED` (its opposite gets `conc_opp_flag`). `orthoEdges` keeps only one edge per node pair, the first in `agfstnode`/`agfstout` order, which here is the `IGNORED` edge `13 -> 14`, and gives it the spline. C's SVG emitter draws any edge that has `ED_spl`, so `13 -> 14` appears, while `14 -> 13` has no spline and does not. The port routes the same edge, but its layout-to-render export drops the splines of `IGNORED` edges, so neither edge is drawn. `-Tdot` agrees in both programs (neither writes a `pos` for these edges). Only the drawn output differs.\n\n**Reproducer**\n\n```dot\ndigraph G {\nsplines=\"ortho\";\nconcentrate=\"true\";\n\"8\" -> \"9\";\n\"8\" -> \"13\";\n\"9\" -> \"14\";\n\"14\" -> \"13\";\n\"13\" -> \"14\";\n}\n```\n\n```sh\nGVBINDIR=<pango-free plugins> dot -Kdot -Tsvg repro.gv   # C Graphviz 16.1.0\ngraphviz-pure -Kdot -Tsvg repro.gv                               # port\n```\n\n**C output vs port**\n\n```diff\n--- c.svg\n+++ rust.svg\n-<!-- 13&#45;&gt;14 -->\n-<g id=\"edge5\" class=\"edge\">\n-<title>13&#45;&gt;14</title>\n-<path fill=\"none\" stroke=\"black\" d=\"M40.5,-33.98C40.5,-33.98 40.5,-62.55 40.5,-62.55\"/>\n-<polygon fill=\"black\" stroke=\"black\" points=\"37,-62.55 40.5,-72.55 44,-62.55 37,-62.55\"/>\n-</g>\n```\n\n**Root cause**\n\nC: `class2` marks the edge `IGNORED` (`lib/dotgen/class2.c:266-271`). `orthoEdges` skips the second edge of each node pair under `Concentrate` (`lib/ortho/ortho.c:1216-1232`) and assigns splines to the kept edge whatever its type. `attach_attrs_and_arrows` skips `IGNORED` edges when it writes `pos` (`lib/common/output.c:350-353`), but `emit_edge_graphics` draws from `ED_spl` with no type check (`lib/common/emit.c:2366`).\n\nPort: `Output::collect` keeps a spline only if `edge_type != IGNORED` (`crates/graphviz-pure-layout/src/dotgen/output.rs:81-96`). That filter is right for the `pos` attribute but also removes the edge from the renderer, so the SVG loses `13 -> 14`.\n\nSuggested fix: export the spline of an `IGNORED` edge to the renderer but keep it out of `pos`/`lp` in the `-Tdot`/`-Txdot`/`-Tjson` writers, as C's `attach_attrs` does. The full case also lacks C's `Orthogonal edges do not currently handle edge labels` warning (stderr only).\n\n**Cases**\n\n1 fuzz case(s): seeds 35138. \nRegenerate a case with `python3 -I scripts/fuzz-gen.py --seed N` (checked byte for byte for seed 35138).\n\n**Files**\n\n`tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge`\n\nVisual diff: {{SITE}}/whats-left/dot-ortho-concentrate-ignored-edge/\n"
   },
   {
-    "slug": "xlabels-hilbert-key-signed-order",
-    "dir": "tests/fuzz-open/005-xlabels-hilbert-key-signed-order",
-    "title": "xlabels: Hilbert keys are sorted as unsigned, but C compares them as int, so label placement differs on drawings over 32768pt",
-    "labels": [
-      "bug",
-      "fidelity",
-      "fuzz",
-      "engine:fdp",
-      "engine:circo",
-      "engine:neato"
-    ],
-    "engine": "all",
-    "category": "layout",
-    "severity": "medium",
-    "seeds": [
-      730,
-      878,
-      1843,
-      10593,
-      20397,
-      21395,
-      22436,
-      22620,
-      22829,
-      30157,
-      30222,
-      31707,
-      32286,
-      32812,
-      32867,
-      35912
-    ],
-    "case_count": 16,
-    "upstream_c": false,
-    "close_as_wontfix": false,
-    "body": "When a drawing is wider or taller than 32768 pt, xlabel and unplaced edge-label placement (`placeLabels`) can pick a different candidate position than C. The label moves by about its own width. C keeps the objects in a dictionary whose comparison reads the 32-bit Hilbert key as a signed `int`. The port sorts the keys as `u32`. Keys with the top bit set, which only occur when coordinates reach 2^15, therefore sort first in the port and last in C. The R-tree is built in that order. C's R-tree covers are not real bounding boxes (see below), so a different insertion order changes which neighbours `RTreeSearch` finds.\n\n**Reproducer**\n\n```dot\ndigraph \"G\" {\nlayout=fdp;\nedge [label=\"e=mc²\"];\n\"0\";\n\"1\" [];\n\"2\";\n\"3\";\n\"4\" [];\n\"5\";\n\"6\" [pos=\"253,-147!\"];\n\"7\" [shape=\"plaintext\"];\n\"8\";\n\"9\";\n\"10\" [label=\"日本語\", fontsize=\"25\"];\n\"11\";\n\"12\";\n\"13\" [];\n\"14\" [];\n\"225\" [pos=\"-145,143\", pin=\"true\"];\n\"0\" -> \"3\";\n\"0\" -> \"12\" [color=\"yellow\"];\n\"1\" -> \"4\" [arrowtail=\"rtee\"];\n\"1\" -> \"5\";\n\"1\" -> \"6\";\n\"1\" -> \"8\";\n\"5\" -> \"1\";\n\"5\" -> \"7\";\n\"5\" -> \"11\" [dir=\"none\"];\n\"5\" -> \"12\";\n\"6\" -> \"4\";\n\"6\" -> \"5\";\n\"7\" -> subgraph \"s32\" {\"119\" \"129\" \"131\"};\n\"7\" -> \"4\";\n\"7\" -> \"9\";\n\"7\" -> \"10\" [style=\"solid\"];\n{\"127\" \"198\"} -> \"13\";\n{\"71\" \"119\" \"10\"} -> \"0\";\n\"8\" -> \"3\";\n\"8\" -> \"7\" [color=\"lightblue\", headport=\"n\"];\n\"8\" -> \"10\";\n\"8\" -> \"11\";\n\"9\" -> \"5\";\n\"9\" -> \"13\";\n\"10\" -> \"0\";\n\"10\" -> \"2\" [weight=\"3.19\"];\n\"10\" -> \"3\";\n\"10\" -> \"9\";\n\"10\" -> \"11\" -> \"4\" [URL=\"http://e.com/\\\\E\"];\n\"12\" -> \"0\";\n{\"194\"} -> \"1\";\n\"12\" -> \"7\";\n\"12\" -> \"9\";\n\"12\" -> \"11\";\n\"13\" -> \"6\";\n\"13\" -> \"8\";\n}\n```\n\n```sh\nGVBINDIR=<pango-free plugins> dot -Kfdp -Tsvg repro.gv   # C Graphviz 16.1.0\ngraphviz-pure -Kfdp -Tsvg repro.gv                              # port\n```\n\n**C output vs port**\n\n```diff\n@@ -291,3 +291,3 @@\n <polygon fill=\"black\" stroke=\"black\" points=\"2129.53,-17776.37 2122.43,-17784.23 2132.88,-17782.51 2129.53,-17776.37\"/>\n-<text xml:space=\"preserve\" text-anchor=\"middle\" x=\"14095.06\" y=\"-11128.94\" font-family=\"Times,serif\" font-size=\"14.00\">e=mc²</text>\n+<text xml:space=\"preserve\" text-anchor=\"middle\" x=\"14056.85\" y=\"-11128.94\" font-family=\"Times,serif\" font-size=\"14.00\">e=mc²</text>\n </g>\n```\n\n**Root cause**\n\nC, `lib/label/xlabels.c:28-35`: `Hdisc` has `.size = sizeof(int)` and `icompare` compares `*(int *)` keys, although `hd_hil_s_from_xy` (`xlabels.c:114`) returns `unsigned`. With `order = 16` (coordinates up to 65535) the keys of objects at large x come out negative.\n\nThe port, `crates/graphviz-pure-layout/src/common/xlabels.rs:716`: `keyed.sort_by(|a, b| a.0.cmp(&b.0).then(...))` on `u32`.\n\nOn seed 30157 the port's R-tree root split 64/1 and C's split 31/34. Traced with an instrumented C build: C's `RTreeSearch` misses an overlapping node, so its first candidate is free (`n=0`). The port finds the node (`n=1, area=120`) and moves to the next candidate. The covers are also wrong because `CombineRect` takes `fmin` of the upper bounds (`lib/label/rectangle.c:95`). That is an upstream bug, which the port reproduces on purpose (`xlabels.rs:52-65`). The key comparison is the only thing that differs here.\n\nSuggested fix: sort by `(key as i32)`.\n\nChecked with a patched build of HEAD whose only change is comparing the key as `i32` at `xlabels.rs:716`. All 16 cases below then match C byte for byte. They are fdp, circo (`repro-circo.gv`: a `headlabel` placed as an xlabel moves 70pt to the other side of the edge end) and 12 neato cases. Those 12 were first grouped with the equal-key-order issue (xlabels-dtobag-equal-key-order); the sign fix alone fixes them. The neato-family corpus (2015 files) is unchanged. The code is shared by every engine that calls `addXLabels`.\n\n**Cases**\n\n16 fuzz cases, seeds 730, 878, 1843, 10593, 20397, 21395, 22436, 22620, 22829, 30157, 30222, 31707, 32286, 32812, 32867, 35912 (fdp 20397, 30157, 32867; circo 878; the rest neato). The reproducers are large, about 55 lines each, because the drawing must be at least 32768pt wide. Regenerate a case with `python3 -I scripts/fuzz-gen.py --seed N` (byte for byte for these seeds).\n\n**Files**\n\n`tests/fuzz-open/005-xlabels-hilbert-key-signed-order`\n\nVisual diff: {{SITE}}/whats-left/xlabels-hilbert-key-signed-order/\n"
-  },
-  {
     "slug": "fdp-cluster-port-sincos-fusion",
     "dir": "tests/fuzz-open/006-fdp-cluster-port-sincos-fusion",
     "title": "fdp: cluster port positions differ by 1 ulp because sin/cos are merged into __sincos_stret",
