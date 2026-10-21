@@ -246,7 +246,7 @@ fn line_directives_renumber_lines() {
 /// C: `Error: <file>: syntax error in line 3 near '}'` (grammar.y `subgraph: optsubghdr
 /// body`: a subgraph always has a body). The port accepts `subgraph x` alone.
 #[test]
-#[ignore = "issue #31: the parser accepts a subgraph without a body (grammar acceptance)"]
+#[ignore = "issue #111: the parser accepts a subgraph without a body"]
 fn subgraph_without_body() {
     check(
         "digraph G {\n subgraph x\n}\n",
@@ -257,7 +257,7 @@ fn subgraph_without_body() {
 /// C: `Error: <file>: syntax error in line 2 near 'y'` (grammar.y `qatom: qatom '+'
 /// T_qatom`: only quoted strings concatenate). The port accepts unquoted atoms.
 #[test]
-#[ignore = "issue #31: the parser concatenates unquoted atoms with '+' (grammar acceptance)"]
+#[ignore = "issue #80: the parser concatenates unquoted atoms with '+'"]
 fn plus_concatenates_only_quoted_strings() {
     check(
         "digraph G {\n a -> b [label=\"x\" + y]\n}\n",

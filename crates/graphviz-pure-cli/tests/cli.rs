@@ -578,7 +578,7 @@ fn unterminated_string_excerpt_is_cut_at_80_bytes() {
 /// into two tokens` before the error (scan.l `chkNum`). The port splits the token the same way
 /// but does not warn.
 #[test]
-#[ignore = "issue #31: scan.l chkNum's badly-delimited-number warning is not ported"]
+#[ignore = "issue #97: scan.l chkNum's badly-delimited-number warning is not ported"]
 fn badly_delimited_number_warns() {
     let (_, err, _) = run(&["-Tsvg"], "digraph G {\n a -> b -> 1a ; c -> ;\n}\n");
     assert_eq!(
@@ -586,4 +586,14 @@ fn badly_delimited_number_warns() {
         "Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits \
          into two tokens\nError: <stdin>: syntax error in line 2 near ';'\n"
     );
+}
+
+/// C: a backslash before CR LF in a quoted string is kept with the CR and LF (scan.l:140
+/// ignores only a backslash before LF; rule 142 keeps the backslash). The port drops all three.
+#[test]
+#[ignore = "issue #112: backslash + CRLF in a quoted string is dropped"]
+fn backslash_crlf_in_quoted_string_is_kept() {
+    let (out, err, ok) = run(&["-Tdot"], "digraph G { a [label=\"x\\\r\ny\"] }");
+    assert!(ok, "{err}");
+    assert!(out.contains("label=\"x\\\r\ny\""), "{out}");
 }
