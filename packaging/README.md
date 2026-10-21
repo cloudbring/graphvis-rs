@@ -56,25 +56,42 @@ Host aur.archlinux.org
 
 **Each release:**
 
-1. `packaging/aur/update.sh 0.1.0`. It downloads the two Linux musl archives and `SHA256SUMS`
-   from the release, runs `gh attestation verify` on each archive (signer workflow
-   `release.yml`, source ref the tag) and checks it against `SHA256SUMS`. For the source tarball,
-   which has no attestation, it checks that the tag is signed by a key in
-   `.github/allowed_signers` on `master` and that the tarball's contents equal the tagged tree.
-   Then it writes `pkgver`, `pkgrel=1` and the checksums into both PKGBUILDs, removes the TODO
-   lines, and regenerates `.SRCINFO` with `makepkg --printsrcinfo` (in an `archlinux` container
-   if makepkg is not installed). It prints the source tarball's sha256 for the conda-forge recipe.
+1. `AUR_MAINTAINER='Name <email>' packaging/aur/update.sh 0.1.0`. VERSION must be `X.Y.Z`:
+   prereleases are refused (pacman's `pkgver` cannot contain `-`, and the AUR packages follow
+   stable releases). The script:
+   - downloads the two Linux musl archives and `SHA256SUMS` from the release, runs
+     `gh attestation verify` on each archive (signer workflow `release.yml`, source ref the tag,
+     `--deny-self-hosted-runners`) and checks it against `SHA256SUMS`;
+   - for the source tarball, which has no attestation, requires the tag to carry an SSH
+     signature by a key in `.github/allowed_signers` on `master`, and the tarball's contents to
+     equal the tagged tree;
+   - writes `pkgver`, `pkgrel=1`, the checksums and the Maintainer line into copies of both
+     PKGBUILDs, removes the TODO comments, and regenerates `.SRCINFO` with
+     `makepkg --printsrcinfo` (in an `archlinux` container if makepkg is not installed; with
+     neither makepkg nor a running docker it stops before downloading anything);
+   - refuses to finish while any TODO or placeholder checksum remains, and only then moves the
+     new files into `packaging/aur/`. Any failure leaves them untouched.
+
+   It prints the source tarball's sha256 for the conda-forge recipe.
 2. Test both packages on Arch, ideally in a clean chroot (`pkgctl build` from `devtools`, or
    `makepkg -sri`), and run `namcap PKGBUILD` and `namcap *.pkg.tar.zst`. Two warnings are
    expected for `graphviz-pure-bin`: "Reference to x86_64 should be changed to $CARCH" (the
    per-architecture `source_x86_64` must name its own archive) and "ELF file is unstripped"
    (`!strip`, below).
-3. Publish each package. Its AUR repository holds only `PKGBUILD` and `.SRCINFO`:
+3. Publish each package. Its AUR repository holds the `PKGBUILD`, the `.SRCINFO`, and the licence
+   of the package sources themselves, which the
+   [AUR submission guidelines](https://wiki.archlinux.org/title/AUR_submission_guidelines) ask
+   for: Arch's 0BSD `LICENSE` (also as `LICENSES/0BSD.txt`) and a `REUSE.toml`
+   ([package sources licenses](https://wiki.archlinux.org/title/Arch_package_guidelines#Package_sources_licenses)).
+   They are in each package directory here:
 
    ```sh
    git clone ssh://aur@aur.archlinux.org/graphviz-pure-bin.git   # empty the first time
-   cp packaging/aur/graphviz-pure-bin/{PKGBUILD,.SRCINFO} graphviz-pure-bin/
-   cd graphviz-pure-bin && git add PKGBUILD .SRCINFO && git commit -m "Update to 0.1.0" && git push
+   cp -R packaging/aur/graphviz-pure-bin/{PKGBUILD,.SRCINFO,LICENSE,LICENSES,REUSE.toml} graphviz-pure-bin/
+   cd graphviz-pure-bin
+   pkgctl license check   # optional, from devtools: checks the REUSE setup
+   git add PKGBUILD .SRCINFO LICENSE LICENSES REUSE.toml
+   git commit -m "Update to 0.1.0" && git push
    ```
 
    and the same for `graphviz-pure`. The first push creates the package.
@@ -82,9 +99,11 @@ Host aur.archlinux.org
 
 `graphviz-pure-bin` keeps the binary unstripped (`!strip`), so the installed file is the attested
 release binary byte for byte. Both packages provide `graphviz-pure` and conflict with each
-other. `license` is `EPL-2.0`, `OFL-1.1` (the Tinos, Arimo and Cousine fonts compiled into the
-binary for PNG and JPEG text) and `MIT` (the CORE-MATH `pow` port), the same as the conda-forge
-and nixpkgs recipes; `LICENSE` and `NOTICE` are installed under `/usr/share/licenses/`.
+other. `license` is the SPDX expression `EPL-2.0 AND OFL-1.1 AND MIT`: the port, the Tinos,
+Arimo and Cousine fonts compiled into the binary for PNG and JPEG text, and the CORE-MATH `pow`
+port, the same as the conda-forge and nixpkgs recipes. `LICENSE`, `NOTICE`, `MIT-CORE-MATH.txt`
+and the three `OFL-*.txt` files are installed under `/usr/share/licenses/$pkgname/`. The release
+archives carry the last four in `LICENSES/`; the source package takes them from the source tree.
 
 ## nixpkgs
 
@@ -113,8 +132,9 @@ for `cloudbring` to `maintainers/maintainer-list.nix` in a separate first commit
 The expression follows nixpkgs' current style: `finalAttrs`, `tag =` in `fetchFromGitHub`,
 `cargoHash` (vendoring with `fetchCargoVendor` is the only mode now; `useFetchCargoVendor` has
 been removed), `__structuredAttrs`, and `versionCheckHook` with `-V` as the install check.
-`checkPhase` stays on but runs only `--package graphviz-pure-cli` (see above). `meta.license`
-lists `epl20`, `ofl` and `mit`, as in the other recipes.
+`checkPhase` stays on but runs only `--package graphviz-pure-cli` (see above). `meta.license` is
+`with lib.licenses; AND [ epl20 ofl mit ]`, nixpkgs' documented form for licences whose terms
+all apply. `meta.platforms` is left to `buildRustPackage`, which defaults it to Rust's platforms.
 
 ## conda-forge
 
@@ -138,4 +158,5 @@ statically linked crates, which conda-forge requires), stripped symbols and fat 
    arrive as pull requests from the autotick bot.
 
 `license` is `EPL-2.0 AND OFL-1.1 AND MIT`: the port, the fonts compiled into the binary, and the
-CORE-MATH `pow` port (see `NOTICE`); crate dependencies are listed in `THIRDPARTY.yml`.
+CORE-MATH `pow` port (see `NOTICE`), whose texts (`LICENSES/MIT-CORE-MATH.txt` and the fonts'
+`OFL-*.txt`) are in `license_file`; crate dependencies are listed in `THIRDPARTY.yml`.

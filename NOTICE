@@ -20,7 +20,8 @@ Third-party code
 crates/graphviz-pure-core/src/math/portable/pow/
     A Rust port of CORE-MATH's binary64 pow (Tom Hubrecht, Paul Zimmermann;
     Copyright (c) 2022-2025 CERN and Inria), MIT licence. The licence text is
-    kept in crates/graphviz-pure-core/src/math/portable/pow/mod.rs.
+    in LICENSES/MIT-CORE-MATH.txt (and in the release archives' LICENSES/
+    directory).
 
 The libm crate (dependency)
     rust-lang/compiler-builtins' ports of musl/fdlibm and CORE-MATH, MIT
@@ -34,8 +35,9 @@ source file.
 crates/graphviz-pure-raster/fonts/
     Tinos, Arimo and Cousine (https://github.com/googlefonts), Copyright 2026
     The Tinos, Arimo and Cousine Project Authors, under the SIL Open Font
-    License 1.1 (fonts/OFL-*.txt). They are compiled into the graphviz-pure
-    binary to draw text in PNG and JPEG output.
+    License 1.1 (fonts/OFL-*.txt, also in the release archives' LICENSES/
+    directory). They are compiled into the graphviz-pure binary to draw text in
+    PNG and JPEG output.
 
 JPEG output
     This software is based in part on the work of the Independent JPEG Group

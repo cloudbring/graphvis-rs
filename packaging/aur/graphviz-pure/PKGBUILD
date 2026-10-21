@@ -4,7 +4,8 @@
 # https://wiki.archlinux.org/title/Rust_package_guidelines. The GitHub tarball is used rather
 # than the crates.io crate because it carries the workspace Cargo.lock, the release profile in
 # .cargo/config.toml (thin LTO, one codegen unit) and the test inputs the CLI tests read.
-# The checksum is a placeholder: run `packaging/aur/update.sh VERSION` after the release.
+# TODO(release): the checksum below is a placeholder. Run `packaging/aur/update.sh VERSION`
+# after the release; it verifies the tag and the tarball, and removes these TODO lines.
 
 pkgname=graphviz-pure
 pkgver=0.1.0
@@ -13,8 +14,8 @@ pkgdesc='Byte-exact Rust port of Graphviz 16.1.0, a dot-compatible command line 
 arch=('x86_64' 'aarch64')
 url='https://graphviz-pure.github.io/'
 # EPL-2.0: the port. OFL-1.1: the Tinos, Arimo and Cousine fonts compiled into the binary.
-# MIT: the CORE-MATH pow port (see NOTICE).
-license=('EPL-2.0' 'OFL-1.1' 'MIT')
+# MIT: the CORE-MATH pow port.
+license=('EPL-2.0 AND OFL-1.1 AND MIT')
 depends=('glibc' 'libgcc')
 makedepends=('cargo')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/graphviz-pure/$pkgname/archive/refs/tags/v$pkgver.tar.gz")
@@ -49,6 +50,7 @@ check() {
 package() {
   cd "$pkgname-$pkgver"
   install -Dm755 target/release/graphviz-pure "$pkgdir/usr/bin/graphviz-pure"
-  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE NOTICE
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE NOTICE \
+    LICENSES/MIT-CORE-MATH.txt crates/graphviz-pure-raster/fonts/OFL-*.txt
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }

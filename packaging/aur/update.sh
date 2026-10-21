@@ -2,24 +2,37 @@
 # Fills in pkgver and the checksums of both AUR packages for a published release, after
 # verifying what it downloads, and regenerates their .SRCINFO files.
 #
-# Usage: packaging/aur/update.sh VERSION      (e.g. 0.1.0)
+# Usage: [AUR_MAINTAINER='Name <email>'] packaging/aur/update.sh VERSION    (e.g. 0.1.0)
 #
+# - VERSION must be a plain release, X.Y.Z. Prereleases (0.2.0-rc.1) are refused: pacman's
+#   pkgver cannot contain "-", and the AUR packages are meant to follow stable releases only.
 # - The two Linux musl archives (graphviz-pure-bin) must have a build-provenance attestation
-#   from this repository's release workflow for the tag, and match the release's SHA256SUMS.
+#   from this repository's release workflow, for the tag, built on a GitHub-hosted runner, and
+#   match the release's SHA256SUMS.
 # - The GitHub source tarball (graphviz-pure) is not a release asset and has no attestation, so
-#   the tag must be signed by a key in .github/allowed_signers (read from master, as the release
-#   workflow does) and the tarball's contents must equal the tagged tree.
+#   the tag must carry an SSH signature by a key in .github/allowed_signers (read from master,
+#   as the release workflow does) and the tarball's contents must equal the tagged tree.
+# - AUR_MAINTAINER, if set, replaces the "# Maintainer:" line. The script refuses to finish
+#   while any TODO or placeholder checksum remains, including the maintainer's email.
 #
-# Needs gh (logged in), git, curl, tar and sha256sum or shasum. .SRCINFO is written with
-# `makepkg --printsrcinfo`, run in an archlinux container when makepkg is not installed and
-# docker is; otherwise the script says what to run.
+# Nothing is written until every check has passed: the new PKGBUILDs and .SRCINFO files are
+# built in a temporary directory and moved into place at the end.
+#
+# Needs gh (logged in), git, curl, tar, and sha256sum or shasum. .SRCINFO is written with
+# `makepkg --printsrcinfo`, or in an archlinux container when makepkg is missing; with neither
+# makepkg nor a running docker, the script fails.
 set -euo pipefail
 
 version=${1:?usage: $0 VERSION}
 version=${version#v}
+if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: VERSION must be X.Y.Z (got '$version'); prereleases are not packaged for the AUR" >&2
+  exit 1
+fi
 tag=v$version
 repo=graphviz-pure/graphviz-pure
 here=$(cd "$(dirname "$0")" && pwd)
+packages=(graphviz-pure-bin graphviz-pure)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
@@ -33,6 +46,16 @@ subst() {
   sed "$@" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
 }
 
+# Decide how to write .SRCINFO before downloading anything.
+if command -v makepkg >/dev/null; then
+  srcinfo=makepkg
+elif command -v docker >/dev/null && docker info >/dev/null 2>&1; then
+  srcinfo=docker
+else
+  echo "error: writing .SRCINFO needs makepkg, or docker with a running daemon" >&2
+  exit 1
+fi
+
 echo "== release assets of $tag" >&2
 mkdir "$work/dist"
 targets=(x86_64-unknown-linux-musl aarch64-unknown-linux-musl)
@@ -42,7 +65,8 @@ gh release download "$tag" --repo "$repo" --dir "$work/dist" "${patterns[@]}"
 for t in "${targets[@]}"; do
   f=graphviz-pure-$version-$t.tar.gz
   gh attestation verify "$work/dist/$f" --repo "$repo" \
-    --signer-workflow "$repo/.github/workflows/release.yml" --source-ref "refs/tags/$tag" >&2
+    --signer-workflow "$repo/.github/workflows/release.yml" --source-ref "refs/tags/$tag" \
+    --deny-self-hosted-runners >&2
   sum=$(sha256 "$work/dist/$f")
   listed=$(awk -v f="$f" '$2 == f || $2 == "*" f {print $1}' "$work/dist/SHA256SUMS")
   [ "$sum" = "$listed" ] || { echo "error: $f does not match SHA256SUMS" >&2; exit 1; }
@@ -56,6 +80,9 @@ curl -fsSL -o "$work/allowed_signers" \
   "https://raw.githubusercontent.com/$repo/master/.github/allowed_signers"
 [ "$(git -C "$work/repo" cat-file -t "refs/tags/$tag")" = tag ] \
   || { echo "error: $tag is not an annotated tag" >&2; exit 1; }
+# Only SSH signatures: allowed_signers lists SSH keys, and the release workflow checks the same.
+git -C "$work/repo" cat-file tag "refs/tags/$tag" | grep -q -- '-----BEGIN SSH SIGNATURE-----' \
+  || { echo "error: $tag has no SSH signature" >&2; exit 1; }
 git -C "$work/repo" -c gpg.format=ssh -c gpg.ssh.allowedSignersFile="$work/allowed_signers" \
   verify-tag "$tag" >&2
 mkdir "$work/a" "$work/b"
@@ -64,31 +91,48 @@ git -C "$work/repo" archive --prefix="graphviz-pure-$version/" "$tag" | tar -x -
 diff -r "$work/a" "$work/b" >&2 || { echo "error: the source tarball differs from $tag" >&2; exit 1; }
 src_sum=$(sha256 "$work/src.tar.gz")
 
-echo "== PKGBUILDs" >&2
-for p in graphviz-pure-bin graphviz-pure; do
-  subst "$here/$p/PKGBUILD" -e "s/^pkgver=.*/pkgver=$version/" -e "s/^pkgrel=.*/pkgrel=1/"
+echo "== PKGBUILDs (in $work/out)" >&2
+mkdir "$work/out"
+for p in "${packages[@]}"; do
+  mkdir "$work/out/$p"
+  cp "$here/$p/PKGBUILD" "$work/out/$p/PKGBUILD"
+  # The placeholder header block runs from its TODO line to "removes these TODO lines."
+  subst "$work/out/$p/PKGBUILD" \
+    -e "s/^pkgver=.*/pkgver=$version/" -e "s/^pkgrel=.*/pkgrel=1/" \
+    -e '/^# TODO(release): the checksum/,/removes these TODO lines\.$/d' \
+    -e '/^# TODO(release): placeholder/d'
+  if [ -n "${AUR_MAINTAINER:-}" ]; then
+    m=$(printf '%s' "$AUR_MAINTAINER" | sed 's/[&|\\]/\\&/g')
+    subst "$work/out/$p/PKGBUILD" -e "s|^# Maintainer: .*|# Maintainer: $m|"
+  fi
 done
-subst "$here/graphviz-pure-bin/PKGBUILD" \
+subst "$work/out/graphviz-pure-bin/PKGBUILD" \
   -e "s/^sha256sums_x86_64=.*/sha256sums_x86_64=('$sum_x86_64')/" \
-  -e "s/^sha256sums_aarch64=.*/sha256sums_aarch64=('$sum_aarch64')/" \
-  -e "/^# TODO(release): placeholders/d"
-subst "$here/graphviz-pure/PKGBUILD" \
-  -e "s/^sha256sums=.*/sha256sums=('$src_sum')/" \
-  -e "/^# TODO(release): placeholder/d"
+  -e "s/^sha256sums_aarch64=.*/sha256sums_aarch64=('$sum_aarch64')/"
+subst "$work/out/graphviz-pure/PKGBUILD" -e "s/^sha256sums=.*/sha256sums=('$src_sum')/"
 
-echo "== .SRCINFO" >&2
-for p in graphviz-pure-bin graphviz-pure; do
-  if command -v makepkg >/dev/null; then
-    (cd "$here/$p" && makepkg --printsrcinfo > .SRCINFO)
-  elif command -v docker >/dev/null; then
+echo "== .SRCINFO ($srcinfo)" >&2
+for p in "${packages[@]}"; do
+  if [ "$srcinfo" = makepkg ]; then
+    (cd "$work/out/$p" && makepkg --printsrcinfo > .SRCINFO)
+  else
     # makepkg refuses to run as root, even for --printsrcinfo.
     docker run --rm -i --platform linux/amd64 archlinux:latest bash -c \
       'useradd -m b && mkdir /p && cat > /p/PKGBUILD && chown -R b /p && cd /p && su b -c "makepkg --printsrcinfo"' \
-      < "$here/$p/PKGBUILD" > "$here/$p/.SRCINFO.tmp"
-    mv "$here/$p/.SRCINFO.tmp" "$here/$p/.SRCINFO"
-  else
-    echo "warning: no makepkg or docker; run 'makepkg --printsrcinfo > .SRCINFO' in $here/$p" >&2
+      < "$work/out/$p/PKGBUILD" > "$work/out/$p/.SRCINFO"
   fi
+  [ -s "$work/out/$p/.SRCINFO" ] || { echo "error: empty .SRCINFO for $p" >&2; exit 1; }
+done
+
+# Refuse to finish while anything is still a placeholder.
+if grep -n -E 'TODO|0{64}' "$work"/out/*/PKGBUILD "$work"/out/*/.SRCINFO >&2; then
+  echo "error: placeholders remain (set AUR_MAINTAINER='Name <email>' for the Maintainer line)" >&2
+  exit 1
+fi
+
+for p in "${packages[@]}"; do
+  mv "$work/out/$p/PKGBUILD" "$here/$p/PKGBUILD"
+  mv "$work/out/$p/.SRCINFO" "$here/$p/.SRCINFO"
 done
 
 cat >&2 <<EOF

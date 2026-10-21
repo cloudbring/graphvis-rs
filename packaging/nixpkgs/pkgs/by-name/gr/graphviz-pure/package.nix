@@ -48,14 +48,15 @@ rustPlatform.buildRustPackage (finalAttrs: {
     '';
     homepage = "https://graphviz-pure.github.io/";
     changelog = "https://github.com/graphviz-pure/graphviz-pure/blob/v${finalAttrs.version}/CHANGELOG.md";
-    license = with lib.licenses; [
-      epl20 # the port
-      ofl # the Tinos, Arimo and Cousine fonts compiled into the binary
-      mit # the CORE-MATH pow port (see NOTICE)
-    ];
+    license =
+      with lib.licenses;
+      AND [
+        epl20 # the port
+        ofl # the Tinos, Arimo and Cousine fonts compiled into the binary
+        mit # the CORE-MATH pow port (see NOTICE)
+      ];
     # TODO(submission): add the maintainer entry (maintainers/maintainer-list.nix) in the same PR.
     maintainers = with lib.maintainers; [ ];
     mainProgram = "graphviz-pure";
-    platforms = lib.platforms.all;
   };
 })
