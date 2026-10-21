@@ -8,10 +8,11 @@ All notable changes are listed here. The format follows
 
 ### Fixed
 
-- Packing components no longer hangs when one is enormous (`height="1e30"`, `quantum="1e40"`),
-  where C Graphviz never finishes either. The packer now warns
-  `components too large to pack; packing skipped` and leaves the components where the layout put
-  them (#174).
+- Packing components no longer hangs when one is enormous (`height="1e30"`, `quantum="1e40"`)
+  or pinned near 1e30, where C Graphviz never finishes either. When the polyomino grid would
+  need more than 2^24 cells, the packer warns `components too large to pack; packing skipped`
+  and leaves the components where the layout put them. Inputs that need fewer cells pack as before
+  (#174).
 
 ## [0.1.0] - 2026-10-21
 

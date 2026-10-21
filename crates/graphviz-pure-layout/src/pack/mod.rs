@@ -420,15 +420,6 @@ fn compute_step(bbs: &[BoundingBox], margin: u32) -> i32 {
     let d = b.mul_add(b, -(4.0 * a * c));
     let r = d.sqrt();
     let l1 = (-b + r) / (2.0 * a);
-    // Not in C. With a huge component (height="1e30", quantum="1e40") `l1` is far above
-    // INT_MAX, and C's `(int)l1` saturates on the reference platform: the step is then much
-    // too small, and genBox/genPoly fill ~1e22 cells per side, so C hangs (issue #174).
-    // Return 0 instead, which takes putGraphs' and polyRects' existing `stepSize <= 0`
-    // exit and leaves the components unpacked. NaN (a degenerate box) still truncates to 0.
-    if l1 >= 2_147_483_648.0 {
-        graphviz_pure_core::diag::agwarningf("components too large to pack; packing skipped\n");
-        return 0;
-    }
     let root = l1 as i32;
     if root == 0 { 1 } else { root }
 }
@@ -441,12 +432,51 @@ struct GInfo {
 
 type PointSet = HashSet<(i64, i64)>;
 
+/// Not in C: the most cells genBox/genPoly may fill when computeStep saturated (issue #174).
+/// C finishes about this many in under a second.
+const MAX_CELLS: f64 = (1u64 << 24) as f64;
+
+/// Not in C. With a huge component (height="1e30", quantum="1e40") `l1` in computeStep
+/// (`lib/pack/pack.c:86`) is far above INT_MAX, `(int)l1` saturates on the reference
+/// platform, and the step is then far too small: genBox/genPoly fill ~1e22 cells per side
+/// and C never finishes. An unsaturated step gives about `C * ng` cells by construction, so
+/// only a saturated step gets a budget; when it runs out, packing fails like C's
+/// `stepSize <= 0` exit and the components stay unpacked.
+struct Budget(Option<f64>);
+
+impl Budget {
+    fn for_step(step: i32) -> Self {
+        Self((step == i32::MAX).then_some(MAX_CELLS))
+    }
+
+    /// Spends `n` cells; false once the budget is exceeded (or `n` is NaN).
+    fn take(&mut self, n: f64) -> bool {
+        match &mut self.0 {
+            None => true,
+            Some(left) => {
+                *left -= n;
+                *left >= 0.0
+            }
+        }
+    }
+}
+
+/// Warns that packing gave up on a [`Budget`], once per run.
+fn warn_too_large() {
+    if graphviz_pure_core::diag::emit_once("\0pack\0too large") {
+        graphviz_pure_core::diag::agwarningf("components too large to pack; packing skipped\n");
+    }
+}
+
 fn sgn(x: i64) -> i64 {
     if x > 0 { 1 } else { -1 }
 }
 
-/// `fillLine(p, q, ps)`: Bresenham over cells.
-fn fill_line(p: Point, q: Point, ps: &mut PointSet) {
+/// `fillLine(p, q, ps)`: Bresenham over cells; false if `budget` runs out first.
+fn fill_line(p: Point, q: Point, ps: &mut PointSet, budget: &mut Budget) -> bool {
+    if !budget.take((q.x - p.x).abs().max((q.y - p.y).abs()) + 1.0) {
+        return false;
+    }
     let (x1, y1, x2, y2) = (c_round(p.x), c_round(p.y), c_round(q.x), c_round(q.y));
     let dx = x2 - x1;
     let ax = dx.abs() << 1;
@@ -460,7 +490,7 @@ fn fill_line(p: Point, q: Point, ps: &mut PointSet) {
         loop {
             ps.insert((x, y));
             if x == x2 {
-                return;
+                return true;
             }
             if d >= 0 {
                 y += sy;
@@ -474,7 +504,7 @@ fn fill_line(p: Point, q: Point, ps: &mut PointSet) {
         loop {
             ps.insert((x, y));
             if y == y2 {
-                return;
+                return true;
             }
             if d >= 0 {
                 x += sx;
@@ -496,13 +526,13 @@ fn fill_edge<P: PackGraph + ?Sized>(
     dy: f64,
     ssize: i32,
     do_s: bool,
-) {
+    budget: &mut Budget,
+) -> bool {
     let mv = |q: Point| Point::new(q.x + dx, q.y + dy);
     let spl = g.pk_spl(e);
     if !do_s || spl.is_none() {
         let hpt = cell(mv(g.pk_coord(g.pk_head(e))), ssize);
-        fill_line(p, hpt, ps);
-        return;
+        return fill_line(p, hpt, ps, budget);
     }
     for bz in spl.unwrap() {
         // Not in C. Clipping can leave a bezier with no points (two overlapping pinned nodes
@@ -520,35 +550,54 @@ fn fill_edge<P: PackGraph + ?Sized>(
         };
         pt = cell(mv(pt), ssize);
         hpt = cell(mv(hpt), ssize);
-        fill_line(pt, hpt, ps);
+        if !fill_line(pt, hpt, ps, budget) {
+            return false;
+        }
         while k < bz.list.len() {
             pt = hpt;
             hpt = cell(mv(bz.list[k]), ssize);
-            fill_line(pt, hpt, ps);
+            if !fill_line(pt, hpt, ps, budget) {
+                return false;
+            }
             k += 1;
         }
         if bz.eflag != 0 {
             pt = hpt;
             hpt = cell(mv(bz.ep), ssize);
-            fill_line(pt, hpt, ps);
+            if !fill_line(pt, hpt, ps, budget) {
+                return false;
+            }
         }
     }
+    true
 }
 
-fn add_rect(ps: &mut PointSet, ll: Point, ur: Point) {
-    let mut x = ll.x;
-    while x <= ur.x {
-        let mut y = ll.y;
-        while y <= ur.y {
-            ps.insert((x as i64, y as i64));
-            y += 1.0;
-        }
-        x += 1.0;
+/// Adds the cells of `[ll, ur]`; false if `budget` runs out first.
+fn add_rect(ps: &mut PointSet, ll: Point, ur: Point, budget: &mut Budget) -> bool {
+    if ll.x <= ur.x && ll.y <= ur.y && !budget.take((ur.x - ll.x + 1.0) * (ur.y - ll.y + 1.0)) {
+        return false;
     }
+    // C counts with ints. Count the cells rather than step a double: above 2^53 (a node
+    // pinned at pos="1e30,1e30!") `x += 1.0` no longer advances, and C hangs there too.
+    let (nx, ny) = ((ur.x - ll.x + 1.0) as i64, (ur.y - ll.y + 1.0) as i64);
+    for i in 0..nx {
+        let x = ll.x + i as f64;
+        for j in 0..ny {
+            ps.insert((x as i64, (ll.y + j as f64) as i64));
+        }
+    }
+    true
 }
 
 /// `genBox(bb0, info, ssize, margin, center)`.
-fn gen_box(bb0: &BoundingBox, ssize: i32, margin: u32, center: Point, index: usize) -> GInfo {
+fn gen_box(
+    bb0: &BoundingBox,
+    ssize: i32,
+    margin: u32,
+    center: Point,
+    index: usize,
+    budget: &mut Budget,
+) -> Option<GInfo> {
     let m = f64::from(margin);
     let bb = BoundingBox::new(
         bb0.ll.x.round(),
@@ -565,16 +614,18 @@ fn gen_box(bb0: &BoundingBox, ssize: i32, margin: u32, center: Point, index: usi
         ),
         ssize,
     ));
-    add_rect(&mut ps, ll, ur);
+    if !add_rect(&mut ps, ll, ur, budget) {
+        return None;
+    }
     let w = grid(bb0.ur.x - bb0.ll.x + 2.0 * m, ssize);
     let h = grid(bb0.ur.y - bb0.ll.y + 2.0 * m, ssize);
-    GInfo {
+    Some(GInfo {
         // A degenerate box (an empty component's ±DBL_MAX) saturates GRID's
         // double-to-int conversion; C's int sum then wraps.
         perim: w.wrapping_add(h),
         cells: ps.into_iter().collect(),
         index,
-    }
+    })
 }
 
 /// `genPoly(root, g, info, ssize, pinfo, center)` for component `gi`.
@@ -585,7 +636,8 @@ fn gen_poly<P: PackGraph + ?Sized>(
     pinfo: &PackInfo,
     center: Point,
     index: usize,
-) -> GInfo {
+    budget: &mut Budget,
+) -> Option<GInfo> {
     let mut ps = PointSet::new();
     let margin = f64::from(pinfo.margin);
     let gbb = g.pk_bb(gi);
@@ -612,7 +664,9 @@ fn gen_poly<P: PackGraph + ?Sized>(
                 bb.ur = Point::new(bb.ur.x + dx + margin, bb.ur.y + dy + margin);
                 let ll = round_pt(cell(bb.ll, ssize));
                 let ur = round_pt(cell(bb.ur, ssize));
-                add_rect(&mut ps, ll, ur);
+                if !add_rect(&mut ps, ll, ur, budget) {
+                    return None;
+                }
                 for n in g.pk_cluster_nodes(c) {
                     clust_of.insert(n, PkClust::Clust(c));
                 }
@@ -627,14 +681,18 @@ fn gen_poly<P: PackGraph + ?Sized>(
                 let s2 = Point::new((margin + s.x / 2.0).round(), (margin + s.y / 2.0).round());
                 let ll = round_pt(cell(psub(pt, s2), ssize));
                 let ur = round_pt(cell(add(pt, s2), ssize));
-                add_rect(&mut ps, ll, ur);
+                if !add_rect(&mut ps, ll, ur, budget) {
+                    return None;
+                }
             }
             pt = round_pt(cell(pt, ssize));
             for e in g.pk_root_outs(n) {
                 if in_clust.is_some() && in_clust == clust_of.get(&g.pk_head(e)).copied() {
                     continue;
                 }
-                fill_edge(g, e, pt, &mut ps, dx, dy, ssize, pinfo.do_splines);
+                if !fill_edge(g, e, pt, &mut ps, dx, dy, ssize, pinfo.do_splines, budget) {
+                    return None;
+                }
             }
         }
     } else {
@@ -645,20 +703,24 @@ fn gen_poly<P: PackGraph + ?Sized>(
             let s2 = Point::new((margin + s.x / 2.0).round(), (margin + s.y / 2.0).round());
             let ll = round_pt(cell(psub(pt, s2), ssize));
             let ur = round_pt(cell(add(pt, s2), ssize));
-            add_rect(&mut ps, ll, ur);
+            if !add_rect(&mut ps, ll, ur, budget) {
+                return None;
+            }
             pt = round_pt(cell(pt, ssize));
             for e in g.pk_root_outs(n) {
-                fill_edge(g, e, pt, &mut ps, dx, dy, ssize, pinfo.do_splines);
+                if !fill_edge(g, e, pt, &mut ps, dx, dy, ssize, pinfo.do_splines, budget) {
+                    return None;
+                }
             }
         }
     }
     let w = grid(gbb.ur.x - gbb.ll.x + 2.0 * margin, ssize);
     let h = grid(gbb.ur.y - gbb.ll.y + 2.0 * margin, ssize);
-    GInfo {
+    Some(GInfo {
         perim: w.wrapping_add(h),
         cells: ps.into_iter().collect(),
         index,
-    }
+    })
 }
 
 /// `fits(x, y, info, ps, place, step, bbs)`.
@@ -673,7 +735,9 @@ fn fits(
     if info
         .cells
         .iter()
-        .any(|&(cx, cy)| ps.contains(&(cx + x, cy + y)))
+        // Cells of a node pinned near 1e30 saturate to i64::MAX; wrap as C's int sum does
+        // (and as the release build already did) rather than panic.
+        .any(|&(cx, cy)| ps.contains(&(cx.wrapping_add(x), cy.wrapping_add(y))))
     {
         return None;
     }
@@ -683,7 +747,7 @@ fn fits(
         (i64::from(step) * y) as f64 - ll.y,
     );
     for &(cx, cy) in &info.cells {
-        ps.insert((cx + x, cy + y));
+        ps.insert((cx.wrapping_add(x), cy.wrapping_add(y)));
     }
     Some(place)
 }
@@ -843,15 +907,20 @@ fn poly_graphs<P: PackGraph + ?Sized>(g: &mut P, pinfo: &PackInfo) -> Option<Vec
             ((fixed_bb.ll.y + fixed_bb.ur.y) / 2.0).round(),
         );
     }
-    let infos: Vec<GInfo> = (0..ng)
+    let mut budget = Budget::for_step(step);
+    let Some(infos) = (0..ng)
         .map(|i| {
             if pinfo.mode == PackMode::Graph {
-                gen_box(&bbs[i], step, pinfo.margin, center, i)
+                gen_box(&bbs[i], step, pinfo.margin, center, i, &mut budget)
             } else {
-                gen_poly(g, i, step, pinfo, center, i)
+                gen_poly(g, i, step, pinfo, center, i, &mut budget)
             }
         })
-        .collect();
+        .collect::<Option<Vec<GInfo>>>()
+    else {
+        warn_too_large();
+        return None;
+    };
     let mut sinfo: Vec<usize> = (0..ng).collect();
     qsort_by(&mut sinfo, |a, b| cmpf(a, b, &infos));
     let mut ps = PointSet::new();
@@ -1094,11 +1163,16 @@ fn poly_rects(bbs: &[BoundingBox], pinfo: &PackInfo) -> Option<Vec<Point>> {
     if step <= 0 {
         return None;
     }
-    let infos: Vec<GInfo> = bbs
+    let mut budget = Budget::for_step(step);
+    let Some(infos) = bbs
         .iter()
         .enumerate()
-        .map(|(i, b)| gen_box(b, step, pinfo.margin, Point::default(), i))
-        .collect();
+        .map(|(i, b)| gen_box(b, step, pinfo.margin, Point::default(), i, &mut budget))
+        .collect::<Option<Vec<GInfo>>>()
+    else {
+        warn_too_large();
+        return None;
+    };
     let mut sinfo: Vec<usize> = (0..bbs.len()).collect();
     qsort_by(&mut sinfo, |a, b| cmpf(a, b, &infos));
     let mut ps = PointSet::new();
@@ -1129,15 +1203,18 @@ pub fn pack_rects(bbs: &mut [BoundingBox], pinfo: &PackInfo) -> bool {
 mod tests {
     use super::*;
 
-    /// Issue #174: a step that does not fit in an int is refused, not saturated to
-    /// INT_MAX; ordinary boxes keep C's step.
+    /// Issue #174: only a saturated step gets a budget, and a huge box exhausts it.
     #[test]
-    fn compute_step_refuses_a_step_above_int_max() {
+    fn saturated_step_box_runs_out_of_budget() {
         let small = BoundingBox::new(0.0, 0.0, 54.0, 36.0);
         assert_eq!(compute_step(&[small, small], 8), 6);
+        assert!(Budget::for_step(6).0.is_none());
         let huge = BoundingBox::new(0.0, 0.0, 54.0, 7.2e31);
-        assert_eq!(compute_step(&[huge, small], 8), 0);
-        let inf = BoundingBox::new(0.0, 0.0, 54.0, f64::INFINITY);
-        assert_eq!(compute_step(&[inf, small], 8), 0);
+        let step = compute_step(&[huge, small], 8);
+        assert_eq!(step, i32::MAX);
+        let mut budget = Budget::for_step(step);
+        assert!(gen_box(&huge, step, 8, Point::default(), 0, &mut budget).is_none());
+        let mut budget = Budget::for_step(step);
+        assert!(gen_box(&small, step, 8, Point::default(), 1, &mut budget).is_some());
     }
 }

@@ -830,7 +830,7 @@ impl Fdp<'_, '_> {
         if !cc.is_empty() {
             bb = bbs[0];
             if cc.len() > 1 {
-                // putGraphs returns NULL when compute_step refuses a step (issue #174), and
+                // putGraphs returns NULL when packing runs out of cells (issue #174), and
                 // C's `*pp++` then dereferences NULL. Use zero offsets, as the translation
                 // loop below does for a NULL `pts`.
                 let off = |i: usize| pts.map_or_else(Point::default, |pts| pts[i]);

@@ -355,6 +355,12 @@ Robustness (debug overflow and panics)
   `003-pack-filledge-zero-point-spline-panic`; with no C output to compare, its repro is kept
   in `crates/graphviz-pure-cli/tests/cli.rs` (`packed_edges_with_empty_splines_do_not_panic`).
 * Unknown shapes are boxes for compass ports (`IS_BOX`).
+* A component taller or wider than INT_MAX polyomino steps (`height="1e30"`,
+  `quantum="1e40"`) saturates `computeStep`'s step, and C never finishes filling the cells.
+  A saturated step gets a budget of 2^24 cells; when it runs out, packing warns
+  `components too large to pack; packing skipped` and the components stay unpacked. Nodes
+  pinned near 1e30 (C hangs too) pack. Issue #174; tested by
+  `oversized_component_does_not_hang_the_packer` in `crates/graphviz-pure-cli/tests/cli.rs`.
 
 Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
 * Unknown ports and compass points warn from `poly_port`/`record_port`, once per `chkPort`

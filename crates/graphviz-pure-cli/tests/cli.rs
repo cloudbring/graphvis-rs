@@ -302,20 +302,28 @@ fn cylinder_port_endpoint_does_not_hang_the_router() {
 }
 
 /// Issue #174 (found by cargo-fuzz): a component taller than INT_MAX polyomino steps.
-/// C's `computeStep` (`lib/pack/pack.c:86`) truncates a step of ~1e29 to INT_MAX, and
+/// C's `computeStep` (`lib/pack/pack.c:86`) saturates a step of ~1e29 to INT_MAX, and
 /// `genPoly`/`genBox` then fill ~1e22 cells per side: C Graphviz 16.1.0 never finishes on
-/// these inputs. The port refuses the step with a warning and leaves the components unpacked.
-/// Each run gets 30 s (it takes well under a second) so a regression fails instead of
-/// hanging CI.
+/// these inputs. The port gives a saturated step a cell budget, warns when it runs out and
+/// leaves the components unpacked. A node pinned near 1e30 (C hangs too) packs. Each run gets
+/// 30 s (it takes well under a second) so a regression fails instead of hanging CI.
 #[test]
 fn oversized_component_does_not_hang_the_packer() {
+    let warning = "Warning: components too large to pack; packing skipped\n";
     let cases = [
-        "graph { layout=fdp; a [height=\"1e30\"]; b }",
-        "graph { layout=fdp; quantum=\"1e40\"; a -- b; c -- d }",
-        "graph { layout=neato; pack=false; a [height=\"1e30\"]; b }",
-        "graph { layout=fdp; a [height=\"1e300\"]; b }",
+        ("graph { layout=fdp; a [height=\"1e30\"]; b }", warning),
+        (
+            "graph { layout=fdp; quantum=\"1e40\"; a -- b; c -- d }",
+            warning,
+        ),
+        (
+            "graph { layout=neato; pack=false; a [height=\"1e30\"]; b }",
+            warning,
+        ),
+        ("graph { layout=fdp; a [height=\"1e300\"]; b }", warning),
+        ("graph { layout=fdp; a [pos=\"1e30,1e30!\"]; b; c }", ""),
     ];
-    for src in cases {
+    for (src, expected) in cases {
         let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
             .arg("-Tsvg")
             .stdin(Stdio::piped())
@@ -344,10 +352,7 @@ fn oversized_component_does_not_hang_the_packer() {
             String::from_utf8_lossy(&out.stderr),
         );
         assert!(out.status.success(), "{src}: {err}");
-        assert_eq!(
-            err, "Warning: components too large to pack; packing skipped\n",
-            "{src}"
-        );
+        assert_eq!(err, expected, "{src}");
         assert!(svg.contains("</svg>"), "{src}: {svg}");
     }
 }
