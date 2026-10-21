@@ -289,6 +289,16 @@ exact and `hw3_ports_b15(_splines)` check the same ports through neato.
 - Prism (`overlap=false`, default for sfdp): GTS's edge enumeration order
   (pointer hashing) changes summation order in the solver by an ulp; visible
   only in printed digits (7 arrow graphs in e2e) and in chaotic cases.
+- `makeMultiSpline` triangle centres (issue #28): `triCenter`
+  (`multispline.c:391`) sums a face's corners in the order
+  `gts_triangle_vertices` returns them. GTS documents only that this order is
+  counter-clockwise; which corner comes first depends on which edge GTS's
+  incremental construction stored as `t->e1`. The port's CDT starts at a
+  different corner on some faces, so a centre can differ by an ulp. When two
+  triangle paths tie exactly in C (mirror-image obstacles), that ulp picks the
+  other side and `tweakEnd` can move the end point 0.1pt. Matching it would
+  need GTS's construction internals (LGPL). Tracked by the ignored test
+  `neato_polyline_compass_port_routes_like_c`.
 - `splines=ortho` in neato is left to the dot-phase3 branch.
 - VPSC/IncVPSC pointer-ordered containers are approximated by allocation
   order; C itself is not reproducible on some `mode=ipsep` inputs.
