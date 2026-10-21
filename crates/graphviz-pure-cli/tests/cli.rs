@@ -425,3 +425,39 @@ fn flat_adjacent_edge_ignores_labelfloat_like_c() {
         assert!(out.contains(want), "missing {want}:\n{out}");
     }
 }
+
+// Issue #21, the other side of C's `label_float` lookup: an aux edge floats its label when
+// the main graph sets `label_float`. C 16.1.0 then draws what the port drew for the
+// repro above before the fix (label at y=-33.2).
+#[test]
+fn flat_adjacent_edge_floats_label_from_label_float_like_c() {
+    let src = "digraph G {
+edge [label_float=\"true\"];
+{rank=same; \"2\" -> \"10\" [label=\"x\", tailport=\"e\"];}
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    for want in [
+        "translate(4 49.8)",
+        "d=\"M54,-18C63.19,-18 62.67,-26.46 71.5,-29 75.17,-30.06 79.03,-30.33 82.88,-30.08\"",
+        "x=\"72\" y=\"-33.2\"",
+    ] {
+        assert!(out.contains(want), "missing {want}:\n{out}");
+    }
+}
+
+// Issue #21: `label_float` declared after the edge. cgraph gives the existing edge ""
+// (not the later default), `cloneEdge` copies that, and the label does not float.
+#[test]
+fn label_float_declared_after_the_edge_does_not_float_like_c() {
+    let src = "digraph G {
+{rank=same; \"2\" -> \"10\" [label=\"x\", tailport=\"e\"];}
+edge [label_float=\"true\"];
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("translate(4 50.35)"), "{out}");
+    assert!(out.contains("x=\"72\" y=\"-33.75\""), "{out}");
+}

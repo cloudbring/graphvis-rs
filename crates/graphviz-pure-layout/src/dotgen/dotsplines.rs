@@ -915,18 +915,14 @@ impl Dot<'_> {
             );
             // setState looks E_label_float up as "label_float", not "labelfloat"
             // (dotsplines.c:745), so ED_label_ontop of an aux edge is the value of
-            // an attribute `label_float`, and `labelfloat` is ignored.
-            match main.edge.get("label_float") {
-                Some(sym) => {
-                    let v = attrs
-                        .get("label_float")
-                        .cloned()
-                        .unwrap_or(sym.defval.clone());
-                    attrs.insert("labelfloat".to_string(), v);
-                }
-                None => {
-                    attrs.remove("labelfloat");
-                }
+            // an attribute `label_float`, and `labelfloat` is ignored. An edge made
+            // before `label_float` was declared holds "" (the edge got the defaults
+            // in scope when it was made), not the later default.
+            if main.edge.contains_key("label_float") {
+                let v = attrs.get("label_float").cloned().unwrap_or_default();
+                attrs.insert("labelfloat".to_string(), v);
+            } else {
+                attrs.remove("labelfloat");
             }
         };
         let rightx = self.nodes[hn0].coord.x;
