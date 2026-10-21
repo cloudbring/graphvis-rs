@@ -844,8 +844,8 @@ pub fn update_bb_bz(bb: &mut BoundingBox, cp: &[Point; 4]) {
         return;
     }
     // C has no finiteness test. Every half `Bezier` splits off keeps the curve's midpoint,
-    // which is non-finite when any control point is, so `check_control_points` never
-    // accepts such a segment: C either stops on a half that is not `out`, leaving `bb` as
+    // which is non-finite when any control point is, and `ptToLine2` gives inf or NaN for
+    // such a point, so `check_control_points` never accepts the segment: C either stops on a half that is not `out`, leaving `bb` as
     // it was, or recurses until its stack overflows (#173: osage gives a repeated cluster a
     // NaN box, and its edges inherit it). Leave `bb` as it was.
     if !cp.iter().all(|p| p.x.is_finite() && p.y.is_finite()) {

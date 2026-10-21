@@ -906,8 +906,8 @@ fn pack_single_component_newrank_rank_max_empty_clone_does_not_panic() {
 
 /// Issue #173: `cluster_inner4` is repeated under three parents and each copy holds j1 and
 /// j2. osage's `layout` (`lib/osage/osageinit.c`) places them in the first copy, packs
-/// nothing for the others and leaves them a NaN box, so the edges into `cluster_outer` get
-/// NaN control points. `update_bb_bz` (`lib/common/emit.c`) splits such a segment forever
+/// nothing for the others and leaves them a NaN box, so `j1 -> o1` and `j2 -> o1` get NaN
+/// control points. `update_bb_bz` (`lib/common/emit.c`) splits such a segment forever
 /// and C's stack overflows; the port must render the graph.
 #[test]
 fn osage_repeated_cluster_does_not_overflow_update_bb_bz() {
