@@ -107,7 +107,7 @@ fn os_tail(arg: &OsStr) -> OsString {
     }
     #[cfg(not(any(unix, windows)))]
     {
-        OsString::from(&arg.to_string_lossy()[2..])
+        OsString::from(String::from_utf8_lossy(&arg_bytes(arg)[2..]).into_owned())
     }
 }
 

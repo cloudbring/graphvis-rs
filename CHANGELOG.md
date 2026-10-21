@@ -6,12 +6,6 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
-### Fixed
-
-- The command line no longer panics on an argument that is not valid UTF-8, such as a Latin-1
-  file name, or on a flag such as `-é`. Like C, it takes its arguments as bytes: the file opens,
-  and other flag values keep their bytes (#152).
-
 ## [0.1.0] - 2026-10-21
 
 The first release.
