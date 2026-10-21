@@ -601,8 +601,12 @@ impl<'g> Model<'g> {
         if let Some(list) = listed(&g.graph_attrs, None) {
             root_clusters = list;
         }
+        // Only the root's list repeats clusters (`copyClusterInfo`); repeats below it
+        // would multiply at every level.
         for c in &mut clusters {
-            if let Some(list) = listed(&g.subgraphs[c.sub].graph_attrs, Some(c.sub)) {
+            if let Some(mut list) = listed(&g.subgraphs[c.sub].graph_attrs, Some(c.sub)) {
+                let mut seen = std::collections::HashSet::new();
+                list.retain(|&k| seen.insert(k));
                 c.children = list;
             }
         }

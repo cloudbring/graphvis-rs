@@ -308,6 +308,34 @@ mod tests {
     use graphviz_pure_core::{BezierSegment, BoundingBox, Point, Spline};
     use graphviz_pure_parser::parse_dot;
 
+    // The model accepts only clusters below a graph from its exported `GD_clust` list,
+    // once each below the root: a bad list from a caller that skipped layout cannot
+    // make the cluster tree cyclic or multiply it.
+    #[test]
+    fn cluster_list_key_keeps_only_descendants() {
+        let mut g = parse_dot(
+            "digraph G { subgraph cluster_a { a subgraph cluster_c { c } } subgraph cluster_b { b } }",
+        )
+        .expect("parse");
+        let idx = |name: &str| g.subgraphs.iter().position(|s| s.name == name).unwrap();
+        let (a, c, b) = (idx("cluster_a"), idx("cluster_c"), idx("cluster_b"));
+        g.bb = BoundingBox::new(0.0, 0.0, 100.0, 100.0);
+        for s in &mut g.subgraphs {
+            s.bb = BoundingBox::new(10.0, 10.0, 50.0, 50.0);
+        }
+        g.subgraphs[a].graph_attrs.insert(
+            graphviz_pure_core::CLUSTER_LIST_KEY.to_string(),
+            format!("{a} {c} {c} {b} 99"),
+        );
+        let svg = render_graph(&g, OutputFormat::Svg).expect("render");
+        let titles: Vec<&str> = svg
+            .split("class=\"cluster\">\n<title>")
+            .skip(1)
+            .map(|s| &s[..s.find("</title>").unwrap()])
+            .collect();
+        assert_eq!(titles, ["cluster_a", "cluster_c", "cluster_b"]);
+    }
+
     fn sample_laid_out_graph() -> Graph {
         let mut g = parse_dot(
             r##"
