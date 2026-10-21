@@ -14,9 +14,10 @@ name: Cross-platform
 # a credential for the other. The site's fidelity data, gallery outputs and C references are
 # committed, since they need the C oracle, which CI does not have.
 #
-# Jobs run on GitHub-hosted runners, which are free for a public repository. A tree that already
-# passed this workflow skips the platform renders and the comparison (scripts/ci-result-cache.sh),
-# and the site job takes the cross-platform results from the run that passed it.
+# Jobs run on GitHub-hosted runners, which are free for a public repository. The platform renders
+# and the comparison are skipped when the files they read already passed this workflow
+# (scripts/ci-result-cache.sh), so a change to documentation or the site's pages renders nothing,
+# and the site job takes the cross-platform results from the run that passed those files.
 
 on:
   pull_request:
@@ -37,7 +38,7 @@ env:
 
 jobs:
   lookup:
-    name: Earlier result for this tree
+    name: Earlier result for these inputs
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -154,7 +155,7 @@ jobs:
     name: Compare every platform's output
     needs: [lookup, native, wasm]
     # Runs when a platform job failed (a missing platform fails the comparison), not when the
-    # run was cancelled or the tree already passed.
+    # run was cancelled or these inputs already passed.
     if: ${{ !cancelled() && needs.lookup.outputs.hit != 'true' }}
     runs-on: ubuntu-24.04
     steps:
@@ -192,12 +193,12 @@ jobs:
     name: Build the documentation site
     needs: [lookup, compare]
     # A failed comparison is still published, so the page shows it; a cancelled run is not. It
-    # also runs when the tree already passed: the site deploy takes master's latest `site`.
+    # also runs when the inputs already passed: the site deploy takes master's latest `site`.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      actions: read # download the cross-platform results of the run that passed this tree
+      actions: read # download the cross-platform results of the run that passed these inputs
     env:
       # Served at the root of https://graphviz-pure.github.io/ (the graphviz-pure.github.io repo).
       SITE_BASE: /
@@ -248,7 +249,7 @@ jobs:
         with:
           name: cross-platform-site
           path: site/public/cross-platform
-      - name: Use the cross-platform results of the run that passed this tree
+      - name: Use the cross-platform results of the run that passed these inputs
         if: needs.lookup.outputs.hit == 'true'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -297,9 +298,9 @@ jobs:
           path: site/dist
           retention-days: 30
 
-  # Records that this tree passed, so a later run of the same tree skips the renders.
+  # Records that these inputs passed, so a later run with the same inputs skips the renders.
   record:
-    name: Record the result for this tree
+    name: Record the result for these inputs
     needs: [compare, site]
     runs-on: ubuntu-24.04
     steps:
