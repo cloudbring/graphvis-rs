@@ -1,4 +1,5 @@
 use graphviz_pure::{GlobalAttrs, LayoutEngine, LayoutOptions, OutputFormat};
+use std::borrow::Cow;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
@@ -50,14 +51,21 @@ fn usage(argv0: &str) -> String {
 /// not valid UTF-8 are kept as raw-byte chars (`graphviz_pure_core::charset`): an attribute
 /// set with `-G` carries them into the output, and an error message names them as C does.
 fn arg_text(arg: &OsStr) -> String {
+    graphviz_pure_core::charset::decode_slice(&arg_bytes(arg))
+}
+
+/// The bytes of an argument, as C's `argv` holds them (UTF-8 where the OS has UTF-16).
+/// Flags are split on these, not on [`arg_text`], which does not round-trip a char of the
+/// raw-byte range.
+fn arg_bytes(arg: &OsStr) -> Cow<'_, [u8]> {
     #[cfg(unix)]
     {
         use std::os::unix::ffi::OsStrExt;
-        graphviz_pure_core::charset::decode_slice(arg.as_bytes())
+        Cow::Borrowed(arg.as_bytes())
     }
     #[cfg(not(unix))]
     {
-        arg.to_string_lossy().into_owned()
+        Cow::Owned(arg.to_string_lossy().into_owned().into_bytes())
     }
 }
 
@@ -68,7 +76,12 @@ fn os_tail(arg: &OsStr) -> OsString {
         use std::os::unix::ffi::OsStrExt;
         OsStr::from_bytes(&arg.as_bytes()[2..]).to_os_string()
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::{OsStrExt, OsStringExt};
+        OsString::from_wide(&arg.encode_wide().skip(2).collect::<Vec<_>>())
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         OsString::from(&arg.to_string_lossy()[2..])
     }
@@ -76,15 +89,15 @@ fn os_tail(arg: &OsStr) -> OsString {
 
 /// Mirrors `getFlagOpt`: the text after the flag letter, else the next argument unless it
 /// starts with `-`.
-fn flag_value(args: &[String], i: &mut usize) -> Option<String> {
-    let arg = &args[*i];
+fn flag_value(args: &[OsString], i: &mut usize) -> Option<String> {
+    let arg = arg_bytes(&args[*i]);
     if arg.len() > 2 {
-        return Some(arg[2..].to_string());
+        return Some(graphviz_pure_core::charset::decode_slice(&arg[2..]));
     }
-    let next = args.get(*i + 1)?;
+    let next = arg_text(args.get(*i + 1)?);
     if !next.is_empty() && !next.starts_with('-') {
         *i += 1;
-        return Some(next.clone());
+        return Some(next);
     }
     None
 }
@@ -129,7 +142,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         } else if arg.starts_with('-') && arg.len() > 1 {
             // `dotneato_args_initialize` switches on the byte `arg[1]`, which need not start
             // a char: split the argument's bytes there.
-            let bytes = graphviz_pure_core::charset::encode(arg);
+            let bytes = arg_bytes(&os_args[i]);
             let flag = match bytes[1] {
                 b if b.is_ascii() => b as char,
                 b => graphviz_pure_core::charset::raw_char(b),
@@ -152,24 +165,24 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                         opts.globals.edge.insert(name, value);
                     }
                 }
-                'T' => match flag_value(args, &mut i) {
+                'T' => match flag_value(os_args, &mut i) {
                     Some(v) => opts.format = v,
                     None => return missing('T'),
                 },
-                'K' => match flag_value(args, &mut i) {
+                'K' => match flag_value(os_args, &mut i) {
                     Some(v) => opts.engine = v,
                     None => return missing('K'),
                 },
                 'o' => {
                     let at = i;
-                    match flag_value(args, &mut i) {
+                    match flag_value(os_args, &mut i) {
                         Some(_) if i > at => opts.output = Some(os_args[i].clone()),
                         Some(_) => opts.output = Some(os_tail(&os_args[i])),
                         None => return missing('o'),
                     }
                 }
                 'l' => {
-                    if flag_value(args, &mut i).is_none() {
+                    if flag_value(os_args, &mut i).is_none() {
                         return missing('l');
                     }
                 }

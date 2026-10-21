@@ -1658,13 +1658,13 @@ fn non_utf8_file_name_argument_is_opened() {
         // -o, separate and attached.
         let target = dir.join(std::ffi::OsStr::from_bytes(b"out\xe9.svg"));
         let target_bytes = target.as_os_str().as_bytes();
-        let (_, _, ok) = run_bytes(&[b"-Tsvg", b"-o", target_bytes, path_bytes], "");
-        assert!(ok);
+        let (_, err, ok) = run_bytes(&[b"-Tsvg", b"-o", target_bytes, path_bytes], "");
+        assert!(ok, "{}", String::from_utf8_lossy(&err));
         assert!(std::fs::read(&target).unwrap().starts_with(b"<?xml"));
         std::fs::remove_file(&target).unwrap();
         let attached = [b"-o", target_bytes].concat();
-        let (_, _, ok) = run_bytes(&[b"-Tsvg", &attached, path_bytes], "");
-        assert!(ok);
+        let (_, err, ok) = run_bytes(&[b"-Tsvg", &attached, path_bytes], "");
+        assert!(ok, "{}", String::from_utf8_lossy(&err));
         assert!(std::fs::read(&target).unwrap().starts_with(b"<?xml"));
     }
 
@@ -1706,7 +1706,13 @@ fn non_utf8_flag_values_keep_their_bytes() {
     assert!(err.starts_with(b"Error: Invalid parameter \"\xe9\" for -n flag\n"));
 
     // C switches on the byte after `-`, even inside a multi-byte UTF-8 char (`-é`).
-    for (arg, flag) in [(&b"-\xe9"[..], &b"-\xe9 "[..]), (b"-\xc3\xa9", b"-\xc3 ")] {
+    // A char of the range the port uses for raw bytes (U+10FF54 here) is split the same way.
+    for (arg, flag) in [
+        (&b"-\xe9"[..], &b"-\xe9 "[..]),
+        (b"-\xc3\xa9", b"-\xc3 "),
+        (b"-\xf4\x8f\xbd\x94svg", b"-\xf4 "),
+        (b"-\xf4\x8f\xbd\x87x=1", b"-\xf4 "),
+    ] {
         let (_, err, ok) = run_bytes(&[arg], "digraph{a}");
         assert!(!ok);
         let expected = [b"option ", flag, b"unrecognized"].concat();
