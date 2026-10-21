@@ -35,8 +35,9 @@ pub fn cluster_map(g: &LGraph<'_>, sub: &Sub) -> ClusterData {
             // absent. ipsep always packs components, so `g` is one connected
             // component while the clusters come from the root graph; a member
             // in another component fails C's `bitarray_set` assertion
-            // ("out of bounds access") here, and the index would overrun
-            // `generateNonoverlapConstraints`. The port keeps only the members
+            // ("out of bounds access") here. Carried on, the index overruns
+            // `generateNonoverlapConstraints` under overlap=ipsep, and otherwise
+            // names a cluster dummy variable. The port keeps only the members
             // in this component, so each component sees its part of the
             // cluster (possibly none, laid out like an empty cluster).
             let Some(ind) = sub.nodes.iter().position(|&x| x == n) else {

@@ -1615,13 +1615,14 @@ fn issue30_missing_shapefile_warnings() {
 // components separately, and cluster_map (lib/neatogen/neatoinit.c) takes the clusters from
 // the root graph: a cluster member in another component gets the index agnnodes(g), and C fails
 // bitarray_set's "out of bounds access" assertion (exit 134). The port used to carry that index
-// into generateNonoverlapConstraints and panic; it now keeps each component's own members.
+// into generateNonoverlapConstraints and panic under overlap=ipsep (without it the index
+// silently named a cluster dummy variable); it now keeps each component's own members.
 #[test]
 fn neato_ipsep_clusters_in_other_components_do_not_panic() {
     for src in [
         "graph { layout=neato; mode=ipsep; overlap=ipsep; subgraph cluster_a { a } subgraph cluster_b { b } a -- c }",
         // one cluster split across two components
-        "graph { layout=neato; mode=ipsep; subgraph cluster_a { a b } a -- c }",
+        "graph { layout=neato; mode=ipsep; overlap=ipsep; subgraph cluster_a { a b } a -- c }",
     ] {
         let (out, err, ok) = run(&["-Tsvg"], src);
         assert!(ok, "{src}: {err}");
