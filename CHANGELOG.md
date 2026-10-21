@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- osage no longer overflows its stack when a cluster is repeated inside another cluster (#173).
+  The repeated cluster gets a NaN box, as in C, and the edges that inherit it no longer make
+  `update_bb_bz` split their Bézier segments forever. C Graphviz crashes on this input.
+
 ## [0.1.0] - 2026-10-21
 
 The first release.

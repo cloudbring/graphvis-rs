@@ -843,7 +843,12 @@ pub fn update_bb_bz(bb: &mut BoundingBox, cp: &[Point; 4]) {
     if !out {
         return;
     }
-    if check_control_points(cp) {
+    // C has no finiteness test: a non-finite control point stays non-finite in every half
+    // `Bezier` splits off, so `check_control_points` never accepts one and C recurses
+    // until its stack overflows (#173: osage gives a repeated cluster a NaN box, and its
+    // edges inherit it). Take such a segment as refined instead.
+    let finite = cp.iter().all(|p| p.x.is_finite() && p.y.is_finite());
+    if !finite || check_control_points(cp) {
         for p in cp {
             if p.x > bb.ur.x {
                 bb.ur.x = p.x;
@@ -1415,5 +1420,27 @@ pub fn edge_midpoint(et: EdgeType, spl: &[Bezier]) -> Point {
         dotneato_closest(spl, mid(p, q))
     } else {
         polyline_midpoint(spl)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// #173: a NaN control point outside `bb` used to make `update_bb_bz` split forever.
+    #[test]
+    fn update_bb_bz_takes_a_non_finite_segment_as_refined() {
+        let mut bb = BoundingBox::new(0.0, 0.0, 18.0, 18.0);
+        update_bb_bz(&mut bb, &[Point::new(f64::NAN, 20.0); 4]);
+        assert_eq!(bb, BoundingBox::new(0.0, 0.0, 18.0, 20.0));
+        let mut bb = BoundingBox::new(0.0, 0.0, 18.0, 18.0);
+        let cp = [
+            Point::new(0.0, 0.0),
+            Point::new(5.0, 30.0),
+            Point::new(10.0, -30.0),
+            Point::new(f64::INFINITY, 0.0),
+        ];
+        update_bb_bz(&mut bb, &cp);
+        assert_eq!(bb.ur.x, f64::INFINITY);
     }
 }
