@@ -6,11 +6,6 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
-### Fixed
-
-- neato with `mode=hier` no longer panics when every edge `len` in a component is below 1
-  (#169). C Graphviz fails an assertion on this input.
-
 ## [0.1.0] - 2026-10-21
 
 The first release.

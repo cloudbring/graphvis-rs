@@ -577,6 +577,26 @@ fn flat_adjacent_edge_ignores_labelfloat_like_c() {
     }
 }
 
+/// Issue #169: with mode=hier, `compute_apsp_packed`'s integer BFS truncates every len
+/// below 1 to 0 (`lib/neatogen/bfs.c`), so the stress Laplacian is all zero, or all NaN
+/// with levelsgap > 0. Every desired place in `constrained_majorization_new_with_gaps`
+/// (`lib/neatogen/quad_prog_solve.c`) is then NaN, the block comes out empty, and C fails
+/// the `gv_list_get` bounds assertion. The port indexed the empty block at `len - 1` and
+/// panicked; it must lay the graph out.
+#[test]
+fn neato_hier_zero_laplacian_does_not_panic() {
+    for src in [
+        "graph{layout=neato\nmode=hier\nb--e[len=0.5]}\n",
+        "digraph{layout=neato\nmode=hier\nlevelsgap=1\na->b->c[len=0.5]}\n",
+        "graph{layout=neato\nmode=hier\nstart=random5\ndim=3\nb--e[len=0.5]}\n",
+    ] {
+        let (out, err, ok) = run(&["-Tsvg"], src);
+        assert!(ok, "{src}: {err}");
+        assert!(out.contains("</svg>"), "{src}: {out}");
+        assert!(!out.contains("NaN"), "{src}: {out}");
+    }
+}
+
 // Issue #21, the other side of C's `label_float` lookup: an aux edge floats its label when
 // the main graph sets `label_float`. C 16.1.0 then draws what the port drew for the
 // repro above before the fix (label at y=-33.2).
@@ -1609,24 +1629,4 @@ fn issue30_missing_shapefile_warnings() {
         "Warning: No or improper shapefile=\"<nil>\" for node \"a4\"\n\
          Warning: shapefile not set or not found for epsf node a5\n"
     );
-}
-
-/// Issue #169: with mode=hier, `compute_apsp_packed`'s integer BFS truncates every len
-/// below 1 to 0 (`lib/neatogen/bfs.c`), so the stress Laplacian is all zero, or all NaN
-/// with levelsgap > 0. Every desired place in `constrained_majorization_new_with_gaps`
-/// (`lib/neatogen/quad_prog_solve.c`) is then NaN, the block comes out empty, and C fails
-/// the `gv_list_get` bounds assertion. The port indexed the empty block at `len - 1` and
-/// panicked; it must lay the graph out.
-#[test]
-fn neato_hier_zero_laplacian_does_not_panic() {
-    for src in [
-        "graph{layout=neato\nmode=hier\nb--e[len=0.5]}\n",
-        "digraph{layout=neato\nmode=hier\nlevelsgap=1\na->b->c[len=0.5]}\n",
-        "graph{layout=neato\nmode=hier\nstart=random5\ndim=3\nb--e[len=0.5]}\n",
-    ] {
-        let (out, err, ok) = run(&["-Tsvg"], src);
-        assert!(ok, "{src}: {err}");
-        assert!(out.contains("</svg>"), "{src}: {out}");
-        assert!(!out.contains("NaN"), "{src}: {out}");
-    }
 }
