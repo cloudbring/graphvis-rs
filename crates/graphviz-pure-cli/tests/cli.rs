@@ -374,3 +374,29 @@ a -> b [label=\"lbl\"];
     assert!(ok, "{err}");
     assert_eq!(out.matches("class=\"edge\"").count(), 1, "{out}");
 }
+
+// Fuzz case 009-xlabels-dtobag-equal-key-order (issue #18), its repro.gv verbatim. Five
+// nodes share the pinned position, so several label objects get the same Hilbert key.
+// `placeLabels` (lib/label/xlabels.c:xlhdxload/xlspdxload) loads the R-tree in the order of a
+// cdt `Dtobag`, whose splay tree puts a duplicate key just before the equal element its
+// search stops at (lib/cdt/dttree.c), so equal keys are not simply in reverse insertion
+// order. With the old sort the edge label moved one candidate step down (y="-52.88").
+#[test]
+fn xlabels_equal_hilbert_keys_follow_dtobag_order() {
+    let src = r#"graph "G" {
+layout=neato;
+node [pos="31,-83!"];
+"n0" [];
+"n1" [label=<<TABLE BORDER="0" COLOR="black"><TR><TD BGCOLOR="lightblue">x</TD><TD WIDTH="28" HEIGHT="30">&lt;x&gt;</TD><TD><FONT POINT-SIZE="8">small</FONT></TD></TR></TABLE>>];
+"n3" [shape="star"];
+"n7" [height="1.68"];
+"n12" [pos="-241,74"];
+"n1" -- "n5" [label="\E", headport="w"];
+}
+"#;
+    let (out, err, ok) = run(&["-Kneato", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    // C Graphviz 16.1.0's line for the edge label.
+    let c = r#"<text xml:space="preserve" text-anchor="middle" x="18.66" y="-69.68" font-family="Times,serif" font-size="14.00">n1&#45;&#45;n5</text>"#;
+    assert!(out.contains(c), "{out}");
+}
