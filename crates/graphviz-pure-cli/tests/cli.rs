@@ -830,3 +830,21 @@ fn packed_dot_draws_the_root_cluster_list_of_copy_cluster_info() {
         ["cluster_0", "cluster_5", "cluster_3"]
     );
 }
+
+// The reserved cluster-list key written in the input is an ordinary attribute to C: it
+// must not reorder another engine's clusters, nor (inherited by the subgraphs, so a
+// cluster lists itself) make the cluster tree cyclic, which overflowed the stack.
+#[test]
+fn input_cluster_list_key_is_ignored() {
+    let src =
+        "graph G { \"\u{1}clustlist\"=\"1 0\"; subgraph cluster_a {a} subgraph cluster_b {b} }\n";
+    for engine in ["-Kneato", "-Kfdp", "-Kosage", "-Kpatchwork", "-Kdot"] {
+        let (out, err, ok) = run(&[engine, "-Tsvg"], src);
+        assert!(ok, "{engine}: {err}");
+        assert_eq!(
+            svg_cluster_titles(&out),
+            ["cluster_a", "cluster_b"],
+            "{engine}"
+        );
+    }
+}

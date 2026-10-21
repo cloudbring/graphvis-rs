@@ -73,6 +73,13 @@ pub fn layout_graph_with_options(
         &graph.name,
         graph.graph_attrs.get("charset").map(String::as_str),
     );
+    // Only dot exports its `GD_clust` lists; to C the key is an ordinary attribute, so a
+    // value from the input must not reorder the clusters of another engine's drawing.
+    let key = graphviz_pure_core::CLUSTER_LIST_KEY;
+    graph.graph_attrs.remove(key);
+    for s in &mut graph.subgraphs {
+        s.graph_attrs.remove(key);
+    }
     let effective_engine = if engine == LayoutEngine::Dot
         && let Some(attr_layout) = graph.graph_attrs.get("layout")
         && let Ok(parsed) = LayoutEngine::parse(attr_layout)

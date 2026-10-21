@@ -84,7 +84,10 @@ impl Output {
                 .iter()
                 .filter_map(|&c| d.graphs[c].sub_index.map(|si| si.to_string()))
                 .collect();
-            out.push((d.graphs[g].sub_index, list.join(" ")));
+            // A graph with no subgraph of its own would otherwise land on the root.
+            if g == 0 || d.graphs[g].sub_index.is_some() {
+                out.push((d.graphs[g].sub_index, list.join(" ")));
+            }
             for &c in &d.graphs[g].clust {
                 rec_list(d, c, out);
             }
