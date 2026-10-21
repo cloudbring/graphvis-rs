@@ -690,7 +690,7 @@ impl NodeShape {
     }
 
     /// `polyBB(poly)`: bounding box of the outermost periphery's vertices.
-    fn poly_bb(&self) -> graphviz_pure_core::BoundingBox {
+    pub(crate) fn poly_bb(&self) -> graphviz_pure_core::BoundingBox {
         let peris = self.peripheries.max(1);
         let verts = &self.vertices[(peris - 1) * self.sides..];
         let mut bb = graphviz_pure_core::BoundingBox {

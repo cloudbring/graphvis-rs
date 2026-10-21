@@ -176,16 +176,28 @@ fn ortho_obstacle(lg: &LGraph<'_>, n: usize, pm: &Expand) -> Option<Vec<Point>> 
     if !matches!(sh.inside, InsideFn::Poly | InsideFn::Star | InsideFn::Point) {
         return super::routing::make_obstacle(lg, n, pm);
     }
-    let width = nd.lw + nd.rw;
-    let outline_width = sh.outline_width;
-    let outline_lw = nd.lw * outline_width / width;
-    let outline_ht = sh.outline_height;
-    let vs = [
-        Point::new(-outline_lw, -outline_ht / 2.0),
-        Point::new(outline_lw, -outline_ht / 2.0),
-        Point::new(outline_lw, outline_ht / 2.0),
-        Point::new(-outline_lw, outline_ht / 2.0),
-    ];
+    let vs = if sh.fixedshape && sh.sides > 0 && !sh.vertices.is_empty() {
+        // fixedsize=shape: the polygon's own box, not the node size with its label
+        // (neatosplines.c:351-358).
+        let b = sh.poly_bb();
+        [
+            b.ll,
+            Point::new(b.ur.x, b.ll.y),
+            b.ur,
+            Point::new(b.ll.x, b.ur.y),
+        ]
+    } else {
+        let width = nd.lw + nd.rw;
+        let outline_width = sh.outline_width;
+        let outline_lw = nd.lw * outline_width / width;
+        let outline_ht = sh.outline_height;
+        [
+            Point::new(-outline_lw, -outline_ht / 2.0),
+            Point::new(outline_lw, -outline_ht / 2.0),
+            Point::new(outline_lw, outline_ht / 2.0),
+            Point::new(-outline_lw, outline_ht / 2.0),
+        ]
+    };
     let c = nd.coord;
     let k = if pm.do_add { 1.0 } else { 0.0 };
     Some(

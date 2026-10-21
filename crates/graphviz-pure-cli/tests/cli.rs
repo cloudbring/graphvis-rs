@@ -1558,6 +1558,15 @@ c [pos=\"3,2!\"]; a -- c; b -- c }";
     );
 }
 
+/// A `fixedsize=shape` node's ortho obstacle is its polygon's box (`polyBB`,
+/// `lib/neatogen/neatosplines.c:351-358`), not the node size that holds the label.
+#[test]
+fn issue30_neato_ortho_fixedshape_obstacle_is_the_polygon() {
+    let src = "graph { splines=ortho; k [shape=box fixedsize=shape width=0.3 \
+label=\"a very wide label\" pos=\"0,0!\"]; b [pos=\"0.9,0.3!\"]; c [pos=\"0,2!\"]; k -- c; b -- c }";
+    assert!(!warnings("neato", src).0.contains("touch"));
+}
+
 /// Issue #88: graph_init makes the root graph label before dot sizes the nodes, so the
 /// label's font warnings come first.
 #[test]
