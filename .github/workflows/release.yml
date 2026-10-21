@@ -178,10 +178,14 @@ jobs:
         run: |
           test "$(node -p "require('./web/package.json').version")" = "$VERSION"
           test "$(node -p "require('./web/jsr.json').version")" = "$VERSION"
-      # The tarball also carries jsr.json, so the jsr job publishes exactly its files.
+      # The tarball also carries jsr.json, so the jsr job publishes exactly its files, and the
+      # licence files: the module includes the CORE-MATH pow port (MIT, see NOTICE), not the fonts.
       - name: Pack
         working-directory: web
-        run: cp ../LICENSE ../NOTICE ../THIRD-PARTY-LICENSES.md . && mkdir -p ../dist && npm pack --pack-destination ../dist
+        run: |
+          cp ../LICENSE ../NOTICE ../THIRD-PARTY-LICENSES.md .
+          mkdir -p LICENSES && cp ../LICENSES/MIT-CORE-MATH.txt LICENSES/
+          mkdir -p ../dist && npm pack --pack-destination ../dist
       - name: Install Deno ${{ env.DENO_VERSION }}
         working-directory: ${{ runner.temp }}
         run: |

@@ -9,6 +9,7 @@
       "LICENSE",
       "NOTICE",
       "THIRD-PARTY-LICENSES.md",
+      "LICENSES/MIT-CORE-MATH.txt",
       "pkg/graphviz_pure_wasm.js",
       "pkg/graphviz_pure_wasm.d.ts",
       "pkg/graphviz_pure_wasm_bg.wasm",

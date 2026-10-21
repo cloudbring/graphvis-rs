@@ -15,7 +15,8 @@ LABEL org.opencontainers.image.title="graphviz-pure" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.created="${CREATED}"
-COPY LICENSE NOTICE THIRD-PARTY-LICENSES.md /usr/share/doc/graphviz-pure/
+# LICENSE, NOTICE, THIRD-PARTY-LICENSES.md and LICENSES/, from the release archive.
+COPY doc/ /usr/share/doc/graphviz-pure/
 COPY ${TARGETARCH}/graphviz-pure /usr/local/bin/graphviz-pure
 # Mount the files to render here: docker run -v "$PWD:/data" ... -o out.svg in.dot
 WORKDIR /data

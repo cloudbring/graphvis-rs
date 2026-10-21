@@ -17,6 +17,7 @@ node_modules/
 /web/LICENSE
 /web/NOTICE
 /web/THIRD-PARTY-LICENSES.md
+/web/LICENSES/
 
 # Local scratch notes from the PR review/prepare skills (.local/review.md, .local/prep.md)
 /.local/

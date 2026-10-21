@@ -15,6 +15,7 @@
     "LICENSE",
     "NOTICE",
     "THIRD-PARTY-LICENSES.md",
+    "LICENSES/MIT-CORE-MATH.txt",
     "jsr.json"
   ],
   "exports": {
