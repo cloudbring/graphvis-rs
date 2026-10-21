@@ -904,6 +904,28 @@ fn pack_single_component_newrank_rank_max_empty_clone_does_not_panic() {
     }
 }
 
+/// Issue #173: `cluster_inner4` is repeated under three parents and each copy holds j1 and
+/// j2. osage's `layout` (`lib/osage/osageinit.c`) places them in the first copy, packs
+/// nothing for the others and leaves them a NaN box, so the edges into `cluster_outer` get
+/// NaN control points. `update_bb_bz` (`lib/common/emit.c`) splits such a segment forever
+/// and C's stack overflows; the port must render the graph.
+#[test]
+fn osage_repeated_cluster_does_not_overflow_update_bb_bz() {
+    for fmt in ["-Tsvg", "-Tdot"] {
+        let (out, err, ok) = run(
+            &[fmt],
+            "digraph{layout=osage{o2\n  subgraph cluster_inner4{j1 j2}}subgraph cluster_outer{{label=\"outer\"\
+         subgraph cluster_inner4{j1 j2}}->o1}subgraph cluster_inner4{j1 j2}}\n",
+        );
+        assert!(ok, "{fmt}: {err}");
+        if fmt == "-Tdot" {
+            // The edges leave the root's 18x18 empty-graph box as it was.
+            assert!(out.contains("bb=\"0,0,18,18\""), "{out}");
+            assert!(out.contains("j1 -> o1\t[pos="), "{out}");
+        }
+    }
+}
+
 // The same empty-cluster rank set without pack: cluster_b's nodes are already in
 // cluster_a, so node_induce empties it before its rank=max is compiled (newrank).
 #[test]
@@ -1510,28 +1532,6 @@ subgraph cluster_c { z } } subgraph cluster_b { y } }";
     };
     let want = ["cluster_c", "cluster_a", "cluster_b", "G"].map(w).concat();
     assert_eq!(warnings("osage", src).0, want);
-}
-
-/// Issue #173: `cluster_inner4` is repeated under three parents and each copy holds j1 and
-/// j2. osage's `layout` (`lib/osage/osageinit.c`) places them in the first copy, packs
-/// nothing for the others and leaves them a NaN box, so the edges into `cluster_outer` get
-/// NaN control points. `update_bb_bz` (`lib/common/emit.c`) splits such a segment forever
-/// and C's stack overflows; the port must render the graph.
-#[test]
-fn osage_repeated_cluster_does_not_overflow_update_bb_bz() {
-    for fmt in ["-Tsvg", "-Tdot"] {
-        let (out, err, ok) = run(
-            &[fmt],
-            "digraph{layout=osage{o2\n  subgraph cluster_inner4{j1 j2}}subgraph cluster_outer{{label=\"outer\"\
-         subgraph cluster_inner4{j1 j2}}->o1}subgraph cluster_inner4{j1 j2}}\n",
-        );
-        assert!(ok, "{fmt}: {err}");
-        if fmt == "-Tdot" {
-            // The edges leave the root's 18x18 empty-graph box as it was.
-            assert!(out.contains("bb=\"0,0,18,18\""), "{out}");
-            assert!(out.contains("j1 -> o1\t[pos="), "{out}");
-        }
-    }
 }
 
 /// fdp's cluster edges (`checkCompound`, `lib/common/utils.c:855-900`): cycles and edges
