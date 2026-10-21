@@ -1,5 +1,0 @@
-digraph G {
-packmode=node;
-a [label=edge];
-a:graph -> b;
-}

@@ -375,4 +375,60 @@ mod tests {
         // Unclosed HTML string must fail
         assert!(parse_dot("digraph G { a [label=<<table>] }").is_err());
     }
+
+    /// Issue #29. scan.l returns `T_node`, `T_edge`, `T_graph`, `T_digraph`,
+    /// `T_subgraph` and `T_strict` for the keywords (flex `--case-insensitive`),
+    /// and grammar.y's `atom : T_atom | qatom` accepts none of them, so an
+    /// unquoted keyword is a syntax error as an attribute name or value, a
+    /// port or a compass point. C 16.1.0 exits 1 on every input below.
+    #[test]
+    fn unquoted_keywords_are_not_atoms() {
+        for src in [
+            "digraph G { packmode=node; }",
+            "digraph G { x=strict }",
+            "digraph G { x=digraph }",
+            "digraph G { a [label=edge] }",
+            "digraph G { a [label=NODE] }",
+            "digraph G { a [label=Edge] }",
+            "digraph G { a [node=1] }",
+            "digraph G { a [NODE=1] }",
+            "digraph G { a [label=node, b=c] }",
+            "graph G { graph [x=subgraph] }",
+            "digraph G { a:graph -> b }",
+            "digraph G { a -> b:strict }",
+            "digraph G { a:b:node }",
+            "digraph G { a -> edge }",
+        ] {
+            assert!(parse_dot(src).is_err(), "{src} should be a syntax error");
+        }
+    }
+
+    /// Issue #29: quoted keywords are `T_qatom` in C, so they stay valid.
+    #[test]
+    fn quoted_keywords_are_atoms() {
+        let g = parse_dot(
+            r#"digraph G {
+                packmode="node";
+                "node"="edge";
+                a [label="edge", "node"="1", x="a" + "graph"];
+                a:"graph":"n" -> b;
+                nodes; edged; graphx;
+            }"#,
+        )
+        .unwrap();
+        assert_eq!(
+            g.graph_attrs.get("packmode").map(String::as_str),
+            Some("node")
+        );
+        assert_eq!(g.graph_attrs.get("node").map(String::as_str), Some("edge"));
+        let a = &g.nodes[g.node_lookup["a"].0 as usize].attrs;
+        assert_eq!(a.get("label").map(String::as_str), Some("edge"));
+        assert_eq!(a.get("node").map(String::as_str), Some("1"));
+        assert_eq!(a.get("x").map(String::as_str), Some("agraph"));
+        assert_eq!(g.edges[0].tail_port.name.as_deref(), Some("graph"));
+        assert_eq!(g.edges[0].tail_port.compass.as_deref(), Some("n"));
+        for name in ["nodes", "edged", "graphx"] {
+            assert!(g.node_lookup.contains_key(name), "{name}");
+        }
+    }
 }

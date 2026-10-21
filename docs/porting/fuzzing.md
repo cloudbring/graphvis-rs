@@ -100,6 +100,13 @@ Parser and input
   defaults again.
 * Attributes of a list are declared in source order, which fixes cgraph's `sym->id`.
 * An attribute list holds `atom=atom` items with at most one separator each.
+* An unquoted keyword (`node`, `edge`, `graph`, `digraph`, `subgraph`, `strict`, in any
+  case) is not an `atom`, so as an attribute name or value, or as a port or compass
+  point, it is a syntax error, as in C (`grammar.y` `atom : T_atom | qatom`). The quoted
+  forms still parse. This was open case `020-parser-keyword-as-attribute-value`; its
+  checks are in `crates/graphviz-pure-cli/tests/cli.rs`
+  (`unquoted_keyword_atoms_are_syntax_errors`, `quoted_keyword_atoms_still_parse`) and
+  the parser's unit tests.
 * cgraph reads input a line at a time and each graph gets a new scanner: the rest of
   the line after a graph's closing `}` is dropped, line numbers restart, and the graphs
   read before a syntax error are rendered before dot exits 1.
@@ -274,7 +281,7 @@ Of the 124 cases, 100 fall into 17 port issues. An 18th port issue, `019`, is a
 separate difference that appeared while minimising one of them. The other 24 fall into 8 upstream-C
 issues: undefined behaviour, crashes, address- or clock-dependent output. These are
 proposed as wontfix, with an explanation of what the port does instead. Further issues
-cover gaps that are not from fuzzing: the keyword parser bug, stderr wording, Linux/WASM
+cover gaps that are not from fuzzing: stderr wording, Linux/WASM
 portable math, the twopi arrows graphs and Latin-1 `-Tplain`. One correction to earlier
 notes: the circo/neato "record port 0.1pt off" difference is the record obstacle being
 1pt taller in the port (it uses `ND_height` instead of the field box), not the port point
@@ -290,7 +297,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
 | [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
-| [`020-parser-keyword-as-attribute-value`](../../tests/fuzz-open/020-parser-keyword-as-attribute-value) | medium | — | port |
 | [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
 | [`022-stderr-syntax-error-message`](../../tests/fuzz-open/022-stderr-syntax-error-message) | low | — | port |
 | [`023-neato-circuit-kk-agseq-index-crash`](../../tests/fuzz-open/023-neato-circuit-kk-agseq-index-crash) | high | 1 | upstream C, wontfix |
