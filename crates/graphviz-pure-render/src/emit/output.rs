@@ -74,8 +74,8 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
         let src = &m.g.edges[i].attrs;
         if src.contains_key(graphviz_pure_core::IGNORED_EDGE_KEY) {
             let a = &mut g.edges[i].attrs;
-            for k in ["head_lp", "tail_lp", "xlp"] {
-                match src.get(&format!("{}{k}", graphviz_pure_core::IGNORED_EDGE_KEY)) {
+            for (k, ik) in graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS {
+                match src.get(ik) {
                     Some(v) => a.insert(k.into(), v.clone()),
                     None => a.remove(k),
                 };

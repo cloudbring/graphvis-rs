@@ -113,13 +113,26 @@ pub const UNPLACED_PORT_LABELS_KEY: &str = "\u{1}unplacedportlbl";
 /// the layout dropped the name (dot's `sameport`).
 pub const TAIL_PORT_NAME_KEY: &str = "\u{1}tailportname";
 pub const HEAD_PORT_NAME_KEY: &str = "\u{1}headportname";
+/// One spelling for [`IGNORED_EDGE_KEY`] and the [`IGNORED_EDGE_INPUT_KEYS`] built on it.
+macro_rules! ignored_edge_key {
+    ($attr:literal) => {
+        concat!("\u{1}ignorededge", $attr)
+    };
+}
 /// Edge attribute set by a layout on an edge it routed although its type is `IGNORED`
 /// (dot's `orthoEdges` under `concentrate`, which keeps the first edge of each node pair
 /// whatever its type): renderers draw its spline (`emit_edge_graphics` has no type check),
 /// but `attach_attrs_and_arrows` gives it no `pos`, `lp`, `xlp`, `head_lp` or `tail_lp`
 /// (`lib/common/output.c`). The layout keeps the input value of each label attribute it
-/// overwrote under this key followed by the attribute name.
-pub const IGNORED_EDGE_KEY: &str = "\u{1}ignorededge";
+/// overwrote under [`IGNORED_EDGE_INPUT_KEYS`].
+pub const IGNORED_EDGE_KEY: &str = ignored_edge_key!("");
+/// `(attribute, key)`: where the layout keeps the input value of a label attribute it
+/// overwrote on an [`IGNORED_EDGE_KEY`] edge, for the renderer to put back.
+pub const IGNORED_EDGE_INPUT_KEYS: [(&str, &str); 3] = [
+    ("head_lp", ignored_edge_key!("head_lp")),
+    ("tail_lp", ignored_edge_key!("tail_lp")),
+    ("xlp", ignored_edge_key!("xlp")),
+];
 
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

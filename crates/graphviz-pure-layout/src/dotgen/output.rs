@@ -145,11 +145,16 @@ impl Output {
             if ignored {
                 extra.push((graphviz_pure_core::IGNORED_EDGE_KEY, String::new()));
             }
-            for (k, ik, p) in [
-                ("head_lp", "\u{1}ignorededgehead_lp", pos_of(ed.head_label)),
-                ("tail_lp", "\u{1}ignorededgetail_lp", pos_of(ed.tail_label)),
-                ("xlp", "\u{1}ignorededgexlp", lp_of(ed.xlabel)),
-            ] {
+            // In IGNORED_EDGE_INPUT_KEYS order: head_lp, tail_lp, xlp.
+            let label_pos = [
+                pos_of(ed.head_label),
+                pos_of(ed.tail_label),
+                lp_of(ed.xlabel),
+            ];
+            for ((k, ik), p) in graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS
+                .into_iter()
+                .zip(label_pos)
+            {
                 if let Some(p) = p {
                     if ignored && let Some(v) = d.input.edges[ei].attrs.get(k) {
                         extra.push((ik, v.clone()));
