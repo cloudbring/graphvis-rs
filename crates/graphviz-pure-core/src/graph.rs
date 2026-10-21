@@ -97,6 +97,13 @@ pub const UNREGISTERED_CLUSTER_KEY: &str = "\u{1}unregclust";
 /// positioned (fdp stopping on a layout error): renderers draw it with its empty box.
 pub const REGISTERED_CLUSTER_KEY: &str = "\u{1}regclust";
 
+/// Root graph or cluster attribute set by a layout whose `GD_clust` list is not the
+/// subgraph tree: the subgraph indices of the list, in order and with repeats,
+/// separated by spaces. dot's pack branch (`copyClusterInfo`) builds the root's
+/// list in component order and appends a cluster once per component that kept it;
+/// `emit_clusters` draws the list as it is.
+pub const CLUSTER_LIST_KEY: &str = "\u{1}clustlist";
+
 /// Edge attribute set by a layout whose head or tail label it could not place
 /// (`ED_head_label(e)->set` false: `h`, tail: `t`): `head_lp`/`tail_lp` are still
 /// printed, but renderers do not draw the label.

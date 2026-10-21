@@ -25,6 +25,8 @@ pub struct Output {
     /// `lp` of the root graph and of clusters (by subgraph index).
     graph_lp: Option<String>,
     cluster_lp: Vec<(usize, String)>,
+    /// `GD_clust` of the root (`None`) and of each cluster, as subgraph indices.
+    cluster_list: Vec<(Option<usize>, String)>,
 }
 
 impl Output {
@@ -44,6 +46,7 @@ impl Output {
             node_xlp: Vec::new(),
             graph_lp: None,
             cluster_lp: Vec::new(),
+            cluster_list: Vec::new(),
         }
     }
 
@@ -73,6 +76,23 @@ impl Output {
             }
         }
         rec(d, 0, &mut cluster_bb);
+        // The order (and, after copyClusterInfo, the repeats) emit_clusters walks.
+        let mut cluster_list = Vec::new();
+        fn rec_list(d: &Dot<'_>, g: G, out: &mut Vec<(Option<usize>, String)>) {
+            let list: Vec<String> = d.graphs[g]
+                .clust
+                .iter()
+                .filter_map(|&c| d.graphs[c].sub_index.map(|si| si.to_string()))
+                .collect();
+            // A graph with no subgraph of its own would otherwise land on the root.
+            if g == 0 || d.graphs[g].sub_index.is_some() {
+                out.push((d.graphs[g].sub_index, list.join(" ")));
+            }
+            for &c in &d.graphs[g].clust {
+                rec_list(d, c, out);
+            }
+        }
+        rec_list(d, 0, &mut cluster_list);
         let mut edges = Vec::new();
         let mut edge_attrs = Vec::new();
         let lp_of = |l: Option<L>| l.filter(|&l| d.labels[l].set).map(|l| d.labels[l].pos);
@@ -177,6 +197,7 @@ impl Output {
             node_xlp,
             graph_lp,
             cluster_lp,
+            cluster_list,
         }
     }
 
@@ -236,6 +257,13 @@ impl Output {
             graph.subgraphs[si]
                 .graph_attrs
                 .insert(crate::nop::LABEL_POS_KEY.to_string(), lp);
+        }
+        for (si, list) in self.cluster_list {
+            let attrs = match si {
+                Some(si) => &mut graph.subgraphs[si].graph_attrs,
+                None => &mut graph.graph_attrs,
+            };
+            attrs.insert(graphviz_pure_core::CLUSTER_LIST_KEY.to_string(), list);
         }
         for (i, xlp) in self.node_xlp.into_iter().enumerate() {
             if let Some(v) = xlp {

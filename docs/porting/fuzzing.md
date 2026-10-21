@@ -225,6 +225,17 @@ dot
   `010-dot-pack-single-component-ignores-cc-subgraph` (issue #19); its tests are
   `pack_single_component_*` in `crates/graphviz-pure-cli/tests/cli.rs`. `dot_mincross`
   now prints C's "removing empty cluster" warning.
+* In the pack branch, clusters are drawn from the root's `GD_clust` as `copyClusterInfo`
+  builds it: in component order, and once per component that kept the cluster, so a
+  cluster sharing a node with a non-nested cluster is drawn twice. The renderer used to
+  rebuild the list from the subgraph tree. This was open case
+  `016-dot-pack-cluster-list-from-subgraph-tree` (issue #25); its two reproducers are in
+  `crates/graphviz-pure-cli/tests/cli.rs`
+  (`packed_dot_draws_the_root_cluster_list_of_copy_cluster_info`). Four of its five fuzz
+  cases now match C. Seed 1548 still differs: its nodes of two non-nested clusters are in
+  two components, so the components' boxes take in each other's edges (issue #100) and
+  share node and edge records in C (issue #101). Seeds 1062, 11551 and 35883 still write
+  some edges in a different subgraph in `-Tdot` (issue #102).
 
 neato family
 * `resolvePorts` drops `tailclip=false` on `_` ports.
@@ -310,7 +321,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
 | [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
 | [`011-dot-render-node-lw-rw-ht`](../../tests/fuzz-open/011-dot-render-node-lw-rw-ht) | medium | 3 | port |
-| [`016-dot-pack-cluster-list-from-subgraph-tree`](../../tests/fuzz-open/016-dot-pack-cluster-list-from-subgraph-tree) | low | 5 | port |
 | [`019-neato-polyline-compass-port-endpoint`](../../tests/fuzz-open/019-neato-polyline-compass-port-endpoint) | low | — | port |
 | [`021-stderr-missing-warnings`](../../tests/fuzz-open/021-stderr-missing-warnings) | low | — | port |
 | [`023-neato-circuit-kk-agseq-index-crash`](../../tests/fuzz-open/023-neato-circuit-kk-agseq-index-crash) | high | 1 | upstream C, wontfix |

@@ -562,6 +562,54 @@ impl<'g> Model<'g> {
                 );
             }
         }
+        // A layout that exported its `GD_clust` lists (dot): walk them as they are,
+        // in their order and with their repeats (`copyClusterInfo` in the pack branch).
+        // A graph's `GD_clust` only holds clusters below it, so entries that are not
+        // descendants (the key written in the input, inherited by subgraphs) are dropped:
+        // they could make the cluster tree cyclic.
+        let mut of_sub: Vec<Option<usize>> = vec![None; g.subgraphs.len()];
+        for (ci, c) in clusters.iter().enumerate() {
+            of_sub[c.sub] = Some(ci);
+        }
+        let mut parent: Vec<Option<usize>> = vec![None; g.subgraphs.len()];
+        for (i, s) in g.subgraphs.iter().enumerate() {
+            for c in &s.subgraphs {
+                parent[c.0 as usize] = Some(i);
+            }
+        }
+        let below = |si: usize, owner: Option<usize>| {
+            let Some(owner) = owner else { return true };
+            let mut cur = parent[si];
+            while let Some(p) = cur {
+                if p == owner {
+                    return true;
+                }
+                cur = parent[p];
+            }
+            false
+        };
+        let listed = |attrs: &AttrMap, owner: Option<usize>| -> Option<Vec<usize>> {
+            let list = attrs.get(graphviz_pure_core::CLUSTER_LIST_KEY)?;
+            Some(
+                list.split_ascii_whitespace()
+                    .filter_map(|si| si.parse::<usize>().ok())
+                    .filter(|&si| si < parent.len() && below(si, owner))
+                    .filter_map(|si| of_sub[si])
+                    .collect(),
+            )
+        };
+        if let Some(list) = listed(&g.graph_attrs, None) {
+            root_clusters = list;
+        }
+        // Only the root's list repeats clusters (`copyClusterInfo`); repeats below it
+        // would multiply at every level.
+        for c in &mut clusters {
+            if let Some(mut list) = listed(&g.subgraphs[c.sub].graph_attrs, Some(c.sub)) {
+                let mut seen = std::collections::HashSet::new();
+                list.retain(|&k| seen.insert(k));
+                c.children = list;
+            }
+        }
 
         let bb = g.bb;
         let label = graph_label_geometry_in(&g.name, &g.graph_attrs, true, flip, &env).map(|gl| {
