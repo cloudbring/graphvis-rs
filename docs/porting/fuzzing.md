@@ -266,7 +266,10 @@ neato family
   `crates/graphviz-pure-cli/tests/cli.rs`
   (`neato_splines_route_around_star_and_cylinder_nodes`,
   `circo_star_obstacle_falls_back_to_straight_edge_with_warning`,
-  `ortho_star_and_cylinder_obstacles_are_outline_boxes`).
+  `ortho_star_and_cylinder_obstacles_are_outline_boxes`). A cylinder's repeated vertices
+  leave obstacle sides in no triangle, so a port endpoint on one makes C abort in
+  `addEndpoint` (`findMap`'s `assert(ip)`); the port treats it as a failed multispline
+  and falls back (`cylinder_port_endpoint_does_not_hang_the_router`).
 * patchwork places xlabels around the shape size `common_init_node` gives the node, not
   its patch.
 * fdp places a cluster's boundary ports with separate `cos` and `sin` calls, as C does,

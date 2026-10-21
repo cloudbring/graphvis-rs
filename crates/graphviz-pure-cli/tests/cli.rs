@@ -263,6 +263,24 @@ q -- r;
     );
 }
 
+/// Issue #17: a cylinder's obstacle repeats vertices, so some of its sides are
+/// in no triangle. C's `addEndpoint` (`lib/neatogen/multispline.c:889`, `:897`)
+/// then aborts on `findMap`'s `assert(ip)`; the port looped in `mk_poly`. It
+/// now treats this as a failed multispline and falls back like other failures.
+#[test]
+fn cylinder_port_endpoint_does_not_hang_the_router() {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let src = "graph G { layout=neato; splines=true; a [shape=cylinder]; a:n -- b; c -- a:w; }";
+        tx.send(run(&["-Tsvg"], src)).unwrap();
+    });
+    let (out, err, ok) = rx
+        .recv_timeout(std::time::Duration::from_secs(60))
+        .expect("the router must terminate");
+    assert!(ok, "{err}");
+    assert_eq!(out.matches("class=\"edge\"").count(), 2, "{out}");
+}
+
 // Fuzz case 004-neato-router-record-obstacle-height (issue #13), its repro.gv verbatim. C's
 // `makeObstacle` (lib/neatogen/neatosplines.c:447-449) builds a record's obstacle from the
 // root field box `fld->b`, not from `ND_height`, which carries record_init's +1pt. With the
