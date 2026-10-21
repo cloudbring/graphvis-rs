@@ -720,6 +720,7 @@
     "main/fuzz_record_html_entities",
     "main/fuzz_sametail_title",
     "main/fuzz_strict_edge_merge",
+    "main/fuzz_subgraph_name_multibyte",
     "main/fuzz_subgraph_splines_root",
     "main/fuzz_tapered_fma",
     "main/fuzz_trailing_syntax_error",

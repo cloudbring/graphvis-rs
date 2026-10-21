@@ -328,7 +328,7 @@ fn neato_layout_component(
 }
 
 pub(crate) fn is_a_cluster(sg: &graphviz_pure_core::SubgraphData) -> bool {
-    sg.name.len() >= 7 && sg.name[..7].eq_ignore_ascii_case("cluster")
+    graphviz_pure_core::has_cluster_prefix(&sg.name)
         || mapbool(sg.graph_attrs.get("cluster").map(String::as_str))
 }
 

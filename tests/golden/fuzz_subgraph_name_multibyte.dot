@@ -1,0 +1,16 @@
+graph {
+	graph [bb="0,0,86,124"];
+	node [label="\N"];
+	subgraph aaaaaaé {
+		a	[height=0.5,
+			pos="43,106",
+			width=0.75];
+	}
+	subgraph CLUSTERé {
+		graph [bb="8,8,78,60"];
+		b	[height=0.5,
+			pos="43,34",
+			width=0.75];
+	}
+	a -- b	[pos="43,87.697 43,76.846 43,62.917 43,52.104"];
+}

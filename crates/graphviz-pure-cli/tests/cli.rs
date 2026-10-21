@@ -44,6 +44,43 @@ fn unknown_flag_is_rejected() {
     assert!(err.contains("option -Z unrecognized"), "{err}");
 }
 
+// Issue #165: every engine's `is_a_cluster` sliced the subgraph name at byte 7, which panics
+// ("byte index 7 is not a char boundary") when byte 7 falls inside a multi-byte character.
+// C's `strncasecmp(agnameof(g), "cluster", 7)` compares bytes, and C draws these graphs.
+// "CLUSTERé" is still a cluster, as in C.
+#[test]
+fn subgraph_name_with_multibyte_char_at_byte_7_does_not_panic() {
+    let src = "graph { subgraph \"aaaaaaé\" { a [pos=\"0,0\"] } \
+               subgraph \"CLUSTERé\" { b [pos=\"1,1\"] } }\n";
+    let engines = [
+        "dot",
+        "neato",
+        "fdp",
+        "sfdp",
+        "twopi",
+        "circo",
+        "osage",
+        "patchwork",
+        "nop",
+    ];
+    for engine in engines {
+        for fmt in ["-Tsvg", "-Tjson"] {
+            let (out, err, ok) = run(&[&format!("-K{engine}"), fmt, "-Gpack=true"], src);
+            assert!(ok && !err.contains("panicked"), "{engine} {fmt}: {err}");
+            // The engines that draw this cluster in C (circo, twopi and sfdp ignore clusters;
+            // nop has no cluster `bb` to draw).
+            let draws = ["dot", "neato", "fdp", "osage", "patchwork"].contains(&engine);
+            if fmt == "-Tsvg" && draws {
+                assert_eq!(
+                    out.matches("class=\"cluster\"").count(),
+                    1,
+                    "{engine}: {out}"
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn global_attrs_output_file_and_separate_args() {
     let path = tmp("cli_out.svg");

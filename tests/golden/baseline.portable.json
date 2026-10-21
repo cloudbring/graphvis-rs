@@ -855,6 +855,21 @@
       "rank_ok": true,
       "order_ok": true
     },
+    "fuzz_subgraph_name_multibyte": {
+      "nodes": 2,
+      "nodes_ok": 2,
+      "edges": 1,
+      "edges_ok": 1,
+      "clusters": 1,
+      "clusters_ok": 1,
+      "bb_ok": true,
+      "node_err": 0.0,
+      "edge_err": 0.0,
+      "missing": 0,
+      "sizes_ok": 2,
+      "rank_ok": true,
+      "order_ok": true
+    },
     "fuzz_subgraph_splines_root": {
       "nodes": 2,
       "nodes_ok": 2,

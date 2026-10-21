@@ -56,6 +56,16 @@ pub struct EdgeData {
     pub label_unplaced: bool,
 }
 
+/// The name test of `is_a_cluster` (lib/common/utils.c): `strncasecmp(name, "cluster", 7)`.
+///
+/// This compares bytes, as C does. Slicing the `str` at byte 7 instead panics when byte 7
+/// falls inside a multi-byte character (issue #165).
+pub fn has_cluster_prefix(name: &str) -> bool {
+    name.as_bytes()
+        .get(..7)
+        .is_some_and(|p| p.eq_ignore_ascii_case(b"cluster"))
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SubgraphData {
     pub id: SubgraphId,
@@ -265,5 +275,21 @@ impl Graph {
             label_unplaced: false,
         });
         id
+    }
+}
+
+#[cfg(test)]
+mod cluster_prefix_tests {
+    use super::has_cluster_prefix;
+
+    #[test]
+    fn compares_the_first_seven_bytes_case_insensitively() {
+        assert!(has_cluster_prefix("cluster"));
+        assert!(has_cluster_prefix("Cluster_a"));
+        assert!(has_cluster_prefix("CLUSTERé"));
+        assert!(!has_cluster_prefix("cluste"));
+        assert!(!has_cluster_prefix("aaaaaaé"));
+        assert!(!has_cluster_prefix("clusé_x"));
+        assert!(!has_cluster_prefix(""));
     }
 }

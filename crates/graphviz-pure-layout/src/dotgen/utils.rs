@@ -199,8 +199,7 @@ impl Dot<'_> {
             return !self.comp || mapbool(self.agget(0, "cluster"));
         }
         let name = &self.graphs[g].name;
-        (name.len() >= 7 && name[..7].eq_ignore_ascii_case("cluster"))
-            || mapbool(self.agget(g, "cluster"))
+        graphviz_pure_core::has_cluster_prefix(name) || mapbool(self.agget(g, "cluster"))
     }
 
     /// `nonconstraint_edge(e)` (class1.c)

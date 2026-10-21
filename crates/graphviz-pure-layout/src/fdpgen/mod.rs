@@ -46,7 +46,7 @@ pub(crate) fn trace(level: u8) -> bool {
 
 /// `is_a_cluster(g)` for a subgraph.
 pub fn is_a_cluster(sg: &SubgraphData) -> bool {
-    (sg.name.len() >= 7 && sg.name.as_bytes()[..7].eq_ignore_ascii_case(b"cluster"))
+    graphviz_pure_core::has_cluster_prefix(&sg.name)
         || mapbool(sg.graph_attrs.get("cluster").map(String::as_str))
 }
 

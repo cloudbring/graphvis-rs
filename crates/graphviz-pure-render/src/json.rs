@@ -713,7 +713,7 @@ pub(crate) fn write_json(
     ) {
         gid[s] = *cnt;
         let name = &g.subgraphs[s].name;
-        if name.len() >= 7 && name[..7].eq_ignore_ascii_case("cluster") {
+        if graphviz_pure_core::has_cluster_prefix(name) {
             cl.entry(name.clone()).or_insert(*cnt);
         }
         *cnt += 1;
