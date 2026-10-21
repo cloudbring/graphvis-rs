@@ -37,9 +37,6 @@
    - push the smoke-tested image to `ghcr.io/graphviz-pure/graphviz-pure` as `0.1.0`, `0.1` and
      `latest` (a pre-release gets only its own tag) and attest its digest, with the attestation
      stored next to the image in the registry;
-   - open the winget update pull request on `microsoft/winget-pkgs` with komac, if
-     `WINGET_TOKEN` is set (otherwise the job logs a notice and does nothing). winget's
-     moderators merge it, usually within a day or two.
 5. Within hours, `graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the
    release, verify each asset's attestation and checksum, and commit the new formula and
    manifest. `graphviz-pure/graphviz-pure.github.io` deploys the site from `master` builds the
@@ -76,7 +73,7 @@ docker run --rm -v "$PWD:/data" --user "$(id -u):$(id -g)" ghcr.io/graphviz-pure
 
 ## One-time setup
 
-Done once per channel by a maintainer. Only winget needs a long-lived token in GitHub.
+Done once per channel by a maintainer. Nothing here needs a long-lived token in GitHub.
 
 ### GitHub (organization `graphviz-pure`)
 
@@ -151,37 +148,6 @@ after the first release:
    the package should show this repository as its source (the image's
    `org.opencontainers.image.source` label).
 
-### winget (`GraphvizPure.GraphvizPure`)
-
-winget takes a new package only from a hand-made first submission; the release workflow then
-opens the update for every later version.
-
-1. A **classic** personal access token with the `public_repo` scope only, with an expiry date.
-   komac does not support fine-grained tokens: it can commit with one, but GitHub refuses the
-   pull request to `microsoft/winget-pkgs`
-   ([komac#310](https://github.com/russellbanks/Komac/issues/310)). `public_repo` can write to
-   every public repository its owner can, so create it on a separate account that is not a
-   member of the organization; the pull requests come from that account's fork of
-   `winget-pkgs`, which komac creates.
-2. First version, by hand, after the GitHub release exists (komac 2.17.1 or later, logged in
-   with that token):
-
-   ```sh
-   base=https://github.com/graphviz-pure/graphviz-pure/releases/download/v0.1.0
-   komac new GraphvizPure.GraphvizPure --version 0.1.0 \
-     --urls $base/graphviz-pure-0.1.0-x86_64-pc-windows-msvc.zip $base/graphviz-pure-0.1.0-aarch64-pc-windows-msvc.zip
-   ```
-
-   Each zip holds one `graphviz-pure.exe` (portable) inside a versioned directory, which komac
-   detects as the nested installer. Publisher `graphviz-pure`, licence `EPL-2.0`, command alias
-   `graphviz-pure` (the default). Submit and wait for the moderators to merge it.
-3. Store the token as the `WINGET_TOKEN` secret of the `release` environment (repository
-   Settings → Environments → release). Until it exists the `winget` job only logs a notice.
-   When it expires, the job fails and the winget update can be made by hand with
-   `komac update GraphvizPure.GraphvizPure --version X.Y.Z --urls ... --submit`.
-
-Users then run `winget install GraphvizPure.GraphvizPure`.
-
 ### Homebrew and Scoop
 
 Nothing to set up: the tap and bucket repositories update themselves after each release.
@@ -195,6 +161,7 @@ source.
 
 | channel | what it needs |
 | :--- | :--- |
+| winget | a manifest pull request to `microsoft/winget-pkgs` per release, made with komac. The first version is submitted by hand (`komac new`); later ones can be automated with `komac update --submit` from the release workflow. komac needs a **classic** token with the `public_repo` scope (fine-grained tokens can commit but cannot open the pull request, [komac#310](https://github.com/russellbanks/Komac/issues/310)). The plan: a dedicated bot account, not a member of the organization, that owns a fork of `winget-pkgs`, its token stored as a `release`-environment secret. Each Windows zip holds one portable `graphviz-pure.exe`, which komac detects as the nested installer |
 | Debian/Ubuntu and Fedora repositories | Cloudsmith open-source plan (supports GitHub OIDC, so no stored token), or Fedora COPR and a Launchpad PPA, which build from source |
 | AUR | an AUR account and SSH key; the `graphviz-pure-bin` (release binaries) and `graphviz-pure` (from source) PKGBUILDs are in [`packaging/aur/`](../packaging/aur), filled in from a verified release by `packaging/aur/update.sh VERSION` ([steps](../packaging/README.md#aur)) |
 | nixpkgs, conda-forge | pull requests to their repositories; no account beyond GitHub. The recipes are in [`packaging/nixpkgs/`](../packaging/nixpkgs) and [`packaging/conda-forge/`](../packaging/conda-forge) ([steps](../packaging/README.md#nixpkgs)) |

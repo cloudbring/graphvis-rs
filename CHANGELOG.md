@@ -25,7 +25,6 @@ The first release.
 - Release archives include `THIRD-PARTY-LICENSES.md` and a `LICENSES/` folder with the licence
   texts of third-party code compiled into the binary: the MIT licence of the CORE-MATH `pow` port
   and the OFL licences of the bundled Tinos, Arimo and Cousine fonts.
-- A container image, `ghcr.io/graphviz-pure/graphviz-pure` (linux/amd64 and linux/arm64), and a
-  winget package, `GraphvizPure.GraphvizPure`.
+- A container image, `ghcr.io/graphviz-pure/graphviz-pure` (linux/amd64 and linux/arm64).
 
 [Unreleased]: https://github.com/graphviz-pure/graphviz-pure/commits/master

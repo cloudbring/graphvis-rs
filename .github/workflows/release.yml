@@ -15,8 +15,6 @@ name: Release
 #   maintainer's approval and accepts only v* tags. crates.io and npm are published with
 #   trusted publishing (OIDC): no registry token exists anywhere. The tokens these jobs can mint
 #   live for one job. The container image is pushed to ghcr.io with the job's GITHUB_TOKEN.
-# - The one stored credential is WINGET_TOKEN (a `release` environment secret), which can only
-#   open a pull request to microsoft/winget-pkgs from a fork. Without it the winget job skips.
 # - The Homebrew tap, the Scoop bucket and the website pull new releases themselves and verify
 #   the attestations before updating; this repository holds no credential for them.
 
@@ -464,53 +462,3 @@ jobs:
       - name: Log out
         if: always()
         run: docker logout ghcr.io
-
-  # Opens the pull request to microsoft/winget-pkgs for the new version. komac reads the
-  # previous version's manifest and analyses both zips, which hold one portable exe each, so
-  # the nested installer entries (including the versioned directory) are filled in by it. The
-  # package's first version is submitted by hand (docs/releasing.md).
-  winget:
-    name: Open the winget update
-    if: github.event_name == 'push'
-    needs: [check, github-release]
-    runs-on: ubuntu-24.04
-    environment: release
-    permissions: {} # komac uses WINGET_TOKEN only, against its owner's winget-pkgs fork
-    env:
-      KOMAC_VERSION: "2.17.1"
-      # komac-2.17.1-x86_64-unknown-linux-gnu.tar.gz, as listed in that release's SHA256SUMS.
-      KOMAC_SHA256: e694e79cd451afabf47bead66ed34586fef4814f7b94e4b61a098f419978d5d7
-    steps:
-      - name: Check for WINGET_TOKEN
-        id: token
-        env:
-          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
-        run: |
-          if [ -n "$WINGET_TOKEN" ]; then
-            echo "set=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::WINGET_TOKEN is not set in the release environment, so no winget pull request was opened (docs/releasing.md)"
-          fi
-      - name: Install komac ${{ env.KOMAC_VERSION }}
-        if: steps.token.outputs.set == 'true'
-        working-directory: ${{ runner.temp }}
-        run: |
-          curl --fail --silent --show-error --location --proto '=https' --output komac.tar.gz \
-            "https://github.com/russellbanks/Komac/releases/download/v$KOMAC_VERSION/komac-$KOMAC_VERSION-x86_64-unknown-linux-gnu.tar.gz"
-          echo "$KOMAC_SHA256  komac.tar.gz" | sha256sum --check --strict
-          tar -xzf komac.tar.gz komac
-      - name: komac update
-        if: steps.token.outputs.set == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
-          TAG: ${{ github.ref_name }}
-          VERSION: ${{ needs.check.outputs.version }}
-          REPO: ${{ github.repository }}
-        # In CI komac exits quietly if a pull request for this version already exists, so a
-        # re-run does not open a second one.
-        run: |
-          base="https://github.com/$REPO/releases/download/$TAG"
-          "$RUNNER_TEMP/komac" update GraphvizPure.GraphvizPure --version "$VERSION" \
-            --urls "$base/graphviz-pure-$VERSION-x86_64-pc-windows-msvc.zip" "$base/graphviz-pure-$VERSION-aarch64-pc-windows-msvc.zip" \
-            --release-notes-url "https://github.com/$REPO/releases/tag/$TAG" \
-            --submit
