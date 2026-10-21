@@ -221,7 +221,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           cat > notes.md <<EOF
-          graphviz-pure $VERSION, a byte-exact Rust port of Graphviz 16.1.0.
+          graphviz-pure $VERSION, a pure-Rust port of Graphviz 16.1.0 with the same output on every platform.
 
           Every file below was built by GitHub Actions from \`$TAG\` and has a signed build-provenance attestation. Verify a download with:
 
