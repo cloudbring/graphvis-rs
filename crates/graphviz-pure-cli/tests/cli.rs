@@ -269,16 +269,36 @@ q -- r;
 /// now treats this as a failed multispline and falls back like other failures.
 #[test]
 fn cylinder_port_endpoint_does_not_hang_the_router() {
-    let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        let src = "graph G { layout=neato; splines=true; a [shape=cylinder]; a:n -- b; c -- a:w; }";
-        tx.send(run(&["-Tsvg"], src)).unwrap();
-    });
-    let (out, err, ok) = rx
-        .recv_timeout(std::time::Duration::from_secs(60))
-        .expect("the router must terminate");
-    assert!(ok, "{err}");
-    assert_eq!(out.matches("class=\"edge\"").count(), 2, "{out}");
+    let src = "graph G { layout=neato; splines=true; a [shape=cylinder]; a:n -- b; c -- a:w; }";
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .arg("-Tsvg")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(src.as_bytes())
+        .unwrap();
+    // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    while child.try_wait().unwrap().is_none() {
+        if std::time::Instant::now() > deadline {
+            child.kill().unwrap();
+            panic!("the router must terminate");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let out = child.wait_with_output().unwrap();
+    let (svg, err) = (
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    assert!(out.status.success(), "{err}");
+    assert_eq!(svg.matches("class=\"edge\"").count(), 2, "{svg}");
 }
 
 // Fuzz case 004-neato-router-record-obstacle-height (issue #13), its repro.gv verbatim. C's
