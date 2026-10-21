@@ -40,7 +40,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   doInstallCheck = true;
 
   meta = {
-    description = "Byte-exact Rust port of Graphviz 16.1.0 with a dot-compatible command line";
+    description = "Pure-Rust port of Graphviz 16.1.0 with a dot-compatible command line and the same output on every platform";
     longDescription = ''
       graphviz-pure is a function-by-function port of Graphviz 16.1.0 to safe Rust, with all
       eight layout engines and the svg, json, dot, xdot, plain, png and jpg outputs. It is an

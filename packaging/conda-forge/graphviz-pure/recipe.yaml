@@ -63,7 +63,7 @@ about:
   homepage: https://graphviz-pure.github.io/
   repository: https://github.com/graphviz-pure/graphviz-pure
   documentation: https://graphviz-pure.github.io/
-  summary: Byte-exact Rust port of Graphviz 16.1.0 with a dot-compatible command line
+  summary: Pure-Rust port of Graphviz 16.1.0 with a dot-compatible command line and the same output on every platform
   description: |
     graphviz-pure is a function-by-function port of Graphviz 16.1.0 to safe Rust, with all
     eight layout engines and the svg, json, dot, xdot, plain, png and jpg outputs. It installs

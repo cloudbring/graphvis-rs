@@ -44,7 +44,7 @@ tar -xzf "$dist/$name.tar.gz" -C "$ctx/doc" --strip-components=1 \
 # would add "unknown/unknown" entries to the index.
 annotations=()
 for kv in "title=graphviz-pure" \
-  "description=A byte-exact Rust port of Graphviz: a drop-in dot command line" \
+  "description=A pure-Rust port of Graphviz with the same output on every platform: a drop-in dot command line" \
   "source=https://github.com/graphviz-pure/graphviz-pure" "url=https://graphviz-pure.github.io/" \
   "licenses=EPL-2.0" "version=$version" "revision=$revision" "created=$created"; do
   annotations+=(--annotation "index:org.opencontainers.image.$kv")
