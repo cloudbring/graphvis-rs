@@ -427,3 +427,41 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
     }
     Some(mp)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Issue #171: osage places a node of a repeated cluster at `x = inf`, as C
+    /// does. Its box makes `partition`'s monotonation need a fifth chain slot at
+    /// a vertex; C overruns `vpos[4]` and fails `assert(np->cells[1])` in
+    /// `lib/ortho/maze.c:chkSgraph`. The port fails the maze instead.
+    #[test]
+    fn non_finite_node_box_fails_the_maze() {
+        let nodes = [
+            (Point::new(58.0, 18.0), 54.0, 36.0),
+            (
+                Point::new(f64::INFINITY, 112.0),
+                77.864_504_732_387_15,
+                36.0,
+            ),
+            (
+                Point::new(181.447_833_640_676_58, 112.0),
+                122.895_667_281_353_17,
+                36.0,
+            ),
+            (Point::new(181.0, 18.0), 54.0, 36.0),
+            (Point::new(29.0, 100.0), 54.0, 36.0),
+            (Point::new(87.0, 100.0), 54.0, 36.0),
+            (
+                Point::new(292.896_757_820_101_7, 112.0),
+                91.793_515_640_203_44,
+                36.0,
+            ),
+            (Point::new(58.0, 58.0), 54.0, 36.0),
+            (Point::new(181.0, 58.0), 54.0, 36.0),
+            (Point::new(293.0, 58.0), 54.0, 36.0),
+        ];
+        assert!(mk_maze(&nodes).is_none());
+    }
+}

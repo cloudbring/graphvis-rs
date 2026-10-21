@@ -39,6 +39,8 @@ struct Mono<'a> {
     seg: &'a [SegmentT],
     tr: &'a [Trap],
     flip: bool,
+    /// Set when a vertex needs a fifth chain slot; see `make_new_monotone_poly`.
+    failed: bool,
 }
 
 /// `perp(p)`: rotate by 90 degrees counter-clockwise.
@@ -182,6 +184,17 @@ impl Mono<'_> {
         let (ip, iq) = self.get_vertex_positions(v0, v1);
         let p = self.vert[v0 as usize].vpos[ip] as usize;
         let q = self.vert[v1 as usize].vpos[iq] as usize;
+        let nf0 = self.vert[v0 as usize].nextfree as usize;
+        let nf1 = self.vert[v1 as usize].nextfree as usize;
+        // A vertex of the rectangle outlines lies on at most 4 chains. C writes
+        // `vpos[nextfree]` past the end of its `int vpos[4]` here when the cells
+        // are degenerate (non-finite or overlapping boxes, #171), then fails
+        // `assert(np->cells[1])` in maze.c:chkSgraph. Fail the partition instead,
+        // as when a trapezoidation fails, so the caller falls back.
+        if nf0 >= 4 || nf1 >= 4 {
+            self.failed = true;
+            return mcur;
+        }
         let i = self.new_chain_element();
         let j = self.new_chain_element();
         let ch = &mut self.chain;
@@ -197,8 +210,6 @@ impl Mono<'_> {
         ch[qp].next = j as i32;
         ch[p].next = q as i32;
         ch[q].prev = p as i32;
-        let nf0 = self.vert[v0 as usize].nextfree as usize;
-        let nf1 = self.vert[v1 as usize].nextfree as usize;
         let inext = self.chain[self.chain[i].next as usize].vnum;
         let vp0 = &mut self.vert[v0 as usize];
         vp0.vnext[ip] = v1;
@@ -219,7 +230,7 @@ impl Mono<'_> {
 
     #[allow(clippy::too_many_lines)]
     fn traverse_polygon(&mut self, mcur: usize, trnum: usize, from: usize, dir: i32) {
-        if !is_valid_trap(trnum) || self.visited[trnum] {
+        if self.failed || !is_valid_trap(trnum) || self.visited[trnum] {
             return;
         }
         let t = self.tr[trnum];
@@ -426,13 +437,15 @@ impl Mono<'_> {
     }
 }
 
-/// `monotonate_trapezoids(nsegs, seg, tr, flip, decomp)`.
+/// `monotonate_trapezoids(nsegs, seg, tr, flip, decomp)`. `None` when the
+/// outlines are too degenerate to split into monotone pieces (C has undefined
+/// behaviour there).
 fn monotonate_trapezoids(
     nsegs: i32,
     seg: &[SegmentT],
     tr: &[Trap],
     flip: bool,
-) -> Vec<BoundingBox> {
+) -> Option<Vec<BoundingBox>> {
     let n = nsegs as usize;
     let mut m = Mono {
         chain_idx: nsegs,
@@ -445,6 +458,7 @@ fn monotonate_trapezoids(
         seg,
         tr,
         flip,
+        failed: false,
     };
     let tr_start = (0..tr.len())
         .find(|&j| inside_polygon(&tr[j], seg))
@@ -467,7 +481,7 @@ fn monotonate_trapezoids(
             m.traverse_polygon(0, tr_start, ts.d0, TR_FROM_DN);
         }
     }
-    m.decomp
+    (!m.failed).then_some(m.decomp)
 }
 
 /// `rectIntersect(d, r0, r1)`.
@@ -482,7 +496,7 @@ fn rect_intersect(r0: &BoundingBox, r1: &BoundingBox) -> Option<BoundingBox> {
 }
 
 /// `partition(cells, ncells, &nrects, bb)`: the free rectangles; `None` when
-/// a trapezoidation fails.
+/// a trapezoidation or a monotonation fails.
 pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> Option<Vec<BoundingBox>> {
     let ncells = cells.len();
     let nsegs = 4 * (ncells + 1);
@@ -495,14 +509,14 @@ pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> Option<Vec<BoundingB
     if hor_traps.is_empty() {
         return None;
     }
-    let hor_decomp = monotonate_trapezoids(nsegs as i32, &segs, &hor_traps, false);
+    let hor_decomp = monotonate_trapezoids(nsegs as i32, &segs, &hor_traps, false)?;
     gen_segments(cells, bb, &mut segs, true);
     generate_random_ordering(nsegs, &mut permute, &mut rng);
     let ver_traps = construct_trapezoids(nsegs as i32, &mut segs, &permute);
     if ver_traps.is_empty() {
         return None;
     }
-    let vert_decomp = monotonate_trapezoids(nsegs as i32, &segs, &ver_traps, true);
+    let vert_decomp = monotonate_trapezoids(nsegs as i32, &segs, &ver_traps, true)?;
     let mut rs = Vec::new();
     for v in &vert_decomp {
         for h in &hor_decomp {

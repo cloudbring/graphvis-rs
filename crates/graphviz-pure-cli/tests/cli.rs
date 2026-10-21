@@ -768,6 +768,30 @@ fn backslash_crlf_in_quoted_string_is_kept() {
     assert!(out.contains("label=\"x\\\r\ny\""), "{out}");
 }
 
+// Fuzz case for issue #171, verbatim. osage puts `i1ortho` at x=inf (C does too: the
+// repeated `cluster_inner4`, see #173), and that box breaks the ortho partition. C overruns
+// `vpos[4]` in `lib/ortho/partition.c:make_new_monotone_poly` and then fails
+// `assert(np->cells[1])` in `lib/ortho/maze.c:chkSgraph` (exit 134); the port panicked with
+// an index out of bounds there. Now the partition fails, as when a trapezoidation fails, and
+// the edges fall back to straight lines (`lib/neatogen/neatosplines.c:spline_edges_`).
+#[test]
+fn ortho_partition_with_non_finite_node_does_not_panic() {
+    let src = "digraph{layout=osage
+splines=ortho{label=\"inner\"{o2{i1ortho
+cluster_outer{o1}subgraph cluster_inner4{j1 j2}}subgrapa}subgraph cluster_inner4{j2}}x i2 i3}
+";
+    let (_, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+
+    let src = src.replace("x i2 i3}", "x->i2 i3}");
+    let (out, err, ok) = run(&["-Tdot"], &src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(
+        out.contains("x -> i2\t[pos=\"e,153.78,58 85.298,58 102.1,58 123.89,58 142.44,58\"]"),
+        "the edge falls back to a straight line:\n{out}"
+    );
+}
+
 /// Fuzz case 019-neato-polyline-compass-port-endpoint (issue #28), minimised to fixed
 /// positions. The head port `10:n` lies on the node boundary, so `spline_edges_` sends the
 /// edge to the GTS router (`makeMultiSpline`, `lib/neatogen/multispline.c`). The two
