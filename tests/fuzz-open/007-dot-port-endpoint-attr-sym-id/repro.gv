@@ -1,5 +1,0 @@
-digraph G {
-edge [constraint=false];
-a:sw -> b [fontsize=27.3];
-c -> d [arrowsize=2];
-}

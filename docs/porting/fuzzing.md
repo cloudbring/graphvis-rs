@@ -160,6 +160,13 @@ dot
   * `N_fixed` is looked up as `fixed`, while `arrowhead`/`arrowtail` are found by name.
   * The heavy edge takes the default ports.
   * `quantum` and `charset` are copied to `auxg`.
+  * An `n:port` endpoint declares the `tailport`/`headport` edge attribute when the edge
+    is made (grammar.y `mkport`), so the symbol ids those stale lookups use count it.
+    This was open case `007-dot-port-endpoint-attr-sym-id` (issue #16); its repro is kept
+    in `crates/graphviz-pure-cli/tests/cli.rs`
+    (`port_endpoint_declares_its_edge_attribute_like_mkport`). 9 of its 11 fuzz cases now
+    match C. Seeds 10107 and 33649 still differ in one flat-edge spline (C warns
+    `Unable to reclaim box space` on 33649), a separate cause: issue #84.
 * In the pack branch, edges are mapped only when a component routed splines.
 * A pack component is not the root for `is_a_cluster`, so newrank ignores its top-level
   sink/source sets.
@@ -248,7 +255,6 @@ itself. The ortho variant also no longer has a gap: with a longer timeout, C fin
 | [`002-dot-ortho-concentrate-ignored-edge`](../../tests/fuzz-open/002-dot-ortho-concentrate-ignored-edge) | high | 1 | port |
 | [`005-xlabels-hilbert-key-signed-order`](../../tests/fuzz-open/005-xlabels-hilbert-key-signed-order) | medium | 16 | port |
 | [`006-fdp-cluster-port-sincos-fusion`](../../tests/fuzz-open/006-fdp-cluster-port-sincos-fusion) | medium | 12 | port |
-| [`007-dot-port-endpoint-attr-sym-id`](../../tests/fuzz-open/007-dot-port-endpoint-attr-sym-id) | medium | 11 | port |
 | [`008-neato-router-star-cylinder-no-obstacle`](../../tests/fuzz-open/008-neato-router-star-cylinder-no-obstacle) | medium | 8 | port |
 | [`009-xlabels-dtobag-equal-key-order`](../../tests/fuzz-open/009-xlabels-dtobag-equal-key-order) | medium | 7 | port |
 | [`010-dot-pack-single-component-ignores-cc-subgraph`](../../tests/fuzz-open/010-dot-pack-single-component-ignores-cc-subgraph) | medium | 4 | port |
