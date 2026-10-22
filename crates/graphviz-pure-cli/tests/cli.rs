@@ -1125,6 +1125,60 @@ fn syntax_errors_are_reported_as_c_does() {
     assert_eq!(err, "Error: <stdin>: syntax error in line 1 near ';'\n");
 }
 
+// Issue #199, reduced from `tests/golden/sfdp/attr_label_scheme_4_overlap.dot`. sfdp throws
+// the nodes out to ~1e143 (C too), and a segment's trapezoid then has no upper neighbour in
+// `lib/ortho/trapezoid.c:update_trapezoid`. C reads `LIST_GET(tr, SIZE_MAX)`: depending on
+// the run it fails the `gv_list_get_` bounds assertion (exit 134) or goes on to fail
+// `add_segment` ("trapezoid segment construction failed") and draws the edges straight. The
+// port panicked; now `add_segment` fails and the edges fall back to straight lines.
+#[test]
+fn ortho_trapezoid_without_upper_neighbour_does_not_panic() {
+    let src = "graph {
+	label_scheme=4 layout=sfdp overlap=false splines=ortho
+	a -- \"|edgelabel|ab\"
+	\"|edgelabel|ab\" -- b
+	b -- \"|edgelabel|bc\"
+	\"|edgelabel|bc\" -- c
+	\"|edgelabel|ca\" [width=1.6798]
+	c -- \"|edgelabel|ca\"
+	\"|edgelabel|ca\" -- a
+	e
+	d -- e
+	d -- \"|edgelabel|da\"
+	e -- c
+	\"|edgelabel|da\" -- a
+	f -- g
+	g -- \"|edgelabel|ga\"
+	\"|edgelabel|ga\" -- a
+}
+";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+    let edges: Vec<&str> = out.lines().filter(|l| l.contains(" -- ")).collect();
+    assert_eq!(edges.len(), 13, "{out}");
+    for e in edges {
+        let pos = e.split("pos=\"").nth(1).unwrap().trim_end_matches("\"];");
+        assert_eq!(pos.split(' ').count(), 4, "a straight line: {e}");
+    }
+    // Only the fallback draws a diagonal; an ortho route is axis-aligned.
+    let ab = out
+        .lines()
+        .find(|l| l.contains("a -- \"|edgelabel|ab\""))
+        .unwrap();
+    let pts: Vec<Vec<&str>> = ab
+        .split("pos=\"")
+        .nth(1)
+        .unwrap()
+        .trim_end_matches("\"];")
+        .split(' ')
+        .map(|p| p.split(',').collect())
+        .collect();
+    assert!(
+        pts[0][0] != pts[3][0] && pts[0][1] != pts[3][1],
+        "a diagonal: {ab}"
+    );
+}
+
 // `%.80s` of the string read so far may end inside a UTF-8 sequence: C writes the bytes.
 #[test]
 fn unterminated_string_excerpt_is_cut_at_80_bytes() {

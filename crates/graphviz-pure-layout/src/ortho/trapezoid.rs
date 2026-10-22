@@ -336,7 +336,12 @@ fn merge_trapezoids(
     }
 }
 
-fn update_trapezoid(s: &SegmentT, seg: &[SegmentT], tr: &mut [Trap], t: usize, tn: usize) {
+/// `update_trapezoid(s, seg, tr, t, tn)`. False where `t.u0` is `SIZE_MAX`
+/// (no upper neighbour): C then reads `LIST_GET(tr, SIZE_MAX)` and fails the
+/// `index < list.size` assertion in `gv_list_get_` (`lib/util/list.c:211`),
+/// or, depending on the run, goes on and fails `add_segment`'s "trapezoid
+/// segment construction failed" check (#199). The port fails `add_segment`.
+fn update_trapezoid(s: &SegmentT, seg: &[SegmentT], tr: &mut [Trap], t: usize, tn: usize) -> bool {
     if is_valid_trap(tr[t].u0) && is_valid_trap(tr[t].u1) {
         if is_valid_trap(tr[t].usave) {
             if tr[t].uside == S_LEFT {
@@ -372,6 +377,9 @@ fn update_trapezoid(s: &SegmentT, seg: &[SegmentT], tr: &mut [Trap], t: usize, t
         }
     } else {
         let tmp_u = tr[t].u0;
+        if tmp_u == usize::MAX {
+            return false;
+        }
         let td0 = tr[tmp_u].d0;
         if is_valid_trap(td0) && is_valid_trap(tr[tmp_u].d1) {
             if tr[td0].rseg > 0 && !is_left_of(tr[td0].rseg, seg, s.v1) {
@@ -393,6 +401,7 @@ fn update_trapezoid(s: &SegmentT, seg: &[SegmentT], tr: &mut [Trap], t: usize, t
             tr[a].d1 = tn;
         }
     }
+    true
 }
 
 /// Splits `tu` at `v`: the lower half becomes a new trapezoid; returns it.
@@ -498,7 +507,9 @@ fn add_segment(segnum: i32, seg: &mut [SegmentT], tr: &mut Vec<Trap>, qs: &mut V
             return false;
         } else if d0v && !d1v || !d0v && d1v {
             let use_d0 = d0v;
-            update_trapezoid(&s, seg, tr, t, tn);
+            if !update_trapezoid(&s, seg, tr, t, tn) {
+                return false;
+            }
             let low = |tr: &[Trap], x: usize| if use_d0 { tr[x].d0 } else { tr[x].d1 };
             if fp_equal(tr[t].lo.y, tr[tlast].lo.y)
                 && fp_equal(tr[t].lo.x, tr[tlast].lo.x)
@@ -549,7 +560,9 @@ fn add_segment(segnum: i32, seg: &mut [SegmentT], tr: &mut Vec<Trap>, qs: &mut V
                     i_d0 = true;
                 }
             }
-            update_trapezoid(&s, seg, tr, t, tn);
+            if !update_trapezoid(&s, seg, tr, t, tn) {
+                return false;
+            }
             let tnext;
             let (d0, d1) = (tr[t].d0, tr[t].d1);
             if fp_equal(tr[t].lo.y, tr[tlast].lo.y)
@@ -650,4 +663,52 @@ pub fn construct_trapezoids(nseg: i32, seg: &mut [SegmentT], permute: &[i32]) ->
         segi += 1;
     }
     tr
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::maze::mk_maze;
+    use graphviz_pure_core::Point;
+
+    /// Issue #199: the node boxes sfdp gives the graph of
+    /// `tests/golden/sfdp/attr_label_scheme_4_overlap.dot` (C's are just as
+    /// far out). A segment's trapezoid has no upper neighbour in
+    /// `update_trapezoid`; C fails the `gv_list_get_` bounds assertion there or
+    /// fails `add_segment`, and the port indexed out of bounds. Now
+    /// `construct_trapezoids` fails, so `partition` and the maze do.
+    #[test]
+    fn trapezoid_without_upper_neighbour_fails_the_maze() {
+        let nodes = [
+            (5.645_595_931_397_244e143, 2.714_485_296_736_977_5e141, 54.0),
+            (
+                3.467_860_031_774_634_7e143,
+                6.468_036_434_169_714_6e140,
+                122.028_051_165_226_49,
+            ),
+            (7.059_533_087_296_913e143, 5.178_586_274_370_083e141, 54.0),
+            (
+                1.617_525_775_244_846_3e143,
+                4.028_608_178_598_936_4e141,
+                122.028_051_165_226_49,
+            ),
+            (0.0, 6.409_635_423_132_405e141, 54.0),
+            (
+                1.842_062_239_158_465_5e143,
+                4.832_925_318_390_855e141,
+                120.9456,
+            ),
+            (2.007_766_420_241_161e143, 4.169_174_310_896_976_4e141, 54.0),
+            (6.903_054_462_442_888e143, 1.839_068_144_634_683_3e141, 54.0),
+            (
+                7.415_308_134_430_418e143,
+                7.120_899_497_147_811e141,
+                122.028_051_165_226_49,
+            ),
+            (6.538_957_779_520_443e143, 5.270_099_366_146_343_6e141, 54.0),
+            (3.699_826_958_060_975e143, 7.522_274_695_607_58e141, 54.0),
+            (5.758_790_465_790_995e143, 0.0, 122.028_051_165_226_49),
+        ]
+        .map(|(x, y, w)| (Point::new(x, y), w, 36.0));
+        assert!(mk_maze(&nodes).is_none());
+    }
 }
