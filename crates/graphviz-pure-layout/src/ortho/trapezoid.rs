@@ -298,7 +298,7 @@ fn merge_trapezoids(
     let mut t = tfirst;
     // Each pass merges a trapezoid away or steps down to the next one, so a
     // longer walk is a cycle in broken links, where C loops forever.
-    let mut budget = 2 * tr.len() + 2;
+    let mut budget = tr.len().saturating_mul(2).saturating_add(2);
     while is_valid_trap(t) && greater_than_equal_to(tr.at(t)?.lo, tr.at(tlast)?.lo) {
         budget = budget.checked_sub(1).need()?;
         // `cond` assigns tnext in short-circuit order.
