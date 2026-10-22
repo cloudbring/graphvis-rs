@@ -6,6 +6,50 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-21
+
+Fixes for the crashes and hangs that the coverage-guided fuzzer (#162) found in its first runs.
+
+### Fixed
+
+- The command line no longer panics on an argument that is not valid UTF-8, such as a Latin-1
+  file name, or on a flag such as `-é`. Like C, it takes its arguments as bytes: the file opens,
+  and other flag values keep their bytes (#152).
+- Every engine panicked on a subgraph name whose 7th byte falls inside a multi-byte character,
+  such as `subgraph "aaaaaaé"`. The cluster-name test now compares bytes, as C's `strncasecmp`
+  does (#165).
+- neato, fdp, sfdp, twopi and circo no longer panic on an `overlap` value that starts with
+  `pris` followed by a multi-byte character, or on a `diredgeconstraints` value that starts with
+  `hie` followed by one (#166). An unrecognized `overlap` value now prints C's
+  `Unrecognized overlap value` warning, except under `neato -n` (#149).
+- circo no longer panics (`no entry found for key` in blockpath) on a graph with a block whose
+  nodes share no edge, such as a cycle whose articulation points belong to other blocks; it
+  draws the graph as C does (#167).
+- neato `mode=ipsep`: a graph whose clusters sit in different connected components no longer
+  panics; each component is laid out with the cluster members it contains. C Graphviz fails an
+  assertion on this input (#168).
+- neato with `mode=hier` no longer panics when every edge `len` in a component is below 1
+  (#169). C Graphviz fails an assertion on this input.
+- circo and twopi with `splines=ortho`: when a route segment lies in no channel of the ortho
+  maze, the port no longer panics. It warns and draws the edges as straight lines; C Graphviz
+  aborts on a failed assertion in `chanSearch` (#170).
+- `splines=ortho` no longer panics in the partition when a vertex needs more than four
+  monotone-chain slots (osage with a repeated cluster, #171). Where C Graphviz fails `chkSgraph`,
+  the edges fall back to straight lines (dot reports a layout error, #200); graphs that C routes
+  are routed the same way.
+- osage no longer overflows its stack when a cluster is repeated under several parents and
+  edges leave its nodes inside a later copy (#173). That copy gets a NaN box, as in C, and the
+  edges that inherit it no longer make `update_bb_bz` split their Bézier segments forever.
+  C Graphviz crashes on this input.
+- Packing components no longer hangs when one is enormous (`height="1e30"`, `quantum="1e40"`)
+  or pinned near 1e30, where C Graphviz never finishes either. When the polyomino grid would
+  need more than 2^24 cells, the packer warns `components too large to pack; packing skipped`
+  and leaves the components where the layout put them; C still packs some of these after up to
+  about 30 seconds. Inputs that need fewer cells pack as before (#174).
+- Output change: packing now wraps the grid-step multiplication in 32-bit arithmetic, as C does,
+  so a very large step (`pack=2000000000`, or a component around 1e11 points wide) places the
+  components where C does (#174).
+
 ## [0.1.0] - 2026-10-21
 
 The first release.
@@ -29,5 +73,6 @@ The first release.
   and the OFL licences of the bundled Tinos, Arimo and Cousine fonts.
 - A container image, `ghcr.io/graphviz-pure/graphviz-pure` (linux/amd64 and linux/arm64).
 
-[Unreleased]: https://github.com/graphviz-pure/graphviz-pure/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/graphviz-pure/graphviz-pure/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/graphviz-pure/graphviz-pure/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/graphviz-pure/graphviz-pure/releases/tag/v0.1.0
