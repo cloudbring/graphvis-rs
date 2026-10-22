@@ -1201,6 +1201,8 @@ fn cluster_rank_saved_leader_freed_does_not_panic() {
             err.starts_with("Warning: g was already in a rankset, deleted from cluster G\n"),
             "{fmt}: {err}"
         );
+    }
+}
 
 // The `d` attributes of an SVG's paths, in order.
 fn svg_path_data(svg: &str) -> Vec<&str> {
