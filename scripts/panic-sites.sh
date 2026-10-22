@@ -71,10 +71,22 @@ cargo clippy --quiet "${pkgs[@]}" --lib --message-format=json -- \
     { u += $2; e += $3; i += $4; a += $5 } END { print "TOTAL", u, e, i, a, u + e + i + a }'
 } | column -t -s$'\t'
 
-# Counting nothing means the count broke (a renamed crate or lint, a new JSON format), not that
-# every site is gone.
-if [[ $(wc -l <"$current") -le 1 ]]; then
-  echo "panic-sites: clippy reported no site at all; the count is broken ($(cargo clippy --version))" >&2
+# A kind counting nothing means the count broke, not that every site of that kind is gone: a
+# renamed crate, a lint clippy no longer knows, a new JSON format, or an allow in the source.
+broken=$(jq -r 'select(.reason == "compiler-message")
+  | select(.message.code.code // "" | test("unknown_lints|renamed_and_removed_lints"))
+  | .message.rendered' "$json")
+allowed=$(grep -rnE "clippy::(unwrap_used|expect_used|indexing_slicing|arithmetic_side_effects)" \
+  "${crates[@]/#/crates/}" --include='*.rs' || true)
+empty=$(tail -n +2 "$current" | awk -F'\t' '
+  { for (k = 2; k <= 5; k++) n[k] += $k }
+  END { split("unwrap expect index arith", kind, " ")
+        for (k = 2; k <= 5; k++) if (n[k] == 0) printf " %s", kind[k - 1] }')
+if [[ -n "$broken$allowed$empty" ]]; then
+  echo "panic-sites: the count is broken ($(cargo clippy --version)):" >&2
+  [[ -z "$empty" ]] || echo "  no site of kind:$empty" >&2
+  [[ -z "$broken" ]] || echo "$broken" >&2
+  [[ -z "$allowed" ]] || echo "  the source names a counted lint (an allow hides its sites):"$'\n'"$allowed" >&2
   exit 1
 fi
 
@@ -85,8 +97,8 @@ if $update; then
 fi
 
 # Every count above its baseline; a module missing from the baseline counts as zero.
-if [[ $(head -n 1 "$baseline") != $(head -n 1 "$current") ]]; then
-  echo "panic-sites: $baseline has no 'module unwrap expect index arith' header" >&2
+if [[ "$(head -n 1 "$baseline")" != "$(head -n 1 "$current")" ]]; then
+  echo "panic-sites: the first line of $baseline is not the header 'module<TAB>unwrap<TAB>expect<TAB>index<TAB>arith'" >&2
   exit 1
 fi
 risen=$(awk -F'\t' '
