@@ -1280,6 +1280,22 @@ fn labelled_flat_edge_on_an_unnormalised_top_rank_gets_a_label_rank() {
     assert!(!ok);
     assert_eq!(err, "Error: trouble in init_rank\n\tb 1\n\td 2\n\tc 1\n");
     assert!(out.contains(">x</text>"), "{out}");
+    // C draws a labelled flat edge on a lower rank when the top rank is 2; stderr and
+    // paths are C 16.1.0's.
+    let src = "digraph G { { rank=min; b a e } { rank=max; e } c -> d; a -> c; d -> b; \
+               { rank=same; c x y } c -> y [label=z]; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok);
+    assert_eq!(err, "Error: trouble in init_rank\n\tb 1\n\td 2\n\tc 1\n");
+    assert_eq!(
+        svg_path_data(&out),
+        [
+            "M173,-75.97C161.46,-65.86 145.67,-52.02 132.55,-40.52",
+            "M92.03,-33C80.5,-43.1 64.72,-56.94 51.58,-68.45",
+            "M135.49,-18C142.99,-18 151.27,-18 159.27,-18",
+            "M54.42,-91C62.4,-91 70.37,-91 78.35,-91",
+        ]
+    );
 }
 
 // Issue #234: with `concentrate=true`, a cluster edge with other ports shares its chain

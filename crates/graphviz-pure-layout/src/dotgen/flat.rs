@@ -270,9 +270,10 @@ impl Dot<'_> {
         // C tests rank 0, the top rank once ranking has normalised the ranks. After a
         // failed ranking (`trouble in init_rank`) nothing normalised them, and the top rank
         // is `GD_minrank(g)` > 0. C's ranks above it were never allocated, so `flat_node`
-        // on it reads a NULL `GD_rank(g)[r - 1].v` and segfaults (#241); with clusters, C
-        // already segfaults here on `GD_rank(g)[0].v`. The port runs the test on the top
-        // rank, which is rank 0 whenever C gets this far.
+        // on it reads a NULL `GD_rank(g)[r - 1].v` and segfaults (#241); labelled flat
+        // edges on lower ranks draw. The port runs the test on the top rank, so it fires
+        // only where `flat_node` runs on the top rank. With the top rank at 0 this is C's
+        // test. (`minrank < 0` does not get here: `allocate_ranks` indexes by rank.)
         let top = self.graphs.get(g).map_or(0, |gr| gr.minrank.max(0));
         if self.rk(g, top).flat.is_some() || !self.graphs[g].clust.is_empty() {
             let mut found = false;
