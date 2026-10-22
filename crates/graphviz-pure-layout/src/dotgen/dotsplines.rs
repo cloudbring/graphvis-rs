@@ -1531,7 +1531,8 @@ impl Dot<'_> {
     /// of the root's ranks. After `trouble in init_rank`, a node that mincross never placed
     /// keeps the x coordinate `set_xcoords` left in `ND_rank` (issue #114); C reads past
     /// `GD_rank` there, or has already crashed in mincross's `furthestnode`. The port fails
-    /// the layout. `makeLineEdge` reads no rank, so straight lines are not checked.
+    /// the layout. An edge `makeLineEdge` draws as a straight line reads no rank and is not
+    /// checked; the edges it declines are routed, and checked, like splines.
     fn make_regular_edge(
         &mut self,
         sp: &mut SplineInfoT,

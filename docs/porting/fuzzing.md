@@ -303,7 +303,8 @@ dot
   `ND_rank`; C then segfaults in mincross's `furthestnode`, or reads past `GD_rank` when it
   routes a spline through that node (`maximal_bbox`). The port fails the layout in
   `make_regular_edge` with an error naming the edge and rank, instead of panicking.
-  Straight-line edges (`splines=line|false`) read no rank and are drawn as before (issue
+  Edges `makeLineEdge` draws straight (`splines=line|false`) read no rank and are drawn as
+  before (issue
   #114; `init_rank_trouble_*` in `crates/graphviz-pure-cli/tests/cli.rs`).
 * In the pack branch, clusters are drawn from the root's `GD_clust` as `copyClusterInfo`
   builds it: in component order, and once per component that kept the cluster, so a
