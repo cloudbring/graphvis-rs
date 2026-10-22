@@ -60,6 +60,10 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+      # Fails when a module of the layout or geom crates gains an unwrap, expect, index or
+      # integer-overflow site (tests/panic-sites.tsv; docs/porting/crashes.md).
+      - name: Panic-site ratchet
+        run: scripts/panic-sites.sh
       # Linux uses the portable math profile, so the corpus ratchets
       # (crates/graphviz-pure-diff/tests/*_fidelity.rs) check tests/golden/*.portable.json.
       - name: Run Workspace Tests
