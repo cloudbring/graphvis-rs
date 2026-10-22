@@ -367,6 +367,28 @@ fn cylinder_port_endpoint_does_not_hang_the_router() {
     assert_eq!(svg.matches("class=\"edge\"").count(), 2, "{svg}");
 }
 
+// Issue #191. The repeated cluster gives the osage graph an infinite bb, and
+// `xlhorder`'s `floor(log2(inf)) + 1` overflowed the Hilbert order in a debug build.
+// C fails an assertion in `xlhdxload` (lib/label/xlabels.c) on these inputs; the port
+// computes C's order (0) and exits cleanly.
+#[test]
+fn xlabels_with_an_infinite_bb_do_not_panic() {
+    let cluster = "subgraph cluster_inner4{j1 j2}";
+    for attrs in [
+        "edge[label=L]",
+        "edge[headlabel=L]",
+        "j1[xlabel=X]",
+        "splines=curved edge[label=L]",
+        "splines=polyline edge[label=L]",
+    ] {
+        let src = format!(
+            "digraph{{layout=osage {attrs}{{o2 {cluster}}}subgraph cluster_outer{{{{label=\"outer\"{cluster}}}->o1}}{cluster}}}"
+        );
+        let (_, err, ok) = run(&["-Tsvg"], &src);
+        assert!(ok && !err.contains("panicked"), "{attrs}: {err}");
+    }
+}
+
 // Issue #167, found by the fuzzer. `b` and `l` are articulation points that blocktree.c's
 // `dfs` places in other blocks, so the block {i, k} has no edge of its own. C's
 // `clone_graph` (lib/circogen/blockpath.c) zeroes every clone's `DEGREE`, and `getList`
