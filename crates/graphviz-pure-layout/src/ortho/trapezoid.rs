@@ -1,6 +1,7 @@
 //! Port of `lib/ortho/trapezoid.c` and `trap.h`: Seidel's randomized
 //! trapezoidation of a set of polygons.
 
+use super::fail::{At, Fail, Need, OResult, idx};
 use graphviz_pure_core::Point;
 use graphviz_pure_core::math;
 
@@ -142,8 +143,8 @@ fn init_query_structure(
     seg: &mut [SegmentT],
     tr: &mut Vec<Trap>,
     qs: &mut Vec<QNode>,
-) -> usize {
-    let s = seg[segnum as usize];
+) -> OResult<usize> {
+    let s = *seg.at(idx(segnum)?)?;
     let i1 = newnode(qs);
     qs[i1].nodetype = T_Y;
     qs[i1].yval = max_(s.v0, s.v1);
@@ -207,12 +208,12 @@ fn init_query_structure(
     qs[i4].trnum = t3;
     qs[i6].trnum = t1;
     qs[i7].trnum = t2;
-    seg[segnum as usize].is_inserted = true;
-    root
+    seg.at_mut(idx(segnum)?)?.is_inserted = true;
+    Ok(root)
 }
 
-fn is_left_of(segnum: i32, seg: &[SegmentT], v: Point) -> bool {
-    let s = &seg[segnum as usize];
+fn is_left_of(segnum: i32, seg: &[SegmentT], v: Point) -> OResult<bool> {
+    let s = seg.at(idx(segnum)?)?;
     let area = if greater_than(s.v1, s.v0) {
         if fp_equal(s.v1.y, v.y) {
             if v.x < s.v1.x { 1.0 } else { -1.0 }
@@ -228,55 +229,62 @@ fn is_left_of(segnum: i32, seg: &[SegmentT], v: Point) -> bool {
     } else {
         cross(s.v1, s.v0, v)
     };
-    area > 0.0
+    Ok(area > 0.0)
 }
 
-fn inserted(segnum: i32, seg: &[SegmentT], whichpt: i32) -> bool {
-    let s = &seg[segnum as usize];
-    if whichpt == FIRSTPT {
-        seg[s.prev as usize].is_inserted
-    } else {
-        seg[s.next as usize].is_inserted
-    }
+fn inserted(segnum: i32, seg: &[SegmentT], whichpt: i32) -> OResult<bool> {
+    let s = seg.at(idx(segnum)?)?;
+    let other = if whichpt == FIRSTPT { s.prev } else { s.next };
+    Ok(seg.at(idx(other)?)?.is_inserted)
 }
 
-fn locate_endpoint(v: Point, vo: Point, r: usize, seg: &[SegmentT], qs: &[QNode]) -> usize {
-    let rptr = &qs[r];
-    match rptr.nodetype {
-        T_SINK => rptr.trnum,
-        T_Y => {
-            if greater_than(v, rptr.yval) {
-                return locate_endpoint(v, vo, rptr.right, seg, qs);
-            }
-            if equal_to(v, rptr.yval) {
-                if greater_than(vo, rptr.yval) {
-                    return locate_endpoint(v, vo, rptr.right, seg, qs);
-                }
-                return locate_endpoint(v, vo, rptr.left, seg, qs);
-            }
-            locate_endpoint(v, vo, rptr.left, seg, qs)
-        }
-        T_X => {
-            let s = &seg[rptr.segnum as usize];
-            if equal_to(v, s.v0) || equal_to(v, s.v1) {
-                if fp_equal(v.y, vo.y) {
-                    if vo.x < v.x {
-                        return locate_endpoint(v, vo, rptr.left, seg, qs);
+/// `locate_endpoint(v, vo, r, seg, qs)`: C's tail recursion down the query
+/// structure, as a loop. A query structure that does not end in a sink
+/// within its size is broken: C would recurse through it until the stack
+/// overflows (or index `qs` with garbage).
+fn locate_endpoint(
+    v: Point,
+    vo: Point,
+    r: usize,
+    seg: &[SegmentT],
+    qs: &[QNode],
+) -> OResult<usize> {
+    let mut r = r;
+    for _ in 0..=qs.len() {
+        let rptr = qs.at(r)?;
+        r = match rptr.nodetype {
+            T_SINK => return Ok(rptr.trnum),
+            T_Y => {
+                if greater_than(v, rptr.yval) {
+                    rptr.right
+                } else if equal_to(v, rptr.yval) {
+                    if greater_than(vo, rptr.yval) {
+                        rptr.right
+                    } else {
+                        rptr.left
                     }
-                    return locate_endpoint(v, vo, rptr.right, seg, qs);
+                } else {
+                    rptr.left
                 }
-                if is_left_of(rptr.segnum, seg, vo) {
-                    return locate_endpoint(v, vo, rptr.left, seg, qs);
-                }
-                return locate_endpoint(v, vo, rptr.right, seg, qs);
             }
-            if is_left_of(rptr.segnum, seg, v) {
-                return locate_endpoint(v, vo, rptr.left, seg, qs);
+            T_X => {
+                let s = seg.at(idx(rptr.segnum)?)?;
+                let left = if equal_to(v, s.v0) || equal_to(v, s.v1) {
+                    if fp_equal(v.y, vo.y) {
+                        vo.x < v.x
+                    } else {
+                        is_left_of(rptr.segnum, seg, vo)?
+                    }
+                } else {
+                    is_left_of(rptr.segnum, seg, v)?
+                };
+                if left { rptr.left } else { rptr.right }
             }
-            locate_endpoint(v, vo, rptr.right, seg, qs)
-        }
-        _ => unreachable!("bad query node"),
+            // C asserts the node type (`assert(0)`).
+            _ => return Err(Fail::here()),
+        };
     }
+    Err(Fail::here())
 }
 
 fn merge_trapezoids(
@@ -286,170 +294,189 @@ fn merge_trapezoids(
     side: i32,
     tr: &mut [Trap],
     qs: &mut [QNode],
-) {
+) -> OResult<()> {
     let mut t = tfirst;
-    while is_valid_trap(t) && greater_than_equal_to(tr[t].lo, tr[tlast].lo) {
+    // Each pass merges a trapezoid away or steps down to the next one, so a
+    // longer walk is a cycle in broken links, where C loops forever.
+    let mut budget = 2 * tr.len() + 2;
+    while is_valid_trap(t) && greater_than_equal_to(tr.at(t)?.lo, tr.at(tlast)?.lo) {
+        budget = budget.checked_sub(1).need()?;
         // `cond` assigns tnext in short-circuit order.
-        let matches = |tr: &[Trap], x: usize| {
-            if side == S_LEFT {
-                tr[x].rseg == segnum
+        let matches = |tr: &[Trap], x: usize| -> OResult<bool> {
+            Ok(if side == S_LEFT {
+                tr.at(x)?.rseg == segnum
             } else {
-                tr[x].lseg == segnum
-            }
+                tr.at(x)?.lseg == segnum
+            })
         };
-        let mut tnext = tr[t].d0;
-        let mut cond = is_valid_trap(tnext) && matches(tr, tnext);
+        let mut tnext = tr.at(t)?.d0;
+        let mut cond = is_valid_trap(tnext) && matches(tr, tnext)?;
         if !cond {
-            tnext = tr[t].d1;
-            cond = is_valid_trap(tnext) && matches(tr, tnext);
+            tnext = tr.at(t)?.d1;
+            cond = is_valid_trap(tnext) && matches(tr, tnext)?;
         }
-        if cond && tr[t].lseg == tr[tnext].lseg && tr[t].rseg == tr[tnext].rseg {
-            let ptnext = qs[tr[tnext].sink].parent;
-            if qs[ptnext].left == tr[tnext].sink {
-                qs[ptnext].left = tr[t].sink;
+        if cond && tr.at(t)?.lseg == tr.at(tnext)?.lseg && tr.at(t)?.rseg == tr.at(tnext)?.rseg {
+            let ptnext = qs.at(tr.at(tnext)?.sink)?.parent;
+            if qs.at(ptnext)?.left == tr.at(tnext)?.sink {
+                qs.at_mut(ptnext)?.left = tr.at(t)?.sink;
             } else {
-                qs[ptnext].right = tr[t].sink;
+                qs.at_mut(ptnext)?.right = tr.at(t)?.sink;
             }
-            tr[t].d0 = tr[tnext].d0;
-            if is_valid_trap(tr[t].d0) {
-                let d = tr[t].d0;
-                if tr[d].u0 == tnext {
-                    tr[d].u0 = t;
-                } else if tr[d].u1 == tnext {
-                    tr[d].u1 = t;
+            tr.at_mut(t)?.d0 = tr.at(tnext)?.d0;
+            if is_valid_trap(tr.at(t)?.d0) {
+                let d = tr.at(t)?.d0;
+                if tr.at(d)?.u0 == tnext {
+                    tr.at_mut(d)?.u0 = t;
+                } else if tr.at(d)?.u1 == tnext {
+                    tr.at_mut(d)?.u1 = t;
                 }
             }
-            tr[t].d1 = tr[tnext].d1;
-            if is_valid_trap(tr[t].d1) {
-                let d = tr[t].d1;
-                if tr[d].u0 == tnext {
-                    tr[d].u0 = t;
-                } else if tr[d].u1 == tnext {
-                    tr[d].u1 = t;
+            tr.at_mut(t)?.d1 = tr.at(tnext)?.d1;
+            if is_valid_trap(tr.at(t)?.d1) {
+                let d = tr.at(t)?.d1;
+                if tr.at(d)?.u0 == tnext {
+                    tr.at_mut(d)?.u0 = t;
+                } else if tr.at(d)?.u1 == tnext {
+                    tr.at_mut(d)?.u1 = t;
                 }
             }
-            tr[t].lo = tr[tnext].lo;
-            tr[tnext].is_valid = false;
+            tr.at_mut(t)?.lo = tr.at(tnext)?.lo;
+            tr.at_mut(tnext)?.is_valid = false;
         } else {
             t = tnext;
         }
     }
+    Ok(())
 }
 
-/// `update_trapezoid(s, seg, tr, t, tn)`. False where `t.u0` is `SIZE_MAX`
-/// (no upper neighbour): C then reads `LIST_GET(tr, SIZE_MAX)` and fails the
-/// `index < list.size` assertion in `gv_list_get_` (`lib/util/list.c:211`),
-/// or, depending on the run, goes on and fails `add_segment`'s "trapezoid
-/// segment construction failed" check (#199). The port fails `add_segment`.
-fn update_trapezoid(s: &SegmentT, seg: &[SegmentT], tr: &mut [Trap], t: usize, tn: usize) -> bool {
-    if is_valid_trap(tr[t].u0) && is_valid_trap(tr[t].u1) {
-        if is_valid_trap(tr[t].usave) {
-            if tr[t].uside == S_LEFT {
-                tr[tn].u0 = tr[t].u1;
-                tr[t].u1 = usize::MAX;
-                tr[tn].u1 = tr[t].usave;
-                let a = tr[t].u0;
-                tr[a].d0 = t;
-                let b = tr[tn].u0;
-                tr[b].d0 = tn;
-                let c = tr[tn].u1;
-                tr[c].d0 = tn;
+/// `update_trapezoid(s, seg, tr, t, tn)`. Where `t.u0` is `SIZE_MAX` (no
+/// upper neighbour, #199), C reads `LIST_GET(tr, SIZE_MAX)` and fails the
+/// `index < list.size` assertion in `gv_list_get_` (`lib/util/list.c:211`);
+/// the port's checked read fails there too.
+fn update_trapezoid(
+    s: &SegmentT,
+    seg: &[SegmentT],
+    tr: &mut [Trap],
+    t: usize,
+    tn: usize,
+) -> OResult<()> {
+    if is_valid_trap(tr.at(t)?.u0) && is_valid_trap(tr.at(t)?.u1) {
+        if is_valid_trap(tr.at(t)?.usave) {
+            if tr.at(t)?.uside == S_LEFT {
+                tr.at_mut(tn)?.u0 = tr.at(t)?.u1;
+                tr.at_mut(t)?.u1 = usize::MAX;
+                tr.at_mut(tn)?.u1 = tr.at(t)?.usave;
+                let a = tr.at(t)?.u0;
+                tr.at_mut(a)?.d0 = t;
+                let b = tr.at(tn)?.u0;
+                tr.at_mut(b)?.d0 = tn;
+                let c = tr.at(tn)?.u1;
+                tr.at_mut(c)?.d0 = tn;
             } else {
-                tr[tn].u1 = usize::MAX;
-                tr[tn].u0 = tr[t].u1;
-                tr[t].u1 = tr[t].u0;
-                tr[t].u0 = tr[t].usave;
-                let a = tr[t].u0;
-                tr[a].d0 = t;
-                let b = tr[t].u1;
-                tr[b].d0 = t;
-                let c = tr[tn].u0;
-                tr[c].d0 = tn;
+                tr.at_mut(tn)?.u1 = usize::MAX;
+                tr.at_mut(tn)?.u0 = tr.at(t)?.u1;
+                tr.at_mut(t)?.u1 = tr.at(t)?.u0;
+                tr.at_mut(t)?.u0 = tr.at(t)?.usave;
+                let a = tr.at(t)?.u0;
+                tr.at_mut(a)?.d0 = t;
+                let b = tr.at(t)?.u1;
+                tr.at_mut(b)?.d0 = t;
+                let c = tr.at(tn)?.u0;
+                tr.at_mut(c)?.d0 = tn;
             }
-            tr[t].usave = 0;
-            tr[tn].usave = 0;
+            tr.at_mut(t)?.usave = 0;
+            tr.at_mut(tn)?.usave = 0;
         } else {
-            tr[tn].u0 = tr[t].u1;
-            tr[t].u1 = usize::MAX;
-            tr[tn].u1 = usize::MAX;
-            let b = tr[tn].u0;
-            tr[b].d0 = tn;
+            tr.at_mut(tn)?.u0 = tr.at(t)?.u1;
+            tr.at_mut(t)?.u1 = usize::MAX;
+            tr.at_mut(tn)?.u1 = usize::MAX;
+            let b = tr.at(tn)?.u0;
+            tr.at_mut(b)?.d0 = tn;
         }
     } else {
-        let tmp_u = tr[t].u0;
-        if tmp_u == usize::MAX {
-            return false;
-        }
-        let td0 = tr[tmp_u].d0;
-        if is_valid_trap(td0) && is_valid_trap(tr[tmp_u].d1) {
-            if tr[td0].rseg > 0 && !is_left_of(tr[td0].rseg, seg, s.v1) {
-                tr[t].u0 = usize::MAX;
-                tr[t].u1 = usize::MAX;
-                tr[tn].u1 = usize::MAX;
-                let b = tr[tn].u0;
-                tr[b].d1 = tn;
+        let tmp_u = tr.at(t)?.u0;
+        let td0 = tr.at(tmp_u)?.d0;
+        if is_valid_trap(td0) && is_valid_trap(tr.at(tmp_u)?.d1) {
+            if tr.at(td0)?.rseg > 0 && !is_left_of(tr.at(td0)?.rseg, seg, s.v1)? {
+                tr.at_mut(t)?.u0 = usize::MAX;
+                tr.at_mut(t)?.u1 = usize::MAX;
+                tr.at_mut(tn)?.u1 = usize::MAX;
+                let b = tr.at(tn)?.u0;
+                tr.at_mut(b)?.d1 = tn;
             } else {
-                tr[tn].u0 = usize::MAX;
-                tr[tn].u1 = usize::MAX;
-                tr[t].u1 = usize::MAX;
-                let a = tr[t].u0;
-                tr[a].d0 = t;
+                tr.at_mut(tn)?.u0 = usize::MAX;
+                tr.at_mut(tn)?.u1 = usize::MAX;
+                tr.at_mut(t)?.u1 = usize::MAX;
+                let a = tr.at(t)?.u0;
+                tr.at_mut(a)?.d0 = t;
             }
         } else {
-            let a = tr[t].u0;
-            tr[a].d0 = t;
-            tr[a].d1 = tn;
+            let a = tr.at(t)?.u0;
+            tr.at_mut(a)?.d0 = t;
+            tr.at_mut(a)?.d1 = tn;
         }
     }
-    true
+    Ok(())
 }
 
 /// Splits `tu` at `v`: the lower half becomes a new trapezoid; returns it.
-fn split_at(tr: &mut Vec<Trap>, qs: &mut Vec<QNode>, segnum: i32, tu: usize, v: Point) -> usize {
+fn split_at(
+    tr: &mut Vec<Trap>,
+    qs: &mut Vec<QNode>,
+    segnum: i32,
+    tu: usize,
+    v: Point,
+) -> OResult<usize> {
     let tl = newtrap(tr);
-    tr[tl] = tr[tu];
-    tr[tu].lo = v;
-    tr[tl].hi = v;
-    tr[tu].d0 = tl;
-    tr[tu].d1 = 0;
-    tr[tl].u0 = tu;
-    tr[tl].u1 = 0;
-    let d0 = tr[tl].d0;
-    if is_valid_trap(d0) && tr[d0].u0 == tu {
-        tr[d0].u0 = tl;
+    *tr.at_mut(tl)? = *tr.at(tu)?;
+    tr.at_mut(tu)?.lo = v;
+    tr.at_mut(tl)?.hi = v;
+    tr.at_mut(tu)?.d0 = tl;
+    tr.at_mut(tu)?.d1 = 0;
+    tr.at_mut(tl)?.u0 = tu;
+    tr.at_mut(tl)?.u1 = 0;
+    let d0 = tr.at(tl)?.d0;
+    if is_valid_trap(d0) && tr.at(d0)?.u0 == tu {
+        tr.at_mut(d0)?.u0 = tl;
     }
-    if is_valid_trap(d0) && tr[d0].u1 == tu {
-        tr[d0].u1 = tl;
+    if is_valid_trap(d0) && tr.at(d0)?.u1 == tu {
+        tr.at_mut(d0)?.u1 = tl;
     }
-    let d1 = tr[tl].d1;
-    if is_valid_trap(d1) && tr[d1].u0 == tu {
-        tr[d1].u0 = tl;
+    let d1 = tr.at(tl)?.d1;
+    if is_valid_trap(d1) && tr.at(d1)?.u0 == tu {
+        tr.at_mut(d1)?.u0 = tl;
     }
-    if is_valid_trap(d1) && tr[d1].u1 == tu {
-        tr[d1].u1 = tl;
+    if is_valid_trap(d1) && tr.at(d1)?.u1 == tu {
+        tr.at_mut(d1)?.u1 = tl;
     }
     let i1 = newnode(qs);
     let i2 = newnode(qs);
-    let sk = tr[tu].sink;
-    qs[sk].nodetype = T_Y;
-    qs[sk].yval = v;
-    qs[sk].segnum = segnum;
-    qs[sk].left = i2;
-    qs[sk].right = i1;
-    qs[i1].nodetype = T_SINK;
-    qs[i1].trnum = tu;
-    qs[i1].parent = sk;
-    qs[i2].nodetype = T_SINK;
-    qs[i2].trnum = tl;
-    qs[i2].parent = sk;
-    tr[tu].sink = i1;
-    tr[tl].sink = i2;
-    tl
+    let sk = tr.at(tu)?.sink;
+    qs.at_mut(sk)?.nodetype = T_Y;
+    qs.at_mut(sk)?.yval = v;
+    qs.at_mut(sk)?.segnum = segnum;
+    qs.at_mut(sk)?.left = i2;
+    qs.at_mut(sk)?.right = i1;
+    qs.at_mut(i1)?.nodetype = T_SINK;
+    qs.at_mut(i1)?.trnum = tu;
+    qs.at_mut(i1)?.parent = sk;
+    qs.at_mut(i2)?.nodetype = T_SINK;
+    qs.at_mut(i2)?.trnum = tl;
+    qs.at_mut(i2)?.parent = sk;
+    tr.at_mut(tu)?.sink = i1;
+    tr.at_mut(tl)?.sink = i2;
+    Ok(tl)
 }
 
-/// `add_segment`: returns false on failure.
-fn add_segment(segnum: i32, seg: &mut [SegmentT], tr: &mut Vec<Trap>, qs: &mut Vec<QNode>) -> bool {
-    let mut s = seg[segnum as usize];
+/// `add_segment`. [`Fail::NoMaze`] where C prints "trapezoid segment
+/// construction failed" and returns -1.
+fn add_segment(
+    segnum: i32,
+    seg: &mut [SegmentT],
+    tr: &mut Vec<Trap>,
+    qs: &mut Vec<QNode>,
+) -> OResult<()> {
+    let mut s = *seg.at(idx(segnum)?)?;
     let mut tfirstr = 0usize;
     let mut tlastr = 0usize;
     let mut tribot = false;
@@ -460,159 +487,164 @@ fn add_segment(segnum: i32, seg: &mut [SegmentT], tr: &mut Vec<Trap>, qs: &mut V
     } else {
         false
     };
-    let tfirst = if !inserted(segnum, seg, if is_swapped { LASTPT } else { FIRSTPT }) {
-        let tu = locate_endpoint(s.v0, s.v1, s.root0, seg, qs);
-        split_at(tr, qs, segnum, tu, s.v0)
+    let tfirst = if !inserted(segnum, seg, if is_swapped { LASTPT } else { FIRSTPT })? {
+        let tu = locate_endpoint(s.v0, s.v1, s.root0, seg, qs)?;
+        split_at(tr, qs, segnum, tu, s.v0)?
     } else {
-        locate_endpoint(s.v0, s.v1, s.root0, seg, qs)
+        locate_endpoint(s.v0, s.v1, s.root0, seg, qs)?
     };
-    let tlast = if !inserted(segnum, seg, if is_swapped { FIRSTPT } else { LASTPT }) {
-        let tu = locate_endpoint(s.v1, s.v0, s.root1, seg, qs);
-        split_at(tr, qs, segnum, tu, s.v1);
+    let tlast = if !inserted(segnum, seg, if is_swapped { FIRSTPT } else { LASTPT })? {
+        let tu = locate_endpoint(s.v1, s.v0, s.root1, seg, qs)?;
+        split_at(tr, qs, segnum, tu, s.v1)?;
         tu
     } else {
         tribot = true;
-        locate_endpoint(s.v1, s.v0, s.root1, seg, qs)
+        locate_endpoint(s.v1, s.v0, s.root1, seg, qs)?
     };
     let mut t = tfirst;
-    while is_valid_trap(t) && greater_than_equal_to(tr[t].lo, tr[tlast].lo) {
-        let sk = tr[t].sink;
+    // The walk visits each trapezoid above `tlast` once, going down; a longer
+    // one follows a cycle in broken links, where C loops (adding a trapezoid
+    // each time) until memory runs out.
+    let mut budget = tr.len();
+    while is_valid_trap(t) && greater_than_equal_to(tr.at(t)?.lo, tr.at(tlast)?.lo) {
+        budget = budget.checked_sub(1).need()?;
+        let sk = tr.at(t)?.sink;
         let i1 = newnode(qs);
         let i2 = newnode(qs);
-        qs[sk].nodetype = T_X;
-        qs[sk].segnum = segnum;
-        qs[sk].left = i1;
-        qs[sk].right = i2;
-        qs[i1].nodetype = T_SINK;
-        qs[i1].trnum = t;
-        qs[i1].parent = sk;
-        qs[i2].nodetype = T_SINK;
+        qs.at_mut(sk)?.nodetype = T_X;
+        qs.at_mut(sk)?.segnum = segnum;
+        qs.at_mut(sk)?.left = i1;
+        qs.at_mut(sk)?.right = i2;
+        qs.at_mut(i1)?.nodetype = T_SINK;
+        qs.at_mut(i1)?.trnum = t;
+        qs.at_mut(i1)?.parent = sk;
+        qs.at_mut(i2)?.nodetype = T_SINK;
         let tn = newtrap(tr);
-        qs[i2].trnum = tn;
-        tr[tn].is_valid = true;
-        qs[i2].parent = sk;
+        qs.at_mut(i2)?.trnum = tn;
+        tr.at_mut(tn)?.is_valid = true;
+        qs.at_mut(i2)?.parent = sk;
         if t == tfirst {
             tfirstr = tn;
         }
-        if equal_to(tr[t].lo, tr[tlast].lo) {
+        if equal_to(tr.at(t)?.lo, tr.at(tlast)?.lo) {
             tlastr = tn;
         }
-        tr[tn] = tr[t];
-        tr[t].sink = i1;
-        tr[tn].sink = i2;
+        *tr.at_mut(tn)? = *tr.at(t)?;
+        tr.at_mut(t)?.sink = i1;
+        tr.at_mut(tn)?.sink = i2;
         let t_sav = t;
         let tn_sav = tn;
-        let (d0v, d1v) = (is_valid_trap(tr[t].d0), is_valid_trap(tr[t].d1));
+        let (d0v, d1v) = (is_valid_trap(tr.at(t)?.d0), is_valid_trap(tr.at(t)?.d1));
         if !d0v && !d1v {
-            return false;
+            return Err(Fail::NoMaze);
         } else if d0v && !d1v || !d0v && d1v {
             let use_d0 = d0v;
-            if !update_trapezoid(&s, seg, tr, t, tn) {
-                return false;
-            }
-            let low = |tr: &[Trap], x: usize| if use_d0 { tr[x].d0 } else { tr[x].d1 };
-            if fp_equal(tr[t].lo.y, tr[tlast].lo.y)
-                && fp_equal(tr[t].lo.x, tr[tlast].lo.x)
+            update_trapezoid(&s, seg, tr, t, tn)?;
+            let low = |tr: &[Trap], x: usize| -> OResult<usize> {
+                let x = tr.at(x)?;
+                Ok(if use_d0 { x.d0 } else { x.d1 })
+            };
+            if fp_equal(tr.at(t)?.lo.y, tr.at(tlast)?.lo.y)
+                && fp_equal(tr.at(t)?.lo.x, tr.at(tlast)?.lo.x)
                 && tribot
             {
                 let tmptriseg = if is_swapped {
-                    seg[segnum as usize].prev
+                    seg.at(idx(segnum)?)?.prev
                 } else {
-                    seg[segnum as usize].next
+                    seg.at(idx(segnum)?)?.next
                 };
-                if tmptriseg > 0 && is_left_of(tmptriseg, seg, s.v0) {
-                    let d = low(tr, t);
-                    tr[d].u0 = t;
-                    tr[tn].d0 = usize::MAX;
-                    tr[tn].d1 = usize::MAX;
+                if tmptriseg > 0 && is_left_of(tmptriseg, seg, s.v0)? {
+                    let d = low(tr, t)?;
+                    tr.at_mut(d)?.u0 = t;
+                    tr.at_mut(tn)?.d0 = usize::MAX;
+                    tr.at_mut(tn)?.d1 = usize::MAX;
                 } else {
-                    let d = low(tr, tn);
-                    tr[d].u1 = tn;
-                    tr[t].d0 = usize::MAX;
-                    tr[t].d1 = usize::MAX;
+                    let d = low(tr, tn)?;
+                    tr.at_mut(d)?.u1 = tn;
+                    tr.at_mut(t)?.d0 = usize::MAX;
+                    tr.at_mut(t)?.d1 = usize::MAX;
                 }
             } else {
-                let d = low(tr, t);
-                if is_valid_trap(tr[d].u0) && is_valid_trap(tr[d].u1) {
-                    if tr[d].u0 == t {
-                        tr[d].usave = tr[d].u1;
-                        tr[d].uside = S_LEFT;
+                let d = low(tr, t)?;
+                if is_valid_trap(tr.at(d)?.u0) && is_valid_trap(tr.at(d)?.u1) {
+                    if tr.at(d)?.u0 == t {
+                        tr.at_mut(d)?.usave = tr.at(d)?.u1;
+                        tr.at_mut(d)?.uside = S_LEFT;
                     } else {
-                        tr[d].usave = tr[d].u0;
-                        tr[d].uside = S_RIGHT;
+                        tr.at_mut(d)?.usave = tr.at(d)?.u0;
+                        tr.at_mut(d)?.uside = S_RIGHT;
                     }
                 }
-                tr[d].u0 = t;
-                tr[d].u1 = tn;
+                tr.at_mut(d)?.u0 = t;
+                tr.at_mut(d)?.u1 = tn;
             }
-            t = low(tr, t);
+            t = low(tr, t)?;
         } else {
             let mut i_d0 = false;
-            if fp_equal(tr[t].lo.y, s.v0.y) {
-                if tr[t].lo.x > s.v0.x {
+            if fp_equal(tr.at(t)?.lo.y, s.v0.y) {
+                if tr.at(t)?.lo.x > s.v0.x {
                     i_d0 = true;
                 }
             } else {
-                let y0 = tr[t].lo.y;
+                let y0 = tr.at(t)?.lo.y;
                 let yt = (y0 - s.v0.y) / (s.v1.y - s.v0.y);
                 let tmppt = Point::new(yt.mul_add(s.v1.x - s.v0.x, s.v0.x), y0);
-                if less_than(tmppt, tr[t].lo) {
+                if less_than(tmppt, tr.at(t)?.lo) {
                     i_d0 = true;
                 }
             }
-            if !update_trapezoid(&s, seg, tr, t, tn) {
-                return false;
-            }
+            update_trapezoid(&s, seg, tr, t, tn)?;
             let tnext;
-            let (d0, d1) = (tr[t].d0, tr[t].d1);
-            if fp_equal(tr[t].lo.y, tr[tlast].lo.y)
-                && fp_equal(tr[t].lo.x, tr[tlast].lo.x)
+            let (d0, d1) = (tr.at(t)?.d0, tr.at(t)?.d1);
+            if fp_equal(tr.at(t)?.lo.y, tr.at(tlast)?.lo.y)
+                && fp_equal(tr.at(t)?.lo.x, tr.at(tlast)?.lo.x)
                 && tribot
             {
-                tr[d0].u0 = t;
-                tr[d0].u1 = usize::MAX;
-                tr[d1].u0 = tn;
-                tr[d1].u1 = usize::MAX;
-                tr[tn].d0 = d1;
-                tr[t].d1 = usize::MAX;
-                tr[tn].d1 = usize::MAX;
-                tnext = tr[t].d1;
+                tr.at_mut(d0)?.u0 = t;
+                tr.at_mut(d0)?.u1 = usize::MAX;
+                tr.at_mut(d1)?.u0 = tn;
+                tr.at_mut(d1)?.u1 = usize::MAX;
+                tr.at_mut(tn)?.d0 = d1;
+                tr.at_mut(t)?.d1 = usize::MAX;
+                tr.at_mut(tn)?.d1 = usize::MAX;
+                tnext = tr.at(t)?.d1;
             } else if i_d0 {
-                tr[d0].u0 = t;
-                tr[d0].u1 = tn;
-                tr[d1].u0 = tn;
-                tr[d1].u1 = usize::MAX;
-                tr[t].d1 = usize::MAX;
-                tnext = tr[t].d0;
+                tr.at_mut(d0)?.u0 = t;
+                tr.at_mut(d0)?.u1 = tn;
+                tr.at_mut(d1)?.u0 = tn;
+                tr.at_mut(d1)?.u1 = usize::MAX;
+                tr.at_mut(t)?.d1 = usize::MAX;
+                tnext = tr.at(t)?.d0;
             } else {
-                tr[d0].u0 = t;
-                tr[d0].u1 = usize::MAX;
-                tr[d1].u0 = t;
-                tr[d1].u1 = tn;
-                tr[tn].d0 = d1;
-                tr[tn].d1 = usize::MAX;
-                tnext = tr[t].d1;
+                tr.at_mut(d0)?.u0 = t;
+                tr.at_mut(d0)?.u1 = usize::MAX;
+                tr.at_mut(d1)?.u0 = t;
+                tr.at_mut(d1)?.u1 = tn;
+                tr.at_mut(tn)?.d0 = d1;
+                tr.at_mut(tn)?.d1 = usize::MAX;
+                tnext = tr.at(t)?.d1;
             }
             t = tnext;
         }
-        tr[t_sav].rseg = segnum;
-        tr[tn_sav].lseg = segnum;
+        tr.at_mut(t_sav)?.rseg = segnum;
+        tr.at_mut(tn_sav)?.lseg = segnum;
     }
-    merge_trapezoids(segnum, tfirst, tlast, S_LEFT, tr, qs);
-    merge_trapezoids(segnum, tfirstr, tlastr, S_RIGHT, tr, qs);
-    seg[segnum as usize].is_inserted = true;
-    true
+    merge_trapezoids(segnum, tfirst, tlast, S_LEFT, tr, qs)?;
+    merge_trapezoids(segnum, tfirstr, tlastr, S_RIGHT, tr, qs)?;
+    seg.at_mut(idx(segnum)?)?.is_inserted = true;
+    Ok(())
 }
 
-fn find_new_roots(segnum: usize, seg: &mut [SegmentT], tr: &[Trap], qs: &[QNode]) {
-    let s = seg[segnum];
+fn find_new_roots(segnum: usize, seg: &mut [SegmentT], tr: &[Trap], qs: &[QNode]) -> OResult<()> {
+    let s = *seg.at(segnum)?;
     if s.is_inserted {
-        return;
+        return Ok(());
     }
-    let r0 = locate_endpoint(s.v0, s.v1, s.root0, seg, qs);
-    seg[segnum].root0 = tr[r0].sink;
-    let r1 = locate_endpoint(s.v1, s.v0, s.root1, seg, qs);
-    seg[segnum].root1 = tr[r1].sink;
+    let r0 = locate_endpoint(s.v0, s.v1, s.root0, seg, qs)?;
+    seg.at_mut(segnum)?.root0 = tr.at(r0)?.sink;
+    let r1 = locate_endpoint(s.v1, s.v0, s.root1, seg, qs)?;
+    seg.at_mut(segnum)?.root1 = tr.at(r1)?.sink;
+    Ok(())
 }
 
 fn math_logstar_n(n: i32) -> i32 {
@@ -633,12 +665,16 @@ fn math_n(n: i32, h: i32) -> i32 {
     (f64::from(n) / v).ceil() as i32
 }
 
-/// `construct_trapezoids(nseg, seg, permute)`: empty on failure.
-pub fn construct_trapezoids(nseg: i32, seg: &mut [SegmentT], permute: &[i32]) -> Vec<Trap> {
+/// `construct_trapezoids(nseg, seg, permute)`.
+pub fn construct_trapezoids(
+    nseg: i32,
+    seg: &mut [SegmentT],
+    permute: &[i32],
+) -> OResult<Vec<Trap>> {
     let mut qs: Vec<QNode> = Vec::new();
     let mut tr: Vec<Trap> = vec![Trap::default()];
     let mut segi = 0usize;
-    let root = init_query_structure(permute[segi], seg, &mut tr, &mut qs);
+    let root = init_query_structure(*permute.at(segi)?, seg, &mut tr, &mut qs)?;
     segi += 1;
     for s in seg.iter_mut().take(nseg as usize + 1).skip(1) {
         s.root0 = root;
@@ -647,22 +683,18 @@ pub fn construct_trapezoids(nseg: i32, seg: &mut [SegmentT], permute: &[i32]) ->
     let logstar = math_logstar_n(nseg);
     for h in 1..=logstar {
         for _ in math_n(nseg, h - 1) + 1..=math_n(nseg, h) {
-            if !add_segment(permute[segi], seg, &mut tr, &mut qs) {
-                return Vec::new();
-            }
+            add_segment(*permute.at(segi)?, seg, &mut tr, &mut qs)?;
             segi += 1;
         }
         for i in 1..=nseg as usize {
-            find_new_roots(i, seg, &tr, &qs);
+            find_new_roots(i, seg, &tr, &qs)?;
         }
     }
     for _ in math_n(nseg, logstar) + 1..=nseg {
-        if !add_segment(permute[segi], seg, &mut tr, &mut qs) {
-            return Vec::new();
-        }
+        add_segment(*permute.at(segi)?, seg, &mut tr, &mut qs)?;
         segi += 1;
     }
-    tr
+    Ok(tr)
 }
 
 #[cfg(test)]
@@ -709,6 +741,6 @@ mod tests {
             (5.758_790_465_790_995e143, 0.0, 122.028_051_165_226_49),
         ]
         .map(|(x, y, w)| (Point::new(x, y), w, 36.0));
-        assert!(mk_maze(&nodes).is_none());
+        assert!(mk_maze(&nodes).is_err());
     }
 }

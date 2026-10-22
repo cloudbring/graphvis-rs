@@ -1,6 +1,8 @@
 //! Port of `lib/ortho/sgraph.c` and `lib/ortho/fPQ.c`: the search graph of
 //! the maze and Dijkstra's shortest path over it.
 
+use super::fail::{At, Fail, Need, OResult, ensure};
+
 /// `snode`.
 #[derive(Debug, Clone, Default)]
 pub struct SNode {
@@ -55,134 +57,173 @@ impl SGraph {
         }
     }
 
+    pub fn node(&self, n: usize) -> OResult<&SNode> {
+        self.nodes.at(n)
+    }
+
+    pub fn node_mut(&mut self, n: usize) -> OResult<&mut SNode> {
+        self.nodes.at_mut(n)
+    }
+
+    pub fn edge(&self, e: usize) -> OResult<&SEdge> {
+        self.edges.at(e)
+    }
+
+    pub fn edge_mut(&mut self, e: usize) -> OResult<&mut SEdge> {
+        self.edges.at_mut(e)
+    }
+
     /// `gsave(G)`.
-    pub fn gsave(&mut self) {
+    pub fn gsave(&mut self) -> OResult<()> {
         self.save_nnodes = self.nnodes;
         self.save_nedges = self.nedges;
-        for i in 0..self.nnodes {
-            self.nodes[i].save_n_adj = self.nodes[i].n_adj;
+        for np in self.nodes.get_mut(..self.nnodes).need()? {
+            np.save_n_adj = np.n_adj;
         }
+        Ok(())
     }
 
     /// `reset(G)`.
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self) -> OResult<()> {
         self.nnodes = self.save_nnodes;
         self.nedges = self.save_nedges;
-        for i in 0..self.nnodes {
-            self.nodes[i].n_adj = self.nodes[i].save_n_adj;
+        let nn = self.nnodes;
+        for np in self.nodes.get_mut(..nn).need()? {
+            np.n_adj = np.save_n_adj;
         }
-        for i in self.nnodes..self.nnodes + 2 {
-            self.nodes[i].n_adj = 0;
+        for np in self.nodes.get_mut(nn..nn + 2).need()? {
+            np.n_adj = 0;
         }
+        Ok(())
     }
 
     /// `initSEdges(g, maxdeg)`.
-    pub fn init_sedges(&mut self, maxdeg: usize) {
+    pub fn init_sedges(&mut self, maxdeg: usize) -> OResult<()> {
         self.adj = vec![0; 6 * self.nnodes + 2 * maxdeg];
         let mut base = 0;
-        for i in 0..self.nnodes + 2 {
-            self.nodes[i].adj_base = base;
-            base += if i < self.nnodes { 6 } else { maxdeg };
+        let nn = self.nnodes;
+        for (i, np) in self.nodes.get_mut(..nn + 2).need()?.iter_mut().enumerate() {
+            np.adj_base = base;
+            base += if i < nn { 6 } else { maxdeg };
         }
+        Ok(())
     }
 
     /// `adj_edge_list[k]` of node `n`.
-    pub fn adj_edge(&self, n: usize, k: usize) -> usize {
-        self.adj
-            .get(self.nodes[n].adj_base + k)
+    pub fn adj_edge(&self, n: usize, k: usize) -> OResult<usize> {
+        Ok(self
+            .adj
+            .get(self.node(n)?.adj_base + k)
             .copied()
-            .unwrap_or(0)
+            .unwrap_or(0))
     }
 
     /// `addEdgeToNode(np, idx)`.
-    fn add_edge_to_node(&mut self, n: usize, idx: usize) {
-        let slot = self.nodes[n].adj_base + self.nodes[n].n_adj;
+    fn add_edge_to_node(&mut self, n: usize, idx: usize) -> OResult<()> {
+        let np = self.node(n)?;
+        let slot = np.adj_base + np.n_adj;
         if slot >= self.adj.len() {
             self.adj.resize(slot + 1, 0);
         }
         self.adj[slot] = idx;
-        self.nodes[n].n_adj += 1;
+        self.node_mut(n)?.n_adj += 1;
+        Ok(())
     }
 
-    /// `createSNode(g)`.
-    pub fn create_snode(&mut self) -> usize {
+    /// `createSNode(g)`. C writes past `nodes` if the maze makes more side
+    /// nodes than `mkMazeGraph` allocated; the port fails.
+    pub fn create_snode(&mut self) -> OResult<usize> {
         let i = self.nnodes;
-        self.nodes[i].index = i;
+        self.node_mut(i)?.index = i;
         self.nnodes += 1;
-        i
+        Ok(i)
     }
 
     /// `createSEdge(g, v1, v2, wt)`.
-    pub fn create_sedge(&mut self, v1: usize, v2: usize, wt: f64) -> usize {
+    pub fn create_sedge(&mut self, v1: usize, v2: usize, wt: f64) -> OResult<usize> {
         let idx = self.nedges;
-        self.nedges += 1;
         let e = SEdge {
             weight: wt,
             cnt: 0,
-            v1: self.nodes[v1].index,
-            v2: self.nodes[v2].index,
+            v1: self.node(v1)?.index,
+            v2: self.node(v2)?.index,
         };
+        self.nedges += 1;
         if idx < self.edges.len() {
             self.edges[idx] = e;
         } else {
             self.edges.push(e);
         }
-        self.add_edge_to_node(v1, idx);
-        self.add_edge_to_node(v2, idx);
-        idx
+        self.add_edge_to_node(v1, idx)?;
+        self.add_edge_to_node(v2, idx)?;
+        Ok(idx)
     }
 
-    fn adjacent_node(&self, e: usize, n: usize) -> usize {
-        let ed = &self.edges[e];
-        if ed.v1 == self.nodes[n].index {
+    fn adjacent_node(&self, e: usize, n: usize) -> OResult<usize> {
+        let ed = self.edge(e)?;
+        Ok(if ed.v1 == self.node(n)?.index {
             ed.v2
         } else {
             ed.v1
-        }
+        })
     }
 
-    /// `shortPath(pq, g, from, to)`: returns false on heap overflow.
-    pub fn short_path(&mut self, pq: &mut Pq, from: usize, to: usize) -> bool {
+    /// `shortPath(pq, g, from, to)`.
+    pub fn short_path(&mut self, pq: &mut Pq, from: usize, to: usize) -> OResult<()> {
         const UNSEEN: i32 = i32::MIN;
-        for x in 0..self.nnodes {
-            self.nodes[x].n_val = UNSEEN;
+        for np in self.nodes.get_mut(..self.nnodes).need()? {
+            np.n_val = UNSEEN;
         }
         pq.init();
-        if !pq.insert(self, from) {
-            return false;
-        }
-        self.nodes[from].n_dad = None;
-        self.nodes[from].n_val = 0;
-        while let Some(n) = pq.remove(self) {
-            self.nodes[n].n_val *= -1;
+        pq.insert(self, from)?;
+        self.node_mut(from)?.n_dad = None;
+        self.node_mut(from)?.n_val = 0;
+        while let Some(n) = pq.remove(self)? {
+            // `N_VAL(n) *= -1`; [`distance`] keeps it off `INT_MIN`.
+            let np = self.node_mut(n)?;
+            np.n_val = np.n_val.checked_neg().need()?;
             if n == to {
                 break;
             }
-            for y in 0..self.nodes[n].n_adj {
-                let e = self.adj_edge(n, y);
-                let adjn = self.adjacent_node(e, n);
-                if self.nodes[adjn].n_val < 0 {
-                    // int + double, negated, back to int (truncation)
-                    let d = (-(f64::from(self.nodes[n].n_val) + self.edges[e].weight)) as i32;
-                    if self.nodes[adjn].n_val == UNSEEN {
-                        self.nodes[adjn].n_val = d;
-                        if !pq.insert(self, adjn) {
-                            return false;
-                        }
-                        self.nodes[adjn].n_dad = Some(n);
-                        self.nodes[adjn].n_edge = Some(e);
-                    } else if self.nodes[adjn].n_val < d {
-                        pq.update(self, adjn, d);
-                        self.nodes[adjn].n_dad = Some(n);
-                        self.nodes[adjn].n_edge = Some(e);
+            for y in 0..self.node(n)?.n_adj {
+                let e = self.adj_edge(n, y)?;
+                let adjn = self.adjacent_node(e, n)?;
+                if self.node(adjn)?.n_val < 0 {
+                    let d = distance(self.node(n)?.n_val, self.edge(e)?.weight)?;
+                    if self.node(adjn)?.n_val == UNSEEN {
+                        self.node_mut(adjn)?.n_val = d;
+                        pq.insert(self, adjn)?;
+                        let ap = self.node_mut(adjn)?;
+                        ap.n_dad = Some(n);
+                        ap.n_edge = Some(e);
+                    } else if self.node(adjn)?.n_val < d {
+                        pq.update(self, adjn, d)?;
+                        let ap = self.node_mut(adjn)?;
+                        ap.n_dad = Some(n);
+                        ap.n_edge = Some(e);
                     }
                 }
             }
         }
-        true
+        Ok(())
     }
 }
 
+/// `d = -(N_VAL(n) + E_WT(e))` in `shortPath`: an `int` plus a `double`,
+/// negated and truncated back to `int`. Weights grow with the cell sizes, so
+/// on huge coordinates the `double` does not fit an `int` (#229). C's
+/// conversion is then undefined, and the value it gets breaks the heap:
+/// `PQcheck` fails its assertion, or `N_VAL(n) *= -1` overflows on
+/// `INT_MIN` (`UNSEEN`). A positive `d` (C's weights are never negative) would
+/// make `PQupheap` climb past its guard and loop. The port fails on all of
+/// these; every distance C computes on the inputs it routes is in range.
+/// (A positive `d` always loops in C: every value in the heap is at or below
+/// 0, so it climbs to the root and then past the guard forever.)
+fn distance(n_val: i32, weight: f64) -> OResult<i32> {
+    let d = (-(f64::from(n_val) + weight)).trunc();
+    ensure(d > f64::from(i32::MIN) && d <= 0.0)?;
+    Ok(d as i32)
+}
 /// `pq_t` (fPQ.c): a max-heap of node indices on `n_val`; slot 0 is a guard
 /// with value 0.
 #[derive(Debug, Clone, Default)]
@@ -206,8 +247,8 @@ impl Pq {
         }
     }
 
-    fn val(g: &SGraph, n: usize) -> i32 {
-        if n == GUARD { 0 } else { g.nodes[n].n_val }
+    fn val(g: &SGraph, n: usize) -> OResult<i32> {
+        Ok(if n == GUARD { 0 } else { g.node(n)?.n_val })
     }
 
     /// `PQinit(pq)`.
@@ -215,75 +256,99 @@ impl Pq {
         self.cnt = 0;
     }
 
-    fn upheap(&mut self, g: &mut SGraph, mut k: usize) {
-        let x = self.pq[k];
-        let v = g.nodes[x].n_val;
+    /// `PQupheap(pq, k)`. The guard's value 0 stops the climb, as
+    /// [`distance`] keeps every value at or below 0.
+    fn upheap(&mut self, g: &mut SGraph, mut k: usize) -> OResult<()> {
+        let x = *self.pq.at(k)?;
+        let v = g.node(x)?.n_val;
         let mut next = k / 2;
         loop {
-            let n = self.pq[next];
-            if Self::val(g, n) >= v {
+            let n = *self.pq.at(next)?;
+            if Self::val(g, n)? >= v {
                 break;
             }
             self.pq[k] = n;
-            g.nodes[n].n_idx = k as i32;
+            g.node_mut(n)?.n_idx = k as i32;
             k = next;
             next /= 2;
         }
         self.pq[k] = x;
-        g.nodes[x].n_idx = k as i32;
+        g.node_mut(x)?.n_idx = k as i32;
+        Ok(())
     }
 
-    /// `PQ_insert(pq, np)`: false on overflow.
-    pub fn insert(&mut self, g: &mut SGraph, np: usize) -> bool {
+    /// `PQ_insert(pq, np)`.
+    pub fn insert(&mut self, g: &mut SGraph, np: usize) -> OResult<()> {
         if self.cnt == self.size {
-            return false;
+            return Err(Fail::HeapOverflow);
         }
         self.cnt += 1;
-        self.pq[self.cnt] = np;
-        self.upheap(g, self.cnt);
-        true
+        *self.pq.at_mut(self.cnt)? = np;
+        self.upheap(g, self.cnt)
     }
 
-    fn downheap(&mut self, g: &mut SGraph, mut k: usize) {
-        let x = self.pq[k];
-        let v = g.nodes[x].n_val;
+    fn downheap(&mut self, g: &mut SGraph, mut k: usize) -> OResult<()> {
+        let x = *self.pq.at(k)?;
+        let v = g.node(x)?.n_val;
         let lim = self.cnt / 2;
         while k <= lim {
             let mut j = k + k;
-            let mut n = self.pq[j];
-            if j < self.cnt && g.nodes[n].n_val < g.nodes[self.pq[j + 1]].n_val {
+            let mut n = *self.pq.at(j)?;
+            if j < self.cnt && g.node(n)?.n_val < g.node(*self.pq.at(j + 1)?)?.n_val {
                 j += 1;
                 n = self.pq[j];
             }
-            if v >= g.nodes[n].n_val {
+            if v >= g.node(n)?.n_val {
                 break;
             }
             self.pq[k] = n;
-            g.nodes[n].n_idx = k as i32;
+            g.node_mut(n)?.n_idx = k as i32;
             k = j;
         }
         self.pq[k] = x;
-        g.nodes[x].n_idx = k as i32;
+        g.node_mut(x)?.n_idx = k as i32;
+        Ok(())
     }
 
     /// `PQremove(pq)`.
-    pub fn remove(&mut self, g: &mut SGraph) -> Option<usize> {
+    pub fn remove(&mut self, g: &mut SGraph) -> OResult<Option<usize>> {
         if self.cnt == 0 {
-            return None;
+            return Ok(None);
         }
-        let n = self.pq[1];
-        self.pq[1] = self.pq[self.cnt];
+        let n = *self.pq.at(1)?;
+        self.pq[1] = *self.pq.at(self.cnt)?;
         self.cnt -= 1;
         if self.cnt > 0 {
-            self.downheap(g, 1);
+            self.downheap(g, 1)?;
         }
-        Some(n)
+        Ok(Some(n))
     }
 
     /// `PQupdate(pq, n, d)`.
-    pub fn update(&mut self, g: &mut SGraph, n: usize, d: i32) {
-        g.nodes[n].n_val = d;
-        let k = g.nodes[n].n_idx as usize;
-        self.upheap(g, k);
+    pub fn update(&mut self, g: &mut SGraph, n: usize, d: i32) -> OResult<()> {
+        g.node_mut(n)?.n_val = d;
+        let k = usize::try_from(g.node(n)?.n_idx).map_err(|_| Fail::here())?;
+        self.upheap(g, k)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `d = -(N_VAL(n) + E_WT(e))` is kept where C's `int` arithmetic is
+    /// defined and `PQupheap` stops at its guard (#229).
+    #[test]
+    fn distance_stays_where_cs_int_arithmetic_is_defined() {
+        assert_eq!(distance(0, 0.0), Ok(0));
+        assert_eq!(distance(5, 500.7), Ok(-505));
+        assert_eq!(distance(0, 2_147_483_647.5), Ok(-2_147_483_647));
+        // -2^31 is `UNSEEN`, and `N_VAL(n) *= -1` overflows on it.
+        assert!(distance(0, 2_147_483_648.0).is_err());
+        assert!(distance(0, 1e12).is_err());
+        assert!(distance(i32::MAX, 1.0).is_err());
+        assert!(distance(0, f64::NAN).is_err());
+        // C's PQupheap climbs past its guard forever on a positive value.
+        assert!(distance(0, -1.0).is_err());
     }
 }

@@ -1,6 +1,7 @@
 //! Port of `lib/ortho/maze.c` and `maze.h`: the maze of free cells around
 //! the node cells and its search graph.
 
+use super::fail::{At, Fail, Need, OResult, ensure};
 use super::partition::partition;
 use super::sgraph::SGraph;
 use super::trapezoid::dfp_cmp;
@@ -60,6 +61,14 @@ pub struct Maze {
 impl Maze {
     pub fn ncells(&self) -> usize {
         self.cells.len() - self.ngcells
+    }
+
+    pub fn cell(&self, c: usize) -> OResult<&Cell> {
+        self.cells.at(c)
+    }
+
+    pub fn cell_mut(&mut self, c: usize) -> OResult<&mut Cell> {
+        self.cells.at_mut(c)
     }
 }
 
@@ -125,62 +134,65 @@ impl PointDict {
 }
 
 /// `updateWt(ep, sz)`.
-fn update_wt(sg: &mut SGraph, e: usize, sz: f64) {
-    let ep = &mut sg.edges[e];
+fn update_wt(sg: &mut SGraph, e: usize, sz: f64) -> OResult<()> {
+    let ep = sg.edge_mut(e)?;
     ep.cnt += 1;
     if f64::from(ep.cnt) > sz {
         ep.cnt = 0;
         ep.weight += BIG;
     }
+    Ok(())
 }
 
-fn bend(sg: &SGraph, e: usize) -> bool {
-    let ed = &sg.edges[e];
-    sg.nodes[ed.v1].is_vert != sg.nodes[ed.v2].is_vert
+fn bend(sg: &SGraph, e: usize) -> OResult<bool> {
+    let ed = sg.edge(e)?;
+    Ok(sg.node(ed.v1)?.is_vert != sg.node(ed.v2)?.is_vert)
 }
 
-fn horz(sg: &SGraph, e: usize) -> bool {
-    sg.nodes[sg.edges[e].v1].is_vert
+fn horz(sg: &SGraph, e: usize) -> OResult<bool> {
+    Ok(sg.node(sg.edge(e)?.v1)?.is_vert)
 }
 
 /// `updateWts(g, cp, ep)`.
-pub fn update_wts(sg: &mut SGraph, cp: &Cell, ep: usize) {
-    let is_bend = bend(sg, ep);
+pub fn update_wts(sg: &mut SGraph, cp: &Cell, ep: usize) -> OResult<()> {
+    let is_bend = bend(sg, ep)?;
     let hsz = chansz(cp.bb.ur.y - cp.bb.ll.y);
     let vsz = chansz(cp.bb.ur.x - cp.bb.ll.x);
     let minsz = hsz.min(vsz);
     let mut i = 0;
     while i < cp.edges.len() {
         let e = cp.edges[i];
-        if !bend(sg, e) {
+        if !bend(sg, e)? {
             break;
         }
-        update_wt(sg, e, minsz);
+        update_wt(sg, e, minsz)?;
         i += 1;
     }
     while i < cp.edges.len() {
         let e = cp.edges[i];
         if is_bend || e == ep {
-            let sz = if horz(sg, e) { hsz } else { vsz };
-            update_wt(sg, e, sz);
+            let sz = if horz(sg, e)? { hsz } else { vsz };
+            update_wt(sg, e, sz)?;
         }
         i += 1;
     }
+    Ok(())
 }
 
-/// `markSmall(cp)`. `None` where C dereferences a missing cell or reads past
+/// `markSmall(cp)`. Fails where C dereferences a missing cell or reads past
 /// the allocation of a node cell's side list (`lib/ortho/maze.c:markSmall`).
 /// Tiny or touching node boxes in dot get there (#202): C segfaults, so the
 /// port fails the maze instead and the caller falls back.
-fn mark_small(mp: &mut Maze, c: usize) -> Option<()> {
-    let bb = mp.cells[c].bb;
-    let sides: Vec<usize> = mp.cells[c].sides.iter().flatten().copied().collect();
+fn mark_small(mp: &mut Maze, c: usize) -> OResult<()> {
+    let bb = mp.cell(c)?.bb;
+    let sides: Vec<usize> = mp.cell(c)?.sides.iter().flatten().copied().collect();
     if is_small(bb.ur.y - bb.ll.y) {
         for &onp0 in &sides {
-            if !mp.sg.nodes[onp0].is_vert {
+            let onp = mp.sg.node(onp0)?;
+            if !onp.is_vert {
                 continue;
             }
-            if mp.sg.nodes[onp0].cells[0] == Some(c) {
+            if onp.cells[0] == Some(c) {
                 mark_run(mp, onp0, 1, M_RIGHT, MZ_SMALLV)?;
             } else {
                 mark_run(mp, onp0, 0, M_LEFT, MZ_SMALLV)?;
@@ -189,34 +201,38 @@ fn mark_small(mp: &mut Maze, c: usize) -> Option<()> {
     }
     if is_small(bb.ur.x - bb.ll.x) {
         for &onp0 in &sides {
-            if mp.sg.nodes[onp0].is_vert {
+            let onp = mp.sg.node(onp0)?;
+            if onp.is_vert {
                 continue;
             }
-            if mp.sg.nodes[onp0].cells[0] == Some(c) {
+            if onp.cells[0] == Some(c) {
                 mark_run(mp, onp0, 1, M_TOP, MZ_SMALLH)?;
             } else {
                 mark_run(mp, onp0, 0, M_BOTTOM, MZ_SMALLH)?;
             }
         }
     }
-    Some(())
+    Ok(())
 }
 
 /// One walk of `markSmall`: flag the cell `onp->cells[ci]`, then keep stepping
-/// through `side` while the next cell is not a node. `None` on a missing cell
-/// or an unallocated side slot, where C crashes.
-fn mark_run(mp: &mut Maze, onp: usize, ci: usize, side: usize, flag: i32) -> Option<()> {
-    let mut ocp = mp.sg.nodes[onp].cells[ci]?;
-    mp.cells[ocp].flags |= flag;
-    while let Some(onp) = side_slot(&mp.cells[ocp].sides, side)? {
-        let nc = mp.sg.nodes[onp].cells[ci]?;
-        if mp.cells[nc].is_node() {
+/// through `side` while the next cell is not a node. Fails on a missing cell
+/// or an unallocated side slot, where C crashes. The walk moves one way across
+/// the maze, so it cannot pass more cells than there are.
+fn mark_run(mp: &mut Maze, onp: usize, ci: usize, side: usize, flag: i32) -> OResult<()> {
+    let mut ocp = mp.sg.node(onp)?.cells[ci].need()?;
+    mp.cell_mut(ocp)?.flags |= flag;
+    let mut budget = mp.cells.len();
+    while let Some(onp) = side_slot(&mp.cell(ocp)?.sides, side).need()? {
+        budget = budget.checked_sub(1).need()?;
+        let nc = mp.sg.node(onp)?.cells[ci].need()?;
+        if mp.cell(nc)?.is_node() {
             break;
         }
         ocp = nc;
-        mp.cells[ocp].flags |= flag;
+        mp.cell_mut(ocp)?.flags |= flag;
     }
-    Some(())
+    Ok(())
 }
 
 /// `cp->sides[side]` as C reads it. A node cell's side list comes from
@@ -235,8 +251,8 @@ fn side_slot(sides: &[Option<usize>], side: usize) -> Option<Option<usize>> {
 }
 
 /// `createSEdges(cp, g)`.
-fn create_sedges(mp: &mut Maze, c: usize) {
-    let cp = &mp.cells[c];
+fn create_sedges(mp: &mut Maze, c: usize) -> OResult<()> {
+    let cp = mp.cell(c)?;
     let bb = cp.bb;
     let mut hwt = DELTA * (bb.ur.x - bb.ll.x);
     let mut vwt = DELTA * (bb.ur.y - bb.ll.y);
@@ -250,10 +266,10 @@ fn create_sedges(mp: &mut Maze, c: usize) {
         wt = BIG;
     }
     let s = [
-        cp.sides[M_RIGHT],
-        cp.sides[M_TOP],
-        cp.sides[M_LEFT],
-        cp.sides[M_BOTTOM],
+        *cp.sides.at(M_RIGHT)?,
+        *cp.sides.at(M_TOP)?,
+        *cp.sides.at(M_LEFT)?,
+        *cp.sides.at(M_BOTTOM)?,
     ];
     let pairs = [
         (M_LEFT, M_TOP, wt),
@@ -265,35 +281,36 @@ fn create_sedges(mp: &mut Maze, c: usize) {
     ];
     for (a, b, w) in pairs {
         if let (Some(na), Some(nb)) = (s[a], s[b]) {
-            let e = mp.sg.create_sedge(na, nb, w);
+            let e = mp.sg.create_sedge(na, nb, w)?;
             mp.cells[c].edges.push(e);
         }
     }
+    Ok(())
 }
 
 /// `findSVert(g, cdt, p, ditems, isVert)`.
-fn find_svert(sg: &mut SGraph, dict: &mut PointDict, p: Point, is_vert: bool) -> usize {
+fn find_svert(sg: &mut SGraph, dict: &mut PointDict, p: Point, is_vert: bool) -> OResult<usize> {
     if let Some(i) = dict.find(&p) {
-        return dict.item(i).1;
+        return Ok(dict.item(i).1);
     }
-    let np = sg.create_snode();
+    let np = sg.create_snode()?;
     sg.nodes[np].is_vert = is_vert;
     dict.insert(p, np);
-    np
+    Ok(np)
 }
 
-/// `chkSgraph(g)`: every search-graph node lies between two cells.
-fn chk_sgraph(sg: &SGraph) -> bool {
-    sg.nodes[..sg.nnodes]
-        .iter()
-        .all(|np| np.cells[0].is_some() && np.cells[1].is_some())
+/// `chkSgraph(g)`: every search-graph node lies between two cells. C
+/// asserts it (`lib/ortho/maze.c:308-320`); a non-finite node box breaks it
+/// (#171).
+fn chk_sgraph(sg: &SGraph) -> OResult<()> {
+    for np in sg.nodes.get(..sg.nnodes).need()? {
+        ensure(np.cells[0].is_some() && np.cells[1].is_some())?;
+    }
+    Ok(())
 }
 
-/// `mkMazeGraph(mp, bb)`. False where C's `chkSgraph` fails an assertion
-/// (`lib/ortho/maze.c:308-320`, e.g. on a non-finite node box, #171) or
-/// `markSmall` crashes (#202): C aborts there, the port fails the maze so the
-/// caller falls back.
-fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
+/// `mkMazeGraph(mp, bb)`.
+fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> OResult<()> {
     let ncells = mp.ncells();
     let bound = 4 * ncells;
     mp.sg = SGraph::new(bound + 2);
@@ -303,22 +320,22 @@ fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
         mp.cells[i].sides = vec![None; 4];
         let cb = mp.cells[i].bb;
         if cb.ur.x < bb.ur.x {
-            let np = find_svert(&mut mp.sg, &mut vdict, Point::new(cb.ur.x, cb.ll.y), true);
+            let np = find_svert(&mut mp.sg, &mut vdict, Point::new(cb.ur.x, cb.ll.y), true)?;
             mp.sg.nodes[np].cells[0] = Some(i);
             mp.cells[i].sides[M_RIGHT] = Some(np);
         }
         if cb.ur.y < bb.ur.y {
-            let np = find_svert(&mut mp.sg, &mut hdict, Point::new(cb.ll.x, cb.ur.y), false);
+            let np = find_svert(&mut mp.sg, &mut hdict, Point::new(cb.ll.x, cb.ur.y), false)?;
             mp.sg.nodes[np].cells[0] = Some(i);
             mp.cells[i].sides[M_TOP] = Some(np);
         }
         if cb.ll.x > bb.ll.x {
-            let np = find_svert(&mut mp.sg, &mut vdict, cb.ll, true);
+            let np = find_svert(&mut mp.sg, &mut vdict, cb.ll, true)?;
             mp.sg.nodes[np].cells[1] = Some(i);
             mp.cells[i].sides[M_LEFT] = Some(np);
         }
         if cb.ll.y > bb.ll.y {
-            let np = find_svert(&mut mp.sg, &mut hdict, cb.ll, false);
+            let np = find_svert(&mut mp.sg, &mut hdict, cb.ll, false)?;
             mp.sg.nodes[np].cells[1] = Some(i);
             mp.cells[i].sides[M_BOTTOM] = Some(np);
         }
@@ -341,54 +358,50 @@ fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
                         break;
                     }
                     sides.push(Some(np));
-                    sg.nodes[np].cells[ci] = Some(i);
+                    sg.node_mut(np)?.cells[ci] = Some(i);
                     k = dict.next(kk);
                 }
+                Ok::<(), Fail>(())
             };
-        walk(&mut hdict, cb.ll, true, 1, &mut mp.sg);
-        walk(&mut vdict, cb.ll, false, 1, &mut mp.sg);
+        walk(&mut hdict, cb.ll, true, 1, &mut mp.sg)?;
+        walk(&mut vdict, cb.ll, false, 1, &mut mp.sg)?;
         walk(
             &mut hdict,
             Point::new(cb.ll.x, cb.ur.y),
             true,
             0,
             &mut mp.sg,
-        );
+        )?;
         walk(
             &mut vdict,
             Point::new(cb.ur.x, cb.ll.y),
             false,
             0,
             &mut mp.sg,
-        );
+        )?;
         if sides.len() > maxdeg {
             maxdeg = sides.len();
         }
         mp.cells[i].sides = sides;
     }
     for i in 0..mp.ngcells {
-        if mark_small(mp, i).is_none() {
-            return false;
-        }
+        mark_small(mp, i)?;
     }
     let nn = mp.sg.nnodes;
-    mp.sg.nodes[nn].index = nn;
-    mp.sg.nodes[nn + 1].index = nn + 1;
-    mp.sg.init_sedges(maxdeg);
+    mp.sg.node_mut(nn)?.index = nn;
+    mp.sg.node_mut(nn + 1)?.index = nn + 1;
+    mp.sg.init_sedges(maxdeg)?;
     for i in mp.ngcells..mp.cells.len() {
-        create_sedges(mp, i);
+        create_sedges(mp, i)?;
     }
-    if !chk_sgraph(&mp.sg) {
-        return false;
-    }
-    mp.sg.gsave();
-    true
+    chk_sgraph(&mp.sg)?;
+    mp.sg.gsave()
 }
 
 /// `mkMaze(g)`: one node cell per node box (`(x, y, xsize, ysize)`), then the
-/// free cells from `partition`. `None` when partitioning fails or the search
-/// graph is broken (`chkSgraph`).
-pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
+/// free cells from `partition`. Any failure here is a failure of C's
+/// `mkMaze`, which returns NULL where it detects one.
+pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> OResult<Maze> {
     let mut mp = Maze {
         ngcells: nodes.len(),
         ..Maze::default()
@@ -431,9 +444,7 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
             );
         }
     }
-    if !mk_maze_graph(&mut mp, big) {
-        return None;
-    }
+    mk_maze_graph(&mut mp, big)?;
     if dump {
         for i in 0..mp.ngcells {
             let s: String = mp.cells[i]
@@ -444,7 +455,7 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
             eprintln!("OMS {i}:{s}");
         }
     }
-    Some(mp)
+    Ok(mp)
 }
 
 #[cfg(test)]
@@ -463,7 +474,7 @@ mod tests {
             (Point::new(22.72, 10.16), 0.72, 1.44),
             (Point::new(20.72, 10.16), 0.72, 1.44),
         ];
-        assert!(mk_maze(&nodes).is_none());
+        assert!(mk_maze(&nodes).is_err());
     }
 
     /// Issue #202 review: walking down from a small node lands on a node cell
@@ -478,7 +489,7 @@ mod tests {
             (Point::new(1.0, 9.0), 6.0, 1.0),
             (Point::new(10.5, 10.0), 0.5, 0.5),
         ];
-        assert!(mk_maze(&nodes).is_some());
+        assert!(mk_maze(&nodes).is_ok());
     }
 
     #[test]
@@ -521,7 +532,7 @@ mod tests {
             (Point::new(181.0, 58.0), 54.0, 36.0),
             (Point::new(293.0, 58.0), 54.0, 36.0),
         ];
-        assert!(mk_maze(&nodes).is_none());
+        assert!(mk_maze(&nodes).is_err());
     }
 
     /// Issue #203: the tiny touching point nodes of a dot `splines=ortho` graph.
@@ -548,6 +559,6 @@ mod tests {
             .iter()
             .map(|&(x, y)| (Point::new(x, y), 1.44, 1.44))
             .collect();
-        assert!(mk_maze(&nodes).is_none());
+        assert!(mk_maze(&nodes).is_err());
     }
 }
