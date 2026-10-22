@@ -54,6 +54,15 @@ pub fn cluster_map(g: &LGraph<'_>, sub: &Sub) -> ClusterData {
     cdata
 }
 
+/// Not in C, which aborts here (#197): reports the VPSC failure that ends
+/// `stress_majorization_cola`'s loop.
+fn vpsc_failed(e: &crate::vpsc::VpscError) {
+    graphviz_pure_core::diag::agwarningf(&format!(
+        "VPSC: {}: ending the ipsep layout at the previous iteration\n",
+        e.0
+    ));
+}
+
 /// `stress_majorization_cola(graph, n, d_coords, nodes, dim, model, maxi, opt)`.
 #[allow(clippy::too_many_arguments)]
 pub fn stress_majorization_cola(
@@ -291,17 +300,22 @@ pub fn stress_majorization_cola(
                 opt,
             );
         }
-        // C aborts where constrained_majorization_vpsc fails (an uncaught
-        // std::runtime_error in satisfyVPSC). The port ends the layout as on
-        // C's own solver failures below, with `goto finish`, so the caller
-        // keeps the initial positions ("layout aborted").
+        // C aborts where constrained_majorization_vpsc fails: satisfyVPSC
+        // (lib/vpsc/csolve_VPSC.cpp) lets IncVPSC::satisfy's
+        // std::runtime_error escape. Not in C: the port, which draws such
+        // graphs (#33), restores that dimension's coordinates from before the
+        // call, warns and ends the stress loop, so the layout is the last
+        // iteration's (#197).
         if hor.m > 0 {
-            if hor
-                .constrained_majorization_vpsc(&b[0], &mut coords[0], LOCAL_CONSTR_MAJOR_ITERATIONS)
-                .is_err()
-            {
-                finish(&coords, d_coords);
-                return Err(SolverError);
+            let before = coords[0].clone();
+            if let Err(e) = hor.constrained_majorization_vpsc(
+                &b[0],
+                &mut coords[0],
+                LOCAL_CONSTR_MAJOR_ITERATIONS,
+            ) {
+                coords[0] = before;
+                vpsc_failed(&e);
+                break;
             }
         } else if conjugate_gradient_mkernel(&lap2, &mut coords[0], &mut b[0], n, TOLERANCE_CG, n)
             .is_err()
@@ -313,12 +327,15 @@ pub fn stress_majorization_cola(
             generate_nonoverlap_constraints(&mut vrt, nsize_scale as f32, &coords, 1, false, opt);
         }
         if vrt.m > 0 {
-            if vrt
-                .constrained_majorization_vpsc(&b[1], &mut coords[1], LOCAL_CONSTR_MAJOR_ITERATIONS)
-                .is_err()
-            {
-                finish(&coords, d_coords);
-                return Err(SolverError);
+            let before = coords[1].clone();
+            if let Err(e) = vrt.constrained_majorization_vpsc(
+                &b[1],
+                &mut coords[1],
+                LOCAL_CONSTR_MAJOR_ITERATIONS,
+            ) {
+                coords[1] = before;
+                vpsc_failed(&e);
+                break;
             }
         } else {
             let _ =

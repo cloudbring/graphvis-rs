@@ -85,12 +85,11 @@ pub fn unpack_matrix(packed: &[f32], n: usize) -> Vec<Vec<f32>> {
 impl CMajEnvVpsc {
     /// `satisfyVPSC` between setting the desired positions and reading the
     /// positions back. `IncVPSC::satisfy` throws a `std::runtime_error`
-    /// ("Cycle Error!", "Unsatisfied constraint") that `satisfyVPSC` does not
-    /// catch, so C aborts there: a node in two clusters (#33) gets
-    /// containment constraints from both, and these can be infeasible. The
-    /// port returns the error instead and leaves `place` as it was. It must
-    /// not keep projecting: each failed satisfy splits up to 10000 blocks, and
-    /// the stress loop calls it thousands of times (#197).
+    /// ("Cycle Error!", "Unsatisfied constraint") on an infeasible or cyclic
+    /// constraint set, e.g. a node in two clusters (#33) with containment
+    /// constraints from both. `satisfyVPSC` does not catch it, so C aborts.
+    /// The port returns the error and leaves `place` as passed in; ignoring it
+    /// and projecting again ran without bound (#197).
     fn satisfy_place(&mut self, place: &mut [f32], n: usize) -> Result<(), vpsc::VpscError> {
         for i in 0..n {
             self.solver.vars[self.vs[i]].desired_position = place[i] as f64;

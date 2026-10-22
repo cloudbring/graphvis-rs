@@ -1508,19 +1508,19 @@ fn run_bytes(args: &[&[u8]], stdin: &str) -> (Vec<u8>, Vec<u8>, bool) {
     (out.stdout, out.stderr, out.status.success())
 }
 
-/// Issue #197: `x` is in two clusters (#33), so `overlap=ipsep` gives VPSC
-/// containment constraints it cannot satisfy. C's `satisfyVPSC` (`lib/vpsc/csolve_VPSC.cpp`)
-/// lets the "Cycle Error!" `std::runtime_error` escape and aborts. The port ignored the
-/// error and kept projecting, splitting blocks without bound: over 10 s and gigabytes of
-/// memory. It now ends the layout at the first failure, as C's `stress_majorization_cola`
-/// does when a solver fails, and draws the graph.
+/// Issue #197: `x` is in two clusters (#33), so `overlap=ipsep` gives VPSC containment
+/// constraints it cannot satisfy. C's `satisfyVPSC` (`lib/vpsc/csolve_VPSC.cpp`) lets the
+/// "Cycle Error!" `std::runtime_error` escape and aborts. The port ignored the error and kept
+/// projecting, splitting blocks without bound (over 10 s and gigabytes of memory). It now
+/// warns, keeps the previous iteration's coordinates and ends the layout, so every node keeps
+/// a position of its own.
 #[test]
 fn ipsep_vpsc_cycle_error_ends_the_layout() {
     let src = "digraph { layout=neato; mode=ipsep; overlap=ipsep; \
                subgraph cluster_a { a; x; c } subgraph cluster_b { b; x; d } \
                a -> b; x -> a; c -> d; h -> {a b c d} }";
     let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
-        .arg("-Tsvg")
+        .arg("-Tplain")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1532,8 +1532,9 @@ fn ipsep_vpsc_cycle_error_ends_the_layout() {
         .unwrap()
         .write_all(src.as_bytes())
         .unwrap();
-    // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    // The output is under 1 KB, well under the pipe buffer, so polling cannot block. The fixed
+    // layout takes milliseconds; the deadline is short because the runaway also grows memory.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     while child.try_wait().unwrap().is_none() {
         if std::time::Instant::now() > deadline {
             child.kill().unwrap();
@@ -1542,12 +1543,24 @@ fn ipsep_vpsc_cycle_error_ends_the_layout() {
         std::thread::sleep(std::time::Duration::from_millis(20));
     }
     let out = child.wait_with_output().unwrap();
-    let (svg, err) = (
+    let (plain, err) = (
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr),
     );
     assert!(out.status.success(), "{err}");
-    assert_eq!(svg.matches("class=\"node\"").count(), 6, "{svg}");
+    assert_eq!(
+        err,
+        "Warning: VPSC: Cycle Error!: ending the ipsep layout at the previous iteration\n"
+    );
+    let positions: std::collections::BTreeSet<(&str, &str)> = plain
+        .lines()
+        .filter_map(|l| l.strip_prefix("node "))
+        .map(|l| {
+            let f: Vec<&str> = l.split(' ').collect();
+            (f[1], f[2])
+        })
+        .collect();
+    assert_eq!(positions.len(), 6, "{plain}");
 }
 
 /// Issue #152: C's `main` takes its arguments as bytes; a file name that is not valid UTF-8
