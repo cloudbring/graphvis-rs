@@ -5,7 +5,9 @@ name: Fuzzing
 # differential fuzzer against C Graphviz is separate (docs/porting/fuzzing.md).
 #
 # - pull_request: a short run of every target. A crash that the latest master build also has
-#   is not reported, so only crashes the change introduces fail the job.
+#   is not reported, so only crashes the change introduces fail the job. Skipped for release
+#   pull requests (this repository's release/* branches): they only bump versions in Cargo.lock, and the fixes
+#   they ship were fuzzed in their own pull requests.
 # - push to master: builds the targets and keeps the build for that comparison.
 # - schedule: a longer batch run that grows the corpus, then corpus pruning. The corpus, the
 #   crashes and the builds are kept as artifacts of this workflow.
@@ -41,7 +43,11 @@ concurrency:
 jobs:
   pr:
     name: Fuzz the change
-    if: github.event_name == 'pull_request'
+    # A fork's branch name proves nothing, so only this repository's release/* branches skip.
+    if: >-
+      github.event_name == 'pull_request' &&
+      !(startsWith(github.head_ref, 'release/') &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
