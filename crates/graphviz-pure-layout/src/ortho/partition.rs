@@ -202,12 +202,24 @@ impl Mono<'_> {
         let inext = self.chain[self.chain[i].next as usize].vnum;
         let vp0 = &mut self.vert[v0 as usize];
         vp0.vnext[ip] = v1;
-        vp0.vpos[nf0] = i as i32;
-        vp0.vnext[nf0] = inext;
+        // A vertex has 4 chain slots. On degenerate cells (touching, overlapping
+        // or non-finite boxes, #171) C writes `vpos[nextfree]` and
+        // `vnext[nextfree]` past the end of its `int[4]` arrays, into the rest of
+        // the vertex chain (and, once `nextfree` is overwritten, sometimes past
+        // `vert`: undefined behaviour). C's rectangles do not depend on this data:
+        // `traverse_polygon` builds them from the trapezoids and segments. So skip
+        // the out-of-range writes and go on. Where C later fails, `mk_maze_graph`'s
+        // `chkSgraph` check catches it.
+        if let Some(slot) = vp0.vpos.get_mut(nf0) {
+            *slot = i as i32;
+            vp0.vnext[nf0] = inext;
+        }
         vp0.nextfree += 1;
         let vp1 = &mut self.vert[v1 as usize];
-        vp1.vpos[nf1] = j as i32;
-        vp1.vnext[nf1] = v0;
+        if let Some(slot) = vp1.vpos.get_mut(nf1) {
+            *slot = j as i32;
+            vp1.vnext[nf1] = v0;
+        }
         vp1.nextfree += 1;
         if mnew >= self.mon.len() {
             self.mon.resize(mnew + 1, 0);

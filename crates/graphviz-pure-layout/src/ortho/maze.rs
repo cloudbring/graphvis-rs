@@ -282,8 +282,17 @@ fn find_svert(sg: &mut SGraph, dict: &mut PointDict, p: Point, is_vert: bool) ->
     np
 }
 
-/// `mkMazeGraph(mp, bb)`.
-fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) {
+/// `chkSgraph(g)`: every search-graph node lies between two cells.
+fn chk_sgraph(sg: &SGraph) -> bool {
+    sg.nodes[..sg.nnodes]
+        .iter()
+        .all(|np| np.cells[0].is_some() && np.cells[1].is_some())
+}
+
+/// `mkMazeGraph(mp, bb)`. False where C's `chkSgraph` fails an assertion
+/// (`lib/ortho/maze.c:308-320`, e.g. on a non-finite node box, #171): C
+/// aborts there, the port fails the maze so the caller falls back.
+fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
     let ncells = mp.ncells();
     let bound = 4 * ncells;
     mp.sg = SGraph::new(bound + 2);
@@ -366,11 +375,16 @@ fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) {
     for i in mp.ngcells..mp.cells.len() {
         create_sedges(mp, i);
     }
+    if !chk_sgraph(&mp.sg) {
+        return false;
+    }
     mp.sg.gsave();
+    true
 }
 
 /// `mkMaze(g)`: one node cell per node box (`(x, y, xsize, ysize)`), then the
-/// free cells from `partition`. `None` when partitioning fails.
+/// free cells from `partition`. `None` when partitioning fails or the search
+/// graph is broken (`chkSgraph`).
 pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
     let mut mp = Maze {
         ngcells: nodes.len(),
@@ -414,7 +428,9 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
             );
         }
     }
-    mk_maze_graph(&mut mp, big);
+    if !mk_maze_graph(&mut mp, big) {
+        return None;
+    }
     if dump {
         for i in 0..mp.ngcells {
             let s: String = mp.cells[i]
@@ -426,4 +442,43 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
         }
     }
     Some(mp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Issue #171: osage places a node of a repeated cluster at `x = inf`, as C
+    /// does. `partition`'s monotonation then needs a fifth chain slot at a vertex
+    /// (C overruns `vpos[4]`), and the search graph has a node with one cell, so
+    /// C fails `assert(np->cells[1])` in `lib/ortho/maze.c:chkSgraph`. The port
+    /// fails the maze instead.
+    #[test]
+    fn non_finite_node_box_fails_the_maze() {
+        let nodes = [
+            (Point::new(58.0, 18.0), 54.0, 36.0),
+            (
+                Point::new(f64::INFINITY, 112.0),
+                77.864_504_732_387_15,
+                36.0,
+            ),
+            (
+                Point::new(181.447_833_640_676_58, 112.0),
+                122.895_667_281_353_17,
+                36.0,
+            ),
+            (Point::new(181.0, 18.0), 54.0, 36.0),
+            (Point::new(29.0, 100.0), 54.0, 36.0),
+            (Point::new(87.0, 100.0), 54.0, 36.0),
+            (
+                Point::new(292.896_757_820_101_7, 112.0),
+                91.793_515_640_203_44,
+                36.0,
+            ),
+            (Point::new(58.0, 58.0), 54.0, 36.0),
+            (Point::new(181.0, 58.0), 54.0, 36.0),
+            (Point::new(293.0, 58.0), 54.0, 36.0),
+        ];
+        assert!(mk_maze(&nodes).is_none());
+    }
 }
