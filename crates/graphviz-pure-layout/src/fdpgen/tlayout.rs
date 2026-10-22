@@ -277,7 +277,9 @@ fn grid_repulse(st: &mut TState, dg: &mut DG, grid: &Grid, (i, j): (i32, i32), n
         (1, 0),
         (1, 1),
     ] {
-        do_neighbor(st, dg, grid, i + di, j + dj, nodes);
+        // C's `i + 1` wraps at INT_MAX: a node near 1e17 puts its cell
+        // index there, as `(int)floor(x / Cell)` saturates on arm64 (#196).
+        do_neighbor(st, dg, grid, i.wrapping_add(di), j.wrapping_add(dj), nodes);
     }
 }
 
