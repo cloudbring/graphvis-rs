@@ -29,10 +29,12 @@ half the cores. Outcomes:
   same          exit status, stderr and stdout agree
   stderr_diff   exit status and stdout agree, stderr differs
   plain_diff    stdout differs           exit_diff     exit status differs
-  port_crash    the port panicked or died from a signal
-  port_timeout  the port exceeded the timeout (C finished)
-  both_timeout  both exceeded it         c_timeout     only C did
+  port_crash    the port panicked or died from a signal, whatever C did
+  port_timeout  the port exceeded twice the timeout (C finished)
+  both_timeout  both exceeded theirs     c_timeout     only C did
   c_crash       C died from a signal (the port's result is in the record)
+Node and edge attributes are set with `node [..]` / `edge [..]` before any
+statement, so they reach every node and edge.
 """
 import argparse
 import collections
@@ -93,7 +95,9 @@ ATTRS = [
 ]
 
 # Small graphs with the features the attributes act on: clusters, labels, a
-# record, a polygon, head/tail labels, a flat edge, a self-loop.
+# record, a polygon, gradient fills, head/tail labels, a flat edge, a self-loop.
+# Node and edge defaults go right after the opening line; root and cluster
+# attributes after the label.
 BASES = {
     "small": """digraph G {
   label="G";
@@ -103,8 +107,10 @@ BASES = {
   c -> c;
   subgraph cluster_x {
     label="X";
+    style=filled;
+    fillcolor="red:blue";
     d;
-    e [shape=polygon];
+    e [shape=polygon, style=filled, fillcolor="red:blue"];
   }
   c -> d;
   d -> e;
@@ -117,12 +123,13 @@ BASES = {
 %s}
 """,
     "tiny": """digraph G {
-  a -> b;
+  a [shape=polygon, style=filled, fillcolor="red:blue"];
+  a -> b [label="ab", headlabel="h"];
 %s}
 """,
 }
 
-SCOPE_DECL = {"G": "  %s=%s;\n", "N": "  node [%s=%s];\n", "E": "  edge [%s=%s];\n"}
+SCOPE_DECL = {"N": "  node [%s=%s];\n", "E": "  edge [%s=%s];\n"}
 
 
 def quote(v):
@@ -133,7 +140,10 @@ def place(text, attr, scope, value):
     """Puts attr=value at the scope's place in a base graph."""
     if scope == "C":
         return text.replace('    label="X";\n', '    label="X";\n    %s=%s;\n' % (attr, quote(value)), 1)
-    return text.replace("%s}\n", SCOPE_DECL[scope] % (attr, quote(value)) + "%s}\n", 1)
+    if scope == "G":
+        return text.replace("%s}\n", "  %s=%s;\n%%s}\n" % (attr, quote(value)), 1)
+    # A default declared after a node or edge does not reach it.
+    return text.replace("digraph G {\n", "digraph G {\n" + SCOPE_DECL[scope] % (attr, quote(value)), 1)
 
 
 def values_for(point):
@@ -161,23 +171,24 @@ def single_cases(engines, attrs, bases):
                             continue
                         name = "%s-%s-%s-v%d-%s" % (engine, attr, scope, vi, b)
                         text = finish(place(BASES[b], attr, scope, v))
-                        yield name, engine, header(engine, "attr=%s scope=%s value=%s base=%s"
-                                                   % (attr, scope, v[:40], b)) + text
+                        yield name, engine, ["%s@%s" % (attr, scope)], header(
+                            engine, "attr=%s scope=%s value=%s base=%s" % (attr, scope, v[:40], b)) + text
 
 
 def mix_cases(engines, seed, count):
     """Seeded cases with 2 to 4 extreme attributes each on the small base."""
     for s in range(seed, seed + count):
         r = random.Random(s)
-        engine = engines[s % len(engines)] if len(engines) > 1 else engines[0]
+        engine = engines[s % len(engines)]
         text = BASES["small"]
         picks = []
         for attr, scopes, point in r.sample(ATTRS, r.randint(2, 4)):
             scope = r.choice(scopes)
             v = r.choice(values_for(point))
             text = place(text, attr, scope, v)
-            picks.append("%s@%s=%s" % (attr, scope, v[:40]))
-        yield "mix-s%d-%s" % (s, engine), engine, header(engine, " ".join(picks)) + finish(text)
+            picks.append((attr + "@" + scope, v[:40]))
+        desc = " ".join("%s=%s" % pv for pv in picks)
+        yield "mix-s%d-%s" % (s, engine), engine, [a for a, _ in picks], header(engine, desc) + finish(text)
 
 
 def run(cmd, path, timeout, env=None):
@@ -207,21 +218,21 @@ def compare(path, engine, timeout):
     m = PANIC_RE.search(perr)
     if m:
         d["panic"] = "%s:%s %s" % (m.group(1), m.group(2), m.group(3)[:120])
+    if m or p[0] == 101 or (isinstance(p[0], int) and p[0] < 0):
+        return "port_crash", d
     if c[0] == "timeout":
         return ("both_timeout" if p[0] == "timeout" else "c_timeout"), d
     if p[0] == "timeout":
         return "port_timeout", d
-    if m or p[0] == 101 or (isinstance(p[0], int) and p[0] < 0):
-        return "port_crash", d
     if c[0] < 0:
         return "c_crash", d
     if c[0] != p[0]:
-        d["c_err"], d["port_err"] = norm_err(c[2], path)[-300:], perr[-300:]
+        d["c_err"], d["port_err"] = norm_err(c[2], path)[-300:], norm_err(p[2], path)[-300:]
         return "exit_diff", d
     if c[1] != p[1]:
         return "plain_diff", d
     if norm_err(c[2], path) != norm_err(p[2], path):
-        d["c_err"], d["port_err"] = norm_err(c[2], path)[-300:], perr[-300:]
+        d["c_err"], d["port_err"] = norm_err(c[2], path)[-300:], norm_err(p[2], path)[-300:]
         return "stderr_diff", d
     return "same", d
 
@@ -229,7 +240,7 @@ def compare(path, engine, timeout):
 def cmd_gen(a):
     a.out.mkdir(parents=True, exist_ok=True)
     n = 0
-    for name, _, text in cases(a):
+    for name, _, _, text in cases(a):
         (a.out / (name + ".gv")).write_text(text, encoding="utf-8")
         n += 1
     print("%d cases in %s" % (n, a.out))
@@ -238,27 +249,32 @@ def cmd_gen(a):
 def cases(a):
     engines = [a.engine] if a.engine else ENGINES
     if a.mix:
+        if a.attr or a.base:
+            raise SystemExit("--mix draws from every attribute on the small base; drop --attr/--base")
         return mix_cases(engines, a.seed, a.mix)
     return single_cases(engines, set(a.attr or []), a.base or list(BASES))
 
 
 def cmd_run(a):
+    results = a.out / "results.jsonl"
+    if results.exists() and results.stat().st_size and not a.append:
+        raise SystemExit("%s already has results; use another --out or --append" % results)
     (a.out / "diff").mkdir(parents=True, exist_ok=True)
     work = a.out / "work"
     work.mkdir(exist_ok=True)
 
     def one(case):
-        name, engine, text = case
+        name, engine, attrs, text = case
         p = work / (name + ".gv")
         p.write_text(text, encoding="utf-8")
         oc, d = compare(p, engine, a.timeout)
         if oc != "same":
             (a.out / "diff" / p.name).write_text(text, encoding="utf-8")
         p.unlink()
-        return {"case": name, "engine": engine, "outcome": oc, **d}
+        return {"case": name, "engine": engine, "attrs": attrs, "outcome": oc, **d}
 
     n = 0
-    with open(a.out / "results.jsonl", "a") as f, cf.ThreadPoolExecutor(a.jobs) as ex:
+    with open(results, "a") as f, cf.ThreadPoolExecutor(a.jobs) as ex:
         for rec in ex.map(one, cases(a)):
             f.write(json.dumps(rec) + "\n")
             f.flush()
@@ -269,11 +285,6 @@ def cmd_run(a):
     summarize(a.out)
 
 
-def attr_of(case):
-    parts = case.split("-")
-    return "mix" if parts[0] == "mix" else "%s@%s" % (parts[1], parts[2])
-
-
 def summarize(out):
     recs = [json.loads(l) for l in open(out / "results.jsonl")]
     print("%d cases" % len(recs))
@@ -282,7 +293,8 @@ def summarize(out):
     sites = collections.defaultdict(list)
     for r in recs:
         if r["outcome"] == "port_crash":
-            sites[r.get("panic", "signal %s" % r["port_status"])].append(r["case"])
+            st = r["port_status"]
+            sites[r.get("panic", ("signal %d" % -st) if st < 0 else "exit %d" % st)].append(r["case"])
     if sites:
         print("panic sites:")
         for site, cs in sorted(sites.items(), key=lambda kv: -len(kv[1])):
@@ -290,7 +302,8 @@ def summarize(out):
     by = collections.defaultdict(collections.Counter)
     for r in recs:
         if r["outcome"] not in ("same",):
-            by[r["outcome"]][(r["engine"], attr_of(r["case"]))] += 1
+            for at in r["attrs"]:
+                by[r["outcome"]][(r["engine"], at)] += 1
     for oc in ("port_timeout", "exit_diff", "plain_diff", "stderr_diff", "c_crash", "c_timeout",
                "both_timeout"):
         if by.get(oc):
@@ -313,6 +326,7 @@ def main():
         if name == "run":
             s.add_argument("--timeout", type=float, default=10)
             s.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
+            s.add_argument("--append", action="store_true", help="add to an existing results.jsonl")
     s = sub.add_parser("summary")
     s.add_argument("out", type=pathlib.Path)
     a = ap.parse_args()
