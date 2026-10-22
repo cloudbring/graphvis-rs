@@ -126,7 +126,6 @@ At the start (2026-10-22) the two crates had 10,615 sites: 278 unwrap, 43 expect
 
 The script prints the current table, most sites first. An unwrap is the cheapest to trace: it
 names the value C assumed was there.
-||||||| parent of 04d9db7d (docs/porting/crashes.md: record the ortho failure boundary (#228, #229))
 
 ## The ortho router: one failure boundary
 
@@ -144,4 +143,4 @@ Inputs that C routes never reach a failure, so their output is unchanged.
 - **#229:** pins 1e12 inches apart make `shortPath`'s distance `-(N_VAL + E_WT)` too large for an `int`. That is undefined behaviour in C, which then fails `PQcheck`. The port rejects any distance outside `(INT_MIN, 0]`. A positive distance would make C's `PQupheap` climb past its guard forever.
 - **#228:** NaN pins leave no trapezoid inside the polygon, and C's `monotonate_trapezoids` reads one past the end of `tr`. The port fails the maze at that read.
 - Loops that C would run forever on broken links are bounded by the size of the structure: stale parent chains, trapezoid walks and maze walks. The three recursions (`locate_endpoint`, `traverse_polygon` and `DFS_visit`) run on an explicit stack, in C's order.
-- Thread B validates positions where they are parsed. The boundary does not depend on that validation.
+- The boundary does not depend on positions being validated where they are parsed (the "Extreme coordinates" cause): it holds whatever the input.

@@ -216,7 +216,10 @@ impl SGraph {
 /// `PQcheck` fails its assertion, or `N_VAL(n) *= -1` overflows on
 /// `INT_MIN` (`UNSEEN`). A positive `d` (C's weights are never negative) would
 /// make `PQupheap` climb past its guard and loop. The port fails on all of
-/// these; every distance C computes on the inputs it routes is in range.
+/// these. On the inputs C routes every distance is in range (a scan of
+/// neato pins finds C's first `PQcheck` failure where the port's first
+/// rejection is, near 3e7 inches); an `INT_MIN` that C would only store on
+/// the target node, and never read, is rejected too.
 /// (A positive `d` always loops in C: every value in the heap is at or below
 /// 0, so it climbs to the root and then past the guard forever.)
 fn distance(n_val: i32, weight: f64) -> OResult<i32> {

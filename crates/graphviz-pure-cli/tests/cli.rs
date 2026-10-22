@@ -1437,16 +1437,23 @@ fn ortho_distances_beyond_int_fall_back_to_straight_edges() {
             err.contains("orthogonal routing failed - edges not routed orthogonally"),
             "{engine} {far}: {err}"
         );
-        let pos = out
-            .lines()
-            .find(|l| l.contains("a -- x"))
-            .unwrap_or_else(|| panic!("{engine} {far}: no edge:\n{out}"));
+        let pos =
+            edge_pos(&out, "a -- x").unwrap_or_else(|| panic!("{engine} {far}: no edge:\n{out}"));
         assert_eq!(
-            pos.matches(',').count(),
+            pos.split_whitespace().count(),
             4,
             "a straight 4-point edge: {pos}"
         );
     }
+}
+
+/// The `pos` of the edge `name` in `-Tdot` output, whitespace-normalised (the writer wraps
+/// long attribute lists).
+fn edge_pos(dot: &str, name: &str) -> Option<String> {
+    let rest = &dot[dot.find(&format!("{name}\t"))?..];
+    let rest = &rest[rest.find("pos=\"")? + 5..];
+    let pos = &rest[..rest.find('"')?];
+    Some(pos.split_whitespace().collect::<Vec<_>>().join(" "))
 }
 
 // #228: a NaN or infinite pin. In C, `monotonate_trapezoids` (`lib/ortho/partition.c`)
@@ -1458,8 +1465,10 @@ fn ortho_non_finite_pins_do_not_panic() {
         let src = format!(
             "graph {{ layout=neato; pack=false; splines=ortho; a [pos=\"{pin}!\"]; x [pos=\"1,0!\"]; a -- x; b }}"
         );
-        let (_, err, ok) = run(&["-Tsvg"], &src);
+        let (out, err, ok) = run(&["-Tdot"], &src);
         assert!(ok && !err.contains("panicked"), "{pin}: {err}");
+        // The maze fails, so neato draws the edge without ortho routing.
+        assert!(edge_pos(&out, "a -- x").is_some(), "{pin}: no edge:\n{out}");
     }
 }
 
