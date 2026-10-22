@@ -29,6 +29,14 @@ So a crash is fixed at its cause, not at the line that panics.
 - **Report C bugs upstream.** If the cause is a bug in C (it crashes, hangs or reads out of
   bounds), label the issue `upstream-c` and note the C location, so it can be reported to
   Graphviz.
+- **Port C's own checks, don't replace them.** Where C detects a bad state itself (an overflow
+  check such as `sadd_overflow` or `INT_MAX / t < w`, an internal-invariant message such as
+  `add_tree_edge: missing tree edge`) and stops or returns an error, the port does the same, with
+  C's message. `wrapping_*` arithmetic is right only where C's arithmetic has no check of its own.
+- **A limit C doesn't have needs a measurement.** A budget the port adds against a hang or
+  running out of memory sits at or beyond the point where C stops being practical, measured in
+  time and memory on the reference build, and its comment gives the measurement (#250: packing's
+  cell budget refuses an input C packs in 1 s).
 
 ## Known causes
 
@@ -41,6 +49,7 @@ fixed in that cause's shared mechanism, not with a new local guard.
 | **dot's cluster membership** | A rank set or an earlier cluster takes a node from a cluster after the cluster was ranked (`x was already in a rankset, deleted from cluster G`). The cluster keeps its rank range, so it can have ranks with no node, or no nodes at all; C crashes later in `build_ranks`, `furthestnode`, `rank_box` (#114, #231). | Stop the layout where C dereferences an emptied cluster's NULL node list. Ranks with no node, which C often draws through, are kept; see [below](#dot-cluster-membership). |
 | **Extreme coordinates** | NaN, infinity or huge pinned positions flow into every engine and overflow at the first integer cast or recursion (#191, #196, #201, #227, #228, #229, #239, #240). | Keep C's positions, which C lays out wherever it finishes; bound the algorithms whose limits depend on magnitude (see [below](#extreme-coordinates)). |
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
+| **C's own overflow checks dropped** | C checks an integer sum for overflow and exits with an error (`virtual_weight`, `x_cutval`); the port multiplies unchecked or wraps, so it draws a layout from wrapped weights, or panics in a build with overflow checks (#252). | Port each check with C's message as a layout error, and check the rest of C's explicit overflow checks against the port. |
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | The [panic-site ratchet](#the-panic-site-ratchet) maps the remaining sites and stops the count from growing; new code returns an error instead. |
 
 The fix for each cause records here the issues it closed and the behaviour it chose. Narrower
@@ -187,6 +196,25 @@ At the start (2026-10-22) the two crates had 10,615 sites: 278 unwrap, 43 expect
 
 The script prints the current table, most sites first. An unwrap is the cheapest to trace: it
 names the value C assumed was there.
+
+### What the unwraps assume
+
+Grouped by the value C assumed was there, most of the unwraps in the three densest dot files fall
+into four classes. Each class is one candidate cause: a fuzzer that targets the assumption finds its
+crashes together. Counts are from master on 2026-10-22, when the whole baseline was 10,184 sites.
+
+| Class | Sites | C assumes | Broken by |
+|---|--:|---|---|
+| `rv(…).unwrap()` (`GD_rank(g)[r].v[i]`) | 57 (mincross, position, dotsplines) | every rank has a node in that slot | ranks left empty by a failed root ranking, an emptied cluster (#231), a flat label on the top rank (#241) |
+| `boxes.last().unwrap()` (`P->boxes[P->nbox - 1]`) | 14 (dotsplines) | `beginpath`/`endpath` made a box | ports and clipping on zero-size or shapeless nodes, samehead/sametail, self-loops |
+| `to_orig.unwrap()`, `label.expect`, `rep.unwrap()` | 19 | a virtual edge chain leads back to its real edge | chains rewired by `class2`, `flat_rev`, `concentrate` (#234) |
+| `.ln/.rn.unwrap()` (`GD_ln`, `GD_rn`) | 11 (position) | `make_lrvn` ran for every cluster | clusters emptied after ranking ([cluster membership](#dot-cluster-membership)) |
+
+Two causes don't show up as unwraps. One is the arith column: integer attributes at extreme values
+(`weight`, `minlen`, `nslimit`, `mclimit`, `searchsize`, `peripheries`, `sides`), the
+[extreme coordinates](#extreme-coordinates) cause for attributes that are not positions. The other
+is C's checks that the port dropped, as in #252. C prints a message where it notices a bad state,
+so a C diagnostic with no counterpart in the port is where to look.
 
 ## The ortho router: one failure boundary
 
