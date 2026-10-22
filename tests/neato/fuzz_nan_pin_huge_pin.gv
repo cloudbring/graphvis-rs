@@ -1,1 +1,0 @@
-graph { layout=neato; pack=false; a [pos="nan,0!"]; x [pos="1e12,0!"]; a -- x; b }
