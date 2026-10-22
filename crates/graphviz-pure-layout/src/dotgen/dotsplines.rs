@@ -230,11 +230,17 @@ impl Dot<'_> {
         }
         if et == EdgeType::Ortho && ORTHO_PORTED {
             self.reset_rw();
-            if self.graphs[0].has_labels & EDGE_LABEL != 0 {
+            let use_lbls = self.graphs[0].has_labels & EDGE_LABEL != 0;
+            if use_lbls {
                 self.set_edge_label_pos();
-                self.ortho_edges(true)?;
-            } else {
-                self.ortho_edges(false)?;
+            }
+            if !crate::ortho::ortho_edges(self, use_lbls) {
+                // orthoEdges returns -1 when mkMaze fails (e.g. partition leaves
+                // no free cell, #203): dot_splines_ returns it before `finish`,
+                // and doDot gives up on the layout with nothing routed.
+                self.aborted = true;
+                self.edges.truncate(edge_base);
+                return Ok(());
             }
             self.finish_splines();
             self.edges.truncate(edge_base);
@@ -1198,15 +1204,6 @@ impl Dot<'_> {
         }
         let cnt = cycle.len() as f64;
         Point::new(sum.x / cnt, sum.y / cnt)
-    }
-
-    /// `orthoEdges(g, useLbls)` (lib/ortho).
-    fn ortho_edges(&mut self, use_lbls: bool) -> Result<(), String> {
-        if crate::ortho::ortho_edges(self, use_lbls) {
-            Ok(())
-        } else {
-            Err("orthoEdges: cannot build the maze".to_string())
-        }
     }
 
     /// `makeFlatEnd(g, sp, P, n, e, endp, isBegin)`.
