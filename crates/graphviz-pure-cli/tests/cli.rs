@@ -1419,6 +1419,85 @@ fn ortho_tiny_touching_nodes_do_not_panic_mark_small() {
     }
 }
 
+// The ortho failure boundary (#228, #229): every failure inside `lib/ortho` ends at
+// `orthoEdges`, which handles it the way C handles the failure it detects at that stage.
+// #229: neato pins 1e12 inches apart make the maze's cells 7.2e13 points wide, so the
+// distances in `shortPath` (`lib/ortho/sgraph.c`) do not fit an `int`. C fails
+// `PQcheck`'s assertion (exit 134); the port overflowed `N_VAL(n) *= -1`. Now the
+// routing fails like C's `goto orthofinish`: a warning, and neato draws the edge straight.
+#[test]
+fn ortho_distances_beyond_int_fall_back_to_straight_edges() {
+    for (engine, far) in [("neato", "1e12"), ("neato", "1e8"), ("fdp", "1e12")] {
+        let src = format!(
+            "graph {{ layout={engine}; pack=false; splines=ortho; a [pos=\"0,0!\"]; x [pos=\"{far},0!\"]; a -- x }}"
+        );
+        let (out, err, ok) = run(&["-Tdot"], &src);
+        assert!(ok && !err.contains("panicked"), "{engine} {far}: {err}");
+        assert!(
+            err.contains("orthogonal routing failed - edges not routed orthogonally"),
+            "{engine} {far}: {err}"
+        );
+        let pos =
+            edge_pos(&out, "a -- x").unwrap_or_else(|| panic!("{engine} {far}: no edge:\n{out}"));
+        assert_eq!(
+            pos.split_whitespace().count(),
+            4,
+            "a straight 4-point edge: {pos}"
+        );
+    }
+}
+
+/// The `pos` of the edge `name` in `-Tdot` output, whitespace-normalised (the writer wraps
+/// long attribute lists).
+fn edge_pos(dot: &str, name: &str) -> Option<String> {
+    let rest = &dot[dot.find(&format!("{name}\t"))?..];
+    let rest = &rest[rest.find("pos=\"")? + 5..];
+    let pos = &rest[..rest.find('"')?];
+    Some(pos.split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
+// #228: a NaN or infinite pin. In C, `monotonate_trapezoids` (`lib/ortho/partition.c`)
+// finds no trapezoid inside the polygon and fails `LIST_GET`'s bounds assertion (exit
+// 134). The port fails the maze there, as C's `mkMaze` returning NULL.
+#[test]
+fn ortho_non_finite_pins_do_not_panic() {
+    for pin in ["nan,0", "inf,0", "0,-inf"] {
+        let src = format!(
+            "graph {{ layout=neato; pack=false; splines=ortho; a [pos=\"{pin}!\"]; x [pos=\"1,0!\"]; a -- x; b }}"
+        );
+        let (out, err, ok) = run(&["-Tdot"], &src);
+        assert!(ok && !err.contains("panicked"), "{pin}: {err}");
+        // The maze fails, so neato draws the edge without ortho routing.
+        assert!(edge_pos(&out, "a -- x").is_some(), "{pin}: no edge:\n{out}");
+    }
+}
+
+// Degenerate inputs through every engine that routes ortho edges, plus pack: zero-size and
+// point nodes, self-loops, coincident pins, clusters, touching tiny nodes and huge pins.
+// Whatever C does (it aborts or segfaults on several of these), the port must not panic.
+#[test]
+fn ortho_degenerate_inputs_do_not_panic_in_any_engine() {
+    let bodies = [
+        "node[shape=box width=0 height=0 fixedsize=true label=\"\"] a->b b->c c->a a->c",
+        "node[shape=point width=0 height=0] a->b a->b b->c c->c d->a",
+        "a->a a->a a->a b->b a->b b->a c->c",
+        "a [pos=\"0,0!\"] b [pos=\"0,0!\"] c [pos=\"0,0!\"] a->b b->c c->a a->a",
+        "subgraph cluster_x { a b c } subgraph cluster_y { d e } a->d b->e c->c e->e a->b",
+        "nodesep=0.02 ranksep=0.02 node[shape=circle width=0.01 height=0.01 fixedsize=true label=\"\"] a->b b->c c->a a->a b->b d->d d->a",
+        "a [pos=\"0,0!\"] b [pos=\"1e12,0!\"] c [pos=\"0,1e12!\"] a->b b->c c->a",
+    ];
+    for engine in ["dot", "neato", "fdp", "twopi", "circo", "osage"] {
+        for pack in ["false", "true"] {
+            for body in bodies {
+                let src =
+                    format!("digraph {{ layout={engine} splines=ortho pack={pack}; {body} }}");
+                let (_, err, _) = run(&["-Tsvg"], &src);
+                assert!(!err.contains("panicked"), "{src}\n{err}");
+            }
+        }
+    }
+}
+
 // Issue #171: tiny touching dot nodes also make a vertex need a fifth chain slot in
 // `lib/ortho/partition.c:make_new_monotone_poly`. C writes past `vpos[4]`, but only into
 // bookkeeping, so its partition and routes are still right (exit 0). The port must route the

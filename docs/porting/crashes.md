@@ -126,3 +126,21 @@ At the start (2026-10-22) the two crates had 10,615 sites: 278 unwrap, 43 expect
 
 The script prints the current table, most sites first. An unwrap is the cheapest to trace: it
 names the value C assumed was there.
+
+## The ortho router: one failure boundary
+
+Closed: #186, #199, #202 and #203 (round 1, fixed one site at a time, now covered by the boundary), and #228 and #229.
+
+`lib/ortho` asserts many of its invariants: `LIST_GET` bounds-checks every index, and `chanSearch` asserts its lookups. It trusts the rest without checking: raw `N_DAD` and `cells[]` pointers, and `int` distances. In the port, every function in `crates/graphviz-pure-layout/src/ortho/` returns `Result<_, Fail>` (`ortho/fail.rs`), and every index that comes from data goes through a checked accessor. `ortho_edges_of` (`orthoEdges`) handles each failure in one place, the way C handles the failure it does detect at that stage:
+
+| Stage | C | Port |
+|---|---|---|
+| Building the maze (`mkMaze`: partition, trapezoidation, `markSmall`, `chkSgraph`) | Returns NULL where it detects a failure; elsewhere it asserts or segfaults | Behaves as if C had returned NULL: `orthoEdges` returns -1. dot abandons the layout and draws only the nodes (#203, #200). The neato-family callers draw straight edges. |
+| Routing (`shortPath`, `convertSPtoRoute`, channels, tracks) | `goto orthofinish` where it detects a failure (heap overflow, incomparable segments, each with C's message); elsewhere it asserts, segfaults or loops | Behaves as `goto orthofinish`: no edge is routed and `orthoEdges` returns 0. A warning names the failure (`... - edges not routed orthogonally`). The routes are installed only once every edge has been routed. |
+
+Inputs that C routes never reach a failure, so their output is unchanged.
+
+- **#229:** pins 1e12 inches apart make `shortPath`'s distance `-(N_VAL + E_WT)` too large for an `int`. That is undefined behaviour in C, which then fails `PQcheck`. The port rejects any distance outside `(INT_MIN, 0]`. A positive distance would make C's `PQupheap` climb past its guard forever.
+- **#228:** NaN pins leave no trapezoid inside the polygon, and C's `monotonate_trapezoids` reads one past the end of `tr`. The port fails the maze at that read.
+- Loops that C would run forever on broken links are bounded by the size of the structure: stale parent chains, trapezoid walks and maze walks. The three recursions (`locate_endpoint`, `traverse_polygon` and `DFS_visit`) run on an explicit stack, in C's order.
+- The boundary does not depend on positions being validated where they are parsed (the "Extreme coordinates" cause): it holds whatever the input.

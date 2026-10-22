@@ -7,6 +7,8 @@
 //! - [`sgraph`] — `sgraph.c`, `fPQ.c`: search graph and Dijkstra
 //! - [`rawgraph`] — `rawgraph.c`: track ordering graphs
 //! - this module — `ortho.c`: routing, channel and track assignment
+//! - [`fail`] — the failure boundary: how every failure inside these modules
+//!   reaches [`ortho_edges_of`] and is handled there
 //!
 //! The router works on any layout implementing [`OrthoGraph`].
 
@@ -18,6 +20,7 @@
     clippy::needless_late_init
 )]
 
+pub mod fail;
 pub mod maze;
 pub mod partition;
 pub mod rawgraph;
@@ -26,6 +29,7 @@ pub mod trapezoid;
 
 use crate::cdt::Cdt;
 use crate::common::splines::{SplineGraph, SplineInfo, clip_and_install_info};
+use fail::{At, Fail, Need, OResult, ensure};
 use graphviz_pure_core::Point;
 use maze::{Cell, M_BOTTOM, M_LEFT, M_RIGHT, M_TOP, MZ_HSCAN, MZ_VSCAN, Maze, mk_maze, update_wts};
 use rawgraph::RawGraph;
@@ -166,12 +170,9 @@ impl Chans {
         Some((i, c))
     }
 
-    /// `chanSearch(chans, seg)` for a segment that [`Ortho::assign_segs`]
-    /// has already placed in a channel. It cannot miss: segments are not moved
-    /// after `assign_segs`, and splaying reorders the dictionaries without
-    /// changing which channels they hold.
-    fn search(&mut self, seg: &Segment) -> ChanKey {
-        self.find(seg).expect("chanSearch: no channel")
+    /// `chanSearch(chans, seg)`, failing where C's asserts do (#170).
+    fn search(&mut self, seg: &Segment) -> OResult<ChanKey> {
+        self.find(seg).ok_or(Fail::NoChannel)
     }
 
     fn chan(&self, k: ChanKey) -> &Channel {
@@ -191,12 +192,13 @@ struct Ortho {
 }
 
 /// `cellOf(p, q)`: the cell shared by two snodes.
-fn cell_of(sg: &SGraph, p: usize, q: usize) -> usize {
-    let cp = sg.nodes[p].cells[0];
-    if cp == sg.nodes[q].cells[0] || cp == sg.nodes[q].cells[1] {
-        return cp.unwrap();
+fn cell_of(sg: &SGraph, p: usize, q: usize) -> OResult<usize> {
+    let (pn, qn) = (sg.node(p)?, sg.node(q)?);
+    let cp = pn.cells[0];
+    if cp == qn.cells[0] || cp == qn.cells[1] {
+        return cp.need();
     }
-    sg.nodes[p].cells[1].unwrap()
+    pn.cells[1].need()
 }
 
 fn mid(a: f64, b: f64) -> f64 {
@@ -208,18 +210,19 @@ fn mid_pt(cp: &Cell) -> Point {
 }
 
 /// `sidePt(ptr, cp)`.
-fn side_pt(sg: &SGraph, ptr: usize, c: usize, cp: &Cell) -> Point {
-    let n = &sg.nodes[ptr];
-    if Some(c) == n.cells[1] {
+fn side_pt(sg: &SGraph, ptr: usize, c: usize, cp: &Cell) -> OResult<Point> {
+    let n = sg.node(ptr)?;
+    Ok(if Some(c) == n.cells[1] {
         if n.is_vert {
-            return Point::new(cp.bb.ll.x, mid(cp.bb.ll.y, cp.bb.ur.y));
+            Point::new(cp.bb.ll.x, mid(cp.bb.ll.y, cp.bb.ur.y))
+        } else {
+            Point::new(mid(cp.bb.ll.x, cp.bb.ur.x), cp.bb.ll.y)
         }
-        return Point::new(mid(cp.bb.ll.x, cp.bb.ur.x), cp.bb.ll.y);
-    }
-    if n.is_vert {
-        return Point::new(cp.bb.ur.x, mid(cp.bb.ll.y, cp.bb.ur.y));
-    }
-    Point::new(mid(cp.bb.ll.x, cp.bb.ur.x), cp.bb.ur.y)
+    } else if n.is_vert {
+        Point::new(cp.bb.ur.x, mid(cp.bb.ll.y, cp.bb.ur.y))
+    } else {
+        Point::new(mid(cp.bb.ll.x, cp.bb.ur.x), cp.bb.ur.y)
+    })
 }
 
 /// `setSeg(dir, fix, b1, b2, l1, l2)`.
@@ -244,33 +247,42 @@ fn set_seg(dir: bool, fix: f64, b1: f64, b2: f64, l1: Bend, l2: Bend) -> Segment
 }
 
 /// `convertSPtoRoute(g, fst, lst)`.
-fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
-    let dad = |sg: &SGraph, n: usize| sg.nodes[n].n_dad;
+///
+/// [`Fail::NoPath`] when `shortPath` has never reached `fst`: its `N_DAD`
+/// is still NULL (`reset` does not clear it), and C dereferences it and
+/// segfaults (#186). When an earlier edge did reach `fst`, C follows the
+/// stale parent without crashing, and so does the port.
+fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> OResult<Vec<Segment>> {
+    let dad = |sg: &SGraph, n: usize| sg.node(n).map(|np| np.n_dad);
     let mut rte = Vec::new();
-    let mut ptr = dad(&mp.sg, fst).unwrap();
+    let mut ptr = dad(&mp.sg, fst)?.ok_or(Fail::NoPath)?;
     let mut prev = ptr;
-    let mut next = dad(&mp.sg, ptr).unwrap();
-    let c0 = mp.sg.nodes[ptr].cells[0].unwrap();
-    let mut cp = if mp.cells[c0].is_node() {
-        mp.sg.nodes[ptr].cells[1].unwrap()
+    let mut next = dad(&mp.sg, ptr)?.need()?;
+    let c0 = mp.sg.node(ptr)?.cells[0].need()?;
+    let mut cp = if mp.cell(c0)?.is_node() {
+        mp.sg.node(ptr)?.cells[1].need()?
     } else {
         c0
     };
-    let mut bp1 = side_pt(&mp.sg, ptr, cp, &mp.cells[cp]);
+    let mut bp1 = side_pt(&mp.sg, ptr, cp, mp.cell(cp)?)?;
     let mut prevbp = Point::new(0.0, 0.0);
     let first_dad = ptr;
-    while let Some(nn) = dad(&mp.sg, next) {
-        let ncp = cell_of(&mp.sg, prev, next);
-        let pe = mp.sg.nodes[ptr].n_edge.unwrap();
-        let cell = mp.cells[ncp].clone();
-        update_wts(&mut mp.sg, &cell, pe);
-        let pv = mp.sg.nodes[ptr].is_vert;
-        let nv = mp.sg.nodes[next].is_vert;
+    // A parent chain visits each node once; a longer one is a cycle through
+    // stale parents, where C loops until memory runs out.
+    let mut budget = mp.sg.nodes.len();
+    while let Some(nn) = dad(&mp.sg, next)? {
+        budget = budget.checked_sub(1).need()?;
+        let ncp = cell_of(&mp.sg, prev, next)?;
+        let pe = mp.sg.node(ptr)?.n_edge.need()?;
+        let cell = mp.cell(ncp)?.clone();
+        update_wts(&mut mp.sg, &cell, pe)?;
+        let pv = mp.sg.node(ptr)?.is_vert;
+        let nv = mp.sg.node(next)?.is_vert;
         if pv != nv || nn == lst {
             let bp2 = if pv != nv {
-                mid_pt(&mp.cells[ncp])
+                mid_pt(&cell)
             } else {
-                side_pt(&mp.sg, next, ncp, &mp.cells[ncp])
+                side_pt(&mp.sg, next, ncp, &cell)?
             };
             let (l1, l2, fix, b1, b2);
             if pv {
@@ -282,7 +294,7 @@ fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
                     Bend::Down
                 };
                 l2 = if pv != nv {
-                    if mp.sg.nodes[next].cells[0] == Some(ncp) {
+                    if mp.sg.node(next)?.cells[0] == Some(ncp) {
                         Bend::Up
                     } else {
                         Bend::Down
@@ -290,9 +302,9 @@ fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
                 } else {
                     Bend::Node
                 };
-                fix = mp.cells[cp].bb.ll.y;
-                b1 = mp.cells[cp].bb.ll.x;
-                b2 = mp.cells[ncp].bb.ll.x;
+                fix = mp.cell(cp)?.bb.ll.y;
+                b1 = mp.cell(cp)?.bb.ll.x;
+                b2 = cell.bb.ll.x;
             } else {
                 l1 = if ptr == first_dad {
                     Bend::Node
@@ -302,7 +314,7 @@ fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
                     Bend::Left
                 };
                 l2 = if pv != nv {
-                    if mp.sg.nodes[next].cells[0] == Some(ncp) {
+                    if mp.sg.node(next)?.cells[0] == Some(ncp) {
                         Bend::Right
                     } else {
                         Bend::Left
@@ -310,9 +322,9 @@ fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
                 } else {
                     Bend::Node
                 };
-                fix = mp.cells[cp].bb.ll.x;
-                b1 = mp.cells[cp].bb.ll.y;
-                b2 = mp.cells[ncp].bb.ll.y;
+                fix = mp.cell(cp)?.bb.ll.x;
+                b1 = mp.cell(cp)?.bb.ll.y;
+                b2 = cell.bb.ll.y;
             }
             rte.push(set_seg(!pv, fix, b1, b2, l1, l2));
             cp = ncp;
@@ -326,18 +338,18 @@ fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
                     } else {
                         Bend::Down
                     };
-                    fix = mp.cells[cp].bb.ll.y;
-                    b1 = mp.cells[cp].bb.ll.x;
-                    b2 = mp.cells[ncp].bb.ll.x;
+                    fix = mp.cell(cp)?.bb.ll.y;
+                    b1 = mp.cell(cp)?.bb.ll.x;
+                    b2 = cell.bb.ll.x;
                 } else {
                     l1 = if prevbp.x > bp1.x {
                         Bend::Right
                     } else {
                         Bend::Left
                     };
-                    fix = mp.cells[cp].bb.ll.x;
-                    b1 = mp.cells[cp].bb.ll.y;
-                    b2 = mp.cells[ncp].bb.ll.y;
+                    fix = mp.cell(cp)?.bb.ll.x;
+                    b1 = mp.cell(cp)?.bb.ll.y;
+                    b2 = cell.bb.ll.y;
                 }
                 rte.push(set_seg(!nv, fix, b1, b2, l1, Bend::Node));
             }
@@ -355,11 +367,14 @@ fn convert_sp_to_route(mp: &mut Maze, fst: usize, lst: usize) -> Vec<Segment> {
             rte[i].next = Some(i + 1);
         }
     }
-    rte
+    Ok(rte)
 }
 
 /// `extractHChans(mp)` / `extractVChans(mp)`.
-fn extract_chans(mp: &mut Maze, horizontal: bool) -> Chans {
+///
+/// The walks move one way across the maze, so neither passes more cells than
+/// there are; a longer one is a cycle in a broken maze, where C loops.
+fn extract_chans(mp: &mut Maze, horizontal: bool) -> OResult<Chans> {
     let mut chans = Chans::default();
     let (back, fwd, flag) = if horizontal {
         (M_LEFT, M_RIGHT, MZ_HSCAN)
@@ -371,9 +386,11 @@ fn extract_chans(mp: &mut Maze, horizontal: bool) -> Chans {
         if mp.cells[cp].flags & flag != 0 {
             continue;
         }
-        while let Some(np) = mp.cells[cp].sides[back] {
-            match mp.sg.nodes[np].cells[0] {
-                Some(nc) if !mp.cells[nc].is_node() => cp = nc,
+        let mut budget = mp.cells.len();
+        while let Some(np) = *mp.cell(cp)?.sides.at(back)? {
+            budget = budget.checked_sub(1).need()?;
+            match mp.sg.node(np)?.cells[0] {
+                Some(nc) if !mp.cell(nc)?.is_node() => cp = nc,
                 _ => break,
             }
         }
@@ -384,9 +401,11 @@ fn extract_chans(mp: &mut Maze, horizontal: bool) -> Chans {
             mp.cells[cp].bb.ll.y
         };
         mp.cells[cp].flags |= flag;
-        while let Some(np) = mp.cells[cp].sides[fwd] {
-            match mp.sg.nodes[np].cells[1] {
-                Some(nc) if !mp.cells[nc].is_node() => {
+        let mut budget = mp.cells.len();
+        while let Some(np) = *mp.cell(cp)?.sides.at(fwd)? {
+            budget = budget.checked_sub(1).need()?;
+            match mp.sg.node(np)?.cells[1] {
+                Some(nc) if !mp.cell(nc)?.is_node() => {
                     cp = nc;
                     mp.cells[cp].flags |= flag;
                 }
@@ -413,7 +432,7 @@ fn extract_chans(mp: &mut Maze, horizontal: bool) -> Chans {
             key,
         );
     }
-    chans
+    Ok(chans)
 }
 
 fn eq_end_seg(s1l2: Bend, s2l2: Bend, t1: Bend, t2: Bend) -> i32 {
@@ -547,20 +566,23 @@ fn seg_cmp_(s1: &Segment, s2: &Segment, t1: Bend, t2: Bend) -> i32 {
     -1
 }
 
-/// `seg_cmp(S1, S2)`; -2 when incomparable.
-fn seg_cmp(s1: &Segment, s2: &Segment) -> i32 {
+/// `seg_cmp(S1, S2)`; C returns -2 for incomparable segments, which fails
+/// `assignTracks`.
+fn seg_cmp(s1: &Segment, s2: &Segment) -> OResult<i32> {
     if s1.is_vert != s2.is_vert || s1.comm_coord != s2.comm_coord {
-        return -2;
+        return Err(Fail::Incomparable);
     }
-    if s1.is_vert {
+    Ok(if s1.is_vert {
         seg_cmp_(s1, s2, Bend::Right, Bend::Left)
     } else {
         seg_cmp_(s1, s2, Bend::Down, Bend::Up)
-    }
+    })
 }
 
-fn is_parallel(s1: &Segment, s2: &Segment) -> bool {
-    s1.p1 == s2.p1 && s1.p2 == s2.p2 && s1.l1 == s2.l1 && s1.l2 == s2.l2
+/// `is_parallel(s1, s2)`, with C's `assert(s1.comm_coord == s2.comm_coord)`.
+fn is_parallel(s1: &Segment, s2: &Segment) -> OResult<bool> {
+    ensure(s1.comm_coord == s2.comm_coord)?;
+    Ok(s1.p1 == s2.p1 && s1.p2 == s2.p2 && s1.l1 == s2.l1 && s1.l2 == s2.l2)
 }
 
 impl Ortho {
@@ -582,9 +604,9 @@ impl Ortho {
         }
     }
 
-    fn chan_key(&mut self, r: SegRef) -> (bool, ChanKey) {
+    fn chan_key(&mut self, r: SegRef) -> OResult<(bool, ChanKey)> {
         let s = *self.seg(r);
-        (s.is_vert, self.chans_mut(s.is_vert).search(&s))
+        Ok((s.is_vert, self.chans_mut(s.is_vert).search(&s)?))
     }
 
     /// The nested `dtflatten`/`dtlink` loop over a channel dictionary. The
@@ -593,20 +615,18 @@ impl Ortho {
     fn for_each_chan(
         &mut self,
         vert: bool,
-        f: &mut dyn FnMut(&mut Ortho, ChanKey) -> bool,
-    ) -> bool {
+        f: &mut dyn FnMut(&mut Ortho, ChanKey) -> OResult<()>,
+    ) -> OResult<()> {
         let mut l1 = self.chans_mut(vert).items.flatten();
         while let Some(i) = l1 {
             let mut l2 = self.chans_mut(vert).items.get_mut(i).chans.flatten();
             while let Some(j) = l2 {
-                if !f(self, (i, j)) {
-                    return false;
-                }
+                f(self, (i, j))?;
                 l2 = self.chans_for_kind(vert).items.get(i).chans.link(j);
             }
             l1 = self.chans_for_kind(vert).items.link(i);
         }
-        true
+        Ok(())
     }
 
     fn chan_g(&mut self, k: (bool, (usize, usize))) -> &mut RawGraph {
@@ -625,10 +645,10 @@ impl Ortho {
         }
     }
 
-    /// `assignSegs(nrtes, route_list, mp)`. Returns false where C's
-    /// `chanSearch` fails `assert (chani)` or `assert (cp)` (ortho.c:388/390)
-    /// and aborts (#170): a segment of a route lies in no channel of the maze.
-    fn assign_segs(&mut self) -> bool {
+    /// `assignSegs(nrtes, route_list, mp)`. Fails where C's `chanSearch`
+    /// fails `assert (chani)` or `assert (cp)` (ortho.c:388/390) and aborts
+    /// (#170): a segment of a route lies in no channel of the maze.
+    fn assign_segs(&mut self) -> OResult<()> {
         for i in 0..self.routes.len() {
             for j in 0..self.routes[i].len() {
                 let s = self.routes[i][j];
@@ -637,9 +657,7 @@ impl Ortho {
                 } else {
                     &mut self.hchans
                 };
-                let Some(k) = chans.find(&s) else {
-                    return false;
-                };
+                let k = chans.search(&s)?;
                 let chan = chans.chan_mut(k);
                 let ind = chan.seg_list.len();
                 chan.seg_list.push((i, j));
@@ -655,36 +673,34 @@ impl Ortho {
                 self.routes[i][j].ind_no = Some(ind);
             }
         }
-        true
+        Ok(())
     }
 
     /// `add_edges_in_G(cp)`.
-    fn add_edges_in_g(&mut self, vert: bool, k: (usize, usize)) -> bool {
+    fn add_edges_in_g(&mut self, vert: bool, k: (usize, usize)) -> OResult<()> {
         let chans = if vert { &self.vchans } else { &self.hchans };
         let segs = chans.chan(k).seg_list.clone();
         let size = segs.len();
         for x in 0..size.saturating_sub(1) {
             for y in x + 1..size {
-                let cmp = seg_cmp(self.seg(segs[x]), self.seg(segs[y]));
+                let cmp = seg_cmp(self.seg(segs[x]), self.seg(segs[y]))?;
                 let g = self.chan_g((vert, k));
-                if cmp == -2 {
-                    return false;
-                } else if cmp > 0 {
-                    g.insert_edge(x, y);
+                if cmp > 0 {
+                    g.insert_edge(x, y)?;
                 } else if cmp == -1 {
-                    g.insert_edge(y, x);
+                    g.insert_edge(y, x)?;
                 }
             }
         }
-        true
+        Ok(())
     }
 
     /// `propagate_prec(seg, prec, hops, dir)`.
-    fn propagate_prec(&self, seg: SegRef, prec: i32, hops: i32, dir: i32) -> i32 {
+    fn propagate_prec(&self, seg: SegRef, prec: i32, hops: i32, dir: i32) -> OResult<i32> {
         let mut ans = prec;
         let mut current = seg;
         for _ in 1..=hops {
-            let next = self.next_seg(current, dir).unwrap();
+            let next = self.next_seg(current, dir).need()?;
             let c = *self.seg(current);
             let n = self.seg(next);
             if !c.is_vert {
@@ -704,17 +720,17 @@ impl Ortho {
             }
             current = next;
         }
-        ans
+        Ok(ans)
     }
 
-    /// `decide_point(ret, si, sj, dir1, dir2)`: (hops, prec), `None` on error.
+    /// `decide_point(ret, si, sj, dir1, dir2)`: (hops, prec).
     fn decide_point(
         &self,
         mut si: SegRef,
         mut sj: SegRef,
         dir1: i32,
         dir2: i32,
-    ) -> Option<(i32, i32)> {
+    ) -> OResult<(i32, i32)> {
         let mut ans = 0;
         let mut np1;
         let mut np2 = None;
@@ -723,7 +739,7 @@ impl Ortho {
             let Some(a) = np1 else { break };
             np2 = self.next_seg(sj, dir2);
             let Some(b) = np2 else { break };
-            if !is_parallel(self.seg(a), self.seg(b)) {
+            if !is_parallel(self.seg(a), self.seg(b))? {
                 break;
             }
             ans += 1;
@@ -732,16 +748,14 @@ impl Ortho {
         }
         let prec = match (np1, np2) {
             (None, _) => 0,
-            (Some(_), None) => panic!("decide_point: unmatched segment"),
+            // C: `assert(0); /* FIXME */`.
+            (Some(_), None) => return Err(Fail::here()),
             (Some(a), Some(b)) => {
-                let temp = seg_cmp(self.seg(a), self.seg(b));
-                if temp == -2 {
-                    return None;
-                }
-                self.propagate_prec(a, temp, ans + 1, 1 - dir1)
+                let temp = seg_cmp(self.seg(a), self.seg(b))?;
+                self.propagate_prec(a, temp, ans + 1, 1 - dir1)?
             }
         };
-        Some((ans, prec))
+        Ok((ans, prec))
     }
 
     /// `set_parallel_edges(seg1, seg2, dir1, dir2, hops, mp)`.
@@ -752,27 +766,24 @@ impl Ortho {
         dir1: i32,
         dir2: i32,
         hops: i32,
-    ) {
-        let mut chan = self.chan_key(seg1);
-        let (i1, i2) = (
-            self.seg(seg1).ind_no.unwrap(),
-            self.seg(seg2).ind_no.unwrap(),
-        );
-        self.chan_g(chan).insert_edge(i1, i2);
+    ) -> OResult<()> {
+        let mut chan = self.chan_key(seg1)?;
+        let (i1, i2) = (self.seg(seg1).ind_no.need()?, self.seg(seg2).ind_no.need()?);
+        self.chan_g(chan).insert_edge(i1, i2)?;
         for _ in 1..=hops {
-            let prev1 = self.next_seg(seg1, dir1).unwrap();
-            let prev2 = self.next_seg(seg2, dir2).unwrap();
+            let prev1 = self.next_seg(seg1, dir1).need()?;
+            let prev2 = self.next_seg(seg2, dir2).need()?;
             let s1 = *self.seg(seg1);
-            let (a, b) = (s1.ind_no.unwrap(), self.seg(seg2).ind_no.unwrap());
+            let (a, b) = (s1.ind_no.need()?, self.seg(seg2).ind_no.need()?);
             let (p1i, p2i) = (
-                self.seg(prev1).ind_no.unwrap(),
-                self.seg(prev2).ind_no.unwrap(),
+                self.seg(prev1).ind_no.need()?,
+                self.seg(prev2).ind_no.need()?,
             );
             let nchan = (!s1.is_vert, {
                 let p = *self.seg(prev1);
-                self.chans_mut(!s1.is_vert).search(&p)
+                self.chans_mut(!s1.is_vert).search(&p)?
             });
-            let exists = self.chan_g_ref(chan).edge_exists(a, b);
+            let exists = self.chan_g_ref(chan).edge_exists(a, b)?;
             let at_p1 = self.seg(prev1).comm_coord == s1.p1;
             let first_bend = if !s1.is_vert { Bend::Up } else { Bend::Left };
             // forward: insert prev1 -> prev2; else prev2 -> prev1
@@ -797,23 +808,24 @@ impl Ortho {
             };
             let g = self.chan_g(nchan);
             if forward {
-                g.insert_edge(p1i, p2i);
+                g.insert_edge(p1i, p2i)?;
             } else {
-                g.insert_edge(p2i, p1i);
+                g.insert_edge(p2i, p1i)?;
             }
             if std::env::var_os("GVDUMP").is_some() {
                 let g = self.chan_g_ref(nchan);
                 eprintln!(
                     "OSP {:.6} {p1i} {p2i} {} {}",
                     self.seg(prev1).comm_coord,
-                    i32::from(g.edge_exists(p1i, p2i)),
-                    i32::from(g.edge_exists(p2i, p1i))
+                    i32::from(g.edge_exists(p1i, p2i)?),
+                    i32::from(g.edge_exists(p2i, p1i)?)
                 );
             }
             chan = nchan;
             seg1 = prev1;
             seg2 = prev2;
         }
+        Ok(())
     }
 
     fn chans_for_kind(&self, vert: bool) -> &Chans {
@@ -821,33 +833,30 @@ impl Ortho {
     }
 
     /// `removeEdge(seg1, seg2, dir, mp)`.
-    fn remove_edge(&mut self, seg1: SegRef, seg2: SegRef, dir: i32) {
+    fn remove_edge(&mut self, seg1: SegRef, seg2: SegRef, dir: i32) -> OResult<()> {
         let mut ptr1 = seg1;
         let mut ptr2 = seg2;
-        while is_parallel(self.seg(ptr1), self.seg(ptr2)) {
-            ptr1 = self.next_seg(ptr1, 1).unwrap();
-            ptr2 = self.next_seg(ptr2, dir).unwrap();
+        while is_parallel(self.seg(ptr1), self.seg(ptr2))? {
+            ptr1 = self.next_seg(ptr1, 1).need()?;
+            ptr2 = self.next_seg(ptr2, dir).need()?;
         }
-        let chan = self.chan_key(ptr1);
-        let (a, b) = (
-            self.seg(ptr1).ind_no.unwrap(),
-            self.seg(ptr2).ind_no.unwrap(),
-        );
-        self.chan_g(chan).remove_redge(a, b);
+        let chan = self.chan_key(ptr1)?;
+        let (a, b) = (self.seg(ptr1).ind_no.need()?, self.seg(ptr2).ind_no.need()?);
+        self.chan_g(chan).remove_redge(a, b)
     }
 
     /// `addPEdges(cp, mp)`.
-    fn add_p_edges_chan(&mut self, vert: bool, k: (usize, usize)) -> bool {
+    fn add_p_edges_chan(&mut self, vert: bool, k: (usize, usize)) -> OResult<()> {
         let segs = self.chans_for_kind(vert).chan(k).seg_list.clone();
         let n = segs.len();
         for i in 0..n.saturating_sub(1) {
             for j in i + 1..n {
                 let g = self.chan_g_ref((vert, k));
-                if g.edge_exists(i, j) || g.edge_exists(j, i) {
+                if g.edge_exists(i, j)? || g.edge_exists(j, i)? {
                     continue;
                 }
                 let (si, sj) = (segs[i], segs[j]);
-                if !is_parallel(self.seg(si), self.seg(sj)) {
+                if !is_parallel(self.seg(si), self.seg(sj))? {
                     continue;
                 }
                 let (pi, pj) = (self.seg(si).prev, self.seg(sj).prev);
@@ -855,19 +864,16 @@ impl Ortho {
                     (None, None) => 0,
                     (None, Some(_)) | (Some(_), None) => 1,
                     (Some(a), Some(b)) => {
-                        if self.routes[si.0][a].comm_coord == self.routes[sj.0][b].comm_coord {
+                        let ri = self.routes[si.0].at(a)?.comm_coord;
+                        if ri == self.routes[sj.0].at(b)?.comm_coord {
                             0
                         } else {
                             1
                         }
                     }
                 };
-                let Some((h1, prec1)) = self.decide_point(si, sj, 0, dir) else {
-                    return false;
-                };
-                let Some((h2, prec2)) = self.decide_point(si, sj, 1, 1 - dir) else {
-                    return false;
-                };
+                let (h1, prec1) = self.decide_point(si, sj, 0, dir)?;
+                let (h2, prec2) = self.decide_point(si, sj, 1, 1 - dir)?;
                 if std::env::var_os("GVDUMP").is_some() {
                     eprintln!(
                         "OPE {:.6} {i} {j} {dir} {h1} {prec1} {h2} {prec2}",
@@ -875,29 +881,29 @@ impl Ortho {
                     );
                 }
                 if prec1 == -1 {
-                    self.set_parallel_edges(sj, si, dir, 0, h1);
-                    self.set_parallel_edges(sj, si, 1 - dir, 1, h2);
+                    self.set_parallel_edges(sj, si, dir, 0, h1)?;
+                    self.set_parallel_edges(sj, si, 1 - dir, 1, h2)?;
                     if prec2 == 1 {
-                        self.remove_edge(si, sj, 1 - dir);
+                        self.remove_edge(si, sj, 1 - dir)?;
                     }
                 } else if prec1 == 0 {
                     if prec2 == -1 {
-                        self.set_parallel_edges(sj, si, dir, 0, h1);
-                        self.set_parallel_edges(sj, si, 1 - dir, 1, h2);
+                        self.set_parallel_edges(sj, si, dir, 0, h1)?;
+                        self.set_parallel_edges(sj, si, 1 - dir, 1, h2)?;
                     } else if prec2 == 0 || prec2 == 1 {
-                        self.set_parallel_edges(si, sj, 0, dir, h1);
-                        self.set_parallel_edges(si, sj, 1, 1 - dir, h2);
+                        self.set_parallel_edges(si, sj, 0, dir, h1)?;
+                        self.set_parallel_edges(si, sj, 1, 1 - dir, h2)?;
                     }
                 } else if prec1 == 1 {
-                    self.set_parallel_edges(si, sj, 0, dir, h1);
-                    self.set_parallel_edges(si, sj, 1, 1 - dir, h2);
+                    self.set_parallel_edges(si, sj, 0, dir, h1)?;
+                    self.set_parallel_edges(si, sj, 1, 1 - dir, h2)?;
                     if prec2 == -1 {
-                        self.remove_edge(si, sj, 1 - dir);
+                        self.remove_edge(si, sj, 1 - dir)?;
                     }
                 }
             }
         }
-        true
+        Ok(())
     }
 
     /// Debug dump of the channel graphs (`GVDUMP`).
@@ -910,7 +916,7 @@ impl Ortho {
                 let chans = o.chans_for_kind(vert);
                 let ch = chans.chan(k);
                 if ch.seg_list.is_empty() {
-                    return true;
+                    return Ok(());
                 }
                 let mut l = format!(
                     "OCG {tag} {:.6} [{:.6} {:.6}]:",
@@ -925,36 +931,35 @@ impl Ortho {
                     }
                 }
                 eprintln!("{l}");
-                true
-            });
+                Ok(())
+            })
+            .ok();
         }
     }
 
     /// `assignTracks(mp)`.
-    fn assign_tracks(&mut self) -> bool {
+    fn assign_tracks(&mut self) -> OResult<()> {
         // create_graphs
         for vert in [false, true] {
             self.for_each_chan(vert, &mut |o, k| {
                 let ch = o.chans_mut(vert).chan_mut(k);
                 ch.g = RawGraph::new(ch.seg_list.len());
-                true
-            });
+                Ok(())
+            })?;
         }
         // add_np_edges
         for vert in [false, true] {
-            let ok = self.for_each_chan(vert, &mut |o, k| {
-                o.chans_for_kind(vert).chan(k).seg_list.is_empty() || o.add_edges_in_g(vert, k)
-            });
-            if !ok {
-                return false;
-            }
+            self.for_each_chan(vert, &mut |o, k| {
+                if o.chans_for_kind(vert).chan(k).seg_list.is_empty() {
+                    return Ok(());
+                }
+                o.add_edges_in_g(vert, k)
+            })?;
         }
         self.dump_chans("np");
         // add_p_edges
         for vert in [false, true] {
-            if !self.for_each_chan(vert, &mut |o, k| o.add_p_edges_chan(vert, k)) {
-                return false;
-            }
+            self.for_each_chan(vert, &mut |o, k| o.add_p_edges_chan(vert, k))?;
         }
         self.dump_chans("x");
         // assignTrackNo
@@ -962,9 +967,9 @@ impl Ortho {
             self.for_each_chan(vert, &mut |o, k| {
                 let ch = o.chans_mut(vert).chan_mut(k);
                 if ch.seg_list.is_empty() {
-                    return true;
+                    return Ok(());
                 }
-                ch.g.top_sort();
+                ch.g.top_sort()?;
                 let orders: Vec<(SegRef, i32)> = ch
                     .seg_list
                     .iter()
@@ -974,57 +979,60 @@ impl Ortho {
                 for (r, t) in orders {
                     o.routes[r.0][r.1].track_no = Some(t);
                 }
-                true
-            });
+                Ok(())
+            })?;
         }
-        true
+        Ok(())
     }
 
     /// `vtrack(seg, m)`.
-    fn vtrack(&mut self, r: SegRef) -> f64 {
+    fn vtrack(&mut self, r: SegRef) -> OResult<f64> {
         let s = *self.seg(r);
-        let k = self.vchans.search(&s);
+        let k = self.vchans.search(&s)?;
         let chp = self.vchans.chan(k);
-        let f = f64::from(s.track_no.unwrap()) / (chp.seg_list.len() as f64 + 1.0);
-        let bb = self.mp.cells[chp.cp].bb;
-        f.mul_add(bb.ur.x - bb.ll.x, bb.ll.x)
+        let f = f64::from(s.track_no.need()?) / (chp.seg_list.len() as f64 + 1.0);
+        let bb = self.mp.cell(chp.cp)?.bb;
+        Ok(f.mul_add(bb.ur.x - bb.ll.x, bb.ll.x))
     }
 
     /// `htrack(seg, m)`.
-    fn htrack(&mut self, r: SegRef) -> f64 {
+    fn htrack(&mut self, r: SegRef) -> OResult<f64> {
         let s = *self.seg(r);
-        let k = self.hchans.search(&s);
+        let k = self.hchans.search(&s)?;
         let chp = self.hchans.chan(k);
-        let f = 1.0 - f64::from(s.track_no.unwrap()) / (chp.seg_list.len() as f64 + 1.0);
-        let bb = self.mp.cells[chp.cp].bb;
+        let f = 1.0 - f64::from(s.track_no.need()?) / (chp.seg_list.len() as f64 + 1.0);
+        let bb = self.mp.cell(chp.cp)?.bb;
         let (lo, hi) = (bb.ll.y, bb.ur.y);
-        f.mul_add(hi - lo, lo).round()
+        Ok(f.mul_add(hi - lo, lo).round())
     }
 }
 
 /// `addLoop(sg, cp, dp, sp)`.
-fn add_loop(sg: &mut SGraph, cp: &Cell, c: usize, dp: usize, sp: usize) {
+fn add_loop(sg: &mut SGraph, cp: &Cell, c: usize, dp: usize, sp: usize) -> OResult<()> {
     for onp in cp.sides.iter().flatten().copied() {
-        if sg.nodes[onp].is_vert {
+        let on = sg.node(onp)?;
+        if on.is_vert {
             continue;
         }
-        let on_top = sg.nodes[onp].cells[0] == Some(c);
+        let on_top = on.cells[0] == Some(c);
         if on_top {
-            sg.create_sedge(sp, onp, 0.0);
+            sg.create_sedge(sp, onp, 0.0)?;
         } else {
-            sg.create_sedge(dp, onp, 0.0);
+            sg.create_sedge(dp, onp, 0.0)?;
         }
     }
     sg.nnodes += 2;
+    Ok(())
 }
 
 /// `addNodeEdges(sg, cp, np)`.
-fn add_node_edges(sg: &mut SGraph, cp: &Cell, c: usize, np: usize) {
+fn add_node_edges(sg: &mut SGraph, cp: &Cell, c: usize, np: usize) -> OResult<()> {
     for onp in cp.sides.iter().flatten().copied() {
-        sg.create_sedge(np, onp, 0.0);
+        sg.create_sedge(np, onp, 0.0)?;
     }
     sg.nnodes += 1;
-    sg.nodes[np].cells = [Some(c), Some(c)];
+    sg.node_mut(np)?.cells = [Some(c), Some(c)];
+    Ok(())
 }
 
 /// `orthoEdges(g, useLbls)`: route every edge of `g` orthogonally. Returns
@@ -1036,6 +1044,14 @@ pub fn ortho_edges<S: OrthoGraph + ?Sized>(g: &mut S, use_lbls: bool) -> bool {
 
 /// `orthoEdges(sg, useLbls)` on the subgraph made of `nodes` (in `agfstnode`
 /// order) and their out-edges, e.g. one packed component.
+///
+/// This is the failure boundary of the router (see [`fail`]): nothing below
+/// it panics, and each [`Fail`] is handled here, once. A failure while the
+/// maze is built returns false, as C's `orthoEdges` returns -1 when `mkMaze`
+/// returns NULL. A failure while edges are routed leaves every edge unrouted
+/// and returns true, as C's `goto orthofinish` does when `shortPath` or
+/// `assignTracks` fails; the callers then draw straight edges (neato family)
+/// or lose the edges (dot), as they do after C's failures.
 pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
     g: &mut S,
     nodes: Vec<usize>,
@@ -1048,19 +1064,78 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
             "Orthogonal edges do not currently handle edge labels. Try using xlabels.\n",
         );
     }
-    let node_cell: std::collections::HashMap<usize, usize> =
-        nodes.iter().enumerate().map(|(i, &n)| (n, i)).collect();
     let boxes: Vec<(Point, f64, f64)> = nodes
         .iter()
         .map(|&n| (g.coord(n), g.lw(n) + g.rw(n), g.ht(n)))
         .collect();
-    let Some(mp) = mk_maze(&boxes) else {
-        return false;
+    let mp = match mk_maze(&boxes) {
+        Ok(mp) => mp,
+        Err(fail) => {
+            dump_fail("mkMaze", fail);
+            return false;
+        }
     };
+    match route_edges(g, &nodes, mp) {
+        Ok(routes) => {
+            // attachOrthoEdges
+            let sinfo = SplineInfo {
+                ignore_swap: true,
+                is_ortho: true,
+            };
+            for (e, ispline) in routes {
+                let h = g.head(e);
+                clip_and_install_info(g, e, h, &ispline, sinfo);
+            }
+        }
+        Err(fail) => {
+            dump_fail("route", fail);
+            let msg = match fail {
+                Fail::HeapOverflow => {
+                    // PQ_insert (fPQ.c)
+                    graphviz_pure_core::diag::agerrorf("Heap overflow\n");
+                    return true;
+                }
+                Fail::Incomparable => {
+                    // seg_cmp (ortho.c)
+                    graphviz_pure_core::diag::agerrorf("incomparable segments !! -- Aborting\n");
+                    return true;
+                }
+                Fail::NoPath => "orthogonal routing found no path for an edge",
+                Fail::NoChannel => "orthogonal routing found no channel for an edge segment",
+                Fail::NoMaze | Fail::Broken(_) => "orthogonal routing failed",
+            };
+            // C crashes here (#186, #170 and the invariants it asserts or
+            // trusts): warn, and leave the edges unrouted.
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "{msg} - edges not routed orthogonally\n"
+            ));
+        }
+    }
+    true
+}
+
+/// The failure and the port's source line, for `GVDUMP` debugging.
+fn dump_fail(stage: &str, fail: Fail) {
+    if std::env::var_os("GVDUMP").is_some() {
+        eprintln!("OFAIL {stage} {fail:?}");
+    }
+}
+
+/// The body of `orthoEdges` after `mkMaze`: the edges of `nodes` in C's
+/// order, each with the polyline `attachOrthoEdges` gives it. Nothing is
+/// installed until every edge is routed, so a failure leaves all of them
+/// unrouted, as C's `goto orthofinish` does.
+fn route_edges<S: OrthoGraph + ?Sized>(
+    g: &S,
+    nodes: &[usize],
+    mp: Maze,
+) -> OResult<Vec<(usize, Vec<Point>)>> {
+    let node_cell: std::collections::HashMap<usize, usize> =
+        nodes.iter().enumerate().map(|(i, &n)| (n, i)).collect();
     let concentrate = g.ortho_concentrate();
     let mut ps: std::collections::HashSet<(usize, usize)> = Default::default();
     let mut es: Vec<(f64, usize)> = Vec::new();
-    for &n in &nodes {
+    for &n in nodes {
         for e in g.ortho_out_edges(n) {
             if concentrate {
                 let ti = g.node_seq(g.tail(e));
@@ -1106,47 +1181,33 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
     let mut pq = Pq::new(o.mp.sg.nnodes + 2);
     let (sn, dn) = (gstart, gstart + 1);
     for &(_, e) in &es {
-        let start = node_cell[&g.tail(e)];
-        let dest = node_cell[&g.head(e)];
+        // `CELL(n)`: an end outside the maze has no cell (C reads garbage).
+        let start = *node_cell.get(&g.tail(e)).need()?;
+        let dest = *node_cell.get(&g.head(e)).need()?;
         if start == dest {
-            let cell = o.mp.cells[start].clone();
-            add_loop(&mut o.mp.sg, &cell, start, dn, sn);
+            let cell = o.mp.cell(start)?.clone();
+            add_loop(&mut o.mp.sg, &cell, start, dn, sn)?;
         } else {
-            let cd = o.mp.cells[dest].clone();
-            add_node_edges(&mut o.mp.sg, &cd, dest, dn);
-            let cs = o.mp.cells[start].clone();
-            add_node_edges(&mut o.mp.sg, &cs, start, sn);
+            let cd = o.mp.cell(dest)?.clone();
+            add_node_edges(&mut o.mp.sg, &cd, dest, dn)?;
+            let cs = o.mp.cell(start)?.clone();
+            add_node_edges(&mut o.mp.sg, &cs, start, sn)?;
         }
-        if !o.mp.sg.short_path(&mut pq, dn, sn) {
-            return true;
-        }
-        if o.mp.sg.nodes[sn].n_dad.is_none() {
-            // shortPath has never reached `sn`, so its N_DAD is still NULL
-            // (`reset` does not clear it), and C's convertSPtoRoute
-            // dereferences it and segfaults (#186). Leave the edges
-            // unrouted, as C's `goto orthofinish` does when shortPath fails.
-            // When an earlier edge did reach `sn`, C follows the stale
-            // parent without crashing, and so does the port. This matches C
-            // where the port's search graph does; see #203 for a case where
-            // it does not.
-            graphviz_pure_core::diag::agwarningf(
-                "orthogonal routing found no path for an edge - edges not routed orthogonally\n",
-            );
-            return true;
-        }
+        o.mp.sg.short_path(&mut pq, dn, sn)?;
         if dump {
             let mut l = format!("OSPN {}:", o.routes.len());
             let mut x = Some(sn);
-            while let Some(v) = x {
-                l.push_str(&format!(
-                    " {}/{}",
-                    o.mp.sg.nodes[v].index, o.mp.sg.nodes[v].n_val
-                ));
-                x = o.mp.sg.nodes[v].n_dad;
+            // Bounded: a stale parent chain can cycle.
+            for _ in 0..=o.mp.sg.nodes.len() {
+                let Some(v) = x.and_then(|v| o.mp.sg.nodes.get(v)) else {
+                    break;
+                };
+                l.push_str(&format!(" {}/{}", v.index, v.n_val));
+                x = v.n_dad;
             }
             eprintln!("{l}");
         }
-        let r = convert_sp_to_route(&mut o.mp, sn, dn);
+        let r = convert_sp_to_route(&mut o.mp, sn, dn)?;
         if dump {
             let mut l = format!("OR {}:", o.routes.len());
             for sg in &r {
@@ -1163,23 +1224,12 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
             eprintln!("{l}");
         }
         o.routes.push(r);
-        o.mp.sg.reset();
+        o.mp.sg.reset()?;
     }
-    o.hchans = extract_chans(&mut o.mp, true);
-    o.vchans = extract_chans(&mut o.mp, false);
-    if !o.assign_segs() {
-        // C asserts in chanSearch and aborts here (#170). Leave the edges
-        // unrouted, as C's `goto orthofinish` does when shortPath or
-        // assignTracks fails: the neato-family callers then draw them as
-        // straight lines, and dot loses them.
-        graphviz_pure_core::diag::agwarningf(
-            "orthogonal routing found no channel for an edge segment - edges not routed orthogonally\n",
-        );
-        return true;
-    }
-    if !o.assign_tracks() {
-        return true;
-    }
+    o.hchans = extract_chans(&mut o.mp, true)?;
+    o.vchans = extract_chans(&mut o.mp, false)?;
+    o.assign_segs()?;
+    o.assign_tracks()?;
     if dump {
         for (i, r) in o.routes.iter().enumerate() {
             let mut l = format!("OT {i}:");
@@ -1193,11 +1243,8 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
             eprintln!("{l}");
         }
     }
-    // attachOrthoEdges
-    let sinfo = SplineInfo {
-        ignore_swap: true,
-        is_ortho: true,
-    };
+    // attachOrthoEdges, up to `clip_and_install`
+    let mut splines = Vec::with_capacity(es.len());
     for (irte, &(_, e)) in es.iter().enumerate() {
         let p1 = crate::common::geom::add(g.coord(g.tail(e)), g.tail_port(e).p);
         let q1 = crate::common::geom::add(g.coord(g.head(e)), g.head_port(e).p);
@@ -1208,9 +1255,9 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
         let mut ispline = Vec::with_capacity(1 + 3 * n);
         let s0 = (irte, 0);
         let mut p = if o.seg(s0).is_vert {
-            Point::new(o.vtrack(s0), p1.y)
+            Point::new(o.vtrack(s0)?, p1.y)
         } else {
-            Point::new(p1.x, o.htrack(s0))
+            Point::new(p1.x, o.htrack(s0)?)
         };
         ispline.push(p);
         ispline.push(p);
@@ -1218,9 +1265,9 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
         for i in 1..n {
             let s = (irte, i);
             if o.seg(s).is_vert {
-                p.x = o.vtrack(s);
+                p.x = o.vtrack(s)?;
             } else {
-                p.y = o.htrack(s);
+                p.y = o.htrack(s)?;
             }
             ispline.push(p);
             ispline.push(p);
@@ -1228,14 +1275,99 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
             last = s;
         }
         p = if o.seg(last).is_vert {
-            Point::new(o.vtrack(last), q1.y)
+            Point::new(o.vtrack(last)?, q1.y)
         } else {
-            Point::new(q1.x, o.htrack(last))
+            Point::new(q1.x, o.htrack(last)?)
         };
         ispline.push(p);
         ispline.push(p);
-        let h = g.head(e);
-        clip_and_install_info(g, e, h, &ispline, sinfo);
+        splines.push((e, ispline));
     }
-    true
+    Ok(splines)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn boxes(centres: &[(f64, f64)]) -> Vec<(Point, f64, f64)> {
+        centres
+            .iter()
+            .map(|&(x, y)| (Point::new(x, y), 54.0, 36.0))
+            .collect()
+    }
+
+    /// `true` if `fail` is a broken invariant found in `file`.
+    fn broken_in(fail: Fail, file: &str) -> bool {
+        matches!(fail, Fail::Broken(l) if l.file().ends_with(file))
+    }
+
+    /// Issue #229: the boxes neato gives `a [pos="0,0!"]` and
+    /// `x [pos="1e12,0!"]`. The free cells between them are 7.2e13 points
+    /// wide, so `shortPath`'s distances do not fit an `int`; C fails
+    /// `PQcheck`, the port overflowed `N_VAL(n) *= -1`. Now `shortPath` fails,
+    /// and `orthoEdges` leaves the edge unrouted.
+    #[test]
+    fn huge_cells_fail_the_short_path() {
+        let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (7.2e13, 18.0)])).unwrap();
+        let gstart = mp.sg.nnodes;
+        let mut pq = Pq::new(gstart + 2);
+        let (sn, dn) = (gstart, gstart + 1);
+        let (c0, c1) = (mp.cells[0].clone(), mp.cells[1].clone());
+        add_node_edges(&mut mp.sg, &c1, 1, dn).unwrap();
+        add_node_edges(&mut mp.sg, &c0, 0, sn).unwrap();
+        let fail = mp.sg.short_path(&mut pq, dn, sn).unwrap_err();
+        assert!(broken_in(fail, "sgraph.rs"), "{fail:?}");
+    }
+
+    /// The same edge 7.2e8 points long routes: its distances fit an `int`.
+    #[test]
+    fn long_cells_within_int_range_route() {
+        let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (7.2e8, 18.0)])).unwrap();
+        let gstart = mp.sg.nnodes;
+        let mut pq = Pq::new(gstart + 2);
+        let (sn, dn) = (gstart, gstart + 1);
+        let (c0, c1) = (mp.cells[0].clone(), mp.cells[1].clone());
+        add_node_edges(&mut mp.sg, &c1, 1, dn).unwrap();
+        add_node_edges(&mut mp.sg, &c0, 0, sn).unwrap();
+        mp.sg.short_path(&mut pq, dn, sn).unwrap();
+        assert!(!convert_sp_to_route(&mut mp, sn, dn).unwrap().is_empty());
+    }
+
+    /// Issue #228: neato's NaN pin makes both node positions NaN. No
+    /// trapezoid lies inside the polygon, and C's `monotonate_trapezoids`
+    /// reads `LIST_GET(tr, tr_start)` one past the end and fails its
+    /// assertion (C's backtrace: `partition` <- `mkMaze`). The port's maze
+    /// fails there.
+    #[test]
+    fn nan_node_boxes_fail_the_maze_in_partition() {
+        let fail = mk_maze(&boxes(&[(f64::NAN, 18.0), (f64::NAN, 18.0)])).unwrap_err();
+        assert!(broken_in(fail, "partition.rs"), "{fail:?}");
+    }
+
+    /// One non-finite box among finite ones takes one of C's own `mkMaze`
+    /// failure exits.
+    #[test]
+    fn one_non_finite_box_fails_the_maze_like_c() {
+        for c in [
+            (f64::NAN, 18.0),
+            (f64::INFINITY, 18.0),
+            (18.0, f64::NEG_INFINITY),
+        ] {
+            let fail = mk_maze(&boxes(&[c, (81.0, 18.0)])).unwrap_err();
+            assert_eq!(fail, Fail::NoMaze, "{c:?}");
+        }
+    }
+
+    /// Issue #186's state, built directly: `shortPath` never reaches `sn`, so
+    /// `N_DAD(sn)` is NULL, where C's `convertSPtoRoute` segfaults.
+    #[test]
+    fn an_unreached_start_is_no_path() {
+        let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (200.0, 18.0)])).unwrap();
+        let sn = mp.sg.nnodes;
+        assert_eq!(
+            convert_sp_to_route(&mut mp, sn, sn + 1).unwrap_err(),
+            Fail::NoPath
+        );
+    }
 }

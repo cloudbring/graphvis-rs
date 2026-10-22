@@ -2,6 +2,7 @@
 //! rectangles into maximal rectangles, as the intersection of a horizontal
 //! and a vertical trapezoidation (each split into monotone pieces).
 
+use super::fail::{At, Fail, OResult, idx};
 use super::trapezoid::{
     SegmentT, Trap, construct_trapezoids, equal_to, fp_equal, greater_than, is_valid_trap,
 };
@@ -106,20 +107,21 @@ fn generate_random_ordering(n: usize, permute: &mut [i32], rng: &mut Drand48) {
     }
 }
 
-fn inside_polygon(t: &Trap, seg: &[SegmentT]) -> bool {
+fn inside_polygon(t: &Trap, seg: &[SegmentT]) -> OResult<bool> {
     let rseg = t.rseg;
     if !t.is_valid {
-        return false;
+        return Ok(false);
     }
     if t.lseg <= 0 || t.rseg <= 0 {
-        return false;
+        return Ok(false);
     }
     if (!is_valid_trap(t.u0) && !is_valid_trap(t.u1))
         || (!is_valid_trap(t.d0) && !is_valid_trap(t.d1))
     {
-        return greater_than(seg[rseg as usize].v1, seg[rseg as usize].v0);
+        let s = seg.at(idx(rseg)?)?;
+        return Ok(greater_than(s.v1, s.v0));
     }
-    false
+    Ok(false)
 }
 
 fn get_angle(vp0: Point, vpnext: Point, vp1: Point) -> f64 {
@@ -137,16 +139,16 @@ fn get_angle(vp0: Point, vpnext: Point, vp1: Point) -> f64 {
 }
 
 impl Mono<'_> {
-    fn get_vertex_positions(&self, v0: i32, v1: i32) -> (usize, usize) {
-        let vp0 = &self.vert[v0 as usize];
-        let vp1 = &self.vert[v1 as usize];
+    fn get_vertex_positions(&self, v0: i32, v1: i32) -> OResult<(usize, usize)> {
+        let vp0 = self.vert.at(idx(v0)?)?;
+        let vp1 = self.vert.at(idx(v1)?)?;
         let mut angle = -4.0;
         let mut tp = 0;
         for i in 0..4 {
             if vp0.vnext[i] <= 0 {
                 continue;
             }
-            let temp = get_angle(vp0.pt, self.vert[vp0.vnext[i] as usize].pt, vp1.pt);
+            let temp = get_angle(vp0.pt, self.vert.at(idx(vp0.vnext[i])?)?.pt, vp1.pt);
             if temp > angle {
                 angle = temp;
                 tp = i;
@@ -158,49 +160,50 @@ impl Mono<'_> {
             if vp1.vnext[i] <= 0 {
                 continue;
             }
-            let temp = get_angle(vp1.pt, self.vert[vp1.vnext[i] as usize].pt, vp0.pt);
+            let temp = get_angle(vp1.pt, self.vert.at(idx(vp1.vnext[i])?)?.pt, vp0.pt);
             if temp > angle {
                 angle = temp;
                 tq = i;
             }
         }
-        (tp, tq)
+        Ok((tp, tq))
     }
 
-    fn new_chain_element(&mut self) -> usize {
+    fn new_chain_element(&mut self) -> OResult<usize> {
         self.chain_idx += 1;
-        let i = self.chain_idx as usize;
+        let i = idx(self.chain_idx)?;
         if i >= self.chain.len() {
             self.chain.resize(i + 1, MonChain::default());
         }
-        i
+        Ok(i)
     }
 
-    fn make_new_monotone_poly(&mut self, mcur: usize, v0: i32, v1: i32) -> usize {
+    fn make_new_monotone_poly(&mut self, mcur: usize, v0: i32, v1: i32) -> OResult<usize> {
         self.mon_idx += 1;
         let mnew = self.mon_idx;
-        let (ip, iq) = self.get_vertex_positions(v0, v1);
-        let p = self.vert[v0 as usize].vpos[ip] as usize;
-        let q = self.vert[v1 as usize].vpos[iq] as usize;
-        let i = self.new_chain_element();
-        let j = self.new_chain_element();
+        let (ip, iq) = self.get_vertex_positions(v0, v1)?;
+        let (v0u, v1u) = (idx(v0)?, idx(v1)?);
+        let p = idx(self.vert.at(v0u)?.vpos[ip])?;
+        let q = idx(self.vert.at(v1u)?.vpos[iq])?;
+        let i = self.new_chain_element()?;
+        let j = self.new_chain_element()?;
         let ch = &mut self.chain;
         ch[i].vnum = v0;
         ch[j].vnum = v1;
-        ch[i].next = ch[p].next;
-        let pn = ch[p].next as usize;
-        ch[pn].prev = i as i32;
+        ch[i].next = ch.at(p)?.next;
+        let pn = idx(ch[p].next)?;
+        ch.at_mut(pn)?.prev = i as i32;
         ch[i].prev = j as i32;
         ch[j].next = i as i32;
-        ch[j].prev = ch[q].prev;
-        let qp = ch[q].prev as usize;
-        ch[qp].next = j as i32;
+        ch[j].prev = ch.at(q)?.prev;
+        let qp = idx(ch[q].prev)?;
+        ch.at_mut(qp)?.next = j as i32;
         ch[p].next = q as i32;
         ch[q].prev = p as i32;
-        let nf0 = self.vert[v0 as usize].nextfree as usize;
-        let nf1 = self.vert[v1 as usize].nextfree as usize;
-        let inext = self.chain[self.chain[i].next as usize].vnum;
-        let vp0 = &mut self.vert[v0 as usize];
+        let nf0 = idx(self.vert[v0u].nextfree)?;
+        let nf1 = idx(self.vert[v1u].nextfree)?;
+        let inext = self.chain.at(idx(self.chain[i].next)?)?.vnum;
+        let vp0 = &mut self.vert[v0u];
         vp0.vnext[ip] = v1;
         // A vertex has 4 chain slots. On degenerate cells (touching, overlapping
         // or non-finite boxes, #171) C writes `vpos[nextfree]` and
@@ -215,7 +218,7 @@ impl Mono<'_> {
             vp0.vnext[nf0] = inext;
         }
         vp0.nextfree += 1;
-        let vp1 = &mut self.vert[v1 as usize];
+        let vp1 = &mut self.vert[v1u];
         if let Some(slot) = vp1.vpos.get_mut(nf1) {
             *slot = j as i32;
             vp1.vnext[nf1] = v0;
@@ -224,36 +227,59 @@ impl Mono<'_> {
         if mnew >= self.mon.len() {
             self.mon.resize(mnew + 1, 0);
         }
-        self.mon[mcur] = p as i32;
+        *self.mon.at_mut(mcur)? = p as i32;
         self.mon[mnew] = i as i32;
-        mnew
+        Ok(mnew)
+    }
+
+    /// `traverse_polygon(..., mcur, trnum, from, flip, dir, ...)`. C recurses
+    /// once per trapezoid, which can nest as deep as there are trapezoids;
+    /// the port keeps the pending calls on a stack. Each call's recursive
+    /// calls come last, after all its own work, so running them from the
+    /// stack in order visits the trapezoids in C's order.
+    fn traverse(&mut self, mcur: usize, trnum: usize, from: usize, dir: i32) -> OResult<()> {
+        let mut stack = vec![(mcur, trnum, from, dir)];
+        let mut calls = Vec::new();
+        while let Some((mcur, trnum, from, dir)) = stack.pop() {
+            self.traverse_polygon(mcur, trnum, from, dir, &mut calls)?;
+            stack.extend(calls.drain(..).rev());
+        }
+        Ok(())
     }
 
     #[allow(clippy::too_many_lines)]
-    fn traverse_polygon(&mut self, mcur: usize, trnum: usize, from: usize, dir: i32) {
-        if !is_valid_trap(trnum) || self.visited[trnum] {
-            return;
+    /// One call of `traverse_polygon`: its recursive calls go to `calls`.
+    fn traverse_polygon(
+        &mut self,
+        mcur: usize,
+        trnum: usize,
+        from: usize,
+        dir: i32,
+        calls: &mut Vec<(usize, usize, usize, i32)>,
+    ) -> OResult<()> {
+        if !is_valid_trap(trnum) || *self.visited.at(trnum)? {
+            return Ok(());
         }
-        let t = self.tr[trnum];
+        let t = *self.tr.at(trnum)?;
         let seg = self.seg;
         let tr = self.tr;
         self.visited[trnum] = true;
         if t.hi.y > t.lo.y + super::trapezoid::C_EPS
-            && fp_equal(seg[t.lseg as usize].v0.x, seg[t.lseg as usize].v1.x)
-            && fp_equal(seg[t.rseg as usize].v0.x, seg[t.rseg as usize].v1.x)
+            && fp_equal(seg.at(idx(t.lseg)?)?.v0.x, seg.at(idx(t.lseg)?)?.v1.x)
+            && fp_equal(seg.at(idx(t.rseg)?)?.v0.x, seg.at(idx(t.rseg)?)?.v1.x)
         {
             let newbox = if self.flip {
                 BoundingBox::new(
                     t.lo.y,
-                    -seg[t.rseg as usize].v0.x,
+                    -seg.at(idx(t.rseg)?)?.v0.x,
                     t.hi.y,
-                    -seg[t.lseg as usize].v0.x,
+                    -seg.at(idx(t.lseg)?)?.v0.x,
                 )
             } else {
                 BoundingBox::new(
-                    seg[t.lseg as usize].v0.x,
+                    seg.at(idx(t.lseg)?)?.v0.x,
                     t.lo.y,
-                    seg[t.rseg as usize].v0.x,
+                    seg.at(idx(t.rseg)?)?.v0.x,
                     t.hi.y,
                 )
             };
@@ -262,7 +288,7 @@ impl Mono<'_> {
         let (up, dn) = (TR_FROM_UP, TR_FROM_DN);
         macro_rules! tp {
             ($m:expr, $t:expr, $d:expr) => {
-                self.traverse_polygon($m, $t, trnum, $d)
+                calls.push(($m, $t, trnum, $d))
             };
         }
         let vu0 = is_valid_trap(t.u0);
@@ -271,14 +297,14 @@ impl Mono<'_> {
         let vd1 = is_valid_trap(t.d1);
         if !vu0 && !vu1 {
             if vd0 && vd1 {
-                let v0 = tr[t.d1].lseg;
+                let v0 = tr.at(t.d1)?.lseg;
                 let v1 = t.lseg;
                 if from == t.d1 {
-                    let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                    let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                     tp!(mcur, t.d1, up);
                     tp!(mnew, t.d0, up);
                 } else {
-                    let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                    let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                     tp!(mcur, t.d0, up);
                     tp!(mnew, t.d1, up);
                 }
@@ -291,13 +317,13 @@ impl Mono<'_> {
         } else if !vd0 && !vd1 {
             if vu0 && vu1 {
                 let v0 = t.rseg;
-                let v1 = tr[t.u0].rseg;
+                let v1 = tr.at(t.u0)?.rseg;
                 if from == t.u1 {
-                    let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                    let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                     tp!(mcur, t.u1, dn);
                     tp!(mnew, t.u0, dn);
                 } else {
-                    let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                    let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                     tp!(mcur, t.u0, dn);
                     tp!(mnew, t.u1, dn);
                 }
@@ -309,32 +335,32 @@ impl Mono<'_> {
             }
         } else if vu0 && vu1 {
             if vd0 && vd1 {
-                let v0 = tr[t.d1].lseg;
-                let v1 = tr[t.u0].rseg;
+                let v0 = tr.at(t.d1)?.lseg;
+                let v1 = tr.at(t.u0)?.rseg;
                 if (dir == dn && t.d1 == from) || (dir == up && t.u1 == from) {
-                    let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                    let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                     tp!(mcur, t.u1, dn);
                     tp!(mcur, t.d1, up);
                     tp!(mnew, t.u0, dn);
                     tp!(mnew, t.d0, up);
                 } else {
-                    let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                    let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                     tp!(mcur, t.u0, dn);
                     tp!(mcur, t.d0, up);
                     tp!(mnew, t.u1, dn);
                     tp!(mnew, t.d1, up);
                 }
-            } else if equal_to(t.lo, seg[t.lseg as usize].v1) {
-                let v0 = tr[t.u0].rseg;
-                let v1 = seg[t.lseg as usize].next;
+            } else if equal_to(t.lo, seg.at(idx(t.lseg)?)?.v1) {
+                let v0 = tr.at(t.u0)?.rseg;
+                let v1 = seg.at(idx(t.lseg)?)?.next;
                 if dir == up && t.u0 == from {
-                    let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                    let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                     tp!(mcur, t.u0, dn);
                     tp!(mnew, t.d0, up);
                     tp!(mnew, t.u1, dn);
                     tp!(mnew, t.d1, up);
                 } else {
-                    let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                    let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                     tp!(mcur, t.u1, dn);
                     tp!(mcur, t.d0, up);
                     tp!(mcur, t.d1, up);
@@ -342,15 +368,15 @@ impl Mono<'_> {
                 }
             } else {
                 let v0 = t.rseg;
-                let v1 = tr[t.u0].rseg;
+                let v1 = tr.at(t.u0)?.rseg;
                 if dir == up && t.u1 == from {
-                    let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                    let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                     tp!(mcur, t.u1, dn);
                     tp!(mnew, t.d1, up);
                     tp!(mnew, t.d0, up);
                     tp!(mnew, t.u0, dn);
                 } else {
-                    let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                    let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                     tp!(mcur, t.u0, dn);
                     tp!(mcur, t.d0, up);
                     tp!(mcur, t.d1, up);
@@ -359,70 +385,70 @@ impl Mono<'_> {
             }
         } else if vu0 || vu1 {
             if vd0 && vd1 {
-                if equal_to(t.hi, seg[t.lseg as usize].v0) {
-                    let v0 = tr[t.d1].lseg;
+                if equal_to(t.hi, seg.at(idx(t.lseg)?)?.v0) {
+                    let v0 = tr.at(t.d1)?.lseg;
                     let v1 = t.lseg;
                     if !(dir == dn && t.d0 == from) {
-                        let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                        let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                         tp!(mcur, t.u1, dn);
                         tp!(mcur, t.d1, up);
                         tp!(mcur, t.u0, dn);
                         tp!(mnew, t.d0, up);
                     } else {
-                        let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                        let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                         tp!(mcur, t.d0, up);
                         tp!(mnew, t.u0, dn);
                         tp!(mnew, t.u1, dn);
                         tp!(mnew, t.d1, up);
                     }
                 } else {
-                    let v0 = tr[t.d1].lseg;
-                    let v1 = seg[t.rseg as usize].next;
+                    let v0 = tr.at(t.d1)?.lseg;
+                    let v1 = seg.at(idx(t.rseg)?)?.next;
                     if dir == dn && t.d1 == from {
-                        let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                        let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                         tp!(mcur, t.d1, up);
                         tp!(mnew, t.u1, dn);
                         tp!(mnew, t.u0, dn);
                         tp!(mnew, t.d0, up);
                     } else {
-                        let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                        let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                         tp!(mcur, t.u0, dn);
                         tp!(mcur, t.d0, up);
                         tp!(mcur, t.u1, dn);
                         tp!(mnew, t.d1, up);
                     }
                 }
-            } else if equal_to(t.hi, seg[t.lseg as usize].v0)
-                && equal_to(t.lo, seg[t.rseg as usize].v0)
+            } else if equal_to(t.hi, seg.at(idx(t.lseg)?)?.v0)
+                && equal_to(t.lo, seg.at(idx(t.rseg)?)?.v0)
             {
                 let v0 = t.rseg;
                 let v1 = t.lseg;
                 if dir == up {
-                    let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                    let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                     tp!(mcur, t.u0, dn);
                     tp!(mcur, t.u1, dn);
                     tp!(mnew, t.d1, up);
                     tp!(mnew, t.d0, up);
                 } else {
-                    let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                    let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                     tp!(mcur, t.d1, up);
                     tp!(mcur, t.d0, up);
                     tp!(mnew, t.u0, dn);
                     tp!(mnew, t.u1, dn);
                 }
-            } else if equal_to(t.hi, seg[t.rseg as usize].v1)
-                && equal_to(t.lo, seg[t.lseg as usize].v1)
+            } else if equal_to(t.hi, seg.at(idx(t.rseg)?)?.v1)
+                && equal_to(t.lo, seg.at(idx(t.lseg)?)?.v1)
             {
-                let v0 = seg[t.rseg as usize].next;
-                let v1 = seg[t.lseg as usize].next;
+                let v0 = seg.at(idx(t.rseg)?)?.next;
+                let v1 = seg.at(idx(t.lseg)?)?.next;
                 if dir == up {
-                    let mnew = self.make_new_monotone_poly(mcur, v1, v0);
+                    let mnew = self.make_new_monotone_poly(mcur, v1, v0)?;
                     tp!(mcur, t.u0, dn);
                     tp!(mcur, t.u1, dn);
                     tp!(mnew, t.d1, up);
                     tp!(mnew, t.d0, up);
                 } else {
-                    let mnew = self.make_new_monotone_poly(mcur, v0, v1);
+                    let mnew = self.make_new_monotone_poly(mcur, v0, v1)?;
                     tp!(mcur, t.d1, up);
                     tp!(mcur, t.d0, up);
                     tp!(mnew, t.u0, dn);
@@ -435,6 +461,7 @@ impl Mono<'_> {
                 tp!(mcur, t.d1, up);
             }
         }
+        Ok(())
     }
 }
 
@@ -444,8 +471,8 @@ fn monotonate_trapezoids(
     seg: &[SegmentT],
     tr: &[Trap],
     flip: bool,
-) -> Vec<BoundingBox> {
-    let n = nsegs as usize;
+) -> OResult<Vec<BoundingBox>> {
+    let n = idx(nsegs)?;
     let mut m = Mono {
         chain_idx: nsegs,
         mon_idx: 0,
@@ -458,28 +485,33 @@ fn monotonate_trapezoids(
         tr,
         flip,
     };
-    let tr_start = (0..tr.len())
-        .find(|&j| inside_polygon(&tr[j], seg))
-        .unwrap_or(tr.len());
+    let mut tr_start = tr.len();
+    for (j, t) in tr.iter().enumerate() {
+        if inside_polygon(t, seg)? {
+            tr_start = j;
+            break;
+        }
+    }
     for i in 1..=n {
-        m.chain[i].prev = seg[i].prev;
-        m.chain[i].next = seg[i].next;
+        let s = seg.at(i)?;
+        m.chain[i].prev = s.prev;
+        m.chain[i].next = s.next;
         m.chain[i].vnum = i as i32;
-        m.vert[i].pt = seg[i].v0;
-        m.vert[i].vnext[0] = seg[i].next;
+        m.vert[i].pt = s.v0;
+        m.vert[i].vnext[0] = s.next;
         m.vert[i].vpos[0] = i as i32;
         m.vert[i].nextfree = 1;
     }
     m.mon[0] = 1;
-    if tr_start < tr.len() {
-        let ts = tr[tr_start];
-        if is_valid_trap(ts.u0) {
-            m.traverse_polygon(0, tr_start, ts.u0, TR_FROM_UP);
-        } else if is_valid_trap(ts.d0) {
-            m.traverse_polygon(0, tr_start, ts.d0, TR_FROM_DN);
-        }
+    // With no trapezoid inside the polygon, C reads `LIST_GET(tr, tr_start)`
+    // one past the end and fails `gv_list_get_`'s assertion (#228's NaN pins).
+    let ts = *tr.at(tr_start)?;
+    if is_valid_trap(ts.u0) {
+        m.traverse(0, tr_start, ts.u0, TR_FROM_UP)?;
+    } else if is_valid_trap(ts.d0) {
+        m.traverse(0, tr_start, ts.d0, TR_FROM_DN)?;
     }
-    m.decomp
+    Ok(m.decomp)
 }
 
 /// `rectIntersect(d, r0, r1)`.
@@ -493,28 +525,24 @@ fn rect_intersect(r0: &BoundingBox, r1: &BoundingBox) -> Option<BoundingBox> {
     (!(d.ll.x >= d.ur.x || d.ll.y >= d.ur.y)).then_some(d)
 }
 
-/// `partition(cells, ncells, &nrects, bb)`: the free rectangles; `None` when
-/// a trapezoidation fails or no rectangle is left.
-pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> Option<Vec<BoundingBox>> {
+/// `partition(cells, ncells, &nrects, bb)`: the free rectangles.
+pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> OResult<Vec<BoundingBox>> {
     let ncells = cells.len();
     let nsegs = 4 * (ncells + 1);
+    let nsegs_i = i32::try_from(nsegs).map_err(|_| Fail::here())?;
     let mut segs = vec![SegmentT::default(); nsegs + 1];
     let mut permute = vec![0i32; nsegs];
     gen_segments(cells, bb, &mut segs, false);
     let mut rng = Drand48::new(173);
     generate_random_ordering(nsegs, &mut permute, &mut rng);
-    let hor_traps = construct_trapezoids(nsegs as i32, &mut segs, &permute);
-    if hor_traps.is_empty() {
-        return None;
-    }
-    let hor_decomp = monotonate_trapezoids(nsegs as i32, &segs, &hor_traps, false);
+    // A failed trapezoidation is C's "horizontal/vertical trapezoid
+    // construction failed" exit: partition returns NULL.
+    let hor_traps = construct_trapezoids(nsegs_i, &mut segs, &permute)?;
+    let hor_decomp = monotonate_trapezoids(nsegs_i, &segs, &hor_traps, false)?;
     gen_segments(cells, bb, &mut segs, true);
     generate_random_ordering(nsegs, &mut permute, &mut rng);
-    let ver_traps = construct_trapezoids(nsegs as i32, &mut segs, &permute);
-    if ver_traps.is_empty() {
-        return None;
-    }
-    let vert_decomp = monotonate_trapezoids(nsegs as i32, &segs, &ver_traps, true);
+    let ver_traps = construct_trapezoids(nsegs_i, &mut segs, &permute)?;
+    let vert_decomp = monotonate_trapezoids(nsegs_i, &segs, &ver_traps, true)?;
     let mut rs = Vec::new();
     for v in &vert_decomp {
         for h in &hor_decomp {
@@ -525,5 +553,8 @@ pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> Option<Vec<BoundingB
     }
     // C returns `LIST_DETACH(&rs, ...)`, which is NULL for an empty list, and
     // mkMaze fails on NULL: tiny touching nodes can leave no free cell (#203).
-    (!rs.is_empty()).then_some(rs)
+    if rs.is_empty() {
+        return Err(Fail::NoMaze);
+    }
+    Ok(rs)
 }
