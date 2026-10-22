@@ -7,7 +7,8 @@ use super::conjgrad::conjugate_gradient_mkernel;
 use super::graphdata::VtxData;
 use super::matrix_ops::*;
 use super::quad_prog_vpsc::{
-    ClusterData, IpsepOptions, generate_nonoverlap_constraints, init_cmaj_vpsc_full, removeoverlaps,
+    ClusterData, IpsepOptions, MAX_CYCLE_ERRORS, generate_nonoverlap_constraints,
+    init_cmaj_vpsc_full, removeoverlaps,
 };
 use super::stress::*;
 use super::{MODEL_CIRCUIT, MODEL_MDS, MODEL_SUBSET, SolverError};
@@ -52,15 +53,6 @@ pub fn cluster_map(g: &LGraph<'_>, sub: &Sub) -> ClusterData {
     cdata.bb = vec![Default::default(); cdata.clusters.len()];
     cdata.toplevel = (0..nn).filter(|&i| !assigned[i]).collect();
     cdata
-}
-
-/// Not in C, which aborts here (#197): reports the VPSC failure that ends
-/// `stress_majorization_cola`'s loop.
-fn vpsc_failed(e: &crate::vpsc::VpscError) {
-    graphviz_pure_core::diag::agwarningf(&format!(
-        "VPSC: {}: ending the ipsep layout at the previous iteration\n",
-        e.0
-    ));
 }
 
 /// `stress_majorization_cola(graph, n, d_coords, nodes, dim, model, maxi, opt)`.
@@ -300,23 +292,8 @@ pub fn stress_majorization_cola(
                 opt,
             );
         }
-        // C aborts where constrained_majorization_vpsc fails: satisfyVPSC
-        // (lib/vpsc/csolve_VPSC.cpp) lets IncVPSC::satisfy's
-        // std::runtime_error escape. Not in C: the port, which draws such
-        // graphs (#33), restores that dimension's coordinates from before the
-        // call, warns and ends the stress loop, so the layout is the last
-        // iteration's (#197).
         if hor.m > 0 {
-            let before = coords[0].clone();
-            if let Err(e) = hor.constrained_majorization_vpsc(
-                &b[0],
-                &mut coords[0],
-                LOCAL_CONSTR_MAJOR_ITERATIONS,
-            ) {
-                coords[0] = before;
-                vpsc_failed(&e);
-                break;
-            }
+            hor.constrained_majorization_vpsc(&b[0], &mut coords[0], LOCAL_CONSTR_MAJOR_ITERATIONS);
         } else if conjugate_gradient_mkernel(&lap2, &mut coords[0], &mut b[0], n, TOLERANCE_CG, n)
             .is_err()
         {
@@ -327,21 +304,19 @@ pub fn stress_majorization_cola(
             generate_nonoverlap_constraints(&mut vrt, nsize_scale as f32, &coords, 1, false, opt);
         }
         if vrt.m > 0 {
-            let before = coords[1].clone();
-            if let Err(e) = vrt.constrained_majorization_vpsc(
-                &b[1],
-                &mut coords[1],
-                LOCAL_CONSTR_MAJOR_ITERATIONS,
-            ) {
-                coords[1] = before;
-                vpsc_failed(&e);
-                break;
-            }
+            vrt.constrained_majorization_vpsc(&b[1], &mut coords[1], LOCAL_CONSTR_MAJOR_ITERATIONS);
         } else {
             let _ =
                 conjugate_gradient_mkernel(&lap2, &mut coords[1], &mut b[1], n, TOLERANCE_CG, n);
         }
         iterations += 1;
+        // Not in C, which aborts at the first failed satisfyVPSC (#197).
+        if hor.cycle_errors + vrt.cycle_errors > MAX_CYCLE_ERRORS {
+            graphviz_pure_core::diag::agwarningf(
+                "VPSC: too many cycle errors; ending the ipsep layout early\n",
+            );
+            break;
+        }
     }
     if opt.noverlap == 2 {
         removeoverlaps(orig_n, &mut coords, opt);

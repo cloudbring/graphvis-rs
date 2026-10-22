@@ -129,6 +129,11 @@ pub struct Solver {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VpscError(pub &'static str);
 
+impl VpscError {
+    /// `IncVPSC::satisfy`'s "Cycle Error!", after 10000 in-block splits.
+    pub const CYCLE: Self = Self("Cycle Error!");
+}
+
 const EPS: f64 = 0.0000001;
 
 impl Solver {
@@ -548,7 +553,7 @@ impl Solver {
                 let c = split_ctr;
                 split_ctr += 1;
                 if c > 10000 {
-                    return Err(VpscError("Cycle Error!"));
+                    return Err(VpscError::CYCLE);
                 }
                 let (vl, vr) = (self.cons[v].left, self.cons[v].right);
                 let (sc, lb, rb) = self.split_between(lb, vl, vr);

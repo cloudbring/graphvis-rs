@@ -63,9 +63,18 @@ pub struct CMajEnvVpsc {
     pub f_array1: Vec<f32>,
     pub f_array2: Vec<f32>,
     pub f_array3: Vec<f32>,
+    /// Not in C: how many `satisfyVPSC` calls have thrown "Cycle Error!"
+    /// (see [`Self::satisfy_place`]).
+    pub cycle_errors: u32,
 }
 
 const QUAD_PROG_TOL: f32 = 1e-4;
+
+/// Not in C: the "Cycle Error!" failures of `satisfyVPSC` one ipsep layout may
+/// have before it is ended (#197). Each costs over 10000 block splits. The
+/// most any corpus file reaches and still finishes is 241
+/// (`tests/wild/gv16_dirgraph_apache_aef3b0.gv` with `diredgeconstraints`).
+pub const MAX_CYCLE_ERRORS: u32 = 500;
 
 /// `unpackMatrix(packedMat, n)` from `matrix_ops.c`.
 pub fn unpack_matrix(packed: &[f32], n: usize) -> Vec<Vec<f32>> {
@@ -83,121 +92,118 @@ pub fn unpack_matrix(packed: &[f32], n: usize) -> Vec<Vec<f32>> {
 }
 
 impl CMajEnvVpsc {
-    /// `satisfyVPSC` between setting the desired positions and reading the
-    /// positions back. `IncVPSC::satisfy` throws a `std::runtime_error`
-    /// ("Cycle Error!", "Unsatisfied constraint") on an infeasible or cyclic
-    /// constraint set, e.g. a node in two clusters (#33) with containment
-    /// constraints from both. `satisfyVPSC` does not catch it, so C aborts.
-    /// The port returns the error and leaves `place` as passed in; ignoring it
-    /// and projecting again ran without bound (#197).
-    fn satisfy_place(&mut self, place: &mut [f32], n: usize) -> Result<(), vpsc::VpscError> {
+    fn satisfy_place(&mut self, place: &mut [f32], n: usize) {
         for i in 0..n {
             self.solver.vars[self.vs[i]].desired_position = place[i] as f64;
         }
-        self.solver.satisfy()?;
+        // IncVPSC::satisfy (lib/vpsc/solve_VPSC.cpp) throws a
+        // std::runtime_error ("Cycle Error!" after 10000 in-block splits,
+        // "Unsatisfied constraint") on an infeasible or cyclic constraint set,
+        // e.g. a node in two clusters (#33). satisfyVPSC
+        // (lib/vpsc/csolve_VPSC.cpp) catches only `const char *`, so C
+        // aborts. The port models VPSC's pointer order as allocation order and
+        // can fail where C, on some runs, succeeds, so it reads the positions
+        // back and goes on. It counts the costly cycle errors, so that an
+        // infeasible system cannot keep projecting without bound (#197).
+        if let Err(e) = self.solver.satisfy()
+            && e == vpsc::VpscError::CYCLE
+        {
+            self.cycle_errors += 1;
+        }
         for i in 0..n {
             place[i] = self.solver.position(self.vs[i]) as f32;
         }
-        Ok(())
     }
 
     /// `constrained_majorization_vpsc(e, b, place, max_iterations)`:
-    /// gradient projection; returns the iteration count. Fails where C's
-    /// `satisfyVPSC` aborts (see [`Self::satisfy_place`]).
+    /// gradient projection; returns the iteration count.
     pub fn constrained_majorization_vpsc(
         &mut self,
         b: &[f32],
         place: &mut [f32],
         max_iterations: i32,
-    ) -> Result<i32, vpsc::VpscError> {
+    ) -> i32 {
         let n = self.nv + self.nldv;
         let mut converged = false;
         if max_iterations == 0 {
-            return Ok(0);
+            return 0;
         }
         let mut g = std::mem::take(&mut self.f_array1);
         let mut old_place = std::mem::take(&mut self.f_array2);
         let mut d = std::mem::take(&mut self.f_array3);
-        let rv = 'run: {
-            if self.m > 0
-                && let Err(e) = self.satisfy_place(place, n)
-            {
-                break 'run Err(e);
+        if self.m > 0 {
+            self.satisfy_place(place, n);
+        }
+        let mut counter = 0;
+        while counter < max_iterations && !converged && self.cycle_errors <= MAX_CYCLE_ERRORS {
+            let mut test = 0.0f32;
+            let mut numerator = 0.0f32;
+            let mut denominator = 0.0f32;
+            converged = true;
+            // find steepest descent direction
+            for i in 0..n {
+                old_place[i] = place[i];
+                g[i] = 2.0 * b[i];
+                for j in 0..n {
+                    g[i] = (-(2.0 * self.a[i][j])).mul_add(place[j], g[i]);
+                }
             }
-            let mut counter = 0;
-            while counter < max_iterations && !converged {
-                let mut test = 0.0f32;
-                let mut numerator = 0.0f32;
-                let mut denominator = 0.0f32;
-                converged = true;
-                // find steepest descent direction
-                for i in 0..n {
-                    old_place[i] = place[i];
-                    g[i] = 2.0 * b[i];
-                    for j in 0..n {
-                        g[i] = (-(2.0 * self.a[i][j])).mul_add(place[j], g[i]);
-                    }
+            for i in 0..n {
+                numerator = g[i].mul_add(g[i], numerator);
+                let mut r = 0.0f32;
+                for j in 0..n {
+                    r = (2.0 * self.a[i][j]).mul_add(g[j], r);
                 }
-                for i in 0..n {
-                    numerator = g[i].mul_add(g[i], numerator);
-                    let mut r = 0.0f32;
-                    for j in 0..n {
-                        r = (2.0 * self.a[i][j]).mul_add(g[j], r);
-                    }
-                    denominator = (-r).mul_add(g[i], denominator);
-                }
-                let alpha = if denominator != 0.0 {
-                    numerator / denominator
-                } else {
-                    1.0
-                };
-                for i in 0..n {
-                    place[i] = (-alpha).mul_add(g[i], place[i]);
-                }
-                if self.m > 0 {
-                    // project to constraint boundary
-                    if let Err(e) = self.satisfy_place(place, n) {
-                        break 'run Err(e);
-                    }
-                }
-                for i in 0..n {
-                    d[i] = place[i] - old_place[i];
-                }
-                // now compute beta
-                numerator = 0.0;
-                denominator = 0.0;
-                for i in 0..n {
-                    numerator = g[i].mul_add(d[i], numerator);
-                    let mut r = 0.0f32;
-                    for j in 0..n {
-                        r = (2.0 * self.a[i][j]).mul_add(d[j], r);
-                    }
-                    denominator = r.mul_add(d[i], denominator);
-                }
-                let beta = if denominator != 0.0 {
-                    numerator / denominator
-                } else {
-                    1.0
-                };
-                for i in 0..n {
-                    // beta > 1.0 takes us back outside the feasible region;
-                    // beta < 0 is not useful
-                    if beta > 0.0 && beta < 1.0 {
-                        place[i] = beta.mul_add(d[i], old_place[i]);
-                    }
-                    test += (place[i] - old_place[i]).abs();
-                }
-                if test > QUAD_PROG_TOL {
-                    converged = false;
-                }
-                counter += 1;
+                denominator = (-r).mul_add(g[i], denominator);
             }
-            Ok(counter)
-        };
+            let alpha = if denominator != 0.0 {
+                numerator / denominator
+            } else {
+                1.0
+            };
+            for i in 0..n {
+                place[i] = (-alpha).mul_add(g[i], place[i]);
+            }
+            if self.m > 0 {
+                // project to constraint boundary
+                self.satisfy_place(place, n);
+            }
+            for i in 0..n {
+                d[i] = place[i] - old_place[i];
+            }
+            // now compute beta
+            numerator = 0.0;
+            denominator = 0.0;
+            for i in 0..n {
+                numerator = g[i].mul_add(d[i], numerator);
+                let mut r = 0.0f32;
+                for j in 0..n {
+                    r = (2.0 * self.a[i][j]).mul_add(d[j], r);
+                }
+                denominator = r.mul_add(d[i], denominator);
+            }
+            let beta = if denominator != 0.0 {
+                numerator / denominator
+            } else {
+                1.0
+            };
+            for i in 0..n {
+                // beta > 1.0 takes us back outside the feasible region;
+                // beta < 0 is not useful
+                if beta > 0.0 && beta < 1.0 {
+                    place[i] = beta.mul_add(d[i], old_place[i]);
+                }
+                test += (place[i] - old_place[i]).abs();
+            }
+            if test > QUAD_PROG_TOL {
+                converged = false;
+            }
+            counter += 1;
+        }
         self.f_array1 = g;
         self.f_array2 = old_place;
         self.f_array3 = d;
-        rv
+        counter
     }
 }
 

@@ -1510,10 +1510,10 @@ fn run_bytes(args: &[&[u8]], stdin: &str) -> (Vec<u8>, Vec<u8>, bool) {
 
 /// Issue #197: `x` is in two clusters (#33), so `overlap=ipsep` gives VPSC containment
 /// constraints it cannot satisfy. C's `satisfyVPSC` (`lib/vpsc/csolve_VPSC.cpp`) lets the
-/// "Cycle Error!" `std::runtime_error` escape and aborts. The port ignored the error and kept
-/// projecting, splitting blocks without bound (over 10 s and gigabytes of memory). It now
-/// warns, keeps the previous iteration's coordinates and ends the layout, so every node keeps
-/// a position of its own.
+/// "Cycle Error!" `std::runtime_error` escape and aborts. The port went on projecting, each
+/// cycle error splitting 10000 blocks, without bound in time or memory. It now ends the
+/// layout after `MAX_CYCLE_ERRORS` of them, with a warning, and every node keeps a position
+/// of its own.
 #[test]
 fn ipsep_vpsc_cycle_error_ends_the_layout() {
     let src = "digraph { layout=neato; mode=ipsep; overlap=ipsep; \
@@ -1532,9 +1532,9 @@ fn ipsep_vpsc_cycle_error_ends_the_layout() {
         .unwrap()
         .write_all(src.as_bytes())
         .unwrap();
-    // The output is under 1 KB, well under the pipe buffer, so polling cannot block. The fixed
-    // layout takes milliseconds; the deadline is short because the runaway also grows memory.
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    // The output is under 1 KB, well under the pipe buffer, so polling cannot block. The capped
+    // layout takes about 2 s; the deadline is short because the runaway also grows memory.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
     while child.try_wait().unwrap().is_none() {
         if std::time::Instant::now() > deadline {
             child.kill().unwrap();
@@ -1550,7 +1550,7 @@ fn ipsep_vpsc_cycle_error_ends_the_layout() {
     assert!(out.status.success(), "{err}");
     assert_eq!(
         err,
-        "Warning: VPSC: Cycle Error!: ending the ipsep layout at the previous iteration\n"
+        "Warning: VPSC: too many cycle errors; ending the ipsep layout early\n"
     );
     let positions: std::collections::BTreeSet<(&str, &str)> = plain
         .lines()

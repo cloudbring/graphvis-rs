@@ -138,10 +138,11 @@ mode (C returns failure too).
 - VPSC's `std::set<Block*>` and scanline `NodeSet` pointer order are modelled
   as allocation order (see below).
 - When `IncVPSC::satisfy` fails during `mode=ipsep` ("Cycle Error!",
-  "Unsatisfied constraint"), C aborts on the uncaught exception. The port warns,
-  keeps the coordinates from before the failing projection and ends the stress
-  loop (#197; `ipsep_vpsc_cycle_error_ends_the_layout` in
-  `crates/graphviz-pure-cli/tests/cli.rs`).
+  "Unsatisfied constraint"), C aborts on the uncaught exception. The port, whose
+  block order can fail where C's heap order does not, reads the positions back
+  and goes on, as before. After 500 cycle errors (`MAX_CYCLE_ERRORS`; the corpus
+  needs at most 241), it warns and ends the stress loop (#197;
+  `ipsep_vpsc_cycle_error_ends_the_layout` in `crates/graphviz-pure-cli/tests/cli.rs`).
 - Prism's Delaunay triangulation is a Bowyer–Watson port, not GTS; the edge
   set matches for points in general position, but ties between co-circular
   points and the matrix entry order may differ (all prism corpus files are
