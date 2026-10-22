@@ -192,6 +192,34 @@ fn diredgeconstraints_hier_prefix_with_multibyte_char_does_not_panic() {
     assert_eq!(err, "");
 }
 
+// Issue #196: at 1e17 `(int)floor(x / Cell)` saturates to INT_MAX (INT_MIN at -1e17), and
+// gridRepulse's `doNeighbor(grid, i + 1, ...)` (lib/fdpgen/tlayout.c) wraps under clang where a
+// plain Rust `+` panics in debug builds. The expected output is C Graphviz 16.1.0's.
+#[test]
+fn fdp_nodes_pinned_near_1e17_lay_out_like_c() {
+    let cases = [
+        (
+            "graph { layout=fdp; a [pos=\"1e17,1e17!\"]; b [pos=\"1e17,1.0000001e17!\"] }",
+            "graph 1 1e+17 1e+17\n\
+             node a 1e+17 1e+17 0.75 0.5 a solid ellipse black lightgrey\n\
+             node b 1e+17 1e+17 0.75 0.5 b solid ellipse black lightgrey\n\
+             stop\n",
+        ),
+        (
+            "graph { layout=fdp; a [pos=\"-1e17,-1e17!\"]; b [pos=\"-1e17,-1.0000001e17!\"] }",
+            "graph 1 1e+17 1e+17\n\
+             node a 0 1e+10 0.75 0.5 a solid ellipse black lightgrey\n\
+             node b 0 0 0.75 0.5 b solid ellipse black lightgrey\n\
+             stop\n",
+        ),
+    ];
+    for (src, expected) in cases {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(out, expected, "{src}");
+    }
+}
+
 // Fuzz case 003-pack-filledge-zero-point-spline-panic (issue #12), its repro.gv verbatim.
 // Clipping leaves both edges between the overlapping pinned nodes with an empty spline. C
 // crashes on it (exit 138, SIGBUS), so there is no C reference output and the fidelity

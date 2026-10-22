@@ -277,7 +277,10 @@ fn grid_repulse(st: &mut TState, dg: &mut DG, grid: &Grid, (i, j): (i32, i32), n
         (1, 0),
         (1, 1),
     ] {
-        do_neighbor(st, dg, grid, i + di, j + dj, nodes);
+        // A node near 1e17 puts its cell index at INT_MAX, as
+        // `(int)floor(x / Cell)` saturates on arm64. C's `i + 1` there is UB,
+        // but clang emits a plain 32-bit add, which wraps (#196).
+        do_neighbor(st, dg, grid, i.wrapping_add(di), j.wrapping_add(dj), nodes);
     }
 }
 
