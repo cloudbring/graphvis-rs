@@ -336,8 +336,8 @@ fn merge_trapezoids(
     }
 }
 
-/// `update_trapezoid(s, seg, tr, t, tn)`. False where `t` has no upper
-/// neighbour at all: C then reads `LIST_GET(tr, SIZE_MAX)` and fails the
+/// `update_trapezoid(s, seg, tr, t, tn)`. False where `t.u0` is `SIZE_MAX`
+/// (no upper neighbour): C then reads `LIST_GET(tr, SIZE_MAX)` and fails the
 /// `index < list.size` assertion in `gv_list_get_` (`lib/util/list.c:211`),
 /// or, depending on the run, goes on and fails `add_segment`'s "trapezoid
 /// segment construction failed" check (#199). The port fails `add_segment`.
@@ -377,7 +377,7 @@ fn update_trapezoid(s: &SegmentT, seg: &[SegmentT], tr: &mut [Trap], t: usize, t
         }
     } else {
         let tmp_u = tr[t].u0;
-        if !is_valid_trap(tmp_u) {
+        if tmp_u == usize::MAX {
             return false;
         }
         let td0 = tr[tmp_u].d0;

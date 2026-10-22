@@ -893,6 +893,23 @@ fn ortho_trapezoid_without_upper_neighbour_does_not_panic() {
         let pos = e.split("pos=\"").nth(1).unwrap().trim_end_matches("\"];");
         assert_eq!(pos.split(' ').count(), 4, "a straight line: {e}");
     }
+    // Only the fallback draws a diagonal; an ortho route is axis-aligned.
+    let ab = out
+        .lines()
+        .find(|l| l.contains("a -- \"|edgelabel|ab\""))
+        .unwrap();
+    let pts: Vec<Vec<&str>> = ab
+        .split("pos=\"")
+        .nth(1)
+        .unwrap()
+        .trim_end_matches("\"];")
+        .split(' ')
+        .map(|p| p.split(',').collect())
+        .collect();
+    assert!(
+        pts[0][0] != pts[3][0] && pts[0][1] != pts[3][1],
+        "a diagonal: {ab}"
+    );
 }
 
 // `%.80s` of the string read so far may end inside a UTF-8 sequence: C writes the bytes.
