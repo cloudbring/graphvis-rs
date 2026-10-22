@@ -165,21 +165,21 @@ fn is_c_space(b: u8) -> bool {
 }
 
 fn count_fields(b: &[u8]) -> usize {
-    // numFields: whitespace-separated tokens up to the next ';'.
+    // numFields: whitespace-separated tokens up to the next ';'. A ';' after white space is
+    // a token of its own, as C counts any byte there before it stops.
     let mut i = 0;
     let mut cnt = 0;
     loop {
         while i < b.len() && is_c_space(b[i]) {
             i += 1;
         }
-        if i >= b.len() || b[i] == b';' {
-            return cnt;
+        if i < b.len() {
+            cnt += 1;
+            while i < b.len() && !is_c_space(b[i]) && b[i] != b';' {
+                i += 1;
+            }
         }
-        cnt += 1;
-        while i < b.len() && !is_c_space(b[i]) && b[i] != b';' {
-            i += 1;
-        }
-        if i >= b.len() || b[i] == b';' {
+        if i >= b.len() || !is_c_space(b[i]) {
             return cnt;
         }
     }
@@ -1216,6 +1216,27 @@ mod tests {
         assert_eq!(
             user_spline("1,1 2,2 x,3 4,4", true, true).err(),
             Some(SplineError::Syntax)
+        );
+        // numFields counts a ';' after white space as a field.
+        let p = "0,0 10,10 20,20 30,30";
+        assert_eq!(
+            user_spline(&format!("{p} ;{p}"), true, true).err(),
+            Some(SplineError::Count)
+        );
+        assert_eq!(
+            user_spline("0,0 10,10 20,20 ;", true, true).err(),
+            Some(SplineError::Syntax)
+        );
+        assert_eq!(
+            user_spline(&format!("{p};{p}"), true, true)
+                .unwrap()
+                .segments
+                .len(),
+            2
+        );
+        assert_eq!(
+            user_spline(&format!("{p} \x0b;"), true, true).err(),
+            Some(SplineError::Count)
         );
     }
 
