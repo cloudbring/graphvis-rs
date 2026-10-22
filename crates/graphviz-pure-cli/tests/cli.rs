@@ -1268,6 +1268,20 @@ fn labelled_flat_multi_edge_on_rank_0_gets_a_label_rank() {
     );
 }
 
+// Issue #241: after `trouble in init_rank` nothing normalised the ranks, and the top rank
+// is 1, not 0. `flat_edges` tested rank 0 for labelled flat edges, made no rank above the
+// top one, and `flat_node` read a rank that was never allocated (C segfaults there). The
+// port runs the test on the top rank, and the label is drawn.
+#[test]
+fn labelled_flat_edge_on_an_unnormalised_top_rank_gets_a_label_rank() {
+    let src = "digraph G { { rank=min; b a e } { rank=max; e } a -> b [label=x,weight=0]; \
+               c -> d; a -> c; d -> b; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok);
+    assert_eq!(err, "Error: trouble in init_rank\n\tb 1\n\td 2\n\tc 1\n");
+    assert!(out.contains(">x</text>"), "{out}");
+}
+
 // Issue #234: with `concentrate=true`, a cluster edge with other ports shares its chain
 // (`interclrep`) and is routed alone through `make_regular_edge`'s `hackflag`, which follows
 // the chain as it was before `dot_concentrate` rewired it. Where the walk stops at a

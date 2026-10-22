@@ -81,9 +81,9 @@ ranks have no node. `rec_reset_vlists` then follows a stale rank leader (C segfa
 leave a node unplaced. The port reaches the same state; `make_regular_edge`'s rank check
 (#208) still stops the layout there, so it stays.
 
-Not this cause, although they often follow the same inputs: #230 (`flat_node` reads rank
--1 when no rank was made for it), #231 (a cluster left with no nodes), #234
-(`conc_slope` on a one-sided merge node).
+Not this cause, although they often follow the same inputs: #230 and #241 (`flat_node`
+reads the rank above the top one when no rank was made for it), #231 (a cluster left with
+no nodes), #234 (`conc_slope` on a one-sided merge node).
 
 ## dot cluster membership
 
@@ -206,9 +206,9 @@ Inputs that C routes never reach a failure, so their output is unchanged.
 - Loops that C would run forever on broken links are bounded by the size of the structure: stale parent chains, trapezoid walks and maze walks. The three recursions (`locate_endpoint`, `traverse_polygon` and `DFS_visit`) run on an explicit stack, in C's order.
 - The boundary does not depend on positions being validated where they are parsed (the "Extreme coordinates" cause): it holds whatever the input.
 
-## Flat edge labels on rank 0
+## Flat edge labels on the top rank
 
-Closed: #230.
+Closed: #230, #241.
 
 A labelled flat edge that is not adjacent to its head gets a label node on the rank above
 (`flat_node`). On rank 0, `flat_edges` first makes a rank -1 for it (`abomination`), but C's
@@ -221,8 +221,12 @@ itself, on the same edges one rank down, places the label node and then fails to
 the edge (`lost a b edge`, exit 1). On rank 0 the port prints the same errors. When the
 labelled edge is the representative, C makes rank -1 itself, and nothing changes.
 
-Inputs whose ranking failed can still reach `flat_node` with `minrank > 0` (the ranks were
-never normalised); that is the failed-ranking cause above, not this one (#241).
+`flat_edges` also assumes the top rank is rank 0, which it is once ranking has
+normalised the ranks (`abomination` asserts it). After a failed ranking of the root
+(`trouble in init_rank`, which does not stop the layout; see above), nothing normalised
+them and the top rank is `GD_minrank(g)` > 0. C's ranks above it were never allocated, so
+`flat_node` on it reads a NULL `v` and segfaults (#241). The port runs the test, and makes
+the new rank, at the top rank. When the top rank is 0 this is C's code.
 
 ## Concentrated cluster edges
 

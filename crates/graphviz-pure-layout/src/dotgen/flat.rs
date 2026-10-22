@@ -169,9 +169,15 @@ impl Dot<'_> {
         self.nodes[vn].alg = Some(e);
     }
 
+    /// `abomination(g)`: a new empty rank above the top rank `GD_minrank(g)`. C asserts
+    /// that the top rank is 0 and makes rank -1; see `flat_edges` for the top rank above 0.
     fn abomination(&mut self, g: G) {
         let b = self.new_buf(2);
-        let rk = self.rk_mut(g, -1);
+        let r = self
+            .graphs
+            .get(g)
+            .map_or(-1, |gr| gr.minrank.saturating_sub(1));
+        let rk = self.rk_mut(g, r);
         rk.n = 0;
         rk.an = 0;
         rk.vbuf = b;
@@ -261,10 +267,17 @@ impl Dot<'_> {
                 }
             }
         }
-        if self.rk(g, 0).flat.is_some() || !self.graphs[g].clust.is_empty() {
+        // C tests rank 0, the top rank once ranking has normalised the ranks. After a
+        // failed ranking (`trouble in init_rank`) nothing normalised them, and the top rank
+        // is `GD_minrank(g)` > 0. C's ranks above it were never allocated, so `flat_node`
+        // on it reads a NULL `GD_rank(g)[r - 1].v` and segfaults (#241); with clusters, C
+        // already segfaults here on `GD_rank(g)[0].v`. The port runs the test on the top
+        // rank, which is rank 0 whenever C gets this far.
+        let top = self.graphs.get(g).map_or(0, |gr| gr.minrank.max(0));
+        if self.rk(g, top).flat.is_some() || !self.graphs[g].clust.is_empty() {
             let mut found = false;
             let mut i = 0;
-            while let Some(n) = self.rv(g, 0, i) {
+            while let Some(n) = self.rv(g, top, i) {
                 for &e in &self.nodes[n].flat_in {
                     if self.edges[e].label.is_some() && !self.edges[e].adjacent {
                         found = true;
@@ -275,8 +288,8 @@ impl Dot<'_> {
                 // loop below also calls `flat_node` for a labelled, non-adjacent flat
                 // edge: a parallel `a -> b` merged into an unlabelled representative,
                 // or a reversed `b -> a` merged by `flat_rev`. On rank 0 C then reads
-                // `GD_rank(g)[-1]` in `flat_node` and segfaults (#230). Make rank -1
-                // for those edges too, as C does when the labelled edge is the
+                // `GD_rank(g)[-1]` in `flat_node` and segfaults (#230). Make the rank
+                // above for those edges too, as C does when the labelled edge is the
                 // representative.
                 found = found || self.other_needs_flat_node(n);
                 if found {
