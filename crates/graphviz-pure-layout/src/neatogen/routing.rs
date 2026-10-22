@@ -186,13 +186,16 @@ impl Router {
                         g.nodes[t].lim, p.x, p.y, g.nodes[h].lim, q.x, q.y
                     );
                 }
+                // C's `Pobspath` loops forever when `q` is unreachable (see `pobspath`);
+                // use the straight segment it returns when `p` sees `q`.
                 let path = pobspath(
                     &self.vconfig,
                     p,
                     g.nodes[t].lim as i32,
                     q,
                     g.nodes[h].lim as i32,
-                );
+                )
+                .unwrap_or_else(|| vec![p, q]);
                 g.edges[e].path = path;
             }
         }
