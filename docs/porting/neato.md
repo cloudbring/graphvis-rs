@@ -247,7 +247,8 @@ for the y axis (including C's `lev[right]` indexing by position).
 Laplacian, `initCMajVPSC` for `diredgeconstraints=true|hier` (DiG-CoLa level
 boundaries; C loops forever when there is no boundary, the port skips),
 `overlap=ipsep` node-size ramp and `overlap=vpsc` post-pass, gradient
-projection in `float`. `cluster_map` maps top-level clusters of the root.
+projection in `float`. `cluster_map` maps top-level clusters of the root, keeping only the members
+in the component being laid out (C asserts on a member in another component, #168).
 17 `hw3_hier_*` and 12 `hw3_ipsep_*` cases.
 
 ### `makeMultiSpline` — `neatogen::multispline`
