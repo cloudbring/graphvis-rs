@@ -627,9 +627,22 @@ fn constrained_majorization_new_with_gaps(
                         block.push(node);
                     }
                 }
+                // C tests `desired_place[node] == cur_place` here. When every
+                // edge len in the component is below 1, the integer BFS of
+                // `compute_apsp_packed` (lib/neatogen/bfs.c) truncates every
+                // distance to 0, so the Laplacian is all zero (or all NaN with
+                // levelsgap > 0) and desired_place is NaN. NaN fails all three
+                // tests, the block misses nodes of [left, right), and C's
+                // `constrained_majorization_new_with_gaps` fails the
+                // `gv_list_get` bounds assertion when it reads the block's last
+                // element. Treat an unordered (NaN) desired place as equal, so
+                // the block always holds exactly the nodes of [left, right), as
+                // the rest of the pass assumes. No split of such a block has a
+                // positive movement, so none is chosen and the block stays put.
                 for j in i..first_next_level {
                     let node = ordering[j] as usize;
-                    if desired_place[node] == cur_place {
+                    let ord = desired_place[node].partial_cmp(&cur_place);
+                    if ord.is_none_or(std::cmp::Ordering::is_eq) {
                         block.push(node);
                     }
                 }
