@@ -1376,6 +1376,55 @@ fn svg_cluster_titles(svg: &str) -> Vec<&str> {
         .collect()
 }
 
+// Issue #186: twopi stacks the nodes in a column whose sides differ by float noise, and the
+// ortho search graph does not connect the two sides of t2's self-loop. shortPath never
+// reaches the loop's start, and C's convertSPtoRoute (lib/ortho/ortho.c) dereferences its
+// null N_DAD and segfaults (exit 139, no output). The port used to panic on the same
+// parent ("called `Option::unwrap()` on a `None` value", exit 101); it now abandons ortho
+// routing, as C's orthoEdges does when shortPath fails, and the edges are not routed
+// orthogonally.
+const ISSUE186_GRAPH: &str = "graph{layout=twopi splines=ortho oneblock=true rankdir=LR
+node[shape=record]
+t2--t2 t1--t1 t0--t1 t0--t1 t1--t2 t1--t2 t1--t1 t1--t0}
+";
+
+#[test]
+fn twopi_ortho_self_loop_without_a_path_does_not_panic_convert_sp_to_route() {
+    let (out, err, ok) = run(&["-Tsvg"], ISSUE186_GRAPH);
+    assert!(ok, "C crashes here, the port abandons ortho routing: {err}");
+    assert_eq!(
+        err,
+        "Warning: orthogonal routing found no path for an edge - \
+         edges not routed orthogonally\n"
+    );
+    assert_eq!(out.matches("class=\"edge\"").count(), 8, "{out}");
+}
+
+// Issue #186, the case C survives: the same unreachable self-loop, routed after edges that
+// reached the search graph's start node. C's reset (lib/ortho/sgraph.c) does not clear
+// N_DAD, so convertSPtoRoute follows the stale parent and C routes every edge (exit 0).
+// The port must not take the #186 fallback here: no warning, and t2--t2 gets the ortho route
+// C draws through the stale parent.
+const ISSUE186_STALE_PARENT_GRAPH: &str =
+    "graph{layout=twopi splines=ortho oneblock=true rankdir=LR
+node[shape=record]
+a--t2 t0--t2 t2--t2 t1--t1 t0--t1 t0--t1 t1--t2 t1--t2 t1--t1 t1--t0}
+";
+
+#[test]
+fn twopi_ortho_unreachable_self_loop_follows_the_stale_parent_like_c() {
+    let (out, err, ok) = run(&["-Tsvg"], ISSUE186_STALE_PARENT_GRAPH);
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    assert!(
+        out.contains(
+            "d=\"M70.29,-168.25C70.29,-139.53 70.29,-87 70.29,-87 70.29,-87 96,-87 96,-87 \
+             96,-87 96,-183.41 96,-186.43\""
+        ),
+        "{out}"
+    );
+}
+
 // Issue #25 (fuzz case 016-dot-pack-cluster-list-from-subgraph-tree). With pack/packmode,
 // dot's `copyClusterInfo` (lib/dotgen/dotinit.c) rebuilds `GD_clust(root)` in component
 // order, appending a cluster once per component that kept it, and `emit_clusters`
