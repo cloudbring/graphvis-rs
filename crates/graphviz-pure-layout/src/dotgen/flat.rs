@@ -169,9 +169,15 @@ impl Dot<'_> {
         self.nodes[vn].alg = Some(e);
     }
 
+    /// `abomination(g)`: a new empty rank above the top rank `GD_minrank(g)`. C asserts
+    /// that the top rank is 0 and makes rank -1; see `flat_edges` for the top rank above 0.
     fn abomination(&mut self, g: G) {
         let b = self.new_buf(2);
-        let rk = self.rk_mut(g, -1);
+        let r = self
+            .graphs
+            .get(g)
+            .map_or(-1, |gr| gr.minrank.saturating_sub(1));
+        let rk = self.rk_mut(g, r);
         rk.n = 0;
         rk.an = 0;
         rk.vbuf = b;
@@ -214,6 +220,29 @@ impl Dot<'_> {
         }
     }
 
+    /// Whether the `ND_other` loop of `flat_edges` will call `flat_node` for an edge
+    /// whose tail is `n`: a labelled flat edge, not a loop, whose representative is
+    /// not adjacent. Not in C; see the rank -1 test in `flat_edges`.
+    fn other_needs_flat_node(&self, n: N) -> bool {
+        let rank = |v: N| self.nodes.get(v).map(|nd| nd.rank);
+        let Some(nd) = self.nodes.get(n) else {
+            return false;
+        };
+        nd.other.iter().any(|&e| {
+            let Some(ed) = self.edges.get(e) else {
+                return false;
+            };
+            if ed.tail == ed.head || ed.label.is_none() || rank(ed.tail) != rank(ed.head) {
+                return false;
+            }
+            let mut le = ed;
+            while let Some(next) = le.to_virt.and_then(|x| self.edges.get(x)) {
+                le = next;
+            }
+            !le.adjacent
+        })
+    }
+
     /// `flat_edges`: returns true if label nodes were added (y coords must be reset).
     pub fn flat_edges(&mut self, g: G) -> bool {
         let mut reset = false;
@@ -238,16 +267,32 @@ impl Dot<'_> {
                 }
             }
         }
-        if self.rk(g, 0).flat.is_some() || !self.graphs[g].clust.is_empty() {
+        // C tests rank 0, the top rank once ranking has normalised the ranks. After a
+        // failed ranking (`trouble in init_rank`) nothing normalised them, and the top rank
+        // is `GD_minrank(g)` > 0. C's ranks above it were never allocated, so `flat_node`
+        // on it reads a NULL `GD_rank(g)[r - 1].v` and segfaults (#241); labelled flat
+        // edges on lower ranks draw. The port runs the test on the top rank, so it fires
+        // only where `flat_node` runs on the top rank. With the top rank at 0 this is C's
+        // test. (`minrank < 0` does not get here: `allocate_ranks` indexes by rank.)
+        let top = self.graphs.get(g).map_or(0, |gr| gr.minrank.max(0));
+        if self.rk(g, top).flat.is_some() || !self.graphs[g].clust.is_empty() {
             let mut found = false;
             let mut i = 0;
-            while let Some(n) = self.rv(g, 0, i) {
+            while let Some(n) = self.rv(g, top, i) {
                 for &e in &self.nodes[n].flat_in {
                     if self.edges[e].label.is_some() && !self.edges[e].adjacent {
                         found = true;
                         break;
                     }
                 }
+                // C (`flat.c:279-291`) looks only at `ND_flat_in`, but the `ND_other`
+                // loop below also calls `flat_node` for a labelled, non-adjacent flat
+                // edge: a parallel `a -> b` merged into an unlabelled representative,
+                // or a reversed `b -> a` merged by `flat_rev`. On rank 0 C then reads
+                // `GD_rank(g)[-1]` in `flat_node` and segfaults (#230). Make the rank
+                // above for those edges too, as C does when the labelled edge is the
+                // representative.
+                found = found || self.other_needs_flat_node(n);
                 if found {
                     self.abomination(g);
                     break;

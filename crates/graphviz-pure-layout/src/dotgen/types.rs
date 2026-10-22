@@ -236,6 +236,9 @@ pub struct NodeInfo {
     /// Boxes of the top-level record fields (`ND_shape_info(n)->fld[i]->b`),
     /// in drawing orientation relative to the node centre (`record_path`).
     pub rec_fields: Vec<BoxF>,
+    /// Not in C: the node `mergevirtual` merged this virtual node into, when
+    /// `dot_concentrate` deleted it (see `make_regular_edge`).
+    pub conc_merged_into: Option<N>,
 }
 
 /// `Agedgeinfo_t` plus cgraph edge identity.

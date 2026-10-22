@@ -1555,7 +1555,16 @@ impl Dot<'_> {
             while let Some(v) = self.edges[le].to_virt {
                 le = v;
             }
-            self.edges[a].head = self.edges[le].head;
+            // With `concentrate=true`, `mergevirtual`'s up pass deletes a merged node and
+            // its edges, but an edge routed alone here (a cluster edge with other ports that
+            // shares a chain, `interclrep`) may still lead into the deleted node. C then
+            // walks from a node with no edges and segfaults in `straight_len`. The port
+            // follows the node it was merged into, as the chain's own edges do.
+            let mut h = self.edges[le].head;
+            while let Some(l) = self.nodes.get(h).and_then(|nd| nd.conc_merged_into) {
+                h = l;
+            }
+            self.edges[a].head = h;
             self.edges[a].head_port.defined = false;
             self.edges[a].edge_type = VIRTUAL;
             self.edges[a].head_port.p = Point::new(0.0, 0.0);
@@ -1682,7 +1691,22 @@ impl Dot<'_> {
             let mut b = self.maximal_bbox(sp, hn, Some(e), None);
             hend.nb = b;
             let ee = if hackflag { fwdedgeb.unwrap() } else { e };
-            let m = self.spline_merge_p(self.edges[e].head);
+            let mut m = self.spline_merge_p(self.edges[e].head);
+            // C (`dotsplines.c:1845`) takes the merge flag from `aghead(e)`, where the
+            // chain walk stopped, but with `hackflag` hands `endpath` the original
+            // edge, whose head is the real node further on. The two differ when the
+            // edge shares a chain (cluster edges with other ports, `interclrep`) that
+            // `dot_concentrate` merged: the walk stops at the concentrator, and
+            // `conc_slope` runs on the real head. With edges on both sides of that
+            // node C gets a slope and draws, and so does the port. With one side
+            // empty C dereferences NULL in `conc_slope` (#234); the port uses the
+            // real head's own flag, which is false, as for an unconcentrated end.
+            if m && hackflag {
+                let h = self.edges.get(ee).and_then(|ed| self.nodes.get(ed.head));
+                if h.is_none_or(|h| h.in_.is_empty() || h.out.is_empty()) {
+                    m = false;
+                }
+            }
             endpath(self, &mut p, ee, REGULAREDGE, &mut hend, m);
             let last = *hend.boxes.last().unwrap();
             b.ur.y = last.ur.y;

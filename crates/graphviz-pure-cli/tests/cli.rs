@@ -1204,6 +1204,159 @@ fn cluster_rank_saved_leader_freed_does_not_panic() {
     }
 }
 
+// The `d` attributes of an SVG's paths, in order.
+fn svg_path_data(svg: &str) -> Vec<&str> {
+    svg.split(" d=\"")
+        .skip(1)
+        .filter_map(|s| s.split('"').next())
+        .collect()
+}
+
+// Issue #230: a labelled flat edge on rank 0 that is not its class's representative (a
+// parallel `a -> b` behind an unlabelled one, or a `b -> a` merged by `flat_rev`) sits in
+// `ND_other`. C's `flat_edges` makes rank -1 only for `ND_flat_in` edges, then `flat_node`
+// reads `GD_rank(g)[-1]` and segfaults. The port makes rank -1 for these edges too. The
+// layout then fails as C's does for the same edges on a lower rank (the `z -> a` input,
+// whose stderr and paths are C 16.1.0's).
+#[test]
+fn labelled_flat_multi_edge_on_rank_0_gets_a_label_rank() {
+    let lost = "Error: in routesplines, illegal values of prev 1 and next 1, line 378\n\
+                Error: lost a b edge\n";
+    for (src, want) in [
+        (
+            "{ rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "rankdir=LR; { rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "ordering=out; { rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "newrank=true; rank=sink; a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "{ rank=same; a; b; c } a -> b; b -> a [label=x]; a -> c;",
+            "Error: in routesplines, illegal values of prev 1 and next 1, line 378\n\
+             Error: lost b a edge\n",
+        ),
+        (
+            "subgraph cluster0 { { rank=same; a; b; c } } a -> b; a -> b [label=x]; a -> c;",
+            "",
+        ),
+    ] {
+        let src = format!("digraph G {{ {src} }}");
+        let (out, err, ok) = run(&["-Kdot", "-Tsvg"], &src);
+        assert_eq!(err, want, "{src}");
+        assert_eq!(ok, want.is_empty(), "{src}");
+        assert!(!ok || out.contains(">x</text>"), "{src}: {out}");
+    }
+    let src = "digraph G { z -> a; { rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok);
+    assert_eq!(err, lost);
+    assert_eq!(
+        svg_path_data(&out),
+        [
+            "M27,-88.65C27,-76.96 27,-61.19 27,-47.62",
+            "M42.58,-33.16C54.48,-43.63 71.89,-56.66 90,-62.4 112.88,-69.65 121.8,-71.51 144,\
+             -62.4 154.14,-58.24 163.22,-50.57 170.52,-42.76",
+            "M54.42,-18C62.4,-18 70.37,-18 78.35,-18",
+        ]
+    );
+}
+
+// Issue #241: after `trouble in init_rank` nothing normalised the ranks, and the top rank
+// is 1, not 0. `flat_edges` tested rank 0 for labelled flat edges, made no rank above the
+// top one, and `flat_node` read a rank that was never allocated (C segfaults there). The
+// port runs the test on the top rank, and the label is drawn.
+#[test]
+fn labelled_flat_edge_on_an_unnormalised_top_rank_gets_a_label_rank() {
+    let src = "digraph G { { rank=min; b a e } { rank=max; e } a -> b [label=x,weight=0]; \
+               c -> d; a -> c; d -> b; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok);
+    assert_eq!(err, "Error: trouble in init_rank\n\tb 1\n\td 2\n\tc 1\n");
+    assert!(out.contains(">x</text>"), "{out}");
+    // C draws a labelled flat edge on a lower rank when the top rank is 2; stderr and
+    // paths are C 16.1.0's.
+    let src = "digraph G { { rank=min; b a e } { rank=max; e } c -> d; a -> c; d -> b; \
+               { rank=same; c x y } c -> y [label=z]; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok);
+    assert_eq!(err, "Error: trouble in init_rank\n\tb 1\n\td 2\n\tc 1\n");
+    assert_eq!(
+        svg_path_data(&out),
+        [
+            "M173,-75.97C161.46,-65.86 145.67,-52.02 132.55,-40.52",
+            "M92.03,-33C80.5,-43.1 64.72,-56.94 51.58,-68.45",
+            "M135.49,-18C142.99,-18 151.27,-18 159.27,-18",
+            "M54.42,-91C62.4,-91 70.37,-91 78.35,-91",
+        ]
+    );
+}
+
+// Issue #234: with `concentrate=true`, a cluster edge with other ports shares its chain
+// (`interclrep`) and is routed alone through `make_regular_edge`'s `hackflag`, which follows
+// the chain as it was before `dot_concentrate` rewired it. Where the walk stops at a
+// concentrator, C ends the path at the real head with the concentrator's merge flag
+// (`dotsplines.c:1845`), and `conc_slope` on a head with no out-edges segfaults. Where
+// `mergevirtual` deleted the chain's node, C walks from a node with no edges and segfaults
+// in `straight_len` (the last input but one). The last input gives the head an out-edge: C
+// draws it, and the port's paths are C 16.1.0's.
+#[test]
+fn concentrated_cluster_edge_routed_alone_does_not_panic() {
+    for src in [
+        "subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; b -> c [constraint=false];",
+        "rankdir=LR; subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; \
+         b -> c [constraint=false];",
+        "newrank=true; subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; \
+         b -> c [constraint=false];",
+        "ordering=out; subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; \
+         b -> c [constraint=false];",
+        "subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; b -> c [minlen=2];",
+        "subgraph cluster1 { a } a -> c [minlen=2]; a -> c [tailport=s]; a -> d [minlen=2];",
+        "subgraph cluster0 { c } a -> c [tailport=s,minlen=2]; a -> c; a -> c;",
+    ] {
+        let src = format!("digraph G {{ concentrate=true; {src} }}");
+        let (out, err, ok) = run(&["-Kdot", "-Tsvg"], &src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(err, "", "{src}");
+        assert!(out.contains("<title>a:s&#45;&gt;c</title>"), "{src}: {out}");
+    }
+    // The deleted-node route draws both edge groups from `a` to `c`, with arrowheads.
+    let src = "digraph G { concentrate=true; subgraph cluster0 { c } \
+               a -> c [tailport=s,minlen=2]; a -> c; a -> c; }";
+    let (out, _, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok);
+    assert_eq!(
+        svg_path_data(&out),
+        [
+            "M43,-125C43,-104.43 43,-81.22 43,-63.53",
+            "M43,-124.81C43,-108.27 43,-82.98 43,-63.44",
+        ]
+    );
+    assert_eq!(out.matches("<polygon fill=\"black\"").count(), 2, "{out}");
+    let src = "digraph G { concentrate=true; subgraph cluster1 { c } a -> c [minlen=2]; \
+               a -> c [tailport=s]; b -> c [constraint=false]; c -> d; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        svg_path_data(&out),
+        [
+            "M43,-71.7C43,-64.41 43,-55.73 43,-47.54",
+            "M45.46,-180.93C46.39,-170.36 46.49,-156.63 43,-145",
+            "M43,-144C40.65,-136.18 39.93,-127.42 39.99,-119.31",
+            "M43,-181C43,-152.52 43,-139.25 43,-119.54",
+            "M94.84,-186.89C74.83,-175.29 46.64,-157.11 43,-145",
+        ]
+    );
+}
+
 // Fuzz case 018-render-interpolate-points-fma (issue #27), its repro.gv verbatim. C's
 // `interpolate_pointf` (`lib/common/geomprocs.h:115`, called by `alloc_interpolation_points`
 // in `lib/common/shapes.c`) computes `p + t * (q - p)`, which Apple clang fuses (`fmla.2d`).

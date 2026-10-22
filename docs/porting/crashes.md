@@ -43,7 +43,8 @@ fixed in that cause's shared mechanism, not with a new local guard.
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | The [panic-site ratchet](#the-panic-site-ratchet) maps the remaining sites and stops the count from growing; new code returns an error instead. |
 
-The fix for each cause records here the issues it closed and the behaviour it chose.
+The fix for each cause records here the issues it closed and the behaviour it chose. Narrower
+causes, each confined to one function, have their own sections after these.
 
 ## dot after a failed ranking
 
@@ -80,9 +81,9 @@ ranks have no node. `rec_reset_vlists` then follows a stale rank leader (C segfa
 leave a node unplaced. The port reaches the same state; `make_regular_edge`'s rank check
 (#208) still stops the layout there, so it stays.
 
-Not this cause, although they often follow the same inputs: #230 (`flat_node` reads rank
--1 when no rank was made for it), #231 (a cluster left with no nodes), #234
-(`conc_slope` on a one-sided merge node).
+Not this cause, although they often follow the same inputs: #230 and #241 (`flat_node`
+reads the rank above the top one when no rank was made for it), #231 (a cluster left with
+no nodes), #234 (`conc_slope` on a one-sided merge node).
 
 ## dot cluster membership
 
@@ -204,3 +205,48 @@ Inputs that C routes never reach a failure, so their output is unchanged.
 - **#228:** NaN pins leave no trapezoid inside the polygon, and C's `monotonate_trapezoids` reads one past the end of `tr`. The port fails the maze at that read.
 - Loops that C would run forever on broken links are bounded by the size of the structure: stale parent chains, trapezoid walks and maze walks. The three recursions (`locate_endpoint`, `traverse_polygon` and `DFS_visit`) run on an explicit stack, in C's order.
 - The boundary does not depend on positions being validated where they are parsed (the "Extreme coordinates" cause): it holds whatever the input.
+
+## Flat edge labels on the top rank
+
+Closed: #230, #241.
+
+A labelled flat edge that is not adjacent to its head gets a label node on the rank above
+(`flat_node`). On rank 0, `flat_edges` first makes a rank -1 for it (`abomination`), but C's
+test looks only at `ND_flat_in`. A labelled edge that is not its class's representative
+sits in `ND_other` instead: a parallel `a -> b` behind an unlabelled one (`class2`'s
+`merge_oneway`), or a `b -> a` merged into `a -> b` by `flat_rev`. The `ND_other` loop
+then calls `flat_node` for it, and C reads `GD_rank(g)[-1]` and segfaults. The port makes
+rank -1 for those edges as well, so the edge is handled as it is on any lower rank: C
+itself, on the same edges one rank down, places the label node and then fails to route
+the edge (`lost a b edge`, exit 1). On rank 0 the port prints the same errors. When the
+labelled edge is the representative, C makes rank -1 itself, and nothing changes.
+
+`flat_edges` also assumes the top rank is rank 0, which it is once ranking has
+normalised the ranks (`abomination` asserts it). After a failed ranking of the root
+(`trouble in init_rank`, which does not stop the layout; see above), nothing normalised
+them and the top rank is `GD_minrank(g)` > 0. C's ranks above it were never allocated, so
+`flat_node` on it reads a NULL `v` and segfaults (#241). The port runs the test, and makes
+the new rank, at the top rank. When the top rank is 0 this is C's code.
+
+## Concentrated cluster edges
+
+Closed: #234.
+
+With `concentrate=true`, an edge into or out of a cluster whose ports differ from a
+parallel edge's shares that edge's virtual chain (`interclrep`) but is routed on its own,
+through `make_regular_edge`'s `hackflag` branch. That branch follows the chain as it was
+before `dot_concentrate` rewired it, and it goes wrong in two ways:
+
+- **The chain now ends at a concentrator.** The walk stops there, but C
+  (`dotsplines.c:1845`) passes the concentrator's merge flag to `endpath` together with the
+  original edge, whose head is the real node further on. `conc_slope` then averages the real
+  node's in- and out-edges. If the node has both, C draws, and the port draws the same way.
+  If one side is empty, C dereferences NULL. The port then ends the path with the real
+  node's own merge flag (false), as for an edge that was not concentrated.
+- **`mergevirtual` deleted the node the chain ends at.** In the up pass, the main edge's
+  `ED_to_virt` chain can still end at a deleted node, which has no edges left, and C segfaults in `straight_len`.
+  `mergevirtual` now records the node it merged each deleted node into, and the port routes
+  the edge from there, as the chain's own edges are.
+
+Both change output only where C crashes. (With `splines=line`, C survives the deleted-node
+case because `makeLineEdge` never reads the head; the redirect changes nothing there either.)

@@ -114,6 +114,9 @@ impl Dot<'_> {
             }
             debug_assert!(self.nodes[right].in_.is_empty() && self.nodes[right].out.is_empty());
             self.delete_fast_node(g, right);
+            if let Some(nd) = self.nodes.get_mut(right) {
+                nd.conc_merged_into = Some(left);
+            }
         }
         let mut k = lpos + 1;
         let n = self.rank_n(g, r);
