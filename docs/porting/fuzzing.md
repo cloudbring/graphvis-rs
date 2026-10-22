@@ -297,6 +297,15 @@ dot
   seed 24180). As generated, with `pack="8"`, it matches C through the `_cc_<i>` fix
   above (`pack_single_component_cluster_node_in_rank_max_set_lays_out_like_c`); without
   `pack` C itself segfaults (`cluster_node_in_rank_max_set_does_not_panic_build_skeleton`).
+* `trouble in init_rank` (conflicting rank sets) is reported as C does and does not stop
+  the layout: C, like the port, often goes on to a drawing and exits 1. On some inputs
+  mincross never places a node, which keeps the x coordinate `set_xcoords` left in its
+  `ND_rank`; C then segfaults in mincross's `furthestnode`, or reads past `GD_rank` when it
+  routes a spline through that node (`maximal_bbox`). The port fails the layout in
+  `make_regular_edge` with an error naming the edge and rank, instead of panicking.
+  Edges `makeLineEdge` draws straight (`splines=line|false`) read no rank and are drawn as
+  before (issue
+  #114; `init_rank_trouble_*` in `crates/graphviz-pure-cli/tests/cli.rs`).
 * In the pack branch, clusters are drawn from the root's `GD_clust` as `copyClusterInfo`
   builds it: in component order, and once per component that kept the cluster, so a
   cluster sharing a node with a non-nested cluster is drawn twice. The renderer used to
