@@ -140,9 +140,9 @@ mode (C returns failure too).
 - When `IncVPSC::satisfy` fails during `mode=ipsep` ("Cycle Error!",
   "Unsatisfied constraint"), C aborts on the uncaught exception. The port, whose
   block order can fail where C's heap order does not, reads the positions back
-  and goes on, as before. After 500 cycle errors (`MAX_CYCLE_ERRORS`), it warns
-  and ends the stress loop of that component. On master, corpus files that
-  finished within 10 s reached at most 241 (#197;
+  and goes on, as before. After more than 500 cycle errors (`MAX_CYCLE_ERRORS`),
+  it warns and ends the stress loop of that component. Before #197, corpus files
+  that finished within 10 s reached at most 241 (#197;
   `ipsep_vpsc_cycle_error_ends_the_layout` in `crates/graphviz-pure-cli/tests/cli.rs`).
 - The VPSC solver reuses the slots of blocks that no variable belongs to and that are not
   in `Blocks`. C frees or leaks these; the port kept them all, so memory grew with every

@@ -364,7 +364,7 @@ Robustness (debug overflow and panics)
 * neato `mode=ipsep overlap=ipsep` with an infeasible VPSC system, for example a node in two
   clusters, makes C abort on `IncVPSC::satisfy`'s uncaught `std::runtime_error`. The port
   projected again after each failure, and its time and memory grew without bound. The solver
-  now reuses unused blocks. After 500 "Cycle Error!" failures in a component, the port warns
+  now reuses unused blocks. After more than 500 "Cycle Error!" failures in a component, the port warns
   `VPSC: too many cycle errors; ending the ipsep layout early` and keeps the layout it has.
   Issue #197; tested by `ipsep_vpsc_cycle_error_ends_the_layout` in
   `crates/graphviz-pure-cli/tests/cli.rs`.

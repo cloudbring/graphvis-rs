@@ -71,9 +71,10 @@ pub struct CMajEnvVpsc {
 const QUAD_PROG_TOL: f32 = 1e-4;
 
 /// Not in C: the "Cycle Error!" failures of `satisfyVPSC` one ipsep layout may
-/// have before it is ended (#197). Each one is 10001 block splits. On master,
-/// the most a corpus file reached while finishing within 10 s was 241
-/// (`tests/wild/gv16_dirgraph_apache_aef3b0.gv` with `diredgeconstraints`).
+/// have before it is ended, at the next one (#197). Each one is 10001 block
+/// splits. Before #197, the most a corpus file reached while finishing within
+/// 10 s was 241 (`tests/wild/gv16_dirgraph_apache_aef3b0.gv` with
+/// `diredgeconstraints`).
 pub const MAX_CYCLE_ERRORS: u32 = 500;
 
 /// `unpackMatrix(packedMat, n)` from `matrix_ops.c`.
