@@ -38,8 +38,9 @@ cargo clippy --quiet "${pkgs[@]}" --lib --message-format=json -- \
   -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing \
   -W clippy::arithmetic_side_effects >"$json"
 
-# One row per file: module, unwrap, expect, index, arith. A site is counted once even if clippy
-# reports it twice. The module is the file's path under crates/, without the package prefix and src/.
+# One row per file: module, unwrap, expect, index, arith. A site is its whole span, so the two
+# indexes of v[i][j] count twice, and a site clippy reports twice (a macro used once) counts once.
+# The module is the file's path under crates/, without the package prefix and src/.
 {
   printf 'module\tunwrap\texpect\tindex\tarith\n'
   jq -r '
@@ -51,7 +52,7 @@ cargo clippy --quiet "${pkgs[@]}" --lib --message-format=json -- \
     | select($kind != null)
     | $m.spans[] | select(.is_primary)
     | select(.file_name | test("^crates/graphviz-pure-(layout|geom)/src/"))
-    | [$kind, .file_name, .line_start, .column_start] | @tsv' "$json" |
+    | [$kind, .file_name, .line_start, .column_start, .line_end, .column_end] | @tsv' "$json" |
     sort -u |
     awk -F'\t' '
       { f = $2; sub(/^crates\/graphviz-pure-/, "", f); sub(/\/src\//, "/", f)
@@ -70,6 +71,13 @@ cargo clippy --quiet "${pkgs[@]}" --lib --message-format=json -- \
     { u += $2; e += $3; i += $4; a += $5 } END { print "TOTAL", u, e, i, a, u + e + i + a }'
 } | column -t -s$'\t'
 
+# Counting nothing means the count broke (a renamed crate or lint, a new JSON format), not that
+# every site is gone.
+if [[ $(wc -l <"$current") -le 1 ]]; then
+  echo "panic-sites: clippy reported no site at all; the count is broken ($(cargo clippy --version))" >&2
+  exit 1
+fi
+
 if $update; then
   cp "$current" "$baseline"
   echo "wrote $baseline"
@@ -77,8 +85,12 @@ if $update; then
 fi
 
 # Every count above its baseline; a module missing from the baseline counts as zero.
+if [[ $(head -n 1 "$baseline") != $(head -n 1 "$current") ]]; then
+  echo "panic-sites: $baseline has no 'module unwrap expect index arith' header" >&2
+  exit 1
+fi
 risen=$(awk -F'\t' '
-  NR == FNR { if (FNR > 1) for (k = 2; k <= 5; k++) base[$1, k] = $k; next }
+  FILENAME == ARGV[1] { if (FNR > 1) for (k = 2; k <= 5; k++) base[$1, k] = $k; next }
   FNR == 1 { for (k = 2; k <= 5; k++) kind[k] = $k; next }
   { for (k = 2; k <= 5; k++) if ($k > base[$1, k] + 0)
       printf "  %s: %s %d -> %d\n", $1, kind[k], base[$1, k] + 0, $k }' "$baseline" "$current")
@@ -86,6 +98,7 @@ if [[ -n "$risen" ]]; then
   echo
   echo "panic sites went up (baseline: $baseline):"
   echo "$risen"
+  echo "($(cargo clippy --version); a new clippy can count differently, see the header of this script)"
   echo "Return an error where C would crash (docs/porting/crashes.md), or follow the C's own check."
   exit 1
 fi

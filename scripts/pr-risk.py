@@ -28,6 +28,7 @@ SENSITIVE = [
     (r"(^|/)Cargo\.toml$", "crate manifest (dependencies, features, build settings)"),
     (r"^Cargo\.lock$", "lockfile"),
     (r"^(deny\.toml|rust-toolchain(\.toml)?|\.cargo/)", "toolchain or supply-chain policy"),
+    (r"(^|/)\.?clippy\.toml$", "clippy configuration: can lower the panic-site counts (scripts/panic-sites.sh)"),
     (r"^scripts/", "script run by CI, releases or maintainers"),
     (r"(^|/)(package(-lock)?\.json|\.npmrc|jsr\.json)$", "npm manifest or lockfile"),
     (r"^(LICENSE|NOTICE|SECURITY\.md|CODE_OF_CONDUCT\.md)$", "licence or policy document"),
