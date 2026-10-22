@@ -1222,6 +1222,98 @@ fn input_cluster_list_key_is_ignored() {
     }
 }
 
+/// Issue #174 (found by cargo-fuzz): a component taller than INT_MAX polyomino steps.
+/// C's `computeStep` (`lib/pack/pack.c:86`) saturates a step of ~1e29 to INT_MAX, and
+/// `genPoly`/`genBox` then fill ~1e22 cells per side: C Graphviz 16.1.0 never finishes on
+/// these inputs. The port gives a saturated step a cell budget, warns when it runs out and
+/// leaves the components unpacked. A node pinned near 1e30 (C hangs too) packs. Each run gets
+/// 30 s (it takes well under a second) so a regression fails instead of hanging CI.
+#[test]
+fn oversized_component_does_not_hang_the_packer() {
+    let warning = "Warning: components too large to pack; packing skipped\n";
+    let cases = [
+        ("graph { layout=fdp; a [height=\"1e30\"]; b }", warning),
+        (
+            "graph { layout=fdp; quantum=\"1e40\"; a -- b; c -- d }",
+            warning,
+        ),
+        (
+            "graph { layout=neato; pack=false; a [height=\"1e30\"]; b }",
+            warning,
+        ),
+        ("graph { layout=fdp; a [height=\"1e300\"]; b }", warning),
+        ("graph { layout=fdp; a [pos=\"1e30,1e30!\"]; b; c }", ""),
+        // A saturated step within the budget packs as C does.
+        (
+            "graph { layout=neato; pack=true; a [pos=\"1e9,1e9!\"]; b }",
+            "",
+        ),
+    ];
+    for (src, expected) in cases {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+            .arg("-Tsvg")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(src.as_bytes())
+            .unwrap();
+        // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while child.try_wait().unwrap().is_none() {
+            if std::time::Instant::now() > deadline {
+                child.kill().unwrap();
+                panic!("packing must terminate: {src}");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let out = child.wait_with_output().unwrap();
+        let (svg, err) = (
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+        assert!(out.status.success(), "{src}: {err}");
+        assert_eq!(err, expected, "{src}");
+        assert!(svg.contains("</svg>"), "{src}: {svg}");
+    }
+}
+
+/// Issue #174: C's `fits` (`lib/pack/pack.c:437`) computes `step * x` in int, which wraps
+/// once the step is large. With a saturated step (a 1e11-inch box) or a huge `pack` margin,
+/// C places `b` near the origin; the expected output is C 16.1.0's `-Tplain`.
+#[test]
+fn large_pack_step_wraps_placement_like_c() {
+    let cases = [
+        (
+            "graph { layout=fdp; node[shape=box fixedsize=true]; \
+             a [width=\"1e11\" height=\"1e11\"]; b }",
+            "graph 1 1e+11 1e+11
+node a 5e+10 5e+10 1e+11 1e+11 a solid box black lightgrey
+node b 0.375 0.27777 0.75 0.5 b solid box black lightgrey
+stop
+",
+        ),
+        (
+            "graph { layout=neato; pack=2000000000; a; b }",
+            "graph 1 4.5436e+07 1.2312e+07
+node a 4.5436e+07 1.2312e+07 0.75 0.5 a solid ellipse black lightgrey
+node b 0.375 0.25 0.75 0.5 b solid ellipse black lightgrey
+stop
+",
+        ),
+    ];
+    for (src, expected) in cases {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(ok && err.is_empty(), "{src}: {err}");
+        assert_eq!(out, expected, "{src}");
+    }
+}
+
 // Fuzz case 002-dot-ortho-concentrate-ignored-edge (issue #11), its repro.gv verbatim.
 // Under concentrate, class2 marks `13 -> 14` IGNORED, yet orthoEdges (lib/ortho/ortho.c)
 // routes it as the first edge of the {13, 14} pair. C draws it (emit_edge_graphics has no type

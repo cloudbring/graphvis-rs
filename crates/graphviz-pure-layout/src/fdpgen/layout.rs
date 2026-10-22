@@ -830,8 +830,11 @@ impl Fdp<'_, '_> {
         if !cc.is_empty() {
             bb = bbs[0];
             if cc.len() > 1 {
-                let pts = pts.expect("packing positions");
-                let pt = pts[0];
+                // putGraphs returns NULL when packing runs out of cells (issue #174), and
+                // C's `*pp++` then dereferences NULL. Use zero offsets, as the translation
+                // loop below does for a NULL `pts`.
+                let off = |i: usize| pts.map_or_else(Point::default, |pts| pts[i]);
+                let pt = off(0);
                 bb = BoundingBox::new(
                     bb.ll.x + pt.x,
                     bb.ll.y + pt.y,
@@ -840,7 +843,7 @@ impl Fdp<'_, '_> {
                 );
                 for i in 1..cc.len() {
                     let b = bbs[i];
-                    let pt = pts[i];
+                    let pt = off(i);
                     let b = BoundingBox::new(
                         b.ll.x + pt.x,
                         b.ll.y + pt.y,
