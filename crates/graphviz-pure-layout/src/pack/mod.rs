@@ -418,6 +418,15 @@ fn compute_step(bbs: &[BoundingBox], margin: u32) -> i32 {
         c = (-w).mul_add(h, c);
     }
     let d = b.mul_add(b, -(4.0 * a * c));
+    // C asserts `d >= 0`. A box whose width or height is NaN (`inf - inf`: a component
+    // whose nodes are all at `-inf`, #239) makes `d` NaN, C aborts, and the NaN step would
+    // fill cells without end. Return 0 instead, which takes the callers' `stepSize <= 0`
+    // exit: the components stay unpacked. (A merely infinite box gives `d = inf` and a
+    // saturated step, which the budget below handles.)
+    if d.is_nan() || d < 0.0 {
+        warn_too_large();
+        return 0;
+    }
     let r = d.sqrt();
     let l1 = (-b + r) / (2.0 * a);
     let root = l1 as i32;
@@ -447,8 +456,7 @@ struct Budget(Option<f64>);
 
 impl Budget {
     fn for_step(step: i32) -> Self {
-        // A NaN `l1` (an `inf - inf` box) gives step 1 and no budget; no input is known to
-        // reach it.
+        // `l1` is NaN only when `d` is NaN or negative, which compute_step refuses (#239).
         Self((step == i32::MAX).then_some(MAX_CELLS))
     }
 

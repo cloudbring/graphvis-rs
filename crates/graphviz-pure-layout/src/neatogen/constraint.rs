@@ -39,12 +39,14 @@ struct NItem {
 type DistFn = fn(&IBox, &IBox) -> i32;
 type IntersectFn = fn(&NItem, &NItem) -> bool;
 
+// The `int` arithmetic below wraps where C's does (UB in C, a plain 32-bit add under clang):
+// positions near 3e6 inches and beyond already wrap when `initItem` converts them (#240).
 fn dist_y(b1: &IBox, b2: &IBox) -> i32 {
-    ((b1.ury - b1.lly) + (b2.ury - b2.lly)) / 2
+    (b1.ury.wrapping_sub(b1.lly)).wrapping_add(b2.ury.wrapping_sub(b2.lly)) / 2
 }
 
 fn dist_x(b1: &IBox, b2: &IBox) -> i32 {
-    ((b1.urx - b1.llx) + (b2.urx - b2.llx)) / 2
+    (b1.urx.wrapping_sub(b1.llx)).wrapping_add(b2.urx.wrapping_sub(b2.llx)) / 2
 }
 
 /// `intersectX0`: boxes could overlap if shifted in y but don't, or overlap
@@ -57,11 +59,11 @@ fn intersect_x0(p: &NItem, q: &NItem) -> bool {
     if p.bb.ury < q.bb.lly {
         return true;
     }
-    let ydelta = dist_y(&p.bb, &q.bb) - (q.y - p.y);
+    let ydelta = dist_y(&p.bb, &q.bb).wrapping_sub(q.y.wrapping_sub(p.y));
     let xdelta = if q.x >= p.x {
-        dist_x(&p.bb, &q.bb) - (q.x - p.x)
+        dist_x(&p.bb, &q.bb).wrapping_sub(q.x.wrapping_sub(p.x))
     } else {
-        dist_x(&p.bb, &q.bb) - (p.x - q.x)
+        dist_x(&p.bb, &q.bb).wrapping_sub(p.x.wrapping_sub(q.x))
     };
     ydelta <= xdelta
 }
@@ -75,11 +77,11 @@ fn intersect_y0(p: &NItem, q: &NItem) -> bool {
     if p.bb.urx < q.bb.llx {
         return true;
     }
-    let xdelta = dist_x(&p.bb, &q.bb) - (q.x - p.x);
+    let xdelta = dist_x(&p.bb, &q.bb).wrapping_sub(q.x.wrapping_sub(p.x));
     let ydelta = if q.y >= p.y {
-        dist_y(&p.bb, &q.bb) - (q.y - p.y)
+        dist_y(&p.bb, &q.bb).wrapping_sub(q.y.wrapping_sub(p.y))
     } else {
-        dist_y(&p.bb, &q.bb) - (p.y - q.y)
+        dist_y(&p.bb, &q.bb).wrapping_sub(p.y.wrapping_sub(q.y))
     };
     xdelta <= ydelta
 }
@@ -275,15 +277,15 @@ fn constrain(
     for p in items.iter_mut() {
         let newpos = cg.ns.nodes[p.cnode].rank;
         if is_x {
-            let delta = newpos - p.x;
+            let delta = newpos.wrapping_sub(p.x);
             p.x = newpos;
-            p.bb.llx += delta;
-            p.bb.urx += delta;
+            p.bb.llx = p.bb.llx.wrapping_add(delta);
+            p.bb.urx = p.bb.urx.wrapping_add(delta);
         } else {
-            let delta = newpos - p.y;
+            let delta = newpos.wrapping_sub(p.y);
             p.y = newpos;
-            p.bb.lly += delta;
-            p.bb.ury += delta;
+            p.bb.lly = p.bb.lly.wrapping_add(delta);
+            p.bb.ury = p.bb.ury.wrapping_add(delta);
         }
     }
 }
@@ -309,6 +311,19 @@ fn points_fma(f: f64) -> i32 {
     }
 }
 
+/// `POINTS(f)` for `initItem`'s `x` and `y`. The reference build converts the two with a
+/// vector instruction to 64 bits (`fcvtzs.2d`) and keeps the low 32 (`xtn.2s`), so past
+/// INT_MAX (about 3e6 inches at `SCALE`) they wrap modulo 2^32 rather than saturate as the
+/// scalar conversion of `w2`/`h2` does (#240).
+fn points_wrapping(f: f64) -> i32 {
+    let v = if f * 72.0 >= 0.0 {
+        f.mul_add(72.0, 0.5)
+    } else {
+        f.mul_add(72.0, -0.5)
+    };
+    (v as i64) as i32
+}
+
 /// `d2i`: saturating truncation.
 fn d2i(v: f64) -> i32 {
     if v > i32::MAX as f64 {
@@ -323,8 +338,8 @@ fn d2i(v: f64) -> i32 {
 /// `initItem(n, p, margin)`.
 fn init_item(g: &LGraph<'_>, n: usize, margin: &super::adjust::Expand) -> NItem {
     let nd = &g.nodes[n];
-    let x = points_fma(SCALE as f64 * nd.pos[0]);
-    let y = points_fma(SCALE as f64 * nd.pos[1]);
+    let x = points_wrapping(SCALE as f64 * nd.pos[0]);
+    let y = points_wrapping(SCALE as f64 * nd.pos[1]);
     let (w2, h2) = if margin.do_add {
         (
             d2i(SCALE as f64 * (points_fma(nd.width / 2.0) as f64 + margin.x)),
@@ -342,11 +357,13 @@ fn init_item(g: &LGraph<'_>, n: usize, margin: &super::adjust::Expand) -> NItem 
         y,
         np: n,
         cnode: 0,
+        // C's `x - w2` overflows for a far pin (#240): UB, but clang emits a plain 32-bit add,
+        // which wraps.
         bb: IBox {
-            llx: x - w2,
-            lly: y - h2,
-            urx: x + w2,
-            ury: y + h2,
+            llx: x.wrapping_sub(w2),
+            lly: y.wrapping_sub(h2),
+            urx: x.wrapping_add(w2),
+            ury: y.wrapping_add(h2),
         },
     }
 }

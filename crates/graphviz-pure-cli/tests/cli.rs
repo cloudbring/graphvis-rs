@@ -237,6 +237,249 @@ fn fdp_nodes_pinned_near_1e17_lay_out_like_c() {
     }
 }
 
+// Extreme coordinates (docs/porting/crashes.md): C's `sscanf("%lf")` reads `nan` and `inf` in
+// `pos`, and a finite `pos` can overflow once scaled to points. Where C produces output (often
+// a component at NaN) the port matches it; where C crashes or hangs, the port must not. These
+// are the routes by engine; none may panic or hang.
+#[test]
+fn non_finite_and_huge_positions_do_not_panic_in_any_engine() {
+    let engines = [
+        "dot",
+        "neato",
+        "fdp",
+        "sfdp",
+        "circo",
+        "twopi",
+        "osage",
+        "patchwork",
+    ];
+    // 1e308 inches overflows to infinity once multiplied by 72.
+    for v in ["nan", "inf", "-inf", "1e308"] {
+        for engine in engines {
+            for splines in ["spline", "curved", "ortho"] {
+                let src = format!(
+                    "graph {{ layout={engine}; splines={splines}; pack=false; \
+                     a [pos=\"0,0!\"]; x [pos=\"{v},0!\"]; a -- x; x -- y [label=L]; \
+                     subgraph cluster_c {{ label=C; c [pos=\"5,{v}\"] }} c -- a }}"
+                );
+                let (out, err, _) = run(&["-Tsvg"], &src);
+                assert!(!err.contains("panicked"), "{src}: {err}");
+                assert!(out.contains("</svg>"), "{src}: {err}");
+            }
+        }
+    }
+    for (flag, v) in [
+        ("-n", "nan"),
+        ("-n2", "nan"),
+        ("-n2", "inf"),
+        ("-n2", "1e400"),
+    ] {
+        let src = format!(
+            "digraph {{ a [pos=\"{v},0\"]; b [pos=\"30,30\" xlabel=Q xlp=\"{v},0\"]; \
+             a -> b [pos=\"0,0 {v},10 20,20 30,30\" label=L lp=\"{v},3\"]; \
+             subgraph cluster_z {{ bb=\"0,0,{v},9\"; z [pos=\"4,4\"] }} }}"
+        );
+        let (out, err, ok) = run(&["-Kneato", flag, "-Tsvg"], &src);
+        assert!(ok, "{flag} {src}: {err}");
+        assert!(out.contains("</svg>"), "{flag} {src}: {err}");
+    }
+}
+
+// Issue #228: neato splines=ortho with a NaN or infinite pin. C fails an assertion in
+// ortho's list.c (exit 134); the port panicked in `convert_sp_to_route` until ortho got a
+// failure boundary (#209, #248). The NaN component is drawn as C draws one with any other
+// `splines`: its nodes are at NaN and the SVG leaves them out; `b` is drawn. Here the input
+// side: the position reaches ortho as C reads it.
+#[test]
+fn ortho_with_a_non_finite_pin_does_not_panic() {
+    for v in ["nan", "inf"] {
+        let src = format!(
+            "graph {{ layout=neato; pack=false; splines=ortho; a [pos=\"{v},0!\"]; \
+             x [pos=\"1,0!\"]; a -- x; b }}"
+        );
+        let (out, err, ok) = run(&["-Tsvg"], &src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(err, "", "{src}");
+        assert!(out.contains("<title>b</title>"), "{src}: {out}");
+    }
+}
+
+// Issue #227: curved edges between pins 1e16 inches apart. `update_bb_bz` refines each
+// segment until its control points are within 2pt of its chord, which the coordinates there
+// cannot resolve, and C never finishes. The port stops a segment after 2^28 splits (about 5 s
+// of C) and takes the rest whole; the graph bb still contains the curves. (neato's
+// `compute_bb` rebuilds the bb afterwards; fdp keeps `update_bb_bz`'s.)
+#[test]
+fn curved_edges_between_far_pins_finish() {
+    for (engine, bb) in [
+        ("neato", "0,0,8.6241e+17,8.64e+17"),
+        ("fdp", "-1.4241e+17,-1.08e+17,7.2e+17,7.2e+17"),
+    ] {
+        let src = format!(
+            "graph {{ layout={engine}; pack=false; splines=curved; a [pos=\"0,0!\"]; \
+             x [pos=\"1e16,0!\"]; y [pos=\"0,1e16!\"]; a -- x; a -- y }}"
+        );
+        let (out, err, ok) = run(&["-Tdot"], &src);
+        assert!(ok, "{src}: {err}");
+        assert!(out.contains(&format!("bb=\"{bb}\"")), "{src}: {out}");
+    }
+    // A complete graph of far pins (on a circle of radius 2e14 the same graph kept C running
+    // for 18 minutes) must finish; once a segment runs out of splits, the later ones are
+    // taken whole.
+    let mut src = String::from("graph { layout=fdp; pack=false; splines=curved;");
+    for i in 0..6 {
+        let t = std::f64::consts::PI / 3.0 * f64::from(i);
+        src.push_str(&format!(
+            " n{i} [pos=\"{:?},{:?}!\"];",
+            1.5e15 * t.cos(),
+            1.5e15 * t.sin()
+        ));
+        for j in 0..i {
+            src.push_str(&format!(" n{j} -- n{i};"));
+        }
+    }
+    src.push('}');
+    let (_, err, ok) = run(&["-Tdot"], &src);
+    assert!(ok, "{err}");
+}
+
+// The budget is per segment, not per layout: these 100 segments each finish within it but
+// need 3.9e8 splits in all, and C (8 s) and the port print the same bb. The bb is C Graphviz
+// 16.1.0's; a per-layout budget ran out at segment 66 and printed `0,-8.5824e+15,...`.
+#[test]
+fn many_curved_edges_c_finishes_keep_c_bb() {
+    let mut src = String::from(
+        "graph { layout=fdp; pack=false; splines=curved; top [pos=\"0,300000000000000.0!\"];",
+    );
+    for k in 0..100 {
+        let l = 1e14 * (1.0 + f64::from(k) * 0.02);
+        src.push_str(&format!(
+            " l{k} [pos=\"{:?},0!\"]; r{k} [pos=\"{l:?},0!\"]; l{k} -- r{k};",
+            -l
+        ));
+    }
+    src.push('}');
+    let (out, err, ok) = run(&["-Tdot"], &src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("bb=\"0,-6.4368e+15,4.2912e+16,2.16e+16\""),
+        "{out}"
+    );
+}
+
+// Issue #239: a pin at -inf gives a component an infinite box, so computeStep's discriminant
+// is NaN and C fails `assert(d >= 0)` (exit 134; neato segfaults); the port filled grid
+// cells without end. It now skips packing, as C does where `stepSize <= 0`.
+#[test]
+fn packing_a_component_with_an_infinite_pin_is_skipped() {
+    for engine in ["fdp", "neato"] {
+        let src = format!("digraph {{ layout={engine} n0 [pos=\"-inf,1e8!\"] n2 n1->n0 }}");
+        let (out, err, ok) = run(&["-Tsvg"], &src);
+        assert!(ok, "{engine}: {err}");
+        assert_eq!(
+            err, "Warning: components too large to pack; packing skipped\n",
+            "{engine}"
+        );
+        assert!(out.contains("</svg>"), "{engine}");
+    }
+}
+
+// Issue #240: overlap=portho* with pins from about 3e6 inches. C's initItem (constraint.c)
+// converts the position to `int` through 64 bits and keeps the low 32, so it wraps, and
+// its `int` arithmetic after that wraps too, where the port's panicked. C lays these out;
+// the expected output is C Graphviz 16.1.0's. The last two have overlapping nodes, so
+// overlap removal runs on the wrapped positions.
+#[test]
+fn portho_with_a_pin_at_1e12_lays_out_like_c() {
+    let cases = [
+        (
+            "graph { layout=neato overlap=portho_yx a -- b; b [pos=\"1e12,0!\"] }",
+            [
+                "bb=\"0,0,3.6e+13,52.362\"",
+                "pos=\"3.6e+13,18\"",
+                "a -- b\t[pos=\"54.312,34.362 3.621e+07,34.362 3.6e+13,18 3.6e+13,18\"]",
+            ],
+        ),
+        (
+            "graph { layout=neato overlap=portho_yx a -- b; b [pos=\"-inf,1e12!\"] }",
+            [
+                "bb=\"0,0,-4.295e+09,7.2e+13\"",
+                "pos=\"nan,7.2e+13\"",
+                "a -- b\t[pos=\"nan,18.047 nan,2.1458e+06 nan,7.2e+13 nan,7.2e+13\"]",
+            ],
+        ),
+    ];
+    for (src, expected) in cases {
+        let (out, err, ok) = run(&["-Tdot"], src);
+        assert!(ok, "{src}: {err}");
+        for e in expected {
+            assert!(out.contains(e), "{src}: {e}\n{out}");
+        }
+    }
+    let plain = [
+        (
+            "graph { overlap=portho a [pos=\"1e12,0!\"]; d [pos=\"-1e12,0!\"]; \
+             b [pos=\"0,0!\"]; c [pos=\"0.1,0!\"] }",
+            "graph 1 2.4722 1.7222\n\
+             node a 2.0972 1.4722 0.75 0.5 a solid ellipse black lightgrey\n\
+             node d 0.375 1.4722 0.75 0.5 d solid ellipse black lightgrey\n\
+             node b 1.2361 0.86111 0.75 0.5 b solid ellipse black lightgrey\n\
+             node c 1.2361 0.25 0.75 0.5 c solid ellipse black lightgrey\n\
+             stop\n",
+        ),
+        (
+            "graph { overlap=portho; a [pos=\"2e7,0!\"]; b [pos=\"0,0!\"]; c [pos=\"0.1,0!\"] }",
+            "graph 1 1.6111 1.7222\n\
+             node a 1.2361 1.4722 0.75 0.5 a solid ellipse black lightgrey\n\
+             node b 0.375 0.86111 0.75 0.5 b solid ellipse black lightgrey\n\
+             node c 0.375 0.25 0.75 0.5 c solid ellipse black lightgrey\n\
+             stop\n",
+        ),
+    ];
+    for (src, expected) in plain {
+        let (out, err, ok) = run(&["-Kneato", "-Tplain"], src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(out, expected, "{src}");
+    }
+}
+
+// overlap=vpsc: C's `Rectangle` and `Node` (lib/vpsc/generate-constraints.cpp) assert
+// `x <= X` and `width < 1e40`, which a pin at NaN, infinity or 1e300 (infinite as the `float`
+// coordinates removeoverlaps works on) fails, and C aborts; the port's solver never settled.
+// The port skips overlap removal with a warning. Where the boxes pass and only the solver's
+// cost is NaN, C's `while (fabs(lastcost - cost) > 0.0001)` ends the loop, and so does the
+// port's: an unpinned node at 1e300 lays out as C's (all at NaN).
+#[test]
+fn vpsc_overlap_removal_with_extreme_positions_finishes() {
+    for v in ["nan", "inf", "1e300"] {
+        let src =
+            format!("graph {{ layout=neato; overlap=vpsc; a [pos=\"{v},0!\"]; a -- b; b -- c }}");
+        let (_, err, ok) = run(&["-Tsvg"], &src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(
+            err, "Warning: node positions are not finite; overlap removal skipped\n",
+            "{src}"
+        );
+    }
+    let src = "digraph { layout=fdp; overlap=vpsc; n3 [pos=\"1,1e300\"]; n3->n4 }";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("bb=\"0,0,104.5,-4.295e+09\""), "{out}");
+    assert!(out.contains("pos=\"77.499,nan\""), "{out}");
+}
+
+// fdp's initialPositions (lib/fdpgen/fdpinit.c) warns about a `pos` it cannot read.
+#[test]
+fn fdp_warns_about_an_unreadable_pos_like_c() {
+    let src = "graph { layout=fdp; a [pos=\"zz,0!\"]; a -- b }";
+    let (_, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: node a, position zz,0!, expected two floats\n"
+    );
+}
+
 // Fuzz case 003-pack-filledge-zero-point-spline-panic (issue #12), its repro.gv verbatim.
 // Clipping leaves both edges between the overlapping pinned nodes with an empty spline. C
 // crashes on it (exit 138, SIGBUS), so there is no C reference output and the fidelity

@@ -296,15 +296,19 @@ pub fn stress_majorization_cola(
             iterations = 0;
             converged = false;
         }
-        if opt.noverlap == 1 && nsize_scale > 0.001 {
-            generate_nonoverlap_constraints(
+        // Not in C: where C's `Rectangle` asserts on a non-finite position, stop iterating.
+        if opt.noverlap == 1
+            && nsize_scale > 0.001
+            && !generate_nonoverlap_constraints(
                 &mut hor,
                 nsize_scale as f32,
                 &coords,
                 0,
                 nsize_scale >= 0.5,
                 opt,
-            );
+            )
+        {
+            break;
         }
         if hor.m > 0 {
             hor.constrained_majorization_vpsc(&b[0], &mut coords[0], LOCAL_CONSTR_MAJOR_ITERATIONS);
@@ -317,8 +321,18 @@ pub fn stress_majorization_cola(
         if too_many_cycle_errors(&hor, &vrt) {
             break;
         }
-        if opt.noverlap == 1 && nsize_scale > 0.001 {
-            generate_nonoverlap_constraints(&mut vrt, nsize_scale as f32, &coords, 1, false, opt);
+        if opt.noverlap == 1
+            && nsize_scale > 0.001
+            && !generate_nonoverlap_constraints(
+                &mut vrt,
+                nsize_scale as f32,
+                &coords,
+                1,
+                false,
+                opt,
+            )
+        {
+            break;
         }
         if vrt.m > 0 {
             vrt.constrained_majorization_vpsc(&b[1], &mut coords[1], LOCAL_CONSTR_MAJOR_ITERATIONS);

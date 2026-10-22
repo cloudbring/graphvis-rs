@@ -550,7 +550,10 @@ impl Solver {
             self.satisfy()?;
             self.split_blocks();
             cost = self.bs_cost();
-            if (lastcost - cost).abs() <= 0.0001 {
+            // C's `while (fabs(lastcost - cost) > 0.0001)`: a NaN cost (a node at infinity)
+            // ends the loop, where `<= 0.0001` would never hold.
+            let changed = (lastcost - cost).abs() > 0.0001;
+            if !changed {
                 break;
             }
         }
@@ -960,27 +963,33 @@ pub struct BoxF {
     pub ury: f64,
 }
 
-/// `genXConstraints(n, bb, vs, cs, transitiveClosure)`.
+/// The rectangles of `bb`, or `None` where C's `Rectangle` (`x <= X`, `y <= Y`) or `Node`
+/// (`width < 1e40`) constructor asserts: a NaN, infinite or huge position, which C aborts on
+/// and on which the solver would never settle (`overlap=vpsc` with a pin at `nan` or 1e300).
+fn rectangles(bb: &[BoxF]) -> Option<Vec<Rectangle>> {
+    bb.iter()
+        .map(|b| {
+            let r = Rectangle::new(b.llx, b.urx, b.lly, b.ury);
+            (b.llx <= b.urx && b.lly <= b.ury && r.width() < 1e40).then_some(r)
+        })
+        .collect()
+}
+
+/// `genXConstraints(n, bb, vs, cs, transitiveClosure)`; `None` where C asserts.
 pub fn gen_x_constraints(
     s: &mut Solver,
     bb: &[BoxF],
     vs: &[usize],
     transitive_closure: bool,
-) -> Vec<usize> {
-    let rs: Vec<Rectangle> = bb
-        .iter()
-        .map(|b| Rectangle::new(b.llx, b.urx, b.lly, b.ury))
-        .collect();
-    generate_x_constraints(s, &rs, vs, transitive_closure)
+) -> Option<Vec<usize>> {
+    let rs = rectangles(bb)?;
+    Some(generate_x_constraints(s, &rs, vs, transitive_closure))
 }
 
-/// `genYConstraints(n, bb, vs, cs)`.
-pub fn gen_y_constraints(s: &mut Solver, bb: &[BoxF], vs: &[usize]) -> Vec<usize> {
-    let rs: Vec<Rectangle> = bb
-        .iter()
-        .map(|b| Rectangle::new(b.llx, b.urx, b.lly, b.ury))
-        .collect();
-    generate_y_constraints(s, &rs, vs)
+/// `genYConstraints(n, bb, vs, cs)`; `None` where C asserts.
+pub fn gen_y_constraints(s: &mut Solver, bb: &[BoxF], vs: &[usize]) -> Option<Vec<usize>> {
+    let rs = rectangles(bb)?;
+    Some(generate_y_constraints(s, &rs, vs))
 }
 
 #[cfg(test)]

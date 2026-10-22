@@ -39,7 +39,7 @@ fixed in that cause's shared mechanism, not with a new local guard.
 |---|---|---|
 | **dot keeps going after a failed ranking** | Network simplex prints `trouble in init_rank` and returns unnormalised ranks; C carries on and crashes later in mincross, position or splines (#114, #232, #233). | Stop the layout where a cluster's ranking fails, and where C's `install_in_rank` finds that the ranks do not fit the rank arrays: an error and exit status 1. A failed ranking of the root alone is not stopped; see [below](#dot-after-a-failed-ranking). |
 | **dot's cluster membership** | A rank set or an earlier cluster takes a node from a cluster after the cluster was ranked (`x was already in a rankset, deleted from cluster G`). The cluster keeps its rank range, so it can have ranks with no node, or no nodes at all; C crashes later in `build_ranks`, `furthestnode`, `rank_box` (#114, #231). | Stop the layout where C dereferences an emptied cluster's NULL node list. Ranks with no node, which C often draws through, are kept; see [below](#dot-cluster-membership). |
-| **Extreme coordinates** | NaN, infinity or huge pinned positions flow into every engine and overflow at the first integer cast or recursion (#191, #196, #201, #227, #228, #229). | Validate positions once, where they are parsed. |
+| **Extreme coordinates** | NaN, infinity or huge pinned positions flow into every engine and overflow at the first integer cast or recursion (#191, #196, #201, #227, #228, #229, #239, #240). | Keep C's positions, which C lays out wherever it finishes; bound the algorithms whose limits depend on magnitude (see [below](#extreme-coordinates)). |
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | The [panic-site ratchet](#the-panic-site-ratchet) maps the remaining sites and stops the count from growing; new code returns an error instead. |
 
@@ -250,3 +250,53 @@ before `dot_concentrate` rewired it, and it goes wrong in two ways:
 
 Both change output only where C crashes. (With `splines=line`, C survives the deleted-node
 case because `makeLineEdge` never reads the head; the redirect changes nothing there either.)
+
+## Extreme coordinates
+
+The plan was to validate positions once, where they are parsed. Running C showed this would
+break the first rule. C 16.1.0 and the port were run on pins at NaN, ±inf and 1e6–1e308 inches,
+across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
+
+- **C produces output for most non-finite pins.** C reads `pos` with `sscanf("%lf")`, which
+  accepts `nan` and `inf`. It then lays the whole component out at NaN (`pos="nan,nan"`), or
+  prints `inf` for a finite pin that overflows once multiplied by 72. The port already
+  matched those outputs byte for byte, in neato, `-n` and `-n2`. C crashes only on some
+  routes: ortho asserts (#228), and `update_bb_bz` overflows its stack on #201's shape. Which
+  route an input takes depends on `splines`, the components and the other pins, so no check at
+  parse time can reject exactly the inputs C crashes on. Positions are therefore kept as C
+  reads them, and the routes where C crashes are made safe downstream. #187's finiteness test
+  in `update_bb_bz` covers #201; ortho's failure boundary covers #228 (see above).
+- **Finite positions are laid out exactly by C up to 1e306 inches**, except in algorithms that
+  have a limit of their own:
+  - **Packing** (#174) was budgeted in 0.1.1. A non-finite pin gives a component an infinite
+    box; where its width or height is NaN (`inf - inf`), `computeStep`'s discriminant is NaN
+    and C fails `assert(d >= 0)` (#239). The port returns step 0 there, which takes C's own
+    `stepSize <= 0` exit: packing is skipped with a warning.
+  - **`update_bb_bz`** (#227) refines a curve until its control points are within 2pt of the
+    chord, which takes about `sqrt(length)` splits at a given magnitude, and more as the
+    coordinates' rounding nears 2pt: 1.3e5 for pins 1e10 inches apart, 5.7e7 at 1.5e15.
+    Further out, 2pt is below the rounding and C never finishes. The count grows
+    continuously, so the port uses a cutoff, as with packing: 2^28 splits per segment, about
+    5 s of C's work. A segment under it is refined as in C. Past it, the remaining pieces
+    are taken whole, and so is every later segment of that layout. Their control points
+    enclose the curve, so the bb may be a little larger than C's, on a segment that takes C
+    seconds.
+  - **Integer conversions that C lets wrap.** Where C converts a far position to `int` and
+    goes on, the port reproduces what the reference build does. fdp's `gridRepulse` (#196)
+    saturates the cell index and wraps `i + 1`. neato's `initItem` for `overlap=*ortho*`
+    (#240) converts `x` and `y` through 64 bits and keeps the low 32, so they wrap
+    from about 3e6 inches, and its `int` arithmetic after that wraps too. The output stays
+    C's.
+  - **VPSC overlap removal** (`overlap=vpsc`). C's `Rectangle` and `Node` assert `x <= X`
+    and `width < 1e40`, which a pin at NaN, infinity or 1e300 fails (1e300 is infinite as a
+    `float`). The port skips overlap removal there with a warning. C's solver loop
+    `while (fabs(lastcost - cost) > 0.0001)` ends on a NaN cost; the port's had the test
+    inverted and never ended. It now ends where C's does.
+  - **Ortho's integer path costs** overflow once coordinates span about 3e7 inches (INT_MAX
+    points), and C fails `PQcheck` (#229). The ortho router's failure boundary rejects such
+    distances (see above).
+
+Closed: #227, #239, #240.
+The round-1 guards stay, because they match C and finite or NaN positions still reach them:
+#206 (the Hilbert order and shift for a bb above 2^32 points, or an infinite one), #207 (the
+wrapping grid cell index at 1e17), and #187's finiteness test in `update_bb_bz` (#173, #201).

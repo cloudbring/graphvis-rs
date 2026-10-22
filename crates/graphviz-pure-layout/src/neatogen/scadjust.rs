@@ -191,7 +191,13 @@ pub fn vpsc_adjust(g: &mut LGraph<'_>, sub: &Sub) -> bool {
         nsize,
         ..Default::default()
     };
-    removeoverlaps(nnodes, &mut coords, &mut opt);
+    if !removeoverlaps(nnodes, &mut coords, &mut opt) {
+        // C aborts in `Rectangle` here; the port leaves the layout's positions.
+        graphviz_pure_core::diag::agwarningf(
+            "node positions are not finite; overlap removal skipped\n",
+        );
+        return false;
+    }
     for (j, &v) in sub.nodes.iter().enumerate() {
         for (i, c) in coords.iter().enumerate() {
             g.nodes[v].pos[i] = c[j] as f64;

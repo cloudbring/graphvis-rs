@@ -837,38 +837,79 @@ fn check_control_points(cp: &[Point; 4]) -> bool {
 
 /// `update_bb_bz`: grow `bb` to contain a Bézier segment.
 pub fn update_bb_bz(bb: &mut BoundingBox, cp: &[Point; 4]) {
+    BZ_OUT_OF_SPLITS.with(|out| {
+        let mut budget = if out.get() { 0 } else { BZ_SPLIT_BUDGET };
+        if update_bb_bz_r(bb, cp, &mut budget) {
+            out.set(true);
+        }
+    });
+}
+
+/// Not in C: the most times [`update_bb_bz`] splits one segment (#227), about 5 s of C's
+/// work. C refines a segment until its control points are within 2pt of its chord, which
+/// takes about `sqrt(length)` splits at a given magnitude, and more as the coordinates'
+/// rounding nears 2pt: 1.3e5 for pins 1e10 inches apart, 5.7e7 at 1.5e15. Further out the
+/// 2pt test falls below the rounding and C never finishes (#227: curved edges between pins
+/// 1e16 inches apart). The count grows continuously, so this is a cutoff, as #177's packing
+/// budget is: a segment under it is refined as in C; past it, its remaining pieces are taken
+/// whole, as `check_control_points` accepts a piece, and their control points still enclose
+/// the curve. A segment C finishes but that needs more (seconds of C per segment) can then
+/// give a bb a little larger than C's.
+const BZ_SPLIT_BUDGET: u64 = 1 << 28;
+
+thread_local! {
+    /// Set once a segment of this layout ran out of [`BZ_SPLIT_BUDGET`]: the later segments
+    /// are taken whole, so many such segments cannot add up to a hang.
+    static BZ_OUT_OF_SPLITS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Clears [`BZ_OUT_OF_SPLITS`] for the next layout on this thread. Called by
+/// `layout_graph_with_options`, the entry point of every engine.
+pub(crate) fn reset_bz_split_budget() {
+    BZ_OUT_OF_SPLITS.with(|out| out.set(false));
+}
+
+/// Returns whether a piece needed a split the budget refused.
+fn update_bb_bz_r(bb: &mut BoundingBox, cp: &[Point; 4], budget: &mut u64) -> bool {
     let out = cp
         .iter()
         .any(|p| p.x > bb.ur.x || p.x < bb.ll.x || p.y > bb.ur.y || p.y < bb.ll.y);
     if !out {
-        return;
+        return false;
     }
     // C has no finiteness test. Every half `Bezier` splits off keeps the curve's midpoint,
     // which is non-finite when any control point is, and `ptToLine2` gives inf or NaN for
-    // such a point, so `check_control_points` never accepts the segment: C either stops on a half that is not `out`, leaving `bb` as
-    // it was, or recurses until its stack overflows (#173: osage gives a repeated cluster a
-    // NaN box, and its edges inherit it; #201: neato pins a node at NaN). Leave `bb` as it was.
+    // such a point, so `check_control_points` never accepts the segment: C either stops on a
+    // half that is not `out`, leaving `bb` as it was, or recurses until its stack overflows
+    // (#173: osage gives a repeated cluster a NaN box, and its edges inherit it; #201: neato
+    // pins a node at NaN). Leave `bb` as it was.
     if !cp.iter().all(|p| p.x.is_finite() && p.y.is_finite()) {
-        return;
+        return false;
     }
-    if check_control_points(cp) {
-        for p in cp {
-            if p.x > bb.ur.x {
-                bb.ur.x = p.x;
-            } else if p.x < bb.ll.x {
-                bb.ll.x = p.x;
-            }
-            if p.y > bb.ur.y {
-                bb.ur.y = p.y;
-            } else if p.y < bb.ll.y {
-                bb.ll.y = p.y;
-            }
+    let mut refused = false;
+    if !check_control_points(cp) {
+        if let Some(left) = budget.checked_sub(1) {
+            *budget = left;
+            let (_, l, r) = bezier_split(cp, 0.5);
+            let refused_l = update_bb_bz_r(bb, &l, budget);
+            let refused_r = update_bb_bz_r(bb, &r, budget);
+            return refused_l || refused_r;
         }
-    } else {
-        let (_, l, r) = bezier_split(cp, 0.5);
-        update_bb_bz(bb, &l);
-        update_bb_bz(bb, &r);
+        refused = true;
     }
+    for p in cp {
+        if p.x > bb.ur.x {
+            bb.ur.x = p.x;
+        } else if p.x < bb.ll.x {
+            bb.ll.x = p.x;
+        }
+        if p.y > bb.ur.y {
+            bb.ur.y = p.y;
+        } else if p.y < bb.ll.y {
+            bb.ll.y = p.y;
+        }
+    }
+    refused
 }
 
 /// `addLabelBB` / `updateBB`: grow `bb` by a positioned label.
@@ -1454,5 +1495,52 @@ mod tests {
             update_bb_bz(&mut bb, &cp);
             assert_eq!(bb, bb0, "{cp:?}");
         }
+    }
+
+    /// #227: a segment between points 1e17 apart cannot be refined to 2pt, as adjacent
+    /// doubles there are 16 apart, and C never finishes. The budget stops the split, and
+    /// the pieces taken whole still enclose the curve. A small segment is refined as in C.
+    #[test]
+    fn update_bb_bz_budget_ends_a_huge_segment_and_keeps_small_ones_exact() {
+        let curve = |s: f64| {
+            [
+                Point::new(0.0, 0.0),
+                Point::new(0.0, s),
+                Point::new(s, s),
+                Point::new(s, 0.0),
+            ]
+        };
+        reset_bz_split_budget();
+        let mut bb = BoundingBox::new(0.0, 0.0, 1.0, 1.0);
+        update_bb_bz(&mut bb, &curve(100.0));
+        // The curve's top is at 75; C accepts pieces whose control points are within 2pt.
+        assert!(bb.ur.y >= 75.0 && bb.ur.y < 77.0, "{bb:?}");
+        assert!(!BZ_OUT_OF_SPLITS.with(std::cell::Cell::get));
+
+        let s = 1e17;
+        let mut bb = BoundingBox::new(0.0, 0.0, 1.0, 1.0);
+        update_bb_bz(&mut bb, &curve(s));
+        assert!(bb.ur.y >= 0.75 * s && bb.ur.y <= s, "{bb:?}");
+        assert!(bb.ur.x >= s && bb.ur.x.is_finite(), "{bb:?}");
+        assert!(BZ_OUT_OF_SPLITS.with(std::cell::Cell::get));
+
+        // Once a segment has run out, a later one makes no split at all: taken whole, its
+        // control points are the bb.
+        let mut bb = BoundingBox::new(0.0, 0.0, 1.0, 1.0);
+        update_bb_bz(&mut bb, &curve(2.0 * s));
+        assert_eq!(bb, BoundingBox::new(0.0, 0.0, 2.0 * s, 2.0 * s));
+        reset_bz_split_budget();
+        assert!(!BZ_OUT_OF_SPLITS.with(std::cell::Cell::get));
+
+        // A segment needing exactly the splits left is refined in full, without a refusal.
+        let fresh = || BoundingBox::new(0.0, 0.0, 1.0, 1.0);
+        let mut left = u64::MAX;
+        assert!(!update_bb_bz_r(&mut fresh(), &curve(100.0), &mut left));
+        let needed = u64::MAX - left;
+        let mut exact = needed;
+        assert!(!update_bb_bz_r(&mut fresh(), &curve(100.0), &mut exact));
+        assert_eq!(exact, 0);
+        let mut short = needed - 1;
+        assert!(update_bb_bz_r(&mut fresh(), &curve(100.0), &mut short));
     }
 }
