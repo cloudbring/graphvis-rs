@@ -168,6 +168,12 @@ jobs:
       - name: Build the npm package
         working-directory: web
         run: npm run build:wasm
+      # The release packs the same way (prepack copies the licence files in); JSR publishes the
+      # tarball's files that jsr.json includes.
+      - name: The npm and JSR packages carry the licence files
+        run: |
+          (cd web && npm pack --pack-destination "$RUNNER_TEMP")
+          python3 scripts/check-package-notices.py "$RUNNER_TEMP"/graphviz-pure-wasm-*.tgz
       # Install without running any package's lifecycle scripts, check every package's registry
       # signature, and only then run the scripts (which unpack the deno, bun and workerd binaries).
       - name: Install the runtimes (no scripts)
@@ -219,6 +225,16 @@ jobs:
       # crate in the release binaries and the wasm package (about.toml).
       - name: THIRD-PARTY-LICENSES.md is current
         run: scripts/third-party-licenses.sh --check
+      # Each crate published to crates.io (publish = false ones aside) carries LICENSE and NOTICE
+      # (copies of the root files, which must match them), and the crates with third-party code
+      # their licences.
+      # --no-verify: packaging only, nothing is compiled.
+      - name: The crates carry the licence files
+        run: |
+          read -ra crates <<< "$(cargo metadata --locked --no-deps --format-version 1 |
+            jq -r '[.packages[] | select(.publish != []) | "-p", .name] | join(" ")')"
+          cargo package --locked --no-verify "${crates[@]}"
+          python3 scripts/check-package-notices.py target/package/*.crate
       # Security lint of every workflow: injection, credential persistence, triggers, pinning.
       - name: zizmor
         run: zizmor --persona=pedantic --offline .github/workflows
