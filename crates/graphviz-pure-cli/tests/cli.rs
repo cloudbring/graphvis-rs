@@ -1508,6 +1508,48 @@ fn run_bytes(args: &[&[u8]], stdin: &str) -> (Vec<u8>, Vec<u8>, bool) {
     (out.stdout, out.stderr, out.status.success())
 }
 
+/// Issue #197: `x` is in two clusters (#33), so `overlap=ipsep` gives VPSC
+/// containment constraints it cannot satisfy. C's `satisfyVPSC` (`lib/vpsc/csolve_VPSC.cpp`)
+/// lets the "Cycle Error!" `std::runtime_error` escape and aborts. The port ignored the
+/// error and kept projecting, splitting blocks without bound: over 10 s and gigabytes of
+/// memory. It now ends the layout at the first failure, as C's `stress_majorization_cola`
+/// does when a solver fails, and draws the graph.
+#[test]
+fn ipsep_vpsc_cycle_error_ends_the_layout() {
+    let src = "digraph { layout=neato; mode=ipsep; overlap=ipsep; \
+               subgraph cluster_a { a; x; c } subgraph cluster_b { b; x; d } \
+               a -> b; x -> a; c -> d; h -> {a b c d} }";
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .arg("-Tsvg")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(src.as_bytes())
+        .unwrap();
+    // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while child.try_wait().unwrap().is_none() {
+        if std::time::Instant::now() > deadline {
+            child.kill().unwrap();
+            panic!("the ipsep layout must terminate");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let out = child.wait_with_output().unwrap();
+    let (svg, err) = (
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    assert!(out.status.success(), "{err}");
+    assert_eq!(svg.matches("class=\"node\"").count(), 6, "{svg}");
+}
+
 /// Issue #152: C's `main` takes its arguments as bytes; a file name that is not valid UTF-8
 /// (here Latin-1 `né.gv`) is opened, and named in errors with its own bytes.
 #[cfg(unix)]

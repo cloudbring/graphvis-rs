@@ -291,8 +291,18 @@ pub fn stress_majorization_cola(
                 opt,
             );
         }
+        // C aborts where constrained_majorization_vpsc fails (an uncaught
+        // std::runtime_error in satisfyVPSC). The port ends the layout as on
+        // C's own solver failures below, with `goto finish`, so the caller
+        // keeps the initial positions ("layout aborted").
         if hor.m > 0 {
-            hor.constrained_majorization_vpsc(&b[0], &mut coords[0], LOCAL_CONSTR_MAJOR_ITERATIONS);
+            if hor
+                .constrained_majorization_vpsc(&b[0], &mut coords[0], LOCAL_CONSTR_MAJOR_ITERATIONS)
+                .is_err()
+            {
+                finish(&coords, d_coords);
+                return Err(SolverError);
+            }
         } else if conjugate_gradient_mkernel(&lap2, &mut coords[0], &mut b[0], n, TOLERANCE_CG, n)
             .is_err()
         {
@@ -303,7 +313,13 @@ pub fn stress_majorization_cola(
             generate_nonoverlap_constraints(&mut vrt, nsize_scale as f32, &coords, 1, false, opt);
         }
         if vrt.m > 0 {
-            vrt.constrained_majorization_vpsc(&b[1], &mut coords[1], LOCAL_CONSTR_MAJOR_ITERATIONS);
+            if vrt
+                .constrained_majorization_vpsc(&b[1], &mut coords[1], LOCAL_CONSTR_MAJOR_ITERATIONS)
+                .is_err()
+            {
+                finish(&coords, d_coords);
+                return Err(SolverError);
+            }
         } else {
             let _ =
                 conjugate_gradient_mkernel(&lap2, &mut coords[1], &mut b[1], n, TOLERANCE_CG, n);
