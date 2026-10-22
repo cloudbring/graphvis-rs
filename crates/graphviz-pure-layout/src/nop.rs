@@ -132,7 +132,7 @@ fn mapbool(v: Option<&str>) -> bool {
 }
 
 fn is_a_cluster(name: &str, attrs: &AttrMap) -> bool {
-    name.len() >= 7 && name[..7].eq_ignore_ascii_case("cluster")
+    graphviz_pure_core::has_cluster_prefix(name)
         || mapbool(attrs.get("cluster").map(String::as_str))
 }
 

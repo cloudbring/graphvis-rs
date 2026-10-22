@@ -246,9 +246,9 @@ tests/golden/e2e.libm-matched.json` records C's output with the portable functio
 
 | build | vs C with Apple's libm (`e2e.json`) | vs C with the portable functions (`e2e.libm-matched.json`) |
 |---|---:|---:|
-| macOS, Apple profile | 2590 / 2590 | — |
-| macOS `portable-math`, Linux | 2470 / 2590 | **2591 / 2591** |
-| wasm32 (`scripts/wasm-e2e.mjs --golden tests/golden/e2e.libm-matched.json`) | 2470 / 2590 | **2591 / 2591** |
+| macOS, Apple profile | 2591 / 2591 | — |
+| macOS `portable-math`, Linux | 2471 / 2591 | **2592 / 2592** |
+| wasm32 (`scripts/wasm-e2e.mjs --golden tests/golden/e2e.libm-matched.json`) | 2471 / 2591 | **2592 / 2592** |
 
 The denominators differ because each oracle has its own set of stable inputs: an input counts
 only if C gave the same output on every run of that oracle, and C with Apple's libm and C with

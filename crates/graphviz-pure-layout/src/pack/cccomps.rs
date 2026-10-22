@@ -45,7 +45,7 @@ pub struct CompGraph {
 
 /// `is_a_cluster(g)` for a subgraph.
 pub fn is_a_cluster(s: &SubgraphData) -> bool {
-    (s.name.len() >= 7 && s.name[..7].eq_ignore_ascii_case("cluster"))
+    graphviz_pure_core::has_cluster_prefix(&s.name)
         || mapbool(s.graph_attrs.get("cluster").map(String::as_str))
 }
 

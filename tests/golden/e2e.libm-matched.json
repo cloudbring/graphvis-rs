@@ -721,6 +721,7 @@
     "main/fuzz_record_html_entities": "6ba34ce2263b5d78",
     "main/fuzz_sametail_title": "2a55e64b44b9fc81",
     "main/fuzz_strict_edge_merge": "75d73f6ce381dbe7",
+    "main/fuzz_subgraph_name_multibyte": "d7d42ccfd47bad2e",
     "main/fuzz_subgraph_splines_root": "18ba622ad58bcf37",
     "main/fuzz_tapered_fma": "beb2d11828db78c4",
     "main/fuzz_trailing_syntax_error": "b8f0f86bdbd8cdd2",

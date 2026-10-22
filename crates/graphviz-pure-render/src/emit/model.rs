@@ -224,8 +224,7 @@ fn parse_point(s: Option<&str>) -> Option<Point> {
 }
 
 fn is_a_cluster(name: &str, attrs: &AttrMap) -> bool {
-    (name.len() >= 7 && name[..7].eq_ignore_ascii_case("cluster"))
-        || Attrs(attrs).mapbool("cluster")
+    graphviz_pure_core::has_cluster_prefix(name) || Attrs(attrs).mapbool("cluster")
 }
 
 impl<'g> Model<'g> {
