@@ -142,7 +142,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "graphviz-pure-geom",
@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure",
  "graphviz-pure-core",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "libm",
  "serde",
@@ -175,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-diff"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure",
  "graphviz-pure-core",
@@ -187,14 +187,14 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-geom"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
 ]
 
 [[package]]
 name = "graphviz-pure-layout"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "graphviz-pure-geom",
@@ -202,7 +202,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-parser"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "thiserror",
@@ -210,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-portable-libm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "graphviz-pure-layout",
@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-raster"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "jpeg-encoder",
  "resvg",
@@ -227,7 +227,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-render"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "graphviz-pure-geom",
@@ -238,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-wasm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure",
  "graphviz-pure-core",
