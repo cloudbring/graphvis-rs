@@ -37,9 +37,48 @@ fixed in that cause's shared mechanism, not with a new local guard.
 
 | Cause | How it fails | Fix in the port |
 |---|---|---|
-| **dot keeps going after a failed ranking** | Network simplex prints `trouble in init_rank` and returns unnormalised ranks; C carries on and crashes later in mincross, position or splines (#114, #232, #233). | Stop the layout where the ranking fails: an error and exit status 1. |
+| **dot keeps going after a failed ranking** | Network simplex prints `trouble in init_rank` and returns unnormalised ranks; C carries on and crashes later in mincross, position or splines (#114, #232, #233). | Stop the layout where a cluster's ranking fails, and where C's `install_in_rank` finds that the ranks do not fit the rank arrays: an error and exit status 1. A failed ranking of the root alone is not stopped; see [below](#dot-after-a-failed-ranking). |
 | **Extreme coordinates** | NaN, infinity or huge pinned positions flow into every engine and overflow at the first integer cast or recursion (#191, #196, #201, #227, #228, #229). | Validate positions once, where they are parsed. |
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | `clippy::unwrap_used` and `clippy::indexing_slicing` as warnings in the layout crates map the remaining sites; new code returns an error instead. |
 
 The fix for each cause records here the issues it closed and the behaviour it chose.
+
+## dot after a failed ranking
+
+Closed: #232, #233 (and #114 earlier, by #208).
+
+`trouble in init_rank` means the rank constraints contain a cycle, usually rank sets that
+contradict each other (`rank=min` and `rank=max` on one node) or a node that is both in a
+cluster and in a rank set. On its own it does not stop C, and it does not stop the port:
+over 3000 generated inputs, C printed it on 182 and still drew 155 of them, the same way
+on every run, and the port's output equals C's on all 155. Stopping the layout at the
+message would turn those drawings into errors, so the port stops only where the failed
+ranking leaves state that C cannot use:
+
+- **A cluster's own ranking** (`collapse_cluster` → `dot1_rank`). The cluster's ranks
+  normally start at 0, and `cluster_leader` asserts that some node is on rank 0
+  (`rank.c:316`). After a failed ranking there may be none. The port fails the layout there
+  (`cluster_leader: the ranking of cluster X failed: none of its nodes is on rank 0`), at
+  any cluster depth (#233).
+- **`install_in_rank`** (`mincross.c`), C's own check that the ranks fit the rank arrays
+  built from them. The port now has all of C's checks, in C's order. Where C prints an
+  error (lines 1158, 1179, 1184, 1190), the port prints the same error and abandons the
+  layout as C does; the output is C's (#232, input A). Where C fails
+  `assert(GD_rank(g)[r].n <= GD_rank(g)[r].an)` after writing past the array (line 1165),
+  the port fails the layout before the write (`install_in_rank: rank R of G is full`)
+  (#232, input B). Past the root's first component, C's line-1190 bound uses `>`, so one
+  store can land one slot past the array unreported; the port grows the buffer there and
+  goes on, as C does.
+
+Most of C's crashes after `trouble in init_rank` come from a related cause that is not in
+the ranking itself: a cluster keeps the rank range of nodes that `mark_clusters` later
+removes from it (`x was already in a rankset, deleted from cluster G`), so some of its
+ranks have no node. `rec_reset_vlists` then follows a stale rank leader (C segfaults in
+`furthestnode`, and on some inputs crashes or not depending on the run), and mincross can
+leave a node unplaced. The port reaches the same state; `make_regular_edge`'s rank check
+(#208) still stops the layout there, so it stays.
+
+Not this cause, although they often follow the same inputs: #230 (`flat_node` reads rank
+-1 when no rank was made for it), #231 (a cluster left with no nodes), #234
+(`conc_slope` on a one-sided merge node).

@@ -308,6 +308,12 @@ dot
   Edges `makeLineEdge` draws straight (`splines=line|false`) read no rank and are drawn as
   before (issue
   #114; `init_rank_trouble_*` in `crates/graphviz-pure-cli/tests/cli.rs`).
+* When a cluster's own ranking fails, no node of the cluster may be on rank 0, and C fails
+  `assert(leader != NULL)` in `cluster_leader`; the port fails the layout there (issue
+  #233, `cluster_ranking_trouble_fails_the_layout`). `install_in_rank` has all of C's
+  checks: its errors abandon the layout as C does, and the `n <= an` assertion fails the
+  layout (issue #232, `install_in_rank_*` in `crates/graphviz-pure-cli/tests/cli.rs`).
+  `docs/porting/crashes.md` has the details.
 * In the pack branch, clusters are drawn from the root's `GD_clust` as `copyClusterInfo`
   builds it: in component order, and once per component that kept the cluster, so a
   cluster sharing a node with a non-nested cluster is drawn twice. The renderer used to
