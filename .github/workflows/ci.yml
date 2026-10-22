@@ -225,16 +225,10 @@ jobs:
       # crate in the release binaries and the wasm package (about.toml).
       - name: THIRD-PARTY-LICENSES.md is current
         run: scripts/third-party-licenses.sh --check
-      # Each crate published to crates.io (publish = false ones aside) carries LICENSE and NOTICE
-      # (copies of the root files, which must match them), and the crates with third-party code
-      # their licences.
-      # --no-verify: packaging only, nothing is compiled.
+      # Each crate published to crates.io carries LICENSE and NOTICE (copies of the root files,
+      # which must match them), and the crates with third-party code their licences.
       - name: The crates carry the licence files
-        run: |
-          read -ra crates <<< "$(cargo metadata --locked --no-deps --format-version 1 |
-            jq -r '[.packages[] | select(.publish != []) | "-p", .name] | join(" ")')"
-          cargo package --locked --no-verify "${crates[@]}"
-          python3 scripts/check-package-notices.py target/package/*.crate
+        run: scripts/check-crate-notices.sh
       # Security lint of every workflow: injection, credential persistence, triggers, pinning.
       - name: zizmor
         run: zizmor --persona=pedantic --offline .github/workflows

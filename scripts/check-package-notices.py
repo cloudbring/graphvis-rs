@@ -63,6 +63,8 @@ def required(name):
     sys.exit(f"error: {name}: not a release archive, npm package or crate")
 
 
+if len(sys.argv) < 2:
+    sys.exit("usage: scripts/check-package-notices.py ARTIFACT...")
 errors = 0
 for path in sys.argv[1:]:
     top, files = required(os.path.basename(path))
@@ -80,12 +82,16 @@ for path in sys.argv[1:]:
             print(f"error: {path}: {arc} differs from {src}{hint}", file=sys.stderr)
             errors += 1
     if top == "package":
-        jsr = have.get("package/jsr.json", b'{"publish": {"include": []}}')
-        include = json.loads(jsr)["publish"]["include"]
-        for arc in sorted(set(files) - set(include)):
-            print(f"error: {path}: jsr.json does not publish {arc}", file=sys.stderr)
+        jsr = have.get("package/jsr.json")
+        if jsr is None:
+            print(f"error: {path}: jsr.json is missing", file=sys.stderr)
             errors += 1
+        else:
+            include = json.loads(jsr)["publish"]["include"]
+            for arc in sorted(set(files) - set(include)):
+                print(f"error: {path}: jsr.json does not publish {arc}", file=sys.stderr)
+                errors += 1
     if errors == before:
         print(f"{path}: {', '.join(sorted(files))}")
-if errors or len(sys.argv) < 2:
+if errors:
     sys.exit(1)

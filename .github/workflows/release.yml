@@ -78,6 +78,9 @@ jobs:
         run: |
           cargo metadata --locked --no-deps --format-version 1 > "$RUNNER_TEMP/metadata.json"
           python3 scripts/crates-to-publish.py "$RUNNER_TEMP/metadata.json" "$VERSION"
+      # The crates the crates-io job publishes carry their licence files (also checked in CI).
+      - name: The crates carry the licence files
+        run: scripts/check-crate-notices.sh
       # A maintainer's signed tag, checked against .github/allowed_signers as it is on master (not
       # as it is in the tagged commit, which the tag's author controls).
       - name: The tag is signed by a maintainer
