@@ -1184,6 +1184,40 @@ cluster_outer{o1}subgraph cluster_inner4{j1 j2}}subgrapa}subgraph cluster_inner4
     );
 }
 
+// Issue #202, verbatim. Tiny touching dot nodes make `lib/ortho/maze.c:markSmall` follow a
+// missing cell or read past a node cell's side list; C segfaults (exit 139). The port
+// panicked on an `unwrap` in `mark_small`; now the maze fails like the other cases C crashes
+// on (see #171 above), and the ortho router gives up. What dot does after a failed maze
+// (exit status, nodes-only output) is #200's, so this checks only that nothing panics, and
+// that a successful run draws the nodes.
+#[test]
+fn ortho_tiny_touching_nodes_do_not_panic_mark_small() {
+    let src = "digraph{splines=ortho nodesep=0.02 ranksep=0.02 node[shape=circle width=0.01 height=0.02 fixedsize=true label=\"\"] n0->n3 n1->n1 n2->n3 n1->n1 n3->n3 n0->n0}
+";
+    let out = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .arg("-Tsvg")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            child.stdin.take().unwrap().write_all(src.as_bytes())?;
+            child.wait_with_output()
+        })
+        .unwrap();
+    let (svg, err) = (
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    assert_ne!(out.status.code(), Some(101), "{err}");
+    assert!(!err.contains("panicked"), "{err}");
+    if out.status.success() {
+        for n in ["n0", "n1", "n2", "n3"] {
+            assert!(svg.contains(&format!("<title>{n}</title>")), "{n}:\n{svg}");
+        }
+    }
+}
+
 // Issue #171: tiny touching dot nodes also make a vertex need a fifth chain slot in
 // `lib/ortho/partition.c:make_new_monotone_poly`. C writes past `vpos[4]`, but only into
 // bookkeeping, so its partition and routes are still right (exit 0). The port must route the

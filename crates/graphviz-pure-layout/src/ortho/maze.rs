@@ -168,8 +168,11 @@ pub fn update_wts(sg: &mut SGraph, cp: &Cell, ep: usize) {
     }
 }
 
-/// `markSmall(cp)`.
-fn mark_small(mp: &mut Maze, c: usize) {
+/// `markSmall(cp)`. `None` where C dereferences a missing cell or reads past
+/// the allocation of a node cell's side list (`lib/ortho/maze.c:markSmall`).
+/// Tiny or touching node boxes in dot get there (#202): C segfaults, so the
+/// port fails the maze instead and the caller falls back.
+fn mark_small(mp: &mut Maze, c: usize) -> Option<()> {
     let bb = mp.cells[c].bb;
     let sides: Vec<usize> = mp.cells[c].sides.iter().flatten().copied().collect();
     if is_small(bb.ur.y - bb.ll.y) {
@@ -178,27 +181,9 @@ fn mark_small(mp: &mut Maze, c: usize) {
                 continue;
             }
             if mp.sg.nodes[onp0].cells[0] == Some(c) {
-                let mut ocp = mp.sg.nodes[onp0].cells[1].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLV;
-                while let Some(onp) = mp.cells[ocp].sides[M_RIGHT] {
-                    let nc = mp.sg.nodes[onp].cells[1].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLV;
-                }
+                mark_run(mp, onp0, 1, M_RIGHT, MZ_SMALLV)?;
             } else {
-                let mut ocp = mp.sg.nodes[onp0].cells[0].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLV;
-                while let Some(onp) = mp.cells[ocp].sides[M_LEFT] {
-                    let nc = mp.sg.nodes[onp].cells[0].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLV;
-                }
+                mark_run(mp, onp0, 0, M_LEFT, MZ_SMALLV)?;
             }
         }
     }
@@ -208,29 +193,44 @@ fn mark_small(mp: &mut Maze, c: usize) {
                 continue;
             }
             if mp.sg.nodes[onp0].cells[0] == Some(c) {
-                let mut ocp = mp.sg.nodes[onp0].cells[1].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLH;
-                while let Some(onp) = mp.cells[ocp].sides[M_TOP] {
-                    let nc = mp.sg.nodes[onp].cells[1].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLH;
-                }
+                mark_run(mp, onp0, 1, M_TOP, MZ_SMALLH)?;
             } else {
-                let mut ocp = mp.sg.nodes[onp0].cells[0].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLH;
-                while let Some(onp) = mp.cells[ocp].sides[M_BOTTOM] {
-                    let nc = mp.sg.nodes[onp].cells[0].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLH;
-                }
+                mark_run(mp, onp0, 0, M_BOTTOM, MZ_SMALLH)?;
             }
         }
+    }
+    Some(())
+}
+
+/// One walk of `markSmall`: flag the cell `onp->cells[ci]`, then keep stepping
+/// through `side` while the next cell is not a node. `None` on a missing cell
+/// or an unallocated side slot, where C crashes.
+fn mark_run(mp: &mut Maze, onp: usize, ci: usize, side: usize, flag: i32) -> Option<()> {
+    let mut ocp = mp.sg.nodes[onp].cells[ci]?;
+    mp.cells[ocp].flags |= flag;
+    while let Some(onp) = side_slot(&mp.cells[ocp].sides, side)? {
+        let nc = mp.sg.nodes[onp].cells[ci]?;
+        if mp.cells[nc].is_node() {
+            break;
+        }
+        ocp = nc;
+        mp.cells[ocp].flags |= flag;
+    }
+    Some(())
+}
+
+/// `cp->sides[side]` as C reads it. A node cell's side list comes from
+/// `LIST_DETACH` (`lib/util/list.c`), which keeps the capacity: 1, 2, 4, ...
+/// slots, the unused ones zeroed. So a read past the list but within the
+/// capacity is NULL and ends C's walk; past the capacity (or on an empty list,
+/// whose buffer is NULL) C reads unallocated memory, and this returns `None`.
+/// This holds because `mkMazeGraph` fills the list only with `LIST_APPEND`
+/// (head 0, capacity `len.next_power_of_two()`).
+fn side_slot(sides: &[Option<usize>], side: usize) -> Option<Option<usize>> {
+    match sides.get(side) {
+        Some(&s) => Some(s),
+        None if !sides.is_empty() && side < sides.len().next_power_of_two() => Some(None),
+        None => None,
     }
 }
 
@@ -290,8 +290,9 @@ fn chk_sgraph(sg: &SGraph) -> bool {
 }
 
 /// `mkMazeGraph(mp, bb)`. False where C's `chkSgraph` fails an assertion
-/// (`lib/ortho/maze.c:308-320`, e.g. on a non-finite node box, #171): C
-/// aborts there, the port fails the maze so the caller falls back.
+/// (`lib/ortho/maze.c:308-320`, e.g. on a non-finite node box, #171) or
+/// `markSmall` crashes (#202): C aborts there, the port fails the maze so the
+/// caller falls back.
 fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
     let ncells = mp.ncells();
     let bound = 4 * ncells;
@@ -366,7 +367,9 @@ fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
         mp.cells[i].sides = sides;
     }
     for i in 0..mp.ngcells {
-        mark_small(mp, i);
+        if mark_small(mp, i).is_none() {
+            return false;
+        }
     }
     let nn = mp.sg.nnodes;
     mp.sg.nodes[nn].index = nn;
@@ -447,6 +450,45 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> Option<Maze> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Issue #202: dot places tiny nodes so that `n2` and `n1` touch. Every box
+    /// is clamped to 2x2, and `markSmall`'s walk reaches a search node with a
+    /// missing cell (`lib/ortho/maze.c:markSmall`), where C segfaults.
+    /// The port panicked on an `unwrap`; now the maze fails.
+    #[test]
+    fn touching_tiny_node_boxes_fail_the_maze() {
+        let nodes = [
+            (Point::new(0.72, 10.16), 0.72, 1.44),
+            (Point::new(10.72, 0.72), 0.72, 1.44),
+            (Point::new(22.72, 10.16), 0.72, 1.44),
+            (Point::new(20.72, 10.16), 0.72, 1.44),
+        ];
+        assert!(mk_maze(&nodes).is_none());
+    }
+
+    /// Issue #202 review: walking down from a small node lands on a node cell
+    /// with three sides. C's side list has a fourth, zeroed slot (`LIST_DETACH`
+    /// keeps the capacity), so `sides[M_BOTTOM]` is NULL and `markSmall` ends
+    /// the walk; C builds the maze and routes the edges. The port must too.
+    #[test]
+    fn three_sided_node_cell_ends_the_mark_small_walk() {
+        let nodes = [
+            (Point::new(3.0, 5.5), 4.0, 4.0),
+            (Point::new(9.5, 10.0), 1.0, 0.5),
+            (Point::new(1.0, 9.0), 6.0, 1.0),
+            (Point::new(10.5, 10.0), 0.5, 0.5),
+        ];
+        assert!(mk_maze(&nodes).is_some());
+    }
+
+    #[test]
+    fn side_slot_reads_like_cs_detached_list() {
+        let three = [Some(1), Some(2), Some(3)];
+        assert_eq!(side_slot(&three, M_TOP), Some(Some(2)));
+        assert_eq!(side_slot(&three, M_BOTTOM), Some(None));
+        assert_eq!(side_slot(&three[..1], M_TOP), None);
+        assert_eq!(side_slot(&[], M_RIGHT), None);
+    }
 
     /// Issue #171: osage places a node of a repeated cluster at `x = inf`, as C
     /// does. `partition`'s monotonation then needs a fifth chain slot at a vertex
