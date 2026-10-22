@@ -548,6 +548,23 @@ pack=\"8\";
     );
 }
 
+/// Issue #201, reduced: neato pins `a` at NaN, so `a -- x` gets NaN control points, while
+/// `b` keeps `bb` finite and the segment falls outside it. `update_bb_bz`
+/// (`lib/common/emit.c`) then splits the segment with `Bezier` until C's stack overflows
+/// (SIGSEGV); the issue's second pin at 1e12 is not needed. The port leaves `bb` as it was.
+#[test]
+fn neato_nan_pin_edge_does_not_overflow_update_bb_bz() {
+    let src = "graph { layout=neato; pack=false; a [pos=\"nan,0!\"]; a -- x; b }\n";
+    for fmt in ["-Tsvg", "-Tdot"] {
+        let (out, err, ok) = run(&[fmt], src);
+        assert!(ok, "{fmt}: {err}");
+        if fmt == "-Tdot" {
+            assert!(out.contains("bb=\"0,0,54,68.723\""), "{out}");
+            assert!(out.contains("a -- x\t[pos="), "{out}");
+        }
+    }
+}
+
 // Fuzz case 007-dot-port-endpoint-attr-sym-id (issue #16), its repro.gv verbatim. The flat
 // edge `a:sw -> b` is routed by the nested layout of `make_flat_adj_edges`, where C's stale
 // `E_arrowsz` reads the aux graph attribute whose id equals the main `arrowsize` id. C's
