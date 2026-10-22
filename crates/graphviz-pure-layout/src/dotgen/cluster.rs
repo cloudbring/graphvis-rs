@@ -264,7 +264,23 @@ impl Dot<'_> {
     /// `expand_cluster`: install the cluster contents in place of its skeleton.
     pub fn expand_cluster(&mut self, subg: G) -> Result<(), String> {
         self.class2(subg)?;
+        // C's `build_ranks` starts with `for (ns = GD_nlist(g); ND_next(ns); ...)`
+        // (mincross.c:1227) and segfaults on a cluster with an empty fast-node list. That is
+        // a cluster whose nodes were all taken, after it was registered, by a rank set or an
+        // earlier cluster: `mark_clusters` at its parent's level, or newrank's `set_parent`
+        // before `node_induce` (issue #231). C removes such clusters only among the root's
+        // (the check in `dot_mincross`); a nested one keeps the rank range it had, its rank
+        // leaders are installed in its parent's ranks, and that can fail first with
+        // `install_in_rank`'s own error (line 1158), as in C. The port fails the layout
+        // where C crashes.
         let nl = self.graphs[subg].nlist;
+        if nl.is_none() {
+            return Err(format!(
+                "expand_cluster: cluster {} has no nodes left (a rank set or an earlier cluster \
+                 took them)",
+                self.graph_name(subg)
+            ));
+        }
         self.graphs[subg].comp = vec![nl];
         self.allocate_ranks(subg);
         self.build_ranks(subg, 0)?;
