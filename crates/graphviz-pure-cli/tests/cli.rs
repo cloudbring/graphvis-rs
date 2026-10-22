@@ -1201,6 +1201,83 @@ fn cluster_rank_saved_leader_freed_does_not_panic() {
             err.starts_with("Warning: g was already in a rankset, deleted from cluster G\n"),
             "{fmt}: {err}"
         );
+
+// Issue #230: a labelled flat edge on rank 0 that is not its class's representative (a
+// parallel `a -> b` behind an unlabelled one, or a `b -> a` merged by `flat_rev`) sits in
+// `ND_other`. C's `flat_edges` makes rank -1 only for `ND_flat_in` edges, then `flat_node`
+// reads `GD_rank(g)[-1]` and segfaults. The port makes rank -1 for these edges too. The
+// layout then fails as C's does for the same edges on a lower rank (the `z -> a` input,
+// whose stderr is C 16.1.0's).
+#[test]
+fn labelled_flat_multi_edge_on_rank_0_gets_a_label_rank() {
+    let lost = "Error: in routesplines, illegal values of prev 1 and next 1, line 378\n\
+                Error: lost a b edge\n";
+    for (src, want) in [
+        (
+            "{ rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "z -> a; { rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "rankdir=LR; { rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "ordering=out; { rank=same; a; b; c } a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "newrank=true; rank=sink; a -> b; a -> b [label=x]; a -> c;",
+            lost,
+        ),
+        (
+            "{ rank=same; a; b; c } a -> b; b -> a [label=x]; a -> c;",
+            "Error: in routesplines, illegal values of prev 1 and next 1, line 378\n\
+             Error: lost b a edge\n",
+        ),
+        (
+            "subgraph cluster0 { { rank=same; a; b; c } } a -> b; a -> b [label=x]; a -> c;",
+            "",
+        ),
+    ] {
+        let src = format!("digraph G {{ {src} }}");
+        let (out, err, ok) = run(&["-Kdot", "-Tsvg"], &src);
+        assert!(!err.contains("panicked"), "{src}: {err}");
+        assert_eq!(err, want, "{src}");
+        assert_eq!(ok, want.is_empty(), "{src}");
+        assert!(!ok || out.contains(">x</text>"), "{src}: {out}");
+    }
+}
+
+// Issue #234: with `concentrate=true`, a cluster edge with other ports shares its chain
+// (`interclrep`) and is routed alone with `make_regular_edge`'s `hackflag`. When
+// `dot_concentrate` merged that chain, the walk stops at the concentrator but C ends the path
+// at the real head with the concentrator's merge flag (`dotsplines.c:1845`), and
+// `conc_slope` on a head with no out-edges segfaults. The last input gives the head an
+// out-edge: C draws it, and the port's output is unchanged.
+#[test]
+fn concentrated_cluster_edge_ending_at_a_one_sided_node_does_not_panic() {
+    for src in [
+        "subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; b -> c [constraint=false];",
+        "rankdir=LR; subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; \
+         b -> c [constraint=false];",
+        "newrank=true; subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; \
+         b -> c [constraint=false];",
+        "ordering=out; subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; \
+         b -> c [constraint=false];",
+        "subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; b -> c [minlen=2];",
+        "subgraph cluster1 { a } a -> c [minlen=2]; a -> c [tailport=s]; a -> d [minlen=2];",
+        "subgraph cluster1 { c } a -> c [minlen=2]; a -> c [tailport=s]; \
+         b -> c [constraint=false]; c -> d;",
+    ] {
+        let src = format!("digraph G {{ concentrate=true; {src} }}");
+        let (out, err, ok) = run(&["-Kdot", "-Tsvg"], &src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(err, "", "{src}");
+        assert!(out.contains("<title>a:s&#45;&gt;c</title>") || out.contains("a&#45;&gt;d"));
     }
 }
 

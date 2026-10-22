@@ -204,3 +204,35 @@ Inputs that C routes never reach a failure, so their output is unchanged.
 - **#228:** NaN pins leave no trapezoid inside the polygon, and C's `monotonate_trapezoids` reads one past the end of `tr`. The port fails the maze at that read.
 - Loops that C would run forever on broken links are bounded by the size of the structure: stale parent chains, trapezoid walks and maze walks. The three recursions (`locate_endpoint`, `traverse_polygon` and `DFS_visit`) run on an explicit stack, in C's order.
 - The boundary does not depend on positions being validated where they are parsed (the "Extreme coordinates" cause): it holds whatever the input.
+
+## Flat edge labels on rank 0
+
+Closed: #230.
+
+A labelled flat edge that is not adjacent to its head gets a label node on the rank above
+(`flat_node`). On rank 0, `flat_edges` first makes a rank -1 for it (`abomination`), but C's
+test looks only at `ND_flat_in`. A labelled edge that is not its class's representative
+sits in `ND_other` instead: a parallel `a -> b` behind an unlabelled one (`class2`'s
+`merge_oneway`), or a `b -> a` merged into `a -> b` by `flat_rev`. The `ND_other` loop
+then calls `flat_node` for it, and C reads `GD_rank(g)[-1]` and segfaults. The port makes
+rank -1 for those edges as well, so the edge is handled as it is on any lower rank: C
+itself, on the same edges one rank down, places the label node and then fails to route
+the edge (`lost a b edge`, exit 1). On rank 0 the port prints the same errors. When the
+labelled edge is the representative, C makes rank -1 itself, and nothing changes.
+
+Inputs whose ranking failed can still reach `flat_node` with `minrank > 0` (the ranks were
+never normalised); that is the failed-ranking cause above, not this one (#241).
+
+## Concentrated cluster edges
+
+Closed: #234.
+
+With `concentrate=true`, an edge into or out of a cluster whose ports differ from a
+parallel edge's shares that edge's virtual chain (`interclrep`) but is routed on its own,
+through `make_regular_edge`'s `hackflag` branch. When `dot_concentrate` has merged the
+chain into another, the chain walk stops at the concentrator, and C (`dotsplines.c:1845`)
+passes the concentrator's merge flag to `endpath` together with the original edge, whose
+head is the real node further on. `conc_slope` then averages the real node's in- and
+out-edges. If the node has both, C draws, and the port draws the same way. If one side is
+empty, C dereferences NULL. The port then ends the path with the real node's own merge
+flag (false), as for an edge that was not concentrated.

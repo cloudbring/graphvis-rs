@@ -214,6 +214,29 @@ impl Dot<'_> {
         }
     }
 
+    /// Whether the `ND_other` loop of `flat_edges` will call `flat_node` for an edge
+    /// whose tail is `n`: a labelled flat edge, not a loop, whose representative is
+    /// not adjacent. Not in C; see the rank -1 test in `flat_edges`.
+    fn other_needs_flat_node(&self, n: N) -> bool {
+        let rank = |v: N| self.nodes.get(v).map(|nd| nd.rank);
+        let Some(nd) = self.nodes.get(n) else {
+            return false;
+        };
+        nd.other.iter().any(|&e| {
+            let Some(ed) = self.edges.get(e) else {
+                return false;
+            };
+            if ed.tail == ed.head || ed.label.is_none() || rank(ed.tail) != rank(ed.head) {
+                return false;
+            }
+            let mut le = ed;
+            while let Some(next) = le.to_virt.and_then(|x| self.edges.get(x)) {
+                le = next;
+            }
+            !le.adjacent
+        })
+    }
+
     /// `flat_edges`: returns true if label nodes were added (y coords must be reset).
     pub fn flat_edges(&mut self, g: G) -> bool {
         let mut reset = false;
@@ -248,6 +271,14 @@ impl Dot<'_> {
                         break;
                     }
                 }
+                // C (`flat.c:279-291`) looks only at `ND_flat_in`, but the `ND_other`
+                // loop below also calls `flat_node` for a labelled, non-adjacent flat
+                // edge: a parallel `a -> b` merged into an unlabelled representative,
+                // or a reversed `b -> a` merged by `flat_rev`. On rank 0 C then reads
+                // `GD_rank(g)[-1]` in `flat_node` and segfaults (#230). Make rank -1
+                // for those edges too, as C does when the labelled edge is the
+                // representative.
+                found = found || self.other_needs_flat_node(n);
                 if found {
                     self.abomination(g);
                     break;

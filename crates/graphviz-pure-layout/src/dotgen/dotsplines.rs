@@ -1682,7 +1682,22 @@ impl Dot<'_> {
             let mut b = self.maximal_bbox(sp, hn, Some(e), None);
             hend.nb = b;
             let ee = if hackflag { fwdedgeb.unwrap() } else { e };
-            let m = self.spline_merge_p(self.edges[e].head);
+            let mut m = self.spline_merge_p(self.edges[e].head);
+            // C (`dotsplines.c:1845`) takes the merge flag from `aghead(e)`, where the
+            // chain walk stopped, but with `hackflag` hands `endpath` the original
+            // edge, whose head is the real node further on. The two differ when the
+            // edge shares a chain (cluster edges with other ports, `interclrep`) that
+            // `dot_concentrate` merged: the walk stops at the concentrator, and
+            // `conc_slope` runs on the real head. With edges on both sides of that
+            // node C gets a slope and draws, and so does the port. With one side
+            // empty C dereferences NULL in `conc_slope` (#234); the port uses the
+            // real head's own flag, which is false, as for an unconcentrated end.
+            if m && hackflag {
+                let h = self.edges.get(ee).and_then(|ed| self.nodes.get(ed.head));
+                if h.is_none_or(|h| h.in_.is_empty() || h.out.is_empty()) {
+                    m = false;
+                }
+            }
             endpath(self, &mut p, ee, REGULAREDGE, &mut hend, m);
             let last = *hend.boxes.last().unwrap();
             b.ur.y = last.ur.y;
