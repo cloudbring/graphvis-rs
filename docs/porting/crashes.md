@@ -239,9 +239,10 @@ before `dot_concentrate` rewired it, and it goes wrong in two ways:
   node's in- and out-edges. If the node has both, C draws, and the port draws the same way.
   If one side is empty, C dereferences NULL. The port then ends the path with the real
   node's own merge flag (false), as for an edge that was not concentrated.
-- **`mergevirtual` deleted the chain's first node.** The main edge's `ED_to_virt` still
-  leads into the deleted node, which has no edges left, and C segfaults in `straight_len`.
+- **`mergevirtual` deleted the node the chain ends at.** In the up pass, the main edge's
+  `ED_to_virt` chain can still end at a deleted node, which has no edges left, and C segfaults in `straight_len`.
   `mergevirtual` now records the node it merged each deleted node into, and the port routes
   the edge from there, as the chain's own edges are.
 
-Both changes take effect only where C crashes.
+Both change output only where C crashes. (With `splines=line`, C survives the deleted-node
+case because `makeLineEdge` never reads the head; the redirect changes nothing there either.)

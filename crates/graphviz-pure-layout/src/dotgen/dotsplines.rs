@@ -1555,8 +1555,8 @@ impl Dot<'_> {
             while let Some(v) = self.edges[le].to_virt {
                 le = v;
             }
-            // With `concentrate=true`, `mergevirtual` deletes a merged node and its
-            // edges, but an edge routed alone here (a cluster edge with other ports that
+            // With `concentrate=true`, `mergevirtual`'s up pass deletes a merged node and
+            // its edges, but an edge routed alone here (a cluster edge with other ports that
             // shares a chain, `interclrep`) may still lead into the deleted node. C then
             // walks from a node with no edges and segfaults in `straight_len`. The port
             // follows the node it was merged into, as the chain's own edges do.

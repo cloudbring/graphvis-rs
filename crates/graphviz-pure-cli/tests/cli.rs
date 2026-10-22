@@ -1296,6 +1296,19 @@ fn concentrated_cluster_edge_routed_alone_does_not_panic() {
         assert_eq!(err, "", "{src}");
         assert!(out.contains("<title>a:s&#45;&gt;c</title>"), "{src}: {out}");
     }
+    // The deleted-node route draws both edge groups from `a` to `c`, with arrowheads.
+    let src = "digraph G { concentrate=true; subgraph cluster0 { c } \
+               a -> c [tailport=s,minlen=2]; a -> c; a -> c; }";
+    let (out, _, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok);
+    assert_eq!(
+        svg_path_data(&out),
+        [
+            "M43,-125C43,-104.43 43,-81.22 43,-63.53",
+            "M43,-124.81C43,-108.27 43,-82.98 43,-63.44",
+        ]
+    );
+    assert_eq!(out.matches("<polygon fill=\"black\"").count(), 2, "{out}");
     let src = "digraph G { concentrate=true; subgraph cluster1 { c } a -> c [minlen=2]; \
                a -> c [tailport=s]; b -> c [constraint=false]; c -> d; }";
     let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
