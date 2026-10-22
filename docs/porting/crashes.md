@@ -32,12 +32,13 @@ So a crash is fixed at its cause, not at the line that panics.
 
 ## Known causes
 
-These four causes account for most crashes found so far. A new crash in one of these areas is
+These causes account for most crashes found so far. A new crash in one of these areas is
 fixed in that cause's shared mechanism, not with a new local guard.
 
 | Cause | How it fails | Fix in the port |
 |---|---|---|
 | **dot keeps going after a failed ranking** | Network simplex prints `trouble in init_rank` and returns unnormalised ranks; C carries on and crashes later in mincross, position or splines (#114, #232, #233). | Stop the layout where a cluster's ranking fails, and where C's `install_in_rank` finds that the ranks do not fit the rank arrays: an error and exit status 1. A failed ranking of the root alone is not stopped; see [below](#dot-after-a-failed-ranking). |
+| **dot's cluster membership** | A rank set or an earlier cluster takes a node from a cluster after the cluster was ranked (`x was already in a rankset, deleted from cluster G`). The cluster keeps its rank range, so it can have ranks with no node, or no nodes at all; C crashes later in `build_ranks`, `furthestnode`, `rank_box` (#114, #231). | Stop the layout where C dereferences an emptied cluster's NULL node list. Ranks with no node, which C often draws through, are kept; see [below](#dot-cluster-membership). |
 | **Extreme coordinates** | NaN, infinity or huge pinned positions flow into every engine and overflow at the first integer cast or recursion (#191, #196, #201, #227, #228, #229). | Validate positions once, where they are parsed. |
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | The [panic-site ratchet](#the-panic-site-ratchet) maps the remaining sites and stops the count from growing; new code returns an error instead. |
@@ -82,6 +83,65 @@ leave a node unplaced. The port reaches the same state; `make_regular_edge`'s ra
 Not this cause, although they often follow the same inputs: #230 (`flat_node` reads rank
 -1 when no rank was made for it), #231 (a cluster left with no nodes), #234
 (`conc_slope` on a one-sided merge node).
+
+## dot cluster membership
+
+Closed: #231 (with its `clust_ht` and draw-instead-of-crash variants). #114's remaining
+routes are this cause too.
+
+dot ranks each cluster before the rest of the graph. A node can be taken from a cluster
+after that: `mark_clusters` (at the parent's `class1`) deletes a cluster node that a later
+rank set also claims, and newrank's `set_parent` registers a cluster before `node_induce`
+deletes the nodes an earlier sibling cluster has. The cluster's rank range and rank
+leaders still describe the nodes it had. C does not recompute them, and its drawing
+depends on that: on a rank with no node left, `save_vlist` saves the root's node just right
+of the cluster, and the cluster box reaches out to it. That output is C's on every run, so
+the port keeps the stale range too. It stops only where C's behaviour cannot depend on
+anything but a NULL pointer:
+
+- **A cluster with no nodes left.** C removes one only among the root's clusters (the check
+  at the top of `dot_mincross`, `removing empty cluster`). A nested one is kept: its rank
+  leaders are installed in the parent's ranks, which can fail first with
+  `install_in_rank`'s own `an = 0` error (line 1158, as in C), and otherwise
+  `expand_cluster` → `build_ranks` dereferences its NULL node list (`mincross.c:1227`).
+  The port fails the layout there:
+  `expand_cluster: cluster X has no nodes left (a rank set or an earlier cluster took them)`.
+  Dropping the cluster earlier would change the 60 inputs in the generated corpus where C
+  stops cleanly at line 1158.
+
+Two later points look like better places to stop but are not, because C gets past them
+on some inputs with output that is the same on every run:
+
+- **A saved leader that was freed.** When the node `save_vlist` saves for a rank with no
+  node is the rank leader of a cluster expanded later, `remove_rankleaders` frees it, and
+  `rec_reset_vlists` reads it in `furthestnode`. That is a use after free. C segfaults on
+  most such inputs (#114's repro), but on some it finishes with the same output on every
+  run: the freed node's fields are still intact, or its memory has been reused by a live
+  node. The port keeps the freed leader's fields, as macOS's allocator does, and goes on;
+  it matches C where those fields are what C reads, and still differs where the memory
+  was reused (two generated inputs, where C draws and the port stops with
+  `trouble in init_rank`, as before this change).
+- **A node `merge2` drops.** `allocate_ranks` counts a slot per node and one spare per
+  rank. A cluster rank with no node still gets a skeleton rank leader, which uses the spare;
+  with two of them, a later component stores one slot past the rank array, which C's
+  line-1190 check (`>`) lets through, and `merge2` cuts the rank at `an`, so the node there is
+  never placed. C draws 7 generated inputs that pass through this, the same way on every
+  run.
+
+Where the unplaced node or the freed leader's stale state is read as a rank,
+`make_regular_edge`'s rank check (#208) stops the layout, where C reads `GD_rank` out of
+bounds in `rank_box`. Two inputs where C reads out of bounds there without crashing fail
+in the port.
+
+Measured against C and against the port before this change, on 33,686 inputs (Thread A's
+corpora, #208's review hits and 4,000 new generated ones, none with `pack`): no output
+changes on an input C draws or stops cleanly on, the same way on two runs. Only inputs
+where C crashes change:
+804 now stop at the `expand_cluster` error, of which the port drew 502 before, panicked on
+54, and failed later on 248. The remaining panics on these corpora belong to #230 and
+#234. With `pack=true`, where the port's components already differ from C's (#101), the
+check also fires on some inputs where C stops cleanly at `install_in_rank` line 1158;
+the port differed from C there before too.
 
 ## The panic-site ratchet
 

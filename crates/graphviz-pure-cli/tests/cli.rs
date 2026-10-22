@@ -1114,6 +1114,96 @@ i -> h [label=x];
     }
 }
 
+// Issue #231: a cluster below the root loses all its nodes after it was registered: to an
+// earlier sibling cluster (newrank's `set_parent` registers it before `node_induce`), or to
+// a rank set, through `mark_clusters` at its parent's level (the second input empties
+// `cluster4` by taking `b` from `cluster1`; the third panicked in `clust_ht`). C keeps the
+// cluster, and `expand_cluster` -> `build_ranks` dereferences its NULL node list
+// (mincross.c:1227, exit 139). The port fails the layout there.
+#[test]
+fn cluster_emptied_by_membership_rules_fails_the_layout() {
+    let err_for = |c: &str| {
+        format!(
+            "Error: <stdin>: Layout computation error in dot: expand_cluster: cluster {c} has \
+             no nodes left (a rank set or an earlier cluster took them)\n"
+        )
+    };
+    for (src, want) in [
+        (
+            "digraph G { newrank=true; subgraph cluster1 { subgraph cluster2 { c } \
+             subgraph cluster4 { c } } }",
+            err_for("cluster4"),
+        ),
+        (
+            "digraph G { concentrate=true; subgraph cluster1 { c; subgraph cluster4 { b } } \
+             { rank=same; b } b -> d [minlen=3]; }",
+            "Warning: b was already in a rankset, deleted from cluster G\n".to_string()
+                + &err_for("cluster4"),
+        ),
+        (
+            "digraph G { concentrate=true; subgraph cluster39 { e subgraph cluster10 { h d a b \
+             { rank=same; c d f e } subgraph cluster73 { c { rank=max; a } { rank=min; a b } } \
+             { rank=source; a f b d } } subgraph cluster29 { g f subgraph cluster95 { f e a g \
+             { rank=source; a g h } } { g f h } } } g -> e; f -> e [label=x,constraint=false,\
+             weight=0]; }",
+            "Warning: a was already in a rankset, deleted from cluster cluster10\n\
+             Warning: b was already in a rankset, deleted from cluster cluster10\n"
+                .to_string()
+                + &err_for("cluster73"),
+        ),
+        (
+            "digraph G { rank=max; subgraph cluster47 { rank=sink; subgraph cluster75 { k; } \
+             { rank=sink; f k } } { rank=source; d c } a; { rank=source; c } b -> j; }",
+            "Warning: k was already in a rankset, deleted from cluster cluster47\n".to_string()
+                + &err_for("cluster75"),
+        ),
+    ] {
+        let (_, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+        assert!(!ok, "{src}: {err}");
+        assert_eq!(err, want, "{src}");
+    }
+}
+
+// A cluster keeps its rank range when `mark_clusters` takes the nodes of one of its ranks
+// for a rank set. On that rank `save_vlist` saves the root's node just right of the
+// cluster. C goes on with that node. Here it is `b` itself, so `cluster0`'s box reaches
+// down to `b`'s rank. The port draws the same.
+#[test]
+fn cluster_rank_emptied_by_a_rank_set_draws_like_c() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tsvg"],
+        "digraph { subgraph cluster0 { a -> b } {rank=same; b; x} }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: b was already in a rankset, deleted from cluster %1\n"
+    );
+    assert!(
+        out.contains("points=\"8,-18 8,-116 78,-116 78,-18 8,-18\""),
+        "{out}"
+    );
+}
+
+// A rank of `cluster50` loses its node `g` to the rank set, and `save_vlist` saves for it
+// the rank leader of `cluster38`, which `cluster38`'s expansion then frees. C reads the
+// freed leader in `rec_reset_vlists` -> `furthestnode`. Here it segfaults; on other inputs
+// it finishes, with output that is the same on every run, so the port does not stop there
+// (see docs/porting/crashes.md). It must not panic.
+#[test]
+fn cluster_rank_saved_leader_freed_does_not_panic() {
+    let src = "digraph G { subgraph cluster50 { c -> g; } { rank=min; g } subgraph cluster38 { \
+               j -> a; b -> k; } f -> b; e -> i; k -> h; }";
+    for fmt in ["-Tsvg", "-Tdot"] {
+        let (_, err, _) = run(&["-Kdot", fmt], src);
+        assert!(!err.contains("panicked"), "{fmt}: {err}");
+        assert!(
+            err.starts_with("Warning: g was already in a rankset, deleted from cluster G\n"),
+            "{fmt}: {err}"
+        );
+    }
+}
+
 // Fuzz case 018-render-interpolate-points-fma (issue #27), its repro.gv verbatim. C's
 // `interpolate_pointf` (`lib/common/geomprocs.h:115`, called by `alloc_interpolation_points`
 // in `lib/common/shapes.c`) computes `p + t * (q - p)`, which Apple clang fuses (`fmla.2d`).
