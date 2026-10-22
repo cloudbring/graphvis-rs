@@ -1,0 +1,14 @@
+graph{layout=circo
+a--b
+c--d
+	e--f
+	e--g--h
+	b--i
+	b--d
+	b--j
+	b--k
+	l--i
+	l--k
+	l--f
+	l--h
+	j--d}

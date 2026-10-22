@@ -367,6 +367,21 @@ fn cylinder_port_endpoint_does_not_hang_the_router() {
     assert_eq!(svg.matches("class=\"edge\"").count(), 2, "{svg}");
 }
 
+// Issue #167, found by the fuzzer. `b` and `l` are articulation points that blocktree.c's
+// `dfs` places in other blocks, so the block {i, k} has no edge of its own. C's
+// `clone_graph` (lib/circogen/blockpath.c) zeroes every clone's `DEGREE`, and `getList`
+// sorts the two nodes at degree 0; the port kept degrees only for nodes with an edge and
+// panicked in `cmpDegree`. The input is a corpus file whose C -Tdot golden the circo ratchet
+// also checks; the positions below are C's.
+#[test]
+fn circo_block_without_edges_lays_out_like_c() {
+    let src = include_str!("../../../tests/circo/fuzz_blockpath_edgeless_block.gv");
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("pos=\"373.36,289.22\""), "i: {out}");
+    assert!(out.contains("pos=\"303.9,249.11\""), "k: {out}");
+}
+
 // Fuzz case 004-neato-router-record-obstacle-height (issue #13), its repro.gv verbatim. C's
 // `makeObstacle` (lib/neatogen/neatosplines.c:447-449) builds a record's obstacle from the
 // root field box `fld->b`, not from `ND_height`, which carries record_init's +1pt. With the

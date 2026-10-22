@@ -20,6 +20,11 @@ fn clone_graph(c: &mut Circ, ing: &CGraph, deg: &mut Degrees) -> (CGraph, CGraph
     for n in ing.nodes() {
         clone.add_node(n);
         xclone.add_node(n);
+        // `agbindrec` zeroes `DEGREE` (`ND_order`), so a node with no edge
+        // in the block still has degree 0: blocktree puts an articulation
+        // point in only one of its blocks, which can leave a block whose
+        // nodes share no edge.
+        deg.insert(n, 0);
     }
     for n in ing.nodes() {
         for e in ing.outs(n) {
