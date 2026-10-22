@@ -217,7 +217,7 @@ impl<'a> Dot<'a> {
         self.set_edge_type();
         self.dot_init_subg();
         self.dot_init_node_edge();
-        self.dot_rank();
+        self.dot_rank()?;
         self.gvdump("R");
         if maxphase == 1 {
             return Ok(());

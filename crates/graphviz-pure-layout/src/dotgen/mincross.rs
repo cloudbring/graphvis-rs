@@ -905,6 +905,12 @@ impl Dot<'_> {
 
     /// `install_in_rank(g, n)`. Its failures make dot_mincross, and so the layout, give up
     /// ([`ABORT_LAYOUT`]).
+    ///
+    /// The checks are C's, in C's order. They are what stops dot when the ranks it was given
+    /// do not fit the rank arrays built from them: a node of a cluster that is also in a
+    /// rank set, or a cluster ranking that printed `trouble in init_rank` (issue #232). C
+    /// fails the `n <= an` assertion after writing past the array; the port fails the
+    /// layout before writing.
     pub fn install_in_rank(&mut self, g: G, n: N) -> Result<(), String> {
         let r = self.nodes[n].rank;
         // C reads GD_rank(g)[r] before checking the range; the entries past the ranks
@@ -928,16 +934,47 @@ impl Dot<'_> {
             ));
             return Err(ABORT_LAYOUT.to_string());
         }
-        if r < self.graphs[g].minrank || r > self.graphs[g].maxrank {
-            graphviz_pure_core::diag::agerrorf(&format!(
-                "install_in_rank, line 1183: rank {r} not in rank range [{},{}]\n",
-                self.graphs[g].minrank, self.graphs[g].maxrank
+        // assert(GD_rank(g)[r].n <= GD_rank(g)[r].an), after the store to v[i].
+        if i >= an {
+            return Err(format!(
+                "install_in_rank: rank {r} of {} is full ({an} allocated), no slot for {}",
+                self.graph_name(g),
+                name(self, n)
             ));
-            return Err(ABORT_LAYOUT.to_string());
         }
         self.set_rv(g, r, i, Some(n));
         self.nodes[n].order = i;
         self.rk_mut(g, r).n += 1;
+        let root_an = self.graphs[0]
+            .rank
+            .get((r + 1) as usize)
+            .map_or(0, |rk| rk.an);
+        if i > root_an {
+            graphviz_pure_core::diag::agerrorf(&format!(
+                "install_in_rank, line 1179: ND_order({}) [{i}] > GD_rank(Root)[{r}].an \
+                 [{root_an}]\n",
+                name(self, n)
+            ));
+            return Err(ABORT_LAYOUT.to_string());
+        }
+        if r < self.graphs[g].minrank || r > self.graphs[g].maxrank {
+            graphviz_pure_core::diag::agerrorf(&format!(
+                "install_in_rank, line 1184: rank {r} not in rank range [{},{}]\n",
+                self.graphs[g].minrank, self.graphs[g].maxrank
+            ));
+            return Err(ABORT_LAYOUT.to_string());
+        }
+        // GD_rank(g)[r].v + ND_order(n) > GD_rank(g)[r].av + GD_rank(Root)[r].an: v is av
+        // advanced past the earlier components (init_mccomp).
+        let rk = self.rk(g, r);
+        if rk.vbuf == rk.avbuf && rk.voff as i64 + i64::from(i) > i64::from(root_an) {
+            graphviz_pure_core::diag::agerrorf(&format!(
+                "install_in_rank, line 1190: GD_rank(g)[{r}].v + ND_order({}) [{i}] > \
+                 GD_rank(g)[{r}].av + GD_rank(Root)[{r}].an [{root_an}]\n",
+                name(self, n)
+            ));
+            return Err(ABORT_LAYOUT.to_string());
+        }
         Ok(())
     }
 

@@ -186,7 +186,12 @@ impl Dot<'_> {
         self.graphs[g].leader = leader;
     }
 
-    fn cluster_leader(&mut self, clust: G) {
+    /// `cluster_leader(clust)`. A cluster's local ranking is normalised, so some node of it
+    /// lies on rank 0, and C asserts that it finds one (`rank.c:316`). When the ranking
+    /// failed (network simplex printed `trouble in init_rank` and left the ranks it could
+    /// not order unnormalised), there may be none, and C aborts. The port fails the layout
+    /// here, where the cluster's ranking failed, instead of panicking (issue #233).
+    fn cluster_leader(&mut self, clust: G) -> Result<(), String> {
         let mut leader: Option<N> = None;
         let mut n = self.graphs[clust].nlist;
         while let Some(x) = n {
@@ -195,55 +200,64 @@ impl Dot<'_> {
             }
             n = self.nodes[x].next;
         }
-        let leader = leader.expect("cluster_leader: no leader");
+        let Some(leader) = leader else {
+            return Err(format!(
+                "cluster_leader: the ranking of cluster {} failed: none of its nodes is on rank 0",
+                self.graphs[clust].name
+            ));
+        };
         self.graphs[clust].leader = Some(leader);
         for n in self.nodes_of(clust) {
             self.uf_union(n, leader);
             self.nodes[n].ranktype = CLUSTER;
         }
+        Ok(())
     }
 
-    fn collapse_cluster(&mut self, g: G, subg: G) {
+    fn collapse_cluster(&mut self, g: G, subg: G) -> Result<(), String> {
         if self.graphs[subg].parent.is_some() {
-            return;
+            return Ok(());
         }
         self.graphs[subg].parent = Some(g);
         self.node_induce(g, subg);
         if self.agfstnode(subg).is_none() {
-            return;
+            return Ok(());
         }
         self.make_new_cluster(g, subg);
         if self.cl_type == LOCAL {
-            self.dot1_rank(subg);
-            self.cluster_leader(subg);
+            self.dot1_rank(subg)?;
+            self.cluster_leader(subg)?;
         } else {
             self.dot_scan_ranks(subg);
         }
+        Ok(())
     }
 
-    fn collapse_sets(&mut self, rg: G, g: G) {
+    fn collapse_sets(&mut self, rg: G, g: G) -> Result<(), String> {
         let subs = self.graphs[g].subgs.clone();
         for subg in subs {
             let c = self.rank_set_class(subg);
             if c != 0 {
                 if c == CLUSTER && self.cl_type == LOCAL {
-                    self.collapse_cluster(rg, subg);
+                    self.collapse_cluster(rg, subg)?;
                 } else {
                     self.collapse_rankset(rg, subg, c);
                 }
             } else {
-                self.collapse_sets(rg, subg);
+                self.collapse_sets(rg, subg)?;
             }
         }
+        Ok(())
     }
 
-    fn find_clusters(&mut self, g: G) {
+    fn find_clusters(&mut self, g: G) -> Result<(), String> {
         let subs = self.graphs[0].subgs.clone();
         for subg in subs {
             if self.graphs[subg].set_type == CLUSTER {
-                self.collapse_cluster(g, subg);
+                self.collapse_cluster(g, subg)?;
             }
         }
+        Ok(())
     }
 
     fn set_minmax(&mut self, g: G) {
@@ -329,7 +343,7 @@ impl Dot<'_> {
         }
     }
 
-    fn expand_ranksets(&mut self, g: G) {
+    fn expand_ranksets(&mut self, g: G) -> Result<(), String> {
         let ns = self.nodes_of(g);
         if !ns.is_empty() {
             self.graphs[g].minrank = i32::MAX;
@@ -356,18 +370,19 @@ impl Dot<'_> {
                         self.set_minmax(c);
                     }
                 } else {
-                    self.find_clusters(g);
+                    self.find_clusters(g)?;
                 }
             }
         } else {
             self.graphs[g].minrank = 0;
             self.graphs[g].maxrank = 0;
         }
+        Ok(())
     }
 
-    pub fn dot1_rank(&mut self, g: G) {
+    pub fn dot1_rank(&mut self, g: G) -> Result<(), String> {
         self.edgelabel_ranks(g);
-        self.collapse_sets(g, g);
+        self.collapse_sets(g, g)?;
         self.class1(g);
         let p = self.minmax_edges(g);
         self.decompose(g, 0);
@@ -376,16 +391,19 @@ impl Dot<'_> {
             self.decompose(g, 0);
         }
         self.rank1(g);
-        self.expand_ranksets(g);
+        self.expand_ranksets(g)?;
         self.cleanup1(g);
+        Ok(())
     }
 
-    pub fn dot_rank(&mut self) {
+    /// `dot_rank(g)`. Fails where a cluster's ranking fails ([`Self::cluster_leader`]).
+    pub fn dot_rank(&mut self) -> Result<(), String> {
         if mapbool(self.agget(0, "newrank")) {
             self.graphs[0].flags |= NEW_RANK;
             self.dot2_rank(0);
+            Ok(())
         } else {
-            self.dot1_rank(0);
+            self.dot1_rank(0)
         }
     }
 

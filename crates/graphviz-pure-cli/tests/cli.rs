@@ -1001,6 +1001,118 @@ subgraph s { rank=source; a; h; subgraph cluster_in { } }
     }
 }
 
+// Issue #233: inside cluster2, `rank=sink` and the nested `rank=min` set contradict each
+// other, network simplex prints `trouble in init_rank` and leaves no node of the cluster on
+// rank 0. C fails `assert(leader != NULL)` in `cluster_leader` (rank.c:316, exit 134). The
+// port fails the layout where the cluster's ranking failed, for a top-level cluster and
+// for a nested one.
+#[test]
+fn cluster_ranking_trouble_fails_the_layout() {
+    for src in [
+        "digraph G { subgraph cluster2 { rank=sink; k; f; { a } { rank=min; a; j } } \
+         j -> f; f -> k; }",
+        "digraph G { subgraph cluster1 { subgraph cluster2 { rank=sink; k; f; { a } \
+         { rank=min; a; j } } } j -> f; f -> k; }",
+    ] {
+        let (_, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+        assert!(!ok, "{src}: {err}");
+        assert_eq!(
+            err,
+            "Error: trouble in init_rank\n\tk 1\n\ta 1\n\tf 1\n\
+             Error: <stdin>: Layout computation error in dot: cluster_leader: the ranking of \
+             cluster cluster2 failed: none of its nodes is on rank 0\n",
+            "{src}"
+        );
+    }
+}
+
+// Issue #232, input A: a cluster's rank is installed past the slots the root reserved for
+// it. C's `install_in_rank` reports it (mincross.c:1190), `dot_layout` abandons the layout
+// and the SVG has the nodes and no edge paths (exit 1). stderr and SVG are C 16.1.0's.
+#[test]
+fn install_in_rank_past_the_root_slots_abandons_the_layout_like_c() {
+    let src = "digraph G {
+rank=sink;
+subgraph cluster0 { a; b; c; d }
+subgraph cluster_1 { e; f }
+{ d }
+subgraph cluster9 { g; i }
+{ e }
+{ i }
+f -> e;
+g -> h;
+i -> g;
+d -> c;
+i -> h [label=x];
+{ rank=source; a; h }
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: a was already in a rankset, deleted from cluster G\n\
+         Warning: c was already in a rankset, deleted from cluster G\n\
+         Warning: d was already in a rankset, deleted from cluster G\n\
+         Warning: e was already in a rankset, deleted from cluster G\n\
+         Warning: i was already in a rankset, deleted from cluster G\n\
+         Error: trouble in init_rank\n\
+         \tc 2\n\t%0 1\n\tf 1\n\t%0 1\n\tg 2\n\t%0 1\n\
+         Error: install_in_rank, line 1190: GD_rank(g)[2].v + ND_order(%0) [0] > \
+         GD_rank(g)[2].av + GD_rank(Root)[2].an [2]\n"
+    );
+    assert!(
+        out.contains("<ellipse fill=\"none\" stroke=\"black\" cx=\"1\" cy=\"0\""),
+        "{out}"
+    );
+    assert!(!out.contains("<path"), "{out}");
+}
+
+// Issue #232, input B and a cluster route: a rank gets more nodes than it has slots. C
+// stores past the array and fails `assert(GD_rank(g)[r].n <= GD_rank(g)[r].an)`
+// (mincross.c:1165, exit 134); the port fails the layout before the store.
+#[test]
+fn install_in_rank_on_a_full_rank_fails_the_layout() {
+    let root = "digraph G {
+rank=sink;
+subgraph cluster0 { a; b; c; d }
+b -> f;
+subgraph cluster_1 { e; f }
+{ d }
+{ e }
+k -> a;
+f -> e;
+d -> c;
+i -> h [label=x];
+}
+";
+    let clust = "digraph G { subgraph cluster6 { b e c d subgraph cluster73 { e subgraph \
+                 cluster69 { e { rank=source; a } } } subgraph cluster77 { b { rank=min; a } } \
+                 } { rank=sink; b a c } c -> d [label=x]; }";
+    for (src, want) in [
+        (
+            root,
+            "Warning: c was already in a rankset, deleted from cluster G\n\
+             Warning: d was already in a rankset, deleted from cluster G\n\
+             Warning: e was already in a rankset, deleted from cluster G\n\
+             Error: <stdin>: Layout computation error in dot: install_in_rank: rank 4 of G is \
+             full (2 allocated), no slot for %0\n",
+        ),
+        (
+            clust,
+            "Warning: b was already in a rankset, deleted from cluster G\n\
+             Warning: c was already in a rankset, deleted from cluster G\n\
+             Warning: a was already in a rankset, deleted from cluster G\n\
+             Error: <stdin>: Layout computation error in dot: install_in_rank: rank 0 of \
+             cluster6 is full (1 allocated), no slot for %0\n",
+        ),
+    ] {
+        let (_, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+        assert!(!ok, "{src}: {err}");
+        assert_eq!(err, want, "{src}");
+    }
+}
+
 // Fuzz case 018-render-interpolate-points-fma (issue #27), its repro.gv verbatim. C's
 // `interpolate_pointf` (`lib/common/geomprocs.h:115`, called by `alloc_interpolation_points`
 // in `lib/common/shapes.c`) computes `p + t * (q - p)`, which Apple clang fuses (`fmla.2d`).
