@@ -11,6 +11,7 @@
 #   index   clippy::indexing_slicing        v[i] or v[a..b] that can go out of bounds
 #   arith   clippy::arithmetic_side_effects integer + - * / % << >> that can overflow or divide by 0
 # The lints are passed on the command line for this run only; they are not on in the workspace.
+# --force-warn counts a site even where the source allows its lint (or clippy::restriction).
 #
 # The check fails when one module's count of one kind is higher than in tests/panic-sites.tsv, or
 # when a module that is not listed has any site. A count going down passes; run --update to lock
@@ -35,8 +36,8 @@ trap 'rm -f "$json" "$current"' EXIT
 pkgs=()
 for c in "${crates[@]}"; do pkgs+=(-p "$c"); done
 cargo clippy --quiet "${pkgs[@]}" --lib --message-format=json -- \
-  -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing \
-  -W clippy::arithmetic_side_effects >"$json"
+  --force-warn clippy::unwrap_used --force-warn clippy::expect_used \
+  --force-warn clippy::indexing_slicing --force-warn clippy::arithmetic_side_effects >"$json"
 
 # One row per file: module, unwrap, expect, index, arith. A site is its whole span, so the two
 # indexes of v[i][j] count twice, and a site clippy reports twice (a macro used once) counts once.
@@ -72,21 +73,18 @@ cargo clippy --quiet "${pkgs[@]}" --lib --message-format=json -- \
 } | column -t -s$'\t'
 
 # A kind counting nothing means the count broke, not that every site of that kind is gone: a
-# renamed crate, a lint clippy no longer knows, a new JSON format, or an allow in the source.
+# renamed crate, a lint clippy no longer knows, or a new JSON format.
 broken=$(jq -r 'select(.reason == "compiler-message")
-  | select(.message.code.code // "" | test("unknown_lints|renamed_and_removed_lints"))
+  | select(.message.code.code // "" | test("^(E0602|unknown_lints|renamed_and_removed_lints)$"))
   | .message.rendered' "$json")
-allowed=$(grep -rnE "clippy::(unwrap_used|expect_used|indexing_slicing|arithmetic_side_effects)" \
-  "${crates[@]/#/crates/}" --include='*.rs' || true)
 empty=$(tail -n +2 "$current" | awk -F'\t' '
   { for (k = 2; k <= 5; k++) n[k] += $k }
   END { split("unwrap expect index arith", kind, " ")
         for (k = 2; k <= 5; k++) if (n[k] == 0) printf " %s", kind[k - 1] }')
-if [[ -n "$broken$allowed$empty" ]]; then
+if [[ -n "$broken$empty" ]]; then
   echo "panic-sites: the count is broken ($(cargo clippy --version)):" >&2
   [[ -z "$empty" ]] || echo "  no site of kind:$empty" >&2
   [[ -z "$broken" ]] || echo "$broken" >&2
-  [[ -z "$allowed" ]] || echo "  the source names a counted lint (an allow hides its sites):"$'\n'"$allowed" >&2
   exit 1
 fi
 

@@ -99,11 +99,11 @@ The lints are passed to clippy for this one run; they are not turned on for the 
 because most of these sites are faithful C and correct for every input C handles. The counts are
 checked in as `tests/panic-sites.tsv`. CI runs the script after clippy, and it fails when one
 file's count of one kind goes up, or when a file that is not listed has any site. It also fails
-when the count itself looks broken: a kind with no site at all, or an `allow` of one of the four
-lints in the source of either crate. A count going down passes; `scripts/panic-sites.sh
---update` rewrites the baseline to lock it in. A pull request that raises a count on purpose (a new
-port of C code that indexes the way C does, a new clippy release that counts differently)
-refreshes the baseline with `--update` and says why.
+when the count itself looks broken: a kind with no site at all, or a lint clippy does not know.
+The lints are forced on, so an `allow` in the source does not hide a site. A count going down
+passes; `scripts/panic-sites.sh --update` rewrites the baseline to lock it in. A pull request that
+raises a count on purpose (a new port of C code that indexes the way C does, a new clippy release
+that counts differently) refreshes the baseline with `--update` and says why.
 
 When the count goes up, prefer what C does at that point: if C checks a bound or a NULL, port the
 check; if C reads past the end or dereferences NULL, return an error from the cause.
