@@ -28,6 +28,23 @@ fn tmp(name: &str) -> PathBuf {
     dir.join(name)
 }
 
+// Issue #181: neato -n2's user_spline (lib/neatogen/neatoinit.c) skips one byte after a
+// segment of an edge `pos`. The port sliced the `str` there and panicked when the byte began a
+// multi-byte character. C rejects the spline with a warning, routes the edge and exits 0;
+// its stderr is Graphviz 16.1.0's.
+#[test]
+fn edge_pos_ending_in_multibyte_char_does_not_panic() {
+    let src = "digraph { a [pos=\"0,0\"]; b [pos=\"30,30\"]; \
+               a -> b [pos=\"0,0 10,10 20,20 30,30é\"] }";
+    let (out, err, ok) = run(&["-Kneato", "-n2", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: pos attribute for edge (a,b) doesn't have 3n+1 points\n"
+    );
+    assert!(out.contains("<path"), "the edge is still drawn");
+}
+
 #[test]
 fn undirected_graph_has_no_arrowhead() {
     let (out, _, ok) = run(&["-Tsvg"], "graph{a--b}");

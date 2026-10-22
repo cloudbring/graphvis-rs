@@ -159,20 +159,24 @@ fn arrow_flags(graph: &Graph, attrs: &AttrMap) -> (bool, bool) {
     (tail, head)
 }
 
-fn count_fields(s: &str) -> usize {
+/// `gv_isspace`: C's `isspace` in the C locale.
+fn is_c_space(b: u8) -> bool {
+    matches!(b, b' ' | b'\t' | b'\n' | b'\x0b' | b'\x0c' | b'\r')
+}
+
+fn count_fields(b: &[u8]) -> usize {
     // numFields: whitespace-separated tokens up to the next ';'.
-    let b = s.as_bytes();
     let mut i = 0;
     let mut cnt = 0;
     loop {
-        while i < b.len() && b[i].is_ascii_whitespace() {
+        while i < b.len() && is_c_space(b[i]) {
             i += 1;
         }
         if i >= b.len() || b[i] == b';' {
             return cnt;
         }
         cnt += 1;
-        while i < b.len() && !b[i].is_ascii_whitespace() && b[i] != b';' {
+        while i < b.len() && !is_c_space(b[i]) && b[i] != b';' {
             i += 1;
         }
         if i >= b.len() || b[i] == b';' {
@@ -181,45 +185,75 @@ fn count_fields(s: &str) -> usize {
     }
 }
 
+/// Why [`user_spline`] rejected an edge `pos`.
+#[derive(Debug, PartialEq)]
+enum SplineError {
+    /// An empty `pos`: no warning.
+    Empty,
+    /// `doesn't have 3n+1 points`.
+    Count,
+    /// `syntax error in pos attribute`.
+    Syntax,
+}
+
 /// `user_spline`: parses an edge `pos` attribute.
-fn user_spline(pos: &str, tail_arrow: bool, head_arrow: bool) -> Option<Spline> {
+///
+/// C walks `pos` a byte at a time and skips one byte after a segment, so the next segment can
+/// start inside a multi-byte character. The port keeps a byte offset for the same reason:
+/// text that does not start on a character boundary matches no `sscanf` pattern, as the
+/// continuation bytes it starts with match none in C.
+fn user_spline(
+    pos: &str,
+    tail_arrow: bool,
+    head_arrow: bool,
+) -> std::result::Result<Spline, SplineError> {
     if pos.is_empty() {
-        return None;
+        return Err(SplineError::Empty);
     }
+    let bytes = pos.as_bytes();
+    let offset = |rest: &str| pos.len() - rest.len();
     let mut segments = Vec::new();
-    let mut rest = pos;
+    let mut at = 0;
     // As in C, the arrow points persist across `;`-separated segments: a later segment
     // without its own `s,`/`e,` reuses the previous one.
     let mut sp = None;
     let mut ep = None;
     loop {
-        if let Some(r) = rest.strip_prefix("s,")
+        if let Some(r) = pos.get(at..).and_then(|r| r.strip_prefix("s,"))
             && let Some((p, r)) = scan_point(r)
         {
             sp = Some(p);
-            rest = r;
+            at = offset(r);
         }
-        let trimmed = rest.trim_start();
-        if let Some(r) = trimmed.strip_prefix("e,")
+        let mut e_at = at;
+        while e_at < bytes.len() && is_c_space(bytes[e_at]) {
+            e_at += 1;
+        }
+        if let Some(r) = pos.get(e_at..).and_then(|r| r.strip_prefix("e,"))
             && let Some((p, r)) = scan_point(r)
         {
             ep = Some(p);
-            rest = r;
+            at = offset(r);
         }
-        let npts = count_fields(rest);
+        let npts = count_fields(&bytes[at..]);
         if npts < 4 || npts % 3 != 1 {
-            return None;
+            return Err(SplineError::Count);
         }
         let mut points = Vec::with_capacity(npts);
         for _ in 0..npts {
-            let (p, r) = scan_point(rest)?;
+            let (p, r) = pos
+                .get(at..)
+                .and_then(scan_point)
+                .ok_or(SplineError::Syntax)?;
             points.push(p);
-            rest = r;
+            at = offset(r);
         }
-        rest = rest.trim_start();
-        let more = !rest.is_empty();
+        while at < bytes.len() && is_c_space(bytes[at]) {
+            at += 1;
+        }
+        let more = at < bytes.len();
         if more {
-            rest = &rest[1..];
+            at += 1;
         }
         segments.push(BezierSegment {
             points,
@@ -230,7 +264,7 @@ fn user_spline(pos: &str, tail_arrow: bool, head_arrow: bool) -> Option<Spline> 
             break;
         }
     }
-    Some(Spline { segments })
+    Ok(Spline { segments })
 }
 
 /// Size of a label in points (`make_label`), made again after `layout_nop`'s first
@@ -504,13 +538,24 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
     // nop_init_edges: splines and edge labels.
     let mut edge_labels: Vec<EdgeLabels> = Vec::with_capacity(graph.edges.len());
     let mut with_spline = 0usize;
+    // The first edge, in C's `agfstnode`/`agfstout` order, whose `pos` user_spline rejects.
+    let mut rejected: Option<(u32, usize, SplineError)> = None;
     for ei in 0..graph.edges.len() {
         let (tail_arrow, head_arrow) = arrow_flags(graph, &graph.edges[ei].attrs);
         let e = &graph.edges[ei];
         let spline = if nop >= 2 {
             e.attrs
                 .get("pos")
-                .and_then(|p| user_spline(p, tail_arrow, head_arrow))
+                .and_then(|p| match user_spline(p, tail_arrow, head_arrow) {
+                    Ok(s) => Some(s),
+                    Err(SplineError::Empty) => None,
+                    Err(err) => {
+                        if rejected.as_ref().is_none_or(|r| e.tail.0 < r.0) {
+                            rejected = Some((e.tail.0, ei, err));
+                        }
+                        None
+                    }
+                })
         } else {
             None
         };
@@ -556,6 +601,23 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             graph.edges[ei].spline = s;
         } else {
             graph.edges[ei].spline = Spline::default();
+        }
+    }
+    if let Some((_, ei, err)) = rejected {
+        // neatoinit.c:user_spline: a `static atomic_flag`, so once per process.
+        static WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        if !WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+            let e = &graph.edges[ei];
+            let (t, h) = (
+                &graph.nodes[e.tail.0 as usize].name,
+                &graph.nodes[e.head.0 as usize].name,
+            );
+            graphviz_pure_core::diag::agwarningf(&match err {
+                SplineError::Count => {
+                    format!("pos attribute for edge ({t},{h}) doesn't have 3n+1 points\n")
+                }
+                _ => format!("syntax error in pos attribute for edge ({t},{h})\n"),
+            });
         }
     }
     let all_edges = with_spline == graph.edges.len();
@@ -1147,7 +1209,46 @@ mod tests {
         // An `s,` point without a tail arrow is dropped, as `sflag = stype` is 0.
         let s = user_spline("s,1,2 1,1 2,2 3,3 4,4", false, true).unwrap();
         assert_eq!(s.segments[0].start_arrow, None);
-        assert!(user_spline("1,1 2,2 3,3", true, true).is_none());
+        assert_eq!(
+            user_spline("1,1 2,2 3,3", true, true).err(),
+            Some(SplineError::Count)
+        );
+        assert_eq!(
+            user_spline("1,1 2,2 x,3 4,4", true, true).err(),
+            Some(SplineError::Syntax)
+        );
+    }
+
+    // Issue #181: C skips one byte after a segment, so a segment that ends in a multi-byte
+    // character leaves its continuation bytes as the next segment. The port sliced the
+    // `str` at that byte and panicked.
+    #[test]
+    fn user_spline_skips_one_byte_after_a_segment_like_c() {
+        let p = "0,0 10,10 20,20 30,30";
+        // One field left (the continuation byte): not 3n+1.
+        assert_eq!(
+            user_spline(&format!("{p}é"), true, true).err(),
+            Some(SplineError::Count)
+        );
+        // The continuation byte is a field of its own, so five fields, not a second segment.
+        assert_eq!(
+            user_spline(&format!("{p}é 1,1 2,2 3,3 4,4"), true, true).err(),
+            Some(SplineError::Count)
+        );
+        // Four fields, the first starting with the continuation byte: a syntax error.
+        assert_eq!(
+            user_spline(&format!("{p}é 2,2 3,3 4,4"), true, true).err(),
+            Some(SplineError::Syntax)
+        );
+        assert_eq!(
+            user_spline(&format!("{p}é1,1 2,2 3,3 4,4"), true, true).err(),
+            Some(SplineError::Syntax)
+        );
+        // `s,` and `e,` do not match after the skipped byte either.
+        assert_eq!(
+            user_spline(&format!("{p}és,1,1 2,2 3,3 4,4"), true, true).err(),
+            Some(SplineError::Syntax)
+        );
     }
 
     #[test]
