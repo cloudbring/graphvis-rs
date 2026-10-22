@@ -393,7 +393,7 @@ impl Dot<'_> {
             } else if self.nodes[t0].rank == self.nodes[h0].rank {
                 self.make_flat_edge(&sd, &group, et)?;
             } else {
-                self.make_regular_edge(&mut sd, &group, et);
+                self.make_regular_edge(&mut sd, &group, et)?;
             }
         }
 
@@ -1066,7 +1066,7 @@ impl Dot<'_> {
         d.et = et;
         d.dot_init_subg();
         d.dot_init_node_edge();
-        d.dot_rank()?;
+        d.dot_rank();
         d.dot_mincross()?;
         d.dot_position()?;
         // reposition
@@ -1525,7 +1525,19 @@ impl Dot<'_> {
     }
 
     /// `make_regular_edge(g, sp, P, edges, ind, cnt, et)`.
-    fn make_regular_edge(&mut self, sp: &mut SplineInfoT, edges: &[E], et: EdgeType) {
+    ///
+    /// Every node on the edge's chain must lie on one of the root's ranks: C indexes
+    /// `GD_rank(g)[ND_rank(vn)]` for each of them (here and in `maximal_bbox`). After
+    /// `trouble in init_rank`, a virtual node that mincross never placed keeps the x
+    /// coordinate `set_xcoords` left in `ND_rank` (issue #114); C reads past `GD_rank` there,
+    /// or has already crashed in mincross's `furthestnode`. The port fails the layout.
+    fn make_regular_edge(
+        &mut self,
+        sp: &mut SplineInfoT,
+        edges: &[E],
+        et: EdgeType,
+    ) -> Result<(), String> {
+        self.check_chain_ranks(edges[0])?;
         let cnt = edges.len();
         let mut e = edges[0];
         let mut hackflag = false;
@@ -1641,7 +1653,7 @@ impl Dot<'_> {
                     })
                 };
                 let Some(ps) = ps.filter(|v| !v.is_empty()) else {
-                    return;
+                    return Ok(());
                 };
                 pointfs.extend_from_slice(&ps);
                 let out0 = self.nodes[hn].out[0];
@@ -1696,7 +1708,7 @@ impl Dot<'_> {
                 ps
             });
             let Some(ps) = ps.filter(|v| !v.is_empty()) else {
-                return;
+                return Ok(());
             };
             pointfs.extend_from_slice(&ps);
             self.recover_slack(segfirst, &p);
@@ -1710,7 +1722,7 @@ impl Dot<'_> {
         // make copies of the spline points, one per multi-edge
         if cnt == 1 {
             clip_and_install(self, fe, hn, &pointfs);
-            return;
+            return Ok(());
         }
         let dx = sp.multisep * (cnt - 1) as f64 / 2.0;
         let np = pointfs.len();
@@ -1728,6 +1740,40 @@ impl Dot<'_> {
             }
             let h = self.edges[e].head;
             clip_and_install(self, e, h, &pointfs.clone());
+        }
+        Ok(())
+    }
+
+    /// The nodes `make_regular_edge` walks from `e` (its tail, then heads along `ND_out`
+    /// while virtual) must have a rank in the root's `minrank..=maxrank`; see
+    /// [`Self::make_regular_edge`].
+    fn check_chain_ranks(&self, e: E) -> Result<(), String> {
+        let (minr, maxr) = (self.graphs[0].minrank, self.graphs[0].maxrank);
+        let mut n = self.edges[e].tail;
+        let mut next = Some(self.edges[e].head);
+        loop {
+            let r = self.nodes[n].rank;
+            if r < minr || r > maxr {
+                let mut orig = e;
+                while let Some(o) = self.edges[orig].to_orig {
+                    orig = o;
+                }
+                let (t, h) = (self.edges[orig].tail, self.edges[orig].head);
+                return Err(format!(
+                    "make_regular_edge: edge {} -> {} reaches a node on rank {r}, outside the \
+                     ranks {minr}..{maxr}",
+                    self.nodes[t].name, self.nodes[h].name
+                ));
+            }
+            let Some(h) = next else {
+                return Ok(());
+            };
+            n = h;
+            next = if self.nodes[h].node_type == VIRTUAL {
+                self.nodes[h].out.first().map(|&o| self.edges[o].head)
+            } else {
+                None
+            };
         }
     }
 

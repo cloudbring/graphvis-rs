@@ -297,12 +297,13 @@ dot
   seed 24180). As generated, with `pack="8"`, it matches C through the `_cc_<i>` fix
   above (`pack_single_component_cluster_node_in_rank_max_set_lays_out_like_c`); without
   `pack` C itself segfaults (`cluster_node_in_rank_max_set_does_not_panic_build_skeleton`).
-* When dot's ranking phase prints `trouble in init_rank` (a cycle left by conflicting
-  rank sets), some nodes keep ranks network simplex never set. C goes on and segfaults in
-  mincross's `furthestnode`; on the rare runs it gets through, it prints `lost ... edge`
-  errors and exits 1. The port abandons the layout after `dot_rank`, as for a failed
-  `install_in_rank`: stderr ends with C's report and the exit status is 1. It used to
-  panic in `maximal_bbox` (issue #114; `init_rank_trouble_abandons_the_layout`).
+* `trouble in init_rank` (conflicting rank sets) is reported as C does and does not stop
+  the layout: C, like the port, often goes on to a drawing and exits 1. On some inputs
+  mincross never places a virtual node, which keeps the x coordinate `set_xcoords` left in
+  its `ND_rank`; C then segfaults in mincross's `furthestnode` or reads past `GD_rank` in
+  `maximal_bbox`. The port fails the layout in `make_regular_edge` with an error naming the
+  edge and rank, instead of panicking (issue #114;
+  `init_rank_trouble_unplaced_virtual_node_fails_the_layout`).
 * In the pack branch, clusters are drawn from the root's `GD_clust` as `copyClusterInfo`
   builds it: in component order, and once per component that kept the cluster, so a
   cluster sharing a node with a non-nested cluster is drawn twice. The renderer used to

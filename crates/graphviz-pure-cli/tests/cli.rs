@@ -735,10 +735,11 @@ edge [label_float=\"true\"];
 }
 
 // Issue #114: after `trouble in init_rank` C segfaults in mincross's `furthestnode` (exit
-// 139). The port panicked in `maximal_bbox`; it now abandons the layout after the ranking
-// phase, so stderr is C's up to the crash and the exit status is 1.
+// 139). The port panicked indexing `GD_rank` in `maximal_bbox` with a virtual node that
+// mincross never placed (its `ND_rank` is still an x coordinate); `make_regular_edge` now
+// fails the layout there.
 #[test]
-fn init_rank_trouble_abandons_the_layout() {
+fn init_rank_trouble_unplaced_virtual_node_fails_the_layout() {
     let src = "digraph G {
 rank=sink;
 subgraph cluster0 { a; b; c; d }
@@ -757,21 +758,49 @@ subgraph s { rank=source; a; h; subgraph cluster_in { } }
     for fmt in ["-Tsvg", "-Tdot"] {
         let (_, err, ok) = run(&["-Kdot", fmt], src);
         assert!(!ok, "{fmt}: {err}");
-        assert_eq!(
-            err,
-            "Warning: a was already in a rankset, deleted from cluster G\n\
-             Warning: c was already in a rankset, deleted from cluster G\n\
-             Warning: d was already in a rankset, deleted from cluster G\n\
-             Warning: e was already in a rankset, deleted from cluster G\n\
-             Error: trouble in init_rank\n\
-             \tc 3\n\
-             \t%0 1\n\
-             \tf 1\n\
-             \ti 1\n\
-             \tg 1\n",
-            "{fmt}"
+        assert!(!err.contains("panicked"), "{fmt}: {err}");
+        assert!(
+            err.starts_with(
+                "Warning: a was already in a rankset, deleted from cluster G\n\
+                 Warning: c was already in a rankset, deleted from cluster G\n\
+                 Warning: d was already in a rankset, deleted from cluster G\n\
+                 Warning: e was already in a rankset, deleted from cluster G\n\
+                 Error: trouble in init_rank\n\
+                 \tc 3\n\
+                 \t%0 1\n\
+                 \tf 1\n\
+                 \ti 1\n\
+                 \tg 1\n"
+            ),
+            "{fmt}: {err}"
+        );
+        assert!(
+            err.ends_with(
+                "Error: <stdin>: Layout computation error in dot: make_regular_edge: edge g -> \
+                 h reaches a node on rank 112, outside the ranks 0..5\n"
+            ),
+            "{fmt}: {err}"
         );
     }
+}
+
+// `trouble in init_rank` alone does not stop C: a node in both a min and a max set is
+// reported, then laid out (exit 1). Issue #114's fix must leave this drawing as C's.
+#[test]
+fn init_rank_trouble_without_lost_nodes_lays_out_like_c() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        "digraph G { {rank=max; a} {rank=min; a} b -> a; }",
+    );
+    assert!(!ok, "{err}");
+    assert_eq!(err, "Error: trouble in init_rank\n\ta 1\n\tb 1\n");
+    assert!(out.contains("bb=\"0,0,126,36\""), "{out}");
+    assert!(out.contains("pos=\"99,18\""), "{out}");
+    assert!(out.contains("pos=\"27,18\""), "{out}");
+    assert!(
+        out.contains("pos=\"e,71.75,18 54.281,18 56.283,18 58.284,18 60.286,18\""),
+        "{out}"
+    );
 }
 
 // Fuzz case 018-render-interpolate-points-fma (issue #27), its repro.gv verbatim. C's

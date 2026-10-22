@@ -85,8 +85,6 @@ pub struct Dot<'a> {
     pub splines_done: bool,
     /// The layout gave up (dot_position failed): no splines, no postprocessing.
     pub aborted: bool,
-    /// Network simplex printed `trouble in init_rank` (see [`Dot::dot_rank`]).
-    pub init_rank_trouble: bool,
 }
 
 impl<'a> Dot<'a> {
@@ -119,7 +117,6 @@ impl<'a> Dot<'a> {
             et: crate::common::types::EdgeType::Spline,
             splines_done: false,
             aborted: false,
-            init_rank_trouble: false,
         }
     }
 
@@ -219,13 +216,7 @@ impl<'a> Dot<'a> {
         self.set_edge_type();
         self.dot_init_subg();
         self.dot_init_node_edge();
-        if let Err(e) = self.dot_rank() {
-            if e == mincross::ABORT_LAYOUT {
-                self.aborted = true;
-                return Ok(());
-            }
-            return Err(e);
-        }
+        self.dot_rank();
         self.gvdump("R");
         if maxphase == 1 {
             return Ok(());
