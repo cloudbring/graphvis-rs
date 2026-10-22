@@ -10,7 +10,15 @@ readme.workspace = true
 homepage.workspace = true
 description = "PNG and JPEG output for graphviz-pure: rasterizes its SVG with resvg and bundled metric-compatible fonts"
 # The bundled fonts (fonts/) are under the SIL Open Font License 1.1; see fonts/OFL-*.txt.
-include = ["src/**", "fonts/*.ttf", "fonts/OFL-*.txt", "fonts/SHA256SUMS", "Cargo.toml"]
+include = [
+    "src/**",
+    "fonts/*.ttf",
+    "fonts/OFL-*.txt",
+    "fonts/SHA256SUMS",
+    "Cargo.toml",
+    "LICENSE",
+    "NOTICE",
+]
 
 [dependencies]
 resvg = { version = "0.48.1", default-features = false, features = ["text"] }

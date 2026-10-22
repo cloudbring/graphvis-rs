@@ -13,7 +13,7 @@ node_modules/
 
 # Built by wasm-bindgen (web/package.json build:wasm); never committed
 /web/pkg/
-# Copied from the repository root into the npm package when it is packed (release.yml)
+# Copied from the repository root into the npm package when it is packed (web/package.json prepack)
 /web/LICENSE
 /web/NOTICE
 /web/THIRD-PARTY-LICENSES.md

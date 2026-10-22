@@ -23,6 +23,10 @@
      (`scripts/release-smoke.py`, `scripts/release-smoke-wasm.mjs`);
    - packages deterministic archives (`scripts/release-package.py`), writes `SHA256SUMS` and
      attests the build provenance of every file (Sigstore, stored on GitHub);
+   - checks that every archive and the npm tarball (and so the JSR package) carry LICENSE,
+     NOTICE, THIRD-PARTY-LICENSES.md and LICENSES/, and every crate LICENSE and NOTICE
+     (`scripts/check-package-notices.py`, `scripts/check-crate-notices.sh`; CI runs the same
+     checks on every change; the crates' directories hold copies that must match the root files);
    - builds the container image for linux/amd64 and linux/arm64 from the two musl archives
      (`scripts/release-image.sh`, no second compile; with the same BuildKit, commit time and
      revision, the same archives give the same digest) and runs the version check and the

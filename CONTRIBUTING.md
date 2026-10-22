@@ -51,6 +51,12 @@ no C installation. Regenerating the C references does; see
   `THIRD-PARTY-LICENSES.md`; it needs `cargo install --locked --features cli cargo-about@0.9.2`,
   and CI fails when the file is stale. A licence added to `deny.toml`'s allow list goes into
   `about.toml`'s `accepted` list too.
+- **Licence files in the crates:** each crate published to crates.io holds copies of `LICENSE`
+  and `NOTICE` (and `graphviz-pure-core` of `LICENSES/MIT-CORE-MATH.txt`), because a crate
+  cannot include files from outside its directory. When you change a root file, copy it over
+  the crates' copies (`for d in crates/*/LICENSE; do cp LICENSE "$d"; done`, likewise for
+  `NOTICE` and for `LICENSES/MIT-CORE-MATH.txt` in `crates/graphviz-pure-core/LICENSES/`);
+  CI (`scripts/check-crate-notices.sh`) fails when one differs.
 - **Changelog:** add a line under "Unreleased" in [CHANGELOG.md](CHANGELOG.md) for anything a
   user would notice, including changes to output bytes.
 - **Pull requests** need the CI checks to pass (tests in both math profiles, the supply-chain
