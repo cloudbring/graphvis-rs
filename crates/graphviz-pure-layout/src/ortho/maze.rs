@@ -169,9 +169,9 @@ pub fn update_wts(sg: &mut SGraph, cp: &Cell, ep: usize) {
 }
 
 /// `markSmall(cp)`. `None` where C dereferences a missing cell or reads past
-/// a node cell's side list (`lib/ortho/maze.c:markSmall`). Tiny or touching
-/// node boxes in dot get there (#202): C usually segfaults, so the port fails
-/// the maze instead and the caller falls back.
+/// the allocation of a node cell's side list (`lib/ortho/maze.c:markSmall`).
+/// Tiny or touching node boxes in dot get there (#202): C segfaults, so the
+/// port fails the maze instead and the caller falls back.
 fn mark_small(mp: &mut Maze, c: usize) -> Option<()> {
     let bb = mp.cells[c].bb;
     let sides: Vec<usize> = mp.cells[c].sides.iter().flatten().copied().collect();
@@ -203,12 +203,12 @@ fn mark_small(mp: &mut Maze, c: usize) -> Option<()> {
 }
 
 /// One walk of `markSmall`: flag the cell `onp->cells[ci]`, then keep stepping
-/// through `side` while the next cell is not a node. A missing cell, or a side
-/// index past the end of a node cell's list, is where C crashes.
+/// through `side` while the next cell is not a node. `None` on a missing cell
+/// or an unallocated side slot, where C crashes.
 fn mark_run(mp: &mut Maze, onp: usize, ci: usize, side: usize, flag: i32) -> Option<()> {
     let mut ocp = mp.sg.nodes[onp].cells[ci]?;
     mp.cells[ocp].flags |= flag;
-    while let Some(onp) = *mp.cells[ocp].sides.get(side)? {
+    while let Some(onp) = side_slot(&mp.cells[ocp].sides, side)? {
         let nc = mp.sg.nodes[onp].cells[ci]?;
         if mp.cells[nc].is_node() {
             break;
@@ -217,6 +217,19 @@ fn mark_run(mp: &mut Maze, onp: usize, ci: usize, side: usize, flag: i32) -> Opt
         mp.cells[ocp].flags |= flag;
     }
     Some(())
+}
+
+/// `cp->sides[side]` as C reads it. A node cell's side list comes from
+/// `LIST_DETACH` (`lib/util/list.c`), which keeps the capacity: 1, 2, 4, ...
+/// slots, the unused ones zeroed. So a read past the list but within the
+/// capacity is NULL and ends C's walk; past the capacity (or on an empty list,
+/// whose buffer is NULL) C reads unallocated memory, and this returns `None`.
+fn side_slot(sides: &[Option<usize>], side: usize) -> Option<Option<usize>> {
+    match sides.get(side) {
+        Some(&s) => Some(s),
+        None if !sides.is_empty() && side < sides.len().next_power_of_two() => Some(None),
+        None => None,
+    }
 }
 
 /// `createSEdges(cp, g)`.
@@ -483,5 +496,29 @@ mod tests {
             (Point::new(20.72, 10.16), 0.72, 1.44),
         ];
         assert!(mk_maze(&nodes).is_none());
+    }
+
+    /// Issue #202 review: walking down from a small node lands on a node cell
+    /// with three sides. C's side list has a fourth, zeroed slot (`LIST_DETACH`
+    /// keeps the capacity), so `sides[M_BOTTOM]` is NULL and `markSmall` ends
+    /// the walk; C builds the maze and routes the edges. The port must too.
+    #[test]
+    fn three_sided_node_cell_ends_the_mark_small_walk() {
+        let nodes = [
+            (Point::new(3.0, 5.5), 4.0, 4.0),
+            (Point::new(9.5, 10.0), 1.0, 0.5),
+            (Point::new(1.0, 9.0), 6.0, 1.0),
+            (Point::new(10.5, 10.0), 0.5, 0.5),
+        ];
+        assert!(mk_maze(&nodes).is_some());
+    }
+
+    #[test]
+    fn side_slot_reads_like_cs_detached_list() {
+        let three = [Some(1), Some(2), Some(3)];
+        assert_eq!(side_slot(&three, M_TOP), Some(Some(2)));
+        assert_eq!(side_slot(&three, M_BOTTOM), Some(None));
+        assert_eq!(side_slot(&three[..1], M_TOP), None);
+        assert_eq!(side_slot(&[], M_RIGHT), None);
     }
 }
