@@ -1511,9 +1511,9 @@ fn run_bytes(args: &[&[u8]], stdin: &str) -> (Vec<u8>, Vec<u8>, bool) {
 /// Issue #197: `x` is in two clusters (#33), so `overlap=ipsep` gives VPSC containment
 /// constraints it cannot satisfy. C's `satisfyVPSC` (`lib/vpsc/csolve_VPSC.cpp`) lets the
 /// "Cycle Error!" `std::runtime_error` escape and aborts. The port went on projecting, each
-/// cycle error splitting 10000 blocks, without bound in time or memory. It now ends the
-/// layout after `MAX_CYCLE_ERRORS` of them, with a warning, and every node keeps a position
-/// of its own.
+/// cycle error splitting 10000 blocks that it never freed, without bound in time or memory.
+/// It now reuses unused blocks and ends the layout after `MAX_CYCLE_ERRORS` cycle errors, with
+/// a warning, and every node keeps a position of its own.
 #[test]
 fn ipsep_vpsc_cycle_error_ends_the_layout() {
     let src = "digraph { layout=neato; mode=ipsep; overlap=ipsep; \

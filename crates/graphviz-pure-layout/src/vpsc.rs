@@ -113,6 +113,8 @@ pub struct Solver {
     pub vars: Vec<Variable>,
     pub cons: Vec<Constraint>,
     blocks: Vec<Block>,
+    /// Not in C: indices in `blocks` that `free_unused_blocks` freed.
+    free_blocks: Vec<usize>,
     /// `Blocks` (`std::set<Block*>`), keyed by `(addr, block)`.
     bs: BTreeSet<(u64, usize)>,
     next_addr: u64,
@@ -219,15 +221,21 @@ impl Solver {
 
     /// `new Block(v)`.
     fn new_block(&mut self, v: Option<usize>) -> usize {
-        let b = self.blocks.len();
-        self.blocks.push(Block {
+        let block = Block {
             vars: Vec::new(),
             posn: 0.0,
             weight: 0.0,
             wposn: 0.0,
             deleted: false,
             addr: self.next_addr,
-        });
+        };
+        let b = if let Some(b) = self.free_blocks.pop() {
+            self.blocks[b] = block;
+            b
+        } else {
+            self.blocks.push(block);
+            self.blocks.len() - 1
+        };
         self.next_addr += 1;
         if let Some(v) = v {
             self.vars[v].offset = 0.0;
@@ -539,8 +547,35 @@ impl Solver {
         Ok(())
     }
 
+    /// Not in C: frees the blocks that no variable belongs to and that are
+    /// not in `Blocks`, for `new_block` to reuse. C `delete`s the deleted
+    /// blocks in `Blocks::cleanup` and `~Blocks`, and leaks the ones that
+    /// `satisfy` merges away without inserting; nothing reads either again.
+    /// Without this, every block ever made stayed in `blocks`, and a run of
+    /// cycle errors (10001 splits each) used gigabytes (#197). Block order
+    /// comes from `addr`, not the index, so reusing an index changes nothing.
+    fn free_unused_blocks(&mut self) {
+        let mut used = vec![false; self.blocks.len()];
+        for v in &self.vars {
+            if v.block != NONE {
+                used[v.block] = true;
+            }
+        }
+        for &(_, b) in &self.bs {
+            used[b] = true;
+        }
+        self.free_blocks.clear();
+        for (b, &u) in used.iter().enumerate() {
+            if !u {
+                self.blocks[b].vars = Vec::new();
+                self.free_blocks.push(b);
+            }
+        }
+    }
+
     /// `IncVPSC::satisfy`.
     pub fn satisfy(&mut self) -> Result<(), VpscError> {
+        self.free_unused_blocks();
         self.split_blocks();
         let mut split_ctr: i64 = 0;
         let mut v = NONE;
@@ -934,4 +969,34 @@ pub fn gen_y_constraints(s: &mut Solver, bb: &[BoxF], vs: &[usize]) -> Vec<usize
         .map(|b| Rectangle::new(b.llx, b.urx, b.lly, b.ury))
         .collect();
     generate_y_constraints(s, &rs, vs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// #197: `a + 1 <= b` and `b + 1 <= a` cannot both hold, so `satisfy`
+    /// fails with a cycle error after 10001 splits. The ipsep stress loop
+    /// builds a new `IncVPSC` and satisfies again on every iteration. Without
+    /// `free_unused_blocks`, every block of every round stayed in `blocks`.
+    #[test]
+    fn failed_satisfy_reuses_unused_blocks() {
+        let mut s = Solver::new();
+        let a = s.new_variable(0, 0.0, 1.0);
+        let b = s.new_variable(1, 0.0, 1.0);
+        let cs = [s.new_constraint(a, b, 1.0), s.new_constraint(b, a, 1.0)];
+        let mut first = 0;
+        for round in 0..20 {
+            s.new_inc_vpsc(&[a, b], &cs);
+            assert_eq!(s.satisfy(), Err(VpscError::CYCLE));
+            if round == 0 {
+                first = s.blocks.len();
+            }
+        }
+        assert!(
+            s.blocks.len() <= 2 * first,
+            "{first} blocks after one round, {} after 20",
+            s.blocks.len()
+        );
+    }
 }

@@ -71,8 +71,8 @@ pub struct CMajEnvVpsc {
 const QUAD_PROG_TOL: f32 = 1e-4;
 
 /// Not in C: the "Cycle Error!" failures of `satisfyVPSC` one ipsep layout may
-/// have before it is ended (#197). Each costs over 10000 block splits. The
-/// most any corpus file reaches and still finishes is 241
+/// have before it is ended (#197). Each one is 10001 block splits. On master,
+/// the most a corpus file reached while finishing within 10 s was 241
 /// (`tests/wild/gv16_dirgraph_apache_aef3b0.gv` with `diredgeconstraints`).
 pub const MAX_CYCLE_ERRORS: u32 = 500;
 
@@ -103,8 +103,8 @@ impl CMajEnvVpsc {
         // (lib/vpsc/csolve_VPSC.cpp) catches only `const char *`, so C
         // aborts. The port models VPSC's pointer order as allocation order and
         // can fail where C, on some runs, succeeds, so it reads the positions
-        // back and goes on. It counts the costly cycle errors, so that an
-        // infeasible system cannot keep projecting without bound (#197).
+        // back and goes on. It counts cycle errors, the failures a runaway
+        // repeats, so that the layout can end (#197).
         if let Err(e) = self.solver.satisfy()
             && e == vpsc::VpscError::CYCLE
         {
