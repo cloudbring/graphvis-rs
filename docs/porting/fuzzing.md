@@ -99,6 +99,8 @@ In CI, `.github/workflows/fuzz.yml` runs the targets with
 A crash becomes an issue labelled `crash`, plus the engine label, with the minimised
 input as a `.gv` reproducer. The fix adds that reproducer to the corpus, as for a
 differential find (`tests/<engine>/fuzz_*.gv`), so it also seeds the next fuzzing runs.
+Before filing, check whether the crash shares its cause with an open issue or one of the
+known causes in [crashes.md](crashes.md); if it does, it joins that fix.
 
 ## Rounds
 

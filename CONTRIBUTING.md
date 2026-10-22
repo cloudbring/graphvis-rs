@@ -42,6 +42,9 @@ no C installation. Regenerating the C references does; see
   to a corpus under `tests/`, and the ratchet baselines refreshed if more files now match
   (`scripts/update-baselines.sh`, and `--portable` for the portable profile). A change must not
   make any file that matched C stop matching.
+- **Where C crashes, the port must not.** Fix a panic at its cause, not at the line that
+  panics, and group crashes that share a cause into one fix
+  ([how crashes are fixed](docs/porting/crashes.md)).
 - **No `unsafe`.** The workspace forbids it; the only exception is the test-only
   `graphviz-pure-portable-libm` crate.
 - **Dependencies** are added only when necessary, and must pass `cargo deny check`
