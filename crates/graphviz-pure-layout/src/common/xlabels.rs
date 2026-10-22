@@ -675,8 +675,10 @@ fn hilbert(x0: i32, y0: i32, n: u32) -> u32 {
     }
     let mut i = n - 1;
     loop {
-        let xi = (x >> i) & 1;
-        let yi = (y >> i) & 1;
+        // An `order` above 32 (a graph bb reaching 2^32) shifts an `int` by
+        // 32 or more, undefined in C; arm64's `asr` takes the count mod 32.
+        let xi = x.wrapping_shr(i) & 1;
+        let yi = y.wrapping_shr(i) & 1;
         s = s
             .wrapping_mul(4)
             .wrapping_add(2 * xi as u32)
@@ -694,9 +696,18 @@ fn hilbert(x0: i32, y0: i32, n: u32) -> u32 {
     s
 }
 
+/// `xlhorder(obj_bb)`: `(unsigned)floor(log2(round(fmax(maxx, maxy)))) + 1`.
+/// `as u32` saturates like arm64's `fcvtzu`, and the add wraps as C's
+/// `unsigned` does: an infinite bb (#191) gives order 0, the order C computes
+/// before `xlhdxload` fails its `INT_MIN..INT_MAX` assertion on the label
+/// centre. The port's `as i32` on that centre saturates where C asserts.
+fn xlhorder(bb: BoundingBox) -> u32 {
+    (math::log2((bb.ur.x.max(bb.ur.y)).round()).floor() as u32).wrapping_add(1)
+}
+
 /// `placeLabels(objs, n_objs, params)`.
 fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bool) {
-    let order = (math::log2((bb.ur.x.max(bb.ur.y)).round()).floor() as i64 + 1) as u32;
+    let order = xlhorder(bb);
     // `HDict_t.key` is an `int`, and `Hdisc`'s `icompare` compares the keys
     // as `int`, so the unsigned Hilbert index is reinterpreted as signed:
     // keys with bit 31 set (coordinates reaching 2^15) sort first, not last.
@@ -994,5 +1005,60 @@ impl XLabelGraph for LGraph<'_> {
     }
     fn xl_forcelabels(&self) -> bool {
         crate::common::utils::map_bool(self.gattr("forcelabels"), true)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hilbert_order_above_32_does_not_overflow_the_shift() {
+        // C's `x >> i` with `i >= 32` is undefined; arm64 takes the count mod
+        // 32, so order 40 walks bits 7..0 and then 31..0. The value comes
+        // from an independent model of `hd_hil_s_from_xy` with that masking.
+        assert_eq!(hilbert(3, 5, 40), 2_863_311_518);
+        assert_eq!(hilbert(3, 5, 8), 52);
+    }
+
+    #[test]
+    fn xlhorder_matches_c_on_arm64() {
+        let bb = |x: f64| BoundingBox {
+            ll: Point::new(0.0, 0.0),
+            ur: Point::new(x, 0.0),
+        };
+        assert_eq!(xlhorder(bb(100.0)), 7);
+        assert_eq!(xlhorder(bb(0.0)), 1);
+        assert_eq!(xlhorder(bb(f64::NAN)), 1);
+        // #191: `(unsigned)floor(log2(inf))` saturates to UINT_MAX and `+ 1` wraps.
+        assert_eq!(xlhorder(bb(f64::INFINITY)), 0);
+    }
+
+    #[test]
+    fn infinite_bb_still_places_labels() {
+        // #191: `log2(inf)` used to overflow the order computation.
+        let objs = [
+            Object {
+                pos: Point::new(0.0, 0.0),
+                sz: Point::new(10.0, 10.0),
+                lbl: Some(0),
+            },
+            Object {
+                pos: Point::new(f64::INFINITY, 0.0),
+                sz: Point::new(10.0, 10.0),
+                lbl: None,
+            },
+        ];
+        let mut lbls = [XLabel {
+            sz: Point::new(4.0, 4.0),
+            pos: Point::default(),
+            set: false,
+        }];
+        let bb = BoundingBox {
+            ll: Point::new(0.0, 0.0),
+            ur: Point::new(f64::INFINITY, 10.0),
+        };
+        place_labels(&objs, &mut lbls, bb, true);
+        assert!(lbls[0].set);
     }
 }
