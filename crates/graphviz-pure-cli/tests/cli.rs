@@ -1026,9 +1026,10 @@ fn cluster_ranking_trouble_fails_the_layout() {
     }
 }
 
-// Issue #232, input A: a cluster's rank is installed past the slots the root reserved for
-// it. C's `install_in_rank` reports it (mincross.c:1190), `dot_layout` abandons the layout
-// and the SVG has the nodes and no edge paths (exit 1). stderr and SVG are C 16.1.0's.
+// Issue #232, input A: in the root's `build_ranks`, a later component's cluster rank
+// leaders are installed past the end of the rank array. C's `install_in_rank` reports it
+// (mincross.c:1190), `dot_layout` abandons the layout and the SVG has the nodes and no edge
+// paths (exit 1). stderr and SVG are C 16.1.0's.
 #[test]
 fn install_in_rank_past_the_root_slots_abandons_the_layout_like_c() {
     let src = "digraph G {

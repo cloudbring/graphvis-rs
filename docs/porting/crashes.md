@@ -67,7 +67,9 @@ ranking leaves state that C cannot use:
   layout as C does; the output is C's (#232, input A). Where C fails
   `assert(GD_rank(g)[r].n <= GD_rank(g)[r].an)` after writing past the array (line 1165),
   the port fails the layout before the write (`install_in_rank: rank R of G is full`)
-  (#232, input B).
+  (#232, input B). Past the root's first component, C's line-1190 bound uses `>`, so one
+  store can land one slot past the array unreported; the port grows the buffer there and
+  goes on, as C does.
 
 Most of C's crashes after `trouble in init_rank` come from a related cause that is not in
 the ranking itself: a cluster keeps the rank range of nodes that `mark_clusters` later

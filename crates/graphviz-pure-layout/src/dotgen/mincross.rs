@@ -910,7 +910,10 @@ impl Dot<'_> {
     /// do not fit the rank arrays built from them: a node of a cluster that is also in a
     /// rank set, or a cluster ranking that printed `trouble in init_rank` (issue #232). C
     /// fails the `n <= an` assertion after writing past the array; the port fails the
-    /// layout before writing.
+    /// layout before writing. Past the first component the store can still land one slot
+    /// past the array before C's `>` check at line 1190 notices; C writes it too, and the
+    /// port's `set_rv` grows the buffer, so both go on (issue #232's input A reports 1190
+    /// on the next node).
     pub fn install_in_rank(&mut self, g: G, n: N) -> Result<(), String> {
         let r = self.nodes[n].rank;
         // C reads GD_rank(g)[r] before checking the range; the entries past the ranks
