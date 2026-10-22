@@ -224,6 +224,8 @@ fn mark_run(mp: &mut Maze, onp: usize, ci: usize, side: usize, flag: i32) -> Opt
 /// slots, the unused ones zeroed. So a read past the list but within the
 /// capacity is NULL and ends C's walk; past the capacity (or on an empty list,
 /// whose buffer is NULL) C reads unallocated memory, and this returns `None`.
+/// This holds because `mkMazeGraph` fills the list only with `LIST_APPEND`
+/// (head 0, capacity `len.next_power_of_two()`).
 fn side_slot(sides: &[Option<usize>], side: usize) -> Option<Option<usize>> {
     match sides.get(side) {
         Some(&s) => Some(s),
@@ -484,8 +486,8 @@ mod tests {
     }
 
     /// Issue #202: dot places tiny nodes so that `n2` and `n1` touch. Every box
-    /// is clamped to 2x2, and `markSmall` walks off a node cell's side list or
-    /// into a missing cell (`lib/ortho/maze.c:markSmall`), where C segfaults.
+    /// is clamped to 2x2, and `markSmall`'s walk reaches a search node with a
+    /// missing cell (`lib/ortho/maze.c:markSmall`), where C segfaults.
     /// The port panicked on an `unwrap`; now the maze fails.
     #[test]
     fn touching_tiny_node_boxes_fail_the_maze() {
