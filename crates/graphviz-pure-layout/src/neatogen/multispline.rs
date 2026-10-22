@@ -564,15 +564,15 @@ impl MRouter {
         !self.tg.nodes[v_id].edges.is_empty()
     }
 
-    /// `edgeToSeg(tg, i, j)`.
-    fn edge_to_seg(&self, i: usize, j: usize) -> Ipair {
-        for &k in &self.tg.nodes[i].edges {
-            let ep = &self.tg.edges[k];
-            if ep.t == j || ep.h == j {
-                return ep.seg;
-            }
-        }
-        Ipair::default()
+    /// `edgeToSeg(tg, i, j)`; `None` where C aborts on `assert(0)`: no
+    /// triangle edge joins `i` and `j`.
+    fn edge_to_seg(&self, i: usize, j: usize) -> Option<Ipair> {
+        self.tg.nodes[i]
+            .edges
+            .iter()
+            .map(|&k| &self.tg.edges[k])
+            .find(|ep| ep.t == j || ep.h == j)
+            .map(|ep| ep.seg)
     }
 
     /// `triPath(g, n, v0, v1, pq)`: `dad` from `v1` back to `v0`.
@@ -839,7 +839,12 @@ fn mk_ctrl_pts(
     Some(ps)
 }
 
-/// `mkPoly(rtr, dad, s, t, p_s, p_t, &sx)`.
+/// `mkPoly(rtr, dad, s, t, p_s, p_t, &sx)`; `None` where C aborts because
+/// `tri_path` never reached `t` (issue #138). An unreached node's `dad` is 0, so
+/// the walk either lands on node 0 as its own parent (`assert(nxt != dad[nxt])`;
+/// without the check the walk never ends) or, when node 0 was reached, follows a
+/// path with a step that is no triangle edge (`edgeToSeg`'s `assert(0)`). A
+/// valid path visits each node once, so a longer walk also fails.
 fn mk_poly(
     rtr: &MRouter,
     dad: &[i32],
@@ -847,7 +852,7 @@ fn mk_poly(
     t: usize,
     p_s: Point,
     p_t: Point,
-) -> (TriPoly, usize) {
+) -> Option<(TriPoly, usize)> {
     struct Side {
         v: i32,
         ts: Vec<(i32, i32)>,
@@ -858,12 +863,15 @@ fn mk_poly(
     let mut nxt = dad[t];
     while nxt as usize != s {
         nt += 1;
+        if nxt == dad[nxt as usize] || nt > dad.len() {
+            return None;
+        }
         nxt = dad[nxt as usize];
     }
     let mut side1: Vec<Side> = Vec::with_capacity(nt + 4);
     let mut side2: Vec<Side> = Vec::with_capacity(nt + 4);
     let nxt0 = dad[t] as usize;
-    let p = rtr.edge_to_seg(nxt0, t);
+    let p = rtr.edge_to_seg(nxt0, t)?;
     side1.push(Side {
         v: p.i,
         ts: vec![(-1, p.j)],
@@ -875,7 +883,7 @@ fn mk_poly(
     let mut t = nxt0;
     let mut nxt = dad[t];
     while nxt >= 0 {
-        let p = rtr.edge_to_seg(t, nxt as usize);
+        let p = rtr.edge_to_seg(t, nxt as usize)?;
         let (c1, c2) = (side1.len() - 1, side2.len() - 1);
         let (s1v, s2v) = (side1[c1].v, side2[c2].v);
         if p.i == s1v {
@@ -943,13 +951,13 @@ fn mk_poly(
         }
     }
     pts.truncate(nt + 4);
-    (
+    Some((
         TriPoly {
             poly: pts,
             tri_map: trim,
         },
         cnt1 + 1,
-    )
+    ))
 }
 
 fn eqpt(p: Point, q: Point) -> bool {
@@ -1133,11 +1141,8 @@ pub fn make_multi_spline(
     } else {
         None
     };
-    let ret = match sp {
-        Some(sp) => {
-            let (poly, idx) = mk_poly(rtr, &sp, h_id, t_id, h_p, t_p);
-            genroute(g, sub, &poly, idx, e, do_polyline)
-        }
+    let ret = match sp.and_then(|sp| mk_poly(rtr, &sp, h_id, t_id, h_p, t_p)) {
+        Some((poly, idx)) => genroute(g, sub, &poly, idx, e, do_polyline),
         None => true,
     };
     // resetGraph

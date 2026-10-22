@@ -681,6 +681,71 @@ a -> b [label=\"lbl\"];
     assert_eq!(out.matches("class=\"edge\"").count(), 1, "{out}");
 }
 
+/// Issue #138: with a rotated box (or `shape=none`) and a compass port, both
+/// endpoints get triangle edges but `triPath` never reaches the tail, so the
+/// `dad` walk in C's `mkPoly` (`lib/neatogen/multispline.c:968-971`) stops on a
+/// node that is its own parent and aborts on `assert(nxt != dad[nxt])`, or, when
+/// node 0 was reached, on `edgeToSeg`'s `assert(0)` (which one varies between C
+/// runs). The port looped forever in the first case. It now treats both as a
+/// failed multispline and falls back like other failures, on every
+/// neato-family engine. On twopi the record graph takes the `edgeToSeg` path.
+#[test]
+fn mk_poly_unreached_tail_does_not_hang_the_router() {
+    let srcs = [
+        (
+            "graph G { splines=true; a [shape=box, orientation=90]; b:se -- a; }",
+            1,
+        ),
+        (
+            "graph G { splines=polyline; a [shape=none, orientation=90, peripheries=2]; b:se -- a; }",
+            1,
+        ),
+        (
+            "graph G { splines=true; n0 [shape=record, orientation=45, peripheries=2]; \
+             n1 [shape=box, orientation=90]; n1:e -- n1:sw; n1:c -- n0:n; n0:nw -- n0:e; \
+             n1:s -- n0:s; n1:c -- n0:se; }",
+            5,
+        ),
+    ];
+    for layout in ["neato", "fdp", "sfdp", "circo", "twopi"] {
+        for (src, edges) in srcs {
+            let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+                .args(["-Tsvg", &format!("-K{layout}")])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap();
+            child
+                .stdin
+                .take()
+                .unwrap()
+                .write_all(src.as_bytes())
+                .unwrap();
+            // The SVG is a few KB, well under the pipe buffer, so polling cannot block.
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+            while child.try_wait().unwrap().is_none() {
+                if std::time::Instant::now() > deadline {
+                    child.kill().unwrap();
+                    panic!("{layout}: the router must terminate on {src}");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            let out = child.wait_with_output().unwrap();
+            let (svg, err) = (
+                String::from_utf8_lossy(&out.stdout),
+                String::from_utf8_lossy(&out.stderr),
+            );
+            assert!(out.status.success(), "{layout}: {err}");
+            assert_eq!(
+                svg.matches("class=\"edge\"").count(),
+                edges,
+                "{layout}: {svg}"
+            );
+        }
+    }
+}
+
 // Fuzz case 009-xlabels-dtobag-equal-key-order (issue #18), its repro.gv verbatim. Five
 // nodes share the pinned position, so several label objects get the same Hilbert key.
 // `placeLabels` (lib/label/xlabels.c:xlhdxload/xlspdxload) loads the R-tree in the order of a

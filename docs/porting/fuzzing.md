@@ -346,6 +346,11 @@ neato family
   leave obstacle sides in no triangle, so a port endpoint on one makes C abort in
   `addEndpoint` (`findMap`'s `assert(ip)`); the port treats it as a failed multispline
   and falls back (`cylinder_port_endpoint_does_not_hang_the_router`).
+  With a rotated box or `shape=none` and a compass port (as in fuzz seed 10854), `triPath` never
+  reaches the tail, and C aborts in `mkPoly` (`assert(nxt != dad[nxt])`) or in `edgeToSeg`
+  (`assert(0)`); which one varies between C runs. The port looped forever in `mk_poly`; it now treats
+  both as a failed multispline and falls back. Issue #138; tested by
+  `mk_poly_unreached_tail_does_not_hang_the_router`.
 * patchwork places xlabels around the shape size `common_init_node` gives the node, not
   its patch.
 * fdp places a cluster's boundary ports with separate `cos` and `sin` calls, as C does,
