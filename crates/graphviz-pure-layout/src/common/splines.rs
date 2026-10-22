@@ -847,7 +847,7 @@ pub fn update_bb_bz(bb: &mut BoundingBox, cp: &[Point; 4]) {
     // which is non-finite when any control point is, and `ptToLine2` gives inf or NaN for
     // such a point, so `check_control_points` never accepts the segment: C either stops on a half that is not `out`, leaving `bb` as
     // it was, or recurses until its stack overflows (#173: osage gives a repeated cluster a
-    // NaN box, and its edges inherit it). Leave `bb` as it was.
+    // NaN box, and its edges inherit it; #201: neato pins a node at NaN). Leave `bb` as it was.
     if !cp.iter().all(|p| p.x.is_finite() && p.y.is_finite()) {
         return;
     }
