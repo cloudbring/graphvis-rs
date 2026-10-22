@@ -1633,6 +1633,49 @@ concentrate=\"true\";
     assert!(dot.contains(edge), "{dot}");
 }
 
+// Issue #185. Under overlap=vpsc, stress_majorization_cola (lib/neatogen/
+// constrained_majorization_ipsep.c) ends with removeoverlaps(orig_n, ...), and initCMajVPSC
+// treats the last 2 * nclusters real nodes as the cluster boundary variables. C sizes
+// generateNonoverlapConstraints' boxes before dropping the dummies, so cluster members among
+// those nodes read zeroed boxes; the port sized them after and panicked. With fewer real nodes
+// than 2 * nclusters, C segfaults (the first two graphs) and the port passes the dummies too.
+#[test]
+fn neato_ipsep_vpsc_with_clusters_does_not_panic() {
+    for (src, nodes) in [
+        (
+            "digraph { layout=neato; mode=ipsep; overlap=vpsc; subgraph cluster_a { a } subgraph cluster_b { b } a -> b; b -> c }",
+            3,
+        ),
+        (
+            "digraph { layout=neato; mode=ipsep; overlap=vpsc; subgraph cluster_a { a } subgraph cluster_b { b } a -> b; b -> c; c -> d; d -> e }",
+            5,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tsvg"], src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(err, "", "{src}");
+        assert_eq!(out.matches("class=\"node\"").count(), nodes, "{src}: {out}");
+        assert_eq!(out.matches("class=\"cluster\"").count(), 2, "{src}: {out}");
+    }
+    // C renders this one; n4 and n5 are the cluster's boundary variables in removeoverlaps.
+    let src = "digraph { layout=neato; mode=ipsep; overlap=vpsc; subgraph cluster_0 { n0 } \
+               n0 -> n1; n1 -> n2; n2 -> n3; n3 -> n4; n4 -> n5; }";
+    let (out, err, ok) = run(&["-Tplain"], src);
+    assert!(ok, "{err}");
+    // C Graphviz 16.1.0.
+    for line in [
+        "graph 1 3.0059 1.7638",
+        "node n0 1.5883 0.2916 0.75 0.5 n0 solid ellipse black lightgrey",
+        "node n1 2.6309 0.80008 0.75 0.5 n1 solid ellipse black lightgrey",
+        "node n2 1.3891 1.5138 0.75 0.5 n2 solid ellipse black lightgrey",
+        "node n3 0.375 1.4439 0.75 0.5 n3 solid ellipse black lightgrey",
+        "node n4 0.7271 0.25 0.75 0.5 n4 solid ellipse black lightgrey",
+        "node n5 1.7698 0.90271 0.75 0.5 n5 solid ellipse black lightgrey",
+    ] {
+        assert!(out.contains(line), "{line}\n{out}");
+    }
+}
+
 // Fuzz case 011-dot-render-node-lw-rw-ht (issue #20), its repro.gv verbatim. With
 // `splines=""` dot_splines_ returns before resetRW, so the self-loop space dot_position added
 // to ND_rw stays (lw=27, rw=45). Mcircle_hack draws the diagonals from ND_rw alone; C's

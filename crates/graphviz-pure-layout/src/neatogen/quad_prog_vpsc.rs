@@ -314,6 +314,10 @@ pub fn generate_nonoverlap_constraints(
     opt: &mut IpsepOptions,
 ) {
     let mut n = e.nv + e.nldv;
+    // C allocates `bb` before taking the cluster dummies off `n`. When
+    // `removeoverlaps` passes only the real nodes, cluster members among the
+    // last `2 * nclusters` of them read these zeroed boxes (#185).
+    let nbb = n;
     let genclusters = opt.clusters.nclusters() > 0;
     if genclusters {
         // n is the number of real variables, not dummy cluster vars
@@ -325,7 +329,7 @@ pub fn generate_nonoverlap_constraints(
         nsize_scale *= 1.0001f32;
     }
     let s = nsize_scale as f64;
-    let mut bb = vec![BoxF::default(); n];
+    let mut bb = vec![BoxF::default(); nbb];
     for i in 0..n {
         let (nx, ny) = opt.nsize[i];
         bb[i].llx = coords[0][i] as f64 - s * nx / 2.0 - opt.gap.0 / 2.0;

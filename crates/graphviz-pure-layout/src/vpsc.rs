@@ -452,12 +452,22 @@ impl Solver {
         (l, r)
     }
 
-    /// `Block::splitBetween(vl, vr, lb, rb)`: `(c, lb, rb)`.
-    fn split_between(&mut self, this: usize, vl: usize, vr: usize) -> (usize, usize, usize) {
+    /// `Block::splitBetween(vl, vr, lb, rb)`: `(c, lb, rb)`. `None` when
+    /// `findMinLMBetween` finds no active constraint between `vl` and `vr`;
+    /// C passes that NULL on to `Block::split`, which dereferences it (#185).
+    fn split_between(
+        &mut self,
+        this: usize,
+        vl: usize,
+        vr: usize,
+    ) -> Option<(usize, usize, usize)> {
         let c = self.find_min_lm_between(this, vl, vr);
+        if c == NONE {
+            return None;
+        }
         let (lb, rb) = self.split(this, c);
         self.blocks[this].deleted = true;
-        (c, lb, rb)
+        Some((c, lb, rb))
     }
 
     /// `Block::cost`.
@@ -551,7 +561,9 @@ impl Solver {
                     return Err(VpscError("Cycle Error!"));
                 }
                 let (vl, vr) = (self.cons[v].left, self.cons[v].right);
-                let (sc, lb, rb) = self.split_between(lb, vl, vr);
+                let Some((sc, lb, rb)) = self.split_between(lb, vl, vr) else {
+                    return Err(VpscError("no constraint to split on"));
+                };
                 self.inactive.push(sc);
                 self.merge2(lb, rb, v);
                 self.bs_insert(lb);

@@ -311,7 +311,13 @@ pub fn stress_majorization_cola(
         iterations += 1;
     }
     if opt.noverlap == 2 {
-        removeoverlaps(orig_n, &mut coords, opt);
+        // C passes only the real nodes, and `initCMajVPSC` still treats the
+        // last `2 * nclusters` of them as the cluster boundary variables. With
+        // fewer real nodes than that, C's `nv` goes negative and
+        // `generateNonoverlapConstraints` segfaults (#185); the port passes
+        // the cluster dummy variables too there, as `hor` and `vrt` get.
+        let nvars = if orig_n < 2 * ncl { n } else { orig_n };
+        removeoverlaps(nvars, &mut coords, opt);
     }
     finish(&coords, d_coords);
     Ok(iterations)
