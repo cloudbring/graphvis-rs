@@ -1199,7 +1199,8 @@ fn twopi_ortho_self_loop_without_a_path_does_not_panic_convert_sp_to_route() {
 // Issue #186, the case C survives: the same unreachable self-loop, routed after edges that
 // reached the search graph's start node. C's reset (lib/ortho/sgraph.c) does not clear
 // N_DAD, so convertSPtoRoute follows the stale parent and C routes every edge (exit 0).
-// The port must not take the #186 fallback here; t2--t2 gets C's ortho route.
+// The port must not take the #186 fallback here: no warning, and t2--t2 gets the ortho route
+// C draws through the stale parent.
 const ISSUE186_STALE_PARENT_GRAPH: &str =
     "graph{layout=twopi splines=ortho oneblock=true rankdir=LR
 node[shape=record]
