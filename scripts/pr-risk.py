@@ -28,6 +28,7 @@ SENSITIVE = [
     (r"(^|/)Cargo\.toml$", "crate manifest (dependencies, features, build settings)"),
     (r"^Cargo\.lock$", "lockfile"),
     (r"^(deny\.toml|rust-toolchain(\.toml)?|\.cargo/)", "toolchain or supply-chain policy"),
+    (r"(^|/)\.?clippy\.toml$", "clippy configuration: can lower the panic-site counts (scripts/panic-sites.sh)"),
     (r"^scripts/", "script run by CI, releases or maintainers"),
     (r"(^|/)(package(-lock)?\.json|\.npmrc|jsr\.json)$", "npm manifest or lockfile"),
     (r"^(LICENSE|NOTICE|SECURITY\.md|CODE_OF_CONDUCT\.md)$", "licence or policy document"),
@@ -39,6 +40,7 @@ SENSITIVE = [
 # editing them by hand is changing the answer key.
 GOLDEN_REF = re.compile(r"^tests/golden/.*\.(dot|svg|json0?|xdot|plain|canon|png)$")
 BASELINE = re.compile(r"^tests/golden/.*\.json$")
+PANIC_SITES = "tests/panic-sites.tsv"
 
 # Added-line patterns, by file kind. Each is (regex, why it matters).
 CODE_PATTERNS = [
@@ -114,6 +116,24 @@ def baseline_weakening(old, new, path=""):
     return found
 
 
+def panic_sites_raised(old, new):
+    """Counts in the panic-site baseline (scripts/panic-sites.sh) that went up."""
+    def rows(text):
+        lines = text.splitlines()
+        if not lines:
+            return [], {}
+        kinds = lines[0].split("\t")[1:]
+        return kinds, {f[0]: f[1:] for f in (l.split("\t") for l in lines[1:]) if f}
+    _, before = rows(old)
+    kinds, after = rows(new)
+    found = []
+    for module, counts in after.items():
+        for kind, b, a in zip(kinds, before.get(module, ["0"] * len(kinds)), counts):
+            if a.isdigit() and b.isdigit() and int(a) > int(b):
+                found.append(f"`{module}` {kind} {b} → {a}")
+    return found
+
+
 def main():
     if len(sys.argv) != 3:
         print(__doc__.split("\n\n")[2], file=sys.stderr)
@@ -164,7 +184,11 @@ def main():
             except (TypeError, ValueError):
                 continue
             weakened += [f"{p}: {w}" for w in baseline_weakening(old, new)]
-    section("Ratchet baselines weakened (a file that matched C stops matching)", weakened[:40]
+    for s, p, _ in changes:
+        if p == PANIC_SITES and s == "M":
+            old, new = show(base, p) or b"", show(head, p) or b""
+            weakened += [f"{p}: {w}" for w in panic_sites_raised(old.decode(), new.decode())]
+    section("Ratchet baselines weakened (a file that matched C stops matching, or a panic site was added)", weakened[:40]
             + ([f"… and {len(weakened) - 40} more"] if len(weakened) > 40 else []))
 
     # Dependencies.

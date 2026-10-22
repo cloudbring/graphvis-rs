@@ -28,6 +28,9 @@ It fetches the pull request into `refs/pr/61` without checking it out and prints
   - *C reference outputs edited*: `tests/golden/**` comes from the C oracle. A hand edit
     changes the answer key so a wrong port "matches".
   - *Ratchet baselines weakened*: a file that matched C now does not. CONTRIBUTING forbids this.
+    Also a count in `tests/panic-sites.tsv` that went up: the pull request adds an `unwrap`,
+    index or overflow site to the layout or geom crates and must say why
+    ([the panic-site ratchet](porting/crashes.md#the-panic-site-ratchet)).
   - *Dependency changes*: new crates, versions and non-crates.io sources; new npm packages with
     install scripts.
   - *Added lines* that spawn processes, reach the network, read the environment or credentials,

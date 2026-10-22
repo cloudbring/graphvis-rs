@@ -31,7 +31,9 @@ cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
 `cargo test` runs the fidelity ratchets: they compare the port with C Graphviz's committed
 outputs on about 2,600 inputs and fail if any file that matched C stops matching. They need
 no C installation. Regenerating the C references does; see
-[tests/golden/README.md](tests/golden/README.md).
+[tests/golden/README.md](tests/golden/README.md). CI also runs `scripts/panic-sites.sh`, which
+fails if the layout or geom crates gain an `unwrap`, `expect`, index or integer-overflow site
+([the panic-site ratchet](docs/porting/crashes.md#the-panic-site-ratchet)).
 
 ## Making a change
 
