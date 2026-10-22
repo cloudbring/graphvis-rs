@@ -1104,6 +1104,23 @@ n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}
     assert!(!out.contains("class=\"edge\""), "{out}");
 }
 
+// Issue #200: zero-size point nodes make partition's trapezoidation fail, so mkMaze fails
+// as in #203 and C's dot abandons the layout and exits 0 with the nodes only. The port exited 1
+// with a layout error. C also prints two trapezoid failure messages, which the port does not
+// (#127).
+#[test]
+fn ortho_trapezoid_failure_abandons_the_dot_layout_like_c() {
+    let src = "digraph{splines=ortho nodesep=0 ranksep=0
+node[shape=point width=0 height=0 fixedsize=true]
+a->b a->c a->d b->e c->e d->e b->f c->f e->g f->g a->g}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(out.contains("<svg width=\"13pt\" height=\"35pt\""), "{out}");
+    assert_eq!(out.matches("class=\"node\"").count(), 7, "{out}");
+    assert!(!out.contains("class=\"edge\""), "{out}");
+}
+
 // As above with a root rank=max, which the emptied clone inherits: its union_all finds no
 // node, and C's `union_one(NULL, GD_maxrep(clust))` returns NULL (lib/dotgen/rank.c:615-621,
 // 684). The port unwrapped the missing leader and panicked. C: one rank, 222x76pt.
