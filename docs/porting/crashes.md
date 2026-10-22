@@ -108,19 +108,19 @@ that counts differently) refreshes the baseline with `--update` and says why.
 When the count goes up, prefer what C does at that point: if C checks a bound or a NULL, port the
 check; if C reads past the end or dereferences NULL, return an error from the cause.
 
-At the start (2026-10-22) the two crates had 10,612 sites: 278 unwrap, 44 expect, 8,144 index and
-2,146 arith. These ten files have the most, and are where to look for the next causes:
+At the start (2026-10-22) the two crates had 10,615 sites: 278 unwrap, 43 expect, 8,146 index and
+2,148 arith. These ten files have the most, and are where to look for the next causes:
 
 | File (under `crates/graphviz-pure-`) | unwrap | expect | index | arith | total |
 |---|--:|--:|--:|--:|--:|
 | `layout/src/dotgen/dotsplines.rs` | 32 | 5 | 478 | 61 | 576 |
-| `layout/src/dotgen/mincross.rs` | 32 | 0 | 389 | 102 | 523 |
+| `layout/src/dotgen/mincross.rs` | 32 | 0 | 390 | 104 | 526 |
 | `layout/src/dotgen/position.rs` | 33 | 0 | 302 | 39 | 374 |
 | `layout/src/cutil.rs` | 1 | 0 | 185 | 179 | 365 |
 | `layout/src/neatogen/digcola.rs` | 3 | 0 | 265 | 65 | 333 |
 | `layout/src/neatogen/voronoi.rs` | 22 | 0 | 250 | 41 | 313 |
 | `layout/src/ortho/trapezoid.rs` | 0 | 0 | 276 | 10 | 286 |
-| `layout/src/dotgen/rank.rs` | 11 | 1 | 243 | 19 | 274 |
+| `layout/src/dotgen/rank.rs` | 11 | 0 | 244 | 19 | 274 |
 | `layout/src/neatogen/multispline.rs` | 4 | 0 | 179 | 81 | 264 |
 | `layout/src/sfdpgen/spring_electrical.rs` | 0 | 3 | 154 | 103 | 260 |
 

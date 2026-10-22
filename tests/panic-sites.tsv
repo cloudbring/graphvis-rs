@@ -42,14 +42,14 @@ layout/dotgen/dotsplines.rs	32	5	478	61
 layout/dotgen/fastgr.rs	0	0	60	3
 layout/dotgen/flat.rs	1	0	114	30
 layout/dotgen/init.rs	2	0	79	12
-layout/dotgen/mincross.rs	32	0	389	102
+layout/dotgen/mincross.rs	32	0	390	104
 layout/dotgen/mod.rs	0	0	18	9
 layout/dotgen/ns.rs	0	0	33	0
 layout/dotgen/output.rs	0	0	54	0
 layout/dotgen/pack.rs	0	2	74	1
 layout/dotgen/position.rs	33	0	302	39
 layout/dotgen/postproc.rs	1	0	58	6
-layout/dotgen/rank.rs	11	1	243	19
+layout/dotgen/rank.rs	11	0	244	19
 layout/dotgen/sameport.rs	0	0	34	0
 layout/dotgen/splinegraph.rs	0	1	51	0
 layout/dotgen/types.rs	0	0	4	8
