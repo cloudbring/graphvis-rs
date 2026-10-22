@@ -735,11 +735,11 @@ edge [label_float=\"true\"];
 }
 
 // Issue #114: after `trouble in init_rank` C segfaults in mincross's `furthestnode` (exit
-// 139). The port panicked indexing `GD_rank` in `maximal_bbox` with a virtual node that
-// mincross never placed (its `ND_rank` is still an x coordinate); `make_regular_edge` now
-// fails the layout there.
+// 139). The port panicked indexing `GD_rank` in `maximal_bbox` with a node of `g -> h`'s
+// chain that mincross never placed (its `ND_rank` is still an x coordinate);
+// `make_regular_edge` now fails the layout there.
 #[test]
-fn init_rank_trouble_unplaced_virtual_node_fails_the_layout() {
+fn init_rank_trouble_unplaced_node_fails_the_layout() {
     let src = "digraph G {
 rank=sink;
 subgraph cluster0 { a; b; c; d }
@@ -777,7 +777,7 @@ subgraph s { rank=source; a; h; subgraph cluster_in { } }
         assert!(
             err.ends_with(
                 "Error: <stdin>: Layout computation error in dot: make_regular_edge: edge g -> \
-                 h reaches a node on rank 112, outside the ranks 0..5\n"
+                 h reaches a node on rank 112, outside the ranks 0 to 5\n"
             ),
             "{fmt}: {err}"
         );
@@ -801,6 +801,51 @@ fn init_rank_trouble_without_lost_nodes_lays_out_like_c() {
         out.contains("pos=\"e,71.75,18 54.281,18 56.283,18 58.284,18 60.286,18\""),
         "{out}"
     );
+}
+
+// With `splines=false` the same kind of unplaced node is drawn: C's `makeLineEdge` reads no
+// rank, so `make_regular_edge` must not check one (issue #114 review). stderr and the SVG
+// are C 16.1.0's.
+#[test]
+fn init_rank_trouble_unplaced_node_with_straight_lines_draws_like_c() {
+    let src = "digraph G {
+splines=false;
+rank=sink;
+subgraph cluster0 { a; b; c; d }
+subgraph cluster_1 { e; subgraph cluster_2 { f } }
+{ d }
+{ e }
+f -> e;
+g -> h [minlen=2];
+d -> c;
+d -> h [minlen=0];
+i -> h [label=x];
+subgraph s { rank=source; a; h; subgraph cluster_in { } }
+}
+";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(!ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: a was already in a rankset, deleted from cluster G\n\
+         Warning: c was already in a rankset, deleted from cluster G\n\
+         Warning: d was already in a rankset, deleted from cluster G\n\
+         Warning: e was already in a rankset, deleted from cluster G\n\
+         Error: trouble in init_rank\n\
+         \tc 3\n\
+         \t%0 1\n\
+         \tf 1\n\
+         \ti 1\n\
+         \tg 1\n"
+    );
+    for want in [
+        "cx=\"376\" cy=\"-91\"",
+        "d=\"M376,-205.51C376,-183.57 376,-146.71 376,-120.75\"",
+        "d=\"M127.6,-33.88C149.38,-59.32 192.25,-109.39 217.99,-139.46\"",
+        "d=\"M239,-205.6C239,-201.81 239,-197.71 239,-193.62\"",
+    ] {
+        assert!(out.contains(want), "{want}\n{out}");
+    }
 }
 
 // Fuzz case 018-render-interpolate-points-fma (issue #27), its repro.gv verbatim. C's

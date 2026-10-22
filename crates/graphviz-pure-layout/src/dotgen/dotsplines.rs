@@ -1526,18 +1526,18 @@ impl Dot<'_> {
 
     /// `make_regular_edge(g, sp, P, edges, ind, cnt, et)`.
     ///
-    /// Every node on the edge's chain must lie on one of the root's ranks: C indexes
-    /// `GD_rank(g)[ND_rank(vn)]` for each of them (here and in `maximal_bbox`). After
-    /// `trouble in init_rank`, a virtual node that mincross never placed keeps the x
-    /// coordinate `set_xcoords` left in `ND_rank` (issue #114); C reads past `GD_rank` there,
-    /// or has already crashed in mincross's `furthestnode`. The port fails the layout.
+    /// Routing a spline or polyline, C indexes `GD_rank(g)[ND_rank(vn)]` for every node on
+    /// the edge's chain (here, in `maximal_bbox` and in `rank_box`), so each must lie on one
+    /// of the root's ranks. After `trouble in init_rank`, a node that mincross never placed
+    /// keeps the x coordinate `set_xcoords` left in `ND_rank` (issue #114); C reads past
+    /// `GD_rank` there, or has already crashed in mincross's `furthestnode`. The port fails
+    /// the layout. `makeLineEdge` reads no rank, so straight lines are not checked.
     fn make_regular_edge(
         &mut self,
         sp: &mut SplineInfoT,
         edges: &[E],
         et: EdgeType,
     ) -> Result<(), String> {
-        self.check_chain_ranks(edges[0])?;
         let cnt = edges.len();
         let mut e = edges[0];
         let mut hackflag = false;
@@ -1579,6 +1579,7 @@ impl Dot<'_> {
             pointfs = pts;
             hn = h;
         } else {
+            self.check_chain_ranks(e)?;
             let is_spline = et == EdgeType::Spline;
             let mut p = Path::default();
             let mut boxes: Vec<BoxF> = Vec::new();
@@ -1744,9 +1745,9 @@ impl Dot<'_> {
         Ok(())
     }
 
-    /// The nodes `make_regular_edge` walks from `e` (its tail, then heads along `ND_out`
-    /// while virtual) must have a rank in the root's `minrank..=maxrank`; see
-    /// [`Self::make_regular_edge`].
+    /// The nodes `make_regular_edge` routes from `e` (its tail, then heads along `ND_out`
+    /// while virtual and not a spline merge point) must have a rank in the root's
+    /// `minrank..=maxrank`; see [`Self::make_regular_edge`].
     fn check_chain_ranks(&self, e: E) -> Result<(), String> {
         let (minr, maxr) = (self.graphs[0].minrank, self.graphs[0].maxrank);
         let mut n = self.edges[e].tail;
@@ -1761,7 +1762,7 @@ impl Dot<'_> {
                 let (t, h) = (self.edges[orig].tail, self.edges[orig].head);
                 return Err(format!(
                     "make_regular_edge: edge {} -> {} reaches a node on rank {r}, outside the \
-                     ranks {minr}..{maxr}",
+                     ranks {minr} to {maxr}",
                     self.nodes[t].name, self.nodes[h].name
                 ));
             }
@@ -1769,7 +1770,7 @@ impl Dot<'_> {
                 return Ok(());
             };
             n = h;
-            next = if self.nodes[h].node_type == VIRTUAL {
+            next = if self.nodes[h].node_type == VIRTUAL && !self.spline_merge_p(h) {
                 self.nodes[h].out.first().map(|&o| self.edges[o].head)
             } else {
                 None
