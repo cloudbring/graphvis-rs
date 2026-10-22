@@ -78,7 +78,10 @@ jobs:
         run: |
           cargo metadata --locked --no-deps --format-version 1 > "$RUNNER_TEMP/metadata.json"
           python3 scripts/crates-to-publish.py "$RUNNER_TEMP/metadata.json" "$VERSION"
-      # The crates the crates-io job publishes carry their licence files (also checked in CI).
+      # The crates the crates-io job publishes carry their licence files (also checked in CI),
+      # packaged by the same cargo as the crates-io job's.
+      - name: Install Rust ${{ env.RUST_VERSION }}
+        run: rustup toolchain install "$RUST_VERSION" --profile minimal && rustup default "$RUST_VERSION"
       - name: The crates carry the licence files
         run: scripts/check-crate-notices.sh
       # A maintainer's signed tag, checked against .github/allowed_signers as it is on master (not

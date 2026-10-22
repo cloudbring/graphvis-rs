@@ -19,5 +19,7 @@ while read -r name crate; do
   args+=(-p "$name")
   crates+=("$crate")
 done <<< "$list"
-cargo package --locked --no-verify "${args[@]}"
+# --allow-dirty: the check reads the working tree, so it also works before a commit; nothing
+# packaged here is published (CI and the release check out a clean tree anyway).
+cargo package --locked --no-verify --allow-dirty "${args[@]}"
 python3 scripts/check-package-notices.py "${crates[@]}"
