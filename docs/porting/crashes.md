@@ -43,7 +43,8 @@ fixed in that cause's shared mechanism, not with a new local guard.
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | The [panic-site ratchet](#the-panic-site-ratchet) maps the remaining sites and stops the count from growing; new code returns an error instead. |
 
-The fix for each cause records here the issues it closed and the behaviour it chose.
+The fix for each cause records here the issues it closed and the behaviour it chose. Narrower
+causes, each confined to one function, have their own sections after these.
 
 ## dot after a failed ranking
 
@@ -229,10 +230,18 @@ Closed: #234.
 
 With `concentrate=true`, an edge into or out of a cluster whose ports differ from a
 parallel edge's shares that edge's virtual chain (`interclrep`) but is routed on its own,
-through `make_regular_edge`'s `hackflag` branch. When `dot_concentrate` has merged the
-chain into another, the chain walk stops at the concentrator, and C (`dotsplines.c:1845`)
-passes the concentrator's merge flag to `endpath` together with the original edge, whose
-head is the real node further on. `conc_slope` then averages the real node's in- and
-out-edges. If the node has both, C draws, and the port draws the same way. If one side is
-empty, C dereferences NULL. The port then ends the path with the real node's own merge
-flag (false), as for an edge that was not concentrated.
+through `make_regular_edge`'s `hackflag` branch. That branch follows the chain as it was
+before `dot_concentrate` rewired it, and it goes wrong in two ways:
+
+- **The chain now ends at a concentrator.** The walk stops there, but C
+  (`dotsplines.c:1845`) passes the concentrator's merge flag to `endpath` together with the
+  original edge, whose head is the real node further on. `conc_slope` then averages the real
+  node's in- and out-edges. If the node has both, C draws, and the port draws the same way.
+  If one side is empty, C dereferences NULL. The port then ends the path with the real
+  node's own merge flag (false), as for an edge that was not concentrated.
+- **`mergevirtual` deleted the chain's first node.** The main edge's `ED_to_virt` still
+  leads into the deleted node, which has no edges left, and C segfaults in `straight_len`.
+  `mergevirtual` now records the node it merged each deleted node into, and the port routes
+  the edge from there, as the chain's own edges are.
+
+Both changes take effect only where C crashes.
