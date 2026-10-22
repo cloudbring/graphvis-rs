@@ -374,6 +374,7 @@ fn cylinder_port_endpoint_does_not_hang_the_router() {
 #[test]
 fn xlabels_with_an_infinite_bb_do_not_panic() {
     let cluster = "subgraph cluster_inner4{j1 j2}";
+    let mut failures = Vec::new();
     for attrs in [
         "edge[label=L]",
         "edge[headlabel=L]",
@@ -385,8 +386,11 @@ fn xlabels_with_an_infinite_bb_do_not_panic() {
             "digraph{{layout=osage {attrs}{{o2 {cluster}}}subgraph cluster_outer{{{{label=\"outer\"{cluster}}}->o1}}{cluster}}}"
         );
         let (_, err, ok) = run(&["-Tsvg"], &src);
-        assert!(ok && !err.contains("panicked"), "{attrs}: {err}");
+        if !ok || err.contains("panicked") {
+            failures.push(format!("{attrs}: {err}"));
+        }
     }
+    assert!(failures.is_empty(), "{failures:#?}");
 }
 
 // Issue #167, found by the fuzzer. `b` and `l` are articulation points that blocktree.c's
