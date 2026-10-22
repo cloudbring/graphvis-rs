@@ -843,7 +843,8 @@ fn mk_ctrl_pts(
 /// `tri_path` never reached `t` (issue #138). An unreached node's `dad` is 0, so
 /// the walk either lands on node 0 as its own parent (`assert(nxt != dad[nxt])`;
 /// without the check the walk never ends) or, when node 0 was reached, follows a
-/// path with a step that is no triangle edge (`edgeToSeg`'s `assert(0)`).
+/// path with a step that is no triangle edge (`edgeToSeg`'s `assert(0)`). A
+/// valid path visits each node once, so a longer walk also fails.
 fn mk_poly(
     rtr: &MRouter,
     dad: &[i32],
@@ -862,7 +863,7 @@ fn mk_poly(
     let mut nxt = dad[t];
     while nxt as usize != s {
         nt += 1;
-        if nxt == dad[nxt as usize] {
+        if nxt == dad[nxt as usize] || nt > dad.len() {
             return None;
         }
         nxt = dad[nxt as usize];
