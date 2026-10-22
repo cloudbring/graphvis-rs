@@ -168,8 +168,11 @@ pub fn update_wts(sg: &mut SGraph, cp: &Cell, ep: usize) {
     }
 }
 
-/// `markSmall(cp)`.
-fn mark_small(mp: &mut Maze, c: usize) {
+/// `markSmall(cp)`. `None` where C dereferences a missing cell or reads past
+/// a node cell's side list (`lib/ortho/maze.c:markSmall`). Tiny or touching
+/// node boxes in dot get there (#202): C usually segfaults, so the port fails
+/// the maze instead and the caller falls back.
+fn mark_small(mp: &mut Maze, c: usize) -> Option<()> {
     let bb = mp.cells[c].bb;
     let sides: Vec<usize> = mp.cells[c].sides.iter().flatten().copied().collect();
     if is_small(bb.ur.y - bb.ll.y) {
@@ -178,27 +181,9 @@ fn mark_small(mp: &mut Maze, c: usize) {
                 continue;
             }
             if mp.sg.nodes[onp0].cells[0] == Some(c) {
-                let mut ocp = mp.sg.nodes[onp0].cells[1].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLV;
-                while let Some(onp) = mp.cells[ocp].sides[M_RIGHT] {
-                    let nc = mp.sg.nodes[onp].cells[1].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLV;
-                }
+                mark_run(mp, onp0, 1, M_RIGHT, MZ_SMALLV)?;
             } else {
-                let mut ocp = mp.sg.nodes[onp0].cells[0].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLV;
-                while let Some(onp) = mp.cells[ocp].sides[M_LEFT] {
-                    let nc = mp.sg.nodes[onp].cells[0].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLV;
-                }
+                mark_run(mp, onp0, 0, M_LEFT, MZ_SMALLV)?;
             }
         }
     }
@@ -208,30 +193,30 @@ fn mark_small(mp: &mut Maze, c: usize) {
                 continue;
             }
             if mp.sg.nodes[onp0].cells[0] == Some(c) {
-                let mut ocp = mp.sg.nodes[onp0].cells[1].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLH;
-                while let Some(onp) = mp.cells[ocp].sides[M_TOP] {
-                    let nc = mp.sg.nodes[onp].cells[1].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLH;
-                }
+                mark_run(mp, onp0, 1, M_TOP, MZ_SMALLH)?;
             } else {
-                let mut ocp = mp.sg.nodes[onp0].cells[0].unwrap();
-                mp.cells[ocp].flags |= MZ_SMALLH;
-                while let Some(onp) = mp.cells[ocp].sides[M_BOTTOM] {
-                    let nc = mp.sg.nodes[onp].cells[0].unwrap();
-                    if mp.cells[nc].is_node() {
-                        break;
-                    }
-                    ocp = nc;
-                    mp.cells[ocp].flags |= MZ_SMALLH;
-                }
+                mark_run(mp, onp0, 0, M_BOTTOM, MZ_SMALLH)?;
             }
         }
     }
+    Some(())
+}
+
+/// One walk of `markSmall`: flag the cell `onp->cells[ci]`, then keep stepping
+/// through `side` while the next cell is not a node. A missing cell, or a side
+/// index past the end of a node cell's list, is where C crashes.
+fn mark_run(mp: &mut Maze, onp: usize, ci: usize, side: usize, flag: i32) -> Option<()> {
+    let mut ocp = mp.sg.nodes[onp].cells[ci]?;
+    mp.cells[ocp].flags |= flag;
+    while let Some(onp) = *mp.cells[ocp].sides.get(side)? {
+        let nc = mp.sg.nodes[onp].cells[ci]?;
+        if mp.cells[nc].is_node() {
+            break;
+        }
+        ocp = nc;
+        mp.cells[ocp].flags |= flag;
+    }
+    Some(())
 }
 
 /// `createSEdges(cp, g)`.
@@ -290,8 +275,9 @@ fn chk_sgraph(sg: &SGraph) -> bool {
 }
 
 /// `mkMazeGraph(mp, bb)`. False where C's `chkSgraph` fails an assertion
-/// (`lib/ortho/maze.c:308-320`, e.g. on a non-finite node box, #171): C
-/// aborts there, the port fails the maze so the caller falls back.
+/// (`lib/ortho/maze.c:308-320`, e.g. on a non-finite node box, #171) or
+/// `markSmall` crashes (#202): C aborts there, the port fails the maze so the
+/// caller falls back.
 fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
     let ncells = mp.ncells();
     let bound = 4 * ncells;
@@ -366,7 +352,9 @@ fn mk_maze_graph(mp: &mut Maze, bb: BoundingBox) -> bool {
         mp.cells[i].sides = sides;
     }
     for i in 0..mp.ngcells {
-        mark_small(mp, i);
+        if mark_small(mp, i).is_none() {
+            return false;
+        }
     }
     let nn = mp.sg.nnodes;
     mp.sg.nodes[nn].index = nn;
@@ -478,6 +466,21 @@ mod tests {
             (Point::new(58.0, 58.0), 54.0, 36.0),
             (Point::new(181.0, 58.0), 54.0, 36.0),
             (Point::new(293.0, 58.0), 54.0, 36.0),
+        ];
+        assert!(mk_maze(&nodes).is_none());
+    }
+
+    /// Issue #202: dot places tiny nodes so that `n2` and `n1` touch. Every box
+    /// is clamped to 2x2, and `markSmall` walks off a node cell's side list or
+    /// into a missing cell (`lib/ortho/maze.c:markSmall`), where C segfaults.
+    /// The port panicked on an `unwrap`; now the maze fails.
+    #[test]
+    fn touching_tiny_node_boxes_fail_the_maze() {
+        let nodes = [
+            (Point::new(0.72, 10.16), 0.72, 1.44),
+            (Point::new(10.72, 0.72), 0.72, 1.44),
+            (Point::new(22.72, 10.16), 0.72, 1.44),
+            (Point::new(20.72, 10.16), 0.72, 1.44),
         ];
         assert!(mk_maze(&nodes).is_none());
     }
