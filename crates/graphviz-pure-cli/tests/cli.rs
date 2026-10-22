@@ -1937,6 +1937,61 @@ fn run_bytes(args: &[&[u8]], stdin: &str) -> (Vec<u8>, Vec<u8>, bool) {
     (out.stdout, out.stderr, out.status.success())
 }
 
+/// Issue #197: `x` is in two clusters (#33), so `overlap=ipsep` gives VPSC containment
+/// constraints it cannot satisfy. C's `satisfyVPSC` (`lib/vpsc/csolve_VPSC.cpp`) lets the
+/// "Cycle Error!" `std::runtime_error` escape and aborts. The port went on projecting, each
+/// cycle error splitting 10000 blocks that it never freed, without bound in time or memory.
+/// It now reuses unused blocks and ends the layout after `MAX_CYCLE_ERRORS` cycle errors, with
+/// a warning, and every node keeps a position of its own.
+#[test]
+fn ipsep_vpsc_cycle_error_ends_the_layout() {
+    let src = "digraph { layout=neato; mode=ipsep; overlap=ipsep; \
+               subgraph cluster_a { a; x; c } subgraph cluster_b { b; x; d } \
+               a -> b; x -> a; c -> d; h -> {a b c d} }";
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .arg("-Tplain")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(src.as_bytes())
+        .unwrap();
+    // The output is under 1 KB, well under the pipe buffer, so polling cannot block. The capped
+    // layout takes about 2 s; the deadline is short because the runaway also grows memory.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while child.try_wait().unwrap().is_none() {
+        if std::time::Instant::now() > deadline {
+            child.kill().unwrap();
+            panic!("the ipsep layout must terminate");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let out = child.wait_with_output().unwrap();
+    let (plain, err) = (
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    assert!(out.status.success(), "{err}");
+    assert_eq!(
+        err,
+        "Warning: VPSC: too many cycle errors; ending the ipsep layout early\n"
+    );
+    let positions: std::collections::BTreeSet<(&str, &str)> = plain
+        .lines()
+        .filter_map(|l| l.strip_prefix("node "))
+        .map(|l| {
+            let f: Vec<&str> = l.split(' ').collect();
+            (f[1], f[2])
+        })
+        .collect();
+    assert_eq!(positions.len(), 6, "{plain}");
+}
+
 /// Issue #152: C's `main` takes its arguments as bytes; a file name that is not valid UTF-8
 /// (here Latin-1 `né.gv`) is opened, and named in errors with its own bytes.
 #[cfg(unix)]

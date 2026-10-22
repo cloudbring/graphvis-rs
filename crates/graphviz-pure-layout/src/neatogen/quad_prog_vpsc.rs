@@ -63,9 +63,19 @@ pub struct CMajEnvVpsc {
     pub f_array1: Vec<f32>,
     pub f_array2: Vec<f32>,
     pub f_array3: Vec<f32>,
+    /// Not in C: how many `satisfyVPSC` calls have thrown "Cycle Error!"
+    /// (see [`Self::satisfy_place`]).
+    pub cycle_errors: u32,
 }
 
 const QUAD_PROG_TOL: f32 = 1e-4;
+
+/// Not in C: the "Cycle Error!" failures of `satisfyVPSC` one ipsep layout may
+/// have before it is ended, at the next one (#197). Each one is 10001 block
+/// splits. Before #197, the most a corpus file reached while finishing within
+/// 10 s was 241 (`tests/wild/gv16_dirgraph_apache_aef3b0.gv` with
+/// `diredgeconstraints`).
+pub const MAX_CYCLE_ERRORS: u32 = 500;
 
 /// `unpackMatrix(packedMat, n)` from `matrix_ops.c`.
 pub fn unpack_matrix(packed: &[f32], n: usize) -> Vec<Vec<f32>> {
@@ -87,8 +97,20 @@ impl CMajEnvVpsc {
         for i in 0..n {
             self.solver.vars[self.vs[i]].desired_position = place[i] as f64;
         }
-        // satisfyVPSC: a thrown std::runtime_error terminates C; ignore.
-        let _ = self.solver.satisfy();
+        // IncVPSC::satisfy (lib/vpsc/solve_VPSC.cpp) throws a
+        // std::runtime_error ("Cycle Error!" after 10000 in-block splits,
+        // "Unsatisfied constraint") on an infeasible or cyclic constraint set,
+        // e.g. a node in two clusters (#33). satisfyVPSC
+        // (lib/vpsc/csolve_VPSC.cpp) catches only `const char *`, so C
+        // aborts. The port models VPSC's pointer order as allocation order and
+        // can fail where C, on some runs, succeeds, so it reads the positions
+        // back and goes on. It counts cycle errors, the failures a runaway
+        // repeats, so that the layout can end (#197).
+        if let Err(e) = self.solver.satisfy()
+            && e == vpsc::VpscError::CYCLE
+        {
+            self.cycle_errors += 1;
+        }
         for i in 0..n {
             place[i] = self.solver.position(self.vs[i]) as f32;
         }
@@ -114,7 +136,7 @@ impl CMajEnvVpsc {
             self.satisfy_place(place, n);
         }
         let mut counter = 0;
-        while counter < max_iterations && !converged {
+        while counter < max_iterations && !converged && self.cycle_errors <= MAX_CYCLE_ERRORS {
             let mut test = 0.0f32;
             let mut numerator = 0.0f32;
             let mut denominator = 0.0f32;

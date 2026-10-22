@@ -7,7 +7,8 @@ use super::conjgrad::conjugate_gradient_mkernel;
 use super::graphdata::VtxData;
 use super::matrix_ops::*;
 use super::quad_prog_vpsc::{
-    ClusterData, IpsepOptions, generate_nonoverlap_constraints, init_cmaj_vpsc_full, removeoverlaps,
+    CMajEnvVpsc, ClusterData, IpsepOptions, MAX_CYCLE_ERRORS, generate_nonoverlap_constraints,
+    init_cmaj_vpsc_full, removeoverlaps,
 };
 use super::stress::*;
 use super::{MODEL_CIRCUIT, MODEL_MDS, MODEL_SUBSET, SolverError};
@@ -52,6 +53,20 @@ pub fn cluster_map(g: &LGraph<'_>, sub: &Sub) -> ClusterData {
     cdata.bb = vec![Default::default(); cdata.clusters.len()];
     cdata.toplevel = (0..nn).filter(|&i| !assigned[i]).collect();
     cdata
+}
+
+/// Not in C, which aborts at the first failed `satisfyVPSC`: whether the two
+/// dimensions' projections have failed with "Cycle Error!" more than
+/// `MAX_CYCLE_ERRORS` times, so that the stress loop must end; warns if so
+/// (#197).
+fn too_many_cycle_errors(hor: &CMajEnvVpsc, vrt: &CMajEnvVpsc) -> bool {
+    let over = hor.cycle_errors + vrt.cycle_errors > MAX_CYCLE_ERRORS;
+    if over {
+        graphviz_pure_core::diag::agwarningf(
+            "VPSC: too many cycle errors; ending the ipsep layout early\n",
+        );
+    }
+    over
 }
 
 /// `stress_majorization_cola(graph, n, d_coords, nodes, dim, model, maxi, opt)`.
@@ -299,6 +314,9 @@ pub fn stress_majorization_cola(
             finish(&coords, d_coords);
             return Err(SolverError);
         }
+        if too_many_cycle_errors(&hor, &vrt) {
+            break;
+        }
         if opt.noverlap == 1 && nsize_scale > 0.001 {
             generate_nonoverlap_constraints(&mut vrt, nsize_scale as f32, &coords, 1, false, opt);
         }
@@ -309,6 +327,9 @@ pub fn stress_majorization_cola(
                 conjugate_gradient_mkernel(&lap2, &mut coords[1], &mut b[1], n, TOLERANCE_CG, n);
         }
         iterations += 1;
+        if too_many_cycle_errors(&hor, &vrt) {
+            break;
+        }
     }
     if opt.noverlap == 2 {
         // C passes only the real nodes, and `initCMajVPSC` still treats the

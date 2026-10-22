@@ -137,6 +137,16 @@ mode (C returns failure too).
   not GTS's pointer-hash order (see below).
 - VPSC's `std::set<Block*>` and scanline `NodeSet` pointer order are modelled
   as allocation order (see below).
+- When `IncVPSC::satisfy` fails during `mode=ipsep` ("Cycle Error!",
+  "Unsatisfied constraint"), C aborts on the uncaught exception. The port, whose
+  block order can fail where C's heap order does not, reads the positions back
+  and goes on, as before. After more than 500 cycle errors (`MAX_CYCLE_ERRORS`),
+  it warns and ends the stress loop of that component. Before #197, corpus files
+  that finished within 10 s reached at most 241 (#197;
+  `ipsep_vpsc_cycle_error_ends_the_layout` in `crates/graphviz-pure-cli/tests/cli.rs`).
+- The VPSC solver reuses the slots of blocks that no variable belongs to and that are not
+  in `Blocks`. C frees or leaks these; the port kept them all, so memory grew with every
+  split (#197, #222). Block order comes from a creation counter, not the slot.
 - Prism's Delaunay triangulation is a Bowyer–Watson port, not GTS; the edge
   set matches for points in general position, but ties between co-circular
   points and the matrix entry order may differ (all prism corpus files are

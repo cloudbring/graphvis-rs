@@ -375,6 +375,13 @@ Robustness (debug overflow and panics)
   `components too large to pack; packing skipped` and the components stay unpacked. Nodes
   pinned near 1e30 (C hangs too) pack. Issue #174; tested by
   `oversized_component_does_not_hang_the_packer` in `crates/graphviz-pure-cli/tests/cli.rs`.
+* neato `mode=ipsep overlap=ipsep` with an infeasible VPSC system, for example a node in two
+  clusters, makes C abort on `IncVPSC::satisfy`'s uncaught `std::runtime_error`. The port
+  projected again after each failure, and its time and memory grew without bound. The solver
+  now reuses unused blocks. After more than 500 "Cycle Error!" failures in a component, the port warns
+  `VPSC: too many cycle errors; ending the ipsep layout early` and keeps the layout it has.
+  Issue #197; tested by `ipsep_vpsc_cycle_error_ends_the_layout` in
+  `crates/graphviz-pure-cli/tests/cli.rs`.
 
 Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
 * Unknown ports and compass points warn from `poly_port`/`record_port`, once per `chkPort`
