@@ -1120,6 +1120,17 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
         if !o.mp.sg.short_path(&mut pq, dn, sn) {
             return true;
         }
+        if !o.mp.sg.reached(sn) {
+            // The search graph does not connect the edge's two ends, so
+            // shortPath leaves `sn` without a parent and C's
+            // convertSPtoRoute dereferences the null N_DAD and crashes
+            // (#186). Leave the edges unrouted, as C's `goto orthofinish`
+            // does when shortPath fails.
+            graphviz_pure_core::diag::agwarningf(
+                "orthogonal routing found no path for an edge - edges not routed orthogonally\n",
+            );
+            return true;
+        }
         if dump {
             let mut l = format!("OSPN {}:", o.routes.len());
             let mut x = Some(sn);

@@ -141,9 +141,15 @@ impl SGraph {
         }
     }
 
+    /// Whether the last [`SGraph::short_path`] reached its `to` node `n`.
+    /// The search runs until it pops `to` or empties the queue, so `to` is
+    /// either reached or still `UNSEEN`, with a stale `n_dad`.
+    pub fn reached(&self, n: usize) -> bool {
+        self.nodes[n].n_val != UNSEEN
+    }
+
     /// `shortPath(pq, g, from, to)`: returns false on heap overflow.
     pub fn short_path(&mut self, pq: &mut Pq, from: usize, to: usize) -> bool {
-        const UNSEEN: i32 = i32::MIN;
         for x in 0..self.nnodes {
             self.nodes[x].n_val = UNSEEN;
         }
@@ -182,6 +188,9 @@ impl SGraph {
         true
     }
 }
+
+/// `UNSEEN` (sgraph.c): the `n_val` of a node `shortPath` has not seen.
+const UNSEEN: i32 = i32::MIN;
 
 /// `pq_t` (fPQ.c): a max-heap of node indices on `n_val`; slot 0 is a guard
 /// with value 0.

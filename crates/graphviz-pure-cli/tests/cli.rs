@@ -1172,6 +1172,42 @@ fn svg_cluster_titles(svg: &str) -> Vec<&str> {
         .collect()
 }
 
+// Issue #186: twopi stacks the nodes in a column whose sides differ by float noise, and the
+// ortho search graph does not connect the two sides of t2's self-loop. shortPath never
+// reaches the loop's start, and C's convertSPtoRoute (lib/ortho/ortho.c) dereferences its
+// null N_DAD and segfaults (exit 139, no output). The port used to panic on the same
+// parent ("called `Option::unwrap()` on a `None` value", exit 101); it now abandons ortho
+// routing, as C's orthoEdges does when shortPath fails, and the edges are drawn straight.
+const ISSUE186_GRAPH: &str = "graph{layout=twopi splines=ortho oneblock=true rankdir=LR
+node[shape=record]
+t2--t2 t1--t1 t0--t1 t0--t1 t1--t2 t1--t2 t1--t1 t1--t0}
+";
+
+#[test]
+fn twopi_ortho_self_loop_without_a_path_does_not_panic_convert_sp_to_route() {
+    let (out, err, ok) = run(&["-Tsvg"], ISSUE186_GRAPH);
+    assert!(
+        ok,
+        "C crashes here, the port falls back to straight lines: {err}"
+    );
+    assert_eq!(
+        err,
+        "Warning: orthogonal routing found no path for an edge - \
+         edges not routed orthogonally\n"
+    );
+    assert_eq!(out.matches("class=\"edge\"").count(), 8, "{out}");
+    // Not ortho polylines: each path is one `C` command and no `L`.
+    let paths: Vec<&str> = out
+        .split("<path fill=\"none\" stroke=\"black\" d=\"")
+        .skip(1)
+        .map(|p| p.split('"').next().unwrap())
+        .collect();
+    assert_eq!(paths.len(), 8, "{out}");
+    for d in paths {
+        assert!(d.matches('C').count() == 1 && !d.contains('L'), "{d}");
+    }
+}
+
 // Issue #25 (fuzz case 016-dot-pack-cluster-list-from-subgraph-tree). With pack/packmode,
 // dot's `copyClusterInfo` (lib/dotgen/dotinit.c) rebuilds `GD_clust(root)` in component
 // order, appending a cluster once per component that kept it, and `emit_clusters`
