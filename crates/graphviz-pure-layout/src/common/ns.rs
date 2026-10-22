@@ -33,6 +33,10 @@ pub trait NsGraph {
         "%0".to_string()
     }
 
+    /// `init_rank` reported `trouble in init_rank`: some nodes were never ranked. C goes on
+    /// regardless; a binding may record it.
+    fn init_rank_trouble(&mut self) {}
+
     fn rank(&self, n: usize) -> i32;
     fn set_rank(&mut self, n: usize, r: i32);
     fn set_mark(&mut self, n: usize, m: bool);
@@ -314,6 +318,7 @@ fn init_rank<G: NsGraph + ?Sized>(g: &mut G) {
     let nlist = g.nlist();
     if ctr != nlist.len() {
         graphviz_pure_core::diag::agerrorf("trouble in init_rank\n");
+        g.init_rank_trouble();
         for v in nlist {
             if g.priority(v) != 0 {
                 graphviz_pure_core::diag::agerr_prev(&format!(

@@ -734,6 +734,46 @@ edge [label_float=\"true\"];
     assert!(out.contains("x=\"72\" y=\"-33.75\""), "{out}");
 }
 
+// Issue #114: after `trouble in init_rank` C segfaults in mincross's `furthestnode` (exit
+// 139). The port panicked in `maximal_bbox`; it now abandons the layout after the ranking
+// phase, so stderr is C's up to the crash and the exit status is 1.
+#[test]
+fn init_rank_trouble_abandons_the_layout() {
+    let src = "digraph G {
+rank=sink;
+subgraph cluster0 { a; b; c; d }
+subgraph cluster_1 { e; subgraph cluster_2 { f } }
+subgraph cluster_3 { }
+{ d }
+{ e }
+{ }
+f -> e;
+g -> h [minlen=2];
+d -> c;
+i -> h [label=x];
+subgraph s { rank=source; a; h; subgraph cluster_in { } }
+}
+";
+    for fmt in ["-Tsvg", "-Tdot"] {
+        let (_, err, ok) = run(&["-Kdot", fmt], src);
+        assert!(!ok, "{fmt}: {err}");
+        assert_eq!(
+            err,
+            "Warning: a was already in a rankset, deleted from cluster G\n\
+             Warning: c was already in a rankset, deleted from cluster G\n\
+             Warning: d was already in a rankset, deleted from cluster G\n\
+             Warning: e was already in a rankset, deleted from cluster G\n\
+             Error: trouble in init_rank\n\
+             \tc 3\n\
+             \t%0 1\n\
+             \tf 1\n\
+             \ti 1\n\
+             \tg 1\n",
+            "{fmt}"
+        );
+    }
+}
+
 // Fuzz case 018-render-interpolate-points-fma (issue #27), its repro.gv verbatim. C's
 // `interpolate_pointf` (`lib/common/geomprocs.h:115`, called by `alloc_interpolation_points`
 // in `lib/common/shapes.c`) computes `p + t * (q - p)`, which Apple clang fuses (`fmla.2d`).

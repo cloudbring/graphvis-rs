@@ -26,6 +26,9 @@ impl NsGraph for DotNs<'_, '_> {
         }
         v
     }
+    fn init_rank_trouble(&mut self) {
+        self.d.init_rank_trouble = true;
+    }
     fn attr(&self, name: &str) -> Option<String> {
         self.d.agget(self.g, name).map(str::to_string)
     }

@@ -1066,7 +1066,7 @@ impl Dot<'_> {
         d.et = et;
         d.dot_init_subg();
         d.dot_init_node_edge();
-        d.dot_rank();
+        d.dot_rank()?;
         d.dot_mincross()?;
         d.dot_position()?;
         // reposition

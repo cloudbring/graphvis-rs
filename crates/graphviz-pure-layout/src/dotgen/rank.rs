@@ -380,13 +380,25 @@ impl Dot<'_> {
         self.cleanup1(g);
     }
 
-    pub fn dot_rank(&mut self) {
+    /// `dot_rank` (rank.c). When network simplex reports `trouble in init_rank`, some nodes
+    /// keep a rank it never set. C carries on with them: `dot_mincross` walks rank arrays
+    /// that do not hold those nodes and crashes in `furthestnode` (`rec_reset_vlists`,
+    /// mincross.c), and on the rare runs it survives it prints `lost ... edge` errors and
+    /// exits 1 (issue #114). The port abandons the layout here instead, as a failed
+    /// `install_in_rank` does: stderr stops at C's `trouble in init_rank` report and the
+    /// exit status is 1.
+    pub fn dot_rank(&mut self) -> Result<(), String> {
+        self.init_rank_trouble = false;
         if mapbool(self.agget(0, "newrank")) {
             self.graphs[0].flags |= NEW_RANK;
             self.dot2_rank(0);
         } else {
             self.dot1_rank(0);
         }
+        if self.init_rank_trouble {
+            return Err(super::mincross::ABORT_LAYOUT.to_string());
+        }
+        Ok(())
     }
 
     // ------------------------------------------------------------------
