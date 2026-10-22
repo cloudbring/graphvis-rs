@@ -494,7 +494,7 @@ fn rect_intersect(r0: &BoundingBox, r1: &BoundingBox) -> Option<BoundingBox> {
 }
 
 /// `partition(cells, ncells, &nrects, bb)`: the free rectangles; `None` when
-/// a trapezoidation fails.
+/// a trapezoidation fails or no rectangle is left.
 pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> Option<Vec<BoundingBox>> {
     let ncells = cells.len();
     let nsegs = 4 * (ncells + 1);
@@ -523,5 +523,7 @@ pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> Option<Vec<BoundingB
             }
         }
     }
-    Some(rs)
+    // C returns `LIST_DETACH(&rs, ...)`, which is NULL for an empty list, and
+    // mkMaze fails on NULL: tiny touching nodes can leave no free cell (#203).
+    (!rs.is_empty()).then_some(rs)
 }

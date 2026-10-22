@@ -83,7 +83,8 @@ pub struct Dot<'a> {
     pub et: crate::common::types::EdgeType,
     /// `State == GVSPLINES`: splines exist and are mapped by postprocessing.
     pub splines_done: bool,
-    /// The layout gave up (dot_position failed): no splines, no postprocessing.
+    /// The layout gave up (dot_position or orthoEdges failed): no splines, no
+    /// postprocessing.
     pub aborted: bool,
 }
 
@@ -245,6 +246,9 @@ impl<'a> Dot<'a> {
         }
         self.dot_sameports();
         self.dot_splines()?;
+        if self.aborted {
+            return Ok(());
+        }
         if utils::mapbool(self.agget(0, "compound")) {
             self.dot_compound_edges();
         }

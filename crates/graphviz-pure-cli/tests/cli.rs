@@ -1085,6 +1085,25 @@ fn pack_single_component_newrank_removes_empty_cluster_clone() {
     );
 }
 
+// Issue #203, reduced. With tiny touching point nodes `partition` keeps no free rectangle,
+// so C's mkMaze fails and `orthoEdges` returns -1 (lib/ortho/partition.c, maze.c). dot_layout
+// then gives up: no edge is drawn and dotneato_postprocess is skipped, so the drawing keeps
+// its negative x. The port panicked in `convert_sp_to_route`. C: exit 0, 19x94pt, 12 nodes.
+#[test]
+fn ortho_maze_without_free_cells_abandons_the_dot_layout_like_c() {
+    let src = "digraph{splines=ortho nodesep=0 ranksep=0.02
+node[shape=point width=0.05 height=0.01 fixedsize=true label=\"\"]
+n3->n2 n10->n7 n1->n11 n10->n4 n8->n2 n5->n3 n6->n4 n3->n10 n6->n3 n6->n0 n3->n6
+n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}
+";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    assert!(out.contains("<svg width=\"19pt\" height=\"94pt\""), "{out}");
+    assert_eq!(out.matches("class=\"node\"").count(), 12, "{out}");
+    assert!(!out.contains("class=\"edge\""), "{out}");
+}
+
 // As above with a root rank=max, which the emptied clone inherits: its union_all finds no
 // node, and C's `union_one(NULL, GD_maxrep(clust))` returns NULL (lib/dotgen/rank.c:615-621,
 // 684). The port unwrapped the missing leader and panicked. C: one rank, 222x76pt.

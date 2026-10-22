@@ -481,4 +481,31 @@ mod tests {
         ];
         assert!(mk_maze(&nodes).is_none());
     }
+
+    /// Issue #203: the tiny touching point nodes of a dot `splines=ortho` graph.
+    /// `partition` keeps no free rectangle, so C's `LIST_DETACH` hands mkMaze a
+    /// NULL list and `orthoEdges` fails. The port went on with an empty maze and
+    /// panicked in `convert_sp_to_route`.
+    #[test]
+    fn partition_without_free_cells_fails_the_maze() {
+        let centres = [
+            (5.0, 57.36),
+            (7.0, 47.92),
+            (6.0, 38.48),
+            (2.0, 29.04),
+            (11.0, 29.04),
+            (11.0, 19.6),
+            (5.0, 10.16),
+            (0.0, 0.72),
+            (23.0, 10.16),
+            (-1.0, 19.6),
+            (-1.0, 10.16),
+            (-2.0, 0.72),
+        ];
+        let nodes: Vec<_> = centres
+            .iter()
+            .map(|&(x, y)| (Point::new(x, y), 1.44, 1.44))
+            .collect();
+        assert!(mk_maze(&nodes).is_none());
+    }
 }
