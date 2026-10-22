@@ -1709,6 +1709,32 @@ a -> b [label=<<TABLE FOO=\"1\"><TR><TD>x</TD></TR></TABLE>>] }";
     }
 }
 
+/// Issue #198: after `overlap=ipsep`, m1 cannot be reached from m3 among the obstacles
+/// fdp's `compoundEdges` (`lib/fdpgen/clusteredges.c`) builds, so `shortestPath` leaves
+/// `dad[N] == -1`. C's `Pobspath` (`lib/pathplan/cvt.c`) then reads `dad[-1]`: it hangs on
+/// `tests/fdp/hw_compound_mid.gv` and routes through garbage on this reduction. The port
+/// panicked; now it warns and routes the edges without compound edges.
+#[test]
+fn compound_edge_without_a_path_falls_back_instead_of_panicking() {
+    let src = "graph { layout=fdp; splines=compound; overlap=ipsep;
+subgraph cluster_mid { m1 -- m2; m3 -- m1; m4 -- m1 }
+a -- m1; b -- m2; c -- m3; d -- c }
+";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok && !err.contains("panicked"), "{err}");
+    // C's own warnings, plus the port's for the missing path.
+    assert_eq!(
+        err,
+        "Warning: compoundEdges: could not find a path - falling back to straight line edges\n\
+         Warning: compoundEdges: nodes touch - falling back to straight line edges\n\
+         Warning: some nodes with margin (3.20,3.20) touch - falling back to straight line edges\n"
+    );
+    assert!(
+        out.contains("m3 -- m1\t[pos=\"83.797,51.424 80.429,48.095 76.858,44.566 73.484,41.231\"]"),
+        "m3 -- m1 falls back to a straight line:\n{out}"
+    );
+}
+
 /// A root graph label is made by `graph_init` (`lib/common/input.c:711`), before the
 /// engine's node and edge labels, so its diagnostics come first.
 #[test]

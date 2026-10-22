@@ -174,8 +174,8 @@ fn object_list(lg: &LGraph<'_>, h: &Hier<'_>, e: usize, pm: &Expand) -> Vec<Vec<
     list
 }
 
-/// `getPath(e, vconfig, false)`.
-fn get_path(lg: &LGraph<'_>, e: usize, vconfig: &Vconfig) -> Vec<Point> {
+/// `getPath(e, vconfig, false)`; `None` when `Pobspath` finds no path (see `pobspath`).
+fn get_path(lg: &LGraph<'_>, e: usize, vconfig: &Vconfig) -> Option<Vec<Point>> {
     let (t, hn) = (lg.edges[e].tail, lg.edges[e].head);
     let p = crate::common::geom::add(lg.nodes[t].coord, lg.edges[e].tail_port.p);
     let q = crate::common::geom::add(lg.nodes[hn].coord, lg.edges[e].head_port.p);
@@ -227,6 +227,10 @@ fn touch_warning(lg: &LGraph<'_>, pm: &Expand) {
 /// `compoundEdges(g, pm, edgetype)`; returns true on success (C returns 0).
 pub fn compound_edges(lg: &mut LGraph<'_>, sub: &Sub, h: &Hier<'_>, pm: &Expand) -> bool {
     let mut ok = true;
+    // Kept apart from `ok` so that a path failure, which C has no branch for, leaves C's
+    // "nodes touch" warning as it is.
+    let mut touched = false;
+    let mut no_path = false;
     for &n in &sub.nodes {
         let outs: Vec<usize> = lg.outs(sub, n).collect();
         for e in outs {
@@ -241,16 +245,30 @@ pub fn compound_edges(lg: &mut LGraph<'_>, sub: &Sub, h: &Hier<'_>, pm: &Expand)
             }
             let objl = object_list(lg, h, e, pm);
             if !plegal_arrangement(&objl) {
-                if ok {
+                if !touched {
                     touch_warning(lg, pm);
                 }
+                touched = true;
                 ok = false;
                 continue;
             }
             let vconfig = pobsopen(&objl);
             let mut e0 = Some(e);
             while let Some(ee) = e0 {
-                lg.edges[ee].path = get_path(lg, ee, &vconfig);
+                // C's `Pobspath` loops forever when the head is unreachable (#198), or
+                // routes through whatever lies before `dad`. Take the branch C takes when
+                // `Pobsopen` fails: warn, skip the edge and return failure.
+                let Some(path) = get_path(lg, ee, &vconfig) else {
+                    if !no_path {
+                        graphviz_pure_core::diag::agwarningf(
+                            "compoundEdges: could not find a path - falling back to straight line edges\n",
+                        );
+                    }
+                    no_path = true;
+                    ok = false;
+                    break;
+                };
+                lg.edges[ee].path = path;
                 make_spline(lg, ee, &objl);
                 e0 = lg.edges[ee].to_virt;
             }
