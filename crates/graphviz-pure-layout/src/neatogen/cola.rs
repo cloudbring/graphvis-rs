@@ -311,7 +311,13 @@ pub fn stress_majorization_cola(
         iterations += 1;
     }
     if opt.noverlap == 2 {
-        removeoverlaps(orig_n, &mut coords, opt);
+        // C passes `orig_n` here, but `initCMajVPSC` still reserves the last
+        // `2 * nclusters` variables for the cluster boundaries, so with
+        // clusters `generateNonoverlapConstraints` reads past the real nodes
+        // and C segfaults or throws "Cycle Error!" (#185). Pass the cluster
+        // dummy variables too, as `hor` and `vrt` above do; without clusters
+        // `n == orig_n`.
+        removeoverlaps(n, &mut coords, opt);
     }
     finish(&coords, d_coords);
     Ok(iterations)

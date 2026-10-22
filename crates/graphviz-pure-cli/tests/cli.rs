@@ -1380,6 +1380,31 @@ concentrate=\"true\";
     assert!(dot.contains(edge), "{dot}");
 }
 
+// Issue #185. Under overlap=vpsc, stress_majorization_cola (lib/neatogen/
+// constrained_majorization_ipsep.c) ends with removeoverlaps(orig_n, ...), but initCMajVPSC
+// still treats the last 2 * nclusters variables as the cluster boundaries: C segfaults on the
+// first graph and throws "Cycle Error!" on the second, and the port panicked in init_cmaj_vpsc
+// and generate_nonoverlap_constraints. The port passes the cluster dummy variables as well.
+#[test]
+fn neato_ipsep_vpsc_with_clusters_does_not_panic() {
+    for (src, nodes) in [
+        (
+            "digraph { layout=neato; mode=ipsep; overlap=vpsc; subgraph cluster_a { a } subgraph cluster_b { b } a -> b; b -> c }",
+            3,
+        ),
+        (
+            "digraph { layout=neato; mode=ipsep; overlap=vpsc; subgraph cluster_a { a } subgraph cluster_b { b } a -> b; b -> c; c -> d; d -> e }",
+            5,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tsvg"], src);
+        assert!(ok, "{src}: {err}");
+        assert_eq!(err, "", "{src}");
+        assert_eq!(out.matches("class=\"node\"").count(), nodes, "{src}: {out}");
+        assert_eq!(out.matches("class=\"cluster\"").count(), 2, "{src}: {out}");
+    }
+}
+
 // Fuzz case 011-dot-render-node-lw-rw-ht (issue #20), its repro.gv verbatim. With
 // `splines=""` dot_splines_ returns before resetRW, so the self-loop space dot_position added
 // to ND_rw stays (lw=27, rw=45). Mcircle_hack draws the diagonals from ND_rw alone; C's

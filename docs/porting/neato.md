@@ -249,6 +249,8 @@ boundaries; C loops forever when there is no boundary, the port skips),
 `overlap=ipsep` node-size ramp and `overlap=vpsc` post-pass, gradient
 projection in `float`. `cluster_map` maps top-level clusters of the root, keeping only the members
 in the component being laid out (C asserts on a member in another component, #168).
+The `overlap=vpsc` post-pass gets the cluster dummy variables too (C passes
+only the real nodes to `removeoverlaps` and segfaults or throws `Cycle Error!`, #185).
 17 `hw3_hier_*` and 12 `hw3_ipsep_*` cases.
 
 ### `makeMultiSpline` — `neatogen::multispline`
