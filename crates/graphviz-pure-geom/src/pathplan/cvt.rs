@@ -87,22 +87,28 @@ mod tests {
     use super::super::POLYID_NONE;
     use super::*;
 
+    /// Clockwise, as neato and fdp build their obstacles.
     fn square(x0: f64, y0: f64, x1: f64, y1: f64) -> Vec<Ppoint> {
-        [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+        [(x0, y0), (x0, y1), (x1, y1), (x1, y0)]
             .map(|(x, y)| Ppoint::new(x, y))
             .to_vec()
     }
 
-    /// #198: a target inside an obstacle sees no barrier vertex, so `shortestPath` leaves
-    /// `dad[N] == -1` and C's `Pobspath` reads `dad[-1]`. The port finds no path.
+    /// #198: an endpoint inside an obstacle sees no barrier vertex, so `shortestPath`
+    /// leaves a `-1` in the `dad` chain: at `dad[N]` for an enclosed target, further down
+    /// for an enclosed source. C's `Pobspath` then reads `dad[-1]`; the port finds no path.
     #[test]
-    fn pobspath_to_an_enclosed_point_finds_no_path() {
+    fn pobspath_with_an_enclosed_endpoint_finds_no_path() {
         let config = pobsopen(&[square(0.0, 0.0, 10.0, 10.0), square(20.0, 0.0, 30.0, 10.0)]);
-        let p0 = Ppoint::new(15.0, 20.0);
-        let p1 = Ppoint::new(25.0, 5.0);
-        assert_eq!(pobspath(&config, p0, POLYID_NONE, p1, POLYID_NONE), None);
-        let p1 = Ppoint::new(15.0, -20.0);
-        let route = pobspath(&config, p0, POLYID_NONE, p1, POLYID_NONE).unwrap();
-        assert_eq!((route[0], route[route.len() - 1]), (p0, p1));
+        let outside = Ppoint::new(-5.0, 5.0);
+        let enclosed = Ppoint::new(25.0, 5.0);
+        let route = |p, q| pobspath(&config, p, POLYID_NONE, q, POLYID_NONE);
+        assert_eq!(route(outside, enclosed), None);
+        assert_eq!(route(enclosed, outside), None);
+        // A route around both obstacles still walks the chain to the end.
+        let (p, q) = (outside, Ppoint::new(35.0, 5.0));
+        let ops = route(p, q).unwrap();
+        assert!(ops.len() > 2, "{ops:?}");
+        assert_eq!((ops[0], ops[ops.len() - 1]), (p, q));
     }
 }

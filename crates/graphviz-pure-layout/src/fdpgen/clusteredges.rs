@@ -256,8 +256,10 @@ pub fn compound_edges(lg: &mut LGraph<'_>, sub: &Sub, h: &Hier<'_>, pm: &Expand)
             let mut e0 = Some(e);
             while let Some(ee) = e0 {
                 // C's `Pobspath` loops forever when the head is unreachable (#198), or
-                // routes through whatever lies before `dad`. Take the branch C takes when
-                // `Pobsopen` fails: warn, skip the edge and return failure.
+                // routes through whatever lies before `dad`. Fail as C does when `Pobsopen`
+                // fails: skip the edge and return failure. The warning is the port's own
+                // and printed once; unlike C's `rv`, it doesn't hide "nodes touch", so the
+                // warnings C prints when it finishes are still printed.
                 let Some(path) = get_path(lg, ee, &vconfig) else {
                     if !no_path {
                         graphviz_pure_core::diag::agwarningf(
