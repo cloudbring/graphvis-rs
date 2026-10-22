@@ -69,6 +69,7 @@ pub fn layout_graph_with_options(
     engine: LayoutEngine,
     options: LayoutOptions,
 ) -> Result<()> {
+    common::splines::reset_bz_split_budget();
     graphviz_pure_core::charset::begin_layout(
         &graph.name,
         graph.graph_attrs.get("charset").map(String::as_str),

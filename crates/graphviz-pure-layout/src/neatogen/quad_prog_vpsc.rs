@@ -334,7 +334,7 @@ pub fn generate_nonoverlap_constraints(
     k: usize,
     transitive_closure: bool,
     opt: &mut IpsepOptions,
-) {
+) -> bool {
     let mut n = e.nv + e.nldv;
     // C allocates `bb` before taking the cluster dummies off `n`. When
     // `removeoverlaps` passes only the real nodes, cluster members among the
@@ -389,16 +389,19 @@ pub fn generate_nonoverlap_constraints(
             if k == 0 {
                 cbb[cn].urx = container.llx + 0.0001;
                 cbb[cn + 1].llx = container.urx - 0.0001;
-                cscl.push(vpsc::gen_x_constraints(
-                    &mut e.solver,
-                    &cbb,
-                    &cvs,
-                    transitive_closure,
-                ));
+                let Some(c) =
+                    vpsc::gen_x_constraints(&mut e.solver, &cbb, &cvs, transitive_closure)
+                else {
+                    return false;
+                };
+                cscl.push(c);
             } else {
                 cbb[cn].ury = container.lly + 0.0001;
                 cbb[cn + 1].lly = container.ury - 0.0001;
-                cscl.push(vpsc::gen_y_constraints(&mut e.solver, &cbb, &cvs));
+                let Some(c) = vpsc::gen_y_constraints(&mut e.solver, &cbb, &cvs) else {
+                    return false;
+                };
+                cscl.push(c);
             }
         }
         // generate top level constraints
@@ -419,14 +422,17 @@ pub fn generate_nonoverlap_constraints(
                 cbb.push(opt.clusters.bb[i - ntop]);
             }
             if k == 0 {
-                cscl.push(vpsc::gen_x_constraints(
-                    &mut e.solver,
-                    &cbb,
-                    &cvs,
-                    transitive_closure,
-                ));
+                let Some(c) =
+                    vpsc::gen_x_constraints(&mut e.solver, &cbb, &cvs, transitive_closure)
+                else {
+                    return false;
+                };
+                cscl.push(c);
             } else {
-                cscl.push(vpsc::gen_y_constraints(&mut e.solver, &cbb, &cvs));
+                let Some(c) = vpsc::gen_y_constraints(&mut e.solver, &cbb, &cvs) else {
+                    return false;
+                };
+                cscl.push(c);
             }
             // remap constraints from tmp dummy vars to cluster l and r vars
             for i in ntop..cn {
@@ -444,10 +450,16 @@ pub fn generate_nonoverlap_constraints(
         cscl.into_iter().flatten().collect()
     } else if k == 0 {
         let vs = e.vs[..n].to_vec();
-        vpsc::gen_x_constraints(&mut e.solver, &bb, &vs, transitive_closure)
+        let Some(c) = vpsc::gen_x_constraints(&mut e.solver, &bb, &vs, transitive_closure) else {
+            return false;
+        };
+        c
     } else {
         let vs = e.vs[..n].to_vec();
-        vpsc::gen_y_constraints(&mut e.solver, &bb, &vs)
+        let Some(c) = vpsc::gen_y_constraints(&mut e.solver, &bb, &vs) else {
+            return false;
+        };
+        c
     };
     // remove constraints from previous iteration
     if e.m > 0 {
@@ -464,22 +476,32 @@ pub fn generate_nonoverlap_constraints(
     let vs = e.vs[..nvars].to_vec();
     let cs = e.cs.clone();
     e.solver.new_inc_vpsc(&vs, &cs);
+    true
 }
 
 /// `removeoverlaps(n, coords, opt)`: statically remove all overlaps, moving
 /// each node as little as possible (x pass, then y pass).
-pub fn removeoverlaps(n: usize, coords: &mut [Vec<f32>], opt: &mut IpsepOptions) {
+///
+/// Not in C: false where C's `Rectangle` or `Node` asserts (`overlap=vpsc` with a NaN,
+/// infinite or huge pin), and C aborts. `coords` may then hold the x pass only:
+/// `vpsc_adjust` drops them, and ipsep's final pass keeps them.
+pub fn removeoverlaps(n: usize, coords: &mut [Vec<f32>], opt: &mut IpsepOptions) -> bool {
     let mut e = init_cmaj_vpsc(n, None, opt);
-    generate_nonoverlap_constraints(&mut e, 1.0, coords, 0, true, opt);
+    if !generate_nonoverlap_constraints(&mut e, 1.0, coords, 0, true, opt) {
+        return false;
+    }
     let _ = e.solver.solve();
     for i in 0..n {
         coords[0][i] = e.solver.position(e.vs[i]) as f32;
     }
-    generate_nonoverlap_constraints(&mut e, 1.0, coords, 1, false, opt);
+    if !generate_nonoverlap_constraints(&mut e, 1.0, coords, 1, false, opt) {
+        return false;
+    }
     let _ = e.solver.solve();
     for i in 0..n {
         coords[1][i] = e.solver.position(e.vs[i]) as f32;
     }
+    true
 }
 
 /// `assign_digcola_levels(ordering, n, level_inds, num_divisions)`.
