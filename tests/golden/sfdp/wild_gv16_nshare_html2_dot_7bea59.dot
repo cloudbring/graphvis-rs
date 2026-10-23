@@ -1,5 +1,5 @@
 digraph G {
-	graph [bb="0,0,1009.1,174.23",
+	graph [bb="0,0,1007.7,174.23",
 		layout=sfdp,
 		rankdir=LR
 	];
@@ -25,27 +25,27 @@ digraph G {
   </TR> 
   <TR> <TD COLSPAN="2" BORDER="4" ALIGN="right" PORT="there">4</TD> </TR>
 </TABLE>>,
-			pos="648.4,87.116",
+			pos="654.03,87.116",
 			shape=ellipse,
 			style=filled,
 			width=2.9463];
 		c	[height=0.81111,
 			label=<long line 1<BR/>line 2<BR ALIGN="LEFT"/>line 3<BR ALIGN="RIGHT"/>>,
-			pos="330.86,87.116",
+			pos="333.92,87.116",
 			width=1.0539];
 	}
-	c -> b	[pos="e,542.1,87.116 368.54,87.116 408.43,87.116 473.42,87.116 530.74,87.116"];
+	c -> b	[pos="e,547.69,87.116 371.58,87.116 411.95,87.116 478.06,87.116 536.18,87.116"];
 	a	[height=0.5,
 		label=<
 <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
   <TR><TD ROWSPAN="3" BGCOLOR="yellow">class</TD></TR>
   <TR><TD PORT="here" BGCOLOR="lightblue">qualifier</TD></TR>
 </TABLE>>,
-		pos="957.79,87.116",
+		pos="956.4,87.116",
 		width=1.4255];
 	a:here -> b:there	[arrowtail=diamond,
 		dir=both,
-		pos="s,1001.1,87.116 e,710.89,54.616 988.27,85.677 939.78,80.247 768.29,61.044 722.31,55.894"];
+		pos="s,999.72,87.116 e,716.52,54.616 986.81,85.635 939.09,80.158 773.05,61.103 727.92,55.924"];
 	d	[height=0.68889,
 		pos="31.197,87.116",
 		shape=triangle,
@@ -57,6 +57,6 @@ digraph G {
       <TD BGCOLOR="blue" WIDTH="10"> </TD>
   </TR>
 </TABLE>>,
-		lp="116.43,109.92",
-		pos="e,292.94,87.116 52.269,87.116 99.524,87.116 215.01,87.116 281.51,87.116"];
+		lp="118.29,109.92",
+		pos="e,296.12,87.116 52.484,87.116 100.45,87.116 218,87.116 285.02,87.116"];
 }

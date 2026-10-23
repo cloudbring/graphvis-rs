@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // WASM end-to-end check: renders every corpus input with the wasm build and compares the
-// normalized SVG hash with C Graphviz's (tests/golden/e2e.json), like `gv-diff e2e` does
-// for the native build. No npm packages are needed.
+// normalized SVG hash with C Graphviz's computed with the same math functions
+// (tests/golden/e2e.libm-matched.json), like `gv-diff e2e` does for the native build. No npm packages are needed.
 //
 // Build the package first (see docs/porting/libm.md):
 //   cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm
@@ -11,9 +11,9 @@
 //   node scripts/wasm-e2e.mjs [--pkg /tmp/gvwasm/pkg] [--baseline FILE] [--filter SUBSTR]
 //                             [--list] [--hashes FILE] [--golden FILE]
 //
-// Exits non-zero when a file in the baseline does not match under wasm. wasm32 always uses
-// the portable math profile, so the default baseline is tests/golden/e2e-baseline.portable.json,
-// the files the native portable build (Linux, or macOS with portable-math) matches.
+// Exits non-zero when a file in the baseline does not match under wasm. Every build uses the
+// same math functions, so the default baseline is the native one,
+// tests/golden/e2e-baseline.libm-matched.portable.json.
 // `--hashes FILE` writes every output's hash in the format of `gv-diff e2e --hashes`, so the
 // two can be compared with `cmp`.
 
@@ -25,8 +25,8 @@ const args = process.argv.slice(2);
 let pkg = '/tmp/gvwasm/pkg';
 let filter = null;
 let list = false;
-let baselinePath = 'tests/golden/e2e-baseline.portable.json';
-let goldenPath = 'tests/golden/e2e.json';
+let baselinePath = 'tests/golden/e2e-baseline.libm-matched.portable.json';
+let goldenPath = 'tests/golden/e2e.libm-matched.json';
 let hashesPath = null;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--pkg') pkg = args[++i];

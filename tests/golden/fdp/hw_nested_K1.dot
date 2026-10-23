@@ -5,7 +5,7 @@ graph nested {
 	];
 	node [label="\N"];
 	subgraph cluster_outer {
-		graph [bb="0,110.12,319.33,464.7",
+		graph [bb="3.1974e-14,110.12,319.33,464.7",
 			label=outer,
 			lheight=0.23,
 			lp="159.66,452.3",

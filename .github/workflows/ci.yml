@@ -64,8 +64,8 @@ jobs:
       # integer-overflow site (tests/panic-sites.tsv; docs/porting/crashes.md).
       - name: Panic-site ratchet
         run: scripts/panic-sites.sh
-      # Linux uses the portable math profile, so the corpus ratchets
-      # (crates/graphviz-pure-diff/tests/*_fidelity.rs) check tests/golden/*.portable.json.
+      # The corpus ratchets (crates/graphviz-pure-diff/tests/*_fidelity.rs) check
+      # tests/golden/*.portable.json, the same on every platform.
       - name: Run Workspace Tests
         run: cargo test --workspace
       - name: Check WASM Target
@@ -114,11 +114,12 @@ jobs:
           cargo build --release --target wasm32-unknown-unknown -p graphviz-pure-wasm
           wasm-bindgen --target nodejs --out-dir "$RUNNER_TEMP/gvwasm/pkg" \
             target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm
-      # Fails if a file of tests/golden/e2e-baseline.portable.json stops matching C.
-      - name: Run wasm e2e against the portable baseline
+      # Fails if a file of tests/golden/e2e-baseline.libm-matched.portable.json stops matching C
+      # (computing with the same math functions).
+      - name: Run wasm e2e against the baseline
         run: node scripts/wasm-e2e.mjs --pkg "$RUNNER_TEMP/gvwasm/pkg" --hashes "$RUNNER_TEMP/wasm-hashes.json"
-      # wasm32 and Linux both use the portable math profile and must agree on every output,
-      # matching C or not.
+      # Every build uses the same math functions, so wasm32 and Linux must agree on every
+      # output, matching C or not.
       - name: Compare wasm output with native Linux output
         run: |
           cargo build --release -p graphviz-pure-diff

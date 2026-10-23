@@ -4,7 +4,7 @@ digraph G {
 	];
 	node [label="\N"];
 	subgraph cluster_c0 {
-		graph [bb="0,47.407,172.4,208.47"];
+		graph [bb="-1.5987e-14,47.407,172.4,208.47"];
 		a0	[height=0.5,
 			pos="83.948,73.407",
 			width=0.75];

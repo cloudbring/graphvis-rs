@@ -17,5 +17,5 @@ for e in neato sfdp circo twopi fdp osage patchwork; do
 done
 "$gvdiff" render --baseline tests/golden/render/baseline.portable.json --update
 "$gvdiff" e2e --update
-"$gvdiff" e2e --golden tests/golden/e2e.libm-matched.json \
-  --baseline tests/golden/e2e-baseline.libm-matched.portable.json --update
+# The informational record against stock C on macOS (Apple's libm); never a check.
+"$gvdiff" e2e --stock --update

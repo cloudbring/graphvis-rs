@@ -4,15 +4,22 @@
 //! layouts. This mode checks the whole pipeline: the port's `-Tsvg` for an input file must
 //! equal C's `dot -Tsvg` for the same file, byte for byte apart from the generator comment.
 //!
-//! Only hashes of C's output are stored (`tests/golden/e2e.json`), written by
-//! `gv-diff e2e --generate` with the pango-free C build (`GVBINDIR`, see
-//! `scripts/gen-golden.sh`). Inputs whose C output changes from run to run are recorded
-//! as unstable and skipped (`--runs N` runs C N times instead of twice). The baseline
-//! (`tests/golden/e2e-baseline.portable.json`) lists the files that match; a file in it that
-//! stops matching fails the check.
+//! The reference is C computing with the same math functions as the port:
+//! `scripts/dot-portable-libm.sh` runs the stock C `dot` with the port's portable math
+//! interposed (`graphviz-pure-portable-libm`), so a difference is a difference in the port, never
+//! in the math library. Only hashes of C's output are stored (`tests/golden/e2e.libm-matched.json`),
+//! written by `gv-diff e2e --generate` with the pango-free C build (`GVBINDIR`, see
+//! `scripts/gen-golden.sh`). Inputs whose C output changes from run to run are recorded as
+//! unstable and skipped (`--runs N` runs C N times instead of twice). The baseline
+//! (`tests/golden/e2e-baseline.libm-matched.portable.json`) lists the files that match; a file in
+//! it that stops matching fails the check.
 //!
-//! `--c-dot PROG` runs PROG instead of `dot` for the C side, e.g.
-//! `scripts/dot-portable-libm.sh`, which runs C with the port's portable math functions.
+//! `--c-dot PROG` runs PROG instead of `scripts/dot-portable-libm.sh` for the C side.
+//!
+//! `--stock` compares with stock C on macOS instead (`tests/golden/e2e.json`, C with Apple's
+//! libm; baseline `tests/golden/e2e-baseline.portable.json`). It is a report, never a check: it
+//! always succeeds, and it splits the differing files into those where the port equals C with the
+//! same math (they differ only through Apple's libm) and the rest (which the main check fails on).
 //!
 //! `--hashes FILE` also writes the hash of every output (matching C or not), to compare two
 //! builds bit for bit.
@@ -174,13 +181,16 @@ pub(crate) fn parallel<T: Send>(
     out.into_inner().unwrap()
 }
 
+/// C's outputs computed with the port's math functions: the reference of the main check.
+const SAME_MATH_GOLDEN: &str = "tests/golden/e2e.libm-matched.json";
+
 pub fn main(args: Vec<String>) -> ExitCode {
-    let mut golden_path = PathBuf::from("tests/golden/e2e.json");
-    let mut baseline_path = PathBuf::from("tests/golden/e2e-baseline.portable.json");
-    let (mut generate, mut update, mut list) = (false, false, false);
+    let mut golden_path = PathBuf::from(SAME_MATH_GOLDEN);
+    let mut baseline_path = PathBuf::from("tests/golden/e2e-baseline.libm-matched.portable.json");
+    let (mut generate, mut update, mut list, mut stock) = (false, false, false, false);
     let mut filter: Option<String> = None;
     let mut hashes_path: Option<PathBuf> = None;
-    let mut c_dot = String::from("dot");
+    let mut c_dot = String::from("scripts/dot-portable-libm.sh");
     let mut runs = 2usize;
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -188,6 +198,12 @@ pub fn main(args: Vec<String>) -> ExitCode {
             "--generate" => generate = true,
             "--update" => update = true,
             "--list" => list = true,
+            "--stock" => {
+                stock = true;
+                golden_path = "tests/golden/e2e.json".into();
+                baseline_path = "tests/golden/e2e-baseline.portable.json".into();
+                c_dot = "dot".into();
+            }
             "--hashes" => hashes_path = Some(it.next().expect("--hashes FILE").into()),
             "--golden" => golden_path = it.next().expect("--golden FILE").into(),
             "--baseline" => baseline_path = it.next().expect("--baseline FILE").into(),
@@ -266,7 +282,7 @@ pub fn main(args: Vec<String>) -> ExitCode {
         if h.as_ref() == golden.files.get(k) {
             e.0 += 1;
             identical.insert(k.clone());
-        } else if list {
+        } else if list && !stock {
             println!("  differs: {k}");
         }
     }
@@ -283,6 +299,37 @@ pub fn main(args: Vec<String>) -> ExitCode {
         golden.unstable.len()
     );
 
+    if stock {
+        // Which differences come from Apple's libm alone: the port equals C with the same math.
+        let same_math: Golden = std::fs::read_to_string(SAME_MATH_GOLDEN)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default();
+        let (mut libm, mut other) = (Vec::new(), Vec::new());
+        for (k, h) in &results {
+            if identical.contains(k) {
+                continue;
+            }
+            if h.is_some() && h.as_ref() == same_math.files.get(k) {
+                libm.push(k);
+            } else {
+                other.push(k);
+            }
+        }
+        println!(
+            "differ from stock C on macOS: {} only through Apple's libm (equal to C with the same math), {} otherwise",
+            libm.len(),
+            other.len()
+        );
+        if list {
+            for k in &libm {
+                println!("  libm only: {k}");
+            }
+        }
+        for k in &other {
+            println!("  not explained by libm: {k}");
+        }
+    }
     if let Some(p) = &hashes_path {
         // Every output's hash, matching C or not: compares two builds (e.g. Linux against
         // macOS) more finely than the identical set does.
@@ -306,6 +353,15 @@ pub fn main(args: Vec<String>) -> ExitCode {
         return ExitCode::FAILURE;
     };
     let base: E2eBaseline = serde_json::from_str(&text).expect("parse e2e baseline");
+    if stock {
+        // A report: stock C on macOS computes with Apple's libm, which no build follows.
+        println!(
+            "stock C report (informational): {} identical, baseline {}",
+            identical.len(),
+            base.identical.len()
+        );
+        return ExitCode::SUCCESS;
+    }
     let lost: Vec<_> = base
         .identical
         .iter()

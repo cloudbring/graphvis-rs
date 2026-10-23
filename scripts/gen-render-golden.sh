@@ -33,7 +33,7 @@ case "$version" in
   *) echo "need Graphviz 16.1.0, found: $version" >&2; exit 1 ;;
 esac
 
-# Keep the ratchet baseline (baseline.json); rebuild everything else.
+# Keep the ratchet baseline (baseline.portable.json); rebuild everything else.
 find "$OUT" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
 mkdir -p "$OUT/laid"
 for fmt in $FORMATS; do mkdir -p "$OUT/$fmt"; done

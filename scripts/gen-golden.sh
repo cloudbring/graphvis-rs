@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Regenerates tests/golden/*.dot from C Graphviz 16.1.0.
 #
+# C computes with the port's own math functions: every layout runs through
+# scripts/dot-portable-libm.sh, which interposes graphviz-pure-portable-libm into the stock
+# `dot`, so the goldens differ from the port only where the port differs from C, never through
+# the platform's libm (docs/porting/libm.md). Build it first:
+#   cargo build --release -p graphviz-pure-portable-libm
+# C_DOT overrides the C command (C_DOT=dot gives stock C, for comparison only).
+#
 # C must measure text the same way the port does, with the built-in font metric
 # tables (textspan_lut.c) rather than pango/cairo. This script builds a plugin
 # directory holding only the core, dot and neato layout plugins and points
@@ -11,6 +18,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+C_DOT="${C_DOT:-$REPO_ROOT/scripts/dot-portable-libm.sh}"
 PLUGIN_SRC="${1:-/opt/homebrew/lib/graphviz}"
 OUT="$REPO_ROOT/tests/golden"
 
@@ -21,7 +29,6 @@ case "$version" in
 esac
 
 PLUGINS="$(mktemp -d)"
-trap 'rm -rf "$PLUGINS"' EXIT
 for p in core dot_layout neato_layout; do
   cp "$PLUGIN_SRC"/libgvplugin_"$p".*dylib "$PLUGINS"/ 2>/dev/null ||
     cp "$PLUGIN_SRC"/libgvplugin_"$p".so* "$PLUGINS"/
@@ -29,16 +36,30 @@ done
 GVBINDIR="$PLUGINS" dot -c
 export GVBINDIR="$PLUGINS"
 
+RUNS="$(mktemp -d)"
+trap 'rm -rf "$PLUGINS" "$RUNS"' EXIT
+
 # gen_dir OUT_DIR INPUT...: lays out each input with C and writes OUT_DIR/<stem>.dot.
+# Some layouts depend on heap addresses in C (fdp, twopi; see docs/porting/libm.md), so C runs
+# three times and the output at least two runs agree on is kept (else the first run's), and the
+# inputs whose runs disagree are listed.
 gen_dir() {
   local out="$1"; shift
   mkdir -p "$out"
-  local count=0 f stem
+  local count=0 f stem r
   for f in "$@"; do
     stem="$(basename "$f" .gv)"
     # C can exit non-zero yet still emit a layout (e.g. it drops an edge after a
     # Pshortestpath failure); that output is still the reference behaviour.
-    dot -Tdot "$f" > "$out/$stem.dot" 2>/dev/null || echo "C dot reported errors on $f" >&2
+    for r in 1 2 3; do
+      "$C_DOT" -Tdot "$f" > "$RUNS/$r" 2>/dev/null || { [ "$r" = 1 ] && echo "C dot reported errors on $f" >&2; }
+    done
+    if cmp -s "$RUNS/1" "$RUNS/2" && cmp -s "$RUNS/1" "$RUNS/3"; then
+      cp "$RUNS/1" "$out/$stem.dot"
+    else
+      echo "C unstable over 3 runs: ${f#"$REPO_ROOT"/}" >&2
+      if cmp -s "$RUNS/2" "$RUNS/3"; then cp "$RUNS/2" "$out/$stem.dot"; else cp "$RUNS/1" "$out/$stem.dot"; fi
+    fi
     if [ -s "$out/$stem.dot" ]; then
       count=$((count + 1))
     else
