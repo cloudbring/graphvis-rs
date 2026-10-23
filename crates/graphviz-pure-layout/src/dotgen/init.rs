@@ -297,7 +297,8 @@ impl<'a> Dot<'a> {
         let mut xpenalty = 1;
         if !tg.is_empty() && tg == hg {
             xpenalty = CL_CROSS;
-            weight *= 100;
+            // No overflow check in C (undefined behaviour); the port wraps.
+            weight = weight.wrapping_mul(100);
         }
         if self.nonconstraint_edge(e) {
             xpenalty = 0;

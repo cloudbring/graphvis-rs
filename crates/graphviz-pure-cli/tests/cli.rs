@@ -1244,6 +1244,126 @@ subgraph s { rank=source; a; h; subgraph cluster_in { } }
     }
 }
 
+// Issue #252: C checks two weight sums for overflow, `virtual_weight` (mincross.c:1725) and
+// `x_cutval` (ns.c:1060), and exits 1 with its error after writing the graphs before. The
+// port fails the layout with C's message, and writes nothing more.
+#[test]
+fn weight_overflow_fails_the_layout_like_c() {
+    for (src, msg, before) in [
+        (
+            "digraph A { x }\ndigraph B { a -> c [weight=2000000000 minlen=3] }\ndigraph C { y }",
+            "overflow when calculating virtual weight of edge",
+            "graph 1 0.75 0.5\nnode x 0.375 0.25 0.75 0.5 x solid ellipse black lightgrey\nstop\n",
+        ),
+        (
+            "digraph { a -> b [weight=2000000000]; a -> c [weight=2000000000]; \
+             b -> d [weight=2000000000]; c -> d [weight=2000000000] }",
+            "overflow when computing edge weight sum",
+            "",
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(!ok, "{src}");
+        assert_eq!(
+            err,
+            format!("Error: <stdin>: Layout computation error in dot: {msg}\n")
+        );
+        assert_eq!(out, before, "{src}");
+    }
+}
+
+// Weights that wrap negative where C has no check leave a tree edge with a negative cut value
+// and no edge to replace it. C passes the NULL edge to `update` and crashes (ns.c:710); the
+// port fails the layout there. Before, it went on and panicked in mincross (with a cluster)
+// or class2 (with newrank).
+#[test]
+fn wrapped_weights_without_an_entering_edge_fail_the_layout() {
+    for src in [
+        "digraph { subgraph cluster0 { n0 } n0 -> n2 [weight=1073741824]; \
+         n0 -> n0 [weight=268435456]; n1 -> n2 [weight=268435456 minlen=0]; \
+         n1 -> n0 [weight=2000000000]; n0 -> n1 [weight=0] }",
+        "digraph { newrank=true; n3 -> n2 [weight=1000 label=x]; \
+         n5 -> n1 [weight=100000000 minlen=2]; n0 -> n2 [weight=1073741824]; \
+         n0 -> n2 [weight=1000 minlen=3]; n0 -> n1 [weight=2000000000]; \
+         n5 -> n1 [weight=2147483647] }",
+    ] {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(!ok, "{src}");
+        assert_eq!(out, "", "{src}");
+        assert_eq!(
+            err,
+            "Error: <stdin>: Layout computation error in dot: network simplex: no edge can \
+             enter the tree for a tree edge with a negative cut value\n",
+            "{src}"
+        );
+    }
+}
+
+// C's `largeMinlen` (position.c:64) reports an aux edge longer than INT_MAX before clamping
+// it, and the error makes dot exit 1 after drawing.
+#[test]
+fn overlong_aux_edge_is_reported_like_c() {
+    let (out, err, ok) = run(&["-Tplain"], "graph { nodesep=\"1e8\"; a; b }");
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: Edge length 2147483701.000000 larger than maximum 2147483647 allowed.\n\
+         Check for overwide node(s).\n"
+    );
+    assert_eq!(
+        out,
+        "graph 1 2.9826e+07 0.5\nnode a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 2.9826e+07 0.25 0.75 0.5 b solid ellipse black lightgrey\nstop\n"
+    );
+}
+
+// Issue #271: C's `int` sums on huge `ranksep` (`edgelabel_ranks`), `nodesep` and `margin`
+// (network simplex's `init_rank` and `init_graph`) have no check; the reference build wraps
+// and draws. The port wraps too, instead of panicking with overflow checks. Its output and
+// stderr are C 16.1.0's.
+#[test]
+fn huge_rank_and_node_separations_wrap_like_c() {
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph { ranksep=\"2147483647\"; a -> b [label=x] }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "graph 1 0.75 1.4556\nnode a 0.375 1.2056 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 0.375 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         edge a b 4 0.375 0.95274 0.375 0.86469 0.375 0.76237 0.375 0.66396 x 0.42361 0.72778 \
+         solid black\nstop\n"
+    );
+    let line = "Error: Edge length 2147483674.000000 larger than maximum 2147483647 allowed.\n\
+                Check for overwide node(s).\n";
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph { margin=\"2147483647\"; subgraph cluster_x { a } b }",
+    );
+    assert!(!ok);
+    assert_eq!(err, line.repeat(3));
+    assert_eq!(
+        out,
+        "graph 1 2.9826e+07 5.9652e+07\n\
+         node a 0.375 2.9826e+07 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 1.375 2.9826e+07 0.75 0.5 b solid ellipse black lightgrey\nstop\n"
+    );
+    // Two INT_MAX minimum lengths in a chain wrap the ranks; C fails `assert(Maxrank >= 0)`
+    // in `TB_balance` (ns.c:823), and the port fails the layout there.
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph { a -> b [minlen=2147483647]; b -> c [minlen=2147483647] }",
+    );
+    assert!(!ok);
+    assert_eq!(out, "");
+    assert_eq!(
+        err,
+        "Error: <stdin>: Layout computation error in dot: network simplex: the ranks \
+         overflowed, the highest rank is below the lowest\n"
+    );
+}
+
 // Issue #233: inside cluster2, `rank=sink` and the nested `rank=min` set contradict each
 // other, network simplex prints `trouble in init_rank` and leaves no node of the cluster on
 // rank 0. C fails `assert(leader != NULL)` in `cluster_leader` (rank.c:316, exit 134). The

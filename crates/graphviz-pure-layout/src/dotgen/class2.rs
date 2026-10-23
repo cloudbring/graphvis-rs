@@ -51,7 +51,7 @@ impl Dot<'_> {
     }
 
     /// `make_chain`: chain of dummy nodes for edge `orig`.
-    pub fn make_chain(&mut self, g: G, from: N, to: N, orig: E) {
+    pub fn make_chain(&mut self, g: G, from: N, to: N, orig: E) -> Result<(), String> {
         let label_rank = if self.edges[orig].label.is_some() {
             (self.nodes[from].rank + self.nodes[to].rank) / 2
         } else {
@@ -73,13 +73,14 @@ impl Dot<'_> {
                 to
             };
             let e = self.virtual_edge(u, v, Some(orig));
-            self.virtual_weight(e);
+            self.virtual_weight(e)?;
             u = v;
             r += 1;
         }
+        Ok(())
     }
 
-    fn interclrep(&mut self, g: G, e: E) {
+    fn interclrep(&mut self, g: G, e: E) -> Result<(), String> {
         let mut t = self.leader_of(self.edges[e].tail);
         let mut h = self.leader_of(self.edges[e].head);
         if self.nodes[t].rank > self.nodes[h].rank {
@@ -88,12 +89,12 @@ impl Dot<'_> {
         if self.nodes[t].clust != self.nodes[h].clust {
             if let Some(ve) = self.find_fast_edge(t, h) {
                 self.merge_chain(g, e, ve, true);
-                return;
+                return Ok(());
             }
             if self.nodes[t].rank == self.nodes[h].rank {
-                return;
+                return Ok(());
             }
-            self.make_chain(g, t, h, e);
+            self.make_chain(g, t, h, e)?;
             let hr = self.nodes[h].rank;
             let mut ve = self.edges[e].to_virt;
             while let Some(x) = ve {
@@ -105,6 +106,7 @@ impl Dot<'_> {
                 ve = self.nodes[hd].out.first().copied();
             }
         }
+        Ok(())
     }
 
     fn is_cluster_edge(&self, e: E) -> bool {
@@ -123,7 +125,10 @@ impl Dot<'_> {
                 self.edges[r].count = short(self.edges[r].count + self.edges[e].count);
             }
             self.edges[r].xpenalty = short(self.edges[r].xpenalty + self.edges[e].xpenalty);
-            self.edges[r].weight += self.edges[e].weight;
+            // No overflow check in C (undefined behaviour); the port wraps.
+            let w = self.edges[e].weight;
+            let rw = &mut self.edges[r].weight;
+            *rw = rw.wrapping_add(w);
             let hd = self.edges[r].head;
             if self.nodes[hd].rank == lastrank {
                 break;
@@ -185,7 +190,7 @@ impl Dot<'_> {
                         }
                         continue;
                     }
-                    self.interclrep(g, e);
+                    self.interclrep(g, e)?;
                     prev = Some(e);
                     continue;
                 }
@@ -229,7 +234,7 @@ impl Dot<'_> {
                     continue;
                 }
                 if self.nodes[eh].rank > self.nodes[et].rank {
-                    self.make_chain(g, et, eh, e);
+                    self.make_chain(g, et, eh, e)?;
                     prev = Some(e);
                     continue;
                 }
@@ -244,7 +249,7 @@ impl Dot<'_> {
                     }
                     if self.edges[opp].to_virt.is_none() {
                         let (ot, oh) = (self.edges[opp].tail, self.edges[opp].head);
-                        self.make_chain(g, ot, oh, opp);
+                        self.make_chain(g, ot, oh, opp)?;
                     }
                     if self.edges[e].label.is_none()
                         && self.edges[opp].label.is_none()
@@ -265,7 +270,7 @@ impl Dot<'_> {
                 if found_opp {
                     continue;
                 }
-                self.make_chain(g, eh, et, e);
+                self.make_chain(g, eh, et, e)?;
                 prev = Some(e);
             }
         }

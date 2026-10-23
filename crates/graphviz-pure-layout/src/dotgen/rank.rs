@@ -66,12 +66,14 @@ impl Dot<'_> {
         // `GD_has_labels(g)`: the label flags live on the cgraph root, so a pack
         // component's own record has none.
         if !self.comp && self.graphs[g].has_labels & EDGE_LABEL != 0 {
+            // No overflow check in C (undefined behaviour); the port wraps.
             for n in self.nodes_of(g) {
                 for e in self.out_edges(g, n) {
-                    self.edges[e].minlen *= 2;
+                    let m = &mut self.edges[e].minlen;
+                    *m = m.wrapping_mul(2);
                 }
             }
-            self.graphs[g].ranksep = (self.graphs[g].ranksep + 1) / 2;
+            self.graphs[g].ranksep = self.graphs[g].ranksep.wrapping_add(1) / 2;
         }
     }
 
@@ -327,7 +329,7 @@ impl Dot<'_> {
         made
     }
 
-    pub fn rank1(&mut self, g: G) {
+    pub fn rank1(&mut self, g: G) -> Result<(), String> {
         let mut maxiter = i32::MAX;
         if let Some(s) = self.agget(g, "nslimit1") {
             maxiter = scale_clamp(self.agnnodes(g) as i32, atof(s));
@@ -339,8 +341,9 @@ impl Dot<'_> {
             } else {
                 0
             };
-            self.ns_rank(g, bal, maxiter);
+            self.ns_rank(g, bal, maxiter)?;
         }
+        Ok(())
     }
 
     fn expand_ranksets(&mut self, g: G) -> Result<(), String> {
@@ -390,7 +393,7 @@ impl Dot<'_> {
         if self.minmax_edges2(g, p) {
             self.decompose(g, 0);
         }
-        self.rank1(g);
+        self.rank1(g)?;
         self.expand_ranksets(g)?;
         self.cleanup1(g);
         Ok(())
@@ -400,8 +403,7 @@ impl Dot<'_> {
     pub fn dot_rank(&mut self) -> Result<(), String> {
         if mapbool(self.agget(0, "newrank")) {
             self.graphs[0].flags |= NEW_RANK;
-            self.dot2_rank(0);
-            Ok(())
+            self.dot2_rank(0)
         } else {
             self.dot1_rank(0)
         }
@@ -617,7 +619,9 @@ impl Dot<'_> {
 
     fn nr_merge(&mut self, e: E, minlen: i32, weight: i32) {
         self.edges[e].minlen = self.edges[e].minlen.max(minlen);
-        self.edges[e].weight += weight;
+        // No overflow check in C (undefined behaviour); the port wraps.
+        let w = &mut self.edges[e].weight;
+        *w = w.wrapping_add(weight);
     }
 
     fn strong(&mut self, g: G, t: N, h: N, orig: E) {
@@ -647,9 +651,13 @@ impl Dot<'_> {
         let e = self.cg_edge(g, v, t);
         let f = self.cg_edge(g, v, h);
         self.edges[e].minlen = self.edges[e].minlen.max(0);
-        self.edges[e].weight += self.edges[orig].weight * BACKWARD_PENALTY;
+        // No overflow check in C (undefined behaviour); the port wraps.
+        let w = self.edges[orig].weight;
+        let ew = &mut self.edges[e].weight;
+        *ew = ew.wrapping_add(w.wrapping_mul(BACKWARD_PENALTY));
         self.edges[f].minlen = self.edges[f].minlen.max(self.edges[orig].minlen);
-        self.edges[f].weight += self.edges[orig].weight;
+        let fw = &mut self.edges[f].weight;
+        *fw = fw.wrapping_add(w);
     }
 
     fn compile_edges(&mut self, ug: G, xg: G) {
@@ -895,7 +903,7 @@ impl Dot<'_> {
         }
     }
 
-    pub fn dot2_rank(&mut self, g: G) {
+    pub fn dot2_rank(&mut self, g: G) -> Result<(), String> {
         self.xg_last = None;
         let xg = self.cg_open("level assignment constraints");
         self.edgelabel_ranks(g);
@@ -914,7 +922,8 @@ impl Dot<'_> {
             Some(s) => atoi(s),
             None => -1,
         };
-        self.rank2(xg, 1, maxiter, ssize);
+        self.rank2(xg, 1, maxiter, ssize)?;
         self.readout_levels(g, ncc);
+        Ok(())
     }
 }

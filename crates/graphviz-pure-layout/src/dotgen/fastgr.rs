@@ -184,7 +184,8 @@ impl Dot<'_> {
             let ed = &mut self.edges[rr];
             ed.count = short(ed.count + c);
             ed.xpenalty = short(ed.xpenalty + x);
-            ed.weight += w;
+            // No overflow check in C (undefined behaviour); the port wraps.
+            ed.weight = ed.weight.wrapping_add(w);
             r = ed.to_virt;
         }
     }

@@ -49,7 +49,7 @@ fixed in that cause's shared mechanism, not with a new local guard.
 | **dot's cluster membership** | A rank set or an earlier cluster takes a node from a cluster after the cluster was ranked (`x was already in a rankset, deleted from cluster G`). The cluster keeps its rank range, so it can have ranks with no node, or no nodes at all; C crashes later in `build_ranks`, `furthestnode`, `rank_box` (#114, #231). | Stop the layout where C dereferences an emptied cluster's NULL node list. Ranks with no node, which C often draws through, are kept; see [below](#dot-cluster-membership). |
 | **Extreme coordinates** | NaN, infinity or huge pinned positions flow into every engine and overflow at the first integer cast or recursion (#191, #196, #201, #227, #228, #229, #239, #240). | Keep C's positions, which C lays out wherever it finishes; bound the algorithms whose limits depend on magnitude (see [below](#extreme-coordinates)). |
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
-| **C's own overflow checks dropped** | C checks an integer sum for overflow and exits with an error (`virtual_weight`, `x_cutval`); the port multiplies unchecked or wraps, so it draws a layout from wrapped weights, or panics in a build with overflow checks (#252). | Port each check with C's message as a layout error, and check the rest of C's explicit overflow checks against the port. |
+| **C's own overflow checks dropped** | C checks an integer sum for overflow and exits with an error (`virtual_weight`, `x_cutval`); the port multiplied unchecked or wrapped, so it drew a layout from wrapped weights, or panicked in a build with overflow checks (#252). Unchecked `int` sums on huge `weight`, `minlen`, `ranksep`, `nodesep` or `margin` panicked the same way (#271). | Each check is ported with C's message as a layout error. Where C has no check the port wraps, and where the wrapped weights crash C (`update` with no entering edge) the port fails the layout; see [below](#cs-own-overflow-checks). |
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | The [panic-site ratchet](#the-panic-site-ratchet) maps the remaining sites and stops the count from growing; new code returns an error instead. |
 
 The fix for each cause records here the issues it closed and the behaviour it chose. Narrower
@@ -328,3 +328,70 @@ Closed: #227, #239, #240.
 The round-1 guards stay, because they match C and finite or NaN positions still reach them:
 #206 (the Hilbert order and shift for a bb above 2^32 points, or an infinite one), #207 (the
 wrapping grid cell index at 1e17), and #187's finiteness test in `update_bb_bz` (#173, #201).
+
+## C's own overflow checks
+
+Closed: #252, #271.
+
+C checks two integer sums for overflow. Where a check fails, C prints an error and exits 1,
+after writing the graphs before the failing one. The port fails the layout at the same point,
+with C's message, and writes nothing more:
+
+| C | Message | Port |
+|---|---|---|
+| `virtual_weight` (mincross.c:1725), `INT_MAX / t < ED_weight(e)` | `overflow when calculating virtual weight of edge` | `dotgen/mincross.rs` `virtual_weight` |
+| `x_cutval` (ns.c:1060), `sadd_overflow` | `overflow when computing edge weight sum` | `common/ns.rs` `x_cutval`; `rank2` returns the error to every caller |
+
+The stderr line has the port's usual prefix for a failed layout
+(`Error: <file>: Layout computation error in dot: …`) where C prints `Error: …`.
+
+**Where C has no check, the port wraps.** Everywhere else, C's `int` arithmetic has undefined
+behaviour on overflow, and the reference build wraps. That covers ns.c's arithmetic on
+weights, cut values, ranks and minimum lengths, and dotgen's weight sums (`group`'s ×100,
+merged parallel and virtual edges, `CL_BACK` cluster edges, newrank's merged constraint
+edges, `contain_clustnodes`' +128). It also covers the sums on `minlen`, `ranksep` and
+`nodesep` (`edgelabel_ranks`, `make_LR_constraints`, `make_edge_pairs`, #271). The port
+wraps there too (`wrapping_*`). Before, a build with overflow checks panicked at these
+sites, and the panics stopped some inputs before they reached C's two checks: `x_val`'s
+`rv -= weight` runs before `x_cutval`'s sum. A comment at each dotgen site says so, and so
+does the module note in `common/ns.rs`. One site doesn't wrap in the reference build.
+`make_edge_pairs` passes `m + 1` to a `double` parameter, and clang computes it as
+`(double)m + 1`, so `INT_MAX + 1` arrives as 2147483648 and `largeMinlen` reports it. The
+port does the same.
+
+**What wrapped weights do in C.** A wrapped sum can come back positive (three parallel
+edges of weight 2e9). C draws those inputs, and so does the port, byte for byte. A sum that
+wraps negative leaves a tree edge whose cut value is negative with no edge to replace it.
+`enter_edge` returns NULL, and `rank2` passes it to `update`, which dereferences it
+(`SLACK(f)`, ns.c:710) and crashes. Before, the port returned 2 there and went on, so it
+drew from broken ranks or panicked later in class2 or mincross. Now it fails the layout at
+that point (`network simplex: no edge can enter the tree for a tree edge with a negative
+cut value`). All 14 of C's crashes that were traced in a debug build stopped there: 7 of
+1500 generated inputs with extreme weights, and 7 hand-written ones. Other negative cut
+values make network simplex cycle until `maxiter`, which is INT_MAX for ranking. Measured
+at 1e5 to 7e7 iterations, that takes about 0.27 µs per iteration in C and 0.19 µs in the
+port, so about 10 and 7 minutes, and with a lower `nslimit1` the two outputs are identical.
+That is C's own limit, so the port adds none.
+
+**Also reported now:** ns.c's internal errors, `add_tree_edge: missing tree edge`,
+`add_tree_edge: empty outedge list` and `add_tree_edge: empty inedge list`,
+`update: mismatched lca in treeupdates` and `invalidate_path: skipped over LCA`. The port
+already returned where C does. Only the messages were missing. dot's `largeMinlen`
+(position.c:64) is reported too: `Edge length … larger than maximum 2147483647 allowed`.
+The port already clamped the edge as C does, and the error makes dot exit 1, as in C
+(part of #262).
+
+**Checked and left as they are:**
+
+- `RectArea`'s `UINT64_MAX / dim < area` (label/rectangle.c:73). Both sides of an rtree
+  rectangle must pass 2^32 points. Every engine has put the drawing's lower-left corner
+  near the origin before `addXLabels`, so such a rectangle has an object centre past
+  `INT_MAX`, and C fails `xlhdxload`'s assertion first. That assertion belongs to
+  [extreme coordinates](#extreme-coordinates).
+- Checks the port already has: `late_int`'s `rv > INT_MAX`, `scale_clamp`, dijkstra's
+  `INT_MAX - prevClosestDist < 10`, and `make_aux_edge`'s clamp.
+- Checks that cannot fail in the port: `Pobsopen`'s `n > INT_MAX`, and the `SIZE_MAX`
+  checks in `gv_calloc`/`gv_recalloc`/`LIST`, which Rust's allocator makes.
+- neato's overlap constraint graph (`constraint.c`) ranks with the same network simplex.
+  Its edges weigh 1 or 100, so `x_cutval`'s sum cannot overflow for a graph that fits in
+  memory, and the port ignores the error there.

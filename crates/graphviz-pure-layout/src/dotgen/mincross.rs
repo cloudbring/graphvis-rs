@@ -20,6 +20,9 @@ const CONVERGENCE: f64 = 0.995;
 /// dotneato_postprocess); the message was already reported.
 pub const ABORT_LAYOUT: &str = "\u{1}abort";
 
+/// C's `agerrorf` before `graphviz_exit(EXIT_FAILURE)` in `virtual_weight`.
+pub const OVERFLOW_VIRTUAL_WEIGHT: &str = "overflow when calculating virtual weight of edge";
+
 impl Dot<'_> {
     // ---------------- checkLabelOrder / fixLabelOrder ----------------
 
@@ -1450,10 +1453,19 @@ impl Dot<'_> {
         0
     }
 
-    pub fn virtual_weight(&mut self, e: E) {
+    /// `virtual_weight(e)`. C checks the product for overflow (mincross.c:1725) and exits
+    /// with its error; the port fails the layout with C's message.
+    pub fn virtual_weight(&mut self, e: E) -> Result<(), String> {
         let t =
             TABLE[self.endpoint_class(self.edges[e].tail)][self.endpoint_class(self.edges[e].head)];
-        self.edges[e].weight *= t;
+        let w = &mut self.edges[e].weight;
+        if i32::MAX / t < *w {
+            return Err(OVERFLOW_VIRTUAL_WEIGHT.to_string());
+        }
+        // A weight that already wrapped negative passes C's check and can overflow here,
+        // unchecked (undefined behaviour); the port wraps.
+        *w = w.wrapping_mul(t);
+        Ok(())
     }
 
     fn mincross_options(&mut self, g: G) {

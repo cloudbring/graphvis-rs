@@ -26,7 +26,8 @@ impl Dot<'_> {
         let t0 = self.uf_find(t);
         let h0 = self.uf_find(h);
         let w = self.edges[e].weight;
-        let rt = self.make_aux_edge(v, t0, t_len as f64, CL_BACK * w);
+        // No overflow check in C (undefined behaviour); the port wraps.
+        let rt = self.make_aux_edge(v, t0, t_len as f64, CL_BACK.wrapping_mul(w));
         let rh = self.make_aux_edge(v, h0, h_len as f64, w);
         self.edges[rt].to_orig = Some(e);
         self.edges[rh].to_orig = Some(e);

@@ -11,6 +11,13 @@
 //! Search order, tie-breaking and balancing modes follow C exactly. The
 //! recursive C helpers (`rerank`, `tree_adjust`) are iterative here; they only
 //! add a constant to every node of a subtree, so visiting order is irrelevant.
+//!
+//! C's `int` arithmetic on ranks, minimum lengths, weights and cut values has
+//! no overflow check except `x_cutval`'s sum, which the port reports as C does
+//! ([`OVERFLOW_EDGE_WEIGHT_SUM`]). Everywhere else overflow is undefined
+//! behaviour in C and the port wraps (`wrapping_*`), as the reference build
+//! does, so extreme `weight`, `minlen` or `nodesep` values reach C's checks
+//! instead of panicking on the way.
 
 pub const SEARCHSIZE: i32 = 30;
 
@@ -216,7 +223,9 @@ fn zapinlist(l: &mut Vec<usize>, e: usize) {
 
 #[inline]
 fn slack<G: NsGraph + ?Sized>(g: &G, e: usize) -> i32 {
-    g.rank(g.head(e)) - g.rank(g.tail(e)) - g.minlen(e)
+    g.rank(g.head(e))
+        .wrapping_sub(g.rank(g.tail(e)))
+        .wrapping_sub(g.minlen(e))
 }
 
 #[inline]
@@ -232,6 +241,7 @@ fn seq<G: NsGraph + ?Sized>(g: &G, v: usize, lo: i32, li: i32) -> bool {
 
 fn add_tree_edge<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx, e: usize) -> i32 {
     if tree_edge(g, e) {
+        graphviz_pure_core::diag::agerrorf("add_tree_edge: missing tree edge\n");
         return -1;
     }
     g.set_tree_index(e, ctx.tree_edge.len() as i32);
@@ -240,12 +250,14 @@ fn add_tree_edge<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx, e: usize) -> i32
     g.set_mark(t, true);
     g.tree_out_mut(t).push(e);
     if g.out_edges(t).len() < g.tree_out(t).len() {
+        graphviz_pure_core::diag::agerrorf("add_tree_edge: empty outedge list\n");
         return -1;
     }
     let h = g.head(e);
     g.set_mark(h, true);
     g.tree_in_mut(h).push(e);
     if g.in_edges(h).len() < g.tree_in(h).len() {
+        graphviz_pure_core::diag::agerrorf("add_tree_edge: empty inedge list\n");
         return -1;
     }
     0
@@ -261,6 +273,9 @@ fn invalidate_path<G: NsGraph + ?Sized>(g: &mut G, lca: usize, mut to_node: usiz
             break;
         };
         if g.lim(to_node) >= g.lim(lca) {
+            if to_node != lca {
+                graphviz_pure_core::diag::agerrorf("invalidate_path: skipped over LCA\n");
+            }
             break;
         }
         let (t, h) = (g.tail(e), g.head(e));
@@ -296,7 +311,7 @@ fn init_rank<G: NsGraph + ?Sized>(g: &mut G) {
         ctr += 1;
         for i in 0..g.in_edges(v).len() {
             let e = g.in_edges(v)[i];
-            let r = g.rank(g.tail(e)) + g.minlen(e);
+            let r = g.rank(g.tail(e)).wrapping_add(g.minlen(e));
             if r > g.rank(v) {
                 g.set_rank(v, r);
             }
@@ -445,10 +460,10 @@ fn enter_edge<G: NsGraph + ?Sized>(g: &G, e: usize) -> Option<usize> {
     }
 }
 
-fn init_cutvalues<G: NsGraph + ?Sized>(g: &mut G) {
+fn init_cutvalues<G: NsGraph + ?Sized>(g: &mut G) -> Result<(), String> {
     let first = g.nlist()[0];
     dfs_range_impl(g, first, None, 1, false);
-    dfs_cutval(g, first, None);
+    dfs_cutval(g, first, None)
 }
 
 fn tight_subtree_search<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx, v: usize, st: usize) -> i32 {
@@ -722,7 +737,7 @@ fn st_heapify(ctx: &mut Ctx, heap: &mut [usize], size: usize, mut i: usize) {
 fn tree_adjust<G: NsGraph + ?Sized>(g: &mut G, v: usize, delta: i32) {
     let mut stack: Vec<(usize, Option<usize>)> = vec![(v, None)];
     while let Some((v, from)) = stack.pop() {
-        let r = g.rank(v) + delta;
+        let r = g.rank(v).wrapping_add(delta);
         g.set_rank(v, r);
         for i in 0..g.tree_in(v).len() {
             let w = g.tail(g.tree_in(v)[i]);
@@ -748,7 +763,7 @@ fn merge_trees<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx, e: usize) -> Optio
             tree_adjust(g, ctx.subtrees[t0].rep, delta);
         }
     } else {
-        let delta = -slack(g, e);
+        let delta = slack(g, e).wrapping_neg();
         if delta != 0 {
             tree_adjust(g, ctx.subtrees[t1].rep, delta);
         }
@@ -759,7 +774,7 @@ fn merge_trees<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx, e: usize) -> Optio
     Some(st_set_union(ctx, t0, t1))
 }
 
-fn feasible_tree<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx) -> i32 {
+fn feasible_tree<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx) -> Result<i32, String> {
     let nl = g.nlist();
     for &n in &nl {
         g.set_subtree(n, None);
@@ -769,7 +784,7 @@ fn feasible_tree<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx) -> i32 {
         if g.subtree(n).is_none() {
             match find_tight_subtree(g, ctx, n) {
                 Some(t) => tree.push(t),
-                None => return 2,
+                None => return Ok(2),
             }
         }
     }
@@ -812,10 +827,10 @@ fn feasible_tree<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx) -> i32 {
         g.set_subtree(n, None);
     }
     if error != 0 {
-        return error;
+        return Ok(error);
     }
-    init_cutvalues(g);
-    0
+    init_cutvalues(g)?;
+    Ok(0)
 }
 
 fn treeupdate<G: NsGraph + ?Sized>(
@@ -833,9 +848,9 @@ fn treeupdate<G: NsGraph + ?Sized>(
         let d = if v == g.tail(e) { dir } else { !dir };
         let cv = g.cutvalue(e);
         if d {
-            g.set_cutvalue(e, cv + cutvalue);
+            g.set_cutvalue(e, cv.wrapping_add(cutvalue));
         } else {
-            g.set_cutvalue(e, cv - cutvalue);
+            g.set_cutvalue(e, cv.wrapping_sub(cutvalue));
         }
         let (t, h) = (g.tail(e), g.head(e));
         v = if g.lim(t) > g.lim(h) { t } else { h };
@@ -846,7 +861,7 @@ fn treeupdate<G: NsGraph + ?Sized>(
 fn rerank<G: NsGraph + ?Sized>(g: &mut G, v: usize, delta: i32) {
     let mut stack = vec![v];
     while let Some(v) = stack.pop() {
-        let r = g.rank(v) - delta;
+        let r = g.rank(v).wrapping_sub(delta);
         g.set_rank(v, r);
         let par = g.par(v);
         for i in 0..g.tree_out(v).len() {
@@ -874,11 +889,11 @@ fn update<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx, e: usize, f: usize) -> 
         } else {
             let s = g.tree_in(eh).len() + g.tree_out(eh).len();
             if s == 1 {
-                rerank(g, eh, -delta);
+                rerank(g, eh, delta.wrapping_neg());
             } else if g.lim(et) < g.lim(eh) {
                 rerank(g, et, delta);
             } else {
-                rerank(g, eh, -delta);
+                rerank(g, eh, delta.wrapping_neg());
             }
         }
     }
@@ -886,12 +901,13 @@ fn update<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx, e: usize, f: usize) -> 
     let (ft, fh) = (g.tail(f), g.head(f));
     let lca = treeupdate(g, ft, fh, cutvalue, true);
     if treeupdate(g, fh, ft, cutvalue, false) != lca {
+        graphviz_pure_core::diag::agerrorf("update: mismatched lca in treeupdates\n");
         return 2;
     }
     let lca_low = g.low(lca);
     invalidate_path(g, lca, fh);
     invalidate_path(g, lca, ft);
-    g.set_cutvalue(f, -cutvalue);
+    g.set_cutvalue(f, cutvalue.wrapping_neg());
     g.set_cutvalue(e, 0);
     exchange_tree_edges(g, ctx, e, f);
     let par = g.par(lca);
@@ -940,15 +956,19 @@ fn lr_balance<G: NsGraph + ?Sized>(g: &mut G, ctx: &mut Ctx) {
             if g.lim(t) < g.lim(h) {
                 rerank(g, t, delta / 2);
             } else {
-                rerank(g, h, -delta / 2);
+                rerank(g, h, delta.wrapping_neg() / 2);
             }
         }
     }
     free_tree_list(g, ctx);
 }
 
-fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) {
+fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) -> Result<(), String> {
     let maxrank = scan_and_normalize(g);
+    // C asserts `Maxrank >= 0` (ns.c:823); ranks that wrapped past INT_MAX fail it.
+    if maxrank < 0 {
+        return Err(RANKS_OVERFLOWED.to_string());
+    }
     let mut adj = 0;
     if let Some(s) = g.attr("TBbalance") {
         if s == "min" {
@@ -1008,17 +1028,17 @@ fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) {
         if !g.is_normal(n) {
             continue;
         }
-        let mut inweight = 0;
-        let mut outweight = 0;
+        let mut inweight: i32 = 0;
+        let mut outweight: i32 = 0;
         let mut low = 0;
         let mut high = maxrank;
         for &e in g.in_edges(n) {
-            inweight += g.weight(e);
-            low = low.max(g.rank(g.tail(e)) + g.minlen(e));
+            inweight = inweight.wrapping_add(g.weight(e));
+            low = low.max(g.rank(g.tail(e)).wrapping_add(g.minlen(e)));
         }
         for &e in g.out_edges(n) {
-            outweight += g.weight(e);
-            high = high.min(g.rank(g.head(e)) - g.minlen(e));
+            outweight = outweight.wrapping_add(g.weight(e));
+            high = high.min(g.rank(g.head(e)).wrapping_sub(g.minlen(e)));
         }
         if low < 0 {
             low = 0;
@@ -1036,7 +1056,8 @@ fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) {
                 }
             };
             let mut choice = low;
-            for i in (low + 1)..=high {
+            // `low + 1` past INT_MAX: no rank above `low` to choose.
+            for i in low.saturating_add(1)..=high {
                 if get(&nrank, i) < get(&nrank, choice) {
                     choice = i;
                 }
@@ -1057,6 +1078,7 @@ fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) {
         g.tree_out_mut(n).clear();
         g.set_mark(n, false);
     }
+    Ok(())
 }
 
 fn init_graph<G: NsGraph + ?Sized>(g: &mut G) -> bool {
@@ -1073,7 +1095,7 @@ fn init_graph<G: NsGraph + ?Sized>(g: &mut G) -> bool {
             g.set_priority(n, p);
             g.set_cutvalue(e, 0);
             g.set_tree_index(e, -1);
-            if g.rank(g.head(e)) - g.rank(g.tail(e)) < g.minlen(e) {
+            if g.rank(g.head(e)).wrapping_sub(g.rank(g.tail(e))) < g.minlen(e) {
                 feasible = false;
             }
         }
@@ -1083,8 +1105,15 @@ fn init_graph<G: NsGraph + ?Sized>(g: &mut G) -> bool {
     feasible
 }
 
-/// `rank2(g, balance, maxiter, search_size)`.
-pub fn rank2<G: NsGraph + ?Sized>(g: &mut G, balance: i32, maxiter: i32, search_size: i32) -> i32 {
+/// `rank2(g, balance, maxiter, search_size)`. `Ok` is C's return value; `Err` is where C
+/// exits (`x_cutval`'s overflow check, with C's message), crashes ([`NO_ENTERING_EDGE`]) or
+/// asserts ([`RANKS_OVERFLOWED`]).
+pub fn rank2<G: NsGraph + ?Sized>(
+    g: &mut G,
+    balance: i32,
+    maxiter: i32,
+    search_size: i32,
+) -> Result<i32, String> {
     let mut ctx = Ctx {
         tree_edge: Vec::new(),
         s_i: 0,
@@ -1092,7 +1121,7 @@ pub fn rank2<G: NsGraph + ?Sized>(g: &mut G, balance: i32, maxiter: i32, search_
         subtrees: Vec::new(),
     };
     if g.nlist().is_empty() {
-        return 0;
+        return Ok(0);
     }
     let feasible = init_graph(g);
     if !feasible {
@@ -1104,24 +1133,27 @@ pub fn rank2<G: NsGraph + ?Sized>(g: &mut G, balance: i32, maxiter: i32, search_
         SEARCHSIZE
     };
     let err = feasible_tree(g, &mut ctx);
-    if err != 0 {
+    if err != Ok(0) {
         free_tree_list(g, &mut ctx);
         return err;
     }
     if maxiter <= 0 {
         free_tree_list(g, &mut ctx);
-        return 0;
+        return Ok(0);
     }
     let mut iter = 0;
     while let Some(e) = leave_edge(g, &mut ctx) {
+        // C passes a NULL entering edge to `update`, which dereferences it (`SLACK(f)`,
+        // ns.c:710): C crashes. Weights that wrapped negative get here (#252). The port
+        // fails the layout.
         let Some(f) = enter_edge(g, e) else {
             free_tree_list(g, &mut ctx);
-            return 2;
+            return Err(NO_ENTERING_EDGE.to_string());
         };
         let err = update(g, &mut ctx, e, f);
         if err != 0 {
             free_tree_list(g, &mut ctx);
-            return err;
+            return Ok(err);
         }
         iter += 1;
         if iter >= maxiter {
@@ -1130,8 +1162,9 @@ pub fn rank2<G: NsGraph + ?Sized>(g: &mut G, balance: i32, maxiter: i32, search_
     }
     match balance {
         1 => {
-            tb_balance(g);
+            let balanced = tb_balance(g);
             ctx.tree_edge.clear();
+            balanced?;
         }
         2 => lr_balance(g, &mut ctx),
         _ => {
@@ -1139,11 +1172,11 @@ pub fn rank2<G: NsGraph + ?Sized>(g: &mut G, balance: i32, maxiter: i32, search_
             free_tree_list(g, &mut ctx);
         }
     }
-    0
+    Ok(0)
 }
 
 /// `rank(g, balance, maxiter)`: `rank2` with `searchsize` from the graph.
-pub fn rank<G: NsGraph + ?Sized>(g: &mut G, balance: i32, maxiter: i32) -> i32 {
+pub fn rank<G: NsGraph + ?Sized>(g: &mut G, balance: i32, maxiter: i32) -> Result<i32, String> {
     let search_size = match g.attr("searchsize") {
         Some(s) => crate::common::utils::atoi(&s) as i32,
         None => SEARCHSIZE,
@@ -1161,7 +1194,9 @@ fn x_val<G: NsGraph + ?Sized>(g: &G, e: usize, v: usize, dir: i32) -> i32 {
     } else {
         f = false;
         rv = if tree_edge(g, e) { g.cutvalue(e) } else { 0 };
-        rv -= g.weight(e);
+        // C has no check here (undefined behaviour on overflow); the port wraps, and
+        // `x_cutval`'s checked sum is where C reports the overflow.
+        rv = rv.wrapping_sub(g.weight(e));
     }
     let mut d = if dir > 0 {
         if g.head(e) == v { 1 } else { -1 }
@@ -1174,12 +1209,25 @@ fn x_val<G: NsGraph + ?Sized>(g: &G, e: usize, v: usize, dir: i32) -> i32 {
         d = -d;
     }
     if d < 0 {
-        rv = -rv;
+        rv = rv.wrapping_neg();
     }
     rv
 }
 
-fn x_cutval<G: NsGraph + ?Sized>(g: &mut G, f: usize) {
+/// The port's error where C's `rank2` passes a NULL entering edge to `update` and crashes.
+pub const NO_ENTERING_EDGE: &str =
+    "network simplex: no edge can enter the tree for a tree edge with a negative cut value";
+
+/// The port's error where C's `TB_balance` fails `assert(Maxrank >= 0)`.
+pub const RANKS_OVERFLOWED: &str =
+    "network simplex: the ranks overflowed, the highest rank is below the lowest";
+
+/// C's `agerrorf` before `graphviz_exit(EXIT_FAILURE)` in `x_cutval`.
+pub const OVERFLOW_EDGE_WEIGHT_SUM: &str = "overflow when computing edge weight sum";
+
+/// `x_cutval(f)`. C checks the sum for overflow (`sadd_overflow`, ns.c:1060) and exits
+/// with its error; the port fails with C's message.
+fn x_cutval<G: NsGraph + ?Sized>(g: &mut G, f: usize) -> Result<(), String> {
     let ft = g.tail(f);
     let (v, dir) = if g.par(ft) == Some(f) {
         (ft, 1)
@@ -1187,16 +1235,16 @@ fn x_cutval<G: NsGraph + ?Sized>(g: &mut G, f: usize) {
         (g.head(f), -1)
     };
     let mut sum: i32 = 0;
-    for &e in g.out_edges(v) {
-        sum = sum.wrapping_add(x_val(g, e, v, dir));
-    }
-    for &e in g.in_edges(v) {
-        sum = sum.wrapping_add(x_val(g, e, v, dir));
+    for &e in g.out_edges(v).iter().chain(g.in_edges(v)) {
+        sum = sum
+            .checked_add(x_val(g, e, v, dir))
+            .ok_or_else(|| OVERFLOW_EDGE_WEIGHT_SUM.to_string())?;
     }
     g.set_cutvalue(f, sum);
+    Ok(())
 }
 
-fn dfs_cutval<G: NsGraph + ?Sized>(g: &mut G, v: usize, par: Option<usize>) {
+fn dfs_cutval<G: NsGraph + ?Sized>(g: &mut G, v: usize, par: Option<usize>) -> Result<(), String> {
     struct St {
         v: usize,
         par: Option<usize>,
@@ -1248,10 +1296,11 @@ fn dfs_cutval<G: NsGraph + ?Sized>(g: &mut G, v: usize, par: Option<usize>) {
             continue;
         }
         if let Some(p) = todo[top].par {
-            x_cutval(g, p);
+            x_cutval(g, p)?;
         }
         todo.pop();
     }
+    Ok(())
 }
 
 fn dfs_range<G: NsGraph + ?Sized>(g: &mut G, v: usize, par: Option<usize>, low: i32) -> i32 {
