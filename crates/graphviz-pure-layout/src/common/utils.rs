@@ -141,7 +141,8 @@ mod tests {
 /// `agnameof` of an anonymous cluster (`%<id>`) is one static buffer, and `fillMap` stores
 /// that pointer as the key. Every later anonymous cluster matches the first one, and once the
 /// map is built the key reads as the last anonymous name `fillMap` saw: `findCluster` finds the
-/// first anonymous cluster by that name only.
+/// first anonymous cluster by that name only. (C's buffer also moves when a warning names a
+/// node whose `%`-name was renumbered; the port keeps fillMap's last name.)
 #[derive(Debug)]
 pub struct ClustMap<T> {
     named: HashMap<String, T>,
