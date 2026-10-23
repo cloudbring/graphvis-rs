@@ -6,7 +6,7 @@
 //! state kept for `aagerror`'s message.
 //!
 //! The rules are scan.l's, tried in its order with flex's longest match, and the input is
-//! what cgraph's `fgets` reader passes on ([`fgets_view`]).
+//! what cgraph's `fgets` or `agmemread` reader passes on ([`ScanInput`]).
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -91,51 +91,98 @@ pub struct Token {
 }
 
 thread_local! {
-    static INPUT_NAME: RefCell<Option<Arc<str>>> = const { RefCell::new(None) };
+    static READING_FILE: RefCell<Option<Arc<str>>> = const { RefCell::new(None) };
 }
 
-/// Runs `f` with `name` as the name of the input being read (`agconcat`'s `filename`, which
-/// becomes the scanner's `InputFile`). `chkNum` names it in its warning, or `input` when
-/// there is none, as for a library call (`agmemread`).
-pub fn with_input_name<R>(name: &str, f: impl FnOnce() -> R) -> R {
+/// Runs `f` with the input read as `agread` reads a file named `name`: through `ioread`'s
+/// `fgets` ([`ScanInput`]), with `name` as `agconcat`'s `filename`, which `chkNum` names in its
+/// warning. Outside it the input is a string read as `agmemread` reads one, and the warning
+/// names `input`.
+pub fn reading_file<R>(name: &str, f: impl FnOnce() -> R) -> R {
     struct Restore(Option<Arc<str>>);
     impl Drop for Restore {
         fn drop(&mut self) {
             let prev = self.0.take();
-            INPUT_NAME.with(|n| *n.borrow_mut() = prev);
+            READING_FILE.with(|n| *n.borrow_mut() = prev);
         }
     }
-    let _restore = Restore(INPUT_NAME.with(|n| n.replace(Some(Arc::from(name)))));
+    let _restore = Restore(READING_FILE.with(|n| n.replace(Some(Arc::from(name)))));
     f()
 }
 
-/// The text cgraph's scanner reads from `input`. `ioread` (`lib/cgraph/io.c`) reads a line at
-/// a time with `fgets` and returns `strlen` of it, so a NUL hides the rest of its line,
-/// newline included, and a line that starts with a NUL reads as the end of the input.
-/// Returns that text and the offsets in it where a hidden newline was.
-fn fgets_view(input: &str) -> (Cow<'_, str>, Vec<usize>) {
-    if !input.contains('\0') {
-        return (Cow::Borrowed(input), Vec::new());
-    }
-    let mut text = String::with_capacity(input.len());
-    let mut hidden_eols = Vec::new();
-    for line in input.split_inclusive('\n') {
-        match line.find('\0') {
-            None => text.push_str(line),
-            Some(0) => break,
-            Some(nul) => {
-                text.push_str(&line[..nul]);
-                if line.ends_with('\n') {
-                    hidden_eols.push(text.len());
+/// The text cgraph's scanner reads from an input, built once for all its graphs.
+///
+/// A file goes through `ioread` (`lib/cgraph/io.c`), which reads a line at a time with
+/// `fgets` and returns `strlen` of it, so a NUL hides the rest of its line, newline included,
+/// and a line that starts with a NUL reads as the end of the input. A string goes through
+/// `agmemread`, whose length is `strlen`: the first NUL ends it.
+pub(crate) struct ScanInput<'a> {
+    text: Cow<'a, str>,
+    /// Offsets in `text` where a newline hidden by a NUL was.
+    hidden_eols: Vec<usize>,
+    /// `agconcat`'s `filename`, for a file.
+    name: Option<Arc<str>>,
+}
+
+impl<'a> ScanInput<'a> {
+    pub(crate) fn new(input: &'a str) -> Self {
+        let name = READING_FILE.with(|n| n.borrow().clone());
+        let Some(first_nul) = input.find('\0') else {
+            return Self {
+                text: Cow::Borrowed(input),
+                hidden_eols: Vec::new(),
+                name,
+            };
+        };
+        if name.is_none() {
+            return Self {
+                text: Cow::Borrowed(&input[..first_nul]),
+                hidden_eols: Vec::new(),
+                name,
+            };
+        }
+        let mut text = String::with_capacity(input.len());
+        let mut hidden_eols = Vec::new();
+        for line in input.split_inclusive('\n') {
+            match line.find('\0') {
+                None => text.push_str(line),
+                Some(0) => break,
+                Some(nul) => {
+                    text.push_str(&line[..nul]);
+                    if line.ends_with('\n') {
+                        hidden_eols.push(text.len());
+                    }
                 }
             }
         }
+        Self {
+            text: Cow::Owned(text),
+            hidden_eols,
+            name,
+        }
     }
-    (Cow::Owned(text), hidden_eols)
+
+    /// Where the `n`-th line (`n` >= 1) read from offset `from` ends: the offset of the next
+    /// line, counting the lines whose newline a NUL hid.
+    pub(crate) fn line_end(&self, from: usize, n: usize) -> Option<usize> {
+        let mut newlines = self.text[from..]
+            .match_indices('\n')
+            .map(|(i, _)| from + i + 1)
+            .peekable();
+        let first_hidden = self.hidden_eols.partition_point(|&h| h <= from);
+        let mut hidden = self.hidden_eols[first_hidden..].iter().copied().peekable();
+        // the two sorted sequences of line ends, merged
+        std::iter::from_fn(move || match (newlines.peek(), hidden.peek()) {
+            (Some(a), Some(b)) if a < b => newlines.next(),
+            (Some(_), None) => newlines.next(),
+            _ => hidden.next(),
+        })
+        .nth(n.saturating_sub(1))
+    }
 }
 
 pub struct Lexer<'a> {
-    /// The input as the scanner reads it ([`fgets_view`]).
+    /// The input as the scanner reads it ([`ScanInput`]), from where this read starts.
     input: Cow<'a, str>,
     pos: usize,
     /// Line of the input (1-based), counting the newlines a NUL hid.
@@ -145,25 +192,45 @@ pub struct Lexer<'a> {
     c_line: i32,
     /// cgraph's `InputFile`, when a line directive named one.
     file: Option<Arc<str>>,
-    /// `agconcat`'s `filename` ([`with_input_name`]).
+    /// `agconcat`'s `filename` ([`reading_file`]).
     input_name: Option<Arc<str>>,
-    /// Offsets in `input` where a newline hidden by a NUL was, and the next one to pass.
-    hidden_eols: Vec<usize>,
+    /// Offsets where a newline hidden by a NUL was, counted from `hidden_base` (where `input`
+    /// starts in the [`ScanInput`]), and the next one to pass.
+    hidden_eols: Cow<'a, [usize]>,
+    hidden_base: usize,
     next_hidden_eol: usize,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
-        let (input, hidden_eols) = fgets_view(input);
+        let scan = ScanInput::new(input);
         Self {
-            input,
+            input: scan.text,
             pos: 0,
             line: 1,
             col: 1,
             c_line: 1,
             file: None,
-            input_name: INPUT_NAME.with(|n| n.borrow().clone()),
-            hidden_eols,
+            input_name: scan.name,
+            hidden_eols: Cow::Owned(scan.hidden_eols),
+            hidden_base: 0,
+            next_hidden_eol: 0,
+        }
+    }
+
+    /// A new scanner (a new `agread`) on `scan` from offset `from`, the start of a line.
+    pub(crate) fn from_scan_input(scan: &'a ScanInput<'a>, from: usize) -> Self {
+        let first_hidden = scan.hidden_eols.partition_point(|&h| h <= from);
+        Self {
+            input: Cow::Borrowed(&scan.text[from..]),
+            pos: 0,
+            line: 1,
+            col: 1,
+            c_line: 1,
+            file: None,
+            input_name: scan.name.clone(),
+            hidden_eols: Cow::Borrowed(&scan.hidden_eols[first_hidden..]),
+            hidden_base: from,
             next_hidden_eol: 0,
         }
     }
@@ -201,7 +268,7 @@ impl<'a> Lexer<'a> {
         } else {
             self.col += 1;
         }
-        if self.hidden_eols.get(self.next_hidden_eol) == Some(&self.pos) {
+        if self.hidden_eols.get(self.next_hidden_eol) == Some(&(self.hidden_base + self.pos)) {
             self.next_hidden_eol += 1;
             self.line += 1;
             self.col = 1;
@@ -626,7 +693,9 @@ mod tests {
 
     #[test]
     fn nul_hides_the_rest_of_its_line_like_fgets() {
-        let tokens = Lexer::new("a \0 b\nc\0\nd\n\0e\nf").tokenize_all().unwrap();
+        let tokens = reading_file("f.gv", || {
+            Lexer::new("a \0 b\nc\0\nd\n\0e\nf").tokenize_all().unwrap()
+        });
         let got: Vec<_> = tokens
             .iter()
             .map(|t| (t.kind.clone(), t.line, t.c_line))
@@ -641,6 +710,22 @@ mod tests {
                 (TokenKind::Eof, 4, 2),
             ]
         );
+    }
+
+    #[test]
+    fn nul_ends_a_string_like_agmemread() {
+        assert_eq!(kinds("a \0 b\nc"), [ident("a"), TokenKind::Eof]);
+    }
+
+    #[test]
+    fn line_end_counts_the_lines_a_nul_hid() {
+        let scan = reading_file("f.gv", || ScanInput::new("a}\0x\nb}\nc\0\n\0d"));
+        // `a}`, `b}`, `c` are the lines; the text is `a}b}\nc`.
+        assert_eq!(scan.line_end(0, 1), Some(2));
+        assert_eq!(scan.line_end(0, 2), Some(5));
+        assert_eq!(scan.line_end(2, 1), Some(5));
+        assert_eq!(scan.line_end(5, 1), Some(6));
+        assert_eq!(scan.line_end(6, 1), None);
     }
 
     #[test]

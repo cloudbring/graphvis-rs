@@ -378,8 +378,8 @@ fn main() -> ExitCode {
                 (bytes, err)
             }
         };
-        // The scanner's warnings name the input as `agconcat`'s `filename`.
-        let (outputs, err): (Vec<Vec<u8>>, _) = graphviz_pure_parser::with_input_name(name, render);
+        // `agread` on the file: read through `fgets`, named as `agconcat`'s `filename`.
+        let (outputs, err): (Vec<Vec<u8>>, _) = graphviz_pure_parser::reading_file(name, render);
         if let Some(e) = &err {
             failed = true;
             if outputs.is_empty() {

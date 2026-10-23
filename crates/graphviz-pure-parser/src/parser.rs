@@ -2,7 +2,7 @@
 //! with full lexical scoping for `graph`, `node`, and `edge` defaults across
 //! nested subgraphs and clusters.
 
-use crate::lexer::{Lexer, ScanState, Token, TokenKind};
+use crate::lexer::{Lexer, ScanInput, ScanState, Token, TokenKind};
 type AttrMap2 = std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>;
 
 use graphviz_pure_core::{
@@ -67,9 +67,9 @@ enum DictKind {
 }
 
 impl<'a> Parser<'a> {
-    fn new(input: &'a str, globals: &GlobalAttrs) -> Result<Self> {
-        Ok(Self {
-            lexer: Lexer::new(input),
+    fn new(lexer: Lexer<'a>, globals: &GlobalAttrs) -> Self {
+        Self {
+            lexer,
             tokens: Vec::new(),
             pos: 0,
             graph: Graph::new("", GraphKind::Undirected, false),
@@ -80,12 +80,12 @@ impl<'a> Parser<'a> {
             anon_ctr: 1,
             sub_parent: Vec::new(),
             started: false,
-        })
+        }
     }
 
     /// Parses the first graph in `input`.
     pub fn parse_str(input: &'a str) -> Result<Graph> {
-        let mut parser = Self::new(input, &GlobalAttrs::default())?;
+        let mut parser = Self::new(Lexer::new(input), &GlobalAttrs::default());
         parser.read_graph()?;
         Ok(parser.graph)
     }
@@ -110,12 +110,11 @@ impl<'a> Parser<'a> {
         globals: &GlobalAttrs,
     ) -> (Vec<Graph>, Option<GraphvizError>) {
         let mut graphs = Vec::new();
-        let mut rest = input;
+        // Built once: every `agread` goes on reading the same stream.
+        let scan = ScanInput::new(input);
+        let mut from = 0;
         loop {
-            let mut parser = match Self::new(rest, globals) {
-                Ok(p) => p,
-                Err(e) => return (graphs, Some(e)),
-            };
+            let mut parser = Parser::new(Lexer::from_scan_input(&scan, from), globals);
             if parser.peek().kind == TokenKind::Eof {
                 return (graphs, None);
             }
@@ -123,12 +122,8 @@ impl<'a> Parser<'a> {
                 return (graphs, Some(e));
             }
             graphs.push(parser.graph);
-            // the byte after the `rbrace_line`-th newline
-            match rest
-                .match_indices('\n')
-                .nth(parser.rbrace_line.saturating_sub(1))
-            {
-                Some((i, _)) => rest = &rest[i + 1..],
+            match scan.line_end(from, parser.rbrace_line) {
+                Some(end) => from = end,
                 None => return (graphs, None),
             }
         }
@@ -341,10 +336,22 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_stmt(&mut self) -> Result<()> {
-        match self.peek().kind.clone() {
-            TokenKind::Graph | TokenKind::Node | TokenKind::Edge => self.parse_attr_stmt(),
-            TokenKind::Subgraph | TokenKind::LBrace => self.parse_compound(),
-            _ if Self::is_atom_token(&self.peek().kind) => {
+        enum Stmt {
+            Attr,
+            Compound,
+            Atom,
+            Other,
+        }
+        let stmt = match &self.peek().kind {
+            TokenKind::Graph | TokenKind::Node | TokenKind::Edge => Stmt::Attr,
+            TokenKind::Subgraph | TokenKind::LBrace => Stmt::Compound,
+            k if Self::is_atom_token(k) => Stmt::Atom,
+            _ => Stmt::Other,
+        };
+        match stmt {
+            Stmt::Attr => self.parse_attr_stmt(),
+            Stmt::Compound => self.parse_compound(),
+            Stmt::Atom => {
                 if let Some(span) = self.atom_span_len(0)
                     && self.peek_n(span).kind == TokenKind::Equals
                 {
@@ -363,7 +370,7 @@ impl<'a> Parser<'a> {
                 }
                 self.parse_compound()
             }
-            _ => Err(syntax_error(self.peek())),
+            Stmt::Other => Err(syntax_error(self.peek())),
         }
     }
 

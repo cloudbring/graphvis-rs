@@ -1863,6 +1863,37 @@ fn nul_hides_the_rest_of_its_line() {
     );
 }
 
+/// The scanner reads a token when the grammar asks for one, as bison calls `yylex`: once a
+/// graph is open (`startgraph`), nothing after a syntax error is scanned (`endgraph` pushes
+/// EOF), and each graph's tokens are scanned once. Before the header, bison's error recovery
+/// discards tokens to the end of the input, so the scanner warns about all of them. C prints
+/// those warnings after the error; the port prints the error last (#278).
+#[test]
+fn scanner_warnings_come_from_the_tokens_c_reads() {
+    let (_, err, _) = run(&["-Tcanon"], "digraph { a -> ; 2x }\n3y\n");
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near ';'\n");
+    let (_, err, ok) = run(&["-Tcanon"], "digraph { a }\ndigraph { 2x }\n");
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: syntax ambiguity - badly delimited number '2x' in line 1 of <stdin> splits \
+         into two tokens\n"
+    );
+    let (_, err, _) = run(&["-Tcanon"], "; 2x\n3y\n");
+    let mut lines: Vec<_> = err.lines().collect();
+    lines.sort_unstable();
+    assert_eq!(
+        lines,
+        [
+            "Error: <stdin>: syntax error in line 1 near ';'",
+            "Warning: syntax ambiguity - badly delimited number '2x' in line 1 of <stdin> splits \
+             into two tokens",
+            "Warning: syntax ambiguity - badly delimited number '3y' in line 2 of <stdin> splits \
+             into two tokens",
+        ]
+    );
+}
+
 /// C: `Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits
 /// into two tokens` before the error (scan.l `chkNum`), which splits the token in two (#97).
 #[test]

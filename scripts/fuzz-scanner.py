@@ -28,7 +28,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GVBINDIR = os.environ.get("GVBINDIR", str(pathlib.Path.home() / "src/gv-ref/lutplugins"))
-C_BIN = os.environ.get("C_DOT", "dot")
+C_BIN = os.environ.get("C_DOT", "/opt/homebrew/bin/dot")
 PORT_BIN = os.environ.get("PORT_BIN", str(ROOT / "target/release/graphviz-pure"))
 
 BOM = b"\xef\xbb\xbf"
@@ -146,7 +146,7 @@ def main():
     ap.add_argument("--out", type=pathlib.Path)
     ap.add_argument("--port", default=PORT_BIN)
     ap.add_argument("--baseline", metavar="BIN", help="another port binary (say, master's) to count against")
-    ap.add_argument("--jobs", type=int, default=os.cpu_count())
+    ap.add_argument("--jobs", type=int, default=2)
     ap.add_argument("--print", type=int, metavar="SEED")
     a = ap.parse_args()
     if a.print is not None:
