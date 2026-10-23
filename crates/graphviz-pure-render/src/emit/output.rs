@@ -4,7 +4,7 @@
 use super::model::Model;
 use super::num::fmt_g;
 use super::{y_dir, y_offset};
-use graphviz_pure_core::{Graph, Point, attr_is_html, set_attr};
+use graphviz_pure_core::{Graph, Point, attr_is_html, math, set_attr};
 use graphviz_pure_geom::shapes::{RecordField, ShapeKind};
 use std::collections::BTreeSet;
 use std::fmt::Write;
@@ -34,21 +34,108 @@ fn record_rects(f: &RecordField, c: Point, y_off: f64, out: &mut String) {
     }
 }
 
+/// C's `strtoul(p, NULL, 0)`: an optional sign, then a hexadecimal (`0x`), octal (`0`) or
+/// decimal number; a negative value wraps, as C's does.
+fn strtoul0(s: &str) -> u64 {
+    let s = s.trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r']);
+    let (neg, s) = match s.as_bytes().first() {
+        Some(b'-') => (true, &s[1..]),
+        Some(b'+') => (false, &s[1..]),
+        _ => (false, s),
+    };
+    let b = s.as_bytes();
+    let (radix, digits) =
+        if b.len() > 2 && b[0] == b'0' && (b[1] | 0x20) == b'x' && b[2].is_ascii_hexdigit() {
+            (16, &s[2..])
+        } else if b.first() == Some(&b'0') {
+            (8, s)
+        } else {
+            (10, s)
+        };
+    let mut v: u64 = 0;
+    for c in digits.chars() {
+        let Some(d) = c.to_digit(radix) else { break };
+        match v
+            .checked_mul(u64::from(radix))
+            .and_then(|v| v.checked_add(u64::from(d)))
+        {
+            Some(n) => v = n,
+            // ULONG_MAX, whatever the sign
+            None => return u64::MAX,
+        }
+    }
+    if neg { v.wrapping_neg() } else { v }
+}
+
+/// The `vertices` of a polygon node (`attach_attrs_and_arrows`, `N_vertices && isPolygon(n)`):
+/// its polygon's first ring in inches, or for an ellipse (`sides < 3`) `samplepoints` points
+/// on it.
+fn vertices(n: &super::model::RNode<'_>, y_off: f64) -> Option<String> {
+    let poly = n.geom.polygon.as_ref()?;
+    // isPolygon: the shape's init function is poly_init (point_init makes points).
+    if n.geom.shape == ShapeKind::Point {
+        return None;
+    }
+    let yf = |y: f64| y_dir(y, y_off / 72.0);
+    let mut sides = poly.sides;
+    if sides < 3 {
+        sides = n
+            .attrs
+            .get("samplepoints")
+            .map_or(8, |p| usize::try_from(strtoul0(p)).unwrap_or(usize::MAX));
+        if sides < 3 {
+            sides = 8;
+        }
+    }
+    let mut s = String::new();
+    for i in 0..sides {
+        if i > 0 {
+            s.push(' ');
+        }
+        let (x, y) = if poly.sides >= 3 {
+            let v = poly.vertices.get(i).copied().unwrap_or_default();
+            (v.x / 72.0, v.y / 72.0)
+        } else {
+            let a = i as f64 / sides as f64 * std::f64::consts::PI * 2.0;
+            (
+                n.geom.width / 2.0 * math::cos(a),
+                n.geom.height / 2.0 * math::sin(a),
+            )
+        };
+        let _ = write!(s, "{} {}", g5(x), g5(yf(y)));
+    }
+    Some(s)
+}
+
 /// `attach_attrs_and_arrows`: returns a copy of the graph with `pos`, `width`, `height`,
-/// `rects`, `bb`, `lp`, `lwidth`, `lheight`, `xlp`, `head_lp`, `tail_lp` set, and whether any
-/// edge has start or end arrows.
+/// `rects`, `vertices`, `bb`, `lp`, `lwidth`, `lheight`, `xlp`, `head_lp`, `tail_lp` set,
+/// and whether any edge has start or end arrows.
 pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<String>>) {
     let mut g = m.g.clone();
     let (mut s_arrows, mut e_arrows) = (false, false);
     let y_off = y_offset(m.bb);
     let pt = |p: Point| pt(p, y_off);
+    // `N_vertices`: the input declares `vertices` for nodes.
+    let n_vertices = m.g.dicts.iter().any(|d| d.node.contains_key("vertices"))
+        || m.g.node_defaults.contains_key("vertices")
+        || m.g.nodes.iter().any(|n| n.attrs.contains_key("vertices"));
+    // dim3 = GD_odim(g) >= 3
+    let dim3 = m.g.layout.odim >= 3;
     for (i, n) in m.nodes.iter().enumerate() {
         let layout = &m.g.nodes[i].layout;
         if layout.clust_node {
             continue;
         }
         let a = &mut g.nodes[i].attrs;
-        set_attr(a, "pos", pt(n.coord), false);
+        let mut pos = pt(n.coord);
+        if dim3 {
+            // POINTS_PER_INCH * ND_pos(n)[k] for k in 2..GD_odim(g)
+            for k in 2..m.g.layout.odim {
+                let z = layout.higher_dims.get(k - 2).copied().unwrap_or(0.0);
+                let _ = write!(pos, ",{}", g5(z));
+            }
+        }
+        set_attr(a, "pos", pos, false);
         set_attr(a, "height", g5(n.ht / 72.0), false);
         set_attr(a, "width", g5((n.lw + n.rw) / 72.0), false);
         if let Some(xl) = n.xlabel.as_ref().filter(|l| l.set) {
@@ -61,6 +148,8 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
             record_rects(f, n.coord, y_off, &mut s);
             s.pop();
             set_attr(a, "rects", s, false);
+        } else if n_vertices && let Some(v) = vertices(n, y_off) {
+            set_attr(a, "vertices", v, false);
         }
     }
     for (i, e) in m.edges.iter().enumerate() {

@@ -908,6 +908,68 @@ fn input_label_positions_are_not_placed_labels() {
     assert!(!out.contains("AAAA") && !out.contains("EEEE"), "{out}");
 }
 
+// Issue #129: `attach_attrs_and_arrows` writes the polygon of every `poly_init` node when the
+// graph declares `vertices`: its vertices in inches, or `samplepoints` points on an ellipse.
+#[test]
+fn declared_vertices_are_written_for_polygon_nodes() {
+    let src = "graph G { node [vertices=\"\"]; a [shape=box]; b [shape=hexagon]; \
+        c [shape=ellipse]; f [shape=point]; a -- b -- c -- f; }\n";
+    for engine in ["-Kneato", "-Kdot"] {
+        let (out, err, ok) = run(&[engine, "-Tdot"], src);
+        assert!(ok, "{err}");
+        for v in [
+            "vertices=\"0.375 0.25 -0.375 0.25 -0.375 -0.25 0.375 -0.25\"",
+            "vertices=\"0.375 -5.9805e-17 0.1875 0.25 -0.1875 0.25 -0.375 3.5353e-17 \
+             -0.1875 -0.25 0.1875 -0.25\"",
+        ] {
+            assert!(out.contains(v), "{engine}: {v} in {out}");
+        }
+        // the point keeps the declared default
+        assert_eq!(out.matches("vertices=").count(), 4, "{engine}: {out}");
+    }
+    // an ellipse: `samplepoints` (8) points on it
+    let (out, err, ok) = run(&["-Kneato", "-Tdot"], src);
+    assert!(ok, "{err}");
+    let ellipse = "vertices=\"0.375 0 0.26517 0.17678 2.2962e-17 0.25 -0.26517 0.17678 -0.375 \
+        3.0616e-17 -0.26517 -0.17678 -6.8886e-17 -0.25 0.26517 -0.17678\"";
+    assert!(out.contains(ellipse), "{out}");
+}
+
+// Issue #328: with `dimen=3` neato and sfdp write each node's `pos` as `x,y,z`
+// (`GD_odim(g) >= 3` in `attach_attrs_and_arrows`).
+#[test]
+fn dimen_3_writes_three_coordinates() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n", "-Tdot"],
+        "graph G { dimen=3; a [pos=\"1,2\"]; b [pos=\"50,60\" z=7]; a -- b }\n",
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("pos=\"27,18,57.091\""), "{out}");
+    assert!(out.contains("pos=\"76,76,7\""), "{out}");
+    for (engine, want) in [
+        ("-Kneato", "pos=\"27,18,33.679\""),
+        ("-Ksfdp", "pos=\"27,18,93.337\""),
+    ] {
+        let (out, err, ok) = run(&[engine, "-Tdot"], "graph G { dimen=3; a -- b }\n");
+        assert!(ok, "{err}");
+        assert!(out.contains(want), "{engine}: {out}");
+    }
+}
+
+// Issue #329: `rec_attach_bb` sets a registered cluster's `bb` with `agxset`, which makes it
+// the cluster's own value even where it equals the one it inherited, so `-Tdot` prints it.
+#[test]
+fn a_cluster_keeps_the_bb_attach_attrs_set_on_it() {
+    let src = "graph G { graph [bb=\"0,0,100,100\"]; subgraph clusterB { d [pos=\"40,40\"] } \
+        x [pos=\"90,90\"] }\n";
+    let (out, err, ok) = run(&["-Kneato", "-n", "-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("subgraph clusterB {\n\t\tgraph [bb=\"0,0,100,100\"];"),
+        "{out}"
+    );
+}
+
 // Extreme coordinates (docs/porting/crashes.md): C's `sscanf("%lf")` reads `nan` and `inf` in
 // `pos`, and a finite `pos` can overflow once scaled to points. Where C produces output (often
 // a component at NaN) the port matches it; where C crashes or hangs, the port must not. These

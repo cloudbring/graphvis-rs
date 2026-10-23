@@ -149,15 +149,22 @@ fn attached(
 
 /// Records the attributes the layout and renderers set in cgraph's dictionaries:
 /// `safe_dcl` for node and edge attributes, and graph values as local symbols (`agxset`).
-fn sync_dicts(g: &mut Graph, orig: &Graph) {
+/// `set` holds, per subgraph, the graph attributes a writer set with `agxset`
+/// (`rec_attach_bb`, xdot's `_draw_`), which become local values even when they equal the
+/// inherited ones.
+fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<String>]) {
     use graphviz_pure_core::{AttrSym, HTML_VALUE_PREFIX, attr_is_html};
     let mark = |k: &str| k.starts_with(HTML_VALUE_PREFIX);
+    let none = std::collections::BTreeSet::new();
     let set_graph = |d: &mut std::collections::BTreeMap<String, AttrSym>,
                      now: &graphviz_pure_core::AttrMap,
-                     before: &graphviz_pure_core::AttrMap| {
+                     before: &graphviz_pure_core::AttrMap,
+                     set: &std::collections::BTreeSet<String>| {
         for (k, v) in now {
             if !mark(k)
-                && (before.get(k) != Some(v) || attr_is_html(before, k) != attr_is_html(now, k))
+                && (before.get(k) != Some(v)
+                    || attr_is_html(before, k) != attr_is_html(now, k)
+                    || set.contains(k))
             {
                 let sym = d.entry(k.clone()).or_default();
                 sym.defval = v.clone();
@@ -172,7 +179,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
             g.dicts[0].graph.entry(k.clone()).or_default();
         }
     }
-    set_graph(&mut g.dicts[0].graph, &root_now, root_before);
+    set_graph(&mut g.dicts[0].graph, &root_now, root_before, &none);
     for i in 0..g.subgraphs.len() {
         let now = g.subgraphs[i].graph_attrs.clone();
         for k in now.keys().filter(|k| !mark(k)) {
@@ -184,6 +191,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
             &mut g.dicts[i + 1].graph,
             &now,
             &orig.subgraphs[i].graph_attrs,
+            set.get(i).unwrap_or(&none),
         );
     }
     let mut node_keys = std::collections::BTreeSet::new();
@@ -347,7 +355,7 @@ impl<'g> GraphJobs<'g> {
             with_earlier(&mut g, self.set.as_ref(), true);
             if format == OutputFormat::Canon {
                 if g.dicts.len() == g.subgraphs.len() + 1 {
-                    sync_dicts(&mut g, graph);
+                    sync_dicts(&mut g, graph, &[]);
                     return Ok(agwrite::agwrite(&g));
                 }
                 return Ok(write_canon(&g));
@@ -398,7 +406,7 @@ impl<'g> GraphJobs<'g> {
                 with_earlier(&mut g, self.set.as_ref(), false);
                 keep_set(&mut self.set, &g);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
-                    sync_dicts(&mut g, graph);
+                    sync_dicts(&mut g, graph, &forced);
                     agwrite::agwrite(&g)
                 } else {
                     emit::output::propagate_inherited(&mut g, graph, &forced);

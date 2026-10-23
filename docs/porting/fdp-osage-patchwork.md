@@ -90,7 +90,7 @@ model does not recycle there.
 (`ClusterEdges::work`: cluster-named nodes deleted, one `__0:<cluster>` node per
 cluster — C's name counter never advances — and cloned edges) and maps the
 layout back. The deleted nodes keep default attributes and carry
-`graphviz_pure_core::CLUST_NODE_KEY`, which tells the renderers neither to draw them nor to
+`NodeLayout::clust_node`, which tells the renderers neither to draw them nor to
 print layout attributes; edges of deleted nodes that were not re-attached are
 removed, as in C.
 

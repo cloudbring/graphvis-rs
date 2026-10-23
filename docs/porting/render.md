@@ -6,6 +6,18 @@ Node, label, record and HTML geometry come from `graphviz_pure_geom::node_size` 
 `graphviz_pure_geom::html_label` (the init half of `shapes.c`, `labels.c`, `htmltable.c`);
 positions come from the layout.
 
+The layout passes its results to the renderers in typed fields, never in the
+user's attributes: `NodeData::pos`/`width`/`height` and `NodeData::layout`
+(`AGSEQ`, `IS_CLUST_NODE`, `ND_lw`/`ND_rw`, a placed xlabel, `ND_pos[2..odim]`),
+`EdgeData::spline`/`label_pos`/`label_unplaced` and `EdgeData::layout` (xlabel,
+head and tail labels with their `set` flag, port names, concentrated arrow
+flags, `IGNORED`), and `Graph::bb`/`SubgraphData::bb` with `GraphLayout`
+(`GD_clust` registration and order, `GD_label` position, `GD_odim`). An `xlp` or
+`lp` in the input is an attribute like any other: only `neato -n` reads one, as
+its layout. The writers turn the typed results into attributes as
+`attach_attrs_and_arrows` does, and `ND_shape_info`'s polygon (`vertices`) is
+the model's node geometry.
+
 ## Module map
 
 | Rust | C source |
