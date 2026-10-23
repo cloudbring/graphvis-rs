@@ -227,6 +227,11 @@ impl Dot<'_> {
         let edge_base = self.edges.len();
         if et == EdgeType::Curved {
             self.reset_rw();
+            if self.graphs[0].has_labels & EDGE_LABEL != 0 {
+                graphviz_pure_core::diag::agwarningf(
+                    "edge labels with splines=curved not supported in dot - use xlabels\n",
+                );
+            }
         }
         if et == EdgeType::Ortho && ORTHO_PORTED {
             self.reset_rw();

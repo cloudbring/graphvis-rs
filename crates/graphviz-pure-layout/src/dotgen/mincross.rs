@@ -260,6 +260,11 @@ impl Dot<'_> {
                     self.do_ordering_node(g, n, true);
                 } else if o == "in" {
                     self.do_ordering_node(g, n, false);
+                } else if !o.is_empty() {
+                    graphviz_pure_core::diag::agerrorf(&format!(
+                        "ordering '{o}' not recognized for node '{}'.\n",
+                        self.nodes[n].name
+                    ));
                 }
             }
         }
@@ -296,6 +301,10 @@ impl Dot<'_> {
                 self.do_ordering(g, true);
             } else if ordering == "in" {
                 self.do_ordering(g, false);
+            } else if !ordering.is_empty() {
+                graphviz_pure_core::diag::agerrorf(&format!(
+                    "ordering '{ordering}' not recognized.\n"
+                ));
             }
         } else {
             for subg in self.graphs[g].subgs.clone() {

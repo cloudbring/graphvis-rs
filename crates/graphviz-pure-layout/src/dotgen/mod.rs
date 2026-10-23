@@ -233,6 +233,16 @@ impl<'a> Dot<'a> {
     pub fn dot_layout(&mut self) -> std::result::Result<(), String> {
         let maxphase = utils::late_int(self.agget(0, "phase"), -1, 1);
         self.set_edge_type();
+        // `setAspect` (aspect.c): `sscanf(p, "%lf,%d", ...) > 0`.
+        if self
+            .agget(0, "aspect")
+            .is_some_and(|p| graphviz_pure_core::strtod::scan_lf(p).is_some())
+        {
+            graphviz_pure_core::diag::agwarningf(
+                "the aspect attribute has been disabled due to implementation flaws - \
+                 attribute ignored.\n",
+            );
+        }
         self.dot_init_subg();
         self.dot_init_node_edge();
         self.dot_rank()?;
