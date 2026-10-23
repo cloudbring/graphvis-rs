@@ -11,7 +11,7 @@
    "doublecircle"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "c5f9528b6b9eea9a1338ae59b3e4334a104a7afd5d0966fa35966d021e684153",
@@ -34,7 +34,7 @@
    "filled styles"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "f8b33359aff39f67f4dfd45927c4853eecd4d57bff64e56bb0ab742cdfd12ec4",
@@ -57,7 +57,7 @@
    "41 nodes"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "bf928876925234f7cfaab4683a753423508b74d3c040d2b31506c9752838dacf",
@@ -80,7 +80,7 @@
    "ports"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "fc74dead1e83e86e827e1ff03055cc43fdcc51048093d6d99dcbebe2d4cc47d1",
@@ -104,7 +104,7 @@
    "fonts"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "aa71f3a71869aff115f8535c8a3b99faff4b3478f71a45568fb39e4a4de15186",
@@ -129,7 +129,7 @@
    "clusters"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.wasm.gv",
   "sha256": {
    "c": "925e2f1a0872e3717cf89a4b2fd54f933aa8a3fe86c86f5a5fa6b734d033e357",
@@ -153,7 +153,7 @@
    "splines=ortho"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.wasm.gv",
   "sha256": {
    "c": "107d90c7e09990a2c635a859a31ee0874f648574732e5538990e1ac9555e4cc9",
@@ -177,7 +177,7 @@
    "concentrate=true"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.wasm.gv",
   "sha256": {
    "c": "cdc759350fbadca4e939896ef9621a115c225ce569fbd1df3b44147342bff21e",
@@ -201,7 +201,7 @@
    "splines=polyline"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.wasm.gv",
   "sha256": {
    "c": "43481b1b08c8a3dc8790d192be0b0f6efdd875b552fc5453e7336ec24ac54772",
@@ -226,7 +226,7 @@
    "edge labels"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.wasm.gv",
   "sha256": {
    "c": "8ef8591acf0ff0f30c5d938b7175c20b74fc3d50c51a1de61e6941f3cde55506",
@@ -250,7 +250,7 @@
    "dir"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "7a0a928919f2b58d455c8133b509aacf6639e5ff0c52b5365d72693b7cee2848",
@@ -274,7 +274,7 @@
    "styles"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "4117235e29e9c259c89497c3cababaef3698ef909af20caddacaeb92fbaa4779",
@@ -297,7 +297,7 @@
    "HTML labels"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "9a31d0fccdeb4dea76faf4be4ae00cd336c0982a3c78837a89453b119c4c1a9a",
@@ -320,7 +320,7 @@
    "forcelabels"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "358735b1b133313dddda7a76121ccf239fc7e5121ecd660584f3d964237cbf60",
@@ -344,7 +344,7 @@
    "ltail"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "ead35a618f0f823b6b7ace2e2122be3f1dd99552ac42412ca1183efbef431e4a",
@@ -367,7 +367,7 @@
    "polygon"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "bdd24a6b9ea60ed29fc7bc193f71b357d81118612df3f801dd9c5eb8da1ffab0",
@@ -390,7 +390,7 @@
    "charset"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "111646627c5b6e300ef4bc79f199a466c04e8a747ee253f5b1355b922152bc05",
@@ -412,7 +412,7 @@
    "stress majorization"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "10f3d09204547e77b3ae40d3c47bbb2748d37d408cb2cc3972c8241e20db11f7",
@@ -435,7 +435,7 @@
    "undirected"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "6613037f3d89d7090954206f408bcae7708dc71922c0ad17d6e93ecac60f268b",
@@ -458,7 +458,7 @@
    "force-directed"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "26427746f89fa3156f70aed148fef35b852f9886eab4760d840bc2941ef365a8",
@@ -480,7 +480,7 @@
    "clusters"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "f52b2feb4aa6de4ad1e5444caa288b06739dd57e6dbd5563215d8b098bedd9cf",
@@ -503,7 +503,7 @@
    "multilevel"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "8de1b1192ef2b47b0f337b94b1fad1cab55ffb020b3bbef4338267921838a428",
@@ -526,7 +526,7 @@
    "quadtree"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "6a9df0d676488aabf59191f450b059882fb36f20f9af3844164f668186b581f4",
@@ -546,19 +546,19 @@
   "source": "graphviz-16.1.0/graphs/directed/unix.gv",
   "features": [
    "multilevel",
-   "portable-math difference"
+   "Apple libm difference"
   ],
   "identical": true,
-  "identical_portable": false,
+  "identical_stock": false,
   "wasm_input": "input.gv",
   "sha256": {
-   "c": "5522dd93323fb38fe8436d80636e39d9f89c627381ab4c1d0af6cd5c43559994",
-   "rust": "f508bfac893e4ec1c1418fc760984dd2825579e8c77d58b2b16bc37559b0b37c"
+   "c": "5b3743efdf066d1c26f6a3d60ce6ec3877d83d976c6910f39cd7d41ff88addad",
+   "rust": "c44b70426fd953c3b7fa8b703f594d3cef376db4d79570e28ddba06c96fc20cc"
   },
   "bytes": {
    "input": 1433,
-   "c": 28010,
-   "rust": 28021
+   "c": 27998,
+   "rust": 28009
   }
  },
  {
@@ -571,7 +571,7 @@
    "biconnected blocks"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "bba3ea67c96f2bb09ba206913c10fd00a2e1e3284b9a148d68f73b83dfcbe055",
@@ -594,7 +594,7 @@
    "self-loops"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "3d2f65dfae1ed8ddedbc3ad0e7b23354af70be56e143b5f4182eed929b8bdd4d",
@@ -617,7 +617,7 @@
    "radial"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "70845d20e57328a7839bfabbb67c620251b03aca2e990962b7c6b6d9f5a79dff",
@@ -640,7 +640,7 @@
    "pack"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "3f4731a24ef6669a9e1494792d069b305ff0d20aa5c1d0148979f03014edb973",
@@ -663,7 +663,7 @@
    "clusters"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "a9512cb13821cee57fe175199f0953fb2b7e89d0cda1ccbce76e9837a618b0df",
@@ -685,7 +685,7 @@
    "treemap"
   ],
   "identical": true,
-  "identical_portable": true,
+  "identical_stock": true,
   "wasm_input": "input.gv",
   "sha256": {
    "c": "b1da16dbc7abdccc1eb3c5a9687cb5ad08b7291e2a95e6dea80a7b3b6b2fac88",

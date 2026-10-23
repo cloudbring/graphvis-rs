@@ -113,6 +113,166 @@
         "identical": true,
         "diff_lines": 0
       },
+      "fuzz_attr_leading_comma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_attr_source_order": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_color_list_known_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_concentrate_abort": {
+        "identical": false,
+        "diff_lines": 10
+      },
+      "fuzz_curved_selfloop_width": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_cylinder_diagonals_nan": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_graph_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_node_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_html_labelloc": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_lr": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_arrowhead": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_default_headport": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_quantum": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_ranksep_half": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_minlen": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_penwidth": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_headlabel_backslash_l": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_hsv_weighted_list": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_mismatched_tag": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_table_pencolor": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_text_tooltip": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_install_in_rank_abort": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_label": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_newrank_pack_sink": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_outputorder_carries_over": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_pack_splines_none": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_port_attr_precedence": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_bad_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_field_sides": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_html_entities": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_sametail_title": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_strict_edge_merge": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_name_multibyte": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_splines_root": {
+        "identical": false,
+        "diff_lines": 3
+      },
+      "fuzz_tapered_fma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_trailing_syntax_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_unknown_shape_port": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_xlabel_backslash_l": {
+        "identical": false,
+        "diff_lines": 6
+      },
+      "fuzz_xlabel_empty_label": {
+        "identical": false,
+        "diff_lines": 6
+      },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
         "diff_lines": 0
@@ -2299,6 +2459,166 @@
         "identical": true,
         "diff_lines": 0
       },
+      "fuzz_attr_leading_comma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_attr_source_order": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_color_list_known_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_concentrate_abort": {
+        "identical": false,
+        "diff_lines": 160
+      },
+      "fuzz_curved_selfloop_width": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_cylinder_diagonals_nan": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_graph_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_node_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_html_labelloc": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_lr": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_arrowhead": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_default_headport": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_quantum": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_ranksep_half": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_minlen": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_penwidth": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_headlabel_backslash_l": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_hsv_weighted_list": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_mismatched_tag": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_table_pencolor": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_text_tooltip": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_install_in_rank_abort": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_label": {
+        "identical": false,
+        "diff_lines": 22
+      },
+      "fuzz_newrank_pack_sink": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_outputorder_carries_over": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_pack_splines_none": {
+        "identical": false,
+        "diff_lines": 36
+      },
+      "fuzz_port_attr_precedence": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_bad_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_field_sides": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_html_entities": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_sametail_title": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_strict_edge_merge": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_name_multibyte": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_splines_root": {
+        "identical": false,
+        "diff_lines": 36
+      },
+      "fuzz_tapered_fma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_trailing_syntax_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_unknown_shape_port": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_xlabel_backslash_l": {
+        "identical": false,
+        "diff_lines": 14
+      },
+      "fuzz_xlabel_empty_label": {
+        "identical": false,
+        "diff_lines": 10
+      },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
         "diff_lines": 0
@@ -4348,6 +4668,166 @@
       "fsm": {
         "identical": true,
         "diff_lines": 0
+      },
+      "fuzz_attr_leading_comma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_attr_source_order": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_color_list_known_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_concentrate_abort": {
+        "identical": false,
+        "diff_lines": 10
+      },
+      "fuzz_curved_selfloop_width": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_cylinder_diagonals_nan": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_graph_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_node_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_html_labelloc": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_lr": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_arrowhead": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_default_headport": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_quantum": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_ranksep_half": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_minlen": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_penwidth": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_headlabel_backslash_l": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_hsv_weighted_list": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_mismatched_tag": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_table_pencolor": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_text_tooltip": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_install_in_rank_abort": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_label": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_newrank_pack_sink": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_outputorder_carries_over": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_pack_splines_none": {
+        "identical": false,
+        "diff_lines": 3
+      },
+      "fuzz_port_attr_precedence": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_bad_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_field_sides": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_html_entities": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_sametail_title": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_strict_edge_merge": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_name_multibyte": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_splines_root": {
+        "identical": false,
+        "diff_lines": 3
+      },
+      "fuzz_tapered_fma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_trailing_syntax_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_unknown_shape_port": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_xlabel_backslash_l": {
+        "identical": false,
+        "diff_lines": 6
+      },
+      "fuzz_xlabel_empty_label": {
+        "identical": false,
+        "diff_lines": 6
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -6515,6 +6995,166 @@
         "identical": true,
         "diff_lines": 0
       },
+      "fuzz_attr_leading_comma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_attr_source_order": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_color_list_known_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_concentrate_abort": {
+        "identical": false,
+        "diff_lines": 6
+      },
+      "fuzz_curved_selfloop_width": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_cylinder_diagonals_nan": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_graph_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_node_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_html_labelloc": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_lr": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_arrowhead": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_default_headport": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_quantum": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_ranksep_half": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_minlen": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_penwidth": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_headlabel_backslash_l": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_hsv_weighted_list": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_mismatched_tag": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_table_pencolor": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_text_tooltip": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_install_in_rank_abort": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_label": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_newrank_pack_sink": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_outputorder_carries_over": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_pack_splines_none": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_port_attr_precedence": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_bad_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_field_sides": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_html_entities": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_sametail_title": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_strict_edge_merge": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_name_multibyte": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_splines_root": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_tapered_fma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_trailing_syntax_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_unknown_shape_port": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_xlabel_backslash_l": {
+        "identical": false,
+        "diff_lines": 4
+      },
+      "fuzz_xlabel_empty_label": {
+        "identical": false,
+        "diff_lines": 4
+      },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
         "diff_lines": 0
@@ -8664,6 +9304,166 @@
       "fsm": {
         "identical": true,
         "diff_lines": 0
+      },
+      "fuzz_attr_leading_comma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_attr_source_order": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_color_list_known_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_concentrate_abort": {
+        "identical": false,
+        "diff_lines": 6
+      },
+      "fuzz_curved_selfloop_width": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_cylinder_diagonals_nan": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_graph_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_node_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_html_labelloc": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_lr": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_arrowhead": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_default_headport": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_quantum": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_ranksep_half": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_minlen": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_penwidth": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_headlabel_backslash_l": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_hsv_weighted_list": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_mismatched_tag": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_table_pencolor": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_text_tooltip": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_install_in_rank_abort": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_label": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_newrank_pack_sink": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_outputorder_carries_over": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_pack_splines_none": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_port_attr_precedence": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_bad_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_field_sides": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_html_entities": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_sametail_title": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_strict_edge_merge": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_name_multibyte": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_splines_root": {
+        "identical": false,
+        "diff_lines": 2
+      },
+      "fuzz_tapered_fma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_trailing_syntax_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_unknown_shape_port": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_xlabel_backslash_l": {
+        "identical": false,
+        "diff_lines": 4
+      },
+      "fuzz_xlabel_empty_label": {
+        "identical": false,
+        "diff_lines": 4
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -10838,6 +11638,166 @@
       "fsm": {
         "identical": true,
         "diff_lines": 0
+      },
+      "fuzz_attr_leading_comma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_attr_source_order": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_color_list_known_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_concentrate_abort": {
+        "identical": false,
+        "diff_lines": 14
+      },
+      "fuzz_curved_selfloop_width": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_cylinder_diagonals_nan": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_graph_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_node_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_html_labelloc": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_lr": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_arrowhead": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_default_headport": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_quantum": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_ranksep_half": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_minlen": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_penwidth": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_headlabel_backslash_l": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_hsv_weighted_list": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_mismatched_tag": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_table_pencolor": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_text_tooltip": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_install_in_rank_abort": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_label": {
+        "identical": false,
+        "diff_lines": 1
+      },
+      "fuzz_newrank_pack_sink": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_outputorder_carries_over": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_pack_splines_none": {
+        "identical": false,
+        "diff_lines": 6
+      },
+      "fuzz_port_attr_precedence": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_bad_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_field_sides": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_html_entities": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_sametail_title": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_strict_edge_merge": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_name_multibyte": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_splines_root": {
+        "identical": false,
+        "diff_lines": 6
+      },
+      "fuzz_tapered_fma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_trailing_syntax_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_unknown_shape_port": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_xlabel_backslash_l": {
+        "identical": false,
+        "diff_lines": 12
+      },
+      "fuzz_xlabel_empty_label": {
+        "identical": false,
+        "diff_lines": 10
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -13028,6 +13988,166 @@
       "fsm": {
         "identical": true,
         "diff_lines": 0
+      },
+      "fuzz_attr_leading_comma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_attr_source_order": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_color_list_known_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_concentrate_abort": {
+        "identical": false,
+        "diff_lines": 18
+      },
+      "fuzz_curved_selfloop_width": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_cylinder_diagonals_nan": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_graph_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_empty_node_name": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_html_labelloc": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_fixedshape_lr": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_arrowhead": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_default_headport": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_quantum": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_ranksep_half": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_minlen": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_flat_adj_stale_penwidth": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_headlabel_backslash_l": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_hsv_weighted_list": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_mismatched_tag": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_table_pencolor": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_html_text_tooltip": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_install_in_rank_abort": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_lost_edge_label": {
+        "identical": false,
+        "diff_lines": 3
+      },
+      "fuzz_newrank_pack_sink": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_outputorder_carries_over": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_pack_splines_none": {
+        "identical": false,
+        "diff_lines": 4
+      },
+      "fuzz_port_attr_precedence": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_bad_label": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_field_sides": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_record_html_entities": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_sametail_title": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_strict_edge_merge": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_name_multibyte": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_subgraph_splines_root": {
+        "identical": false,
+        "diff_lines": 5
+      },
+      "fuzz_tapered_fma": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_trailing_syntax_error": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_unknown_shape_port": {
+        "identical": true,
+        "diff_lines": 0
+      },
+      "fuzz_xlabel_backslash_l": {
+        "identical": false,
+        "diff_lines": 12
+      },
+      "fuzz_xlabel_empty_label": {
+        "identical": false,
+        "diff_lines": 10
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
