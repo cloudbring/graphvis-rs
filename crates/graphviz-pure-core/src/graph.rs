@@ -63,6 +63,10 @@ pub struct EdgeData {
     /// gives every edge a `key` attribute.
     #[serde(default)]
     pub key: Option<String>,
+    /// The key is an HTML string (`<...>`): cgraph's string identity includes the flag, so
+    /// `key=<k>` and `key="k"` name two edges, and `agwrite` prints it back as `<k>`.
+    #[serde(default)]
+    pub key_html: bool,
 }
 
 /// Prefix of the private key that marks an attribute value as an HTML string (cgraph's
@@ -131,6 +135,17 @@ pub struct SubgraphData {
     /// The name was an HTML string; `name` holds its inner text (see [`NodeData::html_name`]).
     #[serde(default)]
     pub html_name: bool,
+    /// The subgraph is named by the empty string (`subgraph "" {…}`), which cgraph keeps
+    /// as a name: only a missing name makes a subgraph anonymous (grammar.y `opensubg`).
+    #[serde(default)]
+    pub empty_name: bool,
+}
+
+impl SubgraphData {
+    /// `agnameof` gives no name of the subgraph's own: it has none, or a local `%` name.
+    pub fn is_anonymous(&self) -> bool {
+        (self.name.is_empty() && !self.empty_name) || self.name.starts_with('%')
+    }
 }
 
 /// Node attribute set by a layout on a node it replaced by a cluster node
@@ -250,6 +265,10 @@ pub struct Graph {
     /// graph when it is set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub render_view: Option<Box<Graph>>,
+    /// The root is named by the empty string (`digraph "" {…}`); an empty `name` is
+    /// otherwise an anonymous root (`agopen(NULL)`), which cgraph calls `%1`.
+    #[serde(default)]
+    pub empty_name: bool,
 }
 
 /// One declared attribute (`Agsym_t`): its default value and whether a root attribute
@@ -296,7 +315,13 @@ impl Graph {
             anon_subgraph_ids: BTreeMap::new(),
             dicts: Vec::new(),
             render_view: None,
+            empty_name: false,
         }
+    }
+
+    /// The root has no name of its own (see [`Graph::empty_name`]).
+    pub fn is_anonymous(&self) -> bool {
+        (self.name.is_empty() && !self.empty_name) || self.name.starts_with('%')
     }
 
     pub fn ensure_node(&mut self, name: &str) -> NodeId {
@@ -401,20 +426,27 @@ impl Graph {
             existing.attrs.extend(attrs);
             return existing.id;
         }
-        let id = EdgeId(self.edges.len() as u32);
         let mut merged_attrs = self.edge_defaults.clone();
         merged_attrs.extend(attrs);
+        self.new_edge(tail, head, merged_attrs)
+    }
+
+    /// Makes an edge with exactly `attrs`, even where a strict graph already has one
+    /// (`agedge` does, for a new key in a subgraph that lacks the edge).
+    pub fn new_edge(&mut self, tail: NodeId, head: NodeId, attrs: AttrMap) -> EdgeId {
+        let id = EdgeId(self.edges.len() as u32);
         self.edges.push(EdgeData {
             id,
             tail,
             head,
             tail_port: Port::default(),
             head_port: Port::default(),
-            attrs: merged_attrs,
+            attrs,
             spline: Spline::default(),
             label_pos: None,
             label_unplaced: false,
             key: None,
+            key_html: false,
         });
         id
     }

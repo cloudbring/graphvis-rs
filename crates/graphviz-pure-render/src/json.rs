@@ -462,9 +462,9 @@ impl W<'_> {
         indent(&mut self.out, self.level);
         self.out.push_str("\"name\": ");
         let name = match sub {
-            None if g.name.is_empty() => "%1".to_string(),
+            None if g.is_anonymous() => "%1".to_string(),
             None => g.name.clone(),
-            Some(s) if g.subgraphs[s].name.is_empty() => format!(
+            Some(s) if g.subgraphs[s].is_anonymous() => format!(
                 "%{}",
                 g.anon_subgraph_ids.get(&(s as u32)).copied().unwrap_or(0)
             ),

@@ -462,3 +462,23 @@ meet a different font. The render-time `_ldraw_` fonts of `emit.c` are not inter
 starts in the prism smoother's first iteration and only at that magnitude, C's residual
 there is 8.5e14, and the path has no conversion that differs from Rust, but its
 `SparseMatrix_multiply_vector` and `vector_product` are FMA-contracted: C11.
+||||||| parent of 88662090 (Parse by grammar.y's productions, with bison's stack and agedge's keys (C6: #80, #92, #111, #115, #116, #118, #295, #297, #303))
+
+## Subgraph nesting: bison's stack
+
+The parser had a limit C doesn't have: `MAX_SUBGRAPH_DEPTH = 256` nested subgraphs (#118,
+C21). C's own check, `opensubg`'s `SubgraphDepth >= YYMAXDEPTH/2` (5000), never fires,
+because bison's state stack runs out first. It holds `YYMAXDEPTH` = 10000 states, and each
+anonymous subgraph level takes three (`optsubghdr`, `$@1`, `{`), four with a statement
+before it, as does each edge operator of one statement (`rcompound` is right-recursive).
+So C 16.1.0 reads 3331 nested `{` and stops at 3332 with `memory exhausted in line N near
+'<token>'`. There is no `graph : error` recovery then: `agread` returns the graph read so
+far, which dot lays out and writes, and the exit status is 1.
+
+The port (C6, #118) reads subgraph bodies without recursion and counts bison's states, so it
+stops at the same token with the same message and renders the same partial graph. C's
+next `agread` then starts wherever flex's buffer stopped, in the middle of a statement; the
+port ends the input there instead. Measured on the reference build: 3331 nested anonymous
+subgraphs take C 0.05 s and 34 MB, and the port 0.03 s and 14 MB, in every engine.
+2498 nested clusters, each with a node, take C 0.3 to 13 s and up to 400 MB; the port
+takes up to 35 s, and fdp needs 11.5 GB. That cost is the engines' (#323), not the parser's.

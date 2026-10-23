@@ -129,12 +129,12 @@ impl W<'_> {
     }
 
     fn graph_name(&self, gi: usize) -> Option<&str> {
-        let n = if gi == 0 {
-            &self.g.name
+        if gi == 0 {
+            (!self.g.is_anonymous()).then_some(self.g.name.as_str())
         } else {
-            &self.g.subgraphs[gi - 1].name
-        };
-        (!n.is_empty() && !n.starts_with('%')).then_some(n.as_str())
+            let s = &self.g.subgraphs[gi - 1];
+            (!s.is_anonymous()).then_some(s.name.as_str())
+        }
     }
 
     fn graph_name_html(&self, gi: usize) -> bool {
@@ -211,8 +211,36 @@ impl W<'_> {
         attrs.get(k).map_or("", String::as_str)
     }
 
-    fn write_nondefault(&mut self, gi: usize, attrs: &AttrMap, k: Kind) {
+    /// `write_edge_name`: an edge's key, `\t[key=<key>`, which `agnameof` gives unless the
+    /// edge has none or a local `%` one. The bracket is left open when `terminate` is false.
+    fn write_edge_name(&mut self, e: usize, terminate: bool) -> bool {
+        let ed = &self.g.edges[e];
+        let Some(key) = ed
+            .key
+            .as_deref()
+            .filter(|k| !k.is_empty() && !k.starts_with('%'))
+        else {
+            return false;
+        };
+        let key = self.canon(key, ed.key_html);
+        if !terminate {
+            self.level += 1;
+        }
+        self.out.push_str("\t[key=");
+        self.out.push_str(&key);
+        if terminate {
+            self.out.push(']');
+        }
+        true
+    }
+
+    fn write_nondefault(&mut self, gi: usize, attrs: &AttrMap, k: Kind, edge: Option<usize>) {
         let mut cnt = 0;
+        if let Some(e) = edge
+            && self.write_edge_name(e, false)
+        {
+            cnt += 1;
+        }
         let view: Vec<(String, bool, String, bool)> = self
             .view_all(gi, k)
             .into_iter()
@@ -274,7 +302,7 @@ impl W<'_> {
         self.out.push_str(&name);
         if !self.node_attrs_written[n] {
             let attrs = self.g.nodes[n].attrs.clone();
-            self.write_nondefault(gi, &attrs, Kind::Node);
+            self.write_nondefault(gi, &attrs, Kind::Node, None);
             self.node_attrs_written[n] = true;
         }
         self.node_written[n] = self.pre[gi];
@@ -321,8 +349,10 @@ impl W<'_> {
         self.write_port(e, "headport");
         if !self.edge_attrs_written[e] {
             let attrs = self.edge_attrs[e].clone();
-            self.write_nondefault(gi, &attrs, Kind::Edge);
+            self.write_nondefault(gi, &attrs, Kind::Edge, Some(e));
             self.edge_attrs_written[e] = true;
+        } else {
+            self.write_edge_name(e, true);
         }
         self.edge_written[e] = self.pre[gi];
         self.out.push_str(";\n");
