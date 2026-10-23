@@ -28,6 +28,9 @@
 //! port outputs produced elsewhere, e.g. by `scripts/dot-broad-validate.sh`).
 //! A stem present only in C_DIR counts as a port failure.
 
+// A developer tool, not the port: its reports go to stderr directly.
+#![allow(clippy::disallowed_macros, clippy::disallowed_methods)]
+
 use graphviz_pure_diff::{Baseline, FileReport, compare_file};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

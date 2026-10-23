@@ -130,7 +130,7 @@ fn tune_control(g: &LGraph<'_>, ctrl: &mut SpringElectricalControl) {
     let init = set_seed(g, INIT_RANDOM, &mut seed);
     if init != INIT_RANDOM {
         let _ = (INIT_SELF, INIT_REGULAR);
-        eprintln!("Warning: sfdp only supports start=random");
+        graphviz_pure_core::diag::agwarningf("sfdp only supports start=random\n");
     }
     ctrl.random_seed = seed as i32;
     ctrl.k = late_double(attrs, "K", -1.0, 0.0);
@@ -145,10 +145,10 @@ fn tune_control(g: &LGraph<'_>, ctrl: &mut SpringElectricalControl) {
     ctrl.edge_labeling_scheme =
         late_int(attrs, "label_scheme", 0, 0).min(i64::from(i32::MAX)) as i32;
     if ctrl.edge_labeling_scheme > 4 {
-        eprintln!(
-            "Warning: label_scheme = {} > 4 : ignoring",
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "label_scheme = {} > 4 : ignoring\n",
             ctrl.edge_labeling_scheme
-        );
+        ));
         ctrl.edge_labeling_scheme = 0;
     }
 }

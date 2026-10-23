@@ -1,0 +1,9 @@
+# Every diagnostic goes through `graphviz_pure_core::diag` (C's `agerr` sink: the `-q` level,
+# `\ooo` escaping, `AGPREV`), or `diag::fprintf_stderr` where C writes with a bare `fprintf`.
+disallowed-macros = [
+    { path = "std::eprintln", reason = "write diagnostics through graphviz_pure_core::diag" },
+    { path = "std::eprint", reason = "write diagnostics through graphviz_pure_core::diag" },
+]
+disallowed-methods = [
+    { path = "std::io::stderr", reason = "write diagnostics through graphviz_pure_core::diag" },
+]

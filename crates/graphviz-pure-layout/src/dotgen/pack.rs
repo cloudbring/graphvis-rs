@@ -363,7 +363,10 @@ impl PackGraph for DotPack<'_, '_> {
         }
         if std::env::var_os("GVDUMP").is_some() {
             let b = self.comps[i].bb;
-            eprintln!("bb[_cc_{i}] {} {} {} {}", b.ll.x, b.ll.y, b.ur.x, b.ur.y);
+            graphviz_pure_core::diag::dump(&format!(
+                "bb[_cc_{i}] {} {} {} {}",
+                b.ll.x, b.ll.y, b.ur.x, b.ur.y
+            ));
         }
     }
     fn pk_graph_bb(&self, g: PkGraph) -> BoundingBox {
@@ -494,12 +497,12 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
     for (ci, cc) in ccs.iter().enumerate() {
         let cg = cc.to_graph(graph);
         if std::env::var_os("GVDUMP").is_some() {
-            eprintln!(
+            graphviz_pure_core::diag::dump(&format!(
                 "CC {ci}: {} nodes {} edges {} subgraphs",
                 cg.nodes.len(),
                 cg.edges.len(),
                 cg.subgraphs.len()
-            );
+            ));
         }
         let mut c = Dot::new_component(&cg.graph, graph, d);
         c.comp_index = ci;

@@ -1,4 +1,5 @@
 use graphviz_pure::{GlobalAttrs, LayoutEngine, LayoutOptions, OutputFormat};
+use graphviz_pure_core::diag::{AgErrLevel, agerrorf, agseterr, fprintf_stderr};
 use std::borrow::Cow;
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -23,7 +24,7 @@ const USAGE: &str = " -V          - Print version and exit
  -Kv         - Set layout engine to 'v'
  -ofile      - Write output to 'file'
  -O          - Write each input's output to <input>.<format>
- -q[l]       - Set level of message suppression (accepted, ignored)
+ -q[l]       - Set level of message suppression
  -n[v]       - No layout mode 'v' (=1)
  -s[v], -x, -y, -lv - accepted, ignored
 ";
@@ -73,9 +74,30 @@ fn bytes_text(bytes: &[u8]) -> String {
     text
 }
 
-/// Writes `msg` to stderr as its bytes, unescaped, as C's `fprintf(stderr, ...)` does.
-fn eprint_raw(msg: &str) {
-    let _ = io::stderr().write_all(&graphviz_pure_core::charset::encode(msg));
+/// `strerror(errno)` for an I/O error: its text without Rust's ` (os error N)`.
+fn strerror(e: &io::Error) -> String {
+    let text = e.to_string();
+    match (e.raw_os_error(), text.rfind(" (os error ")) {
+        (Some(_), Some(at)) => text[..at].to_string(),
+        _ => text,
+    }
+}
+
+/// `atoi(s)`: C's white space, a sign, then digits; what it gives an `int` beyond its range.
+fn atoi(s: &str) -> i32 {
+    let s = s.trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r']);
+    let (neg, digits) = match s.as_bytes().first() {
+        Some(b'-') => (true, &s[1..]),
+        Some(b'+') => (false, &s[1..]),
+        _ => (false, s),
+    };
+    // `atoi` is `(int)strtol(s, NULL, 10)`: strtol saturates at the `long` range.
+    let mut v: i64 = 0;
+    for b in digits.bytes().take_while(u8::is_ascii_digit) {
+        v = v.saturating_mul(10).saturating_add(i64::from(b - b'0'));
+    }
+    let v = if neg { v.saturating_neg() } else { v };
+    v as i32
 }
 
 /// The bytes of an argument, as C's `argv` holds them (UTF-8 where the OS has UTF-16).
@@ -149,16 +171,46 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         inputs: Vec::new(),
     };
     let missing = |flag: char| {
-        eprintln!("Missing argument for -{flag} flag");
-        eprint!("{}", usage(argv0));
+        fprintf_stderr(&format!("Missing argument for -{flag} flag\n"));
+        fprintf_stderr(&usage(argv0));
         Parsed::Exit(ExitCode::FAILURE)
     };
+
+    // `neato_extra_args` (`args.c`) reads `-n` before `dotneato_args_initialize` reads the
+    // rest, so its error comes before any `-q` takes effect.
+    for os_arg in os_args {
+        let bytes = arg_bytes(os_arg);
+        if bytes.len() < 2 || bytes[0] != b'-' || bytes[1] != b'n' {
+            continue;
+        }
+        let rest = bytes_text(&bytes[2..]);
+        if rest.is_empty() {
+            opts.layout.nop = 1;
+            continue;
+        }
+        let digits: String = rest
+            // atoi skips C's isspace only.
+            .trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r'])
+            .chars()
+            .enumerate()
+            .take_while(|(i, c)| c.is_ascii_digit() || (*i == 0 && *c == '+'))
+            .map(|(_, c)| c)
+            .collect();
+        match digits.parse::<i64>() {
+            Ok(n) if n > 0 => opts.layout.nop = n.min(255) as u8,
+            _ => {
+                agerrorf(&format!("Invalid parameter \"{rest}\" for -n flag\n"));
+                fprintf_stderr(&usage(argv0));
+                return Parsed::Exit(ExitCode::FAILURE);
+            }
+        }
+    }
 
     let mut i = 0;
     while i < args.len() {
         let arg = args[i].as_str();
         if arg.starts_with("-V") || arg == "--version" {
-            eprintln!("{VERSION}");
+            fprintf_stderr(&format!("{VERSION}\n"));
             return Parsed::Exit(ExitCode::SUCCESS);
         } else if arg.starts_with("-?") || arg == "--help" {
             print!("{}", usage(argv0));
@@ -211,37 +263,30 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                     }
                 }
                 'O' => opts.auto_output = true,
-                // neato_extra_args: `-n` is `-n1`; `-nN` needs N > 0 (atoi semantics).
-                'n' => {
+                // Read by the `neato_extra_args` pass above.
+                'n' => {}
+                // `-q` is `-q1`: warnings are dropped; `-q2` and up drop errors too.
+                'q' => {
                     if rest.is_empty() {
-                        opts.layout.nop = 1;
+                        agseterr(AgErrLevel::Err);
                     } else {
-                        let digits: String = rest
-                            // atoi skips C's isspace only.
-                            .trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r'])
-                            .chars()
-                            .enumerate()
-                            .take_while(|(i, c)| c.is_ascii_digit() || (*i == 0 && *c == '+'))
-                            .map(|(_, c)| c)
-                            .collect();
-                        match digits.parse::<i64>() {
-                            Ok(n) if n > 0 => opts.layout.nop = n.min(255) as u8,
+                        match atoi(rest) {
+                            ..=0 => fprintf_stderr(&format!(
+                                "Invalid parameter \"{rest}\" for -q flag - ignored\n"
+                            )),
+                            1 => {
+                                agseterr(AgErrLevel::Err);
+                            }
                             _ => {
-                                graphviz_pure_core::charset::eprint_bytes(&format!(
-                                    "Error: Invalid parameter \"{rest}\" for -n flag\n"
-                                ));
-                                eprint!("{}", usage(argv0));
-                                return Parsed::Exit(ExitCode::FAILURE);
+                                agseterr(AgErrLevel::Max);
                             }
                         }
                     }
                 }
-                'v' | 'q' | 's' | 'x' | 'y' | 'P' | 'c' | 'L' => {}
+                'v' | 's' | 'x' | 'y' | 'P' | 'c' | 'L' => {}
                 _ => {
-                    graphviz_pure_core::charset::eprint_bytes(&format!(
-                        "{argv0}: option -{flag} unrecognized\n\n"
-                    ));
-                    eprint!("{}", usage(argv0));
+                    agerrorf(&format!("{argv0}: option -{flag} unrecognized\n\n"));
+                    fprintf_stderr(&usage(argv0));
                     return Parsed::Exit(ExitCode::FAILURE);
                 }
             }
@@ -277,7 +322,7 @@ fn report_error(name: &str, e: &graphviz_pure_core::GraphvizError) {
         } => file.as_str(),
         _ => name,
     };
-    graphviz_pure_core::charset::eprint_bytes(&format!("Error: {name}: {e}\n"));
+    agerrorf(&format!("{name}: {e}\n"));
 }
 
 fn main() -> ExitCode {
@@ -297,11 +342,11 @@ fn main() -> ExitCode {
     let raster = graphviz_pure_raster::RasterFormat::parse(&opts.format);
     if raster.is_none() && OutputFormat::parse(&opts.format).is_err() {
         // `dotneato_args_initialize` writes these two with `fprintf`, not `agerrorf`.
-        eprint_raw(&format!("Format: \"{}\" not recognized.\n", opts.format));
+        fprintf_stderr(&format!("Format: \"{}\" not recognized.\n", opts.format));
         return ExitCode::FAILURE;
     }
     if LayoutEngine::parse(&opts.engine).is_err() {
-        eprint_raw(&format!(
+        fprintf_stderr(&format!(
             "There is no layout engine support for \"{}\"\n",
             opts.engine
         ));
@@ -312,9 +357,11 @@ fn main() -> ExitCode {
         (Some(path), false) => match fs::File::create(path) {
             Ok(f) => Some(Box::new(f)),
             Err(e) => {
+                // gvdevice.c `gvdevice_initialize`.
                 let path = arg_text(path);
-                graphviz_pure_core::charset::eprint_bytes(&format!(
-                    "{argv0}: can't open {path}: {e}\n"
+                agerrorf(&format!(
+                    "Could not open \"{path}\" for writing : {}\n",
+                    strerror(&e)
                 ));
                 return ExitCode::FAILURE;
             }
@@ -335,9 +382,8 @@ fn main() -> ExitCode {
         let source = match read_input(input) {
             Ok(s) => s,
             Err(e) => {
-                graphviz_pure_core::charset::eprint_bytes(&format!(
-                    "{argv0}: can't open {name}: {e}\n"
-                ));
+                // input.c `gvNextInputGraph`.
+                agerrorf(&format!("{argv0}: can't open {name}: {}\n", strerror(&e)));
                 failed = true;
                 continue;
             }
@@ -394,8 +440,9 @@ fn main() -> ExitCode {
                 Ok(f) => per_input = Some(Box::new(f)),
                 Err(e) => {
                     let target = arg_text(&target);
-                    graphviz_pure_core::charset::eprint_bytes(&format!(
-                        "{argv0}: can't open {target}: {e}\n"
+                    agerrorf(&format!(
+                        "Could not open \"{target}\" for writing : {}\n",
+                        strerror(&e)
                     ));
                     failed = true;
                     continue;
@@ -409,7 +456,7 @@ fn main() -> ExitCode {
         };
         for bytes in outputs {
             if let Err(e) = out.write_all(&bytes) {
-                eprintln!("{argv0}: write error: {e}");
+                fprintf_stderr(&format!("{argv0}: write error: {e}\n"));
                 return ExitCode::FAILURE;
             }
         }

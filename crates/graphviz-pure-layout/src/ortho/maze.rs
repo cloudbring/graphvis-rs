@@ -438,10 +438,10 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> OResult<Maze> {
         let ng = mp.ngcells;
         for (i, c) in mp.cells.iter().enumerate() {
             let (tag, k) = if i < ng { ("OMG", i) } else { ("OMC", i - ng) };
-            eprintln!(
+            graphviz_pure_core::diag::dump(&format!(
                 "{tag} {k} {:?} {:?} {:?} {:?}",
                 c.bb.ll.x, c.bb.ll.y, c.bb.ur.x, c.bb.ur.y
-            );
+            ));
         }
     }
     mk_maze_graph(&mut mp, big)?;
@@ -452,7 +452,7 @@ pub fn mk_maze(nodes: &[(Point, f64, f64)]) -> OResult<Maze> {
                 .iter()
                 .map(|n| format!(" {}", n.map_or(-1, |n| mp.sg.nodes[n].index as i64)))
                 .collect();
-            eprintln!("OMS {i}:{s}");
+            graphviz_pure_core::diag::dump(&format!("OMS {i}:{s}"));
         }
     }
     Ok(mp)

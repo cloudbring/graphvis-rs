@@ -11,6 +11,7 @@ use super::job::{
     GVRENDER_DOES_TOOLTIPS, GVRENDER_NO_WHITE_BG, ObjKind, RGRADIENT,
 };
 use super::model::{Bz, TextLabel};
+use graphviz_pure_core::diag::{agerrorf, agwarningf};
 use graphviz_pure_core::font::{LabelSubstContext, convert_label_text, strdup_and_subst_obj};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{BoundingBox, Point};
@@ -43,9 +44,9 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
                 match super::attrs::strtod(rest) {
                     Some((v, _)) if v >= 0.0 => (&tok[..i], v),
                     _ => {
-                        eprintln!(
-                            "Error: Illegal value in \"{clrs}\" color attribute; float expected after ';'"
-                        );
+                        agerrorf(&format!(
+                            "Illegal value in \"{clrs}\" color attribute; float expected after ';'\n"
+                        ));
                         return Err(2);
                     }
                 }
@@ -55,7 +56,8 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
         let del = v - left;
         if del > 0.0 {
             if !aeq0(del) {
-                eprintln!("Warning: Total size > 1 in \"{clrs}\" color spec ");
+                // C's message has no newline: the next one continues the line.
+                agwarningf(&format!("Total size > 1 in \"{clrs}\" color spec "));
                 rval = 3;
             }
             v = left;
@@ -95,7 +97,7 @@ pub(crate) fn find_stop_color(colorlist: &str) -> Option<(String, Option<String>
         return None;
     }
     if segs.len() > 2 {
-        eprintln!("Warning: More than 2 colors specified for a gradient - ignoring remaining");
+        agwarningf("More than 2 colors specified for a gradient - ignoring remaining\n");
     }
     let frac = if segs[0].has_fraction {
         segs[0].t
@@ -366,11 +368,17 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let mut list: Option<Vec<i32>> = self.job.layer_list.clone();
         if let Some(l) = &mut list {
             if l.len() > 1 && !does_layers {
-                eprintln!("Warning: layers not supported in this output");
+                agwarningf(&format!(
+                    "layers not supported in {} output\n",
+                    self.eng.output_langname()
+                ));
                 l.truncate(1);
             }
         } else if self.job.num_layers > 1 && !does_layers {
-            eprintln!("Warning: layers not supported in this output");
+            agwarningf(&format!(
+                "layers not supported in {} output\n",
+                self.eng.output_langname()
+            ));
             self.job.num_layers = 1;
         }
         let layers: Vec<i32> = match &list {
@@ -407,10 +415,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
         };
         let mut delims = a.get("layersep").unwrap_or(":\t ").to_string();
         let mut list_delims = a.get("layerlistsep").unwrap_or(",").to_string();
-        if delims.chars().any(|c| list_delims.contains(c)) {
-            eprintln!(
-                "Warning: The character appears in both the layersep and layerlistsep attributes - layerlistsep ignored."
-            );
+        // strpbrk(layerDelims, layerListDelims)
+        if let Some(tok) = delims.chars().find(|&c| list_delims.contains(c)) {
+            agwarningf(&format!(
+                "The character '{tok}' appears in both the layersep and layerlistsep attributes - layerlistsep ignored.\n"
+            ));
             list_delims = String::new();
         }
         if delims.is_empty() {
@@ -433,9 +442,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 .filter(|&i| self.selected_layer(i, n, sel))
                 .collect();
             if l.is_empty() {
-                eprintln!(
-                    "Warning: The layerselect attribute \"{sel}\" does not match any layer specifed by the layers attribute - ignored."
-                );
+                agwarningf(&format!(
+                    "The layerselect attribute \"{sel}\" does not match any layer specifed by the layers attribute - ignored.\n"
+                ));
             } else {
                 self.job.layer_list = Some(l);
             }

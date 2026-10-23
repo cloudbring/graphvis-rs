@@ -664,11 +664,11 @@ impl Ortho {
                 if std::env::var_os("GVDUMP").is_some() {
                     let (p1, p2) = (chan.p1, chan.p2);
                     let s = &self.routes[i][j];
-                    eprintln!(
+                    graphviz_pure_core::diag::dump(&format!(
                         "OAS {i} {j} {} {:.6} [{p1:.6} {p2:.6}] {ind}",
                         i32::from(s.is_vert),
                         s.comm_coord
-                    );
+                    ));
                 }
                 self.routes[i][j].ind_no = Some(ind);
             }
@@ -814,12 +814,12 @@ impl Ortho {
             }
             if std::env::var_os("GVDUMP").is_some() {
                 let g = self.chan_g_ref(nchan);
-                eprintln!(
+                graphviz_pure_core::diag::dump(&format!(
                     "OSP {:.6} {p1i} {p2i} {} {}",
                     self.seg(prev1).comm_coord,
                     i32::from(g.edge_exists(p1i, p2i)?),
                     i32::from(g.edge_exists(p2i, p1i)?)
-                );
+                ));
             }
             chan = nchan;
             seg1 = prev1;
@@ -875,10 +875,10 @@ impl Ortho {
                 let (h1, prec1) = self.decide_point(si, sj, 0, dir)?;
                 let (h2, prec2) = self.decide_point(si, sj, 1, 1 - dir)?;
                 if std::env::var_os("GVDUMP").is_some() {
-                    eprintln!(
+                    graphviz_pure_core::diag::dump(&format!(
                         "OPE {:.6} {i} {j} {dir} {h1} {prec1} {h2} {prec2}",
                         self.seg(si).comm_coord
-                    );
+                    ));
                 }
                 if prec1 == -1 {
                     self.set_parallel_edges(sj, si, dir, 0, h1)?;
@@ -930,7 +930,7 @@ impl Ortho {
                         l.push_str(&format!("{a},"));
                     }
                 }
-                eprintln!("{l}");
+                graphviz_pure_core::diag::dump(&l);
                 Ok(())
             })
             .ok();
@@ -1117,7 +1117,7 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
 /// The failure and the port's source line, for `GVDUMP` debugging.
 fn dump_fail(stage: &str, fail: Fail) {
     if std::env::var_os("GVDUMP").is_some() {
-        eprintln!("OFAIL {stage} {fail:?}");
+        graphviz_pure_core::diag::dump(&format!("OFAIL {stage} {fail:?}"));
     }
 }
 
@@ -1163,12 +1163,12 @@ fn route_edges<S: OrthoGraph + ?Sized>(
     let dump = std::env::var_os("GVDUMP").is_some();
     if dump {
         for &(d, e) in &es {
-            eprintln!(
+            graphviz_pure_core::diag::dump(&format!(
                 "OE {} {} {:.6}",
                 g.xl_name(g.tail(e)),
                 g.xl_name(g.head(e)),
                 d
-            );
+            ));
         }
     }
     let mut o = Ortho {
@@ -1205,7 +1205,7 @@ fn route_edges<S: OrthoGraph + ?Sized>(
                 l.push_str(&format!(" {}/{}", v.index, v.n_val));
                 x = v.n_dad;
             }
-            eprintln!("{l}");
+            graphviz_pure_core::diag::dump(&l);
         }
         let r = convert_sp_to_route(&mut o.mp, sn, dn)?;
         if dump {
@@ -1221,7 +1221,7 @@ fn route_edges<S: OrthoGraph + ?Sized>(
                     sg.l2 as i32
                 ));
             }
-            eprintln!("{l}");
+            graphviz_pure_core::diag::dump(&l);
         }
         o.routes.push(r);
         o.mp.sg.reset()?;
@@ -1240,7 +1240,7 @@ fn route_edges<S: OrthoGraph + ?Sized>(
                     sg.track_no.unwrap_or(0)
                 ));
             }
-            eprintln!("{l}");
+            graphviz_pure_core::diag::dump(&l);
         }
     }
     // attachOrthoEdges, up to `clip_and_install`

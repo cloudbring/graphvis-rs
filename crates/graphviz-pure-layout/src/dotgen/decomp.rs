@@ -47,7 +47,10 @@ impl Dot<'_> {
                     .iter()
                     .map(|&e| format!(" {}", nm(self.edges[e].head)))
                     .collect();
-                eprintln!("SC {} in:{} out:{}", self.nodes[n].name, ins, outs);
+                graphviz_pure_core::diag::dump(&format!(
+                    "SC {} in:{} out:{}",
+                    self.nodes[n].name, ins, outs
+                ));
             }
             let vecs = [
                 self.nodes[n].flat_in.clone(),

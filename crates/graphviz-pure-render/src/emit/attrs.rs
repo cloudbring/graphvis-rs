@@ -219,7 +219,7 @@ pub(crate) fn parse_style(s: &str) -> Vec<StyleItem> {
                     }
                 } else {
                     if out.len() == 63 {
-                        eprintln!("Warning: truncating style '{s}'");
+                        graphviz_pure_core::diag::agwarningf(&format!("truncating style '{s}'\n"));
                         return out;
                     }
                     out.push(StyleItem {

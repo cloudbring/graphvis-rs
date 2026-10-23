@@ -2843,6 +2843,117 @@ fn non_utf8_flag_values_keep_their_bytes() {
     }
 }
 
+// Issue #153: `-q` (`-q1`) sets cgraph's message level to errors (`agseterr(AGERR)`, args.c),
+// `-q2` and up turn every message off, and `-q0` is reported and ignored. An error that is not
+// written still fails the run (`agerrors()`). stderr and exit status are C 16.1.0's.
+#[test]
+fn q_drops_warnings_and_q2_drops_errors_like_c() {
+    let src = "digraph { a [shape=foo]; b [shape=record,label=\"{a|\"] }";
+    let both = "Warning: using box for unknown shape foo\nError: bad label format {a|\n";
+    for (flag, want) in [
+        (None, both.to_string()),
+        (Some("-q"), "Error: bad label format {a|\n".to_string()),
+        (Some("-q1"), "Error: bad label format {a|\n".to_string()),
+        (Some("-q2"), String::new()),
+        (Some("-q5"), String::new()),
+        (
+            Some("-q0"),
+            format!("Invalid parameter \"0\" for -q flag - ignored\n{both}"),
+        ),
+    ] {
+        let mut args = vec!["-Tsvg"];
+        args.extend(flag);
+        let (out, err, ok) = run(&args, src);
+        assert_eq!(err, want, "{flag:?}");
+        assert!(!ok, "{flag:?}: the error still sets the exit status");
+        assert!(out.contains("</svg>"), "{flag:?}");
+    }
+}
+
+// `-q` applies from where it is read (dotneato_args_initialize), so it drops the error of an
+// unrecognized option after it; `-n` is read before (`neato_extra_args`), so its error is
+// written whatever `-q` says. C 16.1.0 writes the usage after both.
+#[test]
+fn q2_drops_later_option_errors_but_not_the_n_flag_error() {
+    let (_, err, ok) = run(&["-q2", "-Z"], "graph{}");
+    assert!(!ok);
+    assert!(err.starts_with("Usage: "), "{err}");
+    let (_, err, ok) = run(&["-Z", "-q2"], "graph{}");
+    assert!(!ok);
+    assert!(
+        err.starts_with("Error: graphviz-pure: option -Z unrecognized\n\nUsage: "),
+        "{err}"
+    );
+    let (_, err, ok) = run(&["-q2", "-n0"], "graph{}");
+    assert!(!ok);
+    assert!(
+        err.starts_with("Error: Invalid parameter \"0\" for -n flag\nUsage: "),
+        "{err}"
+    );
+}
+
+// Issue #121: cgraph's `default_usererrf` (agerror.c) writes control characters other than
+// white space as `\ooo`, in every message: the color warning of `gvrender_resolve_color`, the
+// style warning of `gvrender_set_style` and the arrow warning of `arrow_match_name`. stderr is
+// C 16.1.0's.
+#[test]
+fn control_characters_in_warnings_are_escaped_like_c() {
+    let src = "digraph { a [color=\"x\u{1}y\", style=\"foo\u{2}\"]; \
+               a -> b [arrowhead=\"zz\u{3}\"] }";
+    let (_, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: Arrow type \"zz\\003\" unknown - ignoring\n\
+         Warning: gvrender_set_style: unsupported style foo\\002 - ignoring\n\
+         Warning: x\\001y is not a known color.\n"
+    );
+}
+
+// Render warnings worded as C 16.1.0's: `firstlayer` names the output format, the
+// `layersep`/`layerlistsep` warning names the character, and `parseSegs`' "Total size > 1"
+// has no newline, so the next message continues its line.
+#[test]
+fn render_warnings_are_worded_like_c() {
+    let (_, err, _) = run(
+        &["-Txdot"],
+        "digraph { layers=\"a:b\"; layersep=\":\"; layerlistsep=\":\"; a }",
+    );
+    assert_eq!(
+        err,
+        "Warning: The character ':' appears in both the layersep and layerlistsep attributes \
+         - layerlistsep ignored.\n\
+         Warning: layers not supported in xdot output\n"
+    );
+    let (_, err, _) = run(
+        &["-Tsvg"],
+        "digraph { a [style=filled fillcolor=\"red;0.8:blue;0.7\"] }",
+    );
+    assert!(
+        err.starts_with(
+            "Warning: Total size > 1 in \"red;0.8:blue;0.7\" color spec Warning: red;0.8 is \
+             not a known color.\n"
+        ),
+        "{err}"
+    );
+}
+
+// Issue #150 (its message only): `init_nop` reports a node with no position and
+// `neato_layout` continues the message with `agerr(AGPREV, ...)`, on a second line, as
+// C 16.1.0 does. `-q2` drops both lines, the continuation at the level of the first.
+#[test]
+fn neato_n_missing_pos_is_reported_on_two_lines_like_c() {
+    let src = "graph A { a; b [pos=\"0,0\"] }";
+    let (_, err, ok) = run(&["-Kneato", "-n", "-Tsvg"], src);
+    assert!(!ok);
+    assert!(
+        err.starts_with("Error: node a in graph A has no position\nas required by the -n flag\n"),
+        "{err}"
+    );
+    let (_, err, _) = run(&["-q2", "-Kneato", "-n", "-Tsvg"], src);
+    assert!(!err.contains("as required"), "{err}");
+}
+
 /// The issue's reproducer, verbatim: an illegal HTML attribute, an unknown port and an edge
 /// label with no spline to place it on.
 #[test]

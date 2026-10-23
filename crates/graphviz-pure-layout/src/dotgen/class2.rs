@@ -14,7 +14,7 @@ impl Dot<'_> {
         self.nodes[v].label = Some(l);
         if std::env::var_os("GVDUMP").is_some() {
             let txt = self.edge_attr(orig, "label").unwrap_or("").to_string();
-            eprintln!("LV [{}] {} {}", txt, dimen.x, dimen.y);
+            graphviz_pure_core::diag::dump(&format!("LV [{}] {} {}", txt, dimen.x, dimen.y));
         }
         self.nodes[v].lw = self.graphs[0].nodesep as f64;
         if !self.edges[orig].label_ontop {

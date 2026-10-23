@@ -247,10 +247,10 @@ fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) ->
     static NO_WIDTH_WARNED: AtomicBool = AtomicBool::new(false);
     let character = if byte >= 128 {
         if crate::diag::reporting() && !NON_ASCII_WARNED.swap(true, Ordering::Relaxed) {
-            eprintln!(
-                "Warning: Warning: no value for width of non-ASCII character {byte}. Falling \
-                 back to width of space character"
-            );
+            crate::diag::agwarningf(&format!(
+                "Warning: no value for width of non-ASCII character {byte}. Falling back to \
+                 width of space character\n"
+            ));
         }
         b' '
     } else {
@@ -259,10 +259,9 @@ fn estimate_character_width_canonical(variant_metrics: &[i16; 128], byte: u8) ->
     let width = variant_metrics[usize::from(character)];
     if width == -1 {
         if crate::diag::reporting() && !NO_WIDTH_WARNED.swap(true, Ordering::Relaxed) {
-            eprintln!(
-                "Warning: Warning: no value for width of ASCII character {character}. Falling \
-                 back to 0"
-            );
+            crate::diag::agwarningf(&format!(
+                "Warning: no value for width of ASCII character {character}. Falling back to 0\n"
+            ));
         }
         0
     } else {
@@ -395,7 +394,7 @@ pub fn html_entity_utf8(text: &str) -> String {
         } else {
             charset::warn_invalid_utf8(|g| {
                 format!(
-                    "Warning: UTF8 codes > 4 bytes are not currently supported (graph {g}) - \
+                    "UTF8 codes > 4 bytes are not currently supported (graph {g}) - \
                      treated as Latin-1. Perhaps \"-Gcharset=latin1\" is needed?\n"
                 )
             });
@@ -426,7 +425,7 @@ pub fn html_entity_utf8(text: &str) -> String {
                 } else {
                     charset::warn_invalid_utf8(|g| {
                         format!(
-                            "Warning: Invalid {}-byte UTF8 found in input of graph {g} - \
+                            "Invalid {}-byte UTF8 found in input of graph {g} - \
                              treated as Latin-1. Perhaps \"-Gcharset=latin1\" is needed?\n",
                             uc + 1
                         )
