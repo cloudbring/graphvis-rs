@@ -3967,6 +3967,11 @@ fn infinite_edge_label_size_does_not_hang_xlabel_placement() {
             "dot",
             format!("digraph G {{ edge [labelfontsize={huge}]; a -> b [headlabel=h]; }}"),
         ),
+        // dot places the edge label itself; only the head label goes to xlabels.
+        (
+            "dot",
+            "digraph G { edge [fontsize=inf]; a -> b [label=ab, headlabel=h]; }".to_string(),
+        ),
     ] {
         let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
             .args(["-Tplain", &format!("-K{engine}")])
