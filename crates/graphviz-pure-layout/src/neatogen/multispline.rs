@@ -1012,10 +1012,10 @@ fn finish_edge(g: &mut LGraph<'_>, e: usize, mut spl: Vec<Point>, flip: bool) {
 /// genroute's `agwarningf("Could not create control points ...")` and `rv = 1`
 /// (multispline.c:703, :723, :740, :759, :778).
 fn route_failed(g: &LGraph<'_>, e: usize) -> bool {
-    eprintln!(
-        "Warning: Could not create control points for multiple spline for edge ({},{})",
+    graphviz_pure_core::diag::agwarningf(&format!(
+        "Could not create control points for multiple spline for edge ({},{})\n",
         g.src.nodes[g.edges[e].tail].name, g.src.nodes[g.edges[e].head].name
-    );
+    ));
     true
 }
 
@@ -1039,11 +1039,11 @@ fn genroute(
         for p in &trip.poly {
             l.push_str(&format!(" {:?},{:?}", p.x, p.y));
         }
-        eprintln!("{l}");
+        graphviz_pure_core::diag::dump(&l);
     }
     let Ok(mut pl) = pshortestpath(&trip.poly, eps) else {
         if dump {
-            eprintln!("MFAIL sp1");
+            graphviz_pure_core::diag::dump("MFAIL sp1");
         }
         return route_failed(g, e);
     };
@@ -1052,7 +1052,7 @@ fn genroute(
         for p in &pl {
             l.push_str(&format!(" {:?},{:?}", p.x, p.y));
         }
-        eprintln!("{l}");
+        graphviz_pure_core::diag::dump(&l);
     }
     if pl.len() == 2 {
         super::neatosplines::make_straight_edge(g, sub, e, EdgeType::None);

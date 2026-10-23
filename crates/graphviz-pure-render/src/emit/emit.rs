@@ -11,6 +11,7 @@ use super::job::{
     GVRENDER_DOES_TOOLTIPS, GVRENDER_NO_WHITE_BG, ObjKind, RGRADIENT,
 };
 use super::model::{Bz, TextLabel};
+use graphviz_pure_core::diag::{agerr_prev, agerrorf, agwarningf};
 use graphviz_pure_core::font::{LabelSubstContext, convert_label_text, strdup_and_subst_obj};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{BoundingBox, Point};
@@ -30,8 +31,15 @@ fn aeq0(x: f64) -> bool {
     x < 1e-5 && x > -1e-5
 }
 
-/// `parseSegs`: `Err(1|2)` on error, `Ok((segs, rval))` with `rval` 0 or 3.
+/// `parseSegs`: `Err(1|2)` on error, `Ok((segs, rval))` with `rval` 0 or 3. Like C's
+/// `static atomic_flag warned`, only the first bad spec reports (2, 3); later ones give 1
+/// and 0. The flag is never reset, so on a thread that renders again a bad spec is drawn as
+/// C's second one is.
 pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
+    thread_local! {
+        static WARNED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    let test_and_set = || WARNED.with(|w| w.replace(true));
     let mut segs: Vec<ColorSeg> = Vec::new();
     let mut left = 1.0f64;
     let mut rval = 0;
@@ -43,9 +51,12 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
                 match super::attrs::strtod(rest) {
                     Some((v, _)) if v >= 0.0 => (&tok[..i], v),
                     _ => {
-                        eprintln!(
-                            "Error: Illegal value in \"{clrs}\" color attribute; float expected after ';'"
-                        );
+                        if test_and_set() {
+                            return Err(1);
+                        }
+                        agerrorf(&format!(
+                            "Illegal value in \"{clrs}\" color attribute; float expected after ';'\n"
+                        ));
                         return Err(2);
                     }
                 }
@@ -54,8 +65,9 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
         let mut v = v;
         let del = v - left;
         if del > 0.0 {
-            if !aeq0(del) {
-                eprintln!("Warning: Total size > 1 in \"{clrs}\" color spec ");
+            if !aeq0(del) && !test_and_set() {
+                // C's message has no newline: the next one continues the line.
+                agwarningf(&format!("Total size > 1 in \"{clrs}\" color spec "));
                 rval = 3;
             }
             v = left;
@@ -95,7 +107,7 @@ pub(crate) fn find_stop_color(colorlist: &str) -> Option<(String, Option<String>
         return None;
     }
     if segs.len() > 2 {
-        eprintln!("Warning: More than 2 colors specified for a gradient - ignoring remaining");
+        agwarningf("More than 2 colors specified for a gradient - ignoring remaining\n");
     }
     let frac = if segs[0].has_fraction {
         segs[0].t
@@ -366,11 +378,17 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let mut list: Option<Vec<i32>> = self.job.layer_list.clone();
         if let Some(l) = &mut list {
             if l.len() > 1 && !does_layers {
-                eprintln!("Warning: layers not supported in this output");
+                agwarningf(&format!(
+                    "layers not supported in {} output\n",
+                    self.eng.output_langname()
+                ));
                 l.truncate(1);
             }
         } else if self.job.num_layers > 1 && !does_layers {
-            eprintln!("Warning: layers not supported in this output");
+            agwarningf(&format!(
+                "layers not supported in {} output\n",
+                self.eng.output_langname()
+            ));
             self.job.num_layers = 1;
         }
         let layers: Vec<i32> = match &list {
@@ -407,10 +425,22 @@ impl<'a, E: Engine> Emitter<'a, E> {
         };
         let mut delims = a.get("layersep").unwrap_or(":\t ").to_string();
         let mut list_delims = a.get("layerlistsep").unwrap_or(",").to_string();
-        if delims.chars().any(|c| list_delims.contains(c)) {
-            eprintln!(
-                "Warning: The character appears in both the layersep and layerlistsep attributes - layerlistsep ignored."
-            );
+        // strpbrk(layerDelims, layerListDelims)
+        // On C's bytes: a raw (non-UTF-8) byte is one char of the raw-byte range here.
+        let list_bytes = graphviz_pure_core::charset::encode(&list_delims);
+        if let Some(tok) = graphviz_pure_core::charset::encode(&delims)
+            .iter()
+            .copied()
+            .find(|b| list_bytes.contains(b))
+        {
+            // `'%c'` of `*tok`: one byte, which need not be a whole character.
+            let tok = match tok {
+                b if b.is_ascii() => b as char,
+                b => graphviz_pure_core::charset::raw_char(b),
+            };
+            agwarningf(&format!(
+                "The character '{tok}' appears in both the layersep and layerlistsep attributes - layerlistsep ignored.\n"
+            ));
             list_delims = String::new();
         }
         if delims.is_empty() {
@@ -433,9 +463,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 .filter(|&i| self.selected_layer(i, n, sel))
                 .collect();
             if l.is_empty() {
-                eprintln!(
-                    "Warning: The layerselect attribute \"{sel}\" does not match any layer specifed by the layers attribute - ignored."
-                );
+                agwarningf(&format!(
+                    "The layerselect attribute \"{sel}\" does not match any layer specifed by the layers attribute - ignored.\n"
+                ));
             } else {
                 self.job.layer_list = Some(l);
             }
@@ -787,7 +817,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 } else {
                     self.set_pencolor(pencolor);
                 }
-                self.striped_box(&af, fillcolor, false);
+                if self.striped_box(&af, fillcolor, false) > 1 {
+                    agerr_prev(&format!("in cluster {}\n", cl.name));
+                }
                 self.boxf(bb, 0);
             } else if peripheries != 0 {
                 self.set_pencolor(pencolor);
@@ -1440,9 +1472,26 @@ impl<'a, E: Engine> Emitter<'a, E> {
     ) -> bool {
         let m = self.job.m;
         let ed = &m.edges[e];
+        let in_edge = || {
+            let arrow = if m.directed { " -> " } else { " -- " };
+            agerr_prev(&format!(
+                "in edge {}{arrow}{}\n",
+                m.nodes[ed.tail].name, m.nodes[ed.head].name
+            ));
+        };
         let segs = match parse_segs(colors) {
-            Ok((s, _)) => s,
-            Err(_) => return true,
+            Ok((s, rv)) => {
+                if rv > 1 {
+                    in_edge();
+                }
+                s
+            }
+            Err(rv) => {
+                if rv > 1 {
+                    in_edge();
+                }
+                return true;
+            }
         };
         let n = ed.bz.len();
         for bz in &ed.bz {

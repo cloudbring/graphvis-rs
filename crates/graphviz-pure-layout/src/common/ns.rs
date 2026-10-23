@@ -983,7 +983,7 @@ fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) {
             };
             l.push_str(&format!(" {}:{}", nm, g.rank(n)));
         }
-        eprintln!("{l}");
+        graphviz_pure_core::diag::dump(&l);
     };
     if dump {
         dump_line(g, "TBPRE", &tree_node);
@@ -1049,7 +1049,14 @@ fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) {
                 nrank[choice as usize] += 1;
             }
             if dump {
-                eprintln!("TB {} {} {} {} -> {}", g.dump_name(n), r, low, high, choice);
+                graphviz_pure_core::diag::dump(&format!(
+                    "TB {} {} {} {} -> {}",
+                    g.dump_name(n),
+                    r,
+                    low,
+                    high,
+                    choice
+                ));
             }
             g.set_rank(n, choice);
         }

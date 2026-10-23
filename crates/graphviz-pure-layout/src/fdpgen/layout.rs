@@ -667,9 +667,9 @@ impl Fdp<'_, '_> {
             let gname = g.map_or(src.name.as_str(), |c| {
                 src.subgraphs[self.tree.subgraph[c]].name.as_str()
             });
-            eprintln!("DG {gname} nodes={}", dg.nodes.len());
+            graphviz_pure_core::diag::dump(&format!("DG {gname} nodes={}", dg.nodes.len()));
             for d in &dg.nodes {
-                eprintln!("  {} {}", d.addr, d.name);
+                graphviz_pure_core::diag::dump(&format!("  {} {}", d.addr, d.name));
             }
         }
         Some(dg)
@@ -799,17 +799,25 @@ impl Fdp<'_, '_> {
         if super::trace(4) {
             let src = self.rg.src;
             let nm = |n: usize| src.nodes[n].name.as_str();
-            eprintln!("EC {}", src.subgraphs[self.tree.subgraph[c]].name);
+            graphviz_pure_core::diag::dump(&format!(
+                "EC {}",
+                src.subgraphs[self.tree.subgraph[c]].name
+            ));
             for p in &pp {
                 let e = &self.rg.edges[p.e];
-                eprintln!("  {} {} {:?}", nm(e.tail), nm(e.head), p.alpha);
+                graphviz_pure_core::diag::dump(&format!(
+                    "  {} {} {:?}",
+                    nm(e.tail),
+                    nm(e.head),
+                    p.alpha
+                ));
             }
             for er in &es {
                 let e = &dg.edges[er.e];
-                eprintln!(
+                graphviz_pure_core::diag::dump(&format!(
                     "  er {} {} {:?} {:?}",
                     dg.nodes[e.t].name, dg.nodes[e.h].name, er.alpha, er.dist2
-                );
+                ));
             }
         }
         self.ports[c] = pp;
@@ -1011,7 +1019,7 @@ impl Fdp<'_, '_> {
         let gname = g.map_or(src.name.as_str(), |c| {
             src.subgraphs[self.tree.subgraph[c]].name.as_str()
         });
-        eprintln!("{tag} {gname}");
+        graphviz_pure_core::diag::dump(&format!("{tag} {gname}"));
         for &n in &comp.nodes {
             let d = &dg.nodes[n];
             let name = match d.kind {
@@ -1020,12 +1028,12 @@ impl Fdp<'_, '_> {
                 DKind::Port => "_port".to_string(),
             };
             if sizes {
-                eprintln!(
+                graphviz_pure_core::diag::dump(&format!(
                     "  {name} {:?} {:?} {:?} {:?}",
                     d.pos[0], d.pos[1], d.width, d.height
-                );
+                ));
             } else {
-                eprintln!("  {name} {:?} {:?}", d.pos[0], d.pos[1]);
+                graphviz_pure_core::diag::dump(&format!("  {name} {:?} {:?}", d.pos[0], d.pos[1]));
             }
         }
     }

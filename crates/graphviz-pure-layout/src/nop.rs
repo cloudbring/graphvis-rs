@@ -431,12 +431,15 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             Some((p, _)) => npos.push((p.x / POINTS_PER_INCH, p.y / POINTS_PER_INCH)),
             None if node.name.starts_with("cluster") => npos.push((0.0, 0.0)),
             None => {
+                // init_nop, then neato_layout continues its message (neatoinit.c).
+                graphviz_pure_core::diag::agerrorf(&format!(
+                    "node {} in graph {} has no position\n",
+                    node.name, graph.name
+                ));
+                graphviz_pure_core::diag::agerr_prev("as required by the -n flag\n");
                 return Err(GraphvizError::LayoutError {
                     stage: "nop",
-                    message: format!(
-                        "node {} in graph {} has no position (as required by the -n flag)",
-                        node.name, graph.name
-                    ),
+                    message: format!("init_nop: node {} has no position", node.name),
                 });
             }
         }

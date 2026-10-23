@@ -186,6 +186,10 @@ pub(crate) struct Features {
 #[allow(unused_variables)]
 pub(crate) trait Engine {
     fn features(&self) -> Features;
+    /// `job->output_langname`, the `-T` format the engine renders.
+    fn output_langname(&self) -> &str {
+        "svg"
+    }
     fn begin_job(&mut self, j: &Job) {}
     fn begin_graph(&mut self, j: &Job) {}
     fn end_graph(&mut self, j: &Job) {}
@@ -520,9 +524,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
                     o.penwidth = item.args.first().map_or(0.0, |a| super::attrs::atof(a));
                 }
                 "filled" | "unfilled" | "tapered" => {}
-                other => {
-                    eprintln!("Warning: gvrender_set_style: unsupported style {other} - ignoring")
-                }
+                other => graphviz_pure_core::diag::agwarningf(&format!(
+                    "gvrender_set_style: unsupported style {other} - ignoring\n"
+                )),
             }
         }
     }

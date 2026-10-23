@@ -5,7 +5,6 @@
 use crate::common::init::scan_pair;
 use crate::common::types::{LGraph, P_PIN, P_SET};
 use crate::common::utils::{late_double, mapbool};
-use std::io::Write;
 
 /// `init_edge(e, E_len)` for every edge: `ED_factor` from `weight` (no lower
 /// bound but 0) and `ED_dist` from `len` (default `K`).
@@ -33,7 +32,7 @@ pub fn initial_positions(g: &mut LGraph<'_>, inputscale: f64) {
             // bytes are written as they are, without agerr's escaping of control characters.
             let name = g.src.nodes.get(n).map_or("", |nd| nd.name.as_str());
             let msg = format!("Warning: node {name}, position {p}, expected two floats\n");
-            let _ = std::io::stderr().write_all(&graphviz_pure_core::charset::encode(&msg));
+            graphviz_pure_core::diag::fprintf_stderr(&msg);
             continue;
         }
         let pin = mapbool(g.nattr(n, "pin"));

@@ -140,8 +140,8 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
                 b.ll.x, b.ll.y, b.ur.x, b.ur.y
             ));
         }
-        eprintln!("{s}");
-        eprintln!(
+        graphviz_pure_core::diag::dump(&s);
+        graphviz_pure_core::diag::dump(&format!(
             "RS ends {:.6},{:.6} {:.6} {} -> {:.6},{:.6} {:.6} {}",
             pp.start.p.x,
             pp.start.p.y,
@@ -151,7 +151,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
             pp.end.p.y,
             pp.end.theta,
             i32::from(pp.end.constrained)
-        );
+        ));
     }
     let boxes = &mut pp.boxes;
     let mut polypoints: Vec<Point> = Vec::with_capacity(boxn * 8);
@@ -267,7 +267,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
         Ok(pl) => pl,
         Err(_) => {
             if gvdump() {
-                eprintln!("RS Pshortestpath failed");
+                graphviz_pure_core::diag::dump("RS Pshortestpath failed");
             }
             agerrorf("in routesplines, Pshortestpath failed\n");
             return None;
@@ -278,12 +278,12 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
         for p in &polypoints {
             s.push_str(&format!(" {:.6},{:.6}", p.x, p.y));
         }
-        eprintln!("{s}");
+        graphviz_pure_core::diag::dump(&s);
         let mut s = format!("RS sp {}:", pl.len());
         for p in &pl {
             s.push_str(&format!(" {:.6},{:.6}", p.x, p.y));
         }
-        eprintln!("{s}");
+        graphviz_pure_core::diag::dump(&s);
     }
     let spl = if polyline {
         make_polyline(&pl)
@@ -306,7 +306,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
             Ok(s) => s,
             Err(_) => {
                 if gvdump() {
-                    eprintln!("RS Proutespline failed");
+                    graphviz_pure_core::diag::dump("RS Proutespline failed");
                 }
                 agerrorf("in routesplines, Proutespline failed\n");
                 return None;
@@ -353,7 +353,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
         for p in &ps {
             s.push_str(&format!(" {:.6},{:.6}", p.x, p.y));
         }
-        eprintln!("{s}");
+        graphviz_pure_core::diag::dump(&s);
     }
     Some(ps)
 }
@@ -392,7 +392,7 @@ fn overlap(i0: f64, i1: f64, j0: f64, j1: f64) -> f64 {
 /// count, so after `checkpath` squeezes out degenerate boxes the tail repeats the last
 /// originals) and the end ports.
 fn printpath(pp: &Path) {
-    eprint!("{}", printpath_text(pp));
+    graphviz_pure_core::diag::fprintf_stderr(&printpath_text(pp));
 }
 
 /// The text [`printpath`] writes to stderr.

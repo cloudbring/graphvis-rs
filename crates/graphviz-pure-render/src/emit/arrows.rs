@@ -101,7 +101,9 @@ fn match_name(name: &str) -> u32 {
         let (mut f, r) = match_shape(next);
         rest = r;
         if f == ARR_TYPE_NONE {
-            eprintln!("Warning: Arrow type \"{next}\" unknown - ignoring");
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "Arrow type \"{next}\" unknown - ignoring\n"
+            ));
             return flag;
         }
         if f == ARR_TYPE_GAP && i == NUMB_OF_ARROW_HEADS - 1 {

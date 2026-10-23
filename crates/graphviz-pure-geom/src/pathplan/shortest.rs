@@ -112,7 +112,7 @@ fn finddqsplit(dq: &Deque, pnl: &Pnl, p: usize) -> usize {
 
 /// `prerror(msg)` of `shortest.c`, with the C line number it reports.
 fn prerror(line: u32, msg: &str) {
-    eprintln!("lib/pathplan/shortest.c:{line}: {msg}");
+    graphviz_pure_core::diag::fprintf_stderr(&format!("lib/pathplan/shortest.c:{line}: {msg}\n"));
 }
 
 /// `Pshortestpath(polyp, eps, &output)`: `Err` when an endpoint is outside

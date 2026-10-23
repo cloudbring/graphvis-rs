@@ -142,10 +142,11 @@ impl<'a> Tree<'a> {
                             .iter()
                             .find(|(_, d)| **d == old)
                             .map_or("", |(k, _)| k.as_str());
-                        eprintln!(
-                            "Error: node \"{}\" belongs to two non-nested clusters \"{}\" and \"{}\"",
+                        // fprintf(stderr, ...): not agerr, so not filtered, counted or escaped.
+                        graphviz_pure_core::diag::fprintf_stderr(&format!(
+                            "Error: node \"{}\" belongs to two non-nested clusters \"{}\" and \"{}\"\n",
                             self.g.nodes[n].name, sg.name, old_name
-                        );
+                        ));
                     }
                     dn_of[n] = Some(dn);
                 }

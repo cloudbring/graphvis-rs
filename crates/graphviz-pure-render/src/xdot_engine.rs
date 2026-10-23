@@ -31,6 +31,8 @@ fn escape_backslashes(s: &str) -> String {
 }
 
 pub(crate) struct XdotEngine {
+    /// The versioned format (`xdot1.2`, `xdot1.4`) this engine renders, if any.
+    fixed: Option<&'static str>,
     pub version: u16,
     pub version_s: String,
     bufs: [String; 8],
@@ -64,6 +66,11 @@ impl XdotEngine {
             },
         };
         XdotEngine {
+            fixed: match fixed {
+                Some("1.4") => Some("xdot1.4"),
+                Some("1.2") => Some("xdot1.2"),
+                _ => None,
+            },
             version,
             version_s,
             bufs: Default::default(),
@@ -224,6 +231,13 @@ impl XdotEngine {
 }
 
 impl Engine for XdotEngine {
+    fn output_langname(&self) -> &str {
+        match self.fixed {
+            Some(v) => v,
+            None => "xdot",
+        }
+    }
+
     fn features(&self) -> Features {
         Features {
             flags: GVRENDER_DOES_TRANSFORM

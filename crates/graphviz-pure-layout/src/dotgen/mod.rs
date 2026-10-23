@@ -179,7 +179,10 @@ impl<'a> Dot<'a> {
         }
         if phase == "R" {
             for n in self.nodes_of(0) {
-                eprintln!("R {} {}", self.nodes[n].name, self.nodes[n].rank);
+                graphviz_pure_core::diag::dump(&format!(
+                    "R {} {}",
+                    self.nodes[n].name, self.nodes[n].rank
+                ));
             }
             return;
         }
@@ -197,7 +200,7 @@ impl<'a> Dot<'a> {
                     line.push_str(&format!("@{}", self.nodes[v].coord.x));
                 }
             }
-            eprintln!("{line}");
+            graphviz_pure_core::diag::dump(&line);
         }
     }
 

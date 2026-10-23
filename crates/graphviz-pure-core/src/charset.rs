@@ -16,7 +16,6 @@
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
-use std::io::Write;
 
 /// First code point of the raw-byte range (`U+10FF00 + byte`).
 const RAW_BASE: u32 = 0x10_FF00;
@@ -71,24 +70,6 @@ pub fn encode(s: &str) -> Cow<'_, [u8]> {
         }
     }
     Cow::Owned(out)
-}
-
-/// Writes `msg` to stderr as C's bytes, as cgraph's `default_usererrf`
-/// (`lib/cgraph/agerror.c`) does: up to the first NUL, with control characters other than
-/// white space written as `\ooo`.
-pub fn eprint_bytes(msg: &str) {
-    let bytes = encode(msg);
-    let bytes = bytes.split(|&b| b == 0).next().unwrap_or_default();
-    let mut out = Vec::with_capacity(bytes.len());
-    for &b in bytes {
-        // gv_iscntrl && !gv_isspace
-        if (b <= 31 || b == 127) && !matches!(b, b'\t' | b'\n' | 0x0b | 0x0c | b'\r') {
-            out.extend_from_slice(format!("\\{b:03o}").as_bytes());
-        } else {
-            out.push(b);
-        }
-    }
-    let _ = std::io::stderr().write_all(&out);
 }
 
 /// `GD_charset(g)`: the input character set of a graph (`CHAR_UTF8`, `CHAR_LATIN1`,
@@ -149,8 +130,8 @@ thread_local! {
 pub fn begin_layout(graph_name: &str, charset: Option<&str>) {
     let (cs, ok) = Charset::parse(charset);
     if !ok {
-        eprint_bytes(&format!(
-            "Warning: Unsupported charset \"{}\" - assuming utf-8\n",
+        crate::diag::agwarningf(&format!(
+            "Unsupported charset \"{}\" - assuming utf-8\n",
             charset.unwrap_or("")
         ));
     }
@@ -188,7 +169,7 @@ pub(crate) fn warn_invalid_utf8(msg: impl FnOnce(&str) -> String) {
         return;
     }
     let text = GRAPH.with(|g| msg(&g.borrow()));
-    eprint_bytes(&text);
+    crate::diag::agwarningf(&text);
 }
 
 #[cfg(test)]

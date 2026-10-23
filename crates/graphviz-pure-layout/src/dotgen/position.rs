@@ -124,7 +124,7 @@ impl Dot<'_> {
                         self.nodes[ed.head].low, ed.minlen, ed.weight
                     ));
                 }
-                eprintln!("{l}");
+                graphviz_pure_core::diag::dump(&l);
             }
         }
         let it = self.nsiter2(g);

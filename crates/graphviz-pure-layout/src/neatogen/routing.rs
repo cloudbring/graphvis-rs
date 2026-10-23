@@ -181,10 +181,10 @@ impl Router {
                 let p = crate::common::geom::add(g.nodes[t].coord, g.edges[e].tail_port.p);
                 let q = crate::common::geom::add(g.nodes[h].coord, g.edges[e].head_port.p);
                 if std::env::var_os("GVDUMP").is_some() {
-                    eprintln!(
+                    graphviz_pure_core::diag::dump(&format!(
                         "OP {} {:?},{:?} {} {:?},{:?}",
                         g.nodes[t].lim, p.x, p.y, g.nodes[h].lim, q.x, q.y
-                    );
+                    ));
                 }
                 // C's `Pobspath` loops forever when `q` is unreachable (see `pobspath`);
                 // use the straight segment it returns when `p` sees `q`.

@@ -244,7 +244,7 @@ pub fn warn_unknown_color(name: &str) {
     if let Ok(mut seen) = seen.lock()
         && seen.insert(name.to_string())
     {
-        eprintln!("Warning: {name} is not a known color.");
+        crate::diag::agwarningf(&format!("{name} is not a known color.\n"));
     }
 }
 
