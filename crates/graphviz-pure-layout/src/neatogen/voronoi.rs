@@ -1210,7 +1210,7 @@ pub fn adjust(g: &mut LGraph<'_>, sub: &Sub, mode: AdjustMode) -> bool {
     let margin = g
         .gattr("voro_margin")
         .filter(|s| !s.is_empty())
-        .map(crate::common::utils::atof)
+        .map(graphviz_pure_core::strtod::atof)
         .unwrap_or(0.05);
     let yd = margin * (y1 - y0);
     let xd = margin * (x1 - x0);

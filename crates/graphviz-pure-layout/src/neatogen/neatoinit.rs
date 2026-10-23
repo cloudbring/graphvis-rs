@@ -10,70 +10,143 @@ use super::stuff::{kk_neato, scan_graph_mode};
 use super::*;
 use crate::common::postproc::gv_postprocess;
 use crate::common::types::*;
-use crate::common::utils::{atoi, compute_bb, late_int, mapbool, parse_f64_rest};
+use crate::common::utils::{atoi, compute_bb, late_int, mapbool};
+use crate::cutil::Drand48;
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, pack_graphs, pccomps};
 use graphviz_pure_core::math;
+use graphviz_pure_core::strtod::{Scanned, scan_lf, sscanf};
 use graphviz_pure_core::{Graph, Point, Result};
 
 /// `CL_OFFSET`: default margin around packed components, in points.
 pub const CL_OFFSET: i64 = 8;
 
-/// `user_pos(posptr, pinptr, np, nG)`: parse a node's `pos`/`pin`.
-fn user_pos(g: &mut LGraph<'_>, n: usize, inputscale: f64, pos_declared: bool) -> bool {
+/// `user_pos(posptr, pinptr, np, nG)`: parse a node's `pos`/`pin` (and, with `dim > 2`, its
+/// `z`).
+fn user_pos(
+    g: &mut LGraph<'_>,
+    n: usize,
+    inputscale: f64,
+    pos_declared: bool,
+    z_declared: bool,
+) -> bool {
     if !pos_declared {
         return false;
     }
-    let Some(p) = g.nattr(n, "pos").filter(|s| !s.is_empty()) else {
+    let Some(p) = g.nattr(n, "pos") else {
         return false;
     };
-    let ndim = g.ndim;
-    let mut vals = Vec::new();
-    let mut rest = p;
-    let mut c = None;
-    while vals.len() < 3 {
-        let Some((v, r)) = parse_f64_rest(rest) else {
-            break;
-        };
-        vals.push(v);
-        rest = r;
-        if vals.len() == 2 && ndim < 3 {
-            c = rest.chars().next();
-            break;
+    let z = if z_declared { g.nattr(n, "z") } else { None };
+    let pin = mapbool(g.nattr(n, "pin"));
+    let ng = g.nodes.len();
+    let name = &g.src.nodes[n].name;
+    let node = &mut g.nodes[n];
+    match user_pos_values(p, z, pin, name, inputscale, ng, &mut g.drand, &mut node.pos) {
+        Some(pinned) => {
+            node.pinned = pinned;
+            true
         }
-        match rest.strip_prefix(',') {
-            Some(r) if vals.len() < 3 => rest = r,
-            _ => {
-                c = rest.chars().next();
-                break;
+        None => false,
+    }
+}
+
+/// The body of `user_pos` on a node's `pos`, `z` (`None` when `z` is not declared) and
+/// `pin`: fills `pvec` (`ND_pos`, of length `Ndim`) and returns `ND_pinned`, or `None` when
+/// `pos` is empty or unreadable (after C's error message).
+pub(crate) fn user_pos_values(
+    p: &str,
+    z: Option<&str>,
+    pin: bool,
+    name: &str,
+    inputscale: f64,
+    ng: usize,
+    drand: &mut Drand48,
+    pvec: &mut [f64],
+) -> Option<u8> {
+    if p.is_empty() {
+        return None;
+    }
+    let ndim = pvec.len();
+    // sscanf assigns each value it reads, even when it then fails.
+    let assign = |pvec: &mut [f64], r: &Scanned<'_>, max: usize| {
+        let k = usize::try_from(r.count).unwrap_or(0).min(max);
+        for (p, v) in pvec.iter_mut().zip(r.values).take(k) {
+            *p = v;
+        }
+    };
+    let scale = |pvec: &mut [f64]| {
+        if inputscale > 0.0 {
+            for v in pvec.iter_mut() {
+                *v /= inputscale;
             }
         }
-    }
-    if vals.len() >= 3 && ndim < 3 {
-        vals.truncate(2);
-    }
-    if vals.len() < 2 {
-        let msg = format!(
-            "node {}, position {p}, expected two doubles\n",
-            g.src.nodes[n].name
-        );
-        graphviz_pure_core::diag::agerrorf(&msg);
-        return false;
-    }
-    let pin_attr = mapbool(g.nattr(n, "pin"));
-    let node = &mut g.nodes[n];
-    for (i, v) in vals.iter().enumerate().take(ndim) {
-        node.pos[i] = *v;
-    }
-    node.pinned = P_SET;
-    if inputscale > 0.0 {
-        for v in node.pos.iter_mut().take(vals.len()) {
-            *v /= inputscale;
+    };
+    let pinned = |c: Option<u8>| if c == Some(b'!') || pin { P_PIN } else { P_SET };
+    if ndim >= 3 {
+        let r = sscanf(p, "%lf,%lf,%lf%c");
+        assign(pvec, &r, 3);
+        if r.count >= 3 {
+            scale(pvec);
+            if ndim > 3 {
+                jitter_d(pvec, ng, 3, drand);
+            }
+            return Some(pinned(r.c));
         }
     }
-    if c == Some('!') || pin_attr {
-        node.pinned = P_PIN;
+    let r = sscanf(p, "%lf,%lf%c");
+    assign(pvec, &r, 2);
+    if r.count >= 2 {
+        scale(pvec);
+        if ndim > 2 {
+            if let Some((z, _)) = z.and_then(scan_lf) {
+                if let Some(p) = pvec.get_mut(2) {
+                    *p = if inputscale > 0.0 { z / inputscale } else { z };
+                }
+                jitter_d(pvec, ng, 3, drand);
+            } else {
+                jitter_d(pvec, ng, 2, drand);
+            }
+        }
+        return Some(pinned(r.c));
     }
-    true
+    graphviz_pure_core::diag::agerrorf(&format!(
+        "node {name}, position {p}, expected two doubles\n"
+    ));
+    None
+}
+
+/// `jitter_d(np, nG, n)` (`jitter3d` is `jitter_d(np, nG, 2)`): random coordinates from
+/// dimension `from` on.
+fn jitter_d(pvec: &mut [f64], ng: usize, from: usize, drand: &mut Drand48) {
+    for v in pvec.iter_mut().skip(from) {
+        *v = ng as f64 * drand.drand48();
+    }
+}
+
+/// `addZ(g)`: with `dim >= 3` and a declared `z`, every node's `z` becomes its third
+/// coordinate in points, printed with `%lf`.
+fn add_z(g: &LGraph<'_>, z_declared: bool, graph: &mut Graph) {
+    if g.ndim >= 3 && z_declared {
+        for (nd, n) in graph.nodes.iter_mut().zip(&g.nodes) {
+            set_z(nd, n.pos.get(2).copied().unwrap_or(0.0));
+        }
+    }
+}
+
+/// `addZ`'s `agxset(n, N_z, "%lf" of POINTS_PER_INCH * ND_pos(n)[2])`.
+pub(crate) fn set_z(node: &mut graphviz_pure_core::NodeData, z: f64) {
+    node.attrs.insert("z".to_string(), c_lf(72.0 * z));
+}
+
+/// `printf("%lf", v)`.
+fn c_lf(v: f64) -> String {
+    // The macOS libc prints a NaN as `nan` whatever its sign.
+    if v.is_nan() {
+        "nan".to_string()
+    } else if v.is_infinite() {
+        if v < 0.0 { "-inf" } else { "inf" }.to_string()
+    } else {
+        format!("{v:.6}")
+    }
 }
 
 /// `neatoMode(g)`.
@@ -461,8 +534,9 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
     let src = graph.clone();
     let mut g = LGraph::new(&src, ndim, EdgeType::Line);
     let pos_declared = g.node_attr_declared("pos");
+    let z_declared = g.node_attr_declared("z");
     for n in 0..g.nodes.len() {
-        user_pos(&mut g, n, inputscale, pos_declared);
+        user_pos(&mut g, n, inputscale, pos_declared, z_declared);
     }
     let layout_mode = neato_mode(&g);
     let am = graph_adjust_mode(&g, None);
@@ -509,6 +583,7 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
         }
         let mut root = g.root_sub();
         compute_bb(&mut g, &mut root, true);
+        add_z(&g, z_declared, graph);
         add_cluster(&mut g);
     } else {
         let mut root = g.root_sub();
@@ -521,6 +596,8 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
             &am,
             no_translate,
         );
+        // C adds z before routing the edges, which does not move the nodes.
+        add_z(&g, z_declared, graph);
     }
     gv_postprocess(&mut g, !no_translate);
     g.write_back(graph);
@@ -542,5 +619,48 @@ fn layout_and_route(
         do_edges(g, sub, is_root);
     } else {
         spline_edges(g, sub, is_root);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn user_pos_of(p: &str, z: Option<&str>, ndim: usize) -> (Option<u8>, Vec<f64>, Drand48) {
+        let mut drand = Drand48::default();
+        let mut pvec = vec![0.0; ndim];
+        let pinned = graphviz_pure_core::diag::quietly(|| {
+            user_pos_values(p, z, false, "n", -1.0, 4, &mut drand, &mut pvec)
+        });
+        (pinned, pvec, drand)
+    }
+
+    // Issue #245: neatoinit.c's user_pos with Ndim > 2 and two values in `pos`.
+    #[test]
+    fn user_pos_takes_z_or_a_random_third_coordinate() {
+        let mut fresh = Drand48::default();
+        // `z` is read and no random number is drawn.
+        let (pinned, pvec, drand) = user_pos_of("1,2", Some("3"), 3);
+        assert_eq!(
+            (pinned, pvec, drand),
+            (Some(P_SET), vec![1.0, 2.0, 3.0], fresh)
+        );
+        // No usable `z`: jitter3d, nG * drand48().
+        let (_, pvec, _) = user_pos_of("1,2!", Some("x"), 3);
+        assert_eq!(pvec, vec![1.0, 2.0, 4.0 * fresh.drand48()]);
+        // Three values in `pos`: `z` is not read; with Ndim 4, jitter_d from the fourth on.
+        let mut fresh = Drand48::default();
+        let (pinned, pvec, _) = user_pos_of("0x1p3,1e1,nan(1)!", Some("3"), 4);
+        assert_eq!(pinned, Some(P_PIN));
+        assert_eq!(pvec[..2], [8.0, 10.0]);
+        assert!(pvec[2].is_nan());
+        assert_eq!(pvec[3], 4.0 * fresh.drand48());
+    }
+
+    // sscanf assigns what it read before failing: `pos="5"` leaves ND_pos[0] at 5.
+    #[test]
+    fn user_pos_keeps_the_values_of_a_failed_scan() {
+        let (pinned, pvec, _) = user_pos_of("5", None, 2);
+        assert_eq!((pinned, pvec), (None, vec![5.0, 0.0]));
     }
 }

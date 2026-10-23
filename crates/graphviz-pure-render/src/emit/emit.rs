@@ -48,7 +48,7 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
             None => (tok, 0.0),
             Some(i) => {
                 let rest = &tok[i + 1..];
-                match super::attrs::strtod(rest) {
+                match graphviz_pure_core::strtod::strtod_rest(rest) {
                     Some((v, _)) if v >= 0.0 => (&tok[..i], v),
                     _ => {
                         if test_and_set() {
@@ -1319,7 +1319,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             let mut want_rounded = styles.is_some_and(|s| s.iter().any(|i| i.name == "rounded"));
             let mut radius = 0.0;
             if let Some(r) = a.nonempty("radius") {
-                radius = super::attrs::atof(r);
+                radius = graphviz_pure_core::strtod::atof(r);
                 want_rounded = radius > 0.0;
             }
             if want_rounded && radius == 0.0 {

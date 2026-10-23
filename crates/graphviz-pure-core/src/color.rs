@@ -305,76 +305,11 @@ fn parse_hsv_color(p: &str) -> Option<RgbaColor> {
     // colorxlate: commas become blanks, then `sscanf("%lf%lf%lf%lf") >= 3`, so text after
     // the numbers (`0.1,0.9,0.7;0.3` of a weighted list) is ignored.
     let canon: String = p.chars().map(|c| if c == ',' { ' ' } else { c }).collect();
-    let mut nums = [0.0_f64, 0.0, 0.0, 1.0];
-    let mut rest = canon.as_str();
-    let mut count = 0;
-    while count < 4 {
-        let Some((v, r)) = scan_lf(rest) else { break };
-        nums[count] = v;
-        rest = r;
-        count += 1;
-    }
-    if count >= 3 {
-        Some(RgbaColor::from_hsva(nums[0], nums[1], nums[2], nums[3]))
-    } else {
-        None
-    }
-}
-
-/// One `%lf` conversion: skips white space, then the longest `strtod` prefix.
-fn scan_lf(s: &str) -> Option<(f64, &str)> {
-    let t = s.trim_start_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c']);
-    let b = t.as_bytes();
-    let mut i = usize::from(matches!(b.first(), Some(b'+' | b'-')));
-    let lower = t[i..]
-        .get(..8.min(t.len() - i))
-        .unwrap_or("")
-        .to_ascii_lowercase();
-    let neg = b.first() == Some(&b'-');
-    for (word, v) in [
-        ("infinity", f64::INFINITY),
-        ("inf", f64::INFINITY),
-        ("nan", f64::NAN),
-    ] {
-        if lower.starts_with(word) {
-            let v = if neg { -v } else { v };
-            return Some((v, &t[i + word.len()..]));
-        }
-    }
-    let start = i;
-    while i < b.len() && b[i].is_ascii_digit() {
-        i += 1;
-    }
-    let mut digits = i - start;
-    if i < b.len() && b[i] == b'.' {
-        let f = i + 1;
-        let mut j = f;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        digits += j - f;
-        if digits > 0 {
-            i = j;
-        }
-    }
-    if digits == 0 {
-        return None;
-    }
-    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
-        let mut j = i + 1;
-        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
-            j += 1;
-        }
-        let e = j;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        if j > e {
-            i = j;
-        }
-    }
-    let text = t[..i].strip_suffix('.').unwrap_or(&t[..i]);
-    Some((text.parse().unwrap_or(0.0), &t[i..]))
+    let r = crate::strtod::sscanf(&canon, "%lf%lf%lf%lf");
+    let [h, sat, v, a, _] = r.values;
+    // `A = 1.0` before the scan.
+    let a = if r.count >= 4 { a } else { 1.0 };
+    (r.count >= 3).then(|| RgbaColor::from_hsva(h, sat, v, a))
 }
 
 /// Port of `resolveColor` from `lib/common/colxlate.c`.

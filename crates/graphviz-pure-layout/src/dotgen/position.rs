@@ -6,6 +6,7 @@ use super::Dot;
 use super::types::*;
 use super::utils::*;
 use graphviz_pure_core::Point;
+use graphviz_pure_core::strtod::atof;
 
 impl Dot<'_> {
     /// `make_aux_edge`

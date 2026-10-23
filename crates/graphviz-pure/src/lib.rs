@@ -97,13 +97,18 @@ pub fn render_svg_all_partial(
     let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
     let mut out = Vec::with_capacity(graphs.len());
     for graph in graphs {
-        let explicit_dpi = ["dpi", "resolution"].iter().any(|k| {
-            graph
-                .graph_attrs
-                .get(*k)
-                .and_then(|v| v.trim().parse::<f64>().ok())
-                .is_some_and(|d| d > 0.0)
-        });
+        // GD_drawing(g)->dpi = late_double(dpi, late_double(resolution, 0, 0), 0) > 0.
+        let late_double = |k: &str, dflt: f64| match graph
+            .graph_attrs
+            .get(k)
+            .filter(|v| !v.is_empty())
+            .and_then(|v| graphviz_pure_core::strtod::strtod_rest(v))
+        {
+            Some((v, _)) if v < 0.0 => 0.0,
+            Some((v, _)) => v,
+            None => dflt,
+        };
+        let explicit_dpi = late_double("dpi", late_double("resolution", 0.0)) > 0.0;
         match render_parsed(graph, engine, OutputFormat::Svg, "svg", options) {
             Ok(s) => out.push((s, explicit_dpi)),
             Err(e) => return (out, Some(e)),

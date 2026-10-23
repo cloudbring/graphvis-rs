@@ -1,72 +1,9 @@
 //! Attribute access with C Graphviz semantics (`late_int`, `late_double`, `late_string`,
-//! `late_nnstring`, `mapbool` in `lib/common/utils.c`) and the C number scanners they rely on.
+//! `late_nnstring`, `mapbool` in `lib/common/utils.c`) and the C integer scanners they rely on
+//! (`strtod` is `graphviz_pure_core::strtod`).
 
 use graphviz_pure_core::AttrMap;
-
-/// `strtod` on the start of `s` (after white space): the value and the unparsed rest.
-pub(crate) fn strtod(s: &str) -> Option<(f64, &str)> {
-    let t = s.trim_start_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c']);
-    let b = t.as_bytes();
-    let mut i = 0;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-    }
-    let lower: String = t[i..]
-        .chars()
-        .take(8)
-        .collect::<String>()
-        .to_ascii_lowercase();
-    for word in ["infinity", "inf", "nan"] {
-        if lower.starts_with(word) {
-            let end = i + word.len();
-            let v: f64 = if word == "nan" {
-                f64::NAN
-            } else if b.first() == Some(&b'-') {
-                f64::NEG_INFINITY
-            } else {
-                f64::INFINITY
-            };
-            return Some((v, &t[end..]));
-        }
-    }
-    let digits_start = i;
-    while i < b.len() && b[i].is_ascii_digit() {
-        i += 1;
-    }
-    let mut mantissa = i - digits_start;
-    if i < b.len() && b[i] == b'.' {
-        let save = i;
-        i += 1;
-        let frac_start = i;
-        while i < b.len() && b[i].is_ascii_digit() {
-            i += 1;
-        }
-        mantissa += i - frac_start;
-        if mantissa == 0 {
-            i = save;
-        }
-    }
-    if mantissa == 0 {
-        return None;
-    }
-    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
-        let mut j = i + 1;
-        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
-            j += 1;
-        }
-        let exp_start = j;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        if j > exp_start {
-            i = j;
-        }
-    }
-    let text = &t[..i];
-    let text = text.strip_suffix('.').unwrap_or(text);
-    let v = text.parse::<f64>().unwrap_or(0.0);
-    Some((v, &t[i..]))
-}
+use graphviz_pure_core::strtod::strtod_rest;
 
 /// `strtol(s, &end, 10)`: the value and the unparsed rest.
 pub(crate) fn strtol(s: &str) -> Option<(i64, &str)> {
@@ -94,11 +31,6 @@ pub(crate) fn strtol(s: &str) -> Option<(i64, &str)> {
 /// `atoi`.
 pub(crate) fn atoi(s: &str) -> i64 {
     strtol(s).map_or(0, |x| x.0)
-}
-
-/// `atof`.
-pub(crate) fn atof(s: &str) -> f64 {
-    strtod(s).map_or(0.0, |x| x.0)
 }
 
 /// `mapBool(p, dflt)`.
@@ -139,7 +71,7 @@ impl<'a> Attrs<'a> {
     }
 
     pub fn late_double(&self, k: &str, dflt: f64, min: f64) -> f64 {
-        match self.get(k).filter(|s| !s.is_empty()).and_then(strtod) {
+        match self.get(k).filter(|s| !s.is_empty()).and_then(strtod_rest) {
             Some((v, _)) if v < min => min,
             Some((v, _)) => v,
             None => dflt,
@@ -267,16 +199,6 @@ pub(crate) fn default_line_style() -> Vec<StyleItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn strtod_prefixes() {
-        assert_eq!(strtod("1.5,2").map(|x| (x.0, x.1)), Some((1.5, ",2")));
-        assert_eq!(strtod("  -2e1x").map(|x| (x.0, x.1)), Some((-20.0, "x")));
-        assert_eq!(strtod("3.").map(|x| x.0), Some(3.0));
-        assert_eq!(strtod(".").map(|x| x.0), None);
-        assert_eq!(strtod("1e").map(|x| (x.0, x.1)), Some((1.0, "e")));
-        assert!(strtod("x").is_none());
-    }
 
     #[test]
     fn parse_style_with_arguments() {

@@ -7,6 +7,7 @@
 use super::Dot;
 use super::types::*;
 use super::utils::*;
+use graphviz_pure_core::strtod::{atof, sscanf};
 use graphviz_pure_core::{Graph, GraphKind, Point};
 
 const GAP: f64 = 4.0;
@@ -135,17 +136,27 @@ impl<'a> Dot<'a> {
             };
         }
         self.graphs[g].rankdir = rankdir;
-        let xf = late_double(self.agget(g, "nodesep"), 0.25, 0.02);
+        let mut xf = late_double(self.agget(g, "nodesep"), 0.25, 0.02);
         self.graphs[g].nodesep = points(xf);
-        let mut xf = 0.5;
         if let Some(p) = self.agget(g, "ranksep") {
-            match strtod_prefix(p) {
-                None => xf = 0.5,
-                Some(v) => xf = if v < 0.02 { 0.02 } else { v },
+            let r = sscanf(p, "%lf");
+            match r.count {
+                0 => xf = 0.5,
+                // EOF (an empty or blank value) assigns nothing: `xf` keeps the nodesep.
+                -1 => xf = if xf < 0.02 { 0.02 } else { xf },
+                _ => {
+                    xf = if r.values[0] < 0.02 {
+                        0.02
+                    } else {
+                        r.values[0]
+                    }
+                }
             }
             if p.contains("equally") {
                 self.graphs[g].exact_ranksep = true;
             }
+        } else {
+            xf = 0.5;
         }
         self.graphs[g].ranksep = points(xf);
         // setRatio
@@ -404,54 +415,21 @@ fn no_clip(v: Option<&str>) -> bool {
 /// `getdoubles2ptf`
 fn getdoubles2ptf(p: Option<&str>) -> (Option<Point>, bool) {
     let Some(p) = p else { return (None, false) };
-    // sscanf("%lf,%lf%c")
-    let t = p.trim_start();
-    if let Some(xf) = strtod_prefix(t) {
-        let consumed = float_len(t);
-        let rest = &t[consumed..];
-        if let Some(r2) = rest.strip_prefix(',')
-            && let Some(yf) = strtod_prefix(r2)
-        {
-            let r3 = &r2.trim_start()[float_len(r2.trim_start())..];
-            if xf > 0.0 && yf > 0.0 {
-                return (
-                    Some(Point::new(points(xf) as f64, points(yf) as f64)),
-                    r3.starts_with('!'),
-                );
-            }
-        }
-        if xf > 0.0 {
-            return (
-                Some(Point::new(points(xf) as f64, points(xf) as f64)),
-                rest.starts_with('!'),
-            );
-        }
+    let r = sscanf(p, "%lf,%lf%c");
+    let [xf, yf, ..] = r.values;
+    if r.count > 1 && xf > 0.0 && yf > 0.0 {
+        return (
+            Some(Point::new(points(xf) as f64, points(yf) as f64)),
+            r.c == Some(b'!'),
+        );
+    }
+    let r = sscanf(p, "%lf%c");
+    let xf = r.values[0];
+    if r.count > 0 && xf > 0.0 {
+        return (
+            Some(Point::new(points(xf) as f64, points(xf) as f64)),
+            r.c == Some(b'!'),
+        );
     }
     (None, false)
-}
-
-/// Length of the float prefix accepted by `strtod`.
-fn float_len(s: &str) -> usize {
-    let b = s.as_bytes();
-    let mut i = 0;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-    }
-    while i < b.len() && (b[i].is_ascii_digit() || b[i] == b'.') {
-        i += 1;
-    }
-    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
-        let mut j = i + 1;
-        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
-            j += 1;
-        }
-        let ds = j;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        if j > ds {
-            i = j;
-        }
-    }
-    i
 }

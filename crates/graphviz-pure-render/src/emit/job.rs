@@ -3,8 +3,9 @@
 //! up by `gvRenderJobs` (`init_job_pad`, `init_job_margin`, `init_job_dpi`,
 //! `init_job_viewport`, `init_job_pagination`, `setup_page`, `emit_graph`).
 
-use super::attrs::{StyleItem, strtod};
+use super::attrs::StyleItem;
 use super::model::{Model, TextSpan};
+use graphviz_pure_core::strtod::{atof, sscanf};
 use graphviz_pure_core::{BoundingBox, Point};
 
 pub(crate) const EMIT_SORTED: u32 = 1 << 0;
@@ -265,10 +266,13 @@ impl<'a> Job<'a> {
     pub fn new(m: &'a Model<'a>, features: Features, flags: u32) -> Self {
         let attrs = m.root_attrs();
         let scan2 = |k: &str| -> Option<(f64, f64)> {
-            let s = attrs.get(k)?;
-            let (a, rest) = strtod(s)?;
-            let b = rest.strip_prefix(',').and_then(strtod).map_or(a, |x| x.0);
-            Some((a * 72.0, b * 72.0))
+            let r = sscanf(attrs.get(k)?, "%lf,%lf");
+            let [a, b, ..] = r.values;
+            match r.count {
+                1 => Some((a * 72.0, a * 72.0)),
+                2 => Some((a * 72.0, b * 72.0)),
+                _ => None,
+            }
         };
         // init_job_pad / init_job_margin / init_job_dpi
         let pad = scan2("pad").map_or(
@@ -277,11 +281,7 @@ impl<'a> Job<'a> {
         );
         let margin = scan2("margin").map_or(Point::default(), |(x, y)| Point::new(x, y));
         let dpi = {
-            let d = attrs
-                .get("dpi")
-                .or_else(|| attrs.get("resolution"))
-                .and_then(strtod)
-                .map_or(0.0, |x| x.0);
+            let d = attrs.late_double("dpi", attrs.late_double("resolution", 0.0, 0.0), 0.0);
             if d > 0.0 { d } else { 72.0 }
         };
         // init_job_viewport
@@ -308,13 +308,35 @@ impl<'a> Job<'a> {
         let rotation = if m.landscape() { 90 } else { 0 };
         let mut view = Point::new(z * sz.x, z * sz.y);
         if let Some(vp) = attrs.get("viewport") {
-            let mut parts = vp.split(',');
+            // Three sscanf calls, each assigning the values it reads before a failure: a
+            // focus node, quoted or not, or else a focus point. A node that does not exist
+            // keeps the default focus.
             let mut nums = [view.x, view.y, z, focus.x, focus.y];
-            for slot in nums.iter_mut() {
-                match parts.next().and_then(strtod) {
-                    Some((v, _)) => *slot = v,
-                    None => break,
+            let assign = |nums: &mut [f64; 5], r: &graphviz_pure_core::strtod::Scanned<'_>, max| {
+                let n = usize::try_from(r.count).unwrap_or(0).min(max);
+                nums[..n].copy_from_slice(&r.values[..n]);
+            };
+            let node = |name: Option<&str>| {
+                name.and_then(|name| m.nodes.iter().find(|n| n.name == name))
+                    .map(|n| n.coord)
+            };
+            let r = sscanf(vp, "%lf,%lf,%lf,'%[^']'");
+            assign(&mut nums, &r, 3);
+            let named = if r.count == 4 {
+                Some(r.set)
+            } else {
+                let r = sscanf(vp, "%lf,%lf,%lf,%[^,]%c");
+                assign(&mut nums, &r, 3);
+                if r.count == 4 {
+                    Some(r.set)
+                } else {
+                    assign(&mut nums, &sscanf(vp, "%lf,%lf,%lf,%lf,%lf"), 5);
+                    None
                 }
+            };
+            if let Some(p) = named.and_then(node) {
+                nums[3] = p.x;
+                nums[4] = p.y;
             }
             view = Point::new(nums[0], nums[1]);
             z = nums[2];
@@ -521,7 +543,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 "invis" | "invisible" => o.pen = Pen::None,
                 "bold" => o.penwidth = PENWIDTH_BOLD,
                 "setlinewidth" => {
-                    o.penwidth = item.args.first().map_or(0.0, |a| super::attrs::atof(a));
+                    o.penwidth = item.args.first().map_or(0.0, |a| atof(a));
                 }
                 "filled" | "unfilled" | "tapered" => {}
                 other => graphviz_pure_core::diag::agwarningf(&format!(

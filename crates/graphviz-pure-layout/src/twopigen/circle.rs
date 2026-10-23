@@ -3,8 +3,8 @@
 //! Per-node `rdata` lives in [`RData`], indexed by node like `ND_alg(n)`.
 
 use crate::common::types::{LGraph, Sub};
-use crate::common::utils::parse_f64_rest;
 use graphviz_pure_core::math;
+use graphviz_pure_core::strtod::strtod_rest;
 use std::collections::VecDeque;
 
 const DEF_RANKSEP: f64 = 1.00;
@@ -232,7 +232,7 @@ fn get_rankseps(g: &LGraph<'_>, maxrank: u64) -> Vec<f64> {
     let mut delx = 0.0f64;
     if let Some(mut p) = g.gattr("ranksep") {
         while rk <= maxrank {
-            let d = match parse_f64_rest(p) {
+            let d = match strtod_rest(p) {
                 Some((d, rest)) if d > 0.0 => {
                     p = rest;
                     d

@@ -455,8 +455,8 @@ pub fn make_matrix(g: &mut LGraph<'_>, sub: &Sub) -> SparseMatrix {
             jcn.push(g.nodes[g.edges[e].head].id as i32);
             let w = if weight_declared {
                 g.eattr(e, "weight")
-                    .and_then(crate::common::utils::parse_leading_f64)
-                    .unwrap_or(1.0)
+                    .and_then(graphviz_pure_core::strtod::scan_lf)
+                    .map_or(1.0, |(v, _)| v)
             } else {
                 1.0
             };

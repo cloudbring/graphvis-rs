@@ -7,6 +7,7 @@ use super::Dot;
 use super::qsort::qsort;
 use super::types::*;
 use super::utils::*;
+use graphviz_pure_core::strtod::atof;
 use std::collections::VecDeque;
 
 const C_EE: i32 = 1;

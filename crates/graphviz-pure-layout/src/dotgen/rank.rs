@@ -4,6 +4,7 @@
 use super::Dot;
 use super::types::*;
 use super::utils::*;
+use graphviz_pure_core::strtod::atof;
 
 const BACKWARD_PENALTY: i32 = 1000;
 const STRONG_CLUSTER_WEIGHT: i32 = 1000;

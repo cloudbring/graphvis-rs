@@ -96,7 +96,7 @@ impl P<'_> {
     }
     fn real(&mut self) -> Option<f64> {
         let rest = self.rest();
-        let (v, r) = crate::emit::attrs::strtod(rest)?;
+        let (v, r) = graphviz_pure_core::strtod::strtod_rest(rest)?;
         self.i += rest.len() - r.len();
         Some(v)
     }

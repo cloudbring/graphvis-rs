@@ -12,6 +12,7 @@
 
 use crate::html_label::HtmlLabel;
 use graphviz_pure_core::math;
+use graphviz_pure_core::strtod::{sscanf, strtod};
 use std::collections::BTreeSet;
 
 use crate::shapes::{RecordField, ShapeKind, html_label_layout, is_html_label};
@@ -58,69 +59,6 @@ fn ps2inch(x: f64) -> f64 {
 // C attribute helpers (`lib/common/utils.c`)
 // ---------------------------------------------------------------------------------------------
 
-/// C `strtod` on a prefix of `s`: returns the parsed value and the number of bytes consumed
-/// (`0` if no conversion could be performed).
-pub fn strtod_prefix(s: &str) -> (f64, usize) {
-    let b = s.as_bytes();
-    let mut i = 0;
-    while i < b.len() && matches!(b[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
-        i += 1;
-    }
-    let start = i;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-    }
-    let rest = &s[i..];
-    let lower: String = rest
-        .chars()
-        .take(8)
-        .collect::<String>()
-        .to_ascii_lowercase();
-    if lower.starts_with("inf") {
-        let n = if lower.starts_with("infinity") { 8 } else { 3 };
-        let neg = start < b.len() && b[start] == b'-';
-        return (
-            if neg {
-                f64::NEG_INFINITY
-            } else {
-                f64::INFINITY
-            },
-            i + n,
-        );
-    }
-    if lower.starts_with("nan") {
-        return (f64::NAN, i + 3);
-    }
-    let mut digits = 0;
-    while i < b.len() && b[i].is_ascii_digit() {
-        i += 1;
-        digits += 1;
-    }
-    if i < b.len() && b[i] == b'.' {
-        i += 1;
-        while i < b.len() && b[i].is_ascii_digit() {
-            i += 1;
-            digits += 1;
-        }
-    }
-    if digits == 0 {
-        return (0.0, 0);
-    }
-    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
-        let mut j = i + 1;
-        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
-            j += 1;
-        }
-        if j < b.len() && b[j].is_ascii_digit() {
-            while j < b.len() && b[j].is_ascii_digit() {
-                j += 1;
-            }
-            i = j;
-        }
-    }
-    (s[start..i].parse::<f64>().unwrap_or(0.0), i)
-}
-
 /// C `strtol(p, &endp, 10)` prefix parse: `(value, consumed)`.
 fn strtol_prefix(s: &str) -> (i64, usize) {
     let b = s.as_bytes();
@@ -150,7 +88,7 @@ pub fn late_double(attrs: &AttrMap, key: &str, default: f64, minimum: f64) -> f6
     let Some(p) = attrs.get(key).filter(|p| !p.is_empty()) else {
         return default;
     };
-    let (rv, used) = strtod_prefix(p);
+    let (rv, used) = strtod(p);
     if used == 0 {
         return default;
     }
@@ -203,23 +141,6 @@ pub fn map_bool(p: Option<&str>, default: bool) -> bool {
 /// `mapbool` from `lib/common/utils.c`.
 pub fn mapbool(p: Option<&str>) -> bool {
     map_bool(p, false)
-}
-
-/// `sscanf(p, "%lf,%lf", &x, &y)`: returns the number of conversions and the values.
-fn sscanf_two_doubles(p: &str) -> (i32, f64, f64) {
-    let (x, used) = strtod_prefix(p);
-    if used == 0 {
-        return (if p.trim().is_empty() { -1 } else { 0 }, 0.0, 0.0);
-    }
-    let rest = &p[used..];
-    let Some(rest) = rest.strip_prefix(',') else {
-        return (1, x, 0.0);
-    };
-    let (y, used2) = strtod_prefix(rest);
-    if used2 == 0 {
-        return (1, x, 0.0);
-    }
-    (2, x, y)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -955,7 +876,8 @@ fn quant(val: f64, q: f64) -> f64 {
 /// `clamp` reproduces poly_init's `fmax(margin, 0)` (record fields do not clamp).
 fn pad_dimen(attrs: &AttrMap, mut dimen: Point, clamp: bool) -> Point {
     let margin = attrs.get("margin").map(String::as_str).unwrap_or("");
-    let (i, mut mx, mut my) = sscanf_two_doubles(margin);
+    let r = sscanf(margin, "%lf,%lf");
+    let (i, [mut mx, mut my, ..]) = (r.count, r.values);
     if clamp {
         mx = mx.max(0.0);
         my = my.max(0.0);
