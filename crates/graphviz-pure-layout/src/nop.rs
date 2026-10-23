@@ -335,6 +335,7 @@ fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> Option<(Lbl, u8, P
     let fontname = attr_str(attrs, "fontname", DEFAULT_FONT_NAME);
     let ctx = LabelSubstContext {
         graph_name: name,
+        font_color: Some(attr_str(attrs, "fontcolor", "black")),
         ..Default::default()
     };
     // nop_init_graphs' do_graph_label makes the cluster labels, after the node and edge init;
@@ -450,6 +451,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
                 graph_name: &graph.name,
                 node_name: &node.name,
                 is_node: true,
+                font_color: Some(attr_str(&node.attrs, "fontcolor", "black")),
                 ..Default::default()
             };
             let mut l = Lbl {
@@ -567,6 +569,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             is_directed: graph.kind == GraphKind::Directed,
             tail_port: e.tail_port.name.as_deref(),
             head_port: e.head_port.name.as_deref(),
+            font_color: Some(attr_str(&e.attrs, "fontcolor", "black")),
             ..Default::default()
         };
         let fs = attr_f64(&e.attrs, "fontsize", DEFAULT_FONT_SIZE, 1.0);
@@ -574,10 +577,24 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
         let lfs = attr_f64(&e.attrs, "labelfontsize", fs, 1.0);
         let lfname = attr_str(&e.attrs, "labelfontname", &fname).to_string();
         let has_spline = spline.is_some();
+        let lfontcolor = attr_str(
+            &e.attrs,
+            "labelfontcolor",
+            attr_str(&e.attrs, "fontcolor", "black"),
+        );
+        let lctx = LabelSubstContext {
+            font_color: Some(lfontcolor),
+            ..ctx.clone()
+        };
         let mk = |text_key: &str, pos_key: &str, fname: &str, fs: f64| {
             let t = e.attrs.get(text_key).filter(|s| !s.is_empty())?;
+            let ctx = if text_key.starts_with("head") || text_key.starts_with("tail") {
+                &lctx
+            } else {
+                &ctx
+            };
             let mut l = Lbl {
-                dimen: label_dimen(t, attr_is_html(&e.attrs, text_key), fname, fs, &ctx),
+                dimen: label_dimen(t, attr_is_html(&e.attrs, text_key), fname, fs, ctx),
                 pos: Point::default(),
                 set: false,
             };

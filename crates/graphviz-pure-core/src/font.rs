@@ -209,16 +209,25 @@ pub fn textfont_object<R>(tag: String, f: impl FnOnce() -> R) -> R {
 /// interns) again and whose ids restart at 0. The layout's own records come back when the
 /// guard is dropped.
 pub fn textfont_other_graph() -> impl Drop {
-    struct Guard(Option<std::collections::HashMap<String, Vec<f64>>>);
+    type Saved = (
+        std::collections::HashMap<String, Vec<f64>>,
+        std::collections::HashMap<LogKey, (Vec<f64>, usize)>,
+    );
+    struct Guard(Option<Saved>);
     impl Drop for Guard {
         fn drop(&mut self) {
-            let saved = self.0.take().unwrap_or_default();
-            TEXTFONT_DT.with(|d| d.borrow_mut().objects = saved);
+            let (objects, log) = self.0.take().unwrap_or_default();
+            TEXTFONT_DT.with(|d| {
+                let mut d = d.borrow_mut();
+                d.objects = objects;
+                d.log = log;
+            });
         }
     }
-    Guard(Some(
-        TEXTFONT_DT.with(|d| std::mem::take(&mut d.borrow_mut().objects)),
-    ))
+    Guard(Some(TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        (std::mem::take(&mut d.objects), std::mem::take(&mut d.log))
+    })))
 }
 
 /// Runs `f`, layout's first measurement of the labels of the object `tag` names: fonts

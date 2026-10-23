@@ -1768,7 +1768,8 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
                 ),
                 None => (env.flags, env.size, env.name.clone(), env.color.clone()),
             };
-            // lp.font = dtinsert(gvc->textfont_dt, &tf)
+            // lp.font = dtinsert(gvc->textfont_dt, &tf); the line's size is tf.size's
+            let tf_size = size;
             let size = graphviz_pure_core::font::textfont_intern(
                 Some(&name),
                 color.as_deref(),
@@ -1783,7 +1784,7 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
                 flags & HTML_BF != 0,
                 flags & HTML_IF != 0,
             );
-            debug_assert!((sy - size * LINESPACING).abs() < 1e-12);
+            debug_assert!(size.is_nan() || (sy - size * LINESPACING).abs() < 1e-12);
             item.text = s;
             item.width = sx;
             item.yoffset_layout = size;
@@ -1793,7 +1794,7 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
             item.flags = flags;
             item.color = color;
             width += sx;
-            mxfsize = c_max(size, mxfsize);
+            mxfsize = c_max(tf_size, mxfsize);
             mxysize = c_max(sy, mxysize);
             maxoffset = c_max(item.yoffset_centerline, maxoffset);
             maxlayout = c_max(item.yoffset_layout, maxlayout);

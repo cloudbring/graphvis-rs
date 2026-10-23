@@ -128,7 +128,12 @@ impl<E: Engine> Emitter<'_, E> {
             base_y -= span.lfsize;
             for item in &span.items {
                 // emit_htextspans: tl.font = ti->font, the font size_html_txt interned
-                let size = item.font_size;
+                // ti->font->size > 0 ? ti->font->size : finfo.size
+                let size = if item.font_size > 0.0 {
+                    item.font_size
+                } else {
+                    env.size
+                };
                 let name = item.font_name.clone();
                 let color = item.color.clone().unwrap_or_else(|| env.color.clone());
                 let flags = item.flags;

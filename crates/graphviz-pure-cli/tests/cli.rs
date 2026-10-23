@@ -4919,6 +4919,30 @@ fn nan_fontsize_takes_an_interned_fonts_size() {
     for c in ["blue", "gray", "red"] {
         assert!(out.contains(&format!("fill=\"{c}\"")), "{c}: {out}");
     }
+    // A line's height uses the size size_html_txt looked up, NaN included; drawing falls
+    // back to the environment's size for a font whose size is not positive.
+    let src =
+        "digraph { a [fontsize=14, label=<x<I>i</I>>]; n2 [fontsize=nan, label=<x<I>i</I>>] }";
+    let (port, _, ok) = run(&["-Txdot"], src);
+    assert!(ok);
+    assert!(port.contains("T 93.56 28.8 -1 7 1 -x "), "{port}");
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { n0 [fontsize=nan, xlabel=<<TABLE><TR><TD><FONT FACE=\"Courier\">c</FONT></TD></TR></TABLE>>]; \
+         n1 -> n3 [xlabel=<same>] }",
+    );
+    assert!(ok);
+    assert!(out.contains("font-size=\"14.00\">same</text>"), "{out}");
+    // -n labels take their fontcolor too.
+    let (out, _, ok) = run(
+        &["-Kneato", "-n", "-Txdot"],
+        "digraph { a [pos=\"0,0\", fontsize=30, label=<<TABLE><TR><TD>abc</TD></TR></TABLE>>]; \
+         b [pos=\"100,0\", fontcolor=red, fontsize=8, label=<<TABLE><TR><TD>abc</TD></TR></TABLE>>]; \
+         subgraph cluster_q { bb=\"150,-20,300,80\"; fontcolor=red; fontsize=nan; \
+         label=<<TABLE><TR><TD>cluster</TD></TR></TABLE>>; c [pos=\"200,0\"] } }",
+    );
+    assert!(ok);
+    assert!(out.contains("lheight=0.30"), "{out}");
     // One dictionary for the run, as C has one per GVC.
     let out = c10_plain(
         "dot",
