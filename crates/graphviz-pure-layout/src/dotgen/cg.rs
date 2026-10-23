@@ -308,8 +308,10 @@ impl Dot<'_> {
     }
 
     /// The order of input edge `e`'s id. An anonymous edge's id counts up (`2k + 1`);
-    /// a `key` names the edge, whose id is then the address of the key string, above
-    /// every anonymous id. Named edges are taken to grow in creation order too.
+    /// the statement's `key` names the edge, whose id is then the address of the key
+    /// string, above every anonymous id. Named edges are taken to grow in creation order
+    /// too. A key starting with `%` (`LOCALNAMEPREFIX`) is not mapped, and the edge gets
+    /// an anonymous id (`agmapnametoid`).
     fn cg_edge_id(&self, e: E, seq: u64) -> u64 {
         if self.cg_keyed(e) {
             seq | (1 << 62)
@@ -322,7 +324,8 @@ impl Dot<'_> {
         self.input
             .edges
             .get(e)
-            .is_some_and(|ed| ed.attrs.contains_key("key"))
+            .and_then(|ed| ed.attrs.get("key"))
+            .is_some_and(|k| !k.starts_with('%'))
     }
 
     fn cg_head(&self, e: E) -> Option<N> {

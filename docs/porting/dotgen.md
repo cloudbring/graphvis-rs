@@ -134,9 +134,10 @@ match C (pos/lp/head_lp/tail_lp/xlp within 2pt) except where C itself exceeds a
   port takes the ids to grow in the order the nodes were created. C often
   reuses freed blocks, so its order differs from that in most graphs, and
   sometimes from one run to the next. It only matters for a node with
-  in-edges from two tails or more. A `key` names an edge, whose id is the
-  address of the key string, so named edges come after anonymous ones; among
-  themselves they are also taken in creation order. In #289's sweeps (13,000
+  in-edges from two tails or more. An edge statement's own `key` names the edge
+  (not `edge [key=…]`, and not a key starting with `%`), whose id is the address
+  of the key string, so named edges come after anonymous ones; among themselves
+  they are also taken in creation order. In #289's sweeps (13,000
   generated concentrate inputs), 28 outputs still differ for this reason alone,
   and on 15 more C's own output varies from run to run.
 

@@ -401,6 +401,11 @@ impl<'a> Parser<'a> {
         // `-G`/`-N`/`-E` symbols are `fixed`: root attribute statements keep them.
         let mut kept = AttrMap::new();
         for (k, v) in attrs {
+            // `bindattrs` skips an edge `key`, and `attrstmt` then skips the unbound item:
+            // `edge [key=k]` sets nothing.
+            if kind == DictKind::Edge && k == "key" {
+                continue;
+            }
             if self.fixed_at_root(kind, &k) {
                 if let Some(sym) = self.dict_mut(0, kind).get_mut(&k) {
                     sym.print = true;

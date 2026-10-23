@@ -1727,6 +1727,27 @@ fn concentrated_edge_takes_the_arrowheads_of_the_opposing_edge_cgraph_finds() {
                  30.5,-60.18 23.5,-60.18\"/>",
             ][..],
         ),
+        // `edge [key=d]` names nothing (`bindattrs` skips `key`), and a key starting with
+        // `%` leaves the edge anonymous (`agmapnametoid`).
+        (
+            "a -> c; subgraph s { edge [key=d]; c -> a [arrowhead=inv]; } \
+             c -> a [arrowhead=dot]; b -> a;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M27,-62.8C27,-57.78 27,-52.5 \
+                 27,-47.41\"/>",
+                "<ellipse fill=\"black\" stroke=\"black\" cx=\"27\" cy=\"-67.2\" rx=\"4\" \
+                 ry=\"4\"/>",
+            ][..],
+        ),
+        (
+            "a -> c; c -> a [key=\"%zz\"]; c -> a [arrowhead=dot]; b -> a;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M27,-62.8C27,-57.78 27,-52.5 \
+                 27,-47.41\"/>",
+                "<ellipse fill=\"black\" stroke=\"black\" cx=\"27\" cy=\"-67.2\" rx=\"4\" \
+                 ry=\"4\"/>",
+            ][..],
+        ),
     ] {
         let src = format!("digraph G {{ concentrate=true; {src} }}");
         let (out, err, ok) = run(&["-Kdot", "-Tsvg"], &src);
@@ -1734,6 +1755,18 @@ fn concentrated_edge_takes_the_arrowheads_of_the_opposing_edge_cgraph_finds() {
         for w in want {
             assert!(out.contains(w), "{src}: {w}\n{out}");
         }
+    }
+    // Undirected: `dir=both` draws both arrowheads of the named edges' group.
+    let src = "graph G { concentrate=true; b -- a [key=k3]; a -- b [arrowtail=inv,dir=none]; \
+               a -- b [key=k1,dir=both]; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    for w in [
+        "<path fill=\"none\" stroke=\"black\" d=\"M27,-60.24C27,-56.01 27,-51.66 27,-47.44\"/>",
+        "<polygon fill=\"black\" stroke=\"black\" points=\"30.5,-47.62 27,-37.62 23.5,-47.62 \
+         30.5,-47.62\"/>",
+    ] {
+        assert!(out.contains(w), "{w}\n{out}");
     }
 }
 
