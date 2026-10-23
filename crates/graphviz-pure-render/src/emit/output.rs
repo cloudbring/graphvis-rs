@@ -279,7 +279,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
             a.late_nnstring("style", "solid"),
             {
                 let sh = a.late_nnstring("shape", "ellipse");
-                if sh != "epsf" && a.nonempty("shapefile").is_some() {
+                if graphviz_pure_core::usershape::binds_custom(sh, a.nonempty("shapefile")) {
                     "custom"
                 } else {
                     sh

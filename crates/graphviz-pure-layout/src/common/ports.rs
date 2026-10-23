@@ -414,7 +414,10 @@ pub fn shape_port<S: PortGraph + ?Sized>(
         .map(String::as_str)
         .filter(|s| !s.is_empty())
         .unwrap_or("ellipse");
-    let custom = shape_name != "epsf" && src.attrs.get("shapefile").is_some_and(|f| !f.is_empty());
+    let custom = graphviz_pure_core::usershape::binds_custom(
+        shape_name,
+        src.attrs.get("shapefile").map(String::as_str),
+    );
     let is_box = custom
         || graphviz_pure_geom::ShapeKind::parse(shape_name) == graphviz_pure_geom::ShapeKind::Box;
     if compass_port(g, n, None, &mut rv, portname, all, !is_box) {

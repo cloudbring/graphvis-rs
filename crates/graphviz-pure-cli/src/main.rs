@@ -356,7 +356,11 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         }
     }
 
-    // `dotneato_args_initialize`.
+    // `dotneato_args_initialize`: running as a web server disables file loading.
+    graphviz_pure_core::usershape::set_server_name(
+        env::var_os("SERVER_NAME").map(|v| arg_text(&v)).as_deref(),
+    );
+    graphviz_pure_core::usershape::set_filepath(None);
     if env::var_os("GV_FILE_PATH").is_some() {
         fprintf_stderr(
             "$GV_FILE_PATH environment variable set; exiting\n\n\
@@ -395,9 +399,9 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
             return Parsed::Exit(ExitCode::SUCCESS);
         } else if arg.starts_with("-?") || arg == "--help" {
             return Parsed::Exit(usage(argv0, 0));
-        } else if arg.starts_with("--filepath=") {
-            // `Gvfilepath`, the directories image files are looked up in: the port reads
-            // images by the name the graph gives.
+        } else if let Some(dirs) = arg.strip_prefix("--filepath=") {
+            // `Gvfilepath`: the directories image files are looked up in.
+            graphviz_pure_core::usershape::set_filepath(Some(dirs));
         } else if bytes.first() == Some(&b'-') {
             // `dotneato_args_initialize` switches on the byte `arg[1]`, which need not start
             // a char (and is the terminating NUL for `-` alone).

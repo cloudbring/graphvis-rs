@@ -4,7 +4,7 @@
 
 use super::attrs::{StyleItem, parse_style};
 use super::emit::{DEFAULT_COLOR, DEFAULT_FILL, find_stop_color};
-use super::job::{EmitState, Emitter, Engine, FILL, GRADIENT, RGRADIENT};
+use super::job::{EMIT_CLUSTERS_LAST, EmitState, Emitter, Engine, FILL, GRADIENT, RGRADIENT};
 use super::model::TextLabel;
 use graphviz_pure_core::Point;
 use graphviz_pure_core::cnum::is_exactly_zero;
@@ -229,8 +229,33 @@ impl<E: Engine> Emitter<'_, E> {
             self.record_gencode(n);
         } else if nd.geom.shape == ShapeKind::Point {
             self.point_gencode(n);
+        } else if nd.geom.shape == ShapeKind::Epsf {
+            self.epsf_gencode(n);
         } else if nd.geom.polygon.is_some() {
             self.poly_gencode(n);
+        }
+    }
+
+    /// `epsf_gencode`: nothing for a node whose `shapefile` did not load. C writes the
+    /// PostScript call `X Y translate newpath user_shape_N` straight into the output file,
+    /// whatever the format; the port leaves it out and draws the label.
+    fn epsf_gencode(&mut self, n: usize) {
+        let nd = &self.job.m.nodes[n];
+        if nd.geom.epsf.is_none() {
+            return;
+        }
+        let do_map = self.anchored();
+        if do_map && !(self.job.flags & EMIT_CLUSTERS_LAST != 0) {
+            self.begin_obj_anchor();
+        }
+        let mut label = nd.label.clone();
+        label.pos = nd.coord;
+        self.emit_label(EmitState::NLabel, &label);
+        if do_map {
+            if self.job.flags & EMIT_CLUSTERS_LAST != 0 {
+                self.begin_obj_anchor();
+            }
+            self.end_anchor();
         }
     }
 

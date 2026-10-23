@@ -1,5 +1,5 @@
 module	unwrap	expect	index	arith
-geom/html_label.rs	0	0	75	77
+geom/html_label.rs	0	0	82	96
 geom/node_size.rs	0	0	67	49
 geom/pathplan/cvt.rs	0	0	7	6
 geom/pathplan/inpoly.rs	0	0	2	1
@@ -33,7 +33,7 @@ layout/dotgen/cg.rs	0	0	61	3
 layout/dotgen/class1.rs	2	0	20	4
 layout/dotgen/class2.rs	6	0	105	7
 layout/dotgen/cluster.rs	12	0	153	32
-layout/dotgen/compound.rs	2	0	43	26
+layout/dotgen/compound.rs	2	0	42	26
 layout/dotgen/conc.rs	6	0	71	24
 layout/dotgen/decomp.rs	1	0	31	2
 layout/dotgen/dotsplines.rs	32	5	476	61

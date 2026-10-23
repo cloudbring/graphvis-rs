@@ -3973,6 +3973,165 @@ concentrate=\"true\";
     assert!(dot.contains(edge), "{dot}");
 }
 
+// Cause C18 (usershape): the files of `image`, `shapefile`, `shape=epsf` and HTML `<IMG>`
+// go through `safefile` and `gvusershape_file_access`/`gvusershape_open`
+// (`lib/gvc/gvusershape.c`) or `epsf_init` (`lib/common/psusershape.c`); HTML labels go
+// through expat (`lib/common/htmllex.c`). Expected output is C 16.1.0's.
+
+/// A scratch directory with a text file and an EPS file whose `%%BoundingBox` is 100x50.
+fn usershape_dir(name: &str) -> PathBuf {
+    let dir = scratch(name);
+    std::fs::write(dir.join("notes.txt"), "not an image, just some text\n").unwrap();
+    std::fs::write(
+        dir.join("box.eps"),
+        "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 10 20 110 70\n",
+    )
+    .unwrap();
+    dir
+}
+
+const USERSHAPES: &str = "digraph {
+  a [image=\"missing.png\"]
+  b [image=\"notes.txt\"]
+  c [shapefile=\"missing.ps\"]
+  d [shape=custom]
+  e [label=<<TABLE><TR><TD><IMG SRC=\"notes.txt\"/></TD></TR></TABLE>>]
+}";
+
+// Issue #130: a file that cannot be opened, or that is neither an image nor a user shape.
+// `d`'s shapefile is the declared default "", not NULL. The `<IMG>` error exits 1.
+#[test]
+fn usershape_files_c_cannot_load_are_reported() {
+    let dir = usershape_dir("c18-files");
+    let (_, err, code) = run_in(&dir, &["-Tsvg"], USERSHAPES);
+    assert_eq!(code, 1);
+    assert_eq!(
+        err,
+        "Warning: No such file or directory while opening missing.png\n\
+         Warning: No or improper image=\"missing.png\" for node \"a\"\n\
+         Warning: \"notes.txt\" was not found as a file or as a shape library member\n\
+         Warning: No or improper image=\"notes.txt\" for node \"b\"\n\
+         Warning: No such file or directory while opening missing.ps\n\
+         Warning: No or improper shapefile=\"missing.ps\" for node \"c\"\n\
+         Warning: No or improper shapefile=\"\" for node \"d\"\n\
+         Warning: \"notes.txt\" was not found as a file or as a shape library member\n\
+         Error: No or improper image file=\"notes.txt\"\n\
+         in label of node e\n"
+    );
+    // safefile: with `imagepath`, a relative name must be found in one of its directories
+    let src = "digraph { imagepath=\"/nonexistent\"; a [image=\"notes.txt\"] }";
+    let (_, err, code) = run_in(&dir, &["-Tsvg"], src);
+    assert_eq!(code, 0);
+    assert_eq!(
+        err,
+        "Warning: Filename \"notes.txt\" is unsafe\n\
+         Warning: No or improper image=\"notes.txt\" for node \"a\"\n"
+    );
+}
+
+// Issue #130: `$SERVER_NAME` disables file loading (`safefile`, warned once), and a
+// shapefile `safefile` refuses does not make the node `custom`.
+#[test]
+fn usershape_files_are_not_read_under_server_name() {
+    let dir = usershape_dir("c18-server");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .arg("-Tsvg")
+        .current_dir(&dir)
+        .env("SERVER_NAME", "web")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(USERSHAPES.as_bytes())
+        .unwrap();
+    let out = child.wait_with_output().unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr),
+        "Warning: file loading is disabled because the environment contains SERVER_NAME=\"web\"\n\
+         Warning: Filename \"missing.png\" is unsafe\n\
+         Warning: No or improper image=\"missing.png\" for node \"a\"\n\
+         Warning: Filename \"notes.txt\" is unsafe\n\
+         Warning: No or improper image=\"notes.txt\" for node \"b\"\n\
+         Warning: No or improper shapefile=\"\" for node \"d\"\n\
+         Warning: Filename \"notes.txt\" is unsafe\n\
+         Error: No or improper image file=\"notes.txt\"\n\
+         in label of node e\n"
+    );
+}
+
+// Issue #132: `epsf_init` leaves `ND_shape_info` NULL unless the shapefile has a
+// `%%BoundingBox`, and `epsf_gencode` then draws nothing, not even the label. The node keeps
+// its `width` and `height` (the label does not grow it); a loaded file gives the size.
+#[test]
+fn epsf_without_a_loadable_shapefile_draws_nothing() {
+    let dir = usershape_dir("c18-epsf");
+    let src = "digraph { a [shape=epsf label=\"a long label for the node\"]; \
+               b [shape=epsf shapefile=\"notes.txt\"]; c [shape=epsf shapefile=\"box.eps\"] }";
+    let (svg, err, code) = run_in(&dir, &["-Tsvg"], src);
+    assert_eq!(code, 0);
+    assert_eq!(
+        err,
+        "Warning: shapefile not set or not found for epsf node a\n\
+         Warning: BoundingBox not found in epsf file notes.txt\n"
+    );
+    for (node, title) in [("node1", "a"), ("node2", "b")] {
+        let group = format!("<g id=\"{node}\" class=\"node\">\n<title>{title}</title>\n</g>\n");
+        assert!(svg.contains(&group), "{svg}");
+    }
+    // C also writes `134 -20 translate newpath user_shape_0` here; the port does not.
+    assert!(svg.contains(
+        "<text xml:space=\"preserve\" text-anchor=\"middle\" x=\"194\" y=\"-20.8\" \
+         font-family=\"Times,serif\" font-size=\"14.00\">c</text>"
+    ));
+    let (dot, _, _) = run_in(&dir, &["-Tdot"], src);
+    assert!(dot.contains("graph [bb=\"0,0,244,50\"]"), "{dot}");
+    assert!(
+        dot.contains("pos=\"27,25\",\n\t\tshape=epsf,\n\t\twidth=0.75]"),
+        "{dot}"
+    );
+    assert!(dot.contains("height=0.69444,"), "{dot}");
+    assert!(dot.contains("width=1.3889]"), "{dot}");
+}
+
+// Issue #131: expat rejects bytes that are not UTF-8. A character cut off at the end of a
+// `findNext` unit waits for more input (`a`'s is reported with the next unit, `</B>`), and a
+// partial tag is parsed again only once its bytes have doubled (`b`'s waits past `x`).
+// `charset=big5` is an encoding expat does not know. C exits 1.
+#[test]
+fn html_label_encoding_errors_are_reported() {
+    let dir = scratch("c18-encoding");
+    let utf8 = dir.join("utf8.gv");
+    std::fs::write(
+        &utf8,
+        b"digraph {\n a [label=<<B>caf\xe9</B>>]\n b [label=<<B\xe9>x</B>>]\n}\n",
+    )
+    .unwrap();
+    let (_, err, code) = run_in(&dir, &["-Tsvg", "utf8.gv"], "");
+    assert_eq!(code, 1);
+    assert_eq!(
+        err,
+        "Error: not well-formed (invalid token) in line 1 \n\
+         ... caf\u{FFFD}</B> ...\n\
+         in label of node a\n\
+         Error: not well-formed (invalid token) in line 1 \n\
+         ... x</B> ...\n\
+         in label of node b\n"
+    );
+    let src = "digraph { charset=big5; a [label=<<B>x</B>>] }";
+    let (_, err, code) = run_in(&dir, &["-Tsvg"], src);
+    assert_eq!(code, 1);
+    assert_eq!(
+        err,
+        "Error: unknown encoding in line 1 \n... <HTML> ...\nin label of node a\n"
+    );
+}
+
 // Issue #185. Under overlap=vpsc, stress_majorization_cola (lib/neatogen/
 // constrained_majorization_ipsep.c) ends with removeoverlaps(orig_n, ...), and initCMajVPSC
 // treats the last 2 * nclusters real nodes as the cluster boundary variables. C sizes
@@ -5905,11 +6064,9 @@ fn issue88_root_label_font_warnings_first() {
     }
 }
 
-/// Not ported: HTML `<IMG>` sources are never loaded, so `size_html_img`'s error
-/// (`lib/common/htmltable.c:1088-1093`, after `gvusershape_file_access`'s warning at
-/// `lib/gvc/gvusershape.c:700`) is missing and the run exits 0 where C exits 1.
+/// Issue #130: `size_html_img`'s error (`lib/common/htmltable.c:1088-1093`), after
+/// `gvusershape_file_access`'s warning (`lib/gvc/gvusershape.c`); C exits 1.
 #[test]
-#[ignore = "issue #130: HTML IMG file errors (No or improper image file)"]
 fn issue30_html_missing_image_error() {
     let src = "digraph { a [label=<<TABLE><TR><TD><IMG SRC=\"nope.png\"/></TD></TR></TABLE>>] }";
     let (err, ok) = warnings("dot", src);
@@ -5922,11 +6079,9 @@ fn issue30_html_missing_image_error() {
     );
 }
 
-/// Not ported: user shapes are never loaded, so `poly_init`'s missing-shapefile warning
-/// (`lib/common/shapes.c:2030-2032`) and `epsf_init`'s (`lib/common/psusershape.c:118`)
-/// are missing.
+/// Issue #130: `poly_init`'s missing-shapefile warning (`lib/common/shapes.c:2030-2032`) and
+/// `epsf_init`'s (`lib/common/psusershape.c:118`).
 #[test]
-#[ignore = "issue #130: shapefile/epsf user-shape warnings"]
 fn issue30_missing_shapefile_warnings() {
     let src = "digraph { a4 [shape=custom]; a5 [shape=epsf] }";
     assert_eq!(

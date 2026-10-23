@@ -86,6 +86,14 @@ pub fn layout_graph_with_options(
         &graph.name,
         graph.graph_attrs.get("charset").map(String::as_str),
     );
+    graphviz_pure_core::usershape::begin_layout(
+        graph.graph_attrs.get("imagepath").map(String::as_str),
+        graph.node_defaults.contains_key("shapefile")
+            || graph
+                .nodes
+                .iter()
+                .any(|n| n.attrs.contains_key("shapefile")),
+    );
     // Only dot exports its `GD_clust` lists; to C the key is an ordinary attribute, so a
     // value from the input must not reorder the clusters of another engine's drawing.
     let key = graphviz_pure_core::CLUSTER_LIST_KEY;
