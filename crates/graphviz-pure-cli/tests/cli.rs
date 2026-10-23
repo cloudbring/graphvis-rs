@@ -2219,7 +2219,7 @@ n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}
 
 // Issue #200: zero-size point nodes make partition's trapezoidation fail, so mkMaze fails
 // as in #203 and C's dot abandons the layout and exits 0 with the nodes only. The port exited 1
-// with a layout error. C also prints two trapezoid failure messages, which the port does not
+// with a layout error. C also prints two trapezoid failure messages, and so does the port
 // (#127).
 #[test]
 fn ortho_trapezoid_failure_abandons_the_dot_layout_like_c() {
@@ -2228,7 +2228,11 @@ node[shape=point width=0 height=0 fixedsize=true]
 a->b a->c a->d b->e c->e d->e b->f c->f e->g f->g a->g}
 ";
     let (out, err, ok) = run(&["-Tsvg"], src);
-    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(ok);
+    assert_eq!(
+        err,
+        "trapezoid segment construction failed\nhorizontal trapezoid construction failed\n"
+    );
     assert!(out.contains("<svg width=\"13pt\" height=\"35pt\""), "{out}");
     assert_eq!(out.matches("class=\"node\"").count(), 7, "{out}");
     assert!(!out.contains("class=\"edge\""), "{out}");
