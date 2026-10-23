@@ -969,10 +969,6 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
             crate::common::postproc::LABEL_POS_KEY.to_string(),
             "0.0,0.0".to_string(),
         );
-        graph.graph_attrs.insert(
-            graphviz_pure_core::NO_LOW_CLUSTERS_KEY.to_string(),
-            String::new(),
-        );
         return;
     };
     gv_postprocess(&mut g, false);

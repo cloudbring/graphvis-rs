@@ -31,8 +31,11 @@ pub struct Output {
     /// The `_cc_<i>` subgraphs a failed pack layout leaves (`Dot::cc_kept`), and
     /// their projected subgraphs, parents first.
     cc_subgraphs: Vec<CcSub>,
-    /// dot's `node_induce` ran on the components' cluster clones only.
-    cc_laid_out: bool,
+    /// The members each input subgraph has in dot's cgraph when the layout ends (by
+    /// subgraph index; nodes, edges). The writers read the cgraph after layout, so they
+    /// see what `node_induce` (`agsubedge`, `agdelete`) and `mark_clusters` (`agdelete`)
+    /// changed.
+    membership: Vec<(usize, Vec<usize>, Vec<usize>)>,
 }
 
 /// A subgraph `cccomps` added to the root.
@@ -45,6 +48,31 @@ struct CcSub {
     edges: Vec<usize>,
     /// Index into [`Output::cc_subgraphs`]; `None` for the root.
     parent: Option<usize>,
+}
+
+/// The members of each input subgraph in `d`'s cgraph. Under a pack layout with several
+/// components, dot ran on the components' projections (`projectG`), so the input
+/// subgraphs still have their declared members.
+fn membership(d: &Dot<'_>) -> Vec<(usize, Vec<usize>, Vec<usize>)> {
+    d.graphs
+        .iter()
+        .filter_map(|s| {
+            let si = s.sub_index?;
+            let nodes = s
+                .nodes
+                .iter()
+                .copied()
+                .filter(|&n| n < d.input.nodes.len())
+                .collect();
+            let edges = s
+                .edges
+                .iter()
+                .copied()
+                .filter(|&e| e < d.input.edges.len())
+                .collect();
+            Some((si, nodes, edges))
+        })
+        .collect()
 }
 
 /// The subgraph trees under `kept` (preorder).
@@ -100,7 +128,7 @@ impl Output {
             cluster_lp: Vec::new(),
             cluster_list: Vec::new(),
             cc_subgraphs: Vec::new(),
-            cc_laid_out: false,
+            membership: membership(d),
         }
     }
 
@@ -275,7 +303,7 @@ impl Output {
             cluster_lp,
             cluster_list,
             cc_subgraphs: cc_subgraphs(d, &d.cc_kept),
-            cc_laid_out: d.cc_laid_out,
+            membership: membership(d),
         }
     }
 
@@ -356,12 +384,16 @@ impl Output {
                 graph.nodes[i].attrs.insert("xlp".to_string(), v);
             }
         }
-        if self.cc_laid_out {
-            // The root's clusters keep the edges they were given.
-            graph.graph_attrs.insert(
-                graphviz_pure_core::NO_LOW_CLUSTERS_KEY.to_string(),
-                String::new(),
-            );
+        for (si, nodes, edges) in self.membership {
+            let s = &mut graph.subgraphs[si];
+            s.nodes = nodes
+                .into_iter()
+                .map(|n| graphviz_pure_core::NodeId(n as u32))
+                .collect();
+            s.edges = edges
+                .into_iter()
+                .map(|e| graphviz_pure_core::EdgeId(e as u32))
+                .collect();
         }
         let base = graph.subgraphs.len();
         let dicts = graph.dicts.len().checked_sub(1) == Some(base);

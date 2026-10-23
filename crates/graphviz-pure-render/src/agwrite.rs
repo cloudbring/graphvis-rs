@@ -409,8 +409,8 @@ pub(crate) fn edge_attrs_with_ports(g: &Graph) -> Vec<AttrMap> {
         .collect()
 }
 
-/// `agwrite`. `extra_edges[i]` adds edges to subgraph `i` (dot's `mark_lowclusters`).
-pub(crate) fn agwrite(g: &Graph, extra_edges: &[BTreeSet<usize>]) -> String {
+/// `agwrite`.
+pub(crate) fn agwrite(g: &Graph) -> String {
     let ns = g.subgraphs.len();
     let mut parent = vec![None; ns + 1];
     let mut children = vec![Vec::new(); ns + 1];
@@ -441,16 +441,12 @@ pub(crate) fn agwrite(g: &Graph, extra_edges: &[BTreeSet<usize>]) -> String {
     dfs(0, 1, &mut pre, &children);
     let mut members_n = vec![(0..g.nodes.len()).collect::<Vec<_>>()];
     let mut members_e = vec![(0..g.edges.len()).collect::<BTreeSet<_>>()];
-    for (i, s) in g.subgraphs.iter().enumerate() {
+    for s in &g.subgraphs {
         let mut n: Vec<usize> = s.nodes.iter().map(|x| x.0 as usize).collect();
         n.sort_unstable();
         n.dedup();
         members_n.push(n);
-        let mut e: BTreeSet<usize> = s.edges.iter().map(|x| x.0 as usize).collect();
-        if let Some(x) = extra_edges.get(i) {
-            e.extend(x.iter().copied());
-        }
-        members_e.push(e);
+        members_e.push(s.edges.iter().map(|x| x.0 as usize).collect());
     }
     let mut out = vec![Vec::new(); g.nodes.len()];
     for (i, e) in g.edges.iter().enumerate() {

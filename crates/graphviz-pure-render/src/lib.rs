@@ -209,35 +209,6 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
     }
 }
 
-/// dot's `mark_lowclusters`: an edge whose ends both lie in a cluster belongs to it and its
-/// ancestors.
-fn low_cluster_edges(graph: &Graph) -> Vec<std::collections::BTreeSet<usize>> {
-    let n = graph.subgraphs.len();
-    let mut parent: Vec<Option<usize>> = vec![None; n];
-    for (i, sg) in graph.subgraphs.iter().enumerate() {
-        for c in &sg.subgraphs {
-            parent[c.0 as usize] = Some(i);
-        }
-    }
-    let mut sets = vec![std::collections::BTreeSet::new(); n];
-    for (i, sg) in graph.subgraphs.iter().enumerate() {
-        if !sg.is_cluster {
-            continue;
-        }
-        let members: std::collections::BTreeSet<u32> = sg.nodes.iter().map(|x| x.0).collect();
-        for (ei, e) in graph.edges.iter().enumerate() {
-            if members.contains(&e.tail.0) && members.contains(&e.head.0) {
-                let mut cur = Some(i);
-                while let Some(c) = cur {
-                    sets[c].insert(ei);
-                    cur = parent[c];
-                }
-            }
-        }
-    }
-    sets
-}
-
 /// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
 pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Result<String> {
     GraphJobs::new(graph).render(format, name)
@@ -407,7 +378,7 @@ impl<'g> GraphJobs<'g> {
             if format == OutputFormat::Canon {
                 if g.dicts.len() == g.subgraphs.len() + 1 {
                     sync_dicts(&mut g, graph);
-                    return Ok(agwrite::agwrite(&g, &[]));
+                    return Ok(agwrite::agwrite(&g));
                 }
                 return Ok(write_canon(&g));
             }
@@ -458,15 +429,7 @@ impl<'g> GraphJobs<'g> {
                 keep_set(&mut self.set, &g);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
                     sync_dicts(&mut g, graph);
-                    let extra = if graph
-                        .graph_attrs
-                        .contains_key(graphviz_pure_core::NO_LOW_CLUSTERS_KEY)
-                    {
-                        Vec::new()
-                    } else {
-                        low_cluster_edges(graph)
-                    };
-                    agwrite::agwrite(&g, &extra)
+                    agwrite::agwrite(&g)
                 } else {
                     emit::output::propagate_inherited(&mut g, graph, &forced);
                     graphviz_pure_parser::write_canon_forced(&g, &forced)

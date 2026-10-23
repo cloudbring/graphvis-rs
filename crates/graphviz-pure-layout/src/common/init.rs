@@ -419,11 +419,6 @@ impl<'a> LGraph<'a> {
         // Placed graph and cluster labels go to the renderer through the private
         // key the no-layout engine uses; it would otherwise re-place them with
         // dot's rules (which flip for rankdir).
-        // Only dot runs mark_lowclusters, which moves edges into clusters for -Tdot.
-        graph.graph_attrs.insert(
-            graphviz_pure_core::NO_LOW_CLUSTERS_KEY.to_string(),
-            String::new(),
-        );
         let exact = |p: Point| format!("{:?},{:?}", p.x, p.y);
         if let Some(l) = self.label.as_ref().filter(|l| l.set) {
             graph.graph_attrs.insert(

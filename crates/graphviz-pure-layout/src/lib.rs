@@ -395,6 +395,103 @@ mod tests {
         assert_eq!(g.nodes[c.0 as usize].rank, g.nodes[d.0 as usize].rank);
     }
 
+    /// A subgraph of `g` with `nodes` and `edges` and no attributes but `attrs`.
+    fn add_subgraph(
+        g: &mut Graph,
+        name: &str,
+        attrs: &[(&str, &str)],
+        nodes: &[graphviz_pure_core::NodeId],
+        edges: &[graphviz_pure_core::EdgeId],
+    ) -> usize {
+        let i = g.subgraphs.len();
+        g.subgraphs.push(SubgraphData {
+            id: SubgraphId(i as u32),
+            name: name.to_string(),
+            is_cluster: name.starts_with("cluster"),
+            graph_attrs: attrs
+                .iter()
+                .map(|&(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+            node_defaults: AttrMap::new(),
+            edge_defaults: AttrMap::new(),
+            nodes: nodes.to_vec(),
+            edges: edges.to_vec(),
+            subgraphs: Vec::new(),
+            bb: Default::default(),
+            html_name: false,
+            empty_name: false,
+        });
+        i
+    }
+
+    fn members(g: &Graph, s: usize) -> (Vec<u32>, Vec<u32>) {
+        let mut n: Vec<u32> = g.subgraphs[s].nodes.iter().map(|x| x.0).collect();
+        let mut e: Vec<u32> = g.subgraphs[s].edges.iter().map(|x| x.0).collect();
+        n.sort_unstable();
+        e.sort_unstable();
+        (n, e)
+    }
+
+    // Issue #106: dot's node_induce adds a root edge between two nodes of a cluster to
+    // the cluster (`agsubedge`), and the writers read that membership.
+    #[test]
+    fn dot_exports_the_edges_node_induce_adds_to_a_cluster() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        let (a, b) = (g.ensure_node("a"), g.ensure_node("b"));
+        let ab = g.add_edge(a, b, AttrMap::new());
+        let c = add_subgraph(&mut g, "cluster_1", &[], &[a, b], &[]);
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert_eq!(members(&g, c), (vec![a.0, b.0], vec![ab.0]));
+    }
+
+    // Issue #102: node_induce deletes a node from a cluster when an earlier sibling
+    // cluster holds it (`agdelete`), with its edges.
+    #[test]
+    fn dot_exports_a_node_node_induce_deletes_from_a_later_cluster() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        let [v6, v0, v1, v5] = ["v6", "v0", "v1", "v5"].map(|n| g.ensure_node(n));
+        let e60 = g.add_edge(v6, v0, AttrMap::new());
+        let e15 = g.add_edge(v1, v5, AttrMap::new());
+        let e10 = g.add_edge(v1, v0, AttrMap::new());
+        let c0 = add_subgraph(&mut g, "cluster_0", &[], &[v6], &[]);
+        let c2 = add_subgraph(&mut g, "cluster_2", &[], &[v6, v0, v1, v5], &[e60, e15]);
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert_eq!(members(&g, c0), (vec![v6.0], vec![]));
+        assert_eq!(
+            members(&g, c2),
+            (vec![v0.0, v1.0, v5.0], vec![e15.0, e10.0])
+        );
+    }
+
+    // Issues #102 and #108: mark_clusters deletes a cluster node that is in a rank set
+    // (`agdelete`, "already in a rankset").
+    #[test]
+    fn dot_exports_a_node_mark_clusters_deletes_from_a_cluster() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        let [x, y, z] = ["x", "y", "z"].map(|n| g.ensure_node(n));
+        let xy = g.add_edge(x, y, AttrMap::new());
+        let c = add_subgraph(&mut g, "cluster_a", &[], &[x, y], &[xy]);
+        let r = add_subgraph(&mut g, "", &[("rank", "same")], &[x, z], &[]);
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert_eq!(members(&g, c), (vec![y.0], vec![]));
+        assert_eq!(members(&g, r), (vec![x.0, z.0], vec![]));
+    }
+
+    // Issue #102: with pack and several components, dot lays out the components'
+    // projections (`projectG`): the original clusters keep their declared members.
+    #[test]
+    fn dot_pack_keeps_the_declared_members_of_the_original_clusters() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        g.graph_attrs.insert("pack".into(), "true".into());
+        let [a, b, c] = ["a", "b", "c"].map(|n| g.ensure_node(n));
+        let ab = g.add_edge(a, b, AttrMap::new());
+        g.add_edge(c, b, AttrMap::new());
+        g.ensure_node("x");
+        let s = add_subgraph(&mut g, "cluster_2", &[], &[a, b, c], &[ab]);
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert_eq!(members(&g, s), (vec![a.0, b.0, c.0], vec![ab.0]));
+    }
+
     #[test]
     fn test_dot_crossing_minimization() {
         // Construct a 2-layer bipartite graph where initial order (a1, a2) -> (b1, b2)

@@ -157,12 +157,6 @@ pub const CLUST_NODE_KEY: &str = "\u{1}clustnode";
 /// (`GD_label` stays NULL, e.g. patchwork's `mkClusters`): renderers neither draw nor size it.
 pub const NO_GRAPH_LABEL_KEY: &str = "\u{1}nolabel";
 
-/// Root graph attribute set by a layout whose output keeps every edge in the subgraphs it
-/// was declared in: only dot's `node_induce` adds the edges between a cluster's nodes to
-/// the cluster, and not when doDot lays out pack components (it adds them to the
-/// components' clones).
-pub const NO_LOW_CLUSTERS_KEY: &str = "\u{1}nolowclust";
-
 /// Root graph attribute set by a layout that binds edge records without calling
 /// `common_init_edge` (patchwork's `patchwork_init_edge`): edges have no labels.
 pub const NO_EDGE_INIT_KEY: &str = "\u{1}noedgeinit";
