@@ -1895,6 +1895,24 @@ fn flat_adjacent_aux_graph_repeats_invalid_utf8_warning_like_c() {
     ]
     .concat();
     assert_eq!(err, want);
+    // Only HTML labels in the aux graph: htmlEntityUTF8 is not called for it, lastg stays G,
+    // and the tooltip rendered later does not warn again.
+    std::fs::write(
+        &path,
+        b"digraph G { node [label=<x>]; {rank=same; a -> b [tailport=e]} \
+          c [label=\"\xe9\" tooltip=\"\xe9\"] }\n",
+    )
+    .unwrap();
+    let (_, err, ok) = run(&["-Kdot", "-Tsvg", path.to_str().unwrap()], "");
+    assert!(ok, "{err}");
+    let want = [
+        utf8("G"),
+        "Warning: Warning: no value for width of non-ASCII character 195. Falling back to \
+         width of space character\n"
+            .to_string(),
+    ]
+    .concat();
+    assert_eq!(err, want);
 }
 
 // Issue #105: with pack, doDot runs cccomps before dotLayout's dot_init_node_edge sizes the

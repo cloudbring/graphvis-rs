@@ -120,8 +120,22 @@ impl Charset {
 
 thread_local! {
     static CURRENT: Cell<Charset> = const { Cell::new(Charset::Utf8) };
-    static GRAPH: RefCell<String> = const { RefCell::new(String::new()) };
+    /// The graph labels are converted for: an id standing for its `Agraph_t*`, and its name.
+    static GRAPH: RefCell<(u64, String)> = const { RefCell::new((0, String::new())) };
+    /// `htmlEntityUTF8`'s `lastg`: the id of the graph of its last call.
+    static LAST: Cell<u64> = const { Cell::new(0) };
+    static NEXT_ID: Cell<u64> = const { Cell::new(0) };
     static WARNED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Makes `graph_name`, with a new id, the graph labels are converted for; returns the
+/// previous one.
+fn set_graph(graph_name: &str) -> (u64, String) {
+    let id = NEXT_ID.with(|n| {
+        n.set(n.get() + 1);
+        n.get()
+    });
+    GRAPH.with(|g| g.replace((id, graph_name.to_string())))
 }
 
 /// `graph_init` for charset purposes: records the root graph's charset and name for the
@@ -137,25 +151,17 @@ pub fn begin_layout(graph_name: &str, charset: Option<&str>) {
     }
     CURRENT.with(|c| c.set(cs));
     WARNED.with(|w| w.set(false));
-    GRAPH.with(|g| {
-        let mut g = g.borrow_mut();
-        g.clear();
-        g.push_str(graph_name);
-    });
+    set_graph(graph_name);
+    LAST.with(|l| l.set(GRAPH.with(|g| g.borrow().0)));
 }
 
 /// Sets the charset of the graph being rendered (no warnings; the layout already gave them).
 pub fn begin_render(graph_name: &str, charset: Option<&str>) {
     let cs = Charset::from_attr(charset);
     CURRENT.with(|c| c.set(cs));
-    GRAPH.with(|g| {
-        let mut g = g.borrow_mut();
-        if *g != graph_name {
-            g.clear();
-            g.push_str(graph_name);
-            WARNED.with(|w| w.set(false));
-        }
-    });
+    if GRAPH.with(|g| g.borrow().1 != graph_name) {
+        set_graph(graph_name);
+    }
 }
 
 /// Charset of the graph being laid out or rendered on this thread.
@@ -163,20 +169,29 @@ pub fn current() -> Charset {
     CURRENT.with(Cell::get)
 }
 
-/// `htmlEntityUTF8(s, g)` called with another `g` than the last call (`lastg`): makes
-/// `graph_name` the graph the warning names and clears its once-per-graph flag, until the
-/// returned guard puts the previous graph back, clearing the flag again.
+/// Converts labels for another graph, `graph_name` (`htmlEntityUTF8(s, g)` with another `g`),
+/// until the returned guard puts the previous graph back.
 pub fn enter_graph(graph_name: &str) -> impl Drop + use<> {
-    struct Guard(String);
+    struct Guard((u64, String));
     impl Drop for Guard {
         fn drop(&mut self) {
             GRAPH.with(|g| std::mem::swap(&mut *g.borrow_mut(), &mut self.0));
-            WARNED.with(|w| w.set(false));
         }
     }
-    let prev = GRAPH.with(|g| g.replace(graph_name.to_string()));
-    WARNED.with(|w| w.set(false));
-    Guard(prev)
+    Guard(set_graph(graph_name))
+}
+
+/// The start of `htmlEntityUTF8`: a call for another graph than the last one (`lastg`)
+/// clears the once-per-graph warning flag. A repeat inside [`crate::diag::quietly`] is not a
+/// C call and leaves `lastg` alone.
+pub(crate) fn enter_html_entity_utf8() {
+    if !crate::diag::reporting() {
+        return;
+    }
+    let g = GRAPH.with(|g| g.borrow().0);
+    if LAST.with(|l| l.replace(g)) != g {
+        WARNED.with(|w| w.set(false));
+    }
 }
 
 /// `htmlEntityUTF8`'s warning: printed at most once per graph. A repeat inside
@@ -185,7 +200,7 @@ pub(crate) fn warn_invalid_utf8(msg: impl FnOnce(&str) -> String) {
     if !crate::diag::reporting() || WARNED.with(|w| w.replace(true)) {
         return;
     }
-    let text = GRAPH.with(|g| msg(&g.borrow()));
+    let text = GRAPH.with(|g| msg(&g.borrow().1));
     crate::diag::agwarningf(&text);
 }
 

@@ -306,7 +306,7 @@ fn scan_entity(t: &[u8], out: &mut Vec<u8>) -> usize {
 fn html_entity_value(name: &str) -> Option<u32> {
     // Same table as `htmlEntityUTF8` (entities.h).
     let probe = format!("&{name};");
-    let decoded = graphviz_pure_core::font::html_entity_utf8(&probe);
+    let decoded = graphviz_pure_core::font::html_entity_utf8_probe(&probe);
     if decoded == probe {
         return None;
     }
