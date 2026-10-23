@@ -219,6 +219,8 @@ impl Dot<'_> {
         let mut cur = Some(g);
         while let Some(c) = cur {
             if !self.graphs[c].edges.insert(e) {
+                // cgraph found `e` in `c`'s dictionaries.
+                self.agcontains_edge_hit(c, e);
                 break;
             }
             cur = self.graphs[c].cg_parent;
@@ -264,6 +266,117 @@ impl Dot<'_> {
             .iter()
             .copied()
             .find(|&e| self.edges[e].head == h && self.graphs[g].edges.contains(&e))
+    }
+
+    /// `agfindedge(agroot, t, h)` on the input graph, as `arrow_flags` calls it.
+    ///
+    /// cgraph searches `h`'s `in_id` dictionary, a splay tree ordered by tail id and
+    /// then edge id, with a key that compares equal to every edge from `t`
+    /// (`agfindedge_by_key`). Among several `t -> h` edges it returns the first one on
+    /// the search path, which depends on the tree's shape, not the one created first.
+    /// Every search splays what it finds to the root, so the tree is kept between
+    /// calls. In an undirected graph cgraph also tries `h -> t`.
+    pub fn agfindedge_root(&self, t: N, h: N) -> Option<E> {
+        let e = self.in_id_search(t, h);
+        if e.is_none() && self.root_input.kind != graphviz_pure_core::GraphKind::Directed {
+            return self.in_id_search(h, t);
+        }
+        e
+    }
+
+    fn in_id_search(&self, t: N, h: N) -> Option<E> {
+        let t = self.cg_node_id(t);
+        self.with_in_id(h, |dict| {
+            let i = dict.find(&|&x: &E| t.cmp(&self.cg_in_id_key(x).0))?;
+            Some(*dict.get(i))
+        })?
+    }
+
+    /// The order of input node `n`'s cgraph id: its root node index.
+    fn cg_node_id(&self, n: N) -> usize {
+        self.cg_root_node
+            .as_ref()
+            .and_then(|m| m.get(n).copied())
+            .unwrap_or(n)
+    }
+
+    /// The order of input edge `e` in its head's `in_id` dictionary.
+    fn cg_in_id_key(&self, e: E) -> (usize, u64) {
+        self.edges
+            .get(e)
+            .map_or((usize::MAX, 0), |ed| (self.cg_node_id(ed.tail), ed.seq))
+    }
+
+    fn cg_head(&self, e: E) -> Option<N> {
+        self.edges.get(e).map(|ed| ed.head)
+    }
+
+    /// `agfindedge_by_key(root, t, h, AGTAG(e))` finding the input edge `e`.
+    fn in_id_hit(&self, e: E) {
+        let Some(h) = self.cg_head(e) else {
+            return;
+        };
+        if self.cg_in_id.borrow().get(h).is_some_and(Option::is_some) {
+            let k = self.cg_in_id_key(e);
+            self.with_in_id(h, |d| d.find(&|&x: &E| k.cmp(&self.cg_in_id_key(x))));
+        } else {
+            self.cg_in_id_hits.borrow_mut().push(e);
+        }
+    }
+
+    /// `agfindedge_by_key(g, t, h, AGTAG(e))` finding `e`, as `agsubedge` and
+    /// `agcontains(g, e)` do: on the input root, it splays `e` in [`Dot::agfindedge_root`]'s
+    /// dictionaries.
+    pub fn agcontains_edge_hit(&self, g: G, e: E) {
+        if g == 0 && !self.comp && e < self.input.edges.len() {
+            self.in_id_hit(e);
+        }
+    }
+
+    /// Runs `f` on the root graph's `in_id` dictionary of input node `h`, building it
+    /// first if needed. Node ids are the addresses of the node names, taken here to
+    /// grow as the nodes were created. The parser creates each edge with
+    /// `installedge`, which searches the root's dictionaries for the edge (missing
+    /// it) and then inserts it. dot adds no edges to the root graph; the searches
+    /// that find one come from `cccomps` and from `agsubedge`/`agcontains`
+    /// ([`Dot::cg_in_id_hits`]).
+    fn with_in_id<R>(&self, h: N, f: impl FnOnce(&mut crate::cdt::Cdt<E>) -> R) -> Option<R> {
+        let mut dicts = self.cg_in_id.borrow_mut();
+        if dicts.len() <= h {
+            dicts.resize_with(h.saturating_add(1), || None);
+        }
+        let dict = dicts.get_mut(h)?.get_or_insert_with(|| {
+            let mut d = crate::cdt::Cdt::new();
+            let key = |e: E| self.cg_in_id_key(e);
+            let mut ins: Vec<E> = (0..self.input.edges.len())
+                .filter(|&e| self.cg_head(e) == Some(h))
+                .collect();
+            for &e in &ins {
+                let k = key(e);
+                d.find(&|&x: &E| k.cmp(&key(x)));
+                d.insert(e, &|&x: &E| k.cmp(&key(x)));
+            }
+            if self.cg_in_id_packed {
+                // graphviz_node_induce: the component's nodes in order, each one's
+                // out-edges in order.
+                ins.sort_by_key(|&e| key(e));
+                for &e in &ins {
+                    let k = key(e);
+                    d.find(&|&x: &E| k.cmp(&key(x)));
+                }
+            }
+            for &e in self
+                .cg_in_id_hits
+                .borrow()
+                .iter()
+                .filter(|&&e| self.cg_head(e) == Some(h))
+            {
+                let k = key(e);
+                d.find(&|&x: &E| k.cmp(&key(x)));
+            }
+            d
+        });
+        Some(f(dict))
     }
 
     /// `agedge(g, t, h, NULL, 1)` on a strict directed graph.

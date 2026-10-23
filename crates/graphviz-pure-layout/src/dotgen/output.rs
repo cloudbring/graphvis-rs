@@ -169,6 +169,13 @@ impl Output {
             ] {
                 extra.push((k, p.name.clone().unwrap_or_default()));
             }
+            if ed.conc_opp_flag {
+                let flags: Vec<String> = bzs
+                    .iter()
+                    .map(|bz| format!("{},{}", bz.sflag, bz.eflag))
+                    .collect();
+                extra.push((graphviz_pure_core::CONC_ARROW_FLAGS_KEY, flags.join(" ")));
+            }
             edge_attrs.push(extra);
             let spline = Spline {
                 segments: bzs

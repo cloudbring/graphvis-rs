@@ -216,6 +216,12 @@ impl Dot<'_> {
                     }
                 }
             }
+            if maxi == -1 {
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "degenerate concentrated rank {},{r}\n",
+                    self.graph_name(g)
+                ));
+            }
             self.rk_mut(g, r).n = maxi + 1;
         }
         for c in self.graphs[g].clust.clone() {

@@ -469,6 +469,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         return d.dot_layout();
     };
     let ccs = cccomps(graph);
+    d.cg_in_id_packed = true;
     if ccs.len() == 1 || d.graphs[0].drawing.ratio_kind != RatioKind::None {
         // `dotLayout(g)` runs while the `_cc_<i>` subgraphs cccomps created
         // are still children of g, so dot sees them (e.g. a root `rank` value
@@ -506,6 +507,8 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         }
         let mut c = Dot::new_component(&cg.graph, graph, d);
         c.comp_index = ci;
+        c.cg_in_id_packed = true;
+        c.cg_root_node = Some(cg.nodes.clone());
         c.dot_layout()?;
         // The component's nodes and edges are the root's objects in C, so what
         // its layout wrote before failing (dot_init_node_edge's sizes, ...)

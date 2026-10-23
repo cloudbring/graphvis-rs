@@ -647,6 +647,7 @@ impl Dot<'_> {
                 }
             }
             if self.agcontains_edge(g, e) {
+                self.agcontains_edge_hit(g, e);
                 return true;
             }
         }
