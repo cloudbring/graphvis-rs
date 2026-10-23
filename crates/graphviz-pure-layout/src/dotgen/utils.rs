@@ -35,11 +35,7 @@ pub fn scale_clamp(original: i32, scale: f64) -> i32 {
 /// `ROUND(f)` from lib/common/macros.h.
 #[inline]
 pub fn round_c(f: f64) -> i32 {
-    if f >= 0.0 {
-        (f + 0.5) as i32
-    } else {
-        (f - 0.5) as i32
-    }
+    graphviz_pure_core::cnum::c_round(f)
 }
 
 /// `POINTS(a_inches)` = `ROUND(a * 72)`.

@@ -376,8 +376,11 @@ pub fn shape_port<S: PortGraph + ?Sized>(
     let all = BOTTOM | RIGHT | TOP | LEFT;
     let src = g.port_node(n);
     // The node was sized, and its diagnostics reported, by common_init_node.
-    let geom =
-        graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::node_geometry(src, &g.port_env()));
+    let geom = graphviz_pure_core::diag::quietly(|| {
+        graphviz_pure_core::font::textfont_remeasuring(|| {
+            graphviz_pure_geom::node_geometry(src, &g.port_env())
+        })
+    });
     let mut rv = PortInfo::default();
     let is_record = g.shape(n).is_some_and(|s| s.inside == InsideFn::Record);
     if is_record && let Some(rec) = geom.record.as_ref() {

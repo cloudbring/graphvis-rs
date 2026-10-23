@@ -227,14 +227,7 @@ impl<'g> Model<'g> {
     pub fn drawing_size(&self) -> Option<(f64, f64, bool)> {
         let p = self.root_attrs().get("size")?;
         // POINTS(a): ROUND(a * 72).
-        let points = |a: f64| {
-            let f = a * 72.0;
-            f64::from(if f >= 0.0 {
-                (f + 0.5) as i32
-            } else {
-                (f - 0.5) as i32
-            })
-        };
+        let points = |a: f64| f64::from(graphviz_pure_core::cnum::c_round(a * 72.0));
         let r = sscanf(p, "%lf,%lf%c");
         let [x, y, ..] = r.values;
         if r.count > 1 && x > 0.0 && y > 0.0 {
@@ -274,6 +267,11 @@ impl<'g> Model<'g> {
     /// The render model of `g`. Its node, edge and cluster labels are sized again here
     /// (`diag::quietly`): C made them in layout, and reported their diagnostics there.
     pub fn build(g: &'g Graph) -> Self {
+        // The labels were measured by layout; measure them again as C measured them then.
+        graphviz_pure_core::font::textfont_remeasuring(|| Self::build_measured(g))
+    }
+
+    fn build_measured(g: &'g Graph) -> Self {
         graphviz_pure_core::diag::quietly(|| Self::build_quiet(g))
     }
 

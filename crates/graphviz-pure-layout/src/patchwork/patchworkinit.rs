@@ -66,7 +66,11 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
     for &n in &res.walk_order {
         let _ = graphviz_pure_geom::node_geometry(&src.nodes[n], &env);
     }
-    let mut g = graphviz_pure_core::diag::quietly(|| LGraph::new_unported(&src, 2, EdgeType::Line));
+    let mut g = graphviz_pure_core::diag::quietly(|| {
+        graphviz_pure_core::font::textfont_remeasuring(|| {
+            LGraph::new_unported(&src, 2, EdgeType::Line)
+        })
+    });
     // patchwork_init_edge binds the edge record without common_init_edge, so
     // edges carry no labels (new_unported makes none).
     for (i, r) in res.nodes.iter().enumerate() {

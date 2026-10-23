@@ -445,9 +445,15 @@ conversion site follows the default unless its function is on this list.
 splay tree whose comparison (`textfont_comparf`) orders sizes with `<` and `>`. A NaN
 `fontsize` compares equal to any size, so the label gets the font that the search reaches
 first: the most recently used font of that name, or, when a NaN font was interned first,
-later labels of that name get the NaN one. The port interns plain-text label fonts in the
-same splay tree (`core::cdt`, moved from layout), per run, in `storeline`. HTML labels'
-fonts are not interned yet; they only change which font a NaN size meets.
+later labels of that name get the NaN one. The port interns fonts in the same splay
+tree (`core::cdt`, moved from layout), one per thread and run, at C's sites: `storeline`,
+and for HTML labels `mkFont` (when the parser reads the token), `pushFont` and
+`size_html_txt`. C measures each label once, but the port measures some again: the root
+label after `graph_init`, dot's node pre-pass before `dot_init_node` (C14), the port
+lookups, patchwork's `LGraph`, and the renderer. Those passes run inside
+`font::textfont_remeasuring`, which leaves the tree alone and gives each font the sizes
+the layout's lookups returned, in order. The render-time `_ldraw_` fonts of `emit.c` are
+not interned.
 
 **Not this cause:** #249 (`overlap=prism` with pins near 1e7 inches). The divergence
 starts in the prism smoother's first iteration and only at that magnitude, C's residual

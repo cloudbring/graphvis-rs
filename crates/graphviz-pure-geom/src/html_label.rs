@@ -1247,6 +1247,14 @@ impl Parser {
     }
 
     fn push_font(&mut self, f: &HtmlFont) {
+        // The lexer's mkFont interned the token's font as C's parser read it, which is
+        // just before this pushFont: dtinsert(gvc->textfont_dt, &tf).
+        graphviz_pure_core::font::textfont_intern(
+            f.name.as_deref(),
+            f.color.as_deref(),
+            u32::from(f.flags),
+            f.size,
+        );
         let mut f = f.clone();
         if let Some(Some(cur)) = self.fontstack.last() {
             if f.color.is_none() && cur.color.is_some() {
@@ -1262,6 +1270,13 @@ impl Parser {
                 f.flags |= cur.flags;
             }
         }
+        // pushFont: dtinsert(gvc->textfont_dt, &f)
+        graphviz_pure_core::font::textfont_intern(
+            f.name.as_deref(),
+            f.color.as_deref(),
+            u32::from(f.flags),
+            f.size,
+        );
         self.fontstack.push(Some(f));
     }
 
@@ -1752,6 +1767,13 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
                 ),
                 None => (env.flags, env.size, env.name.clone(), env.color.clone()),
             };
+            // lp.font = dtinsert(gvc->textfont_dt, &tf)
+            let size = graphviz_pure_core::font::textfont_intern(
+                Some(&name),
+                color.as_deref(),
+                u32::from(flags),
+                size,
+            );
             // estimate_textspan_size
             let (sx, sy) = estimate_text_size_styled(
                 &s,

@@ -211,7 +211,10 @@ impl<'a> Dot<'a> {
         };
         // layout_graph_with_options made the root label first, as graph_init does.
         let gl = if sg == 0 {
-            graphviz_pure_core::diag::quietly(make)
+            // ... and interned its fonts then
+            graphviz_pure_core::diag::quietly(|| {
+                graphviz_pure_core::font::textfont_remeasuring(make)
+            })
         } else {
             make()
         };
@@ -270,7 +273,10 @@ impl<'a> Dot<'a> {
         let r = self.nodes[n].real.unwrap();
         let nd = &self.input.nodes[r];
         let env = graphviz_pure_geom::NodeSizeEnv::from_graph(self.input);
-        let geom = graphviz_pure_geom::node_geometry(nd, &env);
+        // layout_dot's size_graph_nodes measured the node first, and interned its fonts
+        let geom = graphviz_pure_core::font::textfont_remeasuring(|| {
+            graphviz_pure_geom::node_geometry(nd, &env)
+        });
         let (lw, rw, ht) = geom.nodesize(flip);
         let mut sized = nd.clone();
         sized.width = geom.width;

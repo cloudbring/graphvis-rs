@@ -79,6 +79,7 @@ pub fn layout_graph_with_options(
     options: LayoutOptions,
 ) -> Result<()> {
     common::splines::reset_bz_split_budget();
+    graphviz_pure_core::font::textfont_layout_begin();
     common::utils::set_ps_inputscale(options.inputscale);
     fdpgen::tlayout::set_fdp_parms(options.fdp);
     neatogen::stuff::set_reduce(options.reduce);

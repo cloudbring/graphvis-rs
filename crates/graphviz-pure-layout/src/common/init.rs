@@ -67,7 +67,8 @@ pub fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> (Option<TextLa
     let make = || graphviz_pure_geom::graph_label_geometry_in(name, attrs, is_root, false, &env);
     // layout_graph_with_options made the root label first, as graph_init does.
     let geom = if is_root {
-        graphviz_pure_core::diag::quietly(make)
+        // ... and interned its fonts then
+        graphviz_pure_core::diag::quietly(|| graphviz_pure_core::font::textfont_remeasuring(make))
     } else {
         make()
     };

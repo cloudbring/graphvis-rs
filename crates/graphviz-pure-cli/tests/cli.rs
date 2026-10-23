@@ -4862,6 +4862,48 @@ fn nan_fontsize_takes_an_interned_fonts_size() {
     assert!(ok);
     assert!(out.contains("bb=\"8,8,78,84.8\""), "{out}");
     assert!(out.contains("lheight=0.23"), "{out}");
+    // The port measures some labels again (the root label, dot's node pre-pass, the
+    // renderer); those lookups find the fonts C's single lookup found.
+    let out = c10_plain(
+        "dot",
+        "digraph G0 { label=\"GL\"; fontsize=40; n1 [fontsize=nan, label=\"q\\nr\"]; n3 [label=\"X\"] }",
+    );
+    assert!(
+        out.starts_with("graph 1 1.75 2.8205\nnode n1 0.375 1.7992 0.75 2.0428 "),
+        "{out}"
+    );
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { n0 [fontsize=30]; n1 [fontname=Courier, fontsize=40]; \
+         subgraph cluster_3 { label=C3; fontsize=10; n3 [fontsize=nan, label=Q] } }",
+    );
+    assert!(ok);
+    assert!(out.contains("font-size=\"30.00\">Q</text>"), "{out}");
+    // One dictionary for the run, as C has one per GVC.
+    let out = c10_plain(
+        "dot",
+        "digraph { a -> b [fontsize=20, label=E] }\n\
+         digraph { label=\"GL\"; fontsize=nan; n3 [fontname=Courier] }",
+    );
+    assert!(out.contains("stop\ngraph 1 0.75 0.94444\n"), "{out}");
+    // HTML labels intern their fonts too (mkFont, pushFont, size_html_txt).
+    let out = c10_plain(
+        "neato",
+        "digraph { label=\"G0\"; fontsize=14; n0 [fontsize=14]; n1 [fontsize=20]; \
+         n2 [fontsize=14, label=<<B>h</B>>]; n3 [fontsize=nan]; \
+         n1 -> n0 [fontsize=30, label=E]; n1 -> n2 [fontsize=10, label=E] }",
+    );
+    assert_eq!(
+        out,
+        "graph 1 2.5556 3.0111\n\
+         node n0 0.375 2.3372 0.75 0.5 n0 solid ellipse black lightgrey\n\
+         node n1 0.9864 1.541 0.75 0.62854 n1 solid ellipse black lightgrey\n\
+         node n2 1.3212 0.59444 0.75 0.5 <<B>h</B>> solid ellipse black lightgrey\n\
+         node n3 2.1806 2.7611 0.75 0.5 n3 solid ellipse black lightgrey\n\
+         edge n1 n0 4 0.77941 1.8106 0.73615 1.8669 0.68993 1.9271 0.64478 1.9859 E 0.83935 2.1482 solid black\n\
+         edge n1 n2 4 1.0942 1.2363 1.1217 1.1586 1.1516 1.0739 1.1805 0.99226 E 1.0949 1.031 solid black\n\
+         stop\n"
+    );
 }
 
 /// #292: `get_inputscale` tests `is_exactly_zero`, which is false for `-0`, so positions
