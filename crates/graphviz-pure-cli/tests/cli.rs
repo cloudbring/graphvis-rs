@@ -1835,6 +1835,126 @@ edge [label_float=\"true\"];
     }
 }
 
+// Issue #144: make_flat_adj_edges runs dot_init_node_edge on its aux graph, so C prints the
+// label diagnostics of the copied nodes and edges again (dotsplines.c:1208). The aux graph
+// reads `fixed`, not `fixedsize`, and has no xlabel or headlabel symbol, so `size too small
+// for label` and the xlabel and headlabel warnings print once.
+#[test]
+fn flat_adjacent_aux_graph_repeats_label_diagnostics_like_c() {
+    let src = "digraph G { {rank=same; a -> b [label=<<FONT Z=\"2\">x</FONT>>, \
+               headlabel=<<FONT H=\"1\">h</FONT>>, tailport=\"e\"];} \
+               a [label=<<FONT Q=\"1\">a</FONT>>, xlabel=<<FONT W=\"2\">w</FONT>>]; \
+               b [shape=box, fixedsize=true, width=0.75, height=0.1, label=\"abcdefghij\"]; }\n";
+    let (_, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: Illegal attribute Q in <FONT> - ignored\n\
+         in label of node a\n\
+         Warning: Illegal attribute W in <FONT> - ignored\n\
+         in label of node a\n\
+         Warning: node 'b', graph 'G' size too small for label\n\
+         Warning: Illegal attribute Z in <FONT> - ignored\n\
+         in label of edge a -> b\n\
+         Warning: Illegal attribute H in <FONT> - ignored\n\
+         in label of edge a -> b\n\
+         Warning: Illegal attribute Q in <FONT> - ignored\n\
+         in label of node a\n\
+         Warning: Illegal attribute Z in <FONT> - ignored\n\
+         in label of edge a -> b\n"
+    );
+}
+
+// Issue #144: htmlEntityUTF8 warns about invalid UTF-8 once per graph, and starts again when
+// called with another graph (`lastg`): the aux graph's dot_init_node_edge warns for `auxg`,
+// and the next component's for `G` again.
+#[test]
+fn flat_adjacent_aux_graph_repeats_invalid_utf8_warning_like_c() {
+    let path = tmp("issue144_utf8.gv");
+    std::fs::write(
+        &path,
+        b"digraph G { pack=true; {rank=same; a -> b [tailport=e label=\"\xe9\"];} \
+          c [label=\"\xe9\"] }\n",
+    )
+    .unwrap();
+    let (_, err, ok) = run(&["-Kdot", "-Tsvg", path.to_str().unwrap()], "");
+    assert!(ok, "{err}");
+    let utf8 = |g: &str| {
+        format!(
+            "Warning: Invalid 3-byte UTF8 found in input of graph {g} - treated as Latin-1. \
+             Perhaps \"-Gcharset=latin1\" is needed?\n"
+        )
+    };
+    let want = [
+        utf8("G"),
+        "Warning: Warning: no value for width of non-ASCII character 195. Falling back to \
+         width of space character\n"
+            .to_string(),
+        utf8("auxg"),
+        utf8("G"),
+    ]
+    .concat();
+    assert_eq!(err, want);
+    // Only HTML labels in the aux graph, whose entities the HTML lexer decodes: htmlEntityUTF8
+    // is not called for it, lastg stays G, and the tooltip rendered later does not warn again.
+    std::fs::write(
+        &path,
+        b"digraph G { node [label=<x&amp;y>]; {rank=same; a -> b [tailport=e]} \
+          c [label=\"\xe9\" tooltip=\"\xe9\"] }\n",
+    )
+    .unwrap();
+    let (_, err, ok) = run(&["-Kdot", "-Tsvg", path.to_str().unwrap()], "");
+    assert!(ok, "{err}");
+    let want = [
+        utf8("G"),
+        "Warning: Warning: no value for width of non-ASCII character 195. Falling back to \
+         width of space character\n"
+            .to_string(),
+    ]
+    .concat();
+    assert_eq!(err, want);
+}
+
+// Issue #105: with pack, doDot runs cccomps before dotLayout's dot_init_node_edge sizes the
+// nodes, so its `two non-nested clusters` error comes before the font warning, with one
+// component and with several.
+#[test]
+fn pack_cccomps_error_precedes_node_sizing_warnings_like_c() {
+    for extra in ["", " y"] {
+        let src = format!(
+            "digraph G {{ pack=true; node [fontname=Bookman]; \
+             subgraph cluster_a {{ x }} subgraph cluster_b {{ x }}{extra} }}\n"
+        );
+        let (_, err, _) = run(&["-Kdot", "-Tsvg"], &src);
+        assert_eq!(
+            err,
+            "Error: node \"x\" belongs to two non-nested clusters \"cluster_b\" and \
+             \"cluster_a\"\n\
+             Warning: Warning: no hard-coded metrics for 'Bookman'.  Falling back to 'Times' \
+             metrics\n",
+            "{src}"
+        );
+    }
+    // The port's sizing pre-pass is quiet, so it neither prints nor uses up the invalid UTF-8
+    // warning, which comes from dot_init_node_edge after cccomps.
+    let path = tmp("issue105_utf8.gv");
+    std::fs::write(
+        &path,
+        b"digraph G { pack=true; subgraph cluster_a { x } subgraph cluster_b { x } \
+          y [label=\"\xe9\"] }\n",
+    )
+    .unwrap();
+    let (_, err, _) = run(&["-Kdot", "-Tsvg", path.to_str().unwrap()], "");
+    assert_eq!(
+        err,
+        "Error: node \"x\" belongs to two non-nested clusters \"cluster_b\" and \"cluster_a\"\n\
+         Warning: Invalid 3-byte UTF8 found in input of graph G - treated as Latin-1. Perhaps \
+         \"-Gcharset=latin1\" is needed?\n\
+         Warning: Warning: no value for width of non-ASCII character 195. Falling back to width \
+         of space character\n"
+    );
+}
+
 // Issue #21: `label_float` declared after the edge. cgraph gives the existing edge ""
 // (not the later default), `cloneEdge` copies that, and the label does not float.
 #[test]

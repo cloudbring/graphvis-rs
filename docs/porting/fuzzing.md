@@ -440,10 +440,15 @@ Diagnostics (stderr; part of open case `021-stderr-missing-warnings`, issue #30)
   `size too small for label` for a `fixedsize` node, and `bad label format` once per record
   node (it was printed once per sizing pass).
 * The port sizes labels and nodes again after C's `common_init_node`/`common_init_edge`
-  (dot's first sizing, port resolution, the flat-edge aux graph, `neato -n`, rendering).
-  Those repeats run inside `diag::quietly`, so label, shape and font diagnostics print once
-  per C call, also for identical labels and for every graph of a file. `neato -n` reports
-  each edge's labels and then its ports first, as `neato_init_node_edge` does.
+  (dot's first sizing, port resolution, the flat-edge aux graph's pre-pass, `neato -n`,
+  rendering). Those repeats run inside `diag::quietly`, so label, shape, font and invalid
+  UTF-8 diagnostics print once per C call, also for identical labels and for every graph of
+  a file. `neato -n` reports each edge's labels and then its ports first, as
+  `neato_init_node_edge` does.
+* dot's flat-edge aux graph (`make_flat_adj_edges`) reports in its own `dot_init_node_edge`,
+  through the symbols setState leaves: node and edge label diagnostics print again, `size
+  too small for label`, xlabel and head and tail label diagnostics do not, and the invalid
+  UTF-8 warning names `auxg`, then the main graph again (`htmlEntityUTF8`'s `lastg`).
 * An unknown empty HTML element (`<FOO/>`) is reported twice, by expat's start and end
   handlers.
 * dot's `make_flat_adj_edges` warns once per process when a flat edge between adjacent

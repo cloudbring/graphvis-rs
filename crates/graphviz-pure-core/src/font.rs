@@ -627,6 +627,13 @@ fn push_entity_bytes(out: &mut Vec<u8>, v: u32) {
 /// a lead byte without its continuation bytes, or a byte `>= 0xF8`, is converted as if it
 /// were Latin-1, with C's once-per-graph warning.
 pub fn html_entity_utf8(text: &str) -> String {
+    charset::enter_html_entity_utf8();
+    html_entity_utf8_probe(text)
+}
+
+/// [`html_entity_utf8`] as a lookup of the port's own, not a call of C's: it leaves
+/// `htmlEntityUTF8`'s `lastg` alone.
+pub fn html_entity_utf8_probe(text: &str) -> String {
     if !text.contains('&') && !charset::has_raw(text) {
         return text.to_string();
     }
