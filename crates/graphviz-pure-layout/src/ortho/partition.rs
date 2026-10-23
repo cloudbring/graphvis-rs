@@ -535,13 +535,19 @@ pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> OResult<Vec<Bounding
     gen_segments(cells, bb, &mut segs, false);
     let mut rng = Drand48::new(173);
     generate_random_ordering(nsegs, &mut permute, &mut rng);
-    // A failed trapezoidation is C's "horizontal/vertical trapezoid
+    // A failed `add_segment` is C's "horizontal/vertical trapezoid
     // construction failed" exit: partition returns NULL.
-    let hor_traps = construct_trapezoids(nsegs_i, &mut segs, &permute)?;
+    let failed = |vertical| {
+        move |f| match f {
+            Fail::Segment => Fail::Trapezoidation { vertical },
+            f => f,
+        }
+    };
+    let hor_traps = construct_trapezoids(nsegs_i, &mut segs, &permute).map_err(failed(false))?;
     let hor_decomp = monotonate_trapezoids(nsegs_i, &segs, &hor_traps, false)?;
     gen_segments(cells, bb, &mut segs, true);
     generate_random_ordering(nsegs, &mut permute, &mut rng);
-    let ver_traps = construct_trapezoids(nsegs_i, &mut segs, &permute)?;
+    let ver_traps = construct_trapezoids(nsegs_i, &mut segs, &permute).map_err(failed(true))?;
     let vert_decomp = monotonate_trapezoids(nsegs_i, &segs, &ver_traps, true)?;
     let mut rs = Vec::new();
     for v in &vert_decomp {
@@ -554,7 +560,7 @@ pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> OResult<Vec<Bounding
     // C returns `LIST_DETACH(&rs, ...)`, which is NULL for an empty list, and
     // mkMaze fails on NULL: tiny touching nodes can leave no free cell (#203).
     if rs.is_empty() {
-        return Err(Fail::NoMaze);
+        return Err(Fail::NoFreeCell);
     }
     Ok(rs)
 }

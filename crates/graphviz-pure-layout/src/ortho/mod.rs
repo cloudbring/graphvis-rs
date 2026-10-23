@@ -1072,6 +1072,9 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
         Ok(mp) => mp,
         Err(fail) => {
             dump_fail("mkMaze", fail);
+            if let Some(msg) = fail.c_message() {
+                graphviz_pure_core::diag::fprintf_stderr(&msg);
+            }
             return false;
         }
     };
@@ -1102,7 +1105,11 @@ pub fn ortho_edges_of<S: OrthoGraph + ?Sized>(
                 }
                 Fail::NoPath => "orthogonal routing found no path for an edge",
                 Fail::NoChannel => "orthogonal routing found no channel for an edge segment",
-                Fail::NoMaze | Fail::Broken(_) => "orthogonal routing failed",
+                Fail::Segment
+                | Fail::Trapezoidation { .. }
+                | Fail::NoFreeCell
+                | Fail::NoCell { .. }
+                | Fail::Broken(_) => "orthogonal routing failed",
             };
             // C crashes here (#186, #170 and the invariants it asserts or
             // trusts): warn, and leave the edges unrouted.
@@ -1355,7 +1362,10 @@ mod tests {
             (18.0, f64::NEG_INFINITY),
         ] {
             let fail = mk_maze(&boxes(&[c, (81.0, 18.0)])).unwrap_err();
-            assert_eq!(fail, Fail::NoMaze, "{c:?}");
+            assert!(
+                matches!(fail, Fail::Trapezoidation { .. } | Fail::NoFreeCell),
+                "{c:?}: {fail:?}"
+            );
         }
     }
 

@@ -3508,6 +3508,34 @@ c [pos=\"3,2!\"]; a -- c; b -- c }";
     );
 }
 
+/// Issue #127: when the ortho maze fails, C prints `add_segment`'s and `partition`'s bare
+/// `fprintf` messages (`lib/ortho/trapezoid.c:623`, `partition.c:694/711`), and before its
+/// `chkSgraph` assertion, the node it fails at (`maze.c:315/317`). No prefix, no error status.
+#[test]
+fn issue127_ortho_maze_failures_print_cs_messages() {
+    let src = "graph G { layout=neato; splines=ortho;
+a [shape=circle, fixedsize=shape, width=0.3, label=\"a very long label here\", pos=\"0,0!\"];
+b [pos=\"1.0,0!\"]; c [pos=\"0,1.0!\"]; a -- b; b -- c; a -- c; }";
+    let (err, ok) = warnings("neato", src);
+    assert!(ok);
+    assert_eq!(
+        err,
+        "trapezoid segment construction failed\nvertical trapezoid construction failed\n"
+    );
+    let src = "graph { splines=ortho; a [pos=\"1e300,0!\"]; b [pos=\"1.125,0!\"]; \
+               c [pos=\"0,1!\"]; a -- b; b -- c }";
+    assert_eq!(
+        warnings("neato", src).0,
+        "trapezoid segment construction failed\nhorizontal trapezoid construction failed\n"
+    );
+    // C fails its assertion after the message (exit 134); the port draws straight edges.
+    let src = "digraph{layout=osage
+splines=ortho{label=\"inner\"{o2{i1ortho
+cluster_outer{o1}subgraph cluster_inner4{j1 j2}}subgrapa}subgraph cluster_inner4{j2}}x i2 i3}
+";
+    assert_eq!(warnings("osage", src).0, "failed at node 1[1]\n");
+}
+
 /// A `fixedsize=shape` node's ortho obstacle is its polygon's box (`polyBB`,
 /// `lib/neatogen/neatosplines.c:351-358`), not the node size that holds the label.
 #[test]

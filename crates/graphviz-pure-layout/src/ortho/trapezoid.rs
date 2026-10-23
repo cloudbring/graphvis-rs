@@ -468,7 +468,7 @@ fn split_at(
     Ok(tl)
 }
 
-/// `add_segment`. [`Fail::NoMaze`] where C prints "trapezoid segment
+/// `add_segment`. [`Fail::Segment`] where C prints "trapezoid segment
 /// construction failed" and returns -1.
 fn add_segment(
     segnum: i32,
@@ -536,7 +536,7 @@ fn add_segment(
         let tn_sav = tn;
         let (d0v, d1v) = (is_valid_trap(tr.at(t)?.d0), is_valid_trap(tr.at(t)?.d1));
         if !d0v && !d1v {
-            return Err(Fail::NoMaze);
+            return Err(Fail::Segment);
         } else if d0v && !d1v || !d0v && d1v {
             let use_d0 = d0v;
             update_trapezoid(&s, seg, tr, t, tn)?;
