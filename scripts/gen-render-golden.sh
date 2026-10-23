@@ -33,7 +33,7 @@ JSON_LIMIT=100000
 version="$("$C_DOT" -V 2>&1 || true)"
 case "$version" in
   *"version 16.1.0"*) ;;
-  *) echo "need Graphviz 16.1.0, found: $version" >&2; exit 1 ;;
+  *) echo "need Graphviz 16.1.0 as $C_DOT, found: $version" >&2; exit 1 ;;
 esac
 
 # Keep the ratchet baseline (baseline.portable.json); rebuild everything else.

@@ -28,15 +28,16 @@ Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fa
 
 | Check | Every platform (Linux, Windows, macOS, WASM) |
 | :--- | :---: |
-| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (11 inputs skipped because C's own output changes between runs) | 2,592 / 2,592 |
+| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (14 inputs skipped: C's own output changes between runs on 11, and C crashes on 3) | 2,595 / 2,595 |
 | Layout geometry, main corpus (566 files: wild graphs, upstream fixtures, fuzz reproducers) | 566 / 566 exact |
 | Per-engine corpora, exact | neato 442/445, sfdp 297/297, circo 282/282, fdp 386/388, osage 180/180, patchwork 141/141, twopi 281/289 |
-| Renderers given C's layout (`gv-diff render`, 547 layouts, 7 formats) | svg, xdot, dot, json, json0 all identical; plain and plain-ext 535/537 |
+| Renderers given C's layout (`gv-diff render`, 587 layouts, 7 formats) | svg, xdot, dot, json0 581/587; json 545/551; plain and plain-ext 569/577 |
 | C's own test graphs (`graphs/`, `tests/graphs/`, `tests/regression_tests/`), dot with base, LR, ortho, concentrate and newrank variants | 379 / 379 per variant |
 | Differential fuzzing (6,000 random graphs, all engines, final round) | 98.8% identical |
 
-- **One math library.** Every build calls the same pure-Rust math functions (`graphviz_pure_core::math`), on every target; no build option brings back a platform libm, and clippy rejects code that would. (PNG and JPEG are rasterized from the SVG by resvg and tiny-skia, whose own `f32` math is outside this guarantee; #339.) Stock C on macOS calls Apple's libm, whose `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit, so against stock C on macOS the port matches 2,471 of 2,591 inputs: all 120 others differ only through the libm (the port equals C with the same math on every one; `gv-diff e2e --stock` lists them). That comparison is informational. See `docs/porting/libm.md`. For comparison, C Graphviz built on Linux matches C on macOS on only 2,005 of 2,586.
+- **One math library.** Every build calls the same pure-Rust math functions (`graphviz_pure_core::math`), on every target; no build option brings back a platform libm, and clippy rejects code that would. (PNG and JPEG are rasterized from the SVG by resvg and tiny-skia, whose own `f32` math is outside this guarantee; #339.) Stock C on macOS calls Apple's libm, whose `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit, so against stock C on macOS the port matches 2,474 of 2,594 inputs: all 120 others differ only through the libm (the port equals C with the same math on every one; `gv-diff e2e --stock` lists them). That comparison is informational. See `docs/porting/libm.md`. For comparison, C Graphviz built on Linux matches C on macOS on only 2,005 of 2,586.
 - **neato and fdp:** neato's 3 inexact files are inputs C crashes on, so there is no C layout to compare with. fdp's 2 are layouts that change from run to run in C.
+- **Renderers:** the 6 files that differ in every format are fuzz reproducers whose `neato -n2` rendering misses label placement (#142, #266).
 - **plain/plain-ext:** in two Latin-1 files C prints an empty label where the port prints the text, because C reads the label from freed memory (`lib/common/output.c`); the same C bug makes 10 other references unstable.
 - **twopi:** the 8 inexact files are a floating-point tie in edge routing that C itself breaks differently from run to run.
 - **Fuzzing:** the remaining differences are documented in `docs/porting/fuzzing.md`. Most are C nondeterminism (results that depend on memory addresses) and C crashes.

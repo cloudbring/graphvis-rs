@@ -54,7 +54,8 @@ const C_TIMEOUT: Duration = Duration::from_secs(60);
 pub struct Golden {
     /// `corpus/stem` → hash of C's normalized `-Tsvg` output.
     pub files: BTreeMap<String, String>,
-    /// Inputs whose C output differs between runs, or that C could not render in time.
+    /// Inputs whose C output differs between runs, or that C could not render (it crashed or
+    /// timed out).
     pub unstable: BTreeSet<String>,
 }
 
@@ -248,11 +249,18 @@ pub fn main(args: Vec<String>) -> ExitCode {
             .map(|_| parallel(&items, |p| run_c(&c_dot, p)))
             .collect();
         // With --filter, only the filtered inputs are replaced; the rest of the golden stays.
-        let mut g = if filter.is_some() {
-            std::fs::read_to_string(&golden_path)
+        let mut g = if filter.is_some() && golden_path.exists() {
+            let parsed = std::fs::read_to_string(&golden_path)
                 .ok()
-                .and_then(|s| serde_json::from_str::<Golden>(&s).ok())
-                .unwrap_or_default()
+                .and_then(|s| serde_json::from_str::<Golden>(&s).ok());
+            let Some(g) = parsed else {
+                eprintln!(
+                    "cannot parse {}; not overwriting it with the filtered inputs only",
+                    golden_path.display()
+                );
+                return ExitCode::FAILURE;
+            };
+            g
         } else {
             Golden::default()
         };

@@ -162,6 +162,8 @@ def main():
     stock_ident_by = Counter(map(corpus, stock_ident))
     stock_differs = sorted(set(stock_files) - stock_ident)
     libm_only = [f for f in stock_differs if f in ident]
+    # As gv-diff e2e --stock: inputs C with the same math has no stable output for.
+    no_reference = [f for f in stock_differs if f not in golden["files"]]
 
     e2e = {
         "corpora": [
@@ -191,7 +193,8 @@ def main():
             "unstable": sorted(stock_golden["unstable"]),
             "differs": stock_differs,
             "libm_only": len(libm_only),
-            "other": sorted(set(stock_differs) - set(libm_only)),
+            "no_reference": sorted(no_reference),
+            "other": sorted(set(stock_differs) - set(libm_only) - set(no_reference)),
         },
     }
 

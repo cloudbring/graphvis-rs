@@ -32,11 +32,12 @@ cargo test --workspace                                                 # every r
 It covers every transcendental symbol that Graphviz 16.1.0's libraries and plugins, and GTS,
 import (`nm -u`: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `log2`,
 `log10`, `pow`, `hypot`, `cbrt` and clang's `__sincos_stret`); the rest (`sqrt`, `fmod`) are
-exact in IEEE arithmetic. Against it the port is byte-identical on all 2,592 stable corpus
-inputs (`gv-diff e2e`; 11 more are skipped because C's output changes from run to run).
+exact in IEEE arithmetic. Against it the port is byte-identical on all 2,595 stable corpus
+inputs (`gv-diff e2e`; 14 more are skipped: C's output changes from run to run on 11, and C
+crashes on 3).
 
 `gv-diff e2e --stock` compares with stock C on macOS instead (`tests/golden/e2e.json`, C with
-Apple's libm). It is a report and never fails: the port matches 2,471 of 2,591 inputs, and on
+Apple's libm). It is a report and never fails: the port matches 2,474 of 2,594 inputs, and on
 every one of the other 120 it equals C with the same math, so they differ only through Apple's
 libm (114 sfdp, whose multilevel layout amplifies a last-bit difference in `pow`; 4 fdp; 1
 circo; 1 main).
@@ -303,7 +304,7 @@ the portable functions are unstable on slightly different files (12 and 11). The
 the Linux table below.
 
 So with the same math functions on both sides, the portable build and the browser build are
-byte-identical to C on every stable input, including all 119 files that differ from stock C.
+byte-identical to C on every stable input, including every file that differs from stock C.
 The ratchet `e2e_svg_identity_with_matched_libm_does_not_regress`
 (`crates/graphviz-pure-diff/tests/e2e_fidelity.rs`, portable builds only, so it runs in CI) keeps it so.
 11 inputs are unstable in C (its output changed within 5 runs): the twopi `arrows` graphs and a
