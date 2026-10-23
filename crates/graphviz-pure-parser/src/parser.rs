@@ -399,11 +399,13 @@ impl<'a> Parser<'a> {
     fn parse_attr_stmt(&mut self) -> Result<()> {
         let attr_tok = self.advance();
         // Optional macro name `atom '='` before `[` (`optmacroname` in grammar.y)
+        let mut macro_name = false;
         if let Some(span) = self.atom_span_len(0)
             && self.peek_n(span).kind == TokenKind::Equals
         {
-            let _macro_name = self.parse_atom()?;
+            self.parse_atom()?;
             self.expect(&TokenKind::Equals)?;
+            macro_name = true;
         }
 
         if self.peek().kind != TokenKind::LBracket {
@@ -411,6 +413,10 @@ impl<'a> Parser<'a> {
         }
 
         let attrs = self.parse_opt_attr_list()?;
+        // `attrstmt`'s `nomacros()`, with no newline.
+        if macro_name {
+            graphviz_pure_core::diag::agwarningf("attribute macros not implemented");
+        }
         let kind = match attr_tok.kind {
             TokenKind::Graph => DictKind::Graph,
             TokenKind::Node => DictKind::Node,
