@@ -4398,6 +4398,23 @@ fn neato_kk_disconnected_circuit_model_warns_like_c() {
     );
 }
 
+// Issue #311 (C22): `legal.c`'s `find_ints` reports a backward edge with no active line as an
+// error, so the exit status is 1, and the arrangement is illegal (straight lines), as in C.
+#[test]
+fn fdp_legal_arrangement_non_line_is_an_error_like_c() {
+    let src = "graph { splines=polyline; overlap=true; n0 [pos=\"0,1e-300!\"]; n1 [pos=\"2.5,nan!\"]; n2 [pos=\"1e-300,1e-300\"]; n3 [pos=\"-1e7,2.5!\", fontsize=nan]; n4 [pos=\"0,3e6\"]; n0 -- n1; n3 -- n4; n4 -- n1; n4 -- n1; n1 -- n0; n1 -- n2; n4 -- n0 }";
+    let (_, err, status) = run_in(&std::env::temp_dir(), &["-Kfdp", "-Tdot"], src);
+    assert_eq!(
+        (err.as_str(), status),
+        (
+            "Error: trying to delete a non-line\n\
+             Warning: some nodes with margin (3.20,3.20) touch - falling back to straight line \
+             edges\n",
+            1
+        )
+    );
+}
+
 // Issue #261 (C22): `eatComment` warns about a comment closed by a `>` without `--`. The error
 // after it is still the port's (C's expat reads on into the following units); only the warning
 // is checked.
