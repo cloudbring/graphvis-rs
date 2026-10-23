@@ -227,7 +227,11 @@ impl Dot<'_> {
         let edge_base = self.edges.len();
         if et == EdgeType::Curved {
             self.reset_rw();
-            if self.graphs[0].has_labels & EDGE_LABEL != 0 {
+            if self
+                .graphs
+                .first()
+                .is_some_and(|g| g.has_labels & EDGE_LABEL != 0)
+            {
                 graphviz_pure_core::diag::agwarningf(
                     "edge labels with splines=curved not supported in dot - use xlabels\n",
                 );
@@ -1271,8 +1275,8 @@ impl Dot<'_> {
         let real = orig_edge(self, p.data);
         let (t, h) = (self.edges[real].tail, self.edges[real].head);
         let real = RealEdge {
-            tail: &self.nodes[t].name,
-            head: &self.nodes[h].name,
+            tail: self.nodes.get(t).map_or("", |n| n.name.as_str()),
+            head: self.nodes.get(h).map_or("", |n| n.name.as_str()),
             is_loop: t == h,
         };
         if spline {

@@ -263,7 +263,7 @@ impl Dot<'_> {
                 } else if !o.is_empty() {
                     graphviz_pure_core::diag::agerrorf(&format!(
                         "ordering '{o}' not recognized for node '{}'.\n",
-                        self.nodes[n].name
+                        self.nodes.get(n).map_or("", |d| d.name.as_str())
                     ));
                 }
             }

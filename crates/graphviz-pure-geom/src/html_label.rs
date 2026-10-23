@@ -1085,7 +1085,7 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
                     let p = t + 3;
                     t = eat_comment(s, p);
                     // eatComment: a closing `>` not preceded by `--` within the comment.
-                    if t < s.len() && (t < p + 2 || &s[t - 2..t] != b"--") {
+                    if t < s.len() && !s.get(p..t).is_some_and(|c| c.ends_with(b"--")) {
                         lx.warnings
                             .push((lx.toks.len(), "Unclosed comment\n".to_string(), true));
                     }

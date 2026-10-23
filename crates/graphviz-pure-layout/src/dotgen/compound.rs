@@ -157,18 +157,20 @@ impl Dot<'_> {
         };
         let (head, tail) = (self.edges[e].head, self.edges[e].tail);
         // `agnameof(agtail(e)), agnameof(aghead(e))`, then `agget(e, ...)`.
+        let name = |n: N| self.nodes.get(n).map_or("", |d| d.name.as_str());
         let warn = |what: &str, key: &str| {
             graphviz_pure_core::diag::agwarningf(&format!(
                 "{} -> {}: {what} {}\n",
-                self.nodes[tail].name,
-                self.nodes[head].name,
+                name(tail),
+                name(head),
                 self.edge_attr(e, key).unwrap_or("")
             ));
         };
         if spl.len() > 1 {
             graphviz_pure_core::diag::agwarningf(&format!(
                 "{} -> {}: spline size > 1 not supported\n",
-                self.nodes[tail].name, self.nodes[head].name
+                name(tail),
+                name(head)
             ));
             return;
         }
