@@ -1,6 +1,6 @@
 module	unwrap	expect	index	arith
 geom/html_label.rs	0	0	75	77
-geom/node_size.rs	0	0	74	54
+geom/node_size.rs	0	0	67	49
 geom/pathplan/cvt.rs	0	0	7	6
 geom/pathplan/inpoly.rs	0	0	2	1
 geom/pathplan/route.rs	0	0	37	11
@@ -8,7 +8,6 @@ geom/pathplan/shortest.rs	0	0	83	25
 geom/pathplan/triang.rs	0	0	22	5
 geom/pathplan/util.rs	0	0	9	5
 geom/pathplan/visibility.rs	0	0	66	32
-layout/cdt.rs	0	0	39	1
 layout/circogen/blockpath.rs	7	6	51	26
 layout/circogen/blocktree.rs	0	4	44	1
 layout/circogen/circpos.rs	0	1	44	6
@@ -26,7 +25,7 @@ layout/common/routespl.rs	0	0	32	22
 layout/common/shapes.rs	0	0	75	38
 layout/common/splines.rs	2	1	96	46
 layout/common/types.rs	0	0	13	0
-layout/common/utils.rs	0	0	10	2
+layout/common/utils.rs	0	0	6	0
 layout/common/xlabels.rs	6	1	103	32
 layout/cutil.rs	1	0	185	179
 layout/dotgen/acyclic.rs	0	0	23	1
@@ -52,14 +51,14 @@ layout/dotgen/rank.rs	11	0	243	14
 layout/dotgen/sameport.rs	0	0	34	0
 layout/dotgen/splinegraph.rs	0	1	51	0
 layout/dotgen/types.rs	0	0	4	8
-layout/dotgen/utils.rs	1	0	37	8
+layout/dotgen/utils.rs	1	0	30	3
 layout/fdpgen/clusteredges.rs	0	0	25	3
 layout/fdpgen/comp.rs	0	0	10	0
 layout/fdpgen/fdpinit.rs	0	0	6	0
 layout/fdpgen/layout.rs	1	0	175	24
 layout/fdpgen/mod.rs	0	0	5	2
-layout/fdpgen/tlayout.rs	0	0	53	14
-layout/fdpgen/xlayout.rs	0	0	26	10
+layout/fdpgen/tlayout.rs	0	0	53	10
+layout/fdpgen/xlayout.rs	0	0	26	9
 layout/neatogen/adjust.rs	0	0	34	0
 layout/neatogen/bfs.rs	5	0	78	14
 layout/neatogen/call_tri.rs	0	0	2	2

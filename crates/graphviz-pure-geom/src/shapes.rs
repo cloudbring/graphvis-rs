@@ -284,5 +284,13 @@ pub(crate) fn html_label_layout(
     font_size: f64,
     cs: graphviz_pure_core::charset::Charset,
 ) -> HtmlLabelLayout {
-    make_html_label(label, obj, font_name, font_size, obj.font_color, obj.pen_color, cs)
+    make_html_label(
+        label,
+        obj,
+        font_name,
+        font_size,
+        obj.font_color,
+        obj.pen_color,
+        cs,
+    )
 }

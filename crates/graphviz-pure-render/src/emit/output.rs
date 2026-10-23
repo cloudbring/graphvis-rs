@@ -160,8 +160,18 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
         explicit[c.sub].insert("bb".into());
         if let Some(l) = c.label.as_ref().filter(|l| !l.text.is_empty()) {
             set_attr(a, "lp", pt(l.pos), false);
-            set_attr(a, "lwidth", graphviz_pure_core::cnum::fmt_f(l.dimen.x / 72.0, 2), false);
-            set_attr(a, "lheight", graphviz_pure_core::cnum::fmt_f(l.dimen.y / 72.0, 2), false);
+            set_attr(
+                a,
+                "lwidth",
+                graphviz_pure_core::cnum::fmt_f(l.dimen.x / 72.0, 2),
+                false,
+            );
+            set_attr(
+                a,
+                "lheight",
+                graphviz_pure_core::cnum::fmt_f(l.dimen.y / 72.0, 2),
+                false,
+            );
             for k in ["lp", "lwidth", "lheight"] {
                 explicit[c.sub].insert(k.into());
             }
