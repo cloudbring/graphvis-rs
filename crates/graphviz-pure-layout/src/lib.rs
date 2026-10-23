@@ -36,10 +36,17 @@ pub enum LayoutEngine {
 }
 
 /// Engine options set on the command line.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct LayoutOptions {
     /// `-n[N]`: neato keeps the input positions (`Nop` in C). 0 runs the full layout.
     pub nop: u8,
+    /// `-s[v]`: `PSinputscale`, which overrides the `inputscale` attribute of neato and fdp
+    /// when positive.
+    pub inputscale: f64,
+    /// `-x`: `Reduce`, neato removes singletons and trees.
+    pub reduce: bool,
+    /// `-L`: fdp's parameters (`fdp_parms`).
+    pub fdp: fdpgen::tlayout::FdpParms,
 }
 
 impl LayoutEngine {
@@ -64,12 +71,17 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
     layout_graph_with_options(graph, engine, LayoutOptions::default())
 }
 
+use graphviz_pure_core::LAYOUT_LABEL_POS_KEYS;
+
 pub fn layout_graph_with_options(
     graph: &mut Graph,
     engine: LayoutEngine,
     options: LayoutOptions,
 ) -> Result<()> {
     common::splines::reset_bz_split_budget();
+    common::utils::set_ps_inputscale(options.inputscale);
+    fdpgen::tlayout::set_fdp_parms(options.fdp);
+    neatogen::stuff::set_reduce(options.reduce);
     graphviz_pure_core::charset::begin_layout(
         &graph.name,
         graph.graph_attrs.get("charset").map(String::as_str),
@@ -104,7 +116,8 @@ pub fn layout_graph_with_options(
         n.attrs.remove(graphviz_pure_core::NODE_LW_RW_KEY);
     }
 
-    match effective_engine {
+    let input = label_pos_inputs(graph);
+    let result = match effective_engine {
         LayoutEngine::Dot => dotgen::layout_dot(graph),
         LayoutEngine::Neato if options.nop > 0 => nop::layout_nop(graph, options.nop),
         LayoutEngine::Nop1 => nop::layout_nop(graph, 1),
@@ -116,6 +129,56 @@ pub fn layout_graph_with_options(
         LayoutEngine::Circo => circogen::circularinit::circo_layout(graph),
         LayoutEngine::Osage => osage::osage_layout(graph),
         LayoutEngine::Patchwork => patchwork::patchwork_layout(graph),
+    };
+    keep_label_pos_inputs(graph, input);
+    result
+}
+
+/// Each node's and edge's input values of the [`LAYOUT_LABEL_POS_KEYS`].
+type LabelPosInputs = (Vec<[Option<String>; 3]>, Vec<[Option<String>; 3]>);
+
+fn label_pos_inputs(graph: &Graph) -> LabelPosInputs {
+    let of = |a: &graphviz_pure_core::AttrMap| LAYOUT_LABEL_POS_KEYS.map(|k| a.get(k).cloned());
+    (
+        graph.nodes.iter().map(|n| of(&n.attrs)).collect(),
+        graph.edges.iter().map(|e| of(&e.attrs)).collect(),
+    )
+}
+
+/// Records, on each object whose [`LAYOUT_LABEL_POS_KEYS`] the layout changed, the input
+/// value ([`graphviz_pure_core::LAYOUT_INPUT_PREFIX`]). Objects are matched by their cgraph
+/// sequence number, which survives the nodes `Reduce` deletes.
+fn keep_label_pos_inputs(graph: &mut Graph, (nodes, edges): LabelPosInputs) {
+    use graphviz_pure_core::{LAYOUT_INPUT_PREFIX, LAYOUT_NO_INPUT_PREFIX, SEQ_KEY};
+    let keep = |a: &mut graphviz_pure_core::AttrMap, input: &[Option<String>; 3]| {
+        for (k, before) in LAYOUT_LABEL_POS_KEYS.iter().zip(input) {
+            if a.get(*k) == before.as_ref()
+                || a.contains_key(&format!("{LAYOUT_INPUT_PREFIX}{k}"))
+                || a.contains_key(&format!("{LAYOUT_NO_INPUT_PREFIX}{k}"))
+            {
+                continue;
+            }
+            match before {
+                Some(v) => a.insert(format!("{LAYOUT_INPUT_PREFIX}{k}"), v.clone()),
+                None => a.insert(format!("{LAYOUT_NO_INPUT_PREFIX}{k}"), String::new()),
+            };
+        }
+    };
+    let seq = |a: &graphviz_pure_core::AttrMap, i: usize| {
+        a.get(SEQ_KEY)
+            .and_then(|s| s.parse::<usize>().ok())
+            .and_then(|s| s.checked_sub(1))
+            .unwrap_or(i)
+    };
+    for (i, n) in graph.nodes.iter_mut().enumerate() {
+        if let Some(input) = nodes.get(seq(&n.attrs, i)) {
+            keep(&mut n.attrs, input);
+        }
+    }
+    for (i, e) in graph.edges.iter_mut().enumerate() {
+        if let Some(input) = edges.get(seq(&e.attrs, i)) {
+            keep(&mut e.attrs, input);
+        }
     }
 }
 

@@ -11,6 +11,84 @@ use crate::common::types::{LGraph, P_SET, Sub};
 use graphviz_pure_core::math;
 use graphviz_pure_core::strtod::{atof, scan_lf};
 
+thread_local! {
+    /// `Reduce` (`dot -x`).
+    static REDUCE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Sets `Reduce` (`dot -x`) for the layouts that follow on this thread.
+pub fn set_reduce(on: bool) {
+    REDUCE.with(|r| r.set(on));
+}
+
+/// `scan_graph_mode`'s `Reduce` pass: which nodes it deletes from the root graph, none
+/// unless `dot -x` set `Reduce`. Singletons and trees go (`degreeKind`, `prune`): a pruned
+/// node's chain is followed while its other end is left with one neighbour.
+pub fn reduce_set(graph: &graphviz_pure_core::Graph) -> Option<Vec<bool>> {
+    if !REDUCE.with(std::cell::Cell::get) {
+        return None;
+    }
+    let n = graph.nodes.len();
+    // Each node's edges, as (edge ends).
+    let mut incident: Vec<Vec<(usize, usize)>> = vec![Vec::new(); n];
+    for e in &graph.edges {
+        let (t, h) = (e.tail.0 as usize, e.head.0 as usize);
+        for v in if t == h { vec![t] } else { vec![t, h] } {
+            if let Some(list) = incident.get_mut(v) {
+                list.push((t, h));
+            }
+        }
+    }
+    let mut deleted = vec![false; n];
+    let gone = |deleted: &[bool], v: usize| deleted.get(v).copied().unwrap_or(true);
+    // `degreeKind`: 0, 1 (with the neighbour) or 2 for more; loops and multi-edges to the
+    // one neighbour do not count.
+    let degree = |deleted: &[bool], v: usize| -> (u8, usize) {
+        let mut other = None;
+        for &(t, h) in incident.get(v).into_iter().flatten() {
+            if t == h || gone(deleted, t) || gone(deleted, h) {
+                continue;
+            }
+            let o = if t == v { h } else { t };
+            match other {
+                None => other = Some(o),
+                Some(x) if x == o => {}
+                Some(_) => return (2, 0),
+            }
+        }
+        other.map_or((0, 0), |o| (1, o))
+    };
+    for v in 0..n {
+        if gone(&deleted, v) {
+            continue;
+        }
+        let mut next = match degree(&deleted, v) {
+            (0, _) => Some((v, None)),
+            (1, other) => Some((v, Some(other))),
+            _ => None,
+        };
+        // The node, then `prune` along its chain.
+        while let Some((p, other)) = next {
+            if let Some(d) = deleted.get_mut(p) {
+                *d = true;
+            }
+            next = other.and_then(|o| match degree(&deleted, o) {
+                (0, _) => Some((o, None)),
+                (1, oo) => Some((o, Some(oo))),
+                _ => None,
+            });
+        }
+    }
+    deleted.contains(&true).then_some(deleted)
+}
+
+/// Deletes the nodes of [`reduce_set`] from the graph.
+pub fn reduce_graph(graph: &mut graphviz_pure_core::Graph) {
+    if let Some(deleted) = reduce_set(graph) {
+        graph.delete_nodes(&deleted);
+    }
+}
+
 /// KK working arrays (`GD_dist`, `GD_spring`, `GD_sum_t`, `GD_t`).
 pub struct KkState {
     pub dist: Vec<Vec<f64>>,

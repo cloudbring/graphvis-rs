@@ -1,11 +1,14 @@
 //! High-level Graphviz orchestration engine (`graphviz-pure`).
 
 pub use graphviz_pure_core::{Graph, GraphvizError, Result};
+pub use graphviz_pure_layout::fdpgen::tlayout::FdpParms;
 pub use graphviz_pure_layout::{
     LayoutEngine, LayoutOptions, layout_graph, layout_graph_with_options,
 };
-pub use graphviz_pure_parser::{GlobalAttrs, parse_dot, parse_dot_all};
-pub use graphviz_pure_render::{OutputFormat, render_graph, render_graph_named};
+pub use graphviz_pure_parser::{GlobalAttrs, GraphStream, parse_dot, parse_dot_all};
+pub use graphviz_pure_render::{
+    GraphJobs, OutputFormat, render_graph, render_graph_named, set_y_invert,
+};
 
 /// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
 /// first graph in `dot_source`.
@@ -124,16 +127,155 @@ fn render_parsed(
     format_name: &str,
     options: LayoutOptions,
 ) -> Result<String> {
+    let engine = LayoutEngine::parse(engine)?;
     // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
     let layout_engine = match graph.graph_attrs.get("layout") {
         Some(name) if !name.trim().is_empty() => LayoutEngine::parse(name.trim())?,
-        _ => LayoutEngine::parse(engine)?,
+        _ => engine,
     };
-    let lname = format_name.to_ascii_lowercase();
-    if output_format != OutputFormat::Canon && lname != "dot_json" && lname != "xdot_json" {
-        layout_graph_with_options(&mut graph, layout_engine, options)?;
-    }
+    // `dot` lays the graph out for every format, `canon` and the json formats without
+    // layout attributes included: they write the graph as the layout left it.
+    layout_graph_with_options(&mut graph, layout_engine, options)?;
     render_graph_named(&graph, output_format, format_name)
+}
+
+/// The layout plugins, as `gvplugin_list(gvc, API_layout, "")` lists them, with their
+/// packages.
+pub const LAYOUT_PLUGINS: [(&str, &str); 11] = [
+    ("circo", "neato_layout"),
+    ("dot", "dot_layout"),
+    ("fdp", "neato_layout"),
+    ("neato", "neato_layout"),
+    ("nop", "neato_layout"),
+    ("nop1", "neato_layout"),
+    ("nop2", "neato_layout"),
+    ("osage", "neato_layout"),
+    ("patchwork", "neato_layout"),
+    ("sfdp", "neato_layout"),
+    ("twopi", "neato_layout"),
+];
+
+/// The output device plugins: type (`format:render`) and package, in `gvplugin_list` order.
+pub const DEVICE_PLUGINS: [(&str, &str); 17] = [
+    ("canon:dot", "core"),
+    ("dot:dot", "core"),
+    ("dot_json:json", "core"),
+    ("gv:dot", "core"),
+    ("jpe:cairo", "cairo"),
+    ("jpeg:cairo", "cairo"),
+    ("jpg:cairo", "cairo"),
+    ("json:json", "core"),
+    ("json0:json", "core"),
+    ("plain:dot", "core"),
+    ("plain-ext:dot", "core"),
+    ("png:cairo", "cairo"),
+    ("svg:svg", "core"),
+    ("xdot:xdot", "core"),
+    ("xdot1.2:xdot", "core"),
+    ("xdot1.4:xdot", "core"),
+    ("xdot_json:json", "core"),
+];
+
+/// `gvplugin_load`'s match of a requested `type[:dependency[:package]]` against `plugins`:
+/// the index of the first match. Names compare as C's `strcmp` does, case and all.
+pub fn plugin_load(plugins: &[(&str, &str)], req: &str) -> Option<usize> {
+    let mut parts = req.splitn(3, ':');
+    let reqtyp = parts.next().unwrap_or("");
+    let reqdep = parts.next();
+    let reqpkg = parts.next();
+    plugins.iter().position(|&(typestr, package)| {
+        let (typ, dep) = match typestr.split_once(':') {
+            Some((t, d)) => (t, Some(d)),
+            None => (typestr, None),
+        };
+        typ == reqtyp
+            && !matches!((dep, reqdep), (Some(d), Some(r)) if d != r)
+            && reqpkg.is_none_or(|p| p == package)
+    })
+}
+
+/// `gvplugin_list(gvc, api, str)`: `" type:package"` for each plugin of the requested type
+/// when `str` names one with a `:`, else `" type"` for each type.
+pub fn plugin_list(plugins: &[(&str, &str)], req: &str) -> String {
+    let mut out = String::new();
+    if let Some((typ, _)) = req.split_once(':') {
+        for &(typestr, package) in plugins {
+            let t = typestr.split(':').next().unwrap_or("");
+            if typ.is_empty() || typ.eq_ignore_ascii_case(t) {
+                out.push_str(&format!(" {typestr}:{package}"));
+            }
+        }
+        if !out.is_empty() {
+            return out;
+        }
+    }
+    let mut last: Option<&str> = None;
+    for &(typestr, _) in plugins {
+        let t = typestr.split(':').next().unwrap_or("");
+        if last.is_none_or(|l| !l.eq_ignore_ascii_case(t)) {
+            out.push(' ');
+            out.push_str(t);
+        }
+        last = Some(t);
+    }
+    out
+}
+
+/// `gvlayout_select`: the engine a layout name (`-K`, the `layout` attribute) selects.
+pub fn layout_select(name: &str) -> Option<LayoutEngine> {
+    let i = plugin_load(&LAYOUT_PLUGINS, name)?;
+    LayoutEngine::parse(LAYOUT_PLUGINS[i].0).ok()
+}
+
+/// `agget(g, name)` on the root graph: its value, the declared default, or `None` when the
+/// attribute is not declared.
+fn root_attr<'g>(graph: &'g Graph, name: &str) -> Option<&'g str> {
+    graph.graph_attrs.get(name).map(String::as_str).or_else(|| {
+        graph
+            .dicts
+            .first()
+            .and_then(|d| d.graph.get(name))
+            .map(|sym| sym.defval.as_str())
+    })
+}
+
+/// gvc's layout state for a run of `dot`: the engine selected (`gvc->layout`), which a
+/// graph's `layout` attribute replaces for that graph and the ones after it.
+#[derive(Debug, Clone)]
+pub struct LayoutJobs {
+    engine: Option<LayoutEngine>,
+    options: LayoutOptions,
+}
+
+impl LayoutJobs {
+    /// The state after `-K` (or the default engine) selected `engine`.
+    pub fn new(engine: LayoutEngine, options: LayoutOptions) -> Self {
+        LayoutJobs {
+            engine: Some(engine),
+            options,
+        }
+    }
+
+    /// `gvLayoutJobs`: lays `graph` out. `Ok(false)` when no layout was done (an unknown
+    /// `layout` reported here, or one reported for an earlier graph), which `gvRenderJobs`
+    /// then reports as `Layout was not done`.
+    pub fn layout(&mut self, graph: &mut Graph) -> Result<bool> {
+        if let Some(name) = root_attr(graph, "layout") {
+            self.engine = layout_select(name);
+            if self.engine.is_none() {
+                graphviz_pure_core::diag::agerrorf(&format!(
+                    "Layout type: \"{name}\" not recognized. Use one of:{}\n",
+                    plugin_list(&LAYOUT_PLUGINS, name)
+                ));
+                return Ok(false);
+            }
+        }
+        let Some(engine) = self.engine else {
+            return Ok(false);
+        };
+        layout_graph_with_options(graph, engine, self.options)?;
+        Ok(true)
+    }
 }
 
 #[cfg(test)]

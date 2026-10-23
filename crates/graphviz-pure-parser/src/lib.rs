@@ -9,7 +9,7 @@ pub use canon::{
     canon_str, canon_str_with, canon_value, is_html_string, write_canon, write_canon_forced,
 };
 pub use lexer::{Lexer, Token, TokenKind, reading_file};
-pub use parser::{GlobalAttrs, Parser};
+pub use parser::{GlobalAttrs, GraphStream, Parser};
 
 use graphviz_pure_core::{Graph, Result};
 

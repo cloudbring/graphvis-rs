@@ -476,14 +476,21 @@ impl<'a> Job<'a> {
             .knowncolors
             .binary_search_by(|k| cmp_ignore_case(k, name))
             .is_ok();
-        if known || !self.features.rgba {
+        if known {
             return GvColor::Str(name.to_string());
         }
+        // `colorxlate`: a renderer that takes color names (`COLOR_STRING`) keeps the name,
+        // and is warned about an unknown one all the same.
         match graphviz_pure_core::resolve_color_with_scheme(name, self.color_scheme.as_deref()) {
+            Some(_) if !self.features.rgba => GvColor::Str(name.to_string()),
             Some(c) => GvColor::Rgba([c.r, c.g, c.b, c.a]),
             None => {
                 graphviz_pure_core::warn_unknown_color(name);
-                GvColor::Rgba([0, 0, 0, 255])
+                if self.features.rgba {
+                    GvColor::Rgba([0, 0, 0, 255])
+                } else {
+                    GvColor::Str(name.to_string())
+                }
             }
         }
     }

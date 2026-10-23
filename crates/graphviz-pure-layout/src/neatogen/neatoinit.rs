@@ -524,19 +524,72 @@ fn do_edges(g: &mut LGraph<'_>, sub: &mut Sub, is_root: bool) {
 pub fn neato_layout(graph: &mut Graph) -> Result<()> {
     let attrs = &graph.graph_attrs;
     let no_translate = mapbool(attrs.get("notranslate").map(String::as_str));
-    let inputscale = {
-        let d = crate::common::utils::late_double(attrs, "inputscale", -1.0, 0.0);
-        if d == 0.0 { 72.0 } else { d }
-    };
+    let inputscale = crate::common::utils::get_inputscale(attrs);
     let outdim = late_int(attrs, "dimen", 2, 2);
     let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i64) as usize;
 
+    // `Reduce` (`dot -x`) deletes nodes in `scan_graph_mode`, per component once `pccomps`
+    // has split the graph: the components are those of the whole graph, and one it empties
+    // is still packed.
+    let reduced = super::stuff::reduce_set(graph).map(|deleted| {
+        let full = graph.clone();
+        let mut g0 = LGraph::new(&full, ndim, EdgeType::Line);
+        let pos_declared = g0.node_attr_declared("pos");
+        let z_declared = g0.node_attr_declared("z");
+        for n in 0..g0.nodes.len() {
+            user_pos(&mut g0, n, inputscale, pos_declared, z_declared);
+        }
+        let (ccs, pin) = pccomps(&g0);
+        let mut new_index = vec![None; deleted.len()];
+        let kept = deleted.iter().enumerate().filter(|(_, d)| !**d);
+        for (new, (old, _)) in kept.enumerate() {
+            if let Some(slot) = new_index.get_mut(old) {
+                *slot = Some(new);
+            }
+        }
+        let comps: Vec<Vec<usize>> = ccs
+            .iter()
+            .map(|c| {
+                c.nodes
+                    .iter()
+                    .filter_map(|&v| new_index.get(v).copied().flatten())
+                    .collect()
+            })
+            .collect();
+        // `user_pos` ran on the whole graph, before `scan_graph_mode`: its positions, pins
+        // and `drand48` draws (`nG` is the whole graph's count) are kept.
+        let kept_pos: Vec<(Vec<f64>, u8)> = g0
+            .nodes
+            .iter()
+            .zip(&deleted)
+            .filter(|(_, d)| !**d)
+            .map(|(n, _)| (n.pos.clone(), n.pinned))
+            .collect();
+        graph.delete_nodes(&deleted);
+        (comps, pin, kept_pos, g0.drand)
+    });
     let src = graph.clone();
-    let mut g = LGraph::new(&src, ndim, EdgeType::Line);
+    let quiet = reduced.is_some();
+    let mut g = if quiet {
+        graphviz_pure_core::diag::silently(|| LGraph::new(&src, ndim, EdgeType::Line))
+    } else {
+        LGraph::new(&src, ndim, EdgeType::Line)
+    };
     let pos_declared = g.node_attr_declared("pos");
     let z_declared = g.node_attr_declared("z");
-    for n in 0..g.nodes.len() {
-        user_pos(&mut g, n, inputscale, pos_declared, z_declared);
+    match &reduced {
+        Some((_, _, kept_pos, drand)) => {
+            for (node, (pos, pinned)) in g.nodes.iter_mut().zip(kept_pos) {
+                node.pos.clone_from(pos);
+                node.pinned = *pinned;
+            }
+            g.drand = *drand;
+        }
+        None => {
+            for n in 0..g.nodes.len() {
+                user_pos(&mut g, n, inputscale, pos_declared, z_declared);
+            }
+        }
     }
     let layout_mode = neato_mode(&g);
     let am = graph_adjust_mode(&g, None);
@@ -554,7 +607,13 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
     }
 
     if pack >= 0 {
-        let (mut ccs, pin) = pccomps(&g);
+        let (mut ccs, pin) = match reduced {
+            Some((comps, pin, _, _)) => {
+                let n = g.nodes.len();
+                (comps.into_iter().map(|c| Sub::new(n, c)).collect(), pin)
+            }
+            None => pccomps(&g),
+        };
         if ccs.len() > 1 {
             for gc in ccs.iter_mut() {
                 layout_and_route(&mut g, gc, false, layout_mode, model, &am, no_translate);

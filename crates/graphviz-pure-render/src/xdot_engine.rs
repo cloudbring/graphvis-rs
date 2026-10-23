@@ -40,6 +40,8 @@ pub(crate) struct XdotEngine {
     textflags: [u32; 12],
     /// Attributes to set: object, name, value.
     pub sets: Vec<(ObjKind, &'static str, String)>,
+    /// `xd->yOff`: the offset `attach_attrs_and_arrows` returned, for `yDir`.
+    y_off: f64,
 }
 
 fn version_num(s: &str) -> u16 {
@@ -56,7 +58,7 @@ fn version_num(s: &str) -> u16 {
 impl XdotEngine {
     /// `xdot_begin_graph` for format `xdot` (`fixed` is `Some("1.2")`/`Some("1.4")` for the
     /// versioned formats).
-    pub fn new(xdotversion_attr: Option<&str>, fixed: Option<&str>) -> Self {
+    pub fn new(xdotversion_attr: Option<&str>, fixed: Option<&str>, y_off: f64) -> Self {
         let (version, version_s) = match fixed {
             Some("1.4") => (14, "1.4".to_string()),
             Some("1.2") => (12, "1.2".to_string()),
@@ -77,6 +79,7 @@ impl XdotEngine {
             penwidth: [1.0; 12],
             textflags: [0; 12],
             sets: Vec::new(),
+            y_off,
         }
     }
 
@@ -114,18 +117,20 @@ impl XdotEngine {
         self.str_(j, "C ", &c);
     }
 
-    fn point(buf: &mut String, p: Point) {
+    /// `xdot_point`: `y` through `yDir` with the offset `attach_attrs_and_arrows` returned.
+    fn point(buf: &mut String, p: Point, y_off: f64) {
         buf.push_str(&xdot_num(p.x));
         buf.push(' ');
-        buf.push_str(&xdot_num(p.y));
+        buf.push_str(&xdot_num(crate::emit::y_dir(p.y, y_off)));
         buf.push(' ');
     }
 
     fn points(&mut self, j: &Job, c: char, a: &[Point]) {
+        let y_off = self.y_off;
         let b = self.buf(j);
         let _ = write!(b, "{c} {} ", a.len());
         for p in a {
-            Self::point(b, *p);
+            Self::point(b, *p, y_off);
         }
     }
 
@@ -165,8 +170,8 @@ impl XdotEngine {
         if filled == GRADIENT {
             let g = crate::emit::geom::gradient_points(a, angle, 2);
             xb.push('[');
-            Self::point(&mut xb, g[0]);
-            Self::point(&mut xb, g[1]);
+            Self::point(&mut xb, g[0], self.y_off);
+            Self::point(&mut xb, g[1], self.y_off);
         } else {
             let g = crate::emit::geom::gradient_points(a, 0.0, 3);
             let r2 = g[1].y;
@@ -180,10 +185,10 @@ impl XdotEngine {
             };
             let r1 = r2 / 4.0;
             xb.push('(');
-            Self::point(&mut xb, c1);
+            Self::point(&mut xb, c1, self.y_off);
             xb.push_str(&xdot_num(r1));
             xb.push(' ');
-            Self::point(&mut xb, g[0]);
+            Self::point(&mut xb, g[0], self.y_off);
             xb.push_str(&xdot_num(r2));
             xb.push(' ');
         }
@@ -341,9 +346,10 @@ impl Engine for XdotEngine {
         }
         p.y += span.yoffset_centerline;
         {
+            let y_off = self.y_off;
             let b = self.buf(j);
             b.push_str("T ");
-            Self::point(b, p);
+            Self::point(b, p, y_off);
             let _ = write!(b, "{jst} ");
             b.push_str(&xdot_num(span.width));
             b.push(' ');
@@ -360,8 +366,9 @@ impl Engine for XdotEngine {
         } else {
             self.buf(j).push_str("e ");
         }
+        let y_off = self.y_off;
         let b = self.buf(j);
-        Self::point(b, a[0]);
+        Self::point(b, a[0], y_off);
         b.push_str(&xdot_num(a[1].x - a[0].x));
         b.push(' ');
         b.push_str(&xdot_num(a[1].y - a[0].y));

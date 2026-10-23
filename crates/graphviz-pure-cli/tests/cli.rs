@@ -45,6 +45,341 @@ fn edge_pos_ending_in_multibyte_char_does_not_panic() {
     assert!(out.contains("<path"), "the edge is still drawn");
 }
 
+// Cause C2 (job pipeline): `dot` runs as `cmd/dot/dot.c`, `lib/common/args.c` and gvc's
+// `gvLayoutJobs`/`gvRenderJobs`. Expected output is C 16.1.0's.
+
+/// [`run`] in `dir`, with the exit status.
+fn run_in(dir: &std::path::Path, args: &[&str], stdin: &str) -> (String, String, i32) {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .args(args)
+        .current_dir(dir)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    if let Err(e) = child.stdin.take().unwrap().write_all(stdin.as_bytes()) {
+        assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "{e}");
+    }
+    let out = child.wait_with_output().unwrap();
+    (
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+        String::from_utf8_lossy(&out.stderr).into_owned(),
+        out.status.code().unwrap_or(-1),
+    )
+}
+
+/// A fresh scratch directory.
+fn scratch(name: &str) -> PathBuf {
+    let dir = tmp(name);
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+// Issue #158: one job per `-T`, each through `emit_graph`.
+#[test]
+fn every_format_flag_renders_its_own_job() {
+    let (out, err, ok) = run(&["-Tsvg", "-Tdot"], "digraph{s [style=\"bogus(1\"]}");
+    assert!(!ok);
+    let svg_end = out.find("</svg>").expect("the svg comes first");
+    assert!(out[svg_end..].contains("digraph {"), "{out}");
+    assert_eq!(err, "Error: unmatched '(' in style: bogus(1\n".repeat(4));
+}
+
+// Issues #125 and #281: the render-time diagnostics of `emit_graph` for every format; json
+// renders the graph as xdot first.
+#[test]
+fn non_drawing_formats_report_render_diagnostics() {
+    for (fmt, n) in [
+        ("dot", 1),
+        ("plain", 1),
+        ("canon", 1),
+        ("dot_json", 1),
+        ("json", 2),
+    ] {
+        let (_, err, _) = run(&[&format!("-T{fmt}")], "digraph { a [style=striped] }");
+        let warning = "Warning: gvrender_set_style: unsupported style striped - ignoring\n";
+        assert_eq!(err, warning.repeat(n), "-T{fmt}");
+    }
+    let layers = "digraph{layers=\"a:b\"; a}";
+    let (_, err, _) = run(&["-Tjson"], layers);
+    assert_eq!(
+        err,
+        "Warning: layers not supported in xdot output\n\
+         Warning: layers not supported in json output\n"
+    );
+    let (_, err, _) = run(&["-Tcanon"], layers);
+    assert_eq!(err, "Warning: layers not supported in canon output\n");
+}
+
+// Issue #108: the layout runs for `canon` and the json formats without layout attributes.
+#[test]
+fn canon_and_dot_json_are_laid_out() {
+    let src = "digraph G { subgraph cluster_a { x; y; x -> y } {rank=same; x; z} }";
+    for fmt in ["-Tcanon", "-Tdot_json", "-Txdot_json"] {
+        let (_, err, _) = run(&[fmt], src);
+        assert_eq!(
+            err, "Warning: x was already in a rankset, deleted from cluster G\n",
+            "{fmt}"
+        );
+    }
+    // patchwork's init sets the root default `shape=box`.
+    let (out, _, _) = run(
+        &["-Kpatchwork", "-Tcanon"],
+        "digraph G { subgraph cluster_a {a subgraph cluster_c {c}} subgraph cluster_b {b} a->b }",
+    );
+    assert!(
+        out.starts_with("digraph G {\n\tnode [label=\"\\N\",\n\t\tshape=box\n\t];\n"),
+        "{out}"
+    );
+    // The label positions the layout computed are not the graph's attributes.
+    let (out, _, _) = run(&["-Tcanon"], "graph { B -- A [taillabel=tail] }");
+    assert_eq!(
+        out,
+        "graph {\n\tnode [label=\"\\N\"];\n\tB -- A\t[taillabel=tail];\n}\n"
+    );
+}
+
+// What a job attaches stays in the graph for the jobs after it, as in C's cgraph.
+#[test]
+fn later_jobs_write_what_earlier_jobs_attached() {
+    let src = "digraph { a [pos=\"1,2\"]; a -> b }";
+    let (out, _, _) = run(&["-Tdot", "-Tcanon"], src);
+    let (dot, canon) = out.split_at(out.len() / 2);
+    assert_eq!(dot, canon);
+    assert!(canon.contains("pos=\"27,90\""), "{canon}");
+    let (out, _, _) = run(&["-Tcanon", "-Tdot"], src);
+    assert!(
+        out.starts_with("digraph {\n\tnode [label=\"\\N\"];\n\ta\t[pos=\"1,2\"];"),
+        "{out}"
+    );
+}
+
+// Issue #278: each graph is read, laid out and rendered before the next is read, and a
+// syntax error is reported where the parser finds it.
+#[test]
+fn diagnostics_come_one_graph_at_a_time() {
+    let (_, err, _) = run(
+        &["-Tplain"],
+        "digraph { a [style=bogus] }\ndigraph { 2x }\n",
+    );
+    assert_eq!(
+        err,
+        "Warning: gvrender_set_style: unsupported style bogus - ignoring\n\
+         Warning: syntax ambiguity - badly delimited number '2x' in line 1 of <stdin> splits \
+         into two tokens\n"
+    );
+    let (_, err, ok) = run(&["-Tcanon"], "\\\n.5.}");
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: <stdin>: syntax error in line 1 near '\\'\n\
+         Warning: syntax ambiguity - badly delimited number '.5.' in line 2 of <stdin> splits \
+         into two tokens\n"
+    );
+}
+
+// Issue #126: `-y` sets `Y_invert`.
+#[test]
+fn y_flag_inverts_y_in_the_writers() {
+    let (out, _, _) = run(&["-y", "-Tdot"], "digraph { a -> b }");
+    assert!(out.contains("bb=\"0,108,54,0\""), "{out}");
+    assert!(
+        out.contains("pos=\"e,27,71.896 27,36.303 27,43.593 27,52.274 27,60.464\""),
+        "{out}"
+    );
+    let (out, _, _) = run(&["-y", "-Tplain"], "digraph { a -> b }");
+    assert_eq!(
+        out,
+        "graph 1 0.75 1.5\nnode a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 0.375 1.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         edge a b 4 0.375 0.50421 0.375 0.60546 0.375 0.72602 0.375 0.83978 solid black\nstop\n"
+    );
+}
+
+// Issue #190: args.c's option and error paths, and `gvNextInputGraph`'s exit status.
+#[test]
+fn args_c_option_and_error_paths() {
+    let dir = scratch("c2_args");
+    // `-O` with stdin names the output after `noname.gv`, a second graph with its number.
+    let (out, _, code) = run_in(&dir, &["-Tplain", "-O"], "digraph{a}\ndigraph{b}");
+    assert_eq!((out.as_str(), code), ("", 0));
+    assert!(dir.join("noname.gv.plain").exists() && dir.join("noname.gv.2.plain").exists());
+    // `-` alone is an unknown option, its letter the terminating NUL.
+    let (_, err, code) = run_in(&dir, &["-Tsvg", "-"], "");
+    assert_eq!(code, 1);
+    assert!(
+        err.starts_with("Error: graphviz-pure: option -Usage: "),
+        "{err}"
+    );
+    let (_, _, code) = run_in(&dir, &["-Tplain", "--filepath=/tmp"], "digraph{a}");
+    assert_eq!(code, 0);
+    // An input that cannot be opened counts in `graphviz_errors` and as an error.
+    let (_, err, code) = run_in(&dir, &["-Tplain", "nosuch.gv"], "");
+    assert_eq!(code, 2);
+    // (`strerror`'s text is the OS's.)
+    assert!(
+        err.starts_with("Error: graphviz-pure: can't open nosuch.gv: "),
+        "{err}"
+    );
+    #[cfg(unix)]
+    assert_eq!(
+        err,
+        "Error: graphviz-pure: can't open nosuch.gv: No such file or directory\n"
+    );
+    let (_, err, code) = run_in(&dir, &["-Tfoo"], "");
+    assert_eq!(code, 1);
+    assert!(
+        err.starts_with("Format: \"foo\" not recognized. Use one of: canon dot "),
+        "{err}"
+    );
+    let (_, err, code) = run_in(&dir, &["-Kfoo"], "");
+    assert_eq!(code, 1);
+    assert_eq!(
+        err,
+        "There is no layout engine support for \"foo\"\n Use one of: circo dot fdp neato nop \
+         nop1 nop2 osage patchwork sfdp twopi\n"
+    );
+    // The n-th `-o` is the n-th `-T`'s file.
+    let (out, _, code) = run_in(
+        &dir,
+        &["-Tplain", "-Tcanon", "-oa.plain", "-ob.gv"],
+        "digraph{a}",
+    );
+    assert_eq!((out.as_str(), code), ("", 0));
+    assert!(
+        std::fs::read_to_string(dir.join("a.plain"))
+            .unwrap()
+            .starts_with("graph 1")
+    );
+    assert!(
+        std::fs::read_to_string(dir.join("b.gv"))
+            .unwrap()
+            .starts_with("digraph {")
+    );
+}
+
+// Issues #263 and #282: `-L` sets fdp's parameters, and the `-L`, `-v`, `-O` and `-c` passes
+// take their flags out before the other options read theirs.
+#[test]
+fn fdp_flags_and_extra_argument_passes() {
+    let (out, err, ok) = run(&["-Kfdp", "-Tplain", "-Ln5"], "graph G { a -- b -- c }");
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "graph 1 2.3427 2.8003\nnode a 0.375 2.5503 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 1.9677 1.9392 0.75 0.5 b solid ellipse black lightgrey\n\
+         node c 1.7296 0.25 0.75 0.5 c solid ellipse black lightgrey\n\
+         edge a b 4 0.705 2.4237 0.97834 2.3188 1.3649 2.1705 1.6381 2.0656 solid black\n\
+         edge b c 4 1.932 1.6863 1.8872 1.3678 1.8105 0.82387 1.7655 0.50461 solid black\nstop\n"
+    );
+    let (_, err, ok) = run(&["-Tplain", "-Lz"], "graph { a }");
+    assert!(ok);
+    assert_eq!(err, "Warning: unknown flag -Lz - ignored\n");
+    let (out, err, ok) = run(&["-Tplain", "-Lnx"], "graph { a }");
+    assert!(!ok && out.is_empty());
+    assert!(
+        err.starts_with("Error: bad value in flag -Lnx - ignored\nUsage: "),
+        "{err}"
+    );
+    // `setDouble` names the flag from the `*` of `-LT*`.
+    let (_, err, _) = run(&["-Tplain", "-LT*x"], "graph { a }");
+    assert!(
+        err.starts_with("Error: bad value in flag -L*x - ignored\n"),
+        "{err}"
+    );
+    let dir = scratch("c2_passes");
+    let (_, err, code) = run_in(&dir, &["-Tplain", "-o", "-Lg", "o.plain"], "graph { a }");
+    assert_eq!(code, 0, "{err}");
+    assert!(dir.join("o.plain").exists());
+    let (out, _, code) = run_in(&dir, &["-T", "-v", "plain"], "graph { a }");
+    assert_eq!(code, 0);
+    assert!(out.starts_with("graph 1 "), "{out}");
+}
+
+// Issue #282: `-x` (`Reduce`) deletes singletons and trees from the root graph, which keeps
+// the cgraph sequence numbers of the rest.
+#[test]
+fn reduce_flag_prunes_trees_like_c() {
+    let src = "graph G { e -- a; a -- b -- c -- d -- a; b -- d }";
+    let (out, _, _) = run(&["-Kneato", "-x", "-Tplain"], src);
+    assert!(!out.contains("node e"), "{out}");
+    assert_eq!(out.matches("\nnode ").count(), 4, "{out}");
+    let (out, _, _) = run(&["-Kneato", "-x", "-Tsvg"], src);
+    assert!(
+        !out.contains("id=\"node1\"") && out.contains("id=\"node2\""),
+        "{out}"
+    );
+    // Per component, after `pccomps`: a component Reduce empties is still packed.
+    let src = "graph { a -- b -- c -- a; d; e -- f; g -- h -- i -- g; i -- j -- k }";
+    let (out, _, _) = run(&["-Kneato", "-x", "-Tplain"], src);
+    assert!(out.starts_with("graph 1 3.3779 2.2418\n"), "{out}");
+    // `user_pos` ran on the whole graph first: the third coordinates are drawn as there.
+    let src = "graph G { dim=3; a -- b; c -- d -- e -- c; f; c [pos=\"5,5\"] }";
+    let (out, _, _) = run(&["-Kneato", "-x", "-Tdot"], src);
+    assert!(out.contains("bb=\"0,0,108.66,80.61\""), "{out}");
+}
+
+// Issue #294: `-s` sets `PSinputscale`, which `get_inputscale` prefers to `inputscale`.
+#[test]
+fn s_flag_sets_the_input_scale() {
+    let src = "graph { layout=neato; a [pos=\"100,100!\"]; b [pos=\"200,100!\"]; a -- b }";
+    let (out, _, _) = run(&["-s36", "-Tdot"], src);
+    assert!(out.contains("bb=\"0,0,254,36\""), "{out}");
+}
+
+// Issue #264, and `gvLayoutJobs`: a `layout` attribute replaces the engine for its graph and
+// the later ones; one that names no engine leaves none, and the graph is not laid out.
+#[test]
+fn layout_attribute_selects_the_engine_as_gvlayoutjobs() {
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph G { subgraph s { layout=neato; a } a -> b }",
+    );
+    assert!(!ok && out.is_empty());
+    assert_eq!(
+        err,
+        "Warning: layout attribute is invalid except on the root graph\n\
+         Error: Layout type: \"\" not recognized. Use one of: circo dot fdp neato nop nop1 \
+         nop2 osage patchwork sfdp twopi\n\
+         Error: Layout was not done.  Missing layout plugins? \n"
+    );
+    let (out, err, ok) = run(&["-Tplain"], "digraph A {layout=foo; a}\ndigraph B {b}\n");
+    assert!(!ok && out.is_empty());
+    assert!(
+        err.ends_with(
+            "Missing layout plugins? \nError: Layout was not done.  Missing layout plugins? \n"
+        ),
+        "{err}"
+    );
+    let (out, _, _) = run(
+        &["-Tplain"],
+        "digraph A {layout=neato; a->b}\ndigraph B {c->d}\n",
+    );
+    assert_eq!(out.matches("graph 1 1.739 0.64777").count(), 2, "{out}");
+}
+
+// `init_nop` fails on a node with no position, and `dot` renders what it left: every node
+// at the origin, no edge.
+#[test]
+fn nop_without_positions_still_renders() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n", "-Tplain"],
+        "digraph G { a [pos=\"1,1\"]; a -> b }",
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: node b in graph G has no position\nas required by the -n flag\n"
+    );
+    assert_eq!(
+        out,
+        "graph 1 0 0\nnode a 0 0 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 0 0 0.75 0.5 b solid ellipse black lightgrey\n solid black\nstop\n"
+    );
+}
+
 #[test]
 fn undirected_graph_has_no_arrowhead() {
     let (out, _, ok) = run(&["-Tsvg"], "graph{a--b}");
@@ -101,7 +436,7 @@ fn subgraph_name_with_multibyte_char_at_byte_7_does_not_panic() {
 #[test]
 fn global_attrs_output_file_and_separate_args() {
     let path = tmp("cli_out.svg");
-    let (_, _, ok) = run(
+    let (out, _, ok) = run(
         &[
             "-T",
             "svg",
@@ -114,8 +449,13 @@ fn global_attrs_output_file_and_separate_args() {
         "digraph G{a->b}\ndigraph H{c->d}",
     );
     assert!(ok);
+    // C closes `-o`'s file after the first graph (`gvdevice_close` forgets its name), and
+    // writes the second graph to stdout.
     let svg = std::fs::read_to_string(&path).unwrap();
-    assert_eq!(svg.matches("<svg").count(), 2, "every graph is rendered");
+    assert_eq!(svg.matches("<svg").count(), 1, "{svg}");
+    assert!(svg.contains("<title>a</title>"));
+    assert_eq!(out.matches("<svg").count(), 1, "{out}");
+    assert!(out.contains("<title>c</title>"));
     assert!(!svg.contains("<ellipse"));
     assert!(svg.contains("fill=\"yellow\""));
     assert!(svg.contains("stroke=\"red\""));
