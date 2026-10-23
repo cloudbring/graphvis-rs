@@ -814,6 +814,10 @@ impl<'a> Parser<'a> {
         let is_new = self.graph.edges.len() > before;
         if is_new {
             self.anon_ctr += 2;
+            // `endedge` passes `agedge` the statement's own `key`.
+            if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
+                edge.key = edge_attrs.get("key").cloned();
+            }
         }
         if let Some(edge) = self.graph.edges.get(edge_id.0 as usize) {
             // grammar.y `newedge`: an existing undirected edge found the other way round

@@ -1768,6 +1768,18 @@ fn concentrated_edge_takes_the_arrowheads_of_the_opposing_edge_cgraph_finds() {
     ] {
         assert!(out.contains(w), "{w}\n{out}");
     }
+    // `-Ekey=q` gives every edge a `key` attribute, but names none of them.
+    let src = "digraph G { concentrate=true; a -> c; c -> a [key=zz]; c -> a [arrowhead=dot]; \
+               b -> a; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg", "-Ekey=q"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "<polygon fill=\"black\" stroke=\"black\" points=\"23.5,-60.18 27,-70.18 \
+             30.5,-60.18 23.5,-60.18\"/>"
+        ),
+        "{out}"
+    );
 }
 
 // Issue #242: `rebuild_vlists` warns when concentration leaves a cluster no node of its own

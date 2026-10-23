@@ -54,6 +54,11 @@ pub struct EdgeData {
     /// `lp` is still printed, but renderers do not draw it.
     #[serde(default)]
     pub label_unplaced: bool,
+    /// The cgraph name of the edge: the `key` of the statement that made it (`agedge`'s
+    /// `name`). Defaults never name an edge (`edge [key=…]`, `-Ekey=…`), although `-E`
+    /// gives every edge a `key` attribute.
+    #[serde(default)]
+    pub key: Option<String>,
 }
 
 /// The name test of `is_a_cluster` (lib/common/utils.c): `strncasecmp(name, "cluster", 7)`.
@@ -278,6 +283,7 @@ impl Graph {
             spline: Spline::default(),
             label_pos: None,
             label_unplaced: false,
+            key: None,
         });
         id
     }

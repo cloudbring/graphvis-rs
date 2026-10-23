@@ -324,7 +324,7 @@ impl Dot<'_> {
         self.input
             .edges
             .get(e)
-            .and_then(|ed| ed.attrs.get("key"))
+            .and_then(|ed| ed.key.as_deref())
             .is_some_and(|k| !k.starts_with('%'))
     }
 
