@@ -15,6 +15,7 @@
 //! are checked for content only, since C's own geometry changes from run to run there.
 
 use crate::e2e;
+use graphviz_pure_core::math;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -223,7 +224,8 @@ fn parse_transform(t: &str) -> Affine {
             ("translate", [tx, ty, ..]) => [1.0, 0.0, 0.0, 1.0, *tx, *ty],
             ("translate", [tx]) => [1.0, 0.0, 0.0, 1.0, *tx, 0.0],
             ("rotate", [deg, ..]) => {
-                let (s, c) = deg.to_radians().sin_cos();
+                let r = deg.to_radians();
+                let (s, c) = (math::sin(r), math::cos(r));
                 [c, s, -s, c, 0.0, 0.0]
             }
             _ => continue,

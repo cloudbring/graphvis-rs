@@ -28,7 +28,7 @@
 //! A stem present only in C_DIR counts as a port failure.
 
 // A developer tool, not the port: its reports go to stderr directly.
-#![allow(clippy::disallowed_macros, clippy::disallowed_methods)]
+#![allow(clippy::disallowed_macros)]
 
 use graphviz_pure_diff::{Baseline, FileReport, compare_file};
 use std::collections::BTreeMap;

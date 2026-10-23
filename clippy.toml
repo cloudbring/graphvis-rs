@@ -4,6 +4,36 @@ disallowed-macros = [
     { path = "std::eprintln", reason = "write diagnostics through graphviz_pure_core::diag" },
     { path = "std::eprint", reason = "write diagnostics through graphviz_pure_core::diag" },
 ]
+# Every transcendental function goes through `graphviz_pure_core::math`, which calls the same
+# portable implementations on every target, so no build computes with a platform libm. Only
+# `math::portable` itself (and the test comparing it with the system libm) may use them.
+# `sqrt` and `mul_add` are correctly rounded everywhere and stay allowed.
 disallowed-methods = [
     { path = "std::io::stderr", reason = "write diagnostics through graphviz_pure_core::diag" },
+    { path = "f64::sin", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::cos", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::tan", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::asin", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::acos", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::atan", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::atan2", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::sin_cos", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::exp", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::exp2", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::exp_m1", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::ln", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::log", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::log2", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::log10", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::ln_1p", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::powf", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::powi", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::hypot", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::cbrt", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::sinh", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::cosh", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::tanh", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::asinh", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::acosh", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
+    { path = "f64::atanh", reason = "call graphviz_pure_core::math, the same portable functions on every platform (docs/porting/libm.md)" },
 ]

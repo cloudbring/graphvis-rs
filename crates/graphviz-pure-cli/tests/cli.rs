@@ -818,8 +818,8 @@ fn curved_edges_between_far_pins_finish() {
         let t = std::f64::consts::PI / 3.0 * f64::from(i);
         src.push_str(&format!(
             " n{i} [pos=\"{:?},{:?}!\"];",
-            1.5e15 * t.cos(),
-            1.5e15 * t.sin()
+            1.5e15 * graphviz_pure_core::math::cos(t),
+            1.5e15 * graphviz_pure_core::math::sin(t)
         ));
         for j in 0..i {
             src.push_str(&format!(" n{j} -- n{i};"));
