@@ -3457,6 +3457,62 @@ fn pack_failed_component_keeps_cc_subgraphs_and_root_box() {
     assert!(svg.contains("<svg width=\"8pt\" height=\"52pt\""), "{svg}");
 }
 
+// #226 with clusters: the failed layout keeps `_cc_0`'s clones of cluster_a and cluster_b, each
+// declaring the graph attributes agcopyattr copied, with the edges dot's node_induce gave them
+// (C's -Tdot, verbatim). An anonymous subgraph's projection keeps its `%<id>` name (-Tjson).
+#[test]
+fn pack_failed_component_keeps_cluster_clones_like_c() {
+    let ortho = "node[shape=point width=0.05 height=0.01 fixedsize=true label=\"\"]\n\
+        n3->n2 n10->n7 n1->n11 n10->n4 n8->n2 n5->n3 n6->n4 n3->n10 n6->n3 n6->n0 n3->n6\n\
+        n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}\n";
+    let input = format!(
+        "digraph{{pack=true splines=ortho nodesep=0 ranksep=0.02\n\
+         subgraph cluster_a {{ label=A; x1; subgraph cluster_b {{ x2; x3 }} x1->x2 }}\n\
+         x2->x3 x3->x1\n{ortho}"
+    );
+    let (out, err, ok) = run(&["-Kdot", "-Tdot"], &input);
+    assert!(ok, "{err}");
+    let expected = concat!(
+        "\tsubgraph _cc_0 {\n",
+        "\t\tsubgraph cluster_a {\n",
+        "\t\t\tgraph [label=A,\n",
+        "\t\t\t\tnodesep=0,\n",
+        "\t\t\t\tpack=true,\n",
+        "\t\t\t\tranksep=0.02,\n",
+        "\t\t\t\tsplines=ortho\n",
+        "\t\t\t];\n",
+        "\t\t\tsubgraph cluster_b {\n",
+        "\t\t\t\tgraph [label=A,\n",
+        "\t\t\t\t\tnodesep=0,\n",
+        "\t\t\t\t\tpack=true,\n",
+        "\t\t\t\t\tranksep=0.02,\n",
+        "\t\t\t\t\tsplines=ortho\n",
+        "\t\t\t\t];\n",
+        "\t\t\t\tx2;\n",
+        "\t\t\t\tx3;\n",
+        "\t\t\t\tx2 -> x3\t[pos=\"e,51,96.473 51,103.59 51,103.59 51,102.88 51,102.88\"];\n",
+        "\t\t\t}\n",
+        "\t\t\tx1;\n",
+        "\t\t\tx1 -> x2;\n",
+        "\t\t\tx3 -> x1\t[pos=\"e,53,44.265 53,59.813 53,59.813 53,55.778 53,55.778\"];\n",
+        "\t\t}\n",
+        "\t}\n"
+    );
+    let start = out.find("\tsubgraph _cc_0 {").expect("_cc_0");
+    let end = out.find("\tsubgraph _cc_1 {").expect("_cc_1");
+    assert_eq!(&out[start..end], expected);
+
+    let input = format!(
+        "digraph{{pack=true splines=ortho nodesep=0 ranksep=0.02\n\
+         subgraph s1 {{ x1; x2 }} {{rank=same; x3; x4}} subgraph {{ x5 }} \
+         x1->x3 x2->x4 x3->x5 x4->x5\n{ortho}"
+    );
+    let (json, err, ok) = run(&["-Kdot", "-Tjson"], &input);
+    assert!(ok, "{err}");
+    assert_eq!(json.matches("\"name\": \"%3\"").count(), 2, "{json}");
+    assert_eq!(json.matches("\"name\": \"%5\"").count(), 2, "{json}");
+}
+
 // With a non-default ratio C's doDot lays out the root with dotLayout(g) even with several
 // components (lib/dotgen/dotinit.c:466-494), and the `_cc_<i>` subgraphs exist meanwhile.
 // Each inherits rank=max, so a, b, c and d share one rank (C: 216x34pt). Without pack they

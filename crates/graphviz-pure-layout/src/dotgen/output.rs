@@ -416,6 +416,14 @@ impl Output {
             }
             let is_cluster = graphviz_pure_core::has_cluster_prefix(&c.name)
                 || crate::common::utils::mapbool(c.attrs.get("cluster").map(String::as_str));
+            // `projectG` names an anonymous subgraph's projection `agnameof(subg)`,
+            // the original's `%<id>`.
+            if let Some(&anon) = c
+                .orig
+                .and_then(|o| graph.anon_subgraph_ids.get(&(o as u32)))
+            {
+                graph.anon_subgraph_ids.insert(id as u32, anon);
+            }
             let html_name = c
                 .orig
                 .and_then(|o| graph.subgraphs.get(o))

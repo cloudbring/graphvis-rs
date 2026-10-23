@@ -297,8 +297,9 @@ subgraphs, the port now does too:
 - **A failed component.** When `dotLayout(sg)` fails (ortho cannot build its maze), `doDot`
   returns before `attachPos` and `agdelete`. The earlier components keep their positions, the
   `_cc_<i>` subgraphs and their clones stay in the output, and the root's box is what each
-  component's `clip_and_install` grew it to (#226). With the failing component first, C fails
-  `bezier_bb`'s assertion (`emit.c:4082`); the port draws the same nodes and exits 0.
+  component's `clip_and_install` grew it to (#226). Some of these inputs make C fail
+  `bezier_bb`'s assertion (`emit.c:4082`) while drawing, for example with the failing
+  component first; the port draws the nodes and exits 0.
 
 **#101 is not matched.** A node in two non-nested clusters is in two components. In C both
 components share its one `Agnodeinfo_t`, and the edges between two shared nodes their
@@ -306,9 +307,10 @@ components share its one `Agnodeinfo_t`, and the edges between two shared nodes 
 `new_spline` appends a second bezier to a shared edge. The port lays every component out on
 fresh records, and the later component's results win. Matching C would mean laying the
 components out in turn on one shared store and reproducing exactly which fields
-`dot_init_node` and `dot_init_edge` do not reset, for inputs C itself reports as an error
-(`node … belongs to two non-nested clusters`). On those inputs the port's layout differs; where C
-stops (`install_in_rank … _cc_2`), the port can stop at another check (`expand_cluster`), also
+`dot_init_node` and `dot_init_edge` do not reset, on inputs where C prints an error
+(`node … belongs to two non-nested clusters`) but still draws and exits 0. On those inputs the
+port prints the same errors and draws a different layout; where C stops
+(`install_in_rank … _cc_2`, exit 1), the port can stop at another check (`expand_cluster`), also
 with exit status 1. Where no node is in two non-nested clusters, the components share no node or
 edge, and the port lays them out as C does.
 
@@ -334,7 +336,8 @@ across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
     on the reference build with one long edge (#250's input, scaled): C takes 0.9 s and 1.1 GB
     at 3.4e7 cells, 3.9 s and 4.3 GB at 2^27, 10.5 s and 9.2 GB at 3.4e8, and 47 s and 18 GB
     at 1e9. The port takes 13 s and 6 GB at 2^27, with C's output. Past 2^27, where C needs more
-    than 4 GB, the port skips packing with a warning. A non-finite pin gives a component an infinite
+    than 4 GB, the port skips packing with a warning. On 32-bit targets (wasm32, at most 4 GiB)
+    the budget is 2^25 cells, about 1.5 GB in the port, which still covers #250. A non-finite pin gives a component an infinite
     box; where its width or height is NaN (`inf - inf`), `computeStep`'s discriminant is NaN
     and C fails `assert(d >= 0)` (#239). The port returns step 0 there, which takes C's own
     `stepSize <= 0` exit: packing is skipped with a warning.

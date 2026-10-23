@@ -449,7 +449,12 @@ type PointSet = HashSet<(i64, i64)>;
 /// 0.9 s and 1.1 GB at 3.4e7 cells, 3.9 s and 4.3 GB at 2^27, 10.5 s and 9.2 GB at 3.4e8,
 /// 47 s and 18 GB at 1e9; the port 1.8 s and 1.5 GB at 3.4e7, 13 s and 6 GB at 2^27, with
 /// the same output. Past 2^27, where C needs more than 4 GB, the port warns instead (#250).
+#[cfg(not(target_pointer_width = "32"))]
 const MAX_CELLS: f64 = (1u64 << 27) as f64;
+/// A 32-bit target (wasm32) has at most 4 GiB, which 2^27 cells would exceed: there the
+/// budget is 2^25 cells (the port: about 1.5 GB), which still covers #250's 3.35e7.
+#[cfg(target_pointer_width = "32")]
+const MAX_CELLS: f64 = (1u64 << 25) as f64;
 
 /// Not in C. With a huge component (height="1e30", quantum="1e40") `l1` in computeStep
 /// (`lib/pack/pack.c:86`) is far above INT_MAX, `(int)l1` saturates on the reference
@@ -1237,13 +1242,13 @@ mod tests {
     }
 
     /// Issue #250: C packs the edge of `n1 [pos="-1e12,-1e15!"]`, about 3.4e7 cells at a
-    /// saturated step, in about 1 s, so the budget lets it through; it stops at 2^27 cells.
+    /// saturated step, in about 1 s, so the budget lets it through; it stops at MAX_CELLS.
     #[test]
     fn budget_lets_through_what_c_packs_in_a_second() {
         let cells = 1e15 * 72.0 / f64::from(i32::MAX);
         let mut budget = Budget::for_step(i32::MAX);
         assert!(budget.take(cells.ceil() + 1.0));
         let mut budget = Budget::for_step(i32::MAX);
-        assert!(!budget.take((1u64 << 27) as f64 + 1.0));
+        assert!(!budget.take(MAX_CELLS + 1.0));
     }
 }
