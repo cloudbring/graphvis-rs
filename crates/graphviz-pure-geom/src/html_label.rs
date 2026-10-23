@@ -1082,7 +1082,13 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
             if s[pos] == b'<' {
                 let mut t = pos + 1;
                 if s[t..].starts_with(b"!--") {
-                    t = eat_comment(s, t + 3);
+                    let p = t + 3;
+                    t = eat_comment(s, p);
+                    // eatComment: a closing `>` not preceded by `--` within the comment.
+                    if t < s.len() && (t < p + 2 || &s[t - 2..t] != b"--") {
+                        lx.warnings
+                            .push((lx.toks.len(), "Unclosed comment\n".to_string(), true));
+                    }
                 } else {
                     while t < s.len() && s[t] != b'>' {
                         t += 1;
