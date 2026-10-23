@@ -567,7 +567,6 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
     // them), which a failed layout leaves in the root.
     let mut projected: Vec<Vec<Option<Membership>>> = Vec::with_capacity(ccs.len());
     let mut any_splines = false;
-    d.cc_laid_out = true;
     for (ci, cc) in ccs.iter().enumerate() {
         let cg = cc.to_graph(graph);
         if std::env::var_os("GVDUMP").is_some() {

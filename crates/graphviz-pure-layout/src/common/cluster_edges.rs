@@ -44,7 +44,7 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
     }
     let mut clusters = Vec::new();
     preorder(tree, &tree.root, graph, &mut clusters);
-    let cmap = crate::common::utils::mk_clust_map(clusters);
+    let cmap = crate::common::utils::mk_clust_map(clusters, true);
     let mapc = |n: usize| -> Option<usize> {
         let name = graph.nodes[n].name.as_str();
         if name.starts_with("cluster") {

@@ -5387,6 +5387,84 @@ fn issue30_unknown_port_warnings() {
     assert_eq!(warnings("patchwork", src).0, "");
 }
 
+// Issues #102, #106 and #108: the writers read the subgraph membership dot's layout left
+// (node_induce's `agsubedge` and `agdelete`, mark_clusters' `agdelete`). Expected output
+// is Graphviz 16.1.0's.
+#[test]
+fn writers_read_the_membership_dot_left() {
+    let canon = |src: &str| {
+        let (out, _, ok) = run(&["-Kdot", "-Tcanon"], src);
+        assert!(ok, "{src}");
+        out
+    };
+    // #106: the root edge between a cluster's nodes is the cluster's.
+    let src = "digraph G { subgraph cluster_1 { a; b; } a -> b; }";
+    assert_eq!(
+        canon(src),
+        "digraph G {\n\tnode [label=\"\\N\"];\n\tsubgraph cluster_1 {\n\t\ta -> b;\n\t}\n}\n"
+    );
+    let (json, _, ok) = run(&["-Kdot", "-Tdot_json"], src);
+    assert!(ok);
+    assert!(
+        json.contains(
+            "\"nodes\": [\n        1,2\n      ],\n      \"edges\": [\n        0\n      ]"
+        ),
+        "{json}"
+    );
+    // #102: v6 is deleted from cluster_2, an earlier sibling holds it.
+    let src = "digraph G {\nsubgraph cluster_0 { v6 }\nsubgraph cluster_2 { v6 -> v0; v1 -> v5; }\n\
+               v1 -> v0;\n}\n";
+    assert_eq!(
+        canon(src),
+        "digraph G {\n\tnode [label=\"\\N\"];\n\tsubgraph cluster_0 {\n\t\tv6;\n\t}\n\
+         \tsubgraph cluster_2 {\n\t\tv1 -> v0;\n\t\tv1 -> v5;\n\t}\n\tv6 -> v0;\n}\n"
+    );
+    // #102, #108: x is deleted from cluster_a, it is in a rank set.
+    let src = "digraph G { subgraph cluster_a { x; y; x -> y } {rank=same; x; z} }";
+    let (out, err, ok) = run(&["-Kdot", "-Tcanon"], src);
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: x was already in a rankset, deleted from cluster G\n"
+    );
+    assert_eq!(
+        out,
+        "digraph G {\n\tnode [label=\"\\N\"];\n\tsubgraph cluster_a {\n\t\ty;\n\t}\n\t{\n\
+         \t\tgraph [rank=same];\n\t\tx;\n\t\tz;\n\t}\n\tx -> y;\n}\n"
+    );
+    // #102: with pack and several components the original cluster keeps its members.
+    let src = "digraph G {\npack=true;\nsubgraph cluster_2 { a -> b; c; }\nc -> b;\nx;\n}\n";
+    assert_eq!(
+        canon(src),
+        "digraph G {\n\tgraph [pack=true];\n\tnode [label=\"\\N\"];\n\tsubgraph cluster_2 {\n\
+         \t\ta -> b;\n\t\tc;\n\t}\n\tc -> b;\n\tx;\n}\n"
+    );
+}
+
+// Issue #345: dot's pack names an anonymous cluster `agnameof(subg)`, `%<id>`, in
+// deriveClusters and in projectG's copies, where findCluster finds it. Graphviz 16.1.0
+// lays these out with no message.
+#[test]
+fn dot_pack_keeps_the_names_of_anonymous_clusters() {
+    for src in [
+        "digraph{pack=true; subgraph {cluster=true; a} subgraph {cluster=true; b} a->b; z}",
+        "digraph{compound=true; pack=true; subgraph {cluster=true; a} z; x->a [lhead=\"%3\"]}",
+        "digraph{compound=true; pack=true; subgraph {cluster=true; a; subgraph {cluster=true; c}} \
+         c->a [ltail=\"%5\"]; q->r}",
+    ] {
+        let (_, err, ok) = run(&["-Kdot", "-Tdot"], src);
+        assert!(ok, "{src}");
+        assert_eq!(err, "", "{src}");
+    }
+    // Two components, side by side.
+    let (out, _, ok) = run(
+        &["-Kdot", "-Tdot"],
+        "digraph{pack=true; subgraph {cluster=true; a} subgraph {cluster=true; b}}",
+    );
+    assert!(ok);
+    assert!(out.contains("graph [bb=\"0,0,166,140\","), "{out}");
+}
+
 /// `doAttrs` and its attribute actions (`lib/common/htmllex.c:80-552`; the `doInt`
 /// messages have no newline), `size_html_cell`'s fixed-size check
 /// (`lib/common/htmltable.c:1141-1153`), then `make_label`'s `in label of ...`

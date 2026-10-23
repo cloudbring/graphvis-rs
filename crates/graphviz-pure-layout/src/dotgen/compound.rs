@@ -327,7 +327,7 @@ impl Dot<'_> {
     pub fn dot_compound_edges(&mut self) {
         let mut clusters = Vec::new();
         self.clusters_preorder(0, &mut clusters);
-        let map = mk_clust_map(clusters);
+        let map = mk_clust_map(clusters, !self.comp);
         for n in self.nodes_of(0) {
             for e in self.out_edges(0, n) {
                 self.make_compound_edge(e, &map);
