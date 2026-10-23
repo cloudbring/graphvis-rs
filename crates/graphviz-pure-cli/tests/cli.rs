@@ -4505,7 +4505,8 @@ fn sfdp_rotation_in_3d_is_skipped_with_a_warning() {
             err.contains("rotation needs a 2-dimensional layout"),
             "{dims}: {err}"
         );
-        let (unrotated, _, _) = run(&["-Ksfdp", "-Tplain"], &src(""));
+        let (unrotated, err, ok) = run(&["-Ksfdp", "-Tplain"], &src(""));
+        assert!(ok, "{dims}: {err}");
         assert_eq!(out, unrotated, "{dims}");
     }
 }
