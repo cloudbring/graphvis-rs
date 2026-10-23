@@ -1,10 +1,12 @@
 //! The neato driver, ported from `lib/neatogen/neatoinit.c`: `neato_layout`,
 //! `neatoLayout`, `majorization`, `user_pos`, `checkStart`/`setSeed`,
-//! `initRegular`, `neatoMode`, `neatoModel`, `checkExp`, `addCluster`.
+//! `initRegular`, `neatoMode`, `neatoModel`, `checkExp`, `addCluster`, and the `Nop`
+//! (`neato -n`) path: `init_nop`, `nop_init_graphs`, `nop_init_edges`, `user_spline`,
+//! `set_label`, `chkBB`.
 
 use super::adjust::{AdjustData, graph_adjust_mode, remove_overlap_with};
 use super::graphdata::make_graph_data;
-use super::neatosplines::{spline_edges, spline_edges0};
+use super::neatosplines::{neato_set_aspect, neato_translate, spline_edges, spline_edges0};
 use super::stress::{DFLT_ITERATIONS, OPT_SMART_INIT, stress_majorization_kd_mkernel};
 use super::stuff::{kk_neato, scan_graph_mode};
 use super::*;
@@ -554,8 +556,462 @@ fn do_edges(g: &mut LGraph<'_>, sub: &mut Sub, is_root: bool) {
     spline_edges0(g, sub, is_root, true);
 }
 
-/// `neato_layout(g)`.
-pub fn neato_layout(graph: &mut Graph) -> Result<()> {
+/// `numFields(pos)`: white-space separated tokens up to the next `;`. A `;` after white
+/// space is a token of its own, as C counts any byte there before it stops.
+fn num_fields(b: &[u8]) -> usize {
+    let mut rest = b;
+    let mut cnt = 0usize;
+    loop {
+        rest = skip_c_space(rest);
+        if rest.is_empty() {
+            return cnt;
+        }
+        cnt = cnt.saturating_add(1);
+        let end = rest
+            .iter()
+            .position(|&c| is_c_space(c) || c == b';')
+            .unwrap_or(rest.len());
+        rest = rest.get(end..).unwrap_or_default();
+        if !rest.first().copied().is_some_and(is_c_space) {
+            return cnt;
+        }
+    }
+}
+
+/// `while (gv_isspace(*pos)) pos++;`
+fn skip_c_space(b: &[u8]) -> &[u8] {
+    let n = b.iter().take_while(|&&c| is_c_space(c)).count();
+    b.get(n..).unwrap_or_default()
+}
+
+/// `gv_isspace`: C's `isspace` in the C locale.
+fn is_c_space(b: u8) -> bool {
+    matches!(b, b' ' | b'\t' | b'\n' | b'\x0b' | b'\x0c' | b'\r')
+}
+
+/// `sscanf(s, "%lf,%lf%n", ...) == 2`: the point and the rest after it.
+fn scan_point(s: &str) -> Option<(Point, &str)> {
+    let r = sscanf(s, "%lf,%lf");
+    (r.count == 2).then(|| (Point::new(r.values[0], r.values[1]), r.rest))
+}
+
+/// Why [`parse_user_spline`] rejected an edge `pos`.
+#[derive(Debug, PartialEq)]
+enum SplineError {
+    /// An empty `pos`: no warning.
+    Empty,
+    /// `doesn't have 3n+1 points`.
+    Count,
+    /// `syntax error in pos attribute`.
+    Syntax,
+}
+
+/// The parser of `user_spline`: the beziers of an edge `pos`, with `stype`/`etype` as
+/// the arrow flags of their `s,`/`e,` points.
+///
+/// C walks `pos` a byte at a time and skips one byte after a segment, so the next segment can
+/// start inside a multi-byte character. The port keeps a byte offset for the same reason:
+/// text that does not start on a character boundary matches no `sscanf` pattern, as the
+/// continuation bytes it starts with match none in C.
+fn parse_user_spline(
+    pos: &str,
+    stype: u32,
+    etype: u32,
+) -> std::result::Result<Vec<Bezier>, SplineError> {
+    if pos.is_empty() {
+        return Err(SplineError::Empty);
+    }
+    let bytes = pos.as_bytes();
+    // The byte offset of `rest`, a tail of `pos` (or of `bytes`).
+    let offset = |rest: usize| pos.len().saturating_sub(rest);
+    let mut spl = Vec::new();
+    let mut at = 0;
+    // The `s,` and `e,` points persist across `;`-separated beziers: a later one without
+    // its own reuses the previous one.
+    let (mut sflag, mut eflag) = (false, false);
+    let (mut sp, mut ep) = (Point::default(), Point::default());
+    loop {
+        if let Some(r) = pos.get(at..).and_then(|r| r.strip_prefix("s,"))
+            && let Some((p, r)) = scan_point(r)
+        {
+            sflag = true;
+            sp = p;
+            at = offset(r.len());
+        }
+        let e_at = offset(skip_c_space(bytes.get(at..).unwrap_or_default()).len());
+        if let Some(r) = pos.get(e_at..).and_then(|r| r.strip_prefix("e,"))
+            && let Some((p, r)) = scan_point(r)
+        {
+            eflag = true;
+            ep = p;
+            at = offset(r.len());
+        }
+        let npts = num_fields(bytes.get(at..).unwrap_or_default());
+        if npts < 4 || npts % 3 != 1 {
+            return Err(SplineError::Count);
+        }
+        let mut list = Vec::with_capacity(npts);
+        for _ in 0..npts {
+            let (p, r) = pos
+                .get(at..)
+                .and_then(scan_point)
+                .ok_or(SplineError::Syntax)?;
+            list.push(p);
+            at = offset(r.len());
+        }
+        let rest = skip_c_space(bytes.get(at..).unwrap_or_default());
+        // C steps over the byte after the bezier, whatever it is.
+        let more = !rest.is_empty();
+        at = offset(rest.len().saturating_sub(1));
+        spl.push(Bezier {
+            list,
+            sflag: if sflag { stype } else { 0 },
+            eflag: if eflag { etype } else { 0 },
+            sp,
+            ep,
+        });
+        if !more {
+            return Ok(spl);
+        }
+    }
+}
+
+/// `set_label(obj, l, name)`: the label's position from the `name` attribute.
+fn set_label(l: Option<&mut TextLabel>, lp: Option<&str>) {
+    if let Some(l) = l
+        && let Some((p, _)) = lp.and_then(scan_point)
+    {
+        l.pos = p;
+        l.set = true;
+    }
+}
+
+/// `user_spline(E_pos, e)`: use the edge's `pos` as its spline; false if it has none or
+/// it is unreadable.
+fn user_spline(g: &mut LGraph<'_>, e: usize) -> bool {
+    use crate::common::splines::SplineGraph;
+    // A `static atomic_flag`: one warning per process.
+    static WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    let pos = g.eattr(e, "pos").unwrap_or("");
+    let (stype, etype) = g.arrow_flags(e);
+    let spl = match parse_user_spline(pos, stype, etype) {
+        Ok(spl) => spl,
+        Err(SplineError::Empty) => return false,
+        Err(err) => {
+            if !WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                let name = |v: usize| g.src.nodes.get(v).map_or("", |n| n.name.as_str());
+                let (t, h) = g
+                    .edges
+                    .get(e)
+                    .map_or(("", ""), |ed| (name(ed.tail), name(ed.head)));
+                graphviz_pure_core::diag::agwarningf(&match err {
+                    SplineError::Count => {
+                        format!("pos attribute for edge ({t},{h}) doesn't have 3n+1 points\n")
+                    }
+                    _ => format!("syntax error in pos attribute for edge ({t},{h})\n"),
+                });
+            }
+            return false;
+        }
+    };
+    let attr = |k: &str| g.eattr(e, k);
+    let (lp, xlp, head_lp, tail_lp) = (attr("lp"), attr("xlp"), attr("head_lp"), attr("tail_lp"));
+    let Some(ed) = g.edges.get_mut(e) else {
+        return false;
+    };
+    ed.spl = Some(spl);
+    set_label(ed.label.as_mut(), lp);
+    set_label(ed.xlabel.as_mut(), xlp);
+    set_label(ed.head_label.as_mut(), head_lp);
+    set_label(ed.tail_label.as_mut(), tail_lp);
+    true
+}
+
+/// How many edges have their position (`pos_edge`), with C's names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
+enum PosEdge {
+    NoEdges,
+    SomeEdges,
+    AllEdges,
+}
+
+/// `nop_init_edges(g)`: with `Nop > 1`, the edges' splines and label positions from
+/// their `pos`, `lp`, `xlp`, `head_lp` and `tail_lp`.
+fn nop_init_edges(g: &mut LGraph<'_>, nop: u8) -> PosEdge {
+    if g.edges.is_empty() {
+        return PosEdge::AllEdges;
+    }
+    if !g.edge_attr_declared("pos") || nop < 2 {
+        return PosEdge::NoEdges;
+    }
+    let mut nedges = 0usize;
+    for e in g.out.concat() {
+        if user_spline(g, e) {
+            nedges = nedges.saturating_add(1);
+        }
+    }
+    if nedges == 0 {
+        PosEdge::NoEdges
+    } else if nedges == g.edges.len() {
+        PosEdge::AllEdges
+    } else {
+        PosEdge::SomeEdges
+    }
+}
+
+/// `freeEdgeInfo(g)`: drop the given splines and the label positions read with them. C
+/// frees the edge labels but keeps the pointers and reads them again: it crashes, or
+/// places them from freed memory. The port places them again on the new edges, as C does
+/// for the same edge without `pos`.
+fn free_edge_info(g: &mut LGraph<'_>) {
+    for e in &mut g.edges {
+        e.spl = None;
+        for l in [
+            &mut e.label,
+            &mut e.xlabel,
+            &mut e.head_label,
+            &mut e.tail_label,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            l.set = false;
+        }
+    }
+}
+
+/// `chkBB(g, G_bb, &bb)`: a cluster's `bb`, normalised when it was written with `-y`.
+fn chk_bb(s: Option<&str>) -> Option<graphviz_pure_core::BoundingBox> {
+    let r = sscanf(s?, "%lf,%lf,%lf,%lf");
+    let [llx, mut lly, urx, mut ury, _] = r.values;
+    if r.count != 4 {
+        return None;
+    }
+    if lly > ury {
+        std::mem::swap(&mut lly, &mut ury);
+    }
+    Some(graphviz_pure_core::BoundingBox::new(llx, lly, urx, ury))
+}
+
+/// `dfs(subg, parentg, G_lp, G_bb)`: a cluster with a readable `bb` is registered below
+/// `parent` (`add_cluster`, `do_graph_label`) and read in turn (`nop_init_graphs`);
+/// another subgraph passes its subgraphs on to `parent`.
+fn nop_dfs(g: &mut LGraph<'_>, si: usize, parent: Option<usize>) {
+    let src = g.src;
+    let Some(sg) = src.subgraphs.get(si) else {
+        return;
+    };
+    let Some(bb) = is_a_cluster(sg)
+        .then(|| chk_bb(sg.graph_attrs.get("bb").map(String::as_str)))
+        .flatten()
+    else {
+        for c in &sg.subgraphs {
+            nop_dfs(g, c.0 as usize, parent);
+        }
+        return;
+    };
+    let (mut label, label_pos) = crate::common::init::graph_label(&sg.graph_attrs, &sg.name, false);
+    let mut border = [Point::default(); 4];
+    let [bottom, _, top, _] = &mut border;
+    if let Some(l) = &label {
+        *if label_pos & LABEL_AT_TOP != 0 {
+            top
+        } else {
+            bottom
+        } = crate::common::init::pad(l.dimen);
+    }
+    set_label(label.as_mut(), sg.graph_attrs.get("lp").map(String::as_str));
+    let ci = g.clusters.len();
+    g.clusters.push(LCluster {
+        subgraph: si,
+        bb,
+        label,
+        label_pos,
+        border,
+        children: Vec::new(),
+    });
+    match parent.and_then(|p| g.clusters.get_mut(p)) {
+        Some(p) => p.children.push(ci),
+        None => g.root_clusters.push(ci),
+    }
+    for c in &sg.subgraphs {
+        nop_dfs(g, c.0 as usize, Some(ci));
+    }
+}
+
+/// `nop_init_graphs(g, G_lp, G_bb)` on the root: its label's `lp`, and the clusters with a
+/// `bb` (`init_nop` declares `bb`, so they are always read).
+fn nop_init_graphs(g: &mut LGraph<'_>) {
+    let lp = g.gattr("lp");
+    set_label(g.label.as_mut(), lp);
+    for si in top_level_subgraphs(g.src) {
+        nop_dfs(g, si, None);
+    }
+}
+
+/// `init_nop(g, 1)`: keep the nodes where `pos` put them, then add what the input lacks.
+/// Whether `State` became `GVSPLINES`; `Err` after the error for a node without a
+/// position.
+fn init_nop(g: &mut LGraph<'_>, nop: u8) -> std::result::Result<bool, ()> {
+    let translate = !mapbool(g.gattr("notranslate"));
+    // scan_graph (Reduce, edge lengths) ran in neato_layout_nop.
+    let src = g.src;
+    for (node, sn) in g.nodes.iter_mut().zip(&src.nodes) {
+        if node.pinned == 0 && !sn.name.starts_with("cluster") {
+            let gname = if src.name.is_empty() { "%1" } else { &src.name };
+            graphviz_pure_core::diag::agerrorf(&format!(
+                "node {} in graph {gname} has no position\n",
+                sn.name
+            ));
+            return Err(());
+        }
+        set_label(
+            node.xlabel.as_mut(),
+            sn.attrs.get("xlp").map(String::as_str),
+        );
+    }
+    nop_init_graphs(g);
+    let mut pos_edges = nop_init_edges(g, nop);
+    // `_background` (GD_drawing(g)->xdots) is not read by the port: no background.
+    let did_adjust = if nop == 1 {
+        let root = g.root_sub();
+        super::adjust::adjust_nodes(g, &root)
+    } else {
+        false
+    };
+    if did_adjust && let Some(l) = g.label.as_mut() {
+        l.set = false;
+    }
+    let mut root = g.root_sub();
+    compute_bb(g, &mut root, true);
+    if translate && (g.bb.ll.x != 0.0 || g.bb.ll.y != 0.0) {
+        neato_translate(g);
+    }
+    let root = g.root_sub();
+    let did_shift = neato_set_aspect(g, &root, true);
+    if pos_edges != PosEdge::NoEdges && (did_shift || did_adjust) {
+        free_edge_info(g);
+        pos_edges = PosEdge::NoEdges;
+    }
+    if pos_edges != PosEdge::AllEdges || nop == 3 {
+        let root = g.root_sub();
+        spline_edges0(g, &root, true, false);
+        // splineEdges sets State; spline_edges0 returns before it with splines="".
+        Ok(g.edge_type != EdgeType::None)
+    } else {
+        Ok(true)
+    }
+}
+
+/// `neato_layout(g)` with `Nop`: `init_nop(g, 1)`, then `gv_postprocess(g, 0)`. A node
+/// without a position ends the layout of this graph only, which is still drawn.
+fn neato_layout_nop(graph: &mut Graph, nop: u8) {
+    let attrs = &graph.graph_attrs;
+    let outdim = late_int(attrs, "dimen", 2, 2);
+    let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i32) as usize;
+    // PSinputscale = POINTS_PER_INCH: `pos` is in points.
+    let inputscale = 72.0;
+    // neato_init_graph: user_pos on every node, then addZ, before init_nop's scan_graph
+    // applies `Reduce`.
+    let full = graph.clone();
+    let mut g0 = LGraph::new(&full, ndim, EdgeType::Line);
+    let pos_declared = g0.node_attr_declared("pos");
+    let z_declared = g0.node_attr_declared("z");
+    for n in 0..g0.nodes.len() {
+        user_pos(&mut g0, n, inputscale, pos_declared, z_declared);
+    }
+    add_z(&g0, z_declared, graph);
+    let reduced;
+    let mut g = match super::stuff::reduce_set(graph) {
+        None => g0,
+        Some(deleted) => {
+            graph.delete_nodes(&deleted);
+            reduced = graph.clone();
+            let mut g =
+                graphviz_pure_core::diag::silently(|| LGraph::new(&reduced, ndim, EdgeType::Line));
+            let kept = g0.nodes.iter().zip(&deleted).filter(|(_, d)| !**d);
+            for (node, (old, _)) in g.nodes.iter_mut().zip(kept) {
+                node.pos.clone_from(&old.pos);
+                node.pinned = old.pinned;
+            }
+            g.drand = g0.drand;
+            g
+        }
+    };
+    // The rest of init_nop's scan_graph: its `bad edge len` warnings.
+    super::stuff::nop_check_edge_lens(graph);
+    let done = {
+        let _nop = super::neatosplines::NopGuard::set(nop);
+        init_nop(&mut g, nop)
+    };
+    let Ok(splines_state) = done else {
+        graphviz_pure_core::diag::agerr_prev("as required by the -n flag\n");
+        // `neato_layout` returns before any coordinate, spline or cluster is set, and
+        // `dot` draws that: every node at the origin, no edge, the root label unplaced.
+        for (nd, n) in graph.nodes.iter_mut().zip(&g.nodes) {
+            nd.pos = Point::default();
+            nd.width = n.width;
+            nd.height = n.height;
+        }
+        for e in &mut graph.edges {
+            e.spline = graphviz_pure_core::Spline::default();
+            e.label_pos = None;
+        }
+        for sg in graph.subgraphs.iter_mut().filter(|s| s.is_cluster) {
+            sg.graph_attrs.insert(
+                graphviz_pure_core::UNREGISTERED_CLUSTER_KEY.to_string(),
+                String::new(),
+            );
+        }
+        graph.bb = graphviz_pure_core::BoundingBox::default();
+        graph.graph_attrs.insert(
+            crate::common::postproc::LABEL_POS_KEY.to_string(),
+            "0.0,0.0".to_string(),
+        );
+        graph
+            .graph_attrs
+            .insert("\u{1}nolowclust".to_string(), String::new());
+        return;
+    };
+    gv_postprocess(&mut g, false);
+    // With State below GVSPLINES, attach_attrs_and_arrows writes no edge position: the
+    // given splines are drawn, and the edges keep their input attributes, as an IGNORED
+    // edge's do.
+    let kept: Vec<Vec<(&str, String)>> = if splines_state {
+        Vec::new()
+    } else {
+        graph
+            .edges
+            .iter()
+            .map(|e| {
+                graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS
+                    .iter()
+                    .filter_map(|(k, ik)| e.attrs.get(*k).map(|v| (*ik, v.clone())))
+                    .collect()
+            })
+            .collect()
+    };
+    g.write_back(graph);
+    for ((e, ge), input) in graph.edges.iter_mut().zip(&g.edges).zip(kept) {
+        if ge.spl.is_some() {
+            e.attrs.insert(
+                graphviz_pure_core::IGNORED_EDGE_KEY.to_string(),
+                String::new(),
+            );
+            for (ik, v) in input {
+                e.attrs.insert(ik.to_string(), v);
+            }
+        }
+    }
+}
+
+/// `neato_layout(g)`; `nop` is `Nop`, the `-n` level.
+pub fn neato_layout(graph: &mut Graph, nop: u8) -> Result<()> {
+    if nop > 0 {
+        neato_layout_nop(graph, nop);
+        return Ok(());
+    }
     let attrs = &graph.graph_attrs;
     let no_translate = mapbool(attrs.get("notranslate").map(String::as_str));
     let inputscale = crate::common::utils::get_inputscale(attrs);
@@ -765,5 +1221,307 @@ mod tests {
     fn user_pos_keeps_the_values_of_a_failed_scan() {
         let (pinned, pvec, _) = user_pos_of("5", None, 2);
         assert_eq!((pinned, pvec), (None, vec![5.0, 0.0]));
+    }
+
+    fn parse(pos: &str) -> std::result::Result<Vec<Bezier>, SplineError> {
+        parse_user_spline(pos, 1, 1)
+    }
+
+    // Issue #220: user_spline's sscanf("%lf,%lf%n") reads hexadecimal floats and `nan(chars)`.
+    #[test]
+    fn user_spline_reads_hex_and_nan_chars_like_c() {
+        let s = parse("0x10,0 10,10 20,20 30,30").unwrap();
+        assert_eq!(s[0].list[0], Point::new(16.0, 0.0));
+        let s = parse("nan(1),0 10,10 20,20 0x1p-1,30").unwrap();
+        assert!(s[0].list[0].x.is_nan());
+        assert_eq!(s[0].list[3], Point::new(0.5, 30.0));
+        assert_eq!(scan_point("0x1.8p1,2x").map(|x| x.1), Some("x"));
+    }
+
+    #[test]
+    fn user_spline_parses_arrows_and_multiple_beziers() {
+        let s = parse("s,1,2 e,9,9 1,1 2,2 3,3 4,4;5,5 6,6 7,7 8,8").unwrap();
+        assert_eq!(s.len(), 2);
+        assert_eq!((s[0].sflag, s[0].sp), (1, Point::new(1.0, 2.0)));
+        assert_eq!((s[0].eflag, s[0].ep), (1, Point::new(9.0, 9.0)));
+        // The `s,` and `e,` points carry over to the next bezier.
+        assert_eq!((s[1].sflag, s[1].eflag), (1, 1));
+        assert_eq!(s[1].list.len(), 4);
+        // An `s,` point without a tail arrow gets `sflag = stype`, 0.
+        let s = parse_user_spline("s,1,2 1,1 2,2 3,3 4,4", 0, 1).unwrap();
+        assert_eq!(s[0].sflag, 0);
+        assert_eq!(parse("1,1 2,2 3,3").err(), Some(SplineError::Count));
+        assert_eq!(parse("1,1 2,2 x,3 4,4").err(), Some(SplineError::Syntax));
+        assert_eq!(parse("").err(), Some(SplineError::Empty));
+        // numFields counts a ';' after white space as a field.
+        let p = "0,0 10,10 20,20 30,30";
+        assert_eq!(parse(&format!("{p} ;{p}")).err(), Some(SplineError::Count));
+        assert_eq!(parse("0,0 10,10 20,20 ;").err(), Some(SplineError::Syntax));
+        assert_eq!(parse(&format!("{p};{p}")).unwrap().len(), 2);
+        assert_eq!(parse(&format!("{p} \x0b;")).err(), Some(SplineError::Count));
+    }
+
+    // Issue #181: C skips one byte after a segment, so a segment that ends in a multi-byte
+    // character leaves its continuation bytes as the next segment. The port sliced the
+    // `str` at that byte and panicked.
+    #[test]
+    fn user_spline_skips_one_byte_after_a_segment_like_c() {
+        let p = "0,0 10,10 20,20 30,30";
+        // One field left (the continuation byte): not 3n+1.
+        assert_eq!(parse(&format!("{p}é")).err(), Some(SplineError::Count));
+        // The continuation byte is a field of its own, so five fields, not a second segment.
+        assert_eq!(
+            parse(&format!("{p}é 1,1 2,2 3,3 4,4")).err(),
+            Some(SplineError::Count)
+        );
+        // Four fields, the first starting with the continuation byte: a syntax error.
+        assert_eq!(
+            parse(&format!("{p}é 2,2 3,3 4,4")).err(),
+            Some(SplineError::Syntax)
+        );
+        assert_eq!(
+            parse(&format!("{p}é1,1 2,2 3,3 4,4")).err(),
+            Some(SplineError::Syntax)
+        );
+        // `s,` and `e,` do not match after the skipped byte either.
+        assert_eq!(
+            parse(&format!("{p}és,1,1 2,2 3,3 4,4")).err(),
+            Some(SplineError::Syntax)
+        );
+    }
+
+    type Attrs<'a> = &'a [(&'a str, &'a str)];
+
+    /// A graph for `neato -n`: graph attributes, nodes and edges (tail, head, attributes).
+    fn nop_graph(
+        directed: bool,
+        gattrs: Attrs<'_>,
+        nodes: &[(&str, Attrs<'_>)],
+        edges: &[(usize, usize, Attrs<'_>)],
+    ) -> Graph {
+        use graphviz_pure_core::{AttrMap, GraphKind, NodeId};
+        let kind = if directed {
+            GraphKind::Directed
+        } else {
+            GraphKind::Undirected
+        };
+        let mut g = Graph::new("G", kind, false);
+        let map = |a: Attrs<'_>| -> AttrMap {
+            a.iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect()
+        };
+        g.graph_attrs = map(gattrs);
+        for (name, a) in nodes {
+            let n = g.ensure_node(name);
+            g.nodes[n.0 as usize].attrs = map(a);
+        }
+        for &(t, h, a) in edges {
+            g.add_edge(NodeId(t as u32), NodeId(h as u32), map(a));
+        }
+        g
+    }
+
+    fn nop_layout(mut g: Graph, nop: u8) -> Graph {
+        graphviz_pure_core::diag::quietly(|| neato_layout(&mut g, nop)).unwrap();
+        g
+    }
+
+    fn near(p: Point, x: f64, y: f64) -> bool {
+        (p.x - x).abs() < 0.01 && (p.y - y).abs() < 0.01
+    }
+
+    #[test]
+    fn nop_translates_to_origin_and_keeps_edges() {
+        let g = nop_graph(
+            false,
+            &[],
+            &[("a", &[("pos", "127,118")]), ("b", &[("pos", "227,118")])],
+            &[(0, 1, &[("pos", "127,118 150,118 180,118 227,118")])],
+        );
+        let g = nop_layout(g, 2);
+        assert_eq!(g.nodes[0].pos, Point::new(27.0, 18.0));
+        assert_eq!(g.bb.ll, Point::new(0.0, 0.0));
+        assert_eq!(
+            g.edges[0].spline.segments[0].points[0],
+            Point::new(27.0, 18.0)
+        );
+    }
+
+    // Issue #149: init_nop runs adjustNodes for -n1, so `overlap=false` moves b to x =
+    // 2.8143in, as C 16.1.0 does.
+    #[test]
+    fn nop1_removes_overlaps_like_c() {
+        let g = nop_graph(
+            false,
+            &[("overlap", "false")],
+            &[("a", &[("pos", "0,0")]), ("b", &[("pos", "10,0")])],
+            &[(0, 1, &[])],
+        );
+        let g = nop_layout(g, 1);
+        assert!(near(g.nodes[0].pos, 27.0, 18.0), "{:?}", g.nodes[0].pos);
+        assert!(
+            near(g.nodes[1].pos, 2.8143 * 72.0, 18.0),
+            "{:?}",
+            g.nodes[1].pos
+        );
+    }
+
+    // Issue #293: setRatio compares `ratio` as it is, so " fill" sets no ratio: C's bb is
+    // 0,0,84,66, not the 3in `size`.
+    #[test]
+    fn nop_does_not_trim_ratio() {
+        let g = nop_graph(
+            false,
+            &[("ratio", " fill"), ("size", "3,3")],
+            &[("a", &[("pos", "0,0")]), ("b", &[("pos", "30,30")])],
+            &[(0, 1, &[])],
+        );
+        let g = nop_layout(g, 2);
+        assert_eq!(
+            (g.bb.ll, g.bb.ur),
+            (Point::new(0.0, 0.0), Point::new(84.0, 66.0))
+        );
+    }
+
+    // Issue #317: with -n3, spline_edges_ keeps the first bezier of the edge's `pos` and
+    // clips and installs it again: C writes `pos="42,33 46.844,37.844 51.688,42.688
+    // 56.531,47.531"`.
+    #[test]
+    fn nop3_clips_and_installs_the_first_bezier() {
+        let g = nop_graph(
+            false,
+            &[],
+            &[("a", &[("pos", "0,0")]), ("b", &[("pos", "100,100")])],
+            &[(
+                0,
+                1,
+                &[("pos", "0,0 10,10 20,20 30,30;40,40 50,50 60,60 70,70")],
+            )],
+        );
+        let g = nop_layout(g, 3);
+        let segs = &g.edges[0].spline.segments;
+        assert_eq!(segs.len(), 1);
+        let want = [
+            (42.0, 33.0),
+            (46.844, 37.844),
+            (51.688, 42.688),
+            (56.531, 47.531),
+        ];
+        for (p, (x, y)) in segs[0].points.iter().zip(want) {
+            assert!(near(*p, x, y), "{:?}", segs[0].points);
+        }
+    }
+
+    // Issue #266: gv_postprocess's addXLabels places a node xlabel that has no `xlp` and
+    // grows the bb: C gives bb="-7,0,54,52.8" and xlp="-3.5,44.4".
+    #[test]
+    fn nop_places_node_xlabels() {
+        let g = nop_graph(
+            false,
+            &[],
+            &[("a", &[("pos", "0,0"), ("xlabel", "x")])],
+            &[],
+        );
+        let g = nop_layout(g, 1);
+        assert!(
+            near(g.bb.ll, -7.0, 0.0) && near(g.bb.ur, 54.0, 52.8),
+            "{:?}",
+            g.bb
+        );
+        let xlp = g.nodes[0].attrs.get("xlp").expect("xlp");
+        let r = sscanf(xlp, "%lf,%lf");
+        assert!(
+            near(Point::new(r.values[0], r.values[1]), -3.5, 44.4),
+            "{xlp}"
+        );
+    }
+
+    // freeEdgeInfo: after `ratio` rescales the drawing, the given splines are dropped and
+    // the edges routed again. C reads the freed labels (it crashes or places them from freed
+    // memory); the port places them again, as for the same edge without `pos`: on the new
+    // edge, not at the scaled input `lp`.
+    #[test]
+    fn nop_rescale_places_the_edge_labels_again() {
+        let g = nop_graph(
+            false,
+            &[("ratio", "2")],
+            &[("a", &[("pos", "0,0")]), ("b", &[("pos", "100,0")])],
+            &[(
+                0,
+                1,
+                &[
+                    ("pos", "0,0 30,0 60,0 100,0"),
+                    ("label", "L"),
+                    ("lp", "50,10"),
+                ],
+            )],
+        );
+        let g = nop_layout(g, 2);
+        let e = &g.edges[0];
+        // The rerouted edge is horizontal; C puts the label of the same edge without `pos`
+        // 8.4pt above it.
+        let y = e.spline.segments[0].points[0].y;
+        let lp = e.label_pos.expect("label position");
+        assert!(!e.label_unplaced, "{e:?}");
+        assert!((lp.y - y - 8.4).abs() < 0.01, "{lp:?} vs edge at y = {y}");
+    }
+
+    // Issue #142: an edge label without `lp` is placed on the routed edge (addXLabels), at
+    // 0.94179,0.36667in in C's -Tplain.
+    #[test]
+    fn nop_places_edge_labels() {
+        let g = nop_graph(
+            true,
+            &[],
+            &[("a", &[("pos", "0,0")]), ("b", &[("pos", "100,0")])],
+            &[(0, 1, &[("label", "x")])],
+        );
+        let g = nop_layout(g, 1);
+        let e = &g.edges[0];
+        assert!(!e.label_unplaced);
+        let lp = e.label_pos.expect("label position");
+        assert!(near(lp, 0.94179 * 72.0, 0.36667 * 72.0), "{lp:?}");
+    }
+
+    // Issue #148: spline_edges_ routes `splines=ortho` through orthoEdges: C's edge a--c
+    // has 7 points, from 0.375,0.50474in up and across.
+    #[test]
+    fn nop_routes_ortho_edges() {
+        let g = nop_graph(
+            false,
+            &[("splines", "ortho")],
+            &[
+                ("a", &[("pos", "0,0")]),
+                ("b", &[("pos", "100,0")]),
+                ("c", &[("pos", "200,100")]),
+            ],
+            &[(0, 2, &[]), (1, 2, &[])],
+        );
+        let g = nop_layout(g, 1);
+        let pts = &g.edges[0].spline.segments[0].points;
+        assert_eq!(pts.len(), 7, "{pts:?}");
+        assert!(near(pts[0], 27.0, 0.50474 * 72.0), "{pts:?}");
+        assert!(near(pts[6], 2.7724 * 72.0, 1.6389 * 72.0), "{pts:?}");
+    }
+
+    // Issue #195: `splines=curved` goes through makeStraightEdges' curved branch: C's a--c
+    // starts at 0.27902,0.4932in.
+    #[test]
+    fn nop_routes_curved_edges() {
+        let g = nop_graph(
+            false,
+            &[("splines", "curved")],
+            &[
+                ("a", &[("pos", "0,0")]),
+                ("b", &[("pos", "50,0")]),
+                ("c", &[("pos", "0,100")]),
+            ],
+            &[(0, 2, &[]), (1, 2, &[])],
+        );
+        let g = nop_layout(g, 1);
+        let pts = &g.edges[0].spline.segments[0].points;
+        assert!(near(pts[0], 0.27902 * 72.0, 0.4932 * 72.0), "{pts:?}");
+        assert!(near(pts[3], 0.27738 * 72.0, 1.3914 * 72.0), "{pts:?}");
     }
 }

@@ -150,9 +150,6 @@ fn attached(
     (g, forced)
 }
 
-/// Private graph attribute the no-layout engine sets (`graphviz_pure_layout::nop`).
-const NOP_KEY: &str = "\u{1}nop";
-
 /// Private graph attribute the neato-family engines set (`graphviz_pure_layout::common`):
 /// only dot runs `mark_lowclusters`, so their edges stay where they were declared.
 const NO_LOW_CLUSTERS_KEY: &str = "\u{1}nolowclust";
@@ -465,9 +462,7 @@ impl<'g> GraphJobs<'g> {
                 keep_set(&mut self.set, &g);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
                     sync_dicts(&mut g, graph);
-                    let extra = if graph.graph_attrs.contains_key(NOP_KEY)
-                        || graph.graph_attrs.contains_key(NO_LOW_CLUSTERS_KEY)
-                    {
+                    let extra = if graph.graph_attrs.contains_key(NO_LOW_CLUSTERS_KEY) {
                         Vec::new()
                     } else {
                         low_cluster_edges(graph)

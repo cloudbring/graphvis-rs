@@ -1257,8 +1257,10 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
         finish(&g, graph);
         let origin = "0.0,0.0".to_string();
         let mark = |gr: &mut Graph| {
-            gr.graph_attrs
-                .insert(crate::nop::LABEL_POS_KEY.to_string(), origin.clone());
+            gr.graph_attrs.insert(
+                crate::common::postproc::LABEL_POS_KEY.to_string(),
+                origin.clone(),
+            );
             for &(sg, has_label) in &labeled {
                 let a = &mut gr.subgraphs[sg].graph_attrs;
                 a.insert(
@@ -1266,7 +1268,10 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
                     String::new(),
                 );
                 if has_label {
-                    a.insert(crate::nop::LABEL_POS_KEY.to_string(), origin.clone());
+                    a.insert(
+                        crate::common::postproc::LABEL_POS_KEY.to_string(),
+                        origin.clone(),
+                    );
                 } else {
                     a.insert(
                         graphviz_pure_core::NO_GRAPH_LABEL_KEY.to_string(),

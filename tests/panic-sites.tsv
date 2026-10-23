@@ -84,7 +84,6 @@ layout/neatogen/smart_ini.rs	8	0	201	36
 layout/neatogen/stress.rs	3	0	95	27
 layout/neatogen/stuff.rs	1	0	180	13
 layout/neatogen/voronoi.rs	22	0	250	41
-layout/nop.rs	0	0	69	12
 layout/ortho/maze.rs	0	0	27	9
 layout/ortho/mod.rs	0	0	30	27
 layout/ortho/partition.rs	0	0	46	18

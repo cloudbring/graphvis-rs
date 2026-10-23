@@ -99,7 +99,7 @@ impl Output {
         let mut edges = Vec::new();
         let mut edge_attrs = Vec::new();
         let lp_of = |l: Option<L>| l.filter(|&l| d.labels[l].set).map(|l| d.labels[l].pos);
-        // Exact notation, as the renderers expect (`nop.rs`).
+        // Exact notation, as the renderers expect (`LGraph::write_back`).
         let fmt = |p: Point| format!("{:?},{:?}", p.x, p.y);
         // attach_attrs_and_arrows: edges without splines (or IGNORED) get no
         // attributes; with splines, lp/head_lp/tail_lp are written whether
@@ -282,12 +282,12 @@ impl Output {
         if let Some(lp) = self.graph_lp {
             graph
                 .graph_attrs
-                .insert(crate::nop::LABEL_POS_KEY.to_string(), lp);
+                .insert(crate::common::postproc::LABEL_POS_KEY.to_string(), lp);
         }
         for (si, lp) in self.cluster_lp {
             graph.subgraphs[si]
                 .graph_attrs
-                .insert(crate::nop::LABEL_POS_KEY.to_string(), lp);
+                .insert(crate::common::postproc::LABEL_POS_KEY.to_string(), lp);
         }
         for (si, list) in self.cluster_list {
             let attrs = match si {

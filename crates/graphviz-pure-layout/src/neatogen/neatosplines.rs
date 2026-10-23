@@ -9,6 +9,32 @@ use crate::common::types::{EdgeType, LGraph, RatioKind, Sub};
 use crate::common::utils::compute_bb;
 use graphviz_pure_core::Point;
 
+thread_local! {
+    /// `Nop` (`globals.h`): the `-n` level of `neato`, 0 for a full layout.
+    static NOP: std::cell::Cell<u8> = const { std::cell::Cell::new(0) };
+}
+
+/// Sets `Nop` while it lives; the previous value comes back when it is dropped, panics
+/// included.
+pub(crate) struct NopGuard(u8);
+
+impl NopGuard {
+    pub(crate) fn set(nop: u8) -> Self {
+        NopGuard(NOP.with(|n| n.replace(nop)))
+    }
+}
+
+impl Drop for NopGuard {
+    fn drop(&mut self) {
+        NOP.with(|n| n.set(self.0));
+    }
+}
+
+/// `Nop`.
+pub(crate) fn nop() -> u8 {
+    NOP.with(std::cell::Cell::get)
+}
+
 /// `makeSelfArcs(e, stepx)`.
 pub fn make_self_arcs(g: &mut LGraph<'_>, e: usize, stepx: f64) {
     let cnt = g.edges[e].count.max(0) as usize;
@@ -114,6 +140,13 @@ pub fn spline_edges_by(
     for &n in &sub.nodes {
         let outs: Vec<usize> = g.outs(sub, n).collect();
         for e in outs {
+            if nop() > 1
+                && let Some(ed) = g.edges.get_mut(e).filter(|ed| ed.spl.is_some())
+            {
+                // With Nop > 1 an edge that has its spline is its own class.
+                ed.count = ed.count.saturating_add(1);
+                continue;
+            }
             let key = equiv_key(g, e);
             match map.get(&key) {
                 Some(&leader) => {
@@ -145,10 +178,15 @@ pub fn spline_edges_route(g: &mut LGraph<'_>, sub: &Sub, pmargin: &Expand, edget
     if let Some(r) = &router {
         r.path_pass(g, sub);
     }
+    let use_edges = nop() > 1;
     for &n in &sub.nodes {
         let outs: Vec<usize> = g.outs(sub, n).collect();
         for e in outs {
             let head = g.edges[e].head;
+            if use_edges && g.edges.get(e).is_some_and(|ed| ed.spl.is_some()) {
+                use_edge(g, n, e);
+                continue;
+            }
             if g.edges[e].count == 0 {
                 continue;
             }
@@ -216,7 +254,7 @@ fn ortho_spline_edges(lg: &mut LGraph<'_>, sub: &Sub, pm: &Expand, et: EdgeType)
         .iter()
         .filter_map(|&n| ortho_obstacle(lg, n, pm))
         .collect();
-    let mut use_edges = false;
+    let mut use_edges = nop() > 1;
     if super::legal::plegal_arrangement(&obs) {
         crate::ortho::ortho_edges_of(lg, sub.nodes.clone(), false);
         use_edges = true;
@@ -231,7 +269,7 @@ fn ortho_spline_edges(lg: &mut LGraph<'_>, sub: &Sub, pm: &Expand, et: EdgeType)
         for e in outs {
             let head = lg.edges[e].head;
             if use_edges && lg.edges[e].spl.is_some() {
-                crate::common::splines::add_edge_labels(lg, e);
+                use_edge(lg, n, e);
             } else if lg.edges[e].count == 0 {
                 continue;
             } else if n == head {
@@ -242,6 +280,37 @@ fn ortho_spline_edges(lg: &mut LGraph<'_>, sub: &Sub, pm: &Expand, et: EdgeType)
             }
         }
     }
+}
+
+/// `spline_edges_`'s branch for an edge that keeps its spline (`useEdges`): its port
+/// labels; with `Nop == 3`, its first bezier only, clipped and installed again.
+fn use_edge(g: &mut LGraph<'_>, n: usize, e: usize) {
+    crate::common::splines::add_edge_labels(g, e);
+    if nop() != 3 {
+        return;
+    }
+    let Some(ed) = g.edges.get_mut(e) else { return };
+    let head = ed.head;
+    let Some(mut spl) = ed.spl.take().filter(|spl| !spl.is_empty()) else {
+        return;
+    };
+    if spl.len() > 1 {
+        let name = |v: usize| g.src.nodes.get(v).map_or("", |n| n.name.as_str());
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "edge {} -> {} : set more than one spline. First used, other dropped.\n",
+            name(n),
+            name(head)
+        ));
+    }
+    let first = spl.swap_remove(0);
+    if first.list.len() < 4 {
+        // A straight edge between overlapping nodes can be a single point. C's
+        // clip_and_install reads the three points after it, past the end of the list; the
+        // port keeps the first bezier as it is.
+        ed.spl = Some(vec![first]);
+        return;
+    }
+    crate::common::splines::clip_and_install(g, e, head, &first.list);
 }
 
 /// `spline_edges0(g, set_aspect)`.
@@ -446,12 +515,70 @@ fn neato_set_aspect_inner(g: &mut LGraph<'_>, is_root: bool) -> bool {
         }
         _ => return translated,
     }
+    if nop() > 1 {
+        for e in 0..g.edges.len() {
+            scale_edge(g, e, xf, yf);
+        }
+    }
     for n in &mut g.nodes {
         n.pos[0] *= xf;
         n.pos[1] *= yf;
     }
     scale_bb(g, xf, yf);
     true
+}
+
+/// `scaleEdge(e, xf, yf)`: the ends of a given spline move with their nodes, its inner
+/// points and label scale.
+fn scale_edge(g: &mut LGraph<'_>, e: usize, xf: f64, yf: f64) {
+    let nodes = &g.nodes;
+    let del = |v: usize| {
+        let p = nodes.get(v).map_or(&[][..], |n| &n.pos[..]);
+        let (x, y) = (p.first().copied(), p.get(1).copied());
+        Point::new(
+            72.0 * (x.unwrap_or(0.0) * (xf - 1.0)),
+            72.0 * (y.unwrap_or(0.0) * (yf - 1.0)),
+        )
+    };
+    let Some(ed) = g.edges.get_mut(e) else { return };
+    let (delh, delt) = (del(ed.head), del(ed.tail));
+    let Some(spl) = ed.spl.as_mut() else { return };
+    let last_bez = spl.len().saturating_sub(1);
+    for (i, bez) in spl.iter_mut().enumerate() {
+        let last_pt = bez.list.len().saturating_sub(1);
+        for (j, pt) in bez.list.iter_mut().enumerate() {
+            if i == 0 && j == 0 {
+                pt.x += delt.x;
+                pt.y += delt.y;
+            } else if i == last_bez && j == last_pt {
+                pt.x += delh.x;
+                pt.y += delh.y;
+            } else {
+                pt.x *= xf;
+                pt.y *= yf;
+            }
+        }
+        if bez.sflag != 0 {
+            bez.sp.x += delt.x;
+            bez.sp.y += delt.y;
+        }
+        if bez.eflag != 0 {
+            bez.ep.x += delh.x;
+            bez.ep.y += delh.y;
+        }
+    }
+    if let Some(l) = ed.label.as_mut().filter(|l| l.set) {
+        l.pos.x *= xf;
+        l.pos.y *= yf;
+    }
+    if let Some(l) = ed.head_label.as_mut().filter(|l| l.set) {
+        l.pos.x += delh.x;
+        l.pos.y += delh.y;
+    }
+    if let Some(l) = ed.tail_label.as_mut().filter(|l| l.set) {
+        l.pos.x += delt.x;
+        l.pos.y += delt.y;
+    }
 }
 
 /// `neato_set_aspect(g)`: apply `ratio` and copy `ND_pos` (inches) to `ND_coord` (points).
