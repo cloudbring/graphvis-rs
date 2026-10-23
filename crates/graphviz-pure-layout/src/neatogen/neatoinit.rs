@@ -909,7 +909,7 @@ fn init_nop(g: &mut LGraph<'_>, nop: u8) -> std::result::Result<bool, ()> {
 fn neato_layout_nop(graph: &mut Graph, nop: u8) {
     let attrs = &graph.graph_attrs;
     let outdim = late_int(attrs, "dimen", 2, 2);
-    let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i64) as usize;
+    let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i32) as usize;
     // PSinputscale = POINTS_PER_INCH: `pos` is in points.
     let inputscale = 72.0;
     // neato_init_graph: user_pos on every node, then addZ, before init_nop's scan_graph
