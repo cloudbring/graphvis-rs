@@ -211,10 +211,7 @@ impl<'a> Dot<'a> {
         };
         // layout_graph_with_options made the root label first, as graph_init does.
         let gl = if sg == 0 {
-            // ... and interned its fonts then
-            graphviz_pure_core::diag::quietly(|| {
-                graphviz_pure_core::font::textfont_remeasuring(make)
-            })
+            graphviz_pure_core::diag::quietly(make)
         } else {
             make()
         };
@@ -273,10 +270,7 @@ impl<'a> Dot<'a> {
         let r = self.nodes[n].real.unwrap();
         let nd = &self.input.nodes[r];
         let env = graphviz_pure_geom::NodeSizeEnv::from_graph(self.input);
-        // layout_dot's size_graph_nodes measured the node first, and interned its fonts
-        let geom = graphviz_pure_core::font::textfont_remeasuring(|| {
-            graphviz_pure_geom::node_geometry(nd, &env)
-        });
+        let geom = graphviz_pure_geom::node_geometry(nd, &env);
         let (lw, rw, ht) = geom.nodesize(flip);
         let mut sized = nd.clone();
         sized.width = geom.width;
@@ -348,7 +342,8 @@ impl<'a> Dot<'a> {
         let directed = self.input.kind == GraphKind::Directed;
         let input = self.input;
         let ie = &input.edges[r];
-        let geo = graphviz_pure_geom::edge_label_geometry(
+        let geo = graphviz_pure_geom::node_size::edge_label_geometry_of(
+            u64::from(ie.id.0),
             &ie.attrs,
             &self.nodes[t].name,
             &self.nodes[h].name,

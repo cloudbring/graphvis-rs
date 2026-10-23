@@ -125,6 +125,17 @@ struct TextFontDict {
     log: std::collections::HashMap<LogKey, (Vec<f64>, usize)>,
     /// Inside [`textfont_remeasuring`].
     remeasuring: u32,
+    /// The sizes each object's labels got when layout first measured them, by
+    /// [`textfont_recording`]'s tag: what C keeps in each span's `font`.
+    objects: std::collections::HashMap<String, Vec<f64>>,
+    /// The open [`textfont_recording`] (tag, sizes) and [`textfont_replaying`] (sizes,
+    /// next) scopes, innermost last.
+    scopes: Vec<Scope>,
+}
+
+enum Scope {
+    Record(String, Vec<f64>),
+    Replay(Vec<f64>, usize),
 }
 
 thread_local! {
@@ -152,6 +163,11 @@ pub fn textfont_intern(name: Option<&str>, color: Option<&str>, flags: u32, size
     let lkey = (key.name.clone(), key.color.clone(), flags, size.to_bits());
     TEXTFONT_DT.with(|d| {
         let mut d = d.borrow_mut();
+        if let Some(Scope::Replay(sizes, next)) = d.scopes.last_mut() {
+            let v = sizes.get(*next).copied().unwrap_or(size);
+            *next += 1;
+            return v;
+        }
         if d.remeasuring > 0 {
             return match d.log.get_mut(&lkey) {
                 Some((sizes, next)) if !sizes.is_empty() => {
@@ -166,8 +182,76 @@ pub fn textfont_intern(name: Option<&str>, color: Option<&str>, flags: u32, size
         let (i, _) = d.dt.insert(key.clone(), &cmp);
         let v = d.dt.get(i).size;
         d.log.entry(lkey).or_default().0.push(v);
+        if let Some(Scope::Record(_, sizes)) = d.scopes.last_mut() {
+            sizes.push(v);
+        }
         v
     })
+}
+
+/// Runs `f`, a measurement of the labels of the object `tag` names (`node:a`, ...). The
+/// first one in a layout interns the fonts, as C's single measurement does, and keeps the
+/// sizes they get, as C keeps each span's `font`; a later one (the port measures some
+/// objects again, and the renderer measures them all) gets the same sizes and leaves the
+/// dictionary alone.
+pub fn textfont_object<R>(tag: String, f: impl FnOnce() -> R) -> R {
+    let recorded = TEXTFONT_DT.with(|d| d.borrow().objects.contains_key(&tag));
+    if recorded {
+        textfont_replaying(&tag, f)
+    } else {
+        textfont_recording(tag, f)
+    }
+}
+
+/// Runs `f`, layout's first measurement of the labels of the object `tag` names: fonts
+/// are interned, and the sizes they get are kept for [`textfont_replaying`].
+fn textfont_recording<R>(tag: impl Into<String>, f: impl FnOnce() -> R) -> R {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            TEXTFONT_DT.with(|d| {
+                let mut d = d.borrow_mut();
+                if let Some(Scope::Record(tag, sizes)) = d.scopes.pop() {
+                    d.objects.insert(tag, sizes);
+                }
+            });
+        }
+    }
+    let replaying = TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        let replaying = d.remeasuring > 0 || matches!(d.scopes.last(), Some(Scope::Replay(..)));
+        if !replaying {
+            d.scopes.push(Scope::Record(tag.into(), Vec::new()));
+        }
+        replaying
+    });
+    if replaying {
+        return f();
+    }
+    let _guard = Guard;
+    f()
+}
+
+/// Runs `f`, a measurement of the labels of the object `tag` names that layout has
+/// already made: each lookup returns the size the recorded measurement got, in order, and
+/// the dictionary does not change. An object never recorded is measured as
+/// [`textfont_remeasuring`] does.
+fn textfont_replaying<R>(tag: &str, f: impl FnOnce() -> R) -> R {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            TEXTFONT_DT.with(|d| {
+                d.borrow_mut().scopes.pop();
+            });
+        }
+    }
+    let sizes = TEXTFONT_DT.with(|d| d.borrow().objects.get(tag).cloned());
+    let Some(sizes) = sizes else {
+        return textfont_remeasuring(f);
+    };
+    TEXTFONT_DT.with(|d| d.borrow_mut().scopes.push(Scope::Replay(sizes, 0)));
+    let _guard = Guard;
+    f()
 }
 
 /// Runs `f`, a measurement of labels that the current layout has already measured: fonts
@@ -195,7 +279,11 @@ pub fn textfont_remeasuring<R>(f: impl FnOnce() -> R) -> R {
 /// Starts a graph's layout: later [`textfont_remeasuring`] calls replay this layout's
 /// lookups. The dictionary itself is kept, as C keeps it for the next graph.
 pub fn textfont_layout_begin() {
-    TEXTFONT_DT.with(|d| d.borrow_mut().log.clear());
+    TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        d.log.clear();
+        d.objects.clear();
+    });
 }
 
 /// Empties the font dictionary, as a new GVC starts with an empty one.

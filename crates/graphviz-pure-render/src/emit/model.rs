@@ -15,7 +15,7 @@ use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
 use graphviz_pure_geom::html_label::HtmlLabel;
 use graphviz_pure_geom::node_size::{
     LABEL_AT_LEFT, LABEL_AT_RIGHT, LABEL_AT_TOP, LabelGeometry, NodeGeometry, NodeSizeEnv,
-    edge_label_geometry, graph_label_geometry_in, node_geometry,
+    graph_label_geometry_in, node_geometry,
 };
 
 /// `textfont_t`.
@@ -390,7 +390,14 @@ impl<'g> Model<'g> {
             let lg = if no_edge_init {
                 graphviz_pure_geom::node_size::EdgeLabelGeometry::default()
             } else {
-                edge_label_geometry(&e.attrs, tname, hname, directed, &env)
+                graphviz_pure_geom::node_size::edge_label_geometry_of(
+                    u64::from(e.id.0),
+                    &e.attrs,
+                    tname,
+                    hname,
+                    directed,
+                    &env,
+                )
             };
             let fontcolor = a.late_nnstring("fontcolor", "black");
             let lfontcolor = a.late_nnstring("labelfontcolor", fontcolor);

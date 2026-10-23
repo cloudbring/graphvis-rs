@@ -67,8 +67,7 @@ pub fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> (Option<TextLa
     let make = || graphviz_pure_geom::graph_label_geometry_in(name, attrs, is_root, false, &env);
     // layout_graph_with_options made the root label first, as graph_init does.
     let geom = if is_root {
-        // ... and interned its fonts then
-        graphviz_pure_core::diag::quietly(|| graphviz_pure_core::font::textfont_remeasuring(make))
+        graphviz_pure_core::diag::quietly(make)
     } else {
         make()
     };
@@ -133,7 +132,14 @@ impl<'a> LGraph<'a> {
             let a = &ed.attrs;
             let tname = &graph.nodes[ed.tail.0 as usize].name;
             let hname = &graph.nodes[ed.head.0 as usize].name;
-            let lg = graphviz_pure_geom::edge_label_geometry(a, tname, hname, directed, &env);
+            let lg = graphviz_pure_geom::node_size::edge_label_geometry_of(
+                u64::from(ed.id.0),
+                a,
+                tname,
+                hname,
+                directed,
+                &env,
+            );
             let conv = |key: &str, l: &Option<graphviz_pure_geom::node_size::LabelGeometry>| {
                 l.as_ref().map(|l| TextLabel {
                     text: graphviz_pure_geom::label_text(l, a.get(key).map_or("", String::as_str)),

@@ -4879,6 +4879,27 @@ fn nan_fontsize_takes_an_interned_fonts_size() {
     );
     assert!(ok);
     assert!(out.contains("font-size=\"30.00\">Q</text>"), "{out}");
+    // Each object keeps the sizes its first measurement interned: dot's node pass after
+    // the pre-pass, and the renderer, which measures edges in another order.
+    let out = c10_plain(
+        "dot",
+        "digraph { a [fontsize=30]; b [fontsize=20]; c [fontsize=nan]; d [fontsize=30]; \
+         e [fontsize=nan]; d -> e; e -> f }",
+    );
+    assert!(out.starts_with("graph 1 3.75 3.2285\n"), "{out}");
+    assert!(out.contains("node e 3.375 1.4321 0.75 0.86424 e "), "{out}");
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { a; b; b -> x [fontsize=30, label=E1]; b -> y [fontsize=nan, label=E2]; \
+         a -> z [fontsize=nan, label=E3] }",
+    );
+    assert!(ok);
+    for (size, label) in [("14.00", "E3"), ("30.00", "E1"), ("30.00", "E2")] {
+        assert!(
+            out.contains(&format!("font-size=\"{size}\">{label}<")),
+            "{label}: {out}"
+        );
+    }
     // One dictionary for the run, as C has one per GVC.
     let out = c10_plain(
         "dot",

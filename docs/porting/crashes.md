@@ -448,12 +448,15 @@ first: the most recently used font of that name, or, when a NaN font was interne
 later labels of that name get the NaN one. The port interns fonts in the same splay
 tree (`core::cdt`, moved from layout), one per thread and run, at C's sites: `storeline`,
 and for HTML labels `mkFont` (when the parser reads the token), `pushFont` and
-`size_html_txt`. C measures each label once, but the port measures some again: the root
-label after `graph_init`, dot's node pre-pass before `dot_init_node` (C14), the port
-lookups, patchwork's `LGraph`, and the renderer. Those passes run inside
-`font::textfont_remeasuring`, which leaves the tree alone and gives each font the sizes
-the layout's lookups returned, in order. The render-time `_ldraw_` fonts of `emit.c` are
-not interned.
+`size_html_txt`. C measures each label once and keeps the interned font in each span;
+the port measures some objects again (dot's node pre-pass, port lookups, patchwork, the
+root label after `graph_init`) and the renderer measures them all. So the geometry
+functions measure through `font::textfont_object` with the object's identity (`node:`,
+`edge:` with its id, `graph:`, `root:`): the first measurement in a layout interns and
+keeps the sizes, and later ones get the same sizes and leave the tree alone. Where the
+port's first measurement comes in a different order from C's (fdp's nested cluster
+labels, which C makes one level at a time in `deriveGraph`; C14), a NaN size can still
+meet a different font. The render-time `_ldraw_` fonts of `emit.c` are not interned.
 
 **Not this cause:** #249 (`overlap=prism` with pins near 1e7 inches). The divergence
 starts in the prism smoother's first iteration and only at that magnitude, C's residual

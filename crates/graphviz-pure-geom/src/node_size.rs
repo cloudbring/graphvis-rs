@@ -419,6 +419,12 @@ pub fn node_font(attrs: &AttrMap) -> (&str, f64) {
 
 /// `common_init_node` + shape `initfn`: the exact size and label geometry of `node`.
 pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
+    graphviz_pure_core::font::textfont_object(format!("node:{}", node.name), || {
+        node_geometry_measured(node, env)
+    })
+}
+
+fn node_geometry_measured(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     let attrs = &node.attrs;
     let shape_name = late_nnstring(attrs, "shape", "ellipse");
     // bind_shape: a `shapefile` (except with epsf) makes the shape `custom`, a user shape
@@ -564,6 +570,19 @@ pub fn graph_label_geometry_in(
     flip: bool,
     env: &NodeSizeEnv<'_>,
 ) -> Option<GraphLabelGeometry> {
+    let tag = format!("{}:{name}", if is_root { "root" } else { "graph" });
+    graphviz_pure_core::font::textfont_object(tag, || {
+        graph_label_geometry_measured(name, attrs, is_root, flip, env)
+    })
+}
+
+fn graph_label_geometry_measured(
+    name: &str,
+    attrs: &AttrMap,
+    is_root: bool,
+    flip: bool,
+    env: &NodeSizeEnv<'_>,
+) -> Option<GraphLabelGeometry> {
     let charset = env.charset;
     let s = attrs.get("label").filter(|s| !s.is_empty())?;
     let obj = LabelSubstContext {
@@ -643,6 +662,22 @@ pub struct EdgeLabelGeometry {
 
 /// `common_init_edge`: sizes the labels of an edge with effective attributes `attrs`
 /// between nodes `tail_name` and `head_name` of root graph `env.graph_name`.
+/// [`edge_label_geometry`] for the edge `id`, whose fonts are interned once per layout
+/// (`font::textfont_object`).
+pub fn edge_label_geometry_of(
+    id: u64,
+    attrs: &AttrMap,
+    tail_name: &str,
+    head_name: &str,
+    directed: bool,
+    env: &NodeSizeEnv<'_>,
+) -> EdgeLabelGeometry {
+    let tag = format!("edge:{tail_name}->{head_name}#{id}");
+    graphviz_pure_core::font::textfont_object(tag, || {
+        edge_label_geometry(attrs, tail_name, head_name, directed, env)
+    })
+}
+
 pub fn edge_label_geometry(
     attrs: &AttrMap,
     tail_name: &str,
