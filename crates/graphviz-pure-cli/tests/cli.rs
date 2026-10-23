@@ -2936,11 +2936,25 @@ fn render_warnings_are_worded_like_c() {
         ),
         "{err}"
     );
+    // `parseSegs` reports only the first bad color spec of the process (`static atomic_flag
+    // warned`): the later ones say nothing.
+    let (_, err, _) = run(
+        &["-Tsvg"],
+        "digraph { a [style=filled fillcolor=\"red;0.8:blue;0.7\"]; \
+         b [style=filled fillcolor=\"red;x:blue\"]; c [style=filled fillcolor=\"red;x:blue\"] }",
+    );
+    assert_eq!(
+        err,
+        "Warning: Total size > 1 in \"red;0.8:blue;0.7\" color spec Warning: red;0.8 is not a \
+         known color.\nWarning: red;x is not a known color.\n"
+    );
 }
 
 // Issue #150 (its message only): `init_nop` reports a node with no position and
 // `neato_layout` continues the message with `agerr(AGPREV, ...)`, on a second line, as
-// C 16.1.0 does. `-q2` drops both lines, the continuation at the level of the first.
+// C 16.1.0 does. `-q2` drops both lines, the continuation at the level of the first. The port's
+// `Layout computation error` line after them goes with the fatal `LayoutError`, which the
+// `-n` rework (C8, the rest of #150) replaces.
 #[test]
 fn neato_n_missing_pos_is_reported_on_two_lines_like_c() {
     let src = "graph A { a; b [pos=\"0,0\"] }";

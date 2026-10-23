@@ -24,7 +24,8 @@ pub enum AgErrLevel {
     Warn,
     /// `AGERR`: `Error: ...`.
     Err,
-    /// `AGMAX`: reported as an error; as the [`agseterr`] level it turns every message off.
+    /// `AGMAX`: counted as an error but written as `Warning: ...`; as the [`agseterr`] level
+    /// it turns every message off.
     Max,
     /// `AGPREV`: continues the previous message, at its level and with no prefix.
     Prev,
@@ -118,8 +119,10 @@ fn agerr_va(level: AgErrLevel, msg: &str) -> Option<Vec<u8>> {
     // `out`: the prefix and the message each go through `default_usererrf`.
     let text = match level {
         AgErrLevel::Prev => Cow::Borrowed(msg),
-        AgErrLevel::Err | AgErrLevel::Max => Cow::Owned(format!("Error: {msg}")),
-        AgErrLevel::Warn => Cow::Owned(format!("Warning: {msg}")),
+        // `level == AGERR ? "Error" : "Warning"`: an AGMAX message counts as an error but
+        // is written as a warning.
+        AgErrLevel::Err => Cow::Owned(format!("Error: {msg}")),
+        AgErrLevel::Warn | AgErrLevel::Max => Cow::Owned(format!("Warning: {msg}")),
     };
     Some(usererr_bytes(&text))
 }
@@ -253,7 +256,7 @@ mod tests {
         let old = agseterr(AgErrLevel::Err);
         assert_eq!(out(AgErrLevel::Warn, "w\n"), None);
         assert_eq!(out(AgErrLevel::Err, "e\n").as_deref(), Some("Error: e\n"));
-        assert_eq!(out(AgErrLevel::Max, "m\n").as_deref(), Some("Error: m\n"));
+        assert_eq!(out(AgErrLevel::Max, "m\n").as_deref(), Some("Warning: m\n"));
         agseterr(AgErrLevel::Max);
         assert_eq!(out(AgErrLevel::Err, "e\n"), None);
         assert_eq!(error_count(), 3);

@@ -31,8 +31,14 @@ fn aeq0(x: f64) -> bool {
     x < 1e-5 && x > -1e-5
 }
 
-/// `parseSegs`: `Err(1|2)` on error, `Ok((segs, rval))` with `rval` 0 or 3.
+/// `parseSegs`: `Err(1|2)` on error, `Ok((segs, rval))` with `rval` 0 or 3. Like C's
+/// `static atomic_flag warned`, only the first bad spec reports (2, 3); later ones give 1
+/// and 0.
 pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
+    thread_local! {
+        static WARNED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    let test_and_set = || WARNED.with(|w| w.replace(true));
     let mut segs: Vec<ColorSeg> = Vec::new();
     let mut left = 1.0f64;
     let mut rval = 0;
@@ -44,6 +50,9 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
                 match super::attrs::strtod(rest) {
                     Some((v, _)) if v >= 0.0 => (&tok[..i], v),
                     _ => {
+                        if test_and_set() {
+                            return Err(1);
+                        }
                         agerrorf(&format!(
                             "Illegal value in \"{clrs}\" color attribute; float expected after ';'\n"
                         ));
@@ -55,7 +64,7 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
         let mut v = v;
         let del = v - left;
         if del > 0.0 {
-            if !aeq0(del) {
+            if !aeq0(del) && !test_and_set() {
                 // C's message has no newline: the next one continues the line.
                 agwarningf(&format!("Total size > 1 in \"{clrs}\" color spec "));
                 rval = 3;
@@ -416,7 +425,12 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let mut delims = a.get("layersep").unwrap_or(":\t ").to_string();
         let mut list_delims = a.get("layerlistsep").unwrap_or(",").to_string();
         // strpbrk(layerDelims, layerListDelims)
-        if let Some(tok) = delims.chars().find(|&c| list_delims.contains(c)) {
+        if let Some(tok) = delims.bytes().find(|b| list_delims.as_bytes().contains(b)) {
+            // `'%c'` of `*tok`: one byte, which need not be a whole character.
+            let tok = match tok {
+                b if b.is_ascii() => b as char,
+                b => graphviz_pure_core::charset::raw_char(b),
+            };
             agwarningf(&format!(
                 "The character '{tok}' appears in both the layersep and layerlistsep attributes - layerlistsep ignored.\n"
             ));

@@ -188,16 +188,9 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
             opts.layout.nop = 1;
             continue;
         }
-        let digits: String = rest
-            // atoi skips C's isspace only.
-            .trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r'])
-            .chars()
-            .enumerate()
-            .take_while(|(i, c)| c.is_ascii_digit() || (*i == 0 && *c == '+'))
-            .map(|(_, c)| c)
-            .collect();
-        match digits.parse::<i64>() {
-            Ok(n) if n > 0 => opts.layout.nop = n.min(255) as u8,
+        // `Nop = atoi(arg + 2)`, an error when not positive.
+        match atoi(&rest) {
+            n if n > 0 => opts.layout.nop = n.min(255) as u8,
             _ => {
                 agerrorf(&format!("Invalid parameter \"{rest}\" for -n flag\n"));
                 fprintf_stderr(&usage(argv0));
