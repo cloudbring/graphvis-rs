@@ -259,10 +259,14 @@ pub fn usershape_loads(name: Option<&str>) -> bool {
     true
 }
 
-/// `user_init`'s `%%BoundingBox: %d %d %d %d` scan, line by line as `fgets` reads them
-/// (`BUFSIZ` is 1024 on the reference platform).
+/// `user_init`'s scan of the file, line by line as `fgets` reads them (`BUFSIZ` is 1024 on
+/// the reference platform): every `sscanf` stores the numbers it matches, so the last
+/// `%%BoundingBox` line wins, and the scan stops early only once it has also seen a line
+/// that is not a comment and contains `read` (`must_inline`).
 fn bounding_box(data: &[u8]) -> Option<[i32; 4]> {
     const BUFSIZ: usize = 1024;
+    let mut bb = [0i32; 4];
+    let (mut saw_bb, mut must_inline) = (false, false);
     let mut rest = data;
     while !rest.is_empty() {
         let len = rest
@@ -272,38 +276,59 @@ fn bounding_box(data: &[u8]) -> Option<[i32; 4]> {
             .map_or(rest.len().min(BUFSIZ - 1), |i| i + 1);
         let (line, tail) = rest.split_at(len);
         rest = tail;
-        if let Some(bb) = scan_bounding_box(line) {
-            return Some(bb);
+        if scan_bounding_box(line, &mut bb) == 4 {
+            saw_bb = true;
+        }
+        if line.first() != Some(&b'%') && line.windows(4).any(|w| w == b"read") {
+            must_inline = true;
+        }
+        if saw_bb && must_inline {
+            break;
         }
     }
-    None
+    saw_bb.then_some(bb)
 }
 
-/// `sscanf(line, "%%%%BoundingBox: %d %d %d %d", ...) == 4`.
-fn scan_bounding_box(line: &[u8]) -> Option<[i32; 4]> {
-    let mut s = line.strip_prefix(b"%%BoundingBox:")?;
-    let mut v = [0i32; 4];
-    for x in &mut v {
-        // a space in the format, and %d, skip white space
-        let ws = s.iter().take_while(|c| c.is_ascii_whitespace()).count();
-        s = &s[ws..];
+/// `isspace` in the C locale.
+fn c_isspace(c: u8) -> bool {
+    matches!(c, b' ' | b'\t' | b'\n' | 0x0B | 0x0C | b'\r')
+}
+
+/// `sscanf(line, "%%%%BoundingBox: %d %d %d %d", ...)`: stores each number it matches in
+/// `v` and returns how many. `%%` skips white space before its `%`, as conversions do.
+fn scan_bounding_box(line: &[u8], v: &mut [i32; 4]) -> usize {
+    let skip = |s: &[u8]| s.iter().take_while(|&&c| c_isspace(c)).count();
+    let mut s = line;
+    for _ in 0..2 {
+        s = &s[skip(s)..];
+        match s.strip_prefix(b"%") {
+            Some(t) => s = t,
+            None => return 0,
+        }
+    }
+    let Some(t) = s.strip_prefix(b"BoundingBox:") else {
+        return 0;
+    };
+    s = t;
+    for (k, x) in v.iter_mut().enumerate() {
+        s = &s[skip(s)..];
         let sign = usize::from(matches!(s.first(), Some(b'+' | b'-')));
         let digits = s[sign..].iter().take_while(|c| c.is_ascii_digit()).count();
         if digits == 0 {
-            return None;
+            return k;
         }
         let mut n: i64 = 0;
         for &d in &s[sign..sign + digits] {
             n = n.saturating_mul(10).saturating_add(i64::from(d - b'0'));
         }
-        if s[0] == b'-' {
+        if s.first() == Some(&b'-') {
             n = -n;
         }
         // strtol's long, stored into an int
         *x = n as i32;
         s = &s[sign + digits..];
     }
-    Some(v)
+    4
 }
 
 /// `epsf_init`: the `%%BoundingBox` (`lx ly ux uy`) of a `shape=epsf` node's `shapefile`,
@@ -333,7 +358,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bounding_box_follows_sscanf() {
+    fn bounding_box_follows_user_init() {
         assert_eq!(
             bounding_box(b"%!PS\n%%BoundingBox: 10 20 110 70\n"),
             Some([10, 20, 110, 70])
@@ -342,10 +367,31 @@ mod tests {
             bounding_box(b"%%BoundingBox:-1 +2\t3   4 junk"),
             Some([-1, 2, 3, 4])
         );
-        // not at the start of a line, or incomplete
-        assert_eq!(bounding_box(b" %%BoundingBox: 1 2 3 4\n"), None);
+        // sscanf skips white space (\v too) before `%%` and before each number
+        assert_eq!(
+            bounding_box(b" %%BoundingBox:\x0b1 2 30 40\n"),
+            Some([1, 2, 30, 40])
+        );
+        assert_eq!(
+            bounding_box(b"% %BoundingBox: 1 2 30 40\n"),
+            Some([1, 2, 30, 40])
+        );
         assert_eq!(bounding_box(b"%%BoundingBox: (atend)\n"), None);
         assert_eq!(bounding_box(b"%%BoundingBox: 1 2 3\n"), None);
+        // the last line wins, and a partial match overwrites the numbers it matched
+        assert_eq!(
+            bounding_box(b"%%BoundingBox: 0 0 100 50\n%%BoundingBox: 10 10 30 40\n"),
+            Some([10, 10, 30, 40])
+        );
+        assert_eq!(
+            bounding_box(b"%%BoundingBox: 0 0 100 50\n%%BoundingBox: 7 8 (atend)\n"),
+            Some([7, 8, 100, 50])
+        );
+        // ... unless a non-comment line with `read` came before
+        assert_eq!(
+            bounding_box(b"%%BoundingBox: 0 0 100 50\nreadimage\n%%BoundingBox: 1 1 2 2\n"),
+            Some([0, 0, 100, 50])
+        );
     }
 
     #[test]

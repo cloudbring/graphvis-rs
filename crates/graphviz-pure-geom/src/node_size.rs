@@ -440,10 +440,13 @@ fn node_geometry_measured(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometr
         && !matches!(shape_name, "box" | "rect" | "rectangle");
     // `ND_shape(n)->usershape`: `custom`, by shapefile or by name.
     let usershape = custom || shape_name == "custom";
-    if usershape {
-        usershape::register_user_shape("custom");
-    } else if unknown {
-        usershape::register_user_shape(shape_name);
+    // (once, as C binds each node's shape once: not in the port's repeat sizings)
+    if graphviz_pure_core::diag::reporting() {
+        if usershape {
+            usershape::register_user_shape("custom");
+        } else if unknown {
+            usershape::register_user_shape(shape_name);
+        }
     }
     // user_shape (shapes.c:3955-3962): a name outside the Shapes table becomes a copy of
     // `box`, with a warning the first time the name is seen.

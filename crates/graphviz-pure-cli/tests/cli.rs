@@ -4099,6 +4099,28 @@ fn epsf_without_a_loadable_shapefile_draws_nothing() {
     assert!(dot.contains("width=1.3889]"), "{dot}");
 }
 
+// An epsf node has no polygon, so `makeAddPoly`/`makePoly` (`lib/neatogen/poly.c:189, 258`)
+// report it and `makeInfo` fails: `removeOverlapWith` gives up on the overlaps (C then
+// crashes, #265). The port used to index the missing polygon and panic.
+#[test]
+fn voronoi_overlap_reports_an_epsf_node_like_c() {
+    for (sep, f) in [("", "makeAddPoly"), ("sep=0.5;", "makePoly")] {
+        let src = format!("graph {{ overlap=voronoi; {sep} a [shape=epsf]; b; a -- b }}");
+        for engine in ["neato", "fdp"] {
+            let (err, ok) = warnings(engine, &src);
+            assert!(!ok, "{engine}");
+            assert_eq!(
+                err,
+                format!(
+                    "Warning: shapefile not set or not found for epsf node a\n\
+                     Error: {f}: unknown shape type epsf\n"
+                ),
+                "{engine}"
+            );
+        }
+    }
+}
+
 // Issue #131: expat rejects bytes that are not UTF-8. A character cut off at the end of a
 // `findNext` unit waits for more input (`a`'s is reported with the next unit, `</B>`), and a
 // partial tag is parsed again only once its bytes have doubled (`b`'s waits past `x`).

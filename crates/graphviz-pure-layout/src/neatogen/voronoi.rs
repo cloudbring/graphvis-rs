@@ -73,8 +73,9 @@ fn gen_round(g: &LGraph<'_>, n: usize, xm: f64, ym: f64) -> Vec<Point> {
         .collect()
 }
 
-/// `makeAddPoly` (additive margin, inches) or `makePoly` (scale factors).
-fn make_poly(g: &LGraph<'_>, n: usize, xm: f64, ym: f64, add: bool) -> Poly {
+/// `makeAddPoly` (additive margin, inches) or `makePoly` (scale factors). `None`, with C's
+/// error, for a shape `shapeOf` does not know (`epsf`).
+fn make_poly(g: &LGraph<'_>, n: usize, xm: f64, ym: f64, add: bool) -> Option<Poly> {
     let nd = &g.nodes[n];
     let sh = &nd.shape;
     let mut pp = Poly::default();
@@ -122,6 +123,14 @@ fn make_poly(g: &LGraph<'_>, n: usize, xm: f64, ym: f64, add: bool) -> Poly {
                     ]
                 };
                 pp.kind = BOX;
+            }
+            InsideFn::Epsf => {
+                let f = if add { "makeAddPoly" } else { "makePoly" };
+                graphviz_pure_core::diag::agerrorf(&format!(
+                    "{f}: unknown shape type {}\n",
+                    sh.name
+                ));
+                return None;
             }
             InsideFn::Point => {
                 pp.kind = CIRCLE;
@@ -197,7 +206,7 @@ fn make_poly(g: &LGraph<'_>, n: usize, xm: f64, ym: f64, add: bool) -> Poly {
     pp.origin = o;
     pp.corner = c;
     pp.verts = verts;
-    pp
+    Some(pp)
 }
 
 fn area_2(a: Point, b: Point, c: Point) -> f64 {
@@ -1190,17 +1199,23 @@ pub fn adjust(g: &mut LGraph<'_>, sub: &Sub, mode: AdjustMode) -> bool {
         pmargin.x /= 72.0;
         pmargin.y /= 72.0;
     }
-    let mut info: Vec<Info> = sub
+    // makeInfo: the first node without a polygon fails it, and removeOverlapWith gives up
+    let Some(mut info) = sub
         .nodes
         .iter()
-        .map(|&n| Info {
-            coord: Point::new(g.nodes[n].pos[0], g.nodes[n].pos[1]),
-            poly: make_poly(g, n, pmargin.x, pmargin.y, add),
-            verts: Vec::new(),
-            overlaps: false,
-            node: n,
+        .map(|&n| {
+            Some(Info {
+                coord: Point::new(g.nodes[n].pos[0], g.nodes[n].pos[1]),
+                poly: make_poly(g, n, pmargin.x, pmargin.y, add)?,
+                verts: Vec::new(),
+                overlaps: false,
+                node: n,
+            })
         })
-        .collect();
+        .collect::<Option<Vec<Info>>>()
+    else {
+        return false;
+    };
     // chkBoundBox
     let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, -f64::MAX, -f64::MAX);
     for ip in &info {

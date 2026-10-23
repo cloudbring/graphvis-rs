@@ -1313,7 +1313,19 @@ fn lex(s: &[u8]) -> (Lexed, Option<HtmlError>) {
         let token = bad.map(|(o, n)| (if is_tag { 0 } else { o }, o + n));
         let fed = expat.parse(len, token, cr);
         let r = match fed {
-            Fed::Error => return Err((NOT_WELL_FORMED.to_string(), u, bad_line)),
+            Fed::Error => {
+                // expat first rejects anything wrong in the text before the character; the
+                // text's own token is lost to the error (`T_error` replaces `T_string`)
+                if let Some((o, _)) = bad
+                    && !is_tag
+                    && o > 0
+                {
+                    let ntoks = lx.toks.len();
+                    lx.unit(&data[..o], false).map_err(|msg| (msg, u, None))?;
+                    lx.toks.truncate(ntoks);
+                }
+                return Err((NOT_WELL_FORMED.to_string(), u, bad_line));
+            }
             Fed::Waiting => Ok(()),
             Fed::Parsed => match bad {
                 None => lx.unit(data, is_tag),
@@ -2803,6 +2815,9 @@ mod tests {
                 String::from_utf8_lossy(label)
             );
         }
+        // an error in the text before the character comes first
+        let (msg, _) = encoding_error(b"x&#0;\ny\xe9ab", Charset::Utf8);
+        assert_eq!(msg, "reference to invalid character number in line 1 \n");
         // expat counts lines up to the byte it rejects
         let (msg, _) = encoding_error(b"x\n\ny\xe9<BR/>z", Charset::Utf8);
         assert_eq!(msg, "not well-formed (invalid token) in line 3 \n");

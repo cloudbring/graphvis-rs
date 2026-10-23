@@ -88,7 +88,11 @@ pub fn layout_graph_with_options(
     );
     graphviz_pure_core::usershape::begin_layout(
         graph.graph_attrs.get("imagepath").map(String::as_str),
-        graph.node_defaults.contains_key("shapefile")
+        graph
+            .dicts
+            .first()
+            .is_some_and(|d| d.node.contains_key("shapefile"))
+            || graph.node_defaults.contains_key("shapefile")
             || graph
                 .nodes
                 .iter()
