@@ -969,10 +969,7 @@ impl Dot<'_> {
             }
             return Ok(());
         }
-        // The aux graph's dot_init_node_edge sizes copies of the nodes and edges again. C
-        // repeats some of their diagnostics there, through attribute symbols that are stale
-        // in the aux graph; the port reports each one once.
-        graphviz_pure_core::diag::quietly(|| self.make_flat_adj_edges_aux(edges, tn, hn, et))
+        self.make_flat_adj_edges_aux(edges, tn, hn, et)
     }
 
     /// The recursive-dot part of `make_flat_adj_edges` (edges with ports):
@@ -1110,8 +1107,10 @@ impl Dot<'_> {
             aux.edge_defaults.remove(k);
         }
         // The aux graph's objects are measured afresh, as C's dot_init_node_edge(auxg) does.
+        // Its diagnostics print there, below, through the symbols above: C repeats the
+        // label diagnostics of the copies, but not `size too small for label` (N_fixed).
         let _fonts = graphviz_pure_core::font::textfont_other_graph();
-        graphviz_pure_geom::size_graph_nodes(&mut aux);
+        graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::size_graph_nodes(&mut aux));
 
         let mut d = Dot::new(&aux);
         d.graphs[0].rankdir = if flip { RANKDIR_TB } else { RANKDIR_LR };

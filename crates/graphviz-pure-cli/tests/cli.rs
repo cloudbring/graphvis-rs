@@ -1835,6 +1835,58 @@ edge [label_float=\"true\"];
     }
 }
 
+// Issue #144: make_flat_adj_edges runs dot_init_node_edge on its aux graph, so C prints the
+// label diagnostics of the copied nodes and edges again (dotsplines.c:1208). The aux graph
+// reads `fixed`, not `fixedsize`, and has no xlabel or headlabel symbol, so `size too small
+// for label` and the xlabel and headlabel warnings print once.
+#[test]
+fn flat_adjacent_aux_graph_repeats_label_diagnostics_like_c() {
+    let src = "digraph G { {rank=same; a -> b [label=<<FONT Z=\"2\">x</FONT>>, \
+               headlabel=<<FONT H=\"1\">h</FONT>>, tailport=\"e\"];} \
+               a [label=<<FONT Q=\"1\">a</FONT>>, xlabel=<<FONT W=\"2\">w</FONT>>]; \
+               b [shape=box, fixedsize=true, width=0.75, height=0.1, label=\"abcdefghij\"]; }\n";
+    let (_, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: Illegal attribute Q in <FONT> - ignored\n\
+         in label of node a\n\
+         Warning: Illegal attribute W in <FONT> - ignored\n\
+         in label of node a\n\
+         Warning: node 'b', graph 'G' size too small for label\n\
+         Warning: Illegal attribute Z in <FONT> - ignored\n\
+         in label of edge a -> b\n\
+         Warning: Illegal attribute H in <FONT> - ignored\n\
+         in label of edge a -> b\n\
+         Warning: Illegal attribute Q in <FONT> - ignored\n\
+         in label of node a\n\
+         Warning: Illegal attribute Z in <FONT> - ignored\n\
+         in label of edge a -> b\n"
+    );
+}
+
+// Issue #105: with pack, doDot runs cccomps before dotLayout's dot_init_node_edge sizes the
+// nodes, so its `two non-nested clusters` error comes before the font warning, with one
+// component and with several.
+#[test]
+fn pack_cccomps_error_precedes_node_sizing_warnings_like_c() {
+    for extra in ["", " y"] {
+        let src = format!(
+            "digraph G {{ pack=true; node [fontname=Bookman]; \
+             subgraph cluster_a {{ x }} subgraph cluster_b {{ x }}{extra} }}\n"
+        );
+        let (_, err, _) = run(&["-Kdot", "-Tsvg"], &src);
+        assert_eq!(
+            err,
+            "Error: node \"x\" belongs to two non-nested clusters \"cluster_b\" and \
+             \"cluster_a\"\n\
+             Warning: Warning: no hard-coded metrics for 'Bookman'.  Falling back to 'Times' \
+             metrics\n",
+            "{src}"
+        );
+    }
+}
+
 // Issue #21: `label_float` declared after the edge. cgraph gives the existing edge ""
 // (not the later default), `cloneEdge` copies that, and the label does not float.
 #[test]
