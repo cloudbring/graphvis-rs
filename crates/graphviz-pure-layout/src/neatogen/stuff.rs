@@ -109,7 +109,7 @@ fn lenattr(g: &LGraph<'_>, e: usize, declared: bool) -> Result<f64, bool> {
     if s.is_empty() {
         return Err(false);
     }
-    // Nop is never set here: `neato -n` does not reach scan_graph_mode.
+    // Nop is never set here: `neato -n` has [`nop_check_edge_lens`].
     match scan_lf(s) {
         Some((v, _)) if v > 0.0 || v.is_nan() => Ok(v),
         _ => {
@@ -186,16 +186,47 @@ pub fn scan_graph_mode(
     (nv, kk)
 }
 
+/// `initial_positions`' warning for `start=self`, once per process (C's `static atomic_flag
+/// once`). KK and sgd both reach it.
+pub(super) fn warn_start_self(init: i32) {
+    if init == INIT_SELF && graphviz_pure_core::diag::emit_once("\0neato\0start=self") {
+        graphviz_pure_core::diag::agwarningf("start=0 not supported with mode=self - ignored\n");
+    }
+}
+
+/// `scan_graph`'s `setEdgeLen` under `neato -n` (`Nop`, where `len=0` is good): of its work
+/// only the `bad edge len` warnings show. Edges go by tail, as `agfstout` gives them.
+pub fn nop_check_edge_lens(graph: &graphviz_pure_core::Graph) {
+    let declared = graph.edge_defaults.contains_key("len")
+        || graph.edges.iter().any(|e| e.attrs.contains_key("len"));
+    if !declared {
+        return;
+    }
+    let name = if graph.name.is_empty() {
+        "%1"
+    } else {
+        graph.name.as_str()
+    };
+    let mut by_tail: Vec<&graphviz_pure_core::EdgeData> = graph.edges.iter().collect();
+    by_tail.sort_by_key(|e| e.tail.0);
+    for e in by_tail {
+        let Some(s) = e.attrs.get("len").filter(|s| !s.is_empty()) else {
+            continue;
+        };
+        if !matches!(scan_lf(s), Some((v, _)) if v >= 0.0 || v.is_nan()) {
+            graphviz_pure_core::diag::agwarningf(&format!("bad edge len \"{s}\""));
+            graphviz_pure_core::diag::agerr_prev(&format!(" in {name} - setting to 1.00\n"));
+        }
+    }
+}
+
 /// `initial_positions(G, nG)` for KK.
 fn initial_positions(g: &mut LGraph<'_>, sub: &Sub, ng: usize, p: &NeatoParams) {
     let init = super::neatoinit::check_start(g, sub, ng, INIT_RANDOM, p);
     if init == INIT_REGULAR {
         return;
     }
-    // C's `static atomic_flag once`: once per process.
-    if init == INIT_SELF && graphviz_pure_core::diag::emit_once("\0neato\0start=self") {
-        graphviz_pure_core::diag::agwarningf("start=0 not supported with mode=self - ignored\n");
-    }
+    warn_start_self(init);
     for &np in &sub.nodes {
         if has_pos(g, np) {
             continue;

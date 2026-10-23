@@ -142,10 +142,14 @@ impl Dot<'_> {
 
     /// `makeCompoundEdge(e, clustMap)`.
     fn make_compound_edge(&mut self, e: E, map: &BTreeMap<String, G>) {
+        // `getCluster`
         let get = |k: &str| {
-            self.edge_attr(e, k)
-                .filter(|s| !s.is_empty())
-                .and_then(|s| map.get(s).copied())
+            let s = self.edge_attr(e, k).filter(|s| !s.is_empty())?;
+            let c = map.get(s).copied();
+            if c.is_none() {
+                graphviz_pure_core::diag::agwarningf(&format!("cluster named {s} not found\n"));
+            }
+            c
         };
         let lh = get("lhead");
         let lt = get("ltail");

@@ -4398,6 +4398,91 @@ fn neato_kk_disconnected_circuit_model_warns_like_c() {
     );
 }
 
+// Cause C22, review of #318: the `splines` warning once under `-x` and `-n` (the port's
+// repeat graphs are built `silently`); compound.c's `getCluster`; fdp's `start=self`
+// (tlayout.c); sgd's `initial_positions`; and `scan_graph`'s `bad edge len` under `-n`, where
+// `len=0` is good.
+#[test]
+fn review_c22_siblings_like_c() {
+    for (args, src, want, code) in [
+        (
+            &["-Kneato", "-x", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b -- c -- a; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n", "-Tplain"][..],
+            "graph G { splines=bogus; node [pos=\"0,0\"]; a -- b; b [pos=\"100,100\"] }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n2", "-Tplain"][..],
+            "graph G { splines=bogus; node [pos=\"0,0\"]; a -- b; b [pos=\"100,100\"] }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kpatchwork", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph { compound=true; subgraph cluster_a { a } b -> a [lhead=cluster_zz, ltail=nope] }",
+            "Warning: cluster named cluster_zz not found\nWarning: cluster named nope not found\n",
+            0,
+        ),
+        (
+            &["-Kfdp", "-Tplain"][..],
+            "graph { start=self; a -- b }",
+            "Warning: fdp does not support start=self - ignoring\n",
+            0,
+        ),
+        (
+            &["-Kfdp", "-Tplain"][..],
+            "graph { start=self; subgraph cluster_x { a -- b } c -- a }",
+            "Warning: fdp does not support start=self - ignoring\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Gmode=sgd", "-Tplain"][..],
+            "graph { start=self; a -- b }",
+            "Warning: start=0 not supported with mode=self - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Gmode=sgd", "-Tplain"][..],
+            "graph { start=self; a -- b; c -- d }",
+            "Warning: start=0 not supported with mode=self - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n", "-Tplain"][..],
+            "graph G { node [pos=\"0,0\"]; a -- b [len=-1]; b -- c [len=0]; c -- d [len=abc] }",
+            "Warning: bad edge len \"-1\" in G - setting to 1.00\nWarning: bad edge len \"abc\" in G - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n", "-Tplain"][..],
+            "graph G { node [pos=\"0,0\"]; c -- a [len=-3]; a -- b [len=-1]; b -- c [len=x] }",
+            "Warning: bad edge len \"-3\" in G - setting to 1.00\nWarning: bad edge len \"-1\" in G - setting to 1.00\nWarning: bad edge len \"x\" in G - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n2", "-Tplain"][..],
+            "graph { node [pos=\"0,0\"]; a -- b [len=-1] }",
+            "Warning: bad edge len \"-1\" in %1 - setting to 1.00\n",
+            0,
+        ),
+    ] {
+        let (_, err, status) = run_in(&std::env::temp_dir(), args, src);
+        assert_eq!((err.as_str(), status), (want, code), "{args:?} {src}");
+    }
+}
+
 // Issue #311 (C22): `legal.c`'s `find_ints` reports a backward edge with no active line as an
 // error, so the exit status is 1, and the arrangement is illegal (straight lines), as in C.
 #[test]

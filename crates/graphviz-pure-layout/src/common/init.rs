@@ -428,7 +428,6 @@ impl<'a> LGraph<'a> {
     }
 }
 
-/// `edgeType` in `lib/common/utils.c`.
 /// `setEdgeType(gc, EDGETYPE_LINE)` on a component of neato or sfdp: the component's type
 /// is the root's, already set, but C reads `splines` again and warns again.
 pub fn component_set_edge_type(g: &LGraph<'_>) {
@@ -437,6 +436,8 @@ pub fn component_set_edge_type(g: &LGraph<'_>) {
     }
 }
 
+/// `edgeType` in `lib/common/utils.c`. Its warning is not repeated inside
+/// [`graphviz_pure_core::diag::silently`], where the port builds a graph C builds once.
 pub fn edge_type_of(s: &str, dflt: EdgeType) -> EdgeType {
     let b = s.as_bytes();
     if b.is_empty() {
@@ -458,9 +459,11 @@ pub fn edge_type_of(s: &str, dflt: EdgeType) -> EdgeType {
         "polyline" => EdgeType::Pline,
         "spline" | "true" | "yes" => EdgeType::Spline,
         _ => {
-            graphviz_pure_core::diag::agwarningf(&format!(
-                "Unknown \"splines\" value: \"{s}\" - ignored\n"
-            ));
+            if graphviz_pure_core::diag::reporting_ports() {
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "Unknown \"splines\" value: \"{s}\" - ignored\n"
+                ));
+            }
             dflt
         }
     }
