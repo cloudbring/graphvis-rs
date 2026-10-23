@@ -283,9 +283,15 @@ dot
     is made (grammar.y `mkport`), so the symbol ids those stale lookups use count it.
     This was open case `007-dot-port-endpoint-attr-sym-id` (issue #16); its repro is kept
     in `crates/graphviz-pure-cli/tests/cli.rs`
-    (`port_endpoint_declares_its_edge_attribute_like_mkport`). 9 of its 11 fuzz cases now
-    match C. Seeds 10107 and 33649 still differ in one flat-edge spline (C warns
-    `Unable to reclaim box space` on 33649), a separate cause: issue #84.
+    (`port_endpoint_declares_its_edge_attribute_like_mkport`). All 11 of its fuzz cases now
+    match C; the last two, seeds 10107 and 33649, once the stale symbols were read after the
+    heavy edge gets `weight=10000` (issue #84).
+  * The stale symbols are read when `dot_init_node_edge(auxg)` runs, after the heavy edge
+    gets `weight=10000`. An object made before an attribute was declared holds `""` for it
+    (cgraph declares the attribute with `""`, then sets the default), so its aux copy
+    reads `""`, not the later default (issue #113).
+  * `-N`/`-E` defaults are declared on cgraph's ProtoGraph, which `auxg` copies with the main
+    graph's ids, so they come before the attributes declared in name order.
   * `E_label_float` is looked up as `label_float`, so `labelfloat` is ignored there (was
     open case `012-dot-flat-adj-labelfloat`, issue #21).
 * In the pack branch, edges are mapped only when a component routed splines.

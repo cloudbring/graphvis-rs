@@ -1618,6 +1618,66 @@ a -> b [label=\"lbl\"];
     assert_eq!(out.matches("class=\"edge\"").count(), 1, "{out}");
 }
 
+// Issues #84 and #113 (cause:aux-graph). The flat adjacent edges with a port are laid out in
+// make_flat_adj_edges' aux graph, which declares the main attributes in name order while
+// E_penwidth, E_arrowsz and N_penwidth keep the main graph's symbol ids. #84: E_penwidth's id
+// is the aux `weight`, read after the heavy edge `s -> n` gets weight=10000, so its arrow clip
+// is huge and C cuts the spline down to a fraction of a point. #113: `fixed` is declared after
+// node "2" was made, so the node holds "" and its aux copy is not fixedsize.
+#[test]
+fn flat_adjacent_aux_graph_reads_symbols_by_main_id_like_c() {
+    let cases = [
+        (
+            "digraph G {
+edge [weight=5, constraint=false];
+s -> n;
+s -> n [headclip=false, headport=w];
+c -> d [fontcolor=blue, penwidth=3.99];
+}
+",
+            "d=\"M54.46,-18C54.55,-18 54.64,-18 54.73,-18\"",
+        ),
+        (
+            "digraph G { {rank=same; \"2\" [label=\"a long label here\"]; \"2\" -> \"10\" [label=\"x\", tailport=\"e\"];} node[fixed=true]; }",
+            "d=\"M150.24,-18C158.3,-18 157.03,-26.42 164.68,-29 167.62,-29.99 168.59,-29.41 \
+             171.68,-29 173.56,-28.75 175.48,-28.43 177.41,-28.07\"",
+        ),
+    ];
+    for (src, path) in cases {
+        let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+        assert!(ok, "{src}: {err}");
+        assert!(out.contains(path), "{src}: {out}");
+    }
+    // `label` is the ProtoGraph's node symbol 0, so `aaa` is id 1 in both graphs and
+    // N_penwidth (id 2) reads `penwidth`; sorted by name, id 2 would be `label`.
+    let src = "digraph G { node [penwidth=1, aaa=9, shape=box]; {rank=same; a -> b [tailport=e]; a -> b [label=x];} }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    for path in [
+        "d=\"M54,-18C64.27,-18 59.23,-31.57 68.5,-36 70.21,-36.82 71.31,-36.88 74.95,-35.97\"",
+        "d=\"M58.07,-15.69C61.58,-15.49 65.12,-15.32 68.5,-15.2 70.4,-15.13 72.35,-15.1 74.31,-15.1\"",
+    ] {
+        assert!(out.contains(path), "{out}");
+    }
+    // `-G` attributes reach auxg through the ProtoGraph: the aux layout orders its edges.
+    let src = "graph G { node [shape=box]; {rank=same; a -- b [tailport=s, label=\"long label one\", headlabel=\"H\"]; a -- b [headport=n, label=\"two\"]; a -- b [headport=s, label=\"three\", taillabel=\"T\"];} c -- a; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg", "-Gordering=out"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"213pt\" height=\"159pt\""),
+        "{out}"
+    );
+    // `-E` declares `penwidth` on cgraph's ProtoGraph, so it keeps id 0 in auxg too, and
+    // E_penwidth reads itself; sorted by name, id 0 would be `arrowsize` (3).
+    let src = "digraph G { edge [arrowsize=3]; {rank=same; a -> b [tailport=e];} }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg", "-Epenwidth=1"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("d=\"M54,-18C54.1,-17.95 54.2,-17.91 54.29,-17.87\""),
+        "{out}"
+    );
+}
+
 /// Issue #138: with a rotated box (or `shape=none`) and a compass port, both
 /// endpoints get triangle edges but `triPath` never reaches the tail, so the
 /// `dad` walk in C's `mkPoly` (`lib/neatogen/multispline.c:968-971`) stops on a

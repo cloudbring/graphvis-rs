@@ -294,6 +294,11 @@ pub struct AttrSym {
     /// `aghtmlstr(sym->defval)`: the default is an HTML string (its inner text).
     #[serde(default)]
     pub html_defval: bool,
+    /// Declared on cgraph's ProtoGraph (the node `label`, `-G`/`-N`/`-E`), which every root
+    /// graph copies with its ids: a graph made later, like dot's aux graph, numbers these
+    /// symbols the same way.
+    #[serde(default)]
+    pub proto: bool,
 }
 
 /// The local graph, node and edge dictionaries of one graph or subgraph.
