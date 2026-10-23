@@ -1,0 +1,193 @@
+---
+/**
+ * The home page after the hero: why someone who knows Graphviz would pick the port, and how
+ * to start using it. The figures come from src/data/fidelity.json and platforms.json.
+ */
+import { Code, TabItem, Tabs } from '@astrojs/starlight/components';
+import { fidelity, fmt, pct, url } from '../../lib/data';
+import platforms from '../../data/platforms.json';
+
+const e2e = fidelity.e2e;
+const cc = platforms.c_linux_vs_macos;
+
+const js = `npm install @graphviz-pure/wasm
+
+import init, { render } from '@graphviz-pure/wasm';
+
+await init();
+const svg = render('digraph { a -> b }', 'dot', 'svg');`;
+const workers = `import { initSync, render } from '@graphviz-pure/wasm';
+import wasm from '@graphviz-pure/wasm/graphviz_pure_wasm_bg.wasm';
+
+initSync({ module: wasm });
+const svg = render('digraph { a -> b }', 'dot', 'svg');`;
+const rust = `cargo add graphviz-pure
+
+let svg = graphviz_pure::render_dot("digraph { a -> b }", "dot", "svg")?;`;
+const cli = `brew install graphviz-pure/tap/graphviz-pure    # macOS and Linux
+cargo install graphviz-pure-cli                 # anywhere Rust runs
+
+graphviz-pure -Tsvg graph.gv -o graph.svg       # the same flags as dot`;
+const windows = `scoop bucket add graphviz-pure https://github.com/graphviz-pure/scoop-bucket
+scoop install graphviz-pure/graphviz-pure`;
+const docker = `docker run --rm -i ghcr.io/graphviz-pure/graphviz-pure -Tsvg < graph.gv > graph.svg`;
+---
+
+<div class="home">
+	<section aria-labelledby="why">
+		<h2 id="why">Why not just use Graphviz?</h2>
+		<p class="intro">
+			Graphviz has drawn graphs since 1991, and it does it very well. It is also a C program built from system libraries and plugins, which
+			makes it awkward to embed, and what it draws depends a little on the machine it runs on. graphviz-pure keeps the drawings and changes
+			the rest.
+		</p>
+		<ol class="reasons">
+			<li>
+				<h3>It draws what Graphviz draws.</h3>
+				<p>
+					It is not a lookalike. All eight layout engines were ported from the Graphviz 16.1.0 source, function by function, quirks included. On
+					a Mac, its SVG matches Graphviz's byte for byte on all <strong class="num">{fmt(e2e.apple)}</strong> graphs in the test suite.
+				</p>
+			</li>
+			<li>
+				<h3>It is one self-contained package.</h3>
+				<p>
+					A single binary for the command line, a Rust crate with no C inside, or one npm package for browsers, Node.js, Deno, Bun and
+					Cloudflare Workers. It needs no system libraries, plugins or C compiler, and it has no <code>unsafe</code> code. The WebAssembly build
+					is under 700&nbsp;KB gzipped.
+				</p>
+			</li>
+			<li>
+				<h3>It gives the same picture on every machine.</h3>
+				<p>
+					graphviz-pure writes byte-for-byte the same output on Linux, Windows, Macs and in every browser, for <strong class="num">100%</strong>
+					of the test graphs. The original C Graphviz manages only <strong class="num">{pct(cc.agree, cc.total)}</strong> between Linux and a
+					Mac. graphviz-pure does all its math in pure Rust, with the same portable math library on every platform, and CI compares every output
+					byte for byte across them. (One exception is deliberate: on Apple Silicon, the command line and the Rust crate use Apple's math, so they
+					match C Graphviz on a Mac exactly.)
+				</p>
+			</li>
+		</ol>
+	</section>
+
+	<section aria-labelledby="get-started">
+		<h2 id="get-started">Get started</h2>
+		<div class="start">
+			<div class="tabs">
+				<Tabs syncKey="install">
+					<TabItem label="JavaScript">
+						<Code code={js} lang="js" />
+						<p class="note">
+							Also on JSR for Deno. On Cloudflare Workers, import the <code>.wasm</code> file yourself:
+						</p>
+						<Code code={workers} lang="js" />
+					</TabItem>
+					<TabItem label="Rust">
+						<Code code={rust} lang="rust" />
+						<p class="note">
+							<code>render_dot</code> takes the DOT source, an engine and an output format. The <a href={url('api/')}>API docs</a> cover the
+							rest.
+						</p>
+					</TabItem>
+					<TabItem label="Command line">
+						<Code code={cli} lang="sh" />
+						<p class="note">On Windows, use Scoop:</p>
+						<Code code={windows} lang="powershell" />
+						<p class="note">Or run the container image:</p>
+						<Code code={docker} lang="sh" />
+					</TabItem>
+				</Tabs>
+			</div>
+			<ul class="facts">
+				<li><strong>Every engine:</strong> <code>dot</code>, <code>neato</code>, <code>fdp</code>, <code>sfdp</code>, <code>twopi</code>, <code>circo</code>, <code>osage</code> and <code>patchwork</code>.</li>
+				<li><strong>Every common format:</strong> SVG, JSON, DOT, xdot and plain text everywhere; PNG and JPEG from the command line.</li>
+				<li><strong>A drop-in <code>dot</code>:</strong> the <code>graphviz-pure</code> command takes the same flags as <code>dot</code> and exits with the same status.</li>
+				<li><strong>Often faster:</strong> orthogonal edges on Graphviz's large <code>b100</code> test graph take 20 seconds instead of over five minutes.</li>
+			</ul>
+		</div>
+	</section>
+</div>
+
+<style>
+	.intro {
+		max-width: 44rem;
+		color: var(--key-2);
+	}
+	.reasons {
+		list-style: none;
+		padding: 0;
+		margin: 1.5rem 0 0;
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 2rem;
+		border-top: 0.5px solid var(--rule-strong);
+		counter-reset: reason;
+	}
+	.reasons li {
+		margin: 0;
+		padding-top: 1rem;
+		counter-increment: reason;
+	}
+	.reasons h3 {
+		margin: 0 0 0.5rem;
+		font-size: var(--sl-text-lg);
+		font-weight: 650;
+		font-stretch: 112%;
+		line-height: 1.3;
+		color: var(--key);
+	}
+	.reasons h3::before {
+		content: counter(reason);
+		display: block;
+		margin-bottom: 0.5rem;
+		font-family: var(--face-mono);
+		font-size: var(--sl-text-xs);
+		font-weight: 400;
+		color: var(--register);
+	}
+	.reasons p {
+		margin: 0;
+		color: var(--key-2);
+	}
+	.reasons strong {
+		color: var(--key);
+		font-weight: 650;
+	}
+	.start {
+		display: grid;
+		grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+		gap: 2.5rem;
+		align-items: start;
+	}
+	.tabs :global(.expressive-code) {
+		margin-top: 0.75rem;
+	}
+	.note {
+		margin: 1rem 0 0;
+		font-size: var(--sl-text-sm);
+		color: var(--key-3);
+	}
+	.facts {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		border-top: 0.5px solid var(--rule-strong);
+	}
+	.facts li {
+		margin: 0;
+		padding: 0.75rem 0;
+		border-bottom: 0.5px solid var(--rule);
+		font-size: var(--sl-text-sm);
+		color: var(--key-2);
+	}
+	.facts strong {
+		color: var(--key);
+		font-weight: 650;
+	}
+	@media (max-width: 50rem) {
+		.reasons,
+		.start {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+</style>

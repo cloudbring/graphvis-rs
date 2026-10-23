@@ -521,3 +521,22 @@ nav.sidebar .top-level > li > details > summary {
 		animation-duration: 0ms !important;
 	}
 }
+
+/* ---------- Home page sections (components/home/Intro.astro, components/HomeBody.astro) ---------- */
+
+.home {
+	margin-top: 1rem;
+}
+.home h2 {
+	font-family: Times, Tinos, 'Times New Roman', serif;
+	font-size: clamp(1.5rem, 2.4vw, 2rem);
+	font-weight: 400;
+	font-stretch: 100%;
+	letter-spacing: -0.01em;
+	line-height: 1.15;
+	margin: 4rem 0 1rem;
+	color: var(--key);
+}
+.home a {
+	color: var(--register);
+}

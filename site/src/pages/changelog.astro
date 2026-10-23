@@ -1,0 +1,104 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { releases } from '../lib/changelog';
+import { blob } from '../lib/data';
+---
+
+<StarlightPage
+	frontmatter={{ title: 'Changelog', description: 'What changed in each release of graphviz-pure, read from CHANGELOG.md in the repository.' }}
+	headings={releases.map((r) => ({ depth: 2, slug: r.slug, text: r.version }))}
+>
+	<p class="intro">
+		Every release, newest first. A change to anything the port draws is always listed, so an upgrade never changes your output without saying so
+		(the <a href={blob('docs/versioning.md')}>versioning policy</a> has the rules). This page is built from{' '}
+		<a href={blob('CHANGELOG.md')}><code>CHANGELOG.md</code></a> every time the site is built.
+	</p>
+
+	{
+		releases.map((r) => (
+			<section class="release" aria-labelledby={r.slug}>
+				<header>
+					<h2 id={r.slug}>{r.version}</h2>
+					<p class="meta">
+						{r.date && <time datetime={r.date}>{r.day}</time>}
+						{r.href && <a href={r.href}>{r.date ? 'Release and downloads' : 'Changes since the last release'}</a>}
+						{r.date && r.diff && <a href={r.diff}>Full diff</a>}
+					</p>
+				</header>
+				{r.summary && <div class="summary" set:html={r.summary} />}
+				{r.sections.map((s) => (
+					<div class="group">
+						<h3>{s.title}</h3>
+						<div set:html={s.html} />
+					</div>
+				))}
+			</section>
+		))
+	}
+</StarlightPage>
+
+<style>
+	.intro {
+		color: var(--key-2);
+	}
+	.release {
+		margin-top: 3rem;
+		border-top: 0.5px solid var(--rule-strong);
+		padding-top: 1rem;
+	}
+	.release header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.25rem 1.5rem;
+	}
+	.release h2 {
+		margin: 0;
+		font-family: Times, Tinos, 'Times New Roman', serif;
+		font-weight: 400;
+		font-stretch: 100%;
+		font-size: 2rem;
+		line-height: 1.1;
+		color: var(--key);
+	}
+	.meta {
+		margin: 0 !important;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 1rem;
+		font-size: var(--sl-text-sm);
+		color: var(--key-3);
+	}
+	.meta a {
+		color: var(--register);
+	}
+	.summary {
+		margin-top: 0.75rem;
+		color: var(--key-2);
+	}
+	.group {
+		margin-top: 1.5rem;
+	}
+	.group h3 {
+		margin: 0 0 0.5rem;
+		font-size: var(--sl-text-xs);
+		font-weight: 650;
+		font-stretch: 125%;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--key-3);
+	}
+	.group :global(ul) {
+		padding-left: 1.125rem;
+	}
+	.group :global(li) {
+		color: var(--key-2);
+	}
+	.group :global(li + li) {
+		margin-top: 0.625rem;
+	}
+	.release :global(a) {
+		color: var(--register);
+	}
+</style>
