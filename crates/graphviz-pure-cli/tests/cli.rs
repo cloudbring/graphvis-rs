@@ -3622,6 +3622,45 @@ fn packed_dot_draws_the_root_cluster_list_of_copy_cluster_info() {
     );
 }
 
+// Issue #193 (C16): the json writer's `label_subgs` (gvrender_core_json.c:617) warns once
+// for each later cluster with a taken name; `cluster=true` makes a cluster too. Two top-level
+// `subgraph cluster_a` are one subgraph. With `compound=true`, `mkClustMap` warns first.
+#[test]
+fn json_warns_about_duplicate_cluster_names_like_c() {
+    let dup = "Warning: Duplicate cluster name \"cluster_a\"\n";
+    for (args, src, want) in [
+        (
+            &["-Tjson"][..],
+            "digraph{subgraph cluster_a{x} subgraph cluster_b{subgraph cluster_a{y}}}",
+            dup.to_string(),
+        ),
+        (
+            &["-Kneato", "-Tdot_json"][..],
+            "digraph{subgraph cluster_a{x} subgraph cluster_a{y} subgraph s{subgraph cluster_a{z}} subgraph t{subgraph cluster_a{w}}}",
+            dup.repeat(2),
+        ),
+        (
+            &["-Txdot_json"][..],
+            "digraph{subgraph x{cluster=true; a} subgraph y{subgraph x{cluster=true; b}} subgraph cluster_q{c} subgraph z{subgraph cluster_q{d}}}",
+            "Warning: Duplicate cluster name \"x\"\nWarning: Duplicate cluster name \"cluster_q\"\n".to_string(),
+        ),
+        (
+            &["-Tjson0"][..],
+            "digraph G { compound=true; subgraph cluster_a { x } subgraph s { subgraph cluster_a { y } } x -> y; }",
+            format!("Warning: Two clusters named cluster_a - the second will be ignored\n{dup}"),
+        ),
+        (
+            &["-Tsvg"][..],
+            "digraph{subgraph cluster_a{x} subgraph cluster_b{subgraph cluster_a{y}}}",
+            String::new(),
+        ),
+    ] {
+        let (_, err, ok) = run(args, src);
+        assert!(ok, "{args:?} {src}: {err}");
+        assert_eq!(err, want, "{args:?} {src}");
+    }
+}
+
 // The reserved cluster-list key written in the input is an ordinary attribute to C: it
 // must not reorder another engine's clusters, nor (inherited by the subgraphs, so a
 // cluster lists itself) make the cluster tree cyclic, which overflowed the stack.
