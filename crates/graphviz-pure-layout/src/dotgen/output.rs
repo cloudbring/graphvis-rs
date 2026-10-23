@@ -424,10 +424,9 @@ impl Output {
             {
                 graph.anon_subgraph_ids.insert(id as u32, anon);
             }
-            let html_name = c
-                .orig
-                .and_then(|o| graph.subgraphs.get(o))
-                .is_some_and(|s| s.html_name);
+            let orig = c.orig.and_then(|o| graph.subgraphs.get(o));
+            let html_name = orig.is_some_and(|s| s.html_name);
+            let empty_name = orig.is_some_and(|s| s.empty_name);
             graph.subgraphs.push(graphviz_pure_core::SubgraphData {
                 id: sid,
                 name: c.name,
@@ -448,6 +447,7 @@ impl Output {
                 subgraphs: Vec::new(),
                 bb: Default::default(),
                 html_name,
+                empty_name,
             });
             if dicts {
                 graph.dicts.push(dict);
