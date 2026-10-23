@@ -215,6 +215,8 @@ def main():
     if not a.count:
         print(Gen(a.seed).case(), end="")
         return
+    if a.out is None:
+        ap.error("--count needs --out")
     a.out.mkdir(parents=True, exist_ok=True)
     for s in range(a.seed, a.seed + a.count):
         (a.out / f"s{s}.gv").write_text(Gen(s).case(), encoding="utf-8")

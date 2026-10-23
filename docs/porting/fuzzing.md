@@ -92,16 +92,26 @@ CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=true CARGO_PROFILE_RELEASE_DEBUG_ASSERTION
 python3 -I scripts/fuzz-crash.py run --gen scripts/fuzz-gen-ranks.py --seed 1 --count 20000 --out /tmp/fz/ranks
 python3 -I scripts/fuzz-crash.py run --gen scripts/fuzz-gen-endpoints.py --seed 1 --count 20000 --out /tmp/fz/ends
 python3 -I scripts/fuzz-crash.py summary /tmp/fz/ranks
+python3 -I scripts/fuzz-crash.py min /tmp/fz/ranks/hits/s141.gv -o /tmp/fz/s141.min.gv
 python3 -I scripts/fuzz-gen-ranks.py --seed 17     # one case
 ```
 
 `fuzz-crash.py` runs the port on every case and C only on the cases where the port
-panics or hangs, with half the cores by default (`--jobs`). Every command runs under an
-alarm set before `exec` (`--timeout`, 20 s by default), so no C or port process outlives
-the run, even when the runner is killed. The summary groups the hits by panic site and
-C's outcome. Group them further by cause before filing: the C diagnostic before the
-crash, the input feature, and where C reads NULL or out of bounds (a backtrace of a C
-debug build).
+panics or hangs, with half the cores by default (`--jobs`). Each command runs in a
+process group of its own that is killed after `--timeout` seconds (20 by default),
+wrapper scripts and their children included, even when the runner is killed. A run
+appends to `OUT/results.jsonl`, so give each run a fresh `OUT`. The summary groups the
+hits by panic site and C's outcome. `min` delta-debugs a hit with `fuzz-run.py`'s
+minimiser while the panic site and C's outcome stay the same (`fuzz-run.py min` stops
+at `c_crash`, where most of these hits are). Group the hits further by cause before
+filing: the C diagnostic before the crash, the input feature, and where C reads NULL
+or out of bounds (a backtrace of a C debug build).
+
+The first campaign (2026-10-23, 50,000 rank-shape and 40,000 endpoint cases) found 136
+panics and hangs, C crashing on 130 of them, and filed them by cause as #357–#360.
+"A path end has boxes" had no panic: the port's `pboxfn` never returns a side without
+boxes, and C's one route to an end without boxes is #360. "A cluster has its left and
+right nodes" had none in 90,000 cases.
 
 ## Coverage-guided fuzzing (cargo-fuzz, ClusterFuzzLite)
 
