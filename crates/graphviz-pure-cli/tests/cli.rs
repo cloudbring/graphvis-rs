@@ -309,6 +309,10 @@ fn reduce_flag_prunes_trees_like_c() {
     let src = "graph { a -- b -- c -- a; d; e -- f; g -- h -- i -- g; i -- j -- k }";
     let (out, _, _) = run(&["-Kneato", "-x", "-Tplain"], src);
     assert!(out.starts_with("graph 1 3.3779 2.2418\n"), "{out}");
+    // `user_pos` ran on the whole graph first: the third coordinates are drawn as there.
+    let src = "graph G { dim=3; a -- b; c -- d -- e -- c; f; c [pos=\"5,5\"] }";
+    let (out, _, _) = run(&["-Kneato", "-x", "-Tdot"], src);
+    assert!(out.contains("bb=\"0,0,108.66,80.61\""), "{out}");
 }
 
 // Issue #294: `-s` sets `PSinputscale`, which `get_inputscale` prefers to `inputscale`.

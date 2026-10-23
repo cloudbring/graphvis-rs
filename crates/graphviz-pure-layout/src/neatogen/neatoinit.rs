@@ -556,8 +556,17 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
                     .collect()
             })
             .collect();
+        // `user_pos` ran on the whole graph, before `scan_graph_mode`: its positions, pins
+        // and `drand48` draws (`nG` is the whole graph's count) are kept.
+        let kept_pos: Vec<(Vec<f64>, u8)> = g0
+            .nodes
+            .iter()
+            .zip(&deleted)
+            .filter(|(_, d)| !**d)
+            .map(|(n, _)| (n.pos.clone(), n.pinned))
+            .collect();
         graph.delete_nodes(&deleted);
-        (comps, pin)
+        (comps, pin, kept_pos, g0.drand)
     });
     let src = graph.clone();
     let quiet = reduced.is_some();
@@ -568,13 +577,18 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
     };
     let pos_declared = g.node_attr_declared("pos");
     let z_declared = g.node_attr_declared("z");
-    for n in 0..g.nodes.len() {
-        if quiet {
-            graphviz_pure_core::diag::silently(|| {
-                user_pos(&mut g, n, inputscale, pos_declared, z_declared)
-            });
-        } else {
-            user_pos(&mut g, n, inputscale, pos_declared, z_declared);
+    match &reduced {
+        Some((_, _, kept_pos, drand)) => {
+            for (node, (pos, pinned)) in g.nodes.iter_mut().zip(kept_pos) {
+                node.pos.clone_from(pos);
+                node.pinned = *pinned;
+            }
+            g.drand = *drand;
+        }
+        None => {
+            for n in 0..g.nodes.len() {
+                user_pos(&mut g, n, inputscale, pos_declared, z_declared);
+            }
         }
     }
     let layout_mode = neato_mode(&g);
@@ -594,7 +608,7 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
 
     if pack >= 0 {
         let (mut ccs, pin) = match reduced {
-            Some((comps, pin)) => {
+            Some((comps, pin, _, _)) => {
                 let n = g.nodes.len();
                 (comps.into_iter().map(|c| Sub::new(n, c)).collect(), pin)
             }
