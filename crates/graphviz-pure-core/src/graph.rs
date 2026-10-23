@@ -335,6 +335,22 @@ impl Graph {
         (self.name.is_empty() && !self.empty_name) || self.name.starts_with('%')
     }
 
+    /// `agnameof` of subgraph `s`: an anonymous subgraph is named by its cgraph id, `%<id>`.
+    pub fn subgraph_name(&self, s: usize) -> String {
+        let sg = &self.subgraphs[s];
+        if sg.is_anonymous() {
+            format!(
+                "%{}",
+                self.anon_subgraph_ids
+                    .get(&(s as u32))
+                    .copied()
+                    .unwrap_or(0)
+            )
+        } else {
+            sg.name.clone()
+        }
+    }
+
     pub fn ensure_node(&mut self, name: &str) -> NodeId {
         self.ensure_node_html(name, false)
     }

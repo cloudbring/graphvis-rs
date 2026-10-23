@@ -3720,6 +3720,83 @@ fn packed_dot_draws_the_root_cluster_list_of_copy_cluster_info() {
     );
 }
 
+// Issue #193 (C16): the json writer's `label_subgs` (gvrender_core_json.c:617) warns once
+// for each later cluster with a taken name; `cluster=true` makes a cluster too. Two top-level
+// `subgraph cluster_a` are one subgraph. With `compound=true`, `mkClustMap` warns first.
+#[test]
+fn json_warns_about_duplicate_cluster_names_like_c() {
+    let dup = "Warning: Duplicate cluster name \"cluster_a\"\n";
+    for (args, src, want) in [
+        (
+            &["-Tjson"][..],
+            "digraph{subgraph cluster_a{x} subgraph cluster_b{subgraph cluster_a{y}}}",
+            dup.to_string(),
+        ),
+        (
+            &["-Kneato", "-Tdot_json"][..],
+            "digraph{subgraph cluster_a{x} subgraph cluster_a{y} subgraph s{subgraph cluster_a{z}} subgraph t{subgraph cluster_a{w}}}",
+            dup.repeat(2),
+        ),
+        (
+            &["-Txdot_json"][..],
+            "digraph{subgraph x{cluster=true; a} subgraph y{subgraph x{cluster=true; b}} subgraph cluster_q{c} subgraph z{subgraph cluster_q{d}}}",
+            "Warning: Duplicate cluster name \"x\"\nWarning: Duplicate cluster name \"cluster_q\"\n".to_string(),
+        ),
+        (
+            &["-Tjson0"][..],
+            "digraph G { compound=true; subgraph cluster_a { x } subgraph s { subgraph cluster_a { y } } x -> y; }",
+            format!("Warning: Two clusters named cluster_a - the second will be ignored\n{dup}"),
+        ),
+        (
+            &["-Tsvg"][..],
+            "digraph{subgraph cluster_a{x} subgraph cluster_b{subgraph cluster_a{y}}}",
+            String::new(),
+        ),
+        // `insert` copies `agnameof`, so anonymous clusters (`%3`, `%5`) are two names.
+        (
+            &["-Tjson"][..],
+            "digraph{subgraph {cluster=true; a} subgraph {cluster=true; b}}",
+            String::new(),
+        ),
+    ] {
+        let (_, err, ok) = run(args, src);
+        assert!(ok, "{args:?} {src}: {err}");
+        assert_eq!(err, want, "{args:?} {src}");
+    }
+}
+
+// C16: `fillMap` keys an anonymous cluster by `agnameof`'s static buffer, so every later
+// anonymous cluster is a second one (warned by its own `%<id>`), and `findCluster` then finds
+// the first by the last anonymous name only. `subgraph ""` is named "".
+#[test]
+fn clust_map_keys_anonymous_clusters_like_c() {
+    let two = |n: &str| format!("Warning: Two clusters named {n} - the second will be ignored\n");
+    for (args, src, want) in [
+        (
+            &["-Tsvg"][..],
+            "digraph{compound=true; subgraph {cluster=true; a} subgraph {cluster=true; b} x -> a [lhead=\"%3\"]; x -> b [lhead=\"%5\"]; y -> b [ltail=\"%2\"]}",
+            format!(
+                "{}Warning: cluster named %3 not found\nWarning: x -> b: head not inside head cluster %5\nWarning: cluster named %2 not found\n",
+                two("%5")
+            ),
+        ),
+        (
+            &["-Tsvg"][..],
+            "digraph{compound=true; subgraph \"\"{cluster=true; a} subgraph s{subgraph \"\"{cluster=true; b}} subgraph {cluster=true; c} subgraph {cluster=true; d}}",
+            format!("{}{}", two(""), two("%5")),
+        ),
+        (
+            &["-Kfdp", "-Tsvg"][..],
+            "graph{subgraph {cluster=true; a b} subgraph {cluster=true; c} subgraph t{subgraph {cluster=true; e}} a -- c}",
+            format!("{}{}", two("%5"), two("%7")),
+        ),
+    ] {
+        let (_, err, ok) = run(args, src);
+        assert!(ok, "{args:?} {src}: {err}");
+        assert_eq!(err, want, "{args:?} {src}");
+    }
+}
+
 // The reserved cluster-list key written in the input is an ordinary attribute to C: it
 // must not reorder another engine's clusters, nor (inherited by the subgraphs, so a
 // cluster lists itself) make the cluster tree cyclic, which overflowed the stack.

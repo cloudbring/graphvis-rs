@@ -464,11 +464,7 @@ impl W<'_> {
         let name = match sub {
             None if g.is_anonymous() => "%1".to_string(),
             None => g.name.clone(),
-            Some(s) if g.subgraphs[s].is_anonymous() => format!(
-                "%{}",
-                g.anon_subgraph_ids.get(&(s as u32)).copied().unwrap_or(0)
-            ),
-            Some(s) => g.subgraphs[s].name.clone(),
+            Some(s) => g.subgraph_name(s),
         };
         stoj(&name, &mut self.out);
         if top {
@@ -711,7 +707,6 @@ pub(crate) fn write_json(
         .collect();
     // label_subgs: preorder numbering
     let mut sub_gid = vec![0usize; g.subgraphs.len()];
-    let mut cluster_gid: BTreeMap<&str, usize> = BTreeMap::new();
     let mut cnt = 0;
     fn label(
         s: usize,
@@ -722,9 +717,18 @@ pub(crate) fn write_json(
         cl: &mut BTreeMap<String, usize>,
     ) {
         gid[s] = *cnt;
-        let name = &g.subgraphs[s].name;
-        if graphviz_pure_core::has_cluster_prefix(name) {
-            cl.entry(name.clone()).or_insert(*cnt);
+        let name = g.subgraph_name(s);
+        // `insert(map, agnameof(g), GD_gid(g))`: the first cluster of a name keeps it.
+        if crate::emit::model::is_a_cluster(&name, &g.subgraphs[s].graph_attrs) {
+            match cl.get(&name) {
+                Some(&v) if v != *cnt => graphviz_pure_core::diag::agwarningf(&format!(
+                    "Duplicate cluster name \"{name}\"\n"
+                )),
+                Some(_) => {}
+                None => {
+                    cl.insert(name, *cnt);
+                }
+            }
         }
         *cnt += 1;
         for &c in &children[s] {
@@ -735,7 +739,6 @@ pub(crate) fn write_json(
     for &s in &top {
         label(s, &mut cnt, &mut sub_gid, &children, g, &mut cl);
     }
-    let _ = &mut cluster_gid;
     // A cluster node (IS_CLUST_NODE) takes the id of the cluster it names, or -1.
     let mut ncnt = 0;
     let node_gid: Vec<i64> = g

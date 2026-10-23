@@ -3,6 +3,7 @@
 
 use graphviz_pure_core::AttrMap;
 use graphviz_pure_core::cnum;
+use std::collections::HashMap;
 
 /// `strtol(p, &end, 10)` or `sscanf("%ld")`: `None` when there are no digits; saturates at
 /// the range of `long`.
@@ -133,4 +134,61 @@ mod tests {
         assert!(mapbool(Some("2")));
         assert!(!mapbool(Some("x")));
     }
+}
+
+/// `mkClustMap`'s dictionary: cluster name → the first cluster with that name.
+///
+/// `agnameof` of an anonymous cluster (`%<id>`) is one static buffer, and `fillMap` stores
+/// that pointer as the key. Every later anonymous cluster matches the first one, and once the
+/// map is built the key reads as the last anonymous name `fillMap` saw: `findCluster` finds the
+/// first anonymous cluster by that name only. (C's buffer also moves when a warning names a
+/// node whose `%`-name was renumbered; the port keeps fillMap's last name.)
+#[derive(Debug)]
+pub struct ClustMap<T> {
+    named: HashMap<String, T>,
+    anon: Option<(String, T)>,
+}
+
+impl<T: Copy> ClustMap<T> {
+    /// `findCluster(map, name)`.
+    pub fn get(&self, name: &str) -> Option<T> {
+        match &self.anon {
+            Some((last, cl)) if last == name => Some(*cl),
+            _ => self.named.get(name).copied(),
+        }
+    }
+}
+
+/// `mkClustMap` / `fillMap`, from the clusters' `agnameof` names in `fillMap`'s preorder. The
+/// first cluster of a name wins; each later one warns.
+pub fn mk_clust_map<T>(clusters: impl IntoIterator<Item = (String, T)>) -> ClustMap<T> {
+    let mut map = ClustMap {
+        named: HashMap::new(),
+        anon: None,
+    };
+    for (name, cl) in clusters {
+        let taken = if name.starts_with('%') {
+            match &mut map.anon {
+                Some((last, _)) => {
+                    last.clone_from(&name);
+                    true
+                }
+                None => {
+                    map.anon = Some((name.clone(), cl));
+                    false
+                }
+            }
+        } else if map.named.contains_key(&name) {
+            true
+        } else {
+            map.named.insert(name.clone(), cl);
+            false
+        };
+        if taken {
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "Two clusters named {name} - the second will be ignored\n"
+            ));
+        }
+    }
+    map
 }

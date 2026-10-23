@@ -213,7 +213,8 @@ fn parse_point(s: Option<&str>) -> Option<Point> {
     (r.count == 2).then(|| Point::new(r.values[0], r.values[1]))
 }
 
-fn is_a_cluster(name: &str, attrs: &AttrMap) -> bool {
+/// `is_a_cluster(g)` for a subgraph (`lib/common/utils.c`).
+pub(crate) fn is_a_cluster(name: &str, attrs: &AttrMap) -> bool {
     graphviz_pure_core::has_cluster_prefix(name) || Attrs(attrs).mapbool("cluster")
 }
 
