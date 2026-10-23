@@ -1056,7 +1056,8 @@ fn tb_balance<G: NsGraph + ?Sized>(g: &mut G) -> Result<(), String> {
                 }
             };
             let mut choice = low;
-            // `low + 1` past INT_MAX: no rank above `low` to choose.
+            // C's `int i = low + 1` wraps past INT_MAX and reads `nrank[INT_MIN]` out of
+            // bounds (it crashes); the port has no rank above `low` to choose.
             for i in low.saturating_add(1)..=high {
                 if get(&nrank, i) < get(&nrank, choice) {
                     choice = i;

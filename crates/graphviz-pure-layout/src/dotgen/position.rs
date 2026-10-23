@@ -312,8 +312,9 @@ impl Dot<'_> {
                     m0 = 0;
                 }
                 // No overflow check in C (undefined behaviour). The reference build converts
-                // `m + 1` to `double` as `(double)m + 1`, which does not wrap; the rank below
-                // wraps.
+                // `m + 1` to `double` as `(double)m + 1`, which does not wrap: with
+                // `node [margin="-2147483648"]` (attr-extremes' dot-margin-N-v2-small),
+                // `largeMinlen` receives 2147483648. The rank below wraps.
                 let (t, h, w) = (self.edges[e].tail, self.edges[e].head, self.edges[e].weight);
                 self.make_aux_edge(sn, t, f64::from(m0) + 1.0, w);
                 self.make_aux_edge(sn, h, f64::from(m1) + 1.0, w);

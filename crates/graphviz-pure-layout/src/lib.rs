@@ -173,7 +173,7 @@ mod tests {
     }
 
     // Issue #252: C's `virtual_weight` (mincross.c:1725) exits with this error where the
-    // weight times the endpoint factor (8 between two virtual nodes) overflows.
+    // weight times the endpoint factor (up to 4, between two virtual nodes) overflows.
     #[test]
     fn virtual_weight_overflow_fails_the_layout_like_c() {
         let w = [("weight", "2000000000"), ("minlen", "3")];

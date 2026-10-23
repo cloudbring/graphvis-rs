@@ -273,9 +273,11 @@ fn constrain(
     } else {
         mk_n_constraint_g(g, sub, items, &list, ifn, dist)
     };
-    // C exits where `x_cutval`'s weight sum overflows. Every edge here weighs 1 or 100, so a
-    // cut value is below 100 times the edge count and that sum cannot overflow for a
-    // constraint graph that fits in memory: there is no error to report.
+    // C ignores `rank`'s result here too (constraint.c:398, :433). `rank2` fails only where C
+    // exits or crashes on overflow: `x_cutval`'s sum, or a cut value that wrapped negative
+    // with no entering edge (`TB_balance` doesn't run with balance 2). Every edge here
+    // weighs 1 or 100, so a cut value stays below 100 times the edge count and neither can
+    // happen for a constraint graph that fits in memory.
     let _ = ns::rank(&mut cg.ns, 2, i32::MAX);
     for p in items.iter_mut() {
         let newpos = cg.ns.nodes[p.cnode].rank;
