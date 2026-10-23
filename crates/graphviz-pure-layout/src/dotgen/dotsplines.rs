@@ -110,6 +110,116 @@ fn left_of(p1: Point, p2: Point, p3: Point) -> bool {
     (p1.y - p2.y) * (p3.x - p2.x) - (p3.y - p2.y) * (p1.x - p2.x) > 0.0
 }
 
+/// The attribute symbols `make_flat_adj_edges`' aux graph is laid out with (`cloneGraph`,
+/// `setState`).
+///
+/// cloneGraph declares on auxg cgraph's ProtoGraph node `label`, then the main graph's node and
+/// edge attributes in name order (agnxtattr), then `headport`, `tailport` and `weight` where the
+/// main graph has none. setState rebinds some global symbols to auxg and NULLs others
+/// ([`AuxSyms::NULL_NODE`], [`AuxSyms::NULL_EDGE`]). N_penwidth, E_penwidth and E_arrowsz keep
+/// the main graph's `Agsym_t`, so agxget reads the aux attribute whose id is theirs, whatever
+/// its name. N_fixed and E_label_float are looked up as "fixed" and "label_float".
+struct AuxSyms<'g> {
+    main: &'g graphviz_pure_core::AttrDicts,
+    /// Aux node attribute names by id.
+    node: Vec<String>,
+    /// Aux edge attribute names by id.
+    edge: Vec<String>,
+}
+
+impl<'g> AuxSyms<'g> {
+    const NULL_NODE: [&'static str; 6] = [
+        "xlabel",
+        "group",
+        "style",
+        "nojustify",
+        "showboxes",
+        "fontcolor",
+    ];
+    const NULL_EDGE: [&'static str; 7] = [
+        "constraint",
+        "minlen",
+        "headlabel",
+        "taillabel",
+        "xlabel",
+        "fontcolor",
+        "labelfontcolor",
+    ];
+
+    fn new(main: &'g graphviz_pure_core::AttrDicts) -> Self {
+        let mut node = vec!["label".to_string()];
+        node.extend(main.node.keys().filter(|k| *k != "label").cloned());
+        let mut edge: Vec<String> = main.edge.keys().cloned().collect();
+        for k in ["headport", "tailport", "weight"] {
+            if !main.edge.contains_key(k) {
+                edge.push(k.to_string());
+            }
+        }
+        AuxSyms { main, node, edge }
+    }
+
+    /// Sets each of `keys` to what the main graph's symbol of that name reads on an aux object
+    /// whose attributes are `raw`. A cgraph object holds a value for every attribute declared
+    /// on its graph; the port's objects lack one only for an attribute declared after they
+    /// were made, which cgraph gave them as "".
+    fn stale(
+        dict: &std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>,
+        names: &[String],
+        raw: &graphviz_pure_core::AttrMap,
+        attrs: &mut graphviz_pure_core::AttrMap,
+        keys: &[&str],
+    ) {
+        for &k in keys {
+            match dict.get(k).and_then(|sym| names.get(sym.id)) {
+                Some(an) => {
+                    attrs.insert(k.to_string(), raw.get(an).cloned().unwrap_or_default());
+                }
+                None => {
+                    attrs.remove(k);
+                }
+            }
+        }
+    }
+
+    /// A cloned node's attributes as dot_init_node(auxg) reads them.
+    fn fix_node(&self, attrs: &mut graphviz_pure_core::AttrMap) {
+        let raw = attrs.clone();
+        Self::stale(&self.main.node, &self.node, &raw, attrs, &["penwidth"]);
+        if self.main.node.contains_key("fixed") {
+            let v = raw.get("fixed").cloned().unwrap_or_default();
+            attrs.insert("fixedsize".to_string(), v);
+        } else {
+            attrs.remove("fixedsize");
+        }
+        for k in Self::NULL_NODE {
+            attrs.remove(k);
+        }
+    }
+
+    /// An aux edge's attributes as dot_init_edge(auxg) and the splines read them.
+    fn fix_edge(&self, attrs: &mut graphviz_pure_core::AttrMap) {
+        let raw = attrs.clone();
+        Self::stale(
+            &self.main.edge,
+            &self.edge,
+            &raw,
+            attrs,
+            &["arrowsize", "penwidth"],
+        );
+        // E_label_float is looked up as "label_float", not "labelfloat" (dotsplines.c:745),
+        // so ED_label_ontop of an aux edge is the value of an attribute `label_float`.
+        if self.main.edge.contains_key("label_float") {
+            let v = raw.get("label_float").cloned().unwrap_or_default();
+            attrs.insert("labelfloat".to_string(), v);
+        } else {
+            attrs.remove("labelfloat");
+        }
+        for k in Self::NULL_EDGE {
+            attrs.remove(k);
+        }
+    }
+}
+
 impl Dot<'_> {
     /// `EDGE_TYPE(g)`.
     pub fn edge_type(&self) -> EdgeType {
@@ -864,122 +974,16 @@ impl Dot<'_> {
         }
         aux.node_defaults = input.node_defaults.clone();
         aux.edge_defaults = input.edge_defaults.clone();
-        // setState: these symbols are NULL while the clone is laid out.
-        for k in [
-            "xlabel",
-            "group",
-            "style",
-            "nojustify",
-            "showboxes",
-            "fontcolor",
-        ] {
-            aux.node_defaults.remove(k);
-        }
-        for k in [
-            "constraint",
-            "minlen",
-            "headlabel",
-            "taillabel",
-            "xlabel",
-            "fontcolor",
-            "labelfontcolor",
-            // E_label_float is looked up as "label_float"; fix_edge sets it per edge.
-            "labelfloat",
-        ] {
-            aux.edge_defaults.remove(k);
-        }
-        // setState rebinds only some Agsyms to auxg. The others (N_penwidth, E_arrowsz,
-        // E_penwidth; arrow_flags finds arrowhead/arrowtail by name) keep the main
-        // graph's symbols, and
-        // agxget reads the aux attribute with the same `id`. auxg declares cgraph's
-        // ProtoGraph `label` first, then the main graph's attributes in name order
-        // (agnxtattr), then the ports and `weight` cloneGraph/setState add. N_fixed is
-        // looked up as "fixed", so fixedsize is the value of an attribute `fixed`.
         let empty = graphviz_pure_core::AttrDicts::default();
-        let main = input.dicts.first().unwrap_or(&empty);
-        let mut aux_node_names: Vec<String> = vec!["label".to_string()];
-        aux_node_names.extend(main.node.keys().filter(|k| *k != "label").cloned());
-        let mut aux_edge_names: Vec<String> = main.edge.keys().cloned().collect();
-        for k in ["headport", "tailport", "weight"] {
-            if !main.edge.contains_key(k) {
-                aux_edge_names.push(k.to_string());
-            }
-        }
-        let stale = |dict: &std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>,
-                     names: &[String],
-                     attrs: &mut graphviz_pure_core::AttrMap,
-                     keys: &[&str]| {
-            let orig = attrs.clone();
-            let value = |name: &str| {
-                orig.get(name)
-                    .cloned()
-                    .or_else(|| dict.get(name).map(|s| s.defval.clone()))
-                    .unwrap_or_default()
-            };
-            for &k in keys {
-                match dict.get(k) {
-                    None => {
-                        attrs.remove(k);
-                    }
-                    Some(sym) => {
-                        if let Some(an) = names.get(sym.id) {
-                            attrs.insert(k.to_string(), value(an));
-                        }
-                    }
-                }
-            }
-        };
-        let fix_node = |attrs: &mut graphviz_pure_core::AttrMap| {
-            stale(&main.node, &aux_node_names, attrs, &["penwidth"]);
-            match main.node.get("fixed") {
-                Some(sym) => {
-                    let v = attrs.get("fixed").cloned().unwrap_or(sym.defval.clone());
-                    attrs.insert("fixedsize".to_string(), v);
-                }
-                None => {
-                    attrs.remove("fixedsize");
-                }
-            }
-        };
-        let fix_edge = |attrs: &mut graphviz_pure_core::AttrMap| {
-            stale(
-                &main.edge,
-                &aux_edge_names,
-                attrs,
-                &["arrowsize", "penwidth"],
-            );
-            // setState looks E_label_float up as "label_float", not "labelfloat"
-            // (dotsplines.c:745), so ED_label_ontop of an aux edge is the value of
-            // an attribute `label_float`, and `labelfloat` is ignored. An edge made
-            // before `label_float` was declared holds "" (the edge got the defaults
-            // in scope when it was made), not the later default.
-            if main.edge.contains_key("label_float") {
-                let v = attrs.get("label_float").cloned().unwrap_or_default();
-                attrs.insert("labelfloat".to_string(), v);
-            } else {
-                attrs.remove("labelfloat");
-            }
-        };
+        let syms = AuxSyms::new(input.dicts.first().unwrap_or(&empty));
         let rightx = self.nodes[hn0].coord.x;
         let leftx = self.nodes[tn0].coord.x;
         let (tn, hn) = if flip { (hn0, tn0) } else { (tn0, hn0) };
+        // cloneNode: agcopyattr copies every attribute of the main node.
         let clone_node = |aux: &mut graphviz_pure_core::Graph, n: N| {
             let src = &input.nodes[self.nodes[n].real.unwrap()];
             let id = aux.ensure_node_html(&src.name, src.html_name);
-            let nd = &mut aux.nodes[id.0 as usize];
-            nd.attrs = src.attrs.clone();
-            // stale symbols read the clone's copied values, NULLed symbols included
-            fix_node(&mut nd.attrs);
-            for k in [
-                "xlabel",
-                "group",
-                "style",
-                "nojustify",
-                "showboxes",
-                "fontcolor",
-            ] {
-                nd.attrs.remove(k);
-            }
+            aux.nodes[id.0 as usize].attrs = src.attrs.clone();
             id
         };
         let auxt = clone_node(&mut aux, tn);
@@ -1015,22 +1019,10 @@ impl Dot<'_> {
             } else {
                 (auxh, auxt)
             };
-            let mut attrs = src.attrs.clone();
-            fix_edge(&mut attrs);
-            for k in [
-                "constraint",
-                "minlen",
-                "headlabel",
-                "taillabel",
-                "xlabel",
-                "fontcolor",
-                "labelfontcolor",
-            ] {
-                attrs.remove(k);
-            }
+            // cloneEdge: agcopyattr copies every attribute of the main edge.
             let id = aux.add_edge(t, h, Default::default());
             let ae = &mut aux.edges[id.0 as usize];
-            ae.attrs = attrs;
+            ae.attrs = src.attrs.clone();
             ae.tail_port = src.tail_port.clone();
             ae.head_port = src.head_port.clone();
             let auxe = id.0 as usize;
@@ -1047,9 +1039,8 @@ impl Dot<'_> {
         let hvye = match hvye {
             Some(h) => h,
             None => {
+                // agedge gives the pseudo-edge auxg's defaults, ports included.
                 let h = aux.add_edge(auxt, auxh, Default::default()).0 as usize;
-                fix_edge(&mut aux.edges[h].attrs);
-                // agedge applies the edge defaults, ports included.
                 let port = |s: Option<&String>| match s.map(String::as_str) {
                     None | Some("") => graphviz_pure_core::Port::default(),
                     Some(v) => match v.split_once(':') {
@@ -1072,6 +1063,21 @@ impl Dot<'_> {
         aux.edges[hvye]
             .attrs
             .insert("weight".to_string(), "10000".to_string());
+        // dot_init_node_edge(auxg) reads the attributes from here on, through the symbols
+        // setState left: stale ones read the aux attribute with the same id, NULLed ones
+        // nothing.
+        for nd in &mut aux.nodes {
+            syms.fix_node(&mut nd.attrs);
+        }
+        for ed in &mut aux.edges {
+            syms.fix_edge(&mut ed.attrs);
+        }
+        for k in AuxSyms::NULL_NODE {
+            aux.node_defaults.remove(k);
+        }
+        for k in AuxSyms::NULL_EDGE.into_iter().chain(["labelfloat"]) {
+            aux.edge_defaults.remove(k);
+        }
         // The aux graph's objects are measured afresh, as C's dot_init_node_edge(auxg) does.
         let _fonts = graphviz_pure_core::font::textfont_other_graph();
         graphviz_pure_geom::size_graph_nodes(&mut aux);
@@ -2225,6 +2231,90 @@ fn adjustregularpath(p: &mut Path, fb: usize, lb: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn dict(names: &[&str]) -> std::collections::BTreeMap<String, graphviz_pure_core::AttrSym> {
+        names
+            .iter()
+            .enumerate()
+            .map(|(id, n)| {
+                let sym = graphviz_pure_core::AttrSym {
+                    id,
+                    ..Default::default()
+                };
+                (n.to_string(), sym)
+            })
+            .collect()
+    }
+
+    fn attrs(kv: &[(&str, &str)]) -> graphviz_pure_core::AttrMap {
+        kv.iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
+
+    /// #84: the main graph declares weight, constraint, headclip, headport, fontcolor and
+    /// penwidth in that order. auxg declares them in name order, then `tailport`, so
+    /// E_penwidth (id 5) reads the aux `weight`, which is 10000 on the heavy edge.
+    #[test]
+    fn stale_edge_symbols_read_the_aux_attribute_with_their_id_after_the_heavy_weight() {
+        let main = graphviz_pure_core::AttrDicts {
+            edge: dict(&[
+                "weight",
+                "constraint",
+                "headclip",
+                "headport",
+                "fontcolor",
+                "penwidth",
+            ]),
+            ..Default::default()
+        };
+        let syms = AuxSyms::new(&main);
+        assert_eq!(
+            syms.edge,
+            [
+                "constraint",
+                "fontcolor",
+                "headclip",
+                "headport",
+                "penwidth",
+                "weight",
+                "tailport"
+            ]
+        );
+        let mut heavy = attrs(&[("weight", "10000"), ("constraint", "false")]);
+        syms.fix_edge(&mut heavy);
+        assert_eq!(heavy.get("penwidth").map(String::as_str), Some("10000"));
+        // no main `arrowsize`: E_arrowsz is NULL
+        assert_eq!(heavy.get("arrowsize"), None);
+        // a NULLed symbol is not read by name, but a stale one reads its value
+        assert_eq!(heavy.get("constraint"), None);
+        let mut e = attrs(&[("weight", "5"), ("fontcolor", "blue"), ("penwidth", "3.99")]);
+        syms.fix_edge(&mut e);
+        assert_eq!(e.get("penwidth").map(String::as_str), Some("5"));
+        assert_eq!(e.get("fontcolor"), None);
+    }
+
+    /// #113: `fixed` declared after the node was made: cgraph gave the node "", not the
+    /// later default, so N_fixed (looked up as "fixed") does not fix its aux copy's size.
+    /// A stale symbol whose aux attribute the node lacks reads "" too.
+    #[test]
+    fn attributes_declared_after_the_node_read_empty_on_its_aux_copy() {
+        let mut node = dict(&["label", "fixed", "penwidth"]);
+        node.get_mut("fixed").unwrap().defval = "true".to_string();
+        let main = graphviz_pure_core::AttrDicts {
+            node,
+            ..Default::default()
+        };
+        let syms = AuxSyms::new(&main);
+        assert_eq!(syms.node, ["label", "fixed", "penwidth"]);
+        let mut n = attrs(&[("label", "a long label here")]);
+        syms.fix_node(&mut n);
+        assert_eq!(n.get("fixedsize").map(String::as_str), Some(""));
+        assert_eq!(n.get("penwidth").map(String::as_str), Some(""));
+        let mut n = attrs(&[("label", "x"), ("fixed", "true"), ("fixedsize", "false")]);
+        syms.fix_node(&mut n);
+        assert_eq!(n.get("fixedsize").map(String::as_str), Some("true"));
+    }
 
     /// #270: `add_box` dropped an empty box, so `fb` and `lb` reach past the boxes kept. C's
     /// first loop reads and writes slots past `P->nbox`, which nothing reads; the kept boxes

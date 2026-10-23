@@ -1580,6 +1580,38 @@ a -> b [label=\"lbl\"];
     assert_eq!(out.matches("class=\"edge\"").count(), 1, "{out}");
 }
 
+// Issues #84 and #113 (cause:aux-graph). The flat adjacent edges with a port are laid out in
+// make_flat_adj_edges' aux graph, which declares the main attributes in name order while
+// E_penwidth, E_arrowsz and N_penwidth keep the main graph's symbol ids. #84: E_penwidth's id
+// is the aux `weight`, read after the heavy edge `s -> n` gets weight=10000, so its arrow clip
+// is huge and C cuts the spline down to a fraction of a point. #113: `fixed` is declared after
+// node "2" was made, so the node holds "" and its aux copy is not fixedsize.
+#[test]
+fn flat_adjacent_aux_graph_reads_symbols_by_main_id_like_c() {
+    let cases = [
+        (
+            "digraph G {
+edge [weight=5, constraint=false];
+s -> n;
+s -> n [headclip=false, headport=w];
+c -> d [fontcolor=blue, penwidth=3.99];
+}
+",
+            "d=\"M54.46,-18C54.55,-18 54.64,-18 54.73,-18\"",
+        ),
+        (
+            "digraph G { {rank=same; \"2\" [label=\"a long label here\"]; \"2\" -> \"10\" [label=\"x\", tailport=\"e\"];} node[fixed=true]; }",
+            "d=\"M150.24,-18C158.3,-18 157.03,-26.42 164.68,-29 167.62,-29.99 168.59,-29.41 \
+             171.68,-29 173.56,-28.75 175.48,-28.43 177.41,-28.07\"",
+        ),
+    ];
+    for (src, path) in cases {
+        let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+        assert!(ok, "{src}: {err}");
+        assert!(out.contains(path), "{src}: {out}");
+    }
+}
+
 /// Issue #138: with a rotated box (or `shape=none`) and a compass port, both
 /// endpoints get triangle edges but `triPath` never reaches the tail, so the
 /// `dad` walk in C's `mkPoly` (`lib/neatogen/multispline.c:968-971`) stops on a
