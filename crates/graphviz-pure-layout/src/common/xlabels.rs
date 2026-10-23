@@ -700,7 +700,7 @@ fn hilbert(x0: i32, y0: i32, n: u32) -> u32 {
 /// `as u32` saturates like arm64's `fcvtzu`, and the add wraps as C's
 /// `unsigned` does: an infinite bb (#191) gives order 0, the order C computes
 /// before `xlhdxload` fails its `INT_MIN..INT_MAX` assertion on the label
-/// centre. The port's `as i32` on that centre saturates where C asserts.
+/// centre, which [`place_labels`] ports as a failure.
 fn xlhorder(bb: BoundingBox) -> u32 {
     (math::log2((bb.ur.x.max(bb.ur.y)).round()).floor() as u32).wrapping_add(1)
 }
@@ -724,6 +724,18 @@ fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bo
         };
         let x = r.b[0] + (r.b[2] - r.b[0]) / 2.0;
         let y = r.b[1] + (r.b[3] - r.b[1]) / 2.0;
+        // xlhdxload asserts `x >= INT_MIN && x <= INT_MAX` (and the same for
+        // `y`) before the `(int)` cast, and aborts on an infinite, NaN or huge
+        // centre (#191, #301; past it, `adjust`'s slide never ends on an
+        // infinite label). The port stops there as `xlhdxload`'s own failure
+        // does: `placeLabels` returns -1 and `addXLabels` places no label.
+        let in_int = |v: f64| v >= f64::from(i32::MIN) && v <= f64::from(i32::MAX);
+        if !in_int(x) || !in_int(y) {
+            graphviz_pure_core::diag::agwarningf(
+                "xlabels: a label area's centre does not fit an int; exterior labels are not placed\n",
+            );
+            return;
+        }
         keyed.push((hilbert(x as i32, y as i32, order) as i32, r));
     }
     // lib/label/xlabels.c:xlnew/xlhdxload: `hdx` is a Dtobag keyed by the
@@ -1035,8 +1047,10 @@ mod tests {
     }
 
     #[test]
-    fn infinite_bb_still_places_labels() {
-        // #191: `log2(inf)` used to overflow the order computation.
+    fn infinite_object_places_no_label() {
+        // #191: `log2(inf)` used to overflow the order computation. The
+        // object at infinity has a NaN centre, where C's `xlhdxload` asserts;
+        // the port places no label instead.
         let objs = [
             Object {
                 pos: Point::new(0.0, 0.0),
@@ -1059,6 +1073,28 @@ mod tests {
             ur: Point::new(f64::INFINITY, 10.0),
         };
         place_labels(&objs, &mut lbls, bb, true);
-        assert!(lbls[0].set);
+        assert!(!lbls[0].set);
+    }
+
+    #[test]
+    fn infinite_label_places_no_label() {
+        // #301: an infinite label size used to keep `adjust` sliding at
+        // `-inf >= -inf` forever; C asserts on the centre in `xlhdxload`.
+        let objs = [Object {
+            pos: Point::new(0.0, 0.0),
+            sz: Point::default(),
+            lbl: Some(0),
+        }];
+        let mut lbls = [XLabel {
+            sz: Point::new(f64::INFINITY, f64::INFINITY),
+            pos: Point::default(),
+            set: false,
+        }];
+        let bb = BoundingBox {
+            ll: Point::new(0.0, 0.0),
+            ur: Point::new(10.0, 10.0),
+        };
+        place_labels(&objs, &mut lbls, bb, true);
+        assert!(!lbls[0].set);
     }
 }

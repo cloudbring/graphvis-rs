@@ -332,8 +332,12 @@ across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
   - **Ortho's integer path costs** overflow once coordinates span about 3e7 inches (INT_MAX
     points), and C fails `PQcheck` (#229). The ortho router's failure boundary rejects such
     distances (see above).
+  - **Exterior labels** (`addXLabels`). `xlhdxload` asserts that each label area's centre
+    fits an `int`, which an infinite or 400-digit `fontsize`/`labelfontsize` (or an object at
+    infinity, #191) fails; past it, the placement slide never ends. The port stops there as
+    `xlhdxload`'s own failure return does: no exterior label is placed, with a warning (#301).
 
-Closed: #227, #239, #240, #269, #270.
+Closed: #227, #239, #240, #269, #270, #301.
 The round-1 guards stay, because they match C and finite or NaN positions still reach them:
 #206 (the Hilbert order and shift for a bb above 2^32 points, or an infinite one), #207 (the
 wrapping grid cell index at 1e17), and #187's finiteness test in `update_bb_bz` (#173, #201).
