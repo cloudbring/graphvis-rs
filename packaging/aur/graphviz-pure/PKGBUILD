@@ -1,4 +1,4 @@
-# Maintainer: Emmanuel Mwangi (cloudbring) <TODO: AUR account email>
+# Maintainer: cloudbring <TODO: AUR account email>
 #
 # Builds the command line from the GitHub source tarball of the signed tag, following
 # https://wiki.archlinux.org/title/Rust_package_guidelines. The GitHub tarball is used rather
