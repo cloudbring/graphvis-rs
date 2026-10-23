@@ -14,19 +14,19 @@ thread_local! {
     static NOP: std::cell::Cell<u8> = const { std::cell::Cell::new(0) };
 }
 
-/// Sets `Nop` while it lives; back to 0 when dropped, as after a panic.
-pub(crate) struct NopGuard;
+/// Sets `Nop` while it lives; the previous value comes back when it is dropped, panics
+/// included.
+pub(crate) struct NopGuard(u8);
 
 impl NopGuard {
     pub(crate) fn set(nop: u8) -> Self {
-        NOP.with(|n| n.set(nop));
-        NopGuard
+        NopGuard(NOP.with(|n| n.replace(nop)))
     }
 }
 
 impl Drop for NopGuard {
     fn drop(&mut self) {
-        NOP.with(|n| n.set(0));
+        NOP.with(|n| n.set(self.0));
     }
 }
 

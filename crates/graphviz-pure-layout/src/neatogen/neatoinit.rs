@@ -1459,10 +1459,12 @@ mod tests {
         );
         let g = nop_layout(g, 2);
         let e = &g.edges[0];
+        // The rerouted edge is horizontal; C puts the label of the same edge without `pos`
+        // 8.4pt above it.
         let y = e.spline.segments[0].points[0].y;
-        assert!(near(Point::new(0.0, y), 0.0, 152.31), "{:?}", e.spline);
         let lp = e.label_pos.expect("label position");
-        assert!(!e.label_unplaced && (lp.y - y).abs() < 10.0, "{lp:?}");
+        assert!(!e.label_unplaced, "{e:?}");
+        assert!((lp.y - y - 8.4).abs() < 0.01, "{lp:?} vs edge at y = {y}");
     }
 
     // Issue #142: an edge label without `lp` is placed on the routed edge (addXLabels), at
