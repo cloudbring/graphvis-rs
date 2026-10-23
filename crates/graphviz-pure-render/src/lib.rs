@@ -150,10 +150,6 @@ fn attached(
     (g, forced)
 }
 
-/// Private graph attribute the neato-family engines set (`graphviz_pure_layout::common`):
-/// only dot runs `mark_lowclusters`, so their edges stay where they were declared.
-const NO_LOW_CLUSTERS_KEY: &str = "\u{1}nolowclust";
-
 /// Records the attributes the layout and renderers set in cgraph's dictionaries:
 /// `safe_dcl` for node and edge attributes, and graph values as local symbols (`agxset`).
 fn sync_dicts(g: &mut Graph, orig: &Graph) {
@@ -462,7 +458,10 @@ impl<'g> GraphJobs<'g> {
                 keep_set(&mut self.set, &g);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
                     sync_dicts(&mut g, graph);
-                    let extra = if graph.graph_attrs.contains_key(NO_LOW_CLUSTERS_KEY) {
+                    let extra = if graph
+                        .graph_attrs
+                        .contains_key(graphviz_pure_core::NO_LOW_CLUSTERS_KEY)
+                    {
                         Vec::new()
                     } else {
                         low_cluster_edges(graph)

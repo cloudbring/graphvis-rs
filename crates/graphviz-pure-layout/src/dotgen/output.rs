@@ -28,6 +28,57 @@ pub struct Output {
     cluster_lp: Vec<(usize, String)>,
     /// `GD_clust` of the root (`None`) and of each cluster, as subgraph indices.
     cluster_list: Vec<(Option<usize>, String)>,
+    /// The `_cc_<i>` subgraphs a failed pack layout leaves (`Dot::cc_kept`), and
+    /// their projected subgraphs, parents first.
+    cc_subgraphs: Vec<CcSub>,
+    /// dot's `node_induce` ran on the components' cluster clones only.
+    cc_laid_out: bool,
+}
+
+/// A subgraph `cccomps` added to the root.
+struct CcSub {
+    name: String,
+    /// The subgraph a projection copies.
+    orig: Option<usize>,
+    attrs: graphviz_pure_core::AttrMap,
+    nodes: Vec<usize>,
+    edges: Vec<usize>,
+    /// Index into [`Output::cc_subgraphs`]; `None` for the root.
+    parent: Option<usize>,
+}
+
+/// The subgraph trees under `kept` (preorder).
+fn cc_subgraphs(d: &Dot<'_>, kept: &[G]) -> Vec<CcSub> {
+    fn rec(d: &Dot<'_>, g: G, parent: Option<usize>, out: &mut Vec<CcSub>) {
+        let Some(s) = d.graphs.get(g) else { return };
+        let me = out.len();
+        out.push(CcSub {
+            name: s.name.clone(),
+            orig: s.proj_of,
+            attrs: s.attrs.clone(),
+            nodes: s
+                .nodes
+                .iter()
+                .copied()
+                .filter(|&n| n < d.input.nodes.len())
+                .collect(),
+            edges: s
+                .edges
+                .iter()
+                .copied()
+                .filter(|&e| e < d.input.edges.len())
+                .collect(),
+            parent,
+        });
+        for &k in &s.subgs {
+            rec(d, k, Some(me), out);
+        }
+    }
+    let mut out = Vec::new();
+    for &g in kept {
+        rec(d, g, None, &mut out);
+    }
+    out
 }
 
 impl Output {
@@ -48,6 +99,8 @@ impl Output {
             graph_lp: None,
             cluster_lp: Vec::new(),
             cluster_list: Vec::new(),
+            cc_subgraphs: Vec::new(),
+            cc_laid_out: false,
         }
     }
 
@@ -221,6 +274,8 @@ impl Output {
             graph_lp,
             cluster_lp,
             cluster_list,
+            cc_subgraphs: cc_subgraphs(d, &d.cc_kept),
+            cc_laid_out: d.cc_laid_out,
         }
     }
 
@@ -299,6 +354,95 @@ impl Output {
         for (i, xlp) in self.node_xlp.into_iter().enumerate() {
             if let Some(v) = xlp {
                 graph.nodes[i].attrs.insert("xlp".to_string(), v);
+            }
+        }
+        if self.cc_laid_out {
+            // The root's clusters keep the edges they were given.
+            graph.graph_attrs.insert(
+                graphviz_pure_core::NO_LOW_CLUSTERS_KEY.to_string(),
+                String::new(),
+            );
+        }
+        let base = graph.subgraphs.len();
+        let dicts = graph.dicts.len().checked_sub(1) == Some(base);
+        let mut parent = vec![None; base];
+        for (i, s) in graph.subgraphs.iter().enumerate() {
+            for c in &s.subgraphs {
+                if let Some(p) = parent.get_mut(c.0 as usize) {
+                    *p = Some(i);
+                }
+            }
+        }
+        // Subgraph index of each `cc_subgraphs` entry.
+        let mut ids: Vec<usize> = Vec::with_capacity(self.cc_subgraphs.len());
+        for (id, mut c) in (base..).zip(self.cc_subgraphs) {
+            let sid = graphviz_pure_core::SubgraphId(id as u32);
+            if let Some(p) = c.parent.and_then(|p| ids.get(p)).copied()
+                && let Some(p) = graph.subgraphs.get_mut(p)
+            {
+                p.subgraphs.push(sid);
+            }
+            ids.push(id);
+            // `agsubg` gives `_cc_<i>` no declarations of its own. A projection's
+            // `agcopyattr` sets every graph attribute visible from the original with
+            // `agxset`, which declares it in the projection's own dictionary.
+            let mut dict = graphviz_pure_core::AttrDicts::default();
+            if let Some(o) = c.orig.filter(|_| dicts)
+                && let Some((root_dict, sub_dicts)) = graph.dicts.split_first()
+            {
+                // The nearest declaration, from the original up to the root.
+                let mut chain = Vec::new();
+                let mut cur = Some(o);
+                while let Some(k) = cur {
+                    chain.extend(sub_dicts.get(k));
+                    cur = parent.get(k).copied().flatten();
+                }
+                chain.push(root_dict);
+                for d in chain {
+                    for (k, sym) in &d.graph {
+                        dict.graph.entry(k.clone()).or_insert_with(|| {
+                            graphviz_pure_core::AttrSym {
+                                defval: sym.defval.clone(),
+                                html: sym.html,
+                                html_defval: sym.html_defval,
+                                ..Default::default()
+                            }
+                        });
+                    }
+                }
+                for (k, sym) in &dict.graph {
+                    c.attrs.insert(k.clone(), sym.defval.clone());
+                }
+            }
+            let is_cluster = graphviz_pure_core::has_cluster_prefix(&c.name)
+                || crate::common::utils::mapbool(c.attrs.get("cluster").map(String::as_str));
+            let html_name = c
+                .orig
+                .and_then(|o| graph.subgraphs.get(o))
+                .is_some_and(|s| s.html_name);
+            graph.subgraphs.push(graphviz_pure_core::SubgraphData {
+                id: sid,
+                name: c.name,
+                is_cluster,
+                graph_attrs: c.attrs,
+                node_defaults: Default::default(),
+                edge_defaults: Default::default(),
+                nodes: c
+                    .nodes
+                    .into_iter()
+                    .map(|n| graphviz_pure_core::NodeId(n as u32))
+                    .collect(),
+                edges: c
+                    .edges
+                    .into_iter()
+                    .map(|e| graphviz_pure_core::EdgeId(e as u32))
+                    .collect(),
+                subgraphs: Vec::new(),
+                bb: Default::default(),
+                html_name,
+            });
+            if dicts {
+                graph.dicts.push(dict);
             }
         }
     }

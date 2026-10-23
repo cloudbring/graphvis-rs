@@ -3383,6 +3383,80 @@ fn newrank_rank_max_cluster_emptied_by_node_induce_does_not_panic() {
     );
 }
 
+// #100: pack's `compute_bb` (lib/pack/pack.c:801) measures a component by its own edges.
+// v6 is in two components; its edge v6 -> v0 belongs to _cc_1 only, so it must not widen
+// _cc_0's box (C: _cc_0 is 8 0 78 176.48, and the cluster boxes below).
+#[test]
+fn pack_component_box_takes_only_its_own_edges() {
+    let (out, _, _) = run(
+        &["-Kdot", "-Tdot"],
+        "digraph G { pack=true; v5; subgraph cluster_0 { v6 [height=1.34] } \
+         subgraph cluster_2 { v6 -> v0; v1 -> v5 } v1 -> v0 }\n",
+    );
+    assert!(out.contains("graph [bb=\"0,0,317,340.48\""), "{out}");
+    assert!(out.contains("graph [bb=\"114,167,184,279.48\"]"), "{out}");
+    assert!(out.contains("graph [bb=\"78,0,220,154.24\"]"), "{out}");
+}
+
+// #101: a node of two non-nested clusters is in two pack components. C lays the second out
+// on the records the first left; the port lays out each one on fresh records (not matched,
+// see docs/porting/crashes.md, "dot's pack components"). It reports what C reports and
+// draws one spline for the shared edge.
+#[test]
+fn pack_node_in_two_non_nested_clusters_lays_out_each_component_afresh() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        "digraph G { pack=true; subgraph cluster_0 { v0; v6 } subgraph cluster_2 { v6 -> v0 } }\n",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Error: node \"v0\" belongs to two non-nested clusters \"cluster_2\" and \"cluster_0\"\n\
+         Error: node \"v6\" belongs to two non-nested clusters \"cluster_2\" and \"cluster_0\"\n"
+    );
+    assert!(
+        out.contains("v6 -> v0\t[pos=\"e,99,36.104 99,71.697 99,64.407 99,55.726 99,47.536\"]"),
+        "{out}"
+    );
+}
+
+// #312: dot's node_induce gives a packed component's cluster clone the edges between its
+// nodes; agdelete drops the clone, so -Tdot writes a loop declared at the root at the root
+// (C), not inside the original cluster.
+#[test]
+fn pack_cluster_loop_edge_stays_at_the_root_in_dot_output() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        "graph { pack=true; n5; subgraph cluster_c { label=C; n0; n1 }; n0 -- n0 }\n",
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("\n\tn0 -- n0\t[pos="), "{out}");
+    assert!(!out.contains("\t\tn0 -- n0"), "{out}");
+}
+
+// #226: when a later component's ortho maze cannot be built, doDot returns before packing
+// (lib/dotgen/dotinit.c): the earlier component keeps its layout, the `_cc_<i>` subgraphs
+// stay, and the root's box is what clip_and_install grew it to (C: 0,0,0,43.595).
+#[test]
+fn pack_failed_component_keeps_cc_subgraphs_and_root_box() {
+    let input = "digraph{pack=true a[shape=box width=1 height=0.5 label=A] \
+        b[shape=box width=1 height=0.5 label=B] a->b splines=ortho nodesep=0 ranksep=0.02\n\
+        node[shape=point width=0.05 height=0.01 fixedsize=true label=\"\"]\n\
+        n3->n2 n10->n7 n1->n11 n10->n4 n8->n2 n5->n3 n6->n4 n3->n10 n6->n3 n6->n0 n3->n6\n\
+        n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}\n";
+    let (out, err, ok) = run(&["-Kdot", "-Tdot"], input);
+    assert!(ok, "{err}");
+    assert!(out.contains("graph [bb=\"0,0,0,43.595\""), "{out}");
+    assert!(out.contains("\tsubgraph _cc_0 {\n"), "{out}");
+    assert!(out.contains("\tsubgraph _cc_1 {\n"), "{out}");
+    assert!(
+        out.contains("\t\ta -> b\t[pos=\"e,0,36.473 0,43.595 0,43.595 0,42.883 0,42.883\"];"),
+        "{out}"
+    );
+    let (svg, _, _) = run(&["-Kdot", "-Tsvg"], input);
+    assert!(svg.contains("<svg width=\"8pt\" height=\"52pt\""), "{svg}");
+}
+
 // With a non-default ratio C's doDot lays out the root with dotLayout(g) even with several
 // components (lib/dotgen/dotinit.c:466-494), and the `_cc_<i>` subgraphs exist meanwhile.
 // Each inherits rank=max, so a, b, c and d share one rank (C: 216x34pt). Without pack they

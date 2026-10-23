@@ -97,6 +97,13 @@ pub struct Dot<'a> {
     /// The layout gave up (dot_position or orthoEdges failed): no splines, no
     /// postprocessing.
     pub aborted: bool,
+    /// doDot laid out the `cccomps` components one by one (`dotLayout(sg)`), so dot's
+    /// `node_induce` added edges to the components' cluster clones, not to the root's
+    /// clusters.
+    pub cc_laid_out: bool,
+    /// The `_cc_<i>` subgraphs a failed layout leaves in the root (doDot returns
+    /// before `agdelete`), with the projected subgraphs under them.
+    pub cc_kept: Vec<G>,
 }
 
 impl<'a> Dot<'a> {
@@ -107,6 +114,8 @@ impl<'a> Dot<'a> {
             comp: false,
             comp_index: 0,
             root_bb: BoxF::default(),
+            cc_laid_out: false,
+            cc_kept: Vec::new(),
             edge_decls: std::cell::OnceCell::new(),
             cg_in_id: std::cell::RefCell::new(Vec::new()),
             cg_in_id_hits: std::cell::RefCell::new(Vec::new()),

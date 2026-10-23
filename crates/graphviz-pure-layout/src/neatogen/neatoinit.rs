@@ -971,7 +971,7 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
         );
         graph
             .graph_attrs
-            .insert("\u{1}nolowclust".to_string(), String::new());
+            .insert(graphviz_pure_core::NO_LOW_CLUSTERS_KEY.to_string(), String::new());
         return;
     };
     gv_postprocess(&mut g, false);

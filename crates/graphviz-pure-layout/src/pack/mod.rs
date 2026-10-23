@@ -445,9 +445,11 @@ struct GInfo {
 type PointSet = HashSet<(i64, i64)>;
 
 /// Not in C: the most cells genBox/genPoly may fill when computeStep saturated (issue #174).
-/// C takes a few seconds for this many, and the cell set uses about 0.5 GB; C still finishes
-/// up to roughly 1e8 cells (30 s), where the port now warns instead.
-const MAX_CELLS: f64 = (1u64 << 24) as f64;
+/// Measured on the reference build with one edge of `n` cells (#250's input, scaled): C takes
+/// 0.9 s and 1.1 GB at 3.4e7 cells, 3.9 s and 4.3 GB at 2^27, 10.5 s and 9.2 GB at 3.4e8,
+/// 47 s and 18 GB at 1e9; the port 1.8 s and 1.5 GB at 3.4e7, 13 s and 6 GB at 2^27, with
+/// the same output. Past 2^27, where C needs more than 4 GB, the port warns instead (#250).
+const MAX_CELLS: f64 = (1u64 << 27) as f64;
 
 /// Not in C. With a huge component (height="1e30", quantum="1e40") `l1` in computeStep
 /// (`lib/pack/pack.c:86`) is far above INT_MAX, `(int)l1` saturates on the reference
@@ -1232,5 +1234,16 @@ mod tests {
         assert!(gen_box(&huge, step, 8, Point::default(), 0, &mut budget).is_none());
         let mut budget = Budget::for_step(step);
         assert!(gen_box(&small, step, 8, Point::default(), 1, &mut budget).is_some());
+    }
+
+    /// Issue #250: C packs the edge of `n1 [pos="-1e12,-1e15!"]`, about 3.4e7 cells at a
+    /// saturated step, in about 1 s, so the budget lets it through; it stops at 2^27 cells.
+    #[test]
+    fn budget_lets_through_what_c_packs_in_a_second() {
+        let cells = 1e15 * 72.0 / f64::from(i32::MAX);
+        let mut budget = Budget::for_step(i32::MAX);
+        assert!(budget.take(cells.ceil() + 1.0));
+        let mut budget = Budget::for_step(i32::MAX);
+        assert!(!budget.take((1u64 << 27) as f64 + 1.0));
     }
 }
