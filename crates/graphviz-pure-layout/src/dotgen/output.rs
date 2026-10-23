@@ -52,7 +52,9 @@ struct CcSub {
 
 /// The members of each input subgraph in `d`'s cgraph. Under a pack layout with several
 /// components, dot ran on the components' projections (`projectG`), so the input
-/// subgraphs still have their declared members.
+/// subgraphs still have their declared members. Objects dot created are left out:
+/// `removeFill` deletes newrank's fill nodes, and where it does not run (`phase=2`, `3`)
+/// C crashes.
 fn membership(d: &Dot<'_>) -> Vec<(usize, Vec<usize>, Vec<usize>)> {
     d.graphs
         .iter()
