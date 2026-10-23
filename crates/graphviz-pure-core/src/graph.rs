@@ -54,6 +54,11 @@ pub struct EdgeData {
     /// `lp` is still printed, but renderers do not draw it.
     #[serde(default)]
     pub label_unplaced: bool,
+    /// The cgraph name of the edge: the `key` of the statement that made it (`agedge`'s
+    /// `name`). Defaults never name an edge (`edge [key=…]`, `-Ekey=…`), although `-E`
+    /// gives every edge a `key` attribute.
+    #[serde(default)]
+    pub key: Option<String>,
 }
 
 /// The name test of `is_a_cluster` (lib/common/utils.c): `strncasecmp(name, "cluster", 7)`.
@@ -123,6 +128,11 @@ pub const UNPLACED_PORT_LABELS_KEY: &str = "\u{1}unplacedportlbl";
 /// the layout dropped the name (dot's `sameport`).
 pub const TAIL_PORT_NAME_KEY: &str = "\u{1}tailportname";
 pub const HEAD_PORT_NAME_KEY: &str = "\u{1}headportname";
+/// Edge attribute set by dot on an edge whose arrowheads `arrow_flags` merged with an
+/// opposing edge's (`ED_conc_opp_flag` under `concentrate`): the arrow flags of each of
+/// its splines (`bz.sflag`, `bz.eflag`) as `"s,e"`, separated by spaces. Which opposing
+/// edge cgraph finds depends on its dictionaries, so renderers take the flags from here.
+pub const CONC_ARROW_FLAGS_KEY: &str = "\u{1}concarrows";
 /// One spelling for [`IGNORED_EDGE_KEY`] and the [`IGNORED_EDGE_INPUT_KEYS`] built on it.
 macro_rules! ignored_edge_key {
     ($attr:literal) => {
@@ -273,6 +283,7 @@ impl Graph {
             spline: Spline::default(),
             label_pos: None,
             label_unplaced: false,
+            key: None,
         });
         id
     }

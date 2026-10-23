@@ -1797,6 +1797,138 @@ fn labelled_flat_edge_on_an_unnormalised_top_rank_gets_a_label_rank() {
     );
 }
 
+// Issue #247: with `concentrate=true`, `arrow_flags` gives an edge with `ED_conc_opp_flag`
+// the arrowheads of an opposing edge, found by `agfindedge`. Among several opposing edges
+// cgraph's splay tree returns the first on its search path, not the first created. The port
+// took the first created, and lost an arrowhead and its clip, or drew the wrong type. Each
+// input after the first two needs one more of the searches that shape the tree: the
+// parser's search before each insert, `agcontains` in mincross (`ordering=out`), and
+// `cccomps` (`pack`). In the last, a `key` names an edge, whose id sorts after every
+// anonymous one. The expected lines are C 16.1.0's.
+#[test]
+fn concentrated_edge_takes_the_arrowheads_of_the_opposing_edge_cgraph_finds() {
+    for (src, want) in [
+        (
+            "d -> f [tailport=sw,dir=back]; g -> d [tailport=n,minlen=2,dir=back]; \
+             g -> d [headport=s]; g -> d; d -> g [minlen=4];",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M101.76,-206.18C102.36,-188.74 \
+                 103.37,-166.07 105,-146 107.77,-112 112.62,-73.06 116.05,-47.36\"/>",
+                "<polygon fill=\"black\" stroke=\"black\" points=\"98.27,-205.96 101.46,-216.07 \
+                 105.27,-206.18 98.27,-205.96\"/>",
+            ][..],
+        ),
+        (
+            "d -> g; g -> d [arrowhead=dot]; g -> d [arrowhead=box];",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M27,-61.38C27,-56.85 27,-52.14 \
+                 27,-47.59\"/>",
+                "<polygon fill=\"black\" stroke=\"black\" points=\"31,-71.2 23,-71.2 23,-63.2 \
+                 31,-63.2 31,-71.2\"/>",
+            ][..],
+        ),
+        (
+            "subgraph cluster1 { h; c } subgraph cluster2 { a label=C2; } b -> d; \
+             b -> d [dir=back]; d -> b; a -> d; b -> d; c -> d;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M154,-71.7C154,-64.41 154,-55.73 \
+               154,-47.54\"/>",
+            ][..],
+        ),
+        (
+            "ordering=out; g -> h; h -> b; b -> h [dir=back]; b -> h [tailport=se]; \
+             g -> h [label=x];",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M31.2,-62.22C30.73,-57.48 \
+                 30.25,-52.58 29.78,-47.85\"/>",
+                "<polygon fill=\"black\" stroke=\"black\" points=\"27.69,-62.34 32.16,-71.95 \
+                 34.66,-61.65 27.69,-62.34\"/>",
+            ][..],
+        ),
+        (
+            "pack=true; subgraph cluster0 { d } b -> e; e -> b; b -> e [dir=none]; d -> e;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M43,-71.7C43,-64.41 43,-55.73 \
+               43,-47.54\"/>",
+            ][..],
+        ),
+        (
+            "a -> c; c -> a [key=zz]; c -> a [arrowhead=dot]; b -> a;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M27,-60.24C27,-56.01 27,-51.66 \
+                 27,-47.44\"/>",
+                "<polygon fill=\"black\" stroke=\"black\" points=\"23.5,-60.18 27,-70.18 \
+                 30.5,-60.18 23.5,-60.18\"/>",
+            ][..],
+        ),
+        // `edge [key=d]` names nothing (`bindattrs` skips `key`), and a key starting with
+        // `%` leaves the edge anonymous (`agmapnametoid`).
+        (
+            "a -> c; subgraph s { edge [key=d]; c -> a [arrowhead=inv]; } \
+             c -> a [arrowhead=dot]; b -> a;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M27,-62.8C27,-57.78 27,-52.5 \
+                 27,-47.41\"/>",
+                "<ellipse fill=\"black\" stroke=\"black\" cx=\"27\" cy=\"-67.2\" rx=\"4\" \
+                 ry=\"4\"/>",
+            ][..],
+        ),
+        (
+            "a -> c; c -> a [key=\"%zz\"]; c -> a [arrowhead=dot]; b -> a;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M27,-62.8C27,-57.78 27,-52.5 \
+                 27,-47.41\"/>",
+                "<ellipse fill=\"black\" stroke=\"black\" cx=\"27\" cy=\"-67.2\" rx=\"4\" \
+                 ry=\"4\"/>",
+            ][..],
+        ),
+    ] {
+        let src = format!("digraph G {{ concentrate=true; {src} }}");
+        let (out, err, ok) = run(&["-Kdot", "-Tsvg"], &src);
+        assert!(ok, "{src}: {err}");
+        for w in want {
+            assert!(out.contains(w), "{src}: {w}\n{out}");
+        }
+    }
+    // Undirected: `dir=both` draws both arrowheads of the named edges' group.
+    let src = "graph G { concentrate=true; b -- a [key=k3]; a -- b [arrowtail=inv,dir=none]; \
+               a -- b [key=k1,dir=both]; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    for w in [
+        "<path fill=\"none\" stroke=\"black\" d=\"M27,-60.24C27,-56.01 27,-51.66 27,-47.44\"/>",
+        "<polygon fill=\"black\" stroke=\"black\" points=\"30.5,-47.62 27,-37.62 23.5,-47.62 \
+         30.5,-47.62\"/>",
+    ] {
+        assert!(out.contains(w), "{w}\n{out}");
+    }
+    // `-Ekey=q` gives every edge a `key` attribute, but names none of them.
+    let src = "digraph G { concentrate=true; a -> c; c -> a [key=zz]; c -> a [arrowhead=dot]; \
+               b -> a; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg", "-Ekey=q"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "<polygon fill=\"black\" stroke=\"black\" points=\"23.5,-60.18 27,-70.18 \
+             30.5,-60.18 23.5,-60.18\"/>"
+        ),
+        "{out}"
+    );
+}
+
+// Issue #242: `rebuild_vlists` warns when concentration leaves a cluster no node of its own
+// on a rank (`conc.c:187`). stderr is C 16.1.0's.
+#[test]
+fn concentrate_warns_about_a_degenerate_cluster_rank() {
+    let src = "digraph G { rank=same; concentrate=true; compound=true; \
+               subgraph cluster31 { d f } { rank=same; e } e -> f; \
+               e -> a [minlen=1,constraint=false]; e -> f [weight=0]; e -> f; \
+               e -> d [constraint=false]; d -> a [label=x]; e -> f; d -> f; }";
+    let (_, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok);
+    assert_eq!(err, "Warning: degenerate concentrated rank cluster31,1\n");
+}
+
 // Issue #234: with `concentrate=true`, a cluster edge with other ports shares its chain
 // (`interclrep`) and is routed alone through `make_regular_edge`'s `hackflag`, which follows
 // the chain as it was before `dot_concentrate` rewired it. Where the walk stops at a

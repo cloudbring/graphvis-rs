@@ -401,6 +401,11 @@ impl<'a> Parser<'a> {
         // `-G`/`-N`/`-E` symbols are `fixed`: root attribute statements keep them.
         let mut kept = AttrMap::new();
         for (k, v) in attrs {
+            // `bindattrs` skips an edge `key`, and `attrstmt` then skips the unbound item:
+            // `edge [key=k]` sets nothing.
+            if kind == DictKind::Edge && k == "key" {
+                continue;
+            }
             if self.fixed_at_root(kind, &k) {
                 if let Some(sym) = self.dict_mut(0, kind).get_mut(&k) {
                     sym.print = true;
@@ -809,6 +814,10 @@ impl<'a> Parser<'a> {
         let is_new = self.graph.edges.len() > before;
         if is_new {
             self.anon_ctr += 2;
+            // `endedge` passes `agedge` the statement's own `key`.
+            if let Some(edge) = self.graph.edges.get_mut(edge_id.0 as usize) {
+                edge.key = edge_attrs.get("key").cloned();
+            }
         }
         if let Some(edge) = self.graph.edges.get(edge_id.0 as usize) {
             // grammar.y `newedge`: an existing undirected edge found the other way round

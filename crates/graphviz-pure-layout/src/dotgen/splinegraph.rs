@@ -112,7 +112,7 @@ impl SplineGraph for Dot<'_> {
         let (mut s, mut f) = arrow_flags(self.edge_attrs(e), directed);
         if self.edges[e].conc_opp_flag {
             let (t, h) = (self.edges[e].tail, self.edges[e].head);
-            if let Some(o) = self.cg_find_edge(0, h, t) {
+            if let Some(o) = self.agfindedge_root(h, t) {
                 let (s0, e0) = arrow_flags(self.edge_attrs(o), directed);
                 f |= s0;
                 s |= e0;

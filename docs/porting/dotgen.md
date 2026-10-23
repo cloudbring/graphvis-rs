@@ -127,6 +127,20 @@ match C (pos/lp/head_lp/tail_lp/xlp within 2pt) except where C itself exceeds a
   the node record, so stale state from the first layout leaks into the
   second. `wild_GraphViz-Samples_complex` with `-Gpack=true` differs.
 * `agcontains` of virtual nodes is false (they have ID 0 in C), as in C.
+* With `concentrate=true`, `arrow_flags` takes the arrowheads of an opposing
+  edge from `agfindedge`. When there are several such edges, which one it finds
+  depends on the shape of cgraph's splay tree (`Dot::agfindedge_root`), and that
+  shape depends on the node ids, which are the addresses of the node names. The
+  port takes the ids to grow in the order the nodes were created. C often
+  reuses freed blocks, so its order differs from that in most graphs, and
+  sometimes from one run to the next. It only matters for a node with
+  in-edges from two tails or more. An edge statement's own `key` names the edge
+  (not `edge [key=…]` or `-Ekey=…`, and not a key starting with `%`), whose id is
+  the address of the key string, so named edges come after anonymous ones; among
+  themselves they are also taken in creation order. A `%` key that is used again
+  takes the id of its first edge in C; the port gives each edge a new one. In #289's sweeps (13,000
+  generated concentrate inputs), 28 outputs still differ for this reason alone,
+  and on 15 more C's own output varies from run to run.
 
 ## Validation
 

@@ -56,6 +56,17 @@ pub struct Dot<'a> {
     pub root_bb: BoxF,
     /// Edge attribute names declared in `root_input` (`agattr(g, AGEDGE, k, NULL)`).
     pub edge_decls: std::cell::OnceCell<std::collections::BTreeSet<String>>,
+    /// The root graph's in-edge dictionaries by tail (`agsubrep(g, n)->in_id`), each
+    /// built on the first `agfindedge` into its node. See [`Dot::agfindedge_root`].
+    pub cg_in_id: std::cell::RefCell<Vec<Option<crate::cdt::Cdt<E>>>>,
+    /// Input edges `agsubedge` found in the root graph's `in_id` dictionaries (a search
+    /// that splays them), in order, for the dictionaries not built yet.
+    pub cg_in_id_hits: std::cell::RefCell<Vec<E>>,
+    /// `cccomps` ran on the root (doDot's pack branch): `graphviz_node_induce` found
+    /// every edge in the root's dictionaries, by tail and then edge.
+    pub cg_in_id_packed: bool,
+    /// Root node index of each input node, when `input` is a pack component.
+    pub cg_root_node: Option<Vec<usize>>,
     pub nodes: Vec<NodeInfo>,
     pub edges: Vec<EdgeInfo>,
     pub graphs: Vec<GraphInfo>,
@@ -97,6 +108,10 @@ impl<'a> Dot<'a> {
             comp_index: 0,
             root_bb: BoxF::default(),
             edge_decls: std::cell::OnceCell::new(),
+            cg_in_id: std::cell::RefCell::new(Vec::new()),
+            cg_in_id_hits: std::cell::RefCell::new(Vec::new()),
+            cg_in_id_packed: false,
+            cg_root_node: None,
             nodes: Vec::new(),
             edges: Vec::new(),
             graphs: Vec::new(),

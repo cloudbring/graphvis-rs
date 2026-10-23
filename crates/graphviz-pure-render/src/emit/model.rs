@@ -341,8 +341,9 @@ impl<'g> Model<'g> {
             let a = Attrs(&e.attrs);
             let (mut stype, mut etype) = arrow_flags(a, directed);
             // concentrate=true merges the arrowheads of an opposing edge into
-            // this one (`ED_conc_opp_flag` in arrow_flags); the layout only
-            // records that an end has an arrow, so take its type from there.
+            // this one (`ED_conc_opp_flag` in arrow_flags). Unless the layout
+            // passes its flags (below), only the presence of an arrow is known,
+            // so take its type from the first opposing edge.
             let has_s = e.spline.segments.iter().any(|s| s.start_arrow.is_some());
             let has_e = e.spline.segments.iter().any(|s| s.end_arrow.is_some());
             if (has_s && stype == 0) || (has_e && etype == 0) {
@@ -356,6 +357,17 @@ impl<'g> Model<'g> {
                     etype |= os;
                 }
             }
+            // The layout's own flags, where cgraph's choice of opposing edge decides them.
+            let mut conc_flags = e
+                .attrs
+                .get(graphviz_pure_core::CONC_ARROW_FLAGS_KEY)
+                .map(|v| v.split(' '))
+                .into_iter()
+                .flatten()
+                .map(|f| {
+                    let (s, e) = f.split_once(',').unwrap_or_default();
+                    (s.parse().unwrap_or(0), e.parse().unwrap_or(0))
+                });
             let bz = e
                 .spline
                 .segments
@@ -376,6 +388,12 @@ impl<'g> Model<'g> {
                     },
                     sp: s.start_arrow.unwrap_or_default(),
                     ep: s.end_arrow.unwrap_or_default(),
+                })
+                .map(|mut bz| {
+                    if let Some((s, e)) = conc_flags.next() {
+                        (bz.sflag, bz.eflag) = (s, e);
+                    }
+                    bz
                 })
                 .collect();
             let tname = &g.nodes[e.tail.0 as usize].name;
