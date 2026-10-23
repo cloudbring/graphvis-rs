@@ -113,9 +113,10 @@ fn left_of(p1: Point, p2: Point, p3: Point) -> bool {
 /// The attribute symbols `make_flat_adj_edges`' aux graph is laid out with (`cloneGraph`,
 /// `setState`).
 ///
-/// cloneGraph declares on auxg cgraph's ProtoGraph node `label`, then the main graph's node and
-/// edge attributes in name order (agnxtattr), then `headport`, `tailport` and `weight` where the
-/// main graph has none. setState rebinds some global symbols to auxg and NULLs others
+/// auxg starts with cgraph's ProtoGraph symbols (the node `label` and the `-N`/`-E` defaults)
+/// at the ids the main graph gave them; cloneGraph then declares the main graph's other node
+/// and edge attributes in name order (agnxtattr), then `headport`, `tailport` and `weight`
+/// where the main graph has none. setState rebinds some global symbols to auxg and NULLs others
 /// ([`AuxSyms::NULL_NODE`], [`AuxSyms::NULL_EDGE`]). N_penwidth, E_penwidth and E_arrowsz keep
 /// the main graph's `Agsym_t`, so agxget reads the aux attribute whose id is theirs, whatever
 /// its name. N_fixed and E_label_float are looked up as "fixed" and "label_float".
@@ -147,15 +148,38 @@ impl<'g> AuxSyms<'g> {
     ];
 
     fn new(main: &'g graphviz_pure_core::AttrDicts) -> Self {
-        let mut node = vec!["label".to_string()];
-        node.extend(main.node.keys().filter(|k| *k != "label").cloned());
-        let mut edge: Vec<String> = main.edge.keys().cloned().collect();
+        let mut node = Self::names(&main.node);
+        if !main.node.contains_key("label") {
+            node.insert(0, "label".to_string());
+        }
+        let mut edge = Self::names(&main.edge);
         for k in ["headport", "tailport", "weight"] {
             if !main.edge.contains_key(k) {
                 edge.push(k.to_string());
             }
         }
         AuxSyms { main, node, edge }
+    }
+
+    /// The aux ids of a main dictionary's symbols: auxg copies the ProtoGraph's symbols with
+    /// their ids, as the root did, so they come first in id order; cloneGraph then declares
+    /// the others in name order.
+    fn names(
+        dict: &std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>,
+    ) -> Vec<String> {
+        let mut proto: Vec<(usize, &String)> = dict
+            .iter()
+            .filter(|(_, s)| s.proto)
+            .map(|(k, s)| (s.id, k))
+            .collect();
+        proto.sort();
+        let mut names: Vec<String> = proto.into_iter().map(|(_, k)| k.clone()).collect();
+        names.extend(
+            dict.iter()
+                .filter(|(_, s)| !s.proto)
+                .map(|(k, _)| k.clone()),
+        );
+        names
     }
 
     /// Sets each of `keys` to what the main graph's symbol of that name reads on an aux object
@@ -2239,6 +2263,7 @@ mod tests {
             .map(|(id, n)| {
                 let sym = graphviz_pure_core::AttrSym {
                     id,
+                    proto: *n == "label",
                     ..Default::default()
                 };
                 (n.to_string(), sym)
@@ -2254,7 +2279,9 @@ mod tests {
 
     /// #84: the main graph declares weight, constraint, headclip, headport, fontcolor and
     /// penwidth in that order. auxg declares them in name order, then `tailport`, so
-    /// E_penwidth (id 5) reads the aux `weight`, which is 10000 on the heavy edge.
+    /// E_penwidth (id 5) reads the aux `weight`, which is 10000 on the heavy edge. That the
+    /// heavy weight is set before these reads is checked end to end in `cli.rs`
+    /// (`flat_adjacent_aux_graph_reads_symbols_by_main_id_like_c`).
     #[test]
     fn stale_edge_symbols_read_the_aux_attribute_with_their_id_after_the_heavy_weight() {
         let main = graphviz_pure_core::AttrDicts {
@@ -2292,6 +2319,39 @@ mod tests {
         syms.fix_edge(&mut e);
         assert_eq!(e.get("penwidth").map(String::as_str), Some("5"));
         assert_eq!(e.get("fontcolor"), None);
+    }
+
+    /// `-N`/`-E` declare their attributes on cgraph's ProtoGraph, which auxg copies with the
+    /// ids the main graph gave them; the main graph's other attributes follow in name order.
+    #[test]
+    fn protograph_symbols_keep_their_main_ids_in_the_aux_graph() {
+        let mut edge = dict(&["zzz", "penwidth", "arrowsize", "color"]);
+        for k in ["zzz", "penwidth"] {
+            edge.get_mut(k).unwrap().proto = true;
+        }
+        let main = graphviz_pure_core::AttrDicts {
+            node: dict(&["label", "width"]),
+            edge,
+            ..Default::default()
+        };
+        let syms = AuxSyms::new(&main);
+        assert_eq!(syms.node, ["label", "width"]);
+        assert_eq!(
+            syms.edge,
+            [
+                "zzz",
+                "penwidth",
+                "arrowsize",
+                "color",
+                "headport",
+                "tailport",
+                "weight"
+            ]
+        );
+        let mut e = attrs(&[("penwidth", "2"), ("arrowsize", "3"), ("zzz", "1")]);
+        syms.fix_edge(&mut e);
+        assert_eq!(e.get("penwidth").map(String::as_str), Some("2"));
+        assert_eq!(e.get("arrowsize").map(String::as_str), Some("3"));
     }
 
     /// #113: `fixed` declared after the node was made: cgraph gave the node "", not the

@@ -364,6 +364,7 @@ impl<'a> Parser<'a> {
                 id: 0,
                 html: false,
                 html_defval: false,
+                proto: true,
             },
         );
         // Command-line defaults come from cgraph's ProtoGraph dictionaries.
@@ -383,6 +384,7 @@ impl<'a> Parser<'a> {
                         id,
                         html: false,
                         html_defval: false,
+                        proto: true,
                     },
                 );
             }

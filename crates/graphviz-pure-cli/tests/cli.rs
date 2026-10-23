@@ -1610,6 +1610,15 @@ c -> d [fontcolor=blue, penwidth=3.99];
         assert!(ok, "{src}: {err}");
         assert!(out.contains(path), "{src}: {out}");
     }
+    // `-E` declares `penwidth` on cgraph's ProtoGraph, so it keeps id 0 in auxg too, and
+    // E_penwidth reads itself; sorted by name, id 0 would be `arrowsize` (3).
+    let src = "digraph G { edge [arrowsize=3]; {rank=same; a -> b [tailport=e];} }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg", "-Epenwidth=1"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("d=\"M54,-18C54.1,-17.95 54.2,-17.91 54.29,-17.87\""),
+        "{out}"
+    );
 }
 
 /// Issue #138: with a rotated box (or `shape=none`) and a compass port, both
