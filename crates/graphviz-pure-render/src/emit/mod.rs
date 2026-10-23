@@ -82,4 +82,5 @@ pub fn reset_render_state() {
     crate::svg_engine::reset_gradient_ids();
     html::reset_anchor_ids();
     ORDER_FLAGS.with(|c| c.set(0));
+    graphviz_pure_core::font::textfont_dict_reset();
 }

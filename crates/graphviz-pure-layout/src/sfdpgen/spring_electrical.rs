@@ -16,6 +16,7 @@ use crate::sparse::quad_tree::{QuadTree, Supernodes};
 use crate::sparse::{
     MINDIST, SparseMatrix, distance, distance_cropped, drand, from_coordinate_arrays,
 };
+use graphviz_pure_core::cnum::c_max;
 use graphviz_pure_core::math;
 
 /// `ERROR_NOT_SQUARE_MATRIX`.
@@ -463,7 +464,7 @@ fn repulsive_supernodes(
     f: &mut [f64],
 ) {
     for j in 0..sn.len() {
-        let dist = sn.distances[j].max(MINDIST);
+        let dist = c_max(sn.distances[j], MINDIST);
         for k in 0..dim {
             f[k] += sn.wgts[j] * kp * (x[i * dim + k] - sn.center[j * dim + k])
                 / math::powf(dist, 1.0 - p);

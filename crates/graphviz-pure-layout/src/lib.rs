@@ -1,6 +1,6 @@
 //! Graphviz layout engines in pure Rust (`dot`, `neato`, `fdp`, `sfdp`, `twopi`, `circo`, `osage`, `patchwork`).
 
-pub mod cdt;
+pub use graphviz_pure_core::cdt;
 pub mod circogen;
 pub mod common;
 pub mod cutil;
@@ -79,6 +79,7 @@ pub fn layout_graph_with_options(
     options: LayoutOptions,
 ) -> Result<()> {
     common::splines::reset_bz_split_budget();
+    graphviz_pure_core::font::textfont_layout_begin();
     common::utils::set_ps_inputscale(options.inputscale);
     fdpgen::tlayout::set_fdp_parms(options.fdp);
     neatogen::stuff::set_reduce(options.reduce);

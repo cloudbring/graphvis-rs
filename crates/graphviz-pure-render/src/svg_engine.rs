@@ -349,7 +349,10 @@ impl SvgEngine {
         } else if (offset - 1.0).abs() < 0.0005 {
             self.put("<stop offset=\"1\" style=\"stop-color:");
         } else {
-            self.put(&format!("<stop offset=\"{offset:.3}\" style=\"stop-color:"));
+            self.put(&format!(
+                "<stop offset=\"{}\" style=\"stop-color:",
+                graphviz_pure_core::cnum::fmt_f(offset, 3)
+            ));
         }
         match c {
             GvColor::Str(s) if s == "transparent" => self.put("black"),
@@ -421,7 +424,9 @@ impl SvgEngine {
             self.put("_");
         }
         self.put(&format!(
-            "r_{id}\" cx=\"50%\" cy=\"50%\" r=\"75%\" fx=\"{ifx:.0}%\" fy=\"{ify:.0}%\">\n"
+            "r_{id}\" cx=\"50%\" cy=\"50%\" r=\"75%\" fx=\"{}%\" fy=\"{}%\">\n",
+            graphviz_pure_core::cnum::fmt_f(ifx, 0),
+            graphviz_pure_core::cnum::fmt_f(ify, 0)
         ));
         let (fc, sc) = (o.fillcolor.clone(), o.stopcolor.clone());
         self.print_stop(0.0, &fc);
@@ -742,7 +747,10 @@ impl Engine for SvgEngine {
                 self.put(" baseline-shift=\"sub\"");
             }
         }
-        self.put(&format!(" font-size=\"{:.2}\"", span.font.size));
+        self.put(&format!(
+            " font-size=\"{}\"",
+            graphviz_pure_core::cnum::fmt_f(span.font.size, 2)
+        ));
         match &o.pencolor {
             GvColor::Str(s) => {
                 if !s.eq_ignore_ascii_case("black") {

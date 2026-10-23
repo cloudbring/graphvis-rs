@@ -132,7 +132,14 @@ impl<'a> LGraph<'a> {
             let a = &ed.attrs;
             let tname = &graph.nodes[ed.tail.0 as usize].name;
             let hname = &graph.nodes[ed.head.0 as usize].name;
-            let lg = graphviz_pure_geom::edge_label_geometry(a, tname, hname, directed, &env);
+            let lg = graphviz_pure_geom::node_size::edge_label_geometry_of(
+                u64::from(ed.id.0),
+                a,
+                tname,
+                hname,
+                directed,
+                &env,
+            );
             let conv = |key: &str, l: &Option<graphviz_pure_geom::node_size::LabelGeometry>| {
                 l.as_ref().map(|l| TextLabel {
                     text: graphviz_pure_geom::label_text(l, a.get(key).map_or("", String::as_str)),
@@ -157,7 +164,10 @@ impl<'a> LGraph<'a> {
     /// the edge record).
     pub fn new_unported(graph: &'a Graph, ndim: usize, default_edge_type: EdgeType) -> Self {
         let gattrs = &graph.graph_attrs;
-        let nodesep = c_round(late_double(gattrs, "nodesep", DEFAULT_NODESEP, MIN_NODESEP) * 72.0);
+        // `GD_nodesep = POINTS(…)`, an `int`: 1e300 inches saturates at INT_MAX points.
+        let nodesep = i64::from(c_round(
+            late_double(gattrs, "nodesep", DEFAULT_NODESEP, MIN_NODESEP) * 72.0,
+        ));
         let mut drawing = Drawing::default();
         if let Some(p) = gattrs.get("ratio") {
             match p.as_str() {

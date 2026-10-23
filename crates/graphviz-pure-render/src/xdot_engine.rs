@@ -139,7 +139,10 @@ impl XdotEngine {
         let es = o.emit_state as usize;
         if (o.penwidth - self.penwidth[es]).abs() >= 0.0005 {
             self.penwidth[es] = o.penwidth;
-            let s = format!("setlinewidth({})", trim_zeros(format!("{:.3}", o.penwidth)));
+            let s = format!(
+                "setlinewidth({})",
+                trim_zeros(super::emit::num::c_fixed(o.penwidth, 3))
+            );
             self.str_(j, "S ", &s);
         }
         let Some(raw) = o.rawstyle.clone() else {
@@ -194,7 +197,7 @@ impl XdotEngine {
         }
         xb.push_str("2 ");
         let stop = |xb: &mut String, v: f64, c: [u8; 4]| {
-            xb.push_str(&trim_zeros(format!("{v:.3}")));
+            xb.push_str(&trim_zeros(super::emit::num::c_fixed(v, 3)));
             xb.push(' ');
             let cs = Self::color_str(c);
             let _ = write!(

@@ -7,6 +7,7 @@ use super::emit::{DEFAULT_COLOR, DEFAULT_FILL, find_stop_color};
 use super::job::{EmitState, Emitter, Engine, FILL, GRADIENT, RGRADIENT};
 use super::model::TextLabel;
 use graphviz_pure_core::Point;
+use graphviz_pure_core::cnum::is_exactly_zero;
 use graphviz_pure_core::math;
 use graphviz_pure_geom::shapes::{RecordField, ShapeKind};
 
@@ -136,8 +137,8 @@ impl<E: Engine> Emitter<'_, E> {
         let is_box = desc.is_some_and(|p| {
             p.sides == 4
                 && (p.orientation % 90.0).abs() < 0.5
-                && p.distortion == 0.0
-                && p.skew == 0.0
+                && is_exactly_zero(p.distortion)
+                && is_exactly_zero(p.skew)
         });
         let is_ellipse = desc.is_some_and(|p| p.sides <= 2);
         let list = nd.attrs.nonempty("style").map(|s| {

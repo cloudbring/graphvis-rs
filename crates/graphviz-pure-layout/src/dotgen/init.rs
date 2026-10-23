@@ -342,7 +342,8 @@ impl<'a> Dot<'a> {
         let directed = self.input.kind == GraphKind::Directed;
         let input = self.input;
         let ie = &input.edges[r];
-        let geo = graphviz_pure_geom::edge_label_geometry(
+        let geo = graphviz_pure_geom::node_size::edge_label_geometry_of(
+            u64::from(ie.id.0),
             &ie.attrs,
             &self.nodes[t].name,
             &self.nodes[h].name,

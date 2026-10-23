@@ -235,13 +235,22 @@ fn parse_xdot(s: &str) -> Vec<Op> {
     ops
 }
 
+/// `%.03f`, as C's `printf` prints it (`nan` where Rust prints `NaN`).
+struct F3(f64);
+
+impl std::fmt::Display for F3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&graphviz_pure_core::cnum::fmt_f(self.0, 3))
+    }
+}
+
 fn write_polyline(out: &mut String, pts: &[(f64, f64)]) {
     out.push_str("\"points\": [");
     for (i, (x, y)) in pts.iter().enumerate() {
         if i > 0 {
             out.push(',');
         }
-        let _ = write!(out, "[{x:.3},{y:.3}]");
+        let _ = write!(out, "[{},{}]", F3(*x), F3(*y));
     }
     out.push_str("]\n");
 }
@@ -252,7 +261,7 @@ fn write_stops(out: &mut String, stops: &[(f64, String)]) {
         if i > 0 {
             out.push(',');
         }
-        let _ = write!(out, "{{\"frac\": {f:.3}, \"color\": ");
+        let _ = write!(out, "{{\"frac\": {}, \"color\": ", F3(*f));
         stoj(c, out);
         out.push('}');
     }
@@ -271,8 +280,11 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
             indent(out, l);
             let _ = writeln!(
                 out,
-                "\"rect\": [{:.3},{:.3},{:.3},{:.3}]",
-                r[0], r[1], r[2], r[3]
+                "\"rect\": [{},{},{},{}]",
+                F3(r[0]),
+                F3(r[1]),
+                F3(r[2]),
+                F3(r[3])
             );
         }
         Op::Polygon(f, v) => {
@@ -293,7 +305,7 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
         Op::Text(x, y, a, w, t) => {
             out.push_str("\"op\": \"T\",\n");
             indent(out, l);
-            let _ = writeln!(out, "\"pt\": [{x:.3},{y:.3}],");
+            let _ = writeln!(out, "\"pt\": [{},{}],", F3(*x), F3(*y));
             indent(out, l);
             let al = if *a < 0 {
                 'l'
@@ -304,7 +316,7 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
             };
             let _ = writeln!(out, "\"align\": \"{al}\",");
             indent(out, l);
-            let _ = writeln!(out, "\"width\": {w:.3},");
+            let _ = writeln!(out, "\"width\": {},", F3(*w));
             indent(out, l);
             out.push_str("\"text\": ");
             stoj(t, out);
@@ -325,9 +337,9 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
                     out.push_str("\"grad\": \"linear\",\n");
                     indent(out, l);
                     indent(out, l);
-                    let _ = writeln!(out, "\"p0\": [{x0:.3},{y0:.3}],");
+                    let _ = writeln!(out, "\"p0\": [{},{}],", F3(*x0), F3(*y0));
                     indent(out, l);
-                    let _ = writeln!(out, "\"p1\": [{x1:.3},{y1:.3}],");
+                    let _ = writeln!(out, "\"p1\": [{},{}],", F3(*x1), F3(*y1));
                     indent(out, l);
                     write_stops(out, st);
                 }
@@ -335,9 +347,9 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
                     out.push_str("\"grad\": \"radial\",\n");
                     indent(out, l);
                     indent(out, l);
-                    let _ = writeln!(out, "\"p0\": [{x0:.3},{y0:.3},{r0:.3}],");
+                    let _ = writeln!(out, "\"p0\": [{},{},{}],", F3(*x0), F3(*y0), F3(*r0));
                     indent(out, l);
-                    let _ = writeln!(out, "\"p1\": [{x1:.3},{y1:.3},{r1:.3}],");
+                    let _ = writeln!(out, "\"p1\": [{},{},{}],", F3(*x1), F3(*y1), F3(*r1));
                     indent(out, l);
                     write_stops(out, st);
                 }
@@ -346,7 +358,7 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
         Op::Font(sz, f) => {
             out.push_str("\"op\": \"F\",\n");
             indent(out, l);
-            let _ = writeln!(out, "\"size\": {sz:.3},");
+            let _ = writeln!(out, "\"size\": {},", F3(*sz));
             indent(out, l);
             out.push_str("\"face\": ");
             stoj(f, out);

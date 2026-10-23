@@ -65,6 +65,257 @@ pub struct TextLineLayout {
     pub height: f64,
     /// Horizontal justification of this line (`\n`, `\l`, `\r`).
     pub justify: TextJustify,
+    /// The size of the line's interned font (`span->font->size`): the label's font size,
+    /// except where C's font dictionary hands a NaN size another font (see
+    /// [`textfont_intern`]). An empty line has no font and keeps the label's size.
+    #[serde(default)]
+    pub font_size: f64,
+}
+
+/// A `textfont_t` key in C's font dictionary (`gvc->textfont_dt`).
+#[derive(Debug, Clone)]
+struct TextFontKey {
+    name: Option<String>,
+    color: Option<String>,
+    flags: u32,
+    size: f64,
+}
+
+/// `textfont_comparf` (`lib/common/textspan.c`): names, colours, flags, then sizes with
+/// `<` and `>`, so a NaN size compares equal to any size.
+fn textfont_cmp(k1: &TextFontKey, k2: &TextFontKey) -> std::cmp::Ordering {
+    use std::cmp::Ordering::{Equal, Greater, Less};
+    fn opt(a: &Option<String>, b: &Option<String>) -> std::cmp::Ordering {
+        match (a, b) {
+            (None, None) => Equal,
+            (None, Some(_)) => Less,
+            (Some(_), None) => Greater,
+            (Some(a), Some(b)) => a.as_bytes().cmp(b.as_bytes()),
+        }
+    }
+    let rc = opt(&k1.name, &k2.name);
+    if rc != Equal {
+        return rc;
+    }
+    let rc = opt(&k1.color, &k2.color);
+    if rc != Equal {
+        return rc;
+    }
+    if k1.flags != k2.flags {
+        return k1.flags.cmp(&k2.flags);
+    }
+    if k1.size < k2.size {
+        Less
+    } else if k1.size > k2.size {
+        Greater
+    } else {
+        Equal
+    }
+}
+
+/// A font key with its size's bits, for [`TextFontDict::log`].
+type LogKey = (Option<String>, Option<String>, u32, u64);
+
+/// `gvc->textfont_dt`, and what the port needs to measure a label more than once.
+#[derive(Default)]
+struct TextFontDict {
+    dt: crate::cdt::Cdt<TextFontKey>,
+    /// The sizes `dtinsert` returned during the current layout, per key (with the size's
+    /// bits), in order; with the next one to replay.
+    log: std::collections::HashMap<LogKey, (Vec<f64>, usize)>,
+    /// Inside [`textfont_remeasuring`].
+    remeasuring: u32,
+    /// The sizes each object's labels got when layout first measured them, by
+    /// [`textfont_recording`]'s tag: what C keeps in each span's `font`.
+    objects: std::collections::HashMap<String, Vec<f64>>,
+    /// The open [`textfont_recording`] (tag, sizes) and [`textfont_replaying`] (sizes,
+    /// next) scopes, innermost last.
+    scopes: Vec<Scope>,
+}
+
+enum Scope {
+    Record(String, Vec<f64>),
+    Replay(Vec<f64>, usize),
+}
+
+thread_local! {
+    /// One dictionary per thread, as C has one per GVC: it lives across the graphs of a run.
+    static TEXTFONT_DT: std::cell::RefCell<TextFontDict> =
+        std::cell::RefCell::new(TextFontDict::default());
+}
+
+/// `dtinsert(gvc->textfont_dt, &tf)`: interns a font and returns the size of the font in
+/// the dictionary. That is `size`, except where a NaN is involved: C's comparison finds a
+/// NaN size equal to the first font with the same name, colour and flags that the splay
+/// tree's search reaches, and a NaN font interned first is found for later sizes too
+/// (#274).
+///
+/// C measures each label once; the port measures some again (the renderer, and a label
+/// that layout makes twice). Inside [`textfont_remeasuring`] the tree is left alone and
+/// each key gets the sizes the current layout's lookups returned, in order.
+pub fn textfont_intern(name: Option<&str>, color: Option<&str>, flags: u32, size: f64) -> f64 {
+    let key = TextFontKey {
+        name: name.map(str::to_string),
+        color: color.map(str::to_string),
+        flags,
+        size,
+    };
+    let lkey = (key.name.clone(), key.color.clone(), flags, size.to_bits());
+    TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        if let Some(Scope::Replay(sizes, next)) = d.scopes.last_mut() {
+            let v = sizes.get(*next).copied().unwrap_or(size);
+            *next += 1;
+            return v;
+        }
+        if d.remeasuring > 0 {
+            return match d.log.get_mut(&lkey) {
+                Some((sizes, next)) if !sizes.is_empty() => {
+                    let v = sizes[(*next).min(sizes.len() - 1)];
+                    *next += 1;
+                    v
+                }
+                _ => size,
+            };
+        }
+        let cmp = |e: &TextFontKey| textfont_cmp(&key, e);
+        let (i, _) = d.dt.insert(key.clone(), &cmp);
+        let v = d.dt.get(i).size;
+        d.log.entry(lkey).or_default().0.push(v);
+        if let Some(Scope::Record(_, sizes)) = d.scopes.last_mut() {
+            sizes.push(v);
+        }
+        v
+    })
+}
+
+/// Runs `f`, a measurement of the labels of the object `tag` names (`node:a`, ...). The
+/// first one in a layout interns the fonts, as C's single measurement does, and keeps the
+/// sizes they get, as C keeps each span's `font`; a later one (the port measures some
+/// objects again, and the renderer measures them all) gets the same sizes and leaves the
+/// dictionary alone. The recorded sizes belong to the most recent layout on this thread
+/// ([`textfont_layout_begin`]), so a graph is rendered after its own layout.
+pub fn textfont_object<R>(tag: String, f: impl FnOnce() -> R) -> R {
+    let recorded = TEXTFONT_DT.with(|d| d.borrow().objects.contains_key(&tag));
+    if recorded {
+        textfont_replaying(&tag, f)
+    } else {
+        textfont_recording(tag, f)
+    }
+}
+
+/// While the returned guard lives, [`textfont_object`] tags name the objects of another
+/// graph, such as dot's aux graph for flat adjacent edges, whose copies C measures (and
+/// interns) again and whose ids restart at 0. The layout's own records come back when the
+/// guard is dropped.
+pub fn textfont_other_graph() -> impl Drop {
+    type Saved = (
+        std::collections::HashMap<String, Vec<f64>>,
+        std::collections::HashMap<LogKey, (Vec<f64>, usize)>,
+    );
+    struct Guard(Option<Saved>);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            let (objects, log) = self.0.take().unwrap_or_default();
+            TEXTFONT_DT.with(|d| {
+                let mut d = d.borrow_mut();
+                d.objects = objects;
+                d.log = log;
+            });
+        }
+    }
+    Guard(Some(TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        (std::mem::take(&mut d.objects), std::mem::take(&mut d.log))
+    })))
+}
+
+/// Runs `f`, layout's first measurement of the labels of the object `tag` names: fonts
+/// are interned, and the sizes they get are kept for [`textfont_replaying`].
+fn textfont_recording<R>(tag: impl Into<String>, f: impl FnOnce() -> R) -> R {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            TEXTFONT_DT.with(|d| {
+                let mut d = d.borrow_mut();
+                if let Some(Scope::Record(tag, sizes)) = d.scopes.pop() {
+                    d.objects.insert(tag, sizes);
+                }
+            });
+        }
+    }
+    let replaying = TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        let replaying = d.remeasuring > 0 || matches!(d.scopes.last(), Some(Scope::Replay(..)));
+        if !replaying {
+            d.scopes.push(Scope::Record(tag.into(), Vec::new()));
+        }
+        replaying
+    });
+    if replaying {
+        return f();
+    }
+    let _guard = Guard;
+    f()
+}
+
+/// Runs `f`, a measurement of the labels of the object `tag` names that layout has
+/// already made: each lookup returns the size the recorded measurement got, in order, and
+/// the dictionary does not change. An object never recorded is measured as
+/// [`textfont_remeasuring`] does.
+fn textfont_replaying<R>(tag: &str, f: impl FnOnce() -> R) -> R {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            TEXTFONT_DT.with(|d| {
+                d.borrow_mut().scopes.pop();
+            });
+        }
+    }
+    let sizes = TEXTFONT_DT.with(|d| d.borrow().objects.get(tag).cloned());
+    let Some(sizes) = sizes else {
+        return textfont_remeasuring(f);
+    };
+    TEXTFONT_DT.with(|d| d.borrow_mut().scopes.push(Scope::Replay(sizes, 0)));
+    let _guard = Guard;
+    f()
+}
+
+/// Runs `f`, a measurement of labels that the current layout has already measured: fonts
+/// are looked up as they were then, and the dictionary does not change.
+pub fn textfont_remeasuring<R>(f: impl FnOnce() -> R) -> R {
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            TEXTFONT_DT.with(|d| d.borrow_mut().remeasuring -= 1);
+        }
+    }
+    TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        if d.remeasuring == 0 {
+            for (_, next) in d.log.values_mut() {
+                *next = 0;
+            }
+        }
+        d.remeasuring += 1;
+    });
+    let _guard = Guard;
+    f()
+}
+
+/// Starts a graph's layout: later [`textfont_remeasuring`] calls replay this layout's
+/// lookups. The dictionary itself is kept, as C keeps it for the next graph.
+pub fn textfont_layout_begin() {
+    TEXTFONT_DT.with(|d| {
+        let mut d = d.borrow_mut();
+        d.log.clear();
+        d.objects.clear();
+    });
+}
+
+/// Empties the font dictionary, as a new GVC starts with an empty one.
+pub fn textfont_dict_reset() {
+    TEXTFONT_DT.with(|d| *d.borrow_mut() = TextFontDict::default());
 }
 
 /// Measured layout of a multiline Graphviz label in points.
@@ -103,6 +354,9 @@ pub struct LabelSubstContext<'a> {
     /// `getPenColor(obj)` (`pencolor`, else `color`), which an HTML label's outermost
     /// table without a `COLOR` takes (`make_html_label`).
     pub pen_color: Option<&'a str>,
+    /// `lp->fontcolor`, the colour an HTML label's text takes without a `COLOR` of its own
+    /// (`make_html_label`'s `env.finfo.color`); `None` is black.
+    pub font_color: Option<&'a str>,
     /// The object is a node (its name may be empty).
     pub is_node: bool,
     /// The object has a main label (`ND_label`, `ED_label`, `GD_label`), whose text is
@@ -125,6 +379,7 @@ impl<'a> LabelSubstContext<'a> {
             head_port: None,
             label_text: "",
             pen_color: None,
+            font_color: None,
             is_node: true,
             has_label: false,
         }
@@ -615,12 +870,16 @@ pub fn strdup_and_subst_obj(s: &str, ctx: &LabelSubstContext<'_>) -> String {
 /// label. Empty lines get height `(int)(fontsize * LINESPACING)` (C truncates; non-empty
 /// lines do not), see GV-BUG-012 in `docs/c-bugs-ledger.md`.
 fn storeline(layout: &mut TextLabelLayout, line: String, terminator: TextJustify) {
-    let (width, height) = if line.is_empty() {
-        (0.0, (layout.font_size * LINESPACING).trunc())
+    let (width, height, font_size) = if line.is_empty() {
+        let size = layout.font_size;
+        (0.0, (size * LINESPACING).trunc(), size)
     } else {
-        estimate_text_size(&line, &layout.font_name, layout.font_size)
+        // span->font = dtinsert(gvc->textfont_dt, &tf); textspan_size measures that font
+        let size = textfont_intern(Some(&layout.font_name), None, 0, layout.font_size);
+        let (w, h) = estimate_text_size(&line, &layout.font_name, size);
+        (w, h, size)
     };
-    layout.width = layout.width.max(width);
+    layout.width = crate::cnum::c_max(layout.width, width);
     layout.height += height;
     layout.line_widths.push(width);
     layout.lines.push(TextLineLayout {
@@ -628,6 +887,7 @@ fn storeline(layout: &mut TextLabelLayout, line: String, terminator: TextJustify
         width,
         height,
         justify: terminator,
+        font_size,
     });
 }
 
@@ -761,6 +1021,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn nan_font_size_is_found_like_textfont_comparf() {
+        textfont_dict_reset();
+        textfont_layout_begin();
+        let t = Some("Times-Roman");
+        assert_eq!(textfont_intern(t, None, 0, 30.0), 30.0);
+        assert_eq!(textfont_intern(t, None, 0, 20.0), 20.0);
+        // the search meets the last font used first
+        assert_eq!(textfont_intern(t, None, 0, f64::NAN), 20.0);
+        assert!(textfont_intern(Some("Courier"), None, 0, f64::NAN).is_nan());
+        // measuring again replays the layout's answers and leaves the tree alone
+        textfont_remeasuring(|| {
+            assert_eq!(textfont_intern(t, None, 0, 30.0), 30.0);
+            assert_eq!(textfont_intern(t, None, 0, f64::NAN), 20.0);
+            assert_eq!(textfont_intern(t, None, 0, 10.0), 10.0);
+        });
+        assert_eq!(textfont_intern(t, None, 0, f64::NAN), 20.0);
+        textfont_dict_reset();
+    }
+
+    #[test]
     fn test_exact_character_widths_times_helvetica_courier() {
         // Times-Roman: 'A' is index 65 -> width 1479 / 2048
         let w_times_a = estimate_text_width_1pt("Times-Roman", "A", false, false);
@@ -842,6 +1122,7 @@ mod tests {
             head_port: None,
             label_text: "",
             pen_color: None,
+            font_color: None,
             is_node: false,
             has_label: false,
         };

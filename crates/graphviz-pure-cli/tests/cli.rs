@@ -4720,6 +4720,277 @@ fn issue30_identical_labels_each_warn() {
     assert_eq!(warnings("dot", &src).0, format!("{edge}{edge}"));
 }
 
+// C10 (c-numerics): C's numeric idioms as the reference build evaluates them
+// (`graphviz_pure_core::cnum`). Expected outputs are Graphviz 16.1.0's.
+
+fn c10_plain(engine: &str, src: &str) -> String {
+    let (out, err, ok) = run(&[&format!("-K{engine}"), "-Tplain"], src);
+    assert!(ok, "{engine}: {err}");
+    out
+}
+
+/// #192: `-Tjson` prints the `_draw_` numbers with `%.03f`, which writes `nan`.
+#[test]
+fn json_draw_numbers_print_nan_like_printf() {
+    let src = "digraph{layout=osage splines=curved{o2\n  subgraph cluster_inner4{j1 j2}}\
+               subgraph cluster_outer{{label=\"outer\"subgraph cluster_inner4{j1 j2}}->o1}\
+               subgraph cluster_inner4{j1 j2}}";
+    let (out, _, ok) = run(&["-Tjson"], src);
+    assert!(ok);
+    assert!(
+        out.contains("\"points\": [[nan,inf],[nan,nan],[nan,nan],[nan,inf]]"),
+        "{out}"
+    );
+    assert!(out.contains("\"pt\": [nan,nan],"), "{out}");
+    assert!(!out.contains("NaN"), "{out}");
+}
+
+/// #194: `job->width` is `ROUND` converted through 64 bits, keeping the low 32 bits, so an
+/// infinite page width is -1.
+#[test]
+fn svg_infinite_page_width_wraps_like_c() {
+    let src = "digraph{layout=osage{o2\n  subgraph cluster_inner4{j1 j2}}\
+               subgraph cluster_outer{{label=\"outer\"subgraph cluster_inner4{j1 j2}};o1->o2}\
+               subgraph cluster_inner4{j1 j2}}";
+    let (out, _, ok) = run(&["-Tsvg"], src);
+    assert!(ok);
+    assert!(
+        out.contains("<svg width=\"-1pt\" height=\"88pt\"\n viewBox=\"0.00 0.00 -1.00 88.00\""),
+        "{out}"
+    );
+}
+
+/// #216: fdp's `initPositions` builds the pins' box with C's `MIN`/`MAX`, which keep a NaN.
+#[test]
+fn fdp_pin_box_keeps_a_nan_like_c_min_max() {
+    let out = c10_plain("fdp", "graph { a [pos=\"nan,nan!\"]; b [pos=\"1,1!\"] }");
+    assert_eq!(
+        out,
+        "graph 1 -5.9652e+07 -5.9652e+07\n\
+         node a nan nan 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b nan nan 0.75 0.5 b solid ellipse black lightgrey\n\
+         stop\n"
+    );
+}
+
+/// #272: integer attributes narrow to `int` as `atoi`, `sscanf("%d")`, `strtol` and `ROUND`
+/// do in C. fdp with `maxiter=INT_MAX` hung: C's `int` pass-1 count wraps to 0.
+#[test]
+fn int_attributes_narrow_like_c() {
+    assert_eq!(
+        c10_plain("fdp", "graph{maxiter=\"2147483647\"; a--b}"),
+        "graph 1 1.7751 0.65315\n\
+         node a 0.375 0.40315 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 1.4001 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         edge a b 4 0.74507 0.34786 0.83912 0.33381 0.94012 0.31872 1.034 0.3047 solid black\n\
+         stop\n"
+    );
+    let cases = [
+        // MaxIter = atoi(str) = INT_MIN: no iterations
+        (
+            "neato",
+            "graph{maxiter=\"2147483648\"; a--b; b--c; c--d; d--a; a--c}",
+            "graph 1 0.75 0.5\nnode a 0.375 0.25 0.75 0.5 a",
+        ),
+        // late_int: strtol gives LONG_MIN, below the minimum 0
+        (
+            "fdp",
+            "graph{subgraph cluster_x{margin=\"-99999999999999999999\"; a; b} a--c}",
+            "graph 1 2.5276 1.2568\nnode a 0.375 0.25 0.75 0.5 a",
+        ),
+        // mapBool: atoi("4294967296") is 0, false
+        (
+            "neato",
+            "graph{overlap=\"4294967296\"; a--b; a--c; a--d}",
+            "graph 1 5.6728 5.7386\nnode a 2.2796 3.1024 0.75 0.5 a",
+        ),
+        // setSeed: sscanf("%ld") saturates at LONG_MAX
+        (
+            "neato",
+            "graph{start=\"99999999999999999999\"; a--b; b--c}",
+            "graph 1 1.7603 2.2053\nnode a 0.375 0.25 0.75 0.5 a",
+        ),
+        // getPack: sscanf("%d") gives INT_MIN, so no packing
+        (
+            "fdp",
+            "graph{pack=\"2147483648\"; a; b}",
+            "graph 1 1.6528 1.2639\n",
+        ),
+        // GD_nodesep = POINTS(1e300) saturates at INT_MAX
+        (
+            "circo",
+            "graph{nodesep=\"1e300\"; a--b; a--b}",
+            "graph 1 2.5 2.237e+07\nnode a 0.375 1.1185e+07 0.75 0.5 a",
+        ),
+    ];
+    for (engine, src, want) in cases {
+        let out = c10_plain(engine, src);
+        assert!(out.starts_with(want), "{engine} {src}:\n{out}");
+    }
+}
+
+/// #274: C interns a label's font in a dictionary whose comparison finds a NaN size equal
+/// to any size, so a `fontsize=nan` label is measured at another font's size, and a NaN
+/// font interned first is found for later sizes.
+#[test]
+fn nan_fontsize_takes_an_interned_fonts_size() {
+    let out = c10_plain(
+        "dot",
+        "digraph{b [fontsize=30]; a [label=\"X\", fontsize=nan]}",
+    );
+    assert!(
+        out.contains("node a 1.375 0.43212 0.75 0.86424 X "),
+        "{out}"
+    );
+    let out = c10_plain(
+        "dot",
+        "digraph{b [fontsize=30]; c [fontsize=20]; a [label=\"X\", fontsize=nan]}",
+    );
+    assert!(
+        out.contains("node a 2.375 0.43212 0.75 0.62854 X "),
+        "{out}"
+    );
+    let out = c10_plain(
+        "dot",
+        "digraph{a [label=\"X\", fontsize=nan]; b [fontsize=30]}",
+    );
+    assert!(out.contains("node b 1.375 0.25 0.75 0.5 b "), "{out}");
+    let (out, _, ok) = run(
+        &["-Tdot"],
+        "digraph{subgraph cluster_x{label=\"X\"; fontsize=nan; a}}",
+    );
+    assert!(ok);
+    assert!(out.contains("bb=\"8,8,78,84.8\""), "{out}");
+    assert!(out.contains("lheight=0.23"), "{out}");
+    // The port measures some labels again (the root label, dot's node pre-pass, the
+    // renderer); those lookups find the fonts C's single lookup found.
+    let out = c10_plain(
+        "dot",
+        "digraph G0 { label=\"GL\"; fontsize=40; n1 [fontsize=nan, label=\"q\\nr\"]; n3 [label=\"X\"] }",
+    );
+    assert!(
+        out.starts_with("graph 1 1.75 2.8205\nnode n1 0.375 1.7992 0.75 2.0428 "),
+        "{out}"
+    );
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { n0 [fontsize=30]; n1 [fontname=Courier, fontsize=40]; \
+         subgraph cluster_3 { label=C3; fontsize=10; n3 [fontsize=nan, label=Q] } }",
+    );
+    assert!(ok);
+    assert!(out.contains("font-size=\"30.00\">Q</text>"), "{out}");
+    // Each object keeps the sizes its first measurement interned: dot's node pass after
+    // the pre-pass, and the renderer, which measures edges in another order.
+    let out = c10_plain(
+        "dot",
+        "digraph { a [fontsize=30]; b [fontsize=20]; c [fontsize=nan]; d [fontsize=30]; \
+         e [fontsize=nan]; d -> e; e -> f }",
+    );
+    assert!(out.starts_with("graph 1 3.75 3.2285\n"), "{out}");
+    assert!(out.contains("node e 3.375 1.4321 0.75 0.86424 e "), "{out}");
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { a; b; b -> x [fontsize=30, label=E1]; b -> y [fontsize=nan, label=E2]; \
+         a -> z [fontsize=nan, label=E3] }",
+    );
+    assert!(ok);
+    for (size, label) in [("14.00", "E3"), ("30.00", "E1"), ("30.00", "E2")] {
+        assert!(
+            out.contains(&format!("font-size=\"{size}\">{label}<")),
+            "{label}: {out}"
+        );
+    }
+    // dot's aux graph for flat adjacent edges measures its edge copies afresh.
+    let out = c10_plain(
+        "dot",
+        "digraph G { c -> d [label=\"first\", fontsize=30]; {rank=same; a; b}\n\
+         a:e -> b:w [label=\"WIDE LABEL HERE\", fontsize=40];\n\
+         a:e -> b:w [label=\"small\", fontsize=8]; }",
+    );
+    assert!(out.starts_with("graph 1 7.7222 3.5503\n"), "{out}");
+    assert!(out.contains(" small 4.3611 2.1452 "), "{out}");
+    // An HTML label's text takes the object's fontcolor (lp->fontcolor).
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { a [fontcolor=blue, label=<x <B>y</B>>]; \
+         a -> b [fontcolor=gray, label=<<I>e</I>>, headlabel=<h>, labelfontcolor=red] }",
+    );
+    assert!(ok);
+    for c in ["blue", "gray", "red"] {
+        assert!(out.contains(&format!("fill=\"{c}\"")), "{c}: {out}");
+    }
+    // A line's height uses the size size_html_txt looked up, NaN included; drawing falls
+    // back to the environment's size for a font whose size is not positive.
+    let src =
+        "digraph { a [fontsize=14, label=<x<I>i</I>>]; n2 [fontsize=nan, label=<x<I>i</I>>] }";
+    let (port, _, ok) = run(&["-Txdot"], src);
+    assert!(ok);
+    assert!(port.contains("T 93.56 28.8 -1 7 1 -x "), "{port}");
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { n0 [fontsize=nan, xlabel=<<TABLE><TR><TD><FONT FACE=\"Courier\">c</FONT></TD></TR></TABLE>>]; \
+         n1 -> n3 [xlabel=<same>] }",
+    );
+    assert!(ok);
+    assert!(out.contains("font-size=\"14.00\">same</text>"), "{out}");
+    // -n labels take their fontcolor too.
+    let (out, _, ok) = run(
+        &["-Kneato", "-n", "-Txdot"],
+        "digraph { a [pos=\"0,0\", fontsize=30, label=<<TABLE><TR><TD>abc</TD></TR></TABLE>>]; \
+         b [pos=\"100,0\", fontcolor=red, fontsize=8, label=<<TABLE><TR><TD>abc</TD></TR></TABLE>>]; \
+         subgraph cluster_q { bb=\"150,-20,300,80\"; fontcolor=red; fontsize=nan; \
+         label=<<TABLE><TR><TD>cluster</TD></TR></TABLE>>; c [pos=\"200,0\"] } }",
+    );
+    assert!(ok);
+    assert!(out.contains("lheight=0.30"), "{out}");
+    // One dictionary for the run, as C has one per GVC.
+    let out = c10_plain(
+        "dot",
+        "digraph { a -> b [fontsize=20, label=E] }\n\
+         digraph { label=\"GL\"; fontsize=nan; n3 [fontname=Courier] }",
+    );
+    assert!(out.contains("stop\ngraph 1 0.75 0.94444\n"), "{out}");
+    // HTML labels intern their fonts too (mkFont, pushFont, size_html_txt).
+    let out = c10_plain(
+        "neato",
+        "digraph { label=\"G0\"; fontsize=14; n0 [fontsize=14]; n1 [fontsize=20]; \
+         n2 [fontsize=14, label=<<B>h</B>>]; n3 [fontsize=nan]; \
+         n1 -> n0 [fontsize=30, label=E]; n1 -> n2 [fontsize=10, label=E] }",
+    );
+    assert_eq!(
+        out,
+        "graph 1 2.5556 3.0111\n\
+         node n0 0.375 2.3372 0.75 0.5 n0 solid ellipse black lightgrey\n\
+         node n1 0.9864 1.541 0.75 0.62854 n1 solid ellipse black lightgrey\n\
+         node n2 1.3212 0.59444 0.75 0.5 <<B>h</B>> solid ellipse black lightgrey\n\
+         node n3 2.1806 2.7611 0.75 0.5 n3 solid ellipse black lightgrey\n\
+         edge n1 n0 4 0.77941 1.8106 0.73615 1.8669 0.68993 1.9271 0.64478 1.9859 E 0.83935 2.1482 solid black\n\
+         edge n1 n2 4 1.0942 1.2363 1.1217 1.1586 1.1516 1.0739 1.1805 0.99226 E 1.0949 1.031 solid black\n\
+         stop\n"
+    );
+}
+
+/// #292: `get_inputscale` tests `is_exactly_zero`, which is false for `-0`, so positions
+/// are not scaled.
+#[test]
+fn inputscale_minus_zero_does_not_scale() {
+    for engine in ["fdp", "neato"] {
+        let (out, _, ok) = run(
+            &[&format!("-K{engine}"), "-Tdot"],
+            "graph { inputscale=\"-0\"; a [pos=\"100,100!\"]; b [pos=\"200,100!\"]; a -- b }",
+        );
+        assert!(ok);
+        assert!(out.contains("bb=\"0,0,7254,36\""), "{engine}: {out}");
+    }
+    // `-s` sets `PSinputscale` the same way: `-s-0` keeps -0, which does not scale.
+    let src = "graph { a [pos=\"100,100!\"]; b [pos=\"200,100!\"]; a -- b }";
+    for (flag, bb) in [("-s-0", "0,0,7254,36"), ("-s0", "0,0,154,36")] {
+        let (out, _, ok) = run(&["-Kneato", flag, "-Tdot"], src);
+        assert!(ok);
+        assert!(out.contains(&format!("bb=\"{bb}\"")), "{flag}: {out}");
+    }
+}
+
 /// Every graph of a file is laid out, and its labels reported, on its own. Only the
 /// unknown-shape warning is once per process (`user_shape` adds the name to `Shapes`).
 #[test]

@@ -80,11 +80,7 @@ fn late_smooth(s: Option<&str>, dflt: i32) -> i32 {
     let Some(s) = s else { return dflt };
     if is_digit(s) {
         let v = crate::common::utils::atoi(s);
-        if v <= i64::from(SMOOTHING_RNG) {
-            v as i32
-        } else {
-            dflt
-        }
+        if v <= SMOOTHING_RNG { v } else { dflt }
     } else if is_alpha(s) {
         match s.to_ascii_lowercase().as_str() {
             "avg_dist" => SMOOTHING_STRESS_MAJORIZATION_AVG_DIST,
@@ -106,8 +102,8 @@ fn late_quadtree_scheme(s: Option<&str>, dflt: i32) -> i32 {
     let Some(s) = s else { return dflt };
     if is_digit(s) {
         let v = crate::common::utils::atoi(s);
-        if v <= i64::from(QUAD_TREE_FAST) && v >= i64::from(QUAD_TREE_NONE) {
-            v as i32
+        if (QUAD_TREE_NONE..=QUAD_TREE_FAST).contains(&v) {
+            v
         } else {
             dflt
         }
@@ -135,15 +131,13 @@ fn tune_control(g: &LGraph<'_>, ctrl: &mut SpringElectricalControl) {
     ctrl.random_seed = seed as i32;
     ctrl.k = late_double(attrs, "K", -1.0, 0.0);
     ctrl.p = -late_double(attrs, "repulsiveforce", -AUTOP, 0.0);
-    ctrl.multilevels =
-        late_int(attrs, "levels", i64::from(i32::MAX), 0).min(i64::from(i32::MAX)) as i32;
+    ctrl.multilevels = late_int(attrs, "levels", i32::MAX, 0);
     ctrl.smoothing = late_smooth(g.gattr("smoothing"), SMOOTHING_NONE);
     ctrl.tscheme = late_quadtree_scheme(g.gattr("quadtree"), QUAD_TREE_NORMAL);
     ctrl.beautify_leaves = mapbool(g.gattr("beautify"));
     ctrl.do_shrinking = map_bool(g.gattr("overlap_shrink"), true);
     ctrl.rotation = late_double(attrs, "rotation", 0.0, -f64::MAX);
-    ctrl.edge_labeling_scheme =
-        late_int(attrs, "label_scheme", 0, 0).min(i64::from(i32::MAX)) as i32;
+    ctrl.edge_labeling_scheme = late_int(attrs, "label_scheme", 0, 0);
     if ctrl.edge_labeling_scheme > 4 {
         graphviz_pure_core::diag::agwarningf(&format!(
             "label_scheme = {} > 4 : ignoring\n",
@@ -158,7 +152,7 @@ pub fn sfdp_layout(graph: &mut Graph) -> Result<()> {
     // sfdp_init_graph
     let attrs = &graph.graph_attrs;
     let outdim = late_int(attrs, "dimen", 2, 2);
-    let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i64) as usize;
+    let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i32) as usize;
     let src = graph.clone();
     let mut g = LGraph::new(&src, ndim, EdgeType::Line);
     let mut do_adjust = ndim == 2;

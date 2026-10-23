@@ -25,6 +25,7 @@ use crate::common::splines::{
 };
 use crate::common::types::EdgeType;
 use graphviz_pure_core::Point;
+use graphviz_pure_core::cnum::{c_max, c_min};
 use std::cmp::Ordering;
 use std::f64::consts::PI;
 
@@ -267,12 +268,12 @@ impl Dot<'_> {
         for i in minr..=maxr {
             let rn = self.rank_n(0, i);
             if let Some(n) = self.rv(0, i, 0) {
-                sd.left_bound = sd.left_bound.min(self.nodes[n].coord.x - self.nodes[n].lw);
+                sd.left_bound = c_min(sd.left_bound, self.nodes[n].coord.x - self.nodes[n].lw);
             }
             if rn > 0
                 && let Some(n) = self.rv(0, i, rn - 1)
             {
-                sd.right_bound = sd.right_bound.max(self.nodes[n].coord.x + self.nodes[n].rw);
+                sd.right_bound = c_max(sd.right_bound, self.nodes[n].coord.x + self.nodes[n].rw);
             }
             sd.left_bound -= MINW;
             sd.right_bound += MINW;
@@ -1070,6 +1071,8 @@ impl Dot<'_> {
         aux.edges[hvye]
             .attrs
             .insert("weight".to_string(), "10000".to_string());
+        // The aux graph's objects are measured afresh, as C's dot_init_node_edge(auxg) does.
+        let _fonts = graphviz_pure_core::font::textfont_other_graph();
         graphviz_pure_geom::size_graph_nodes(&mut aux);
 
         let mut d = Dot::new(&aux);
@@ -1316,7 +1319,7 @@ impl Dot<'_> {
             let mut ydelta =
                 lnd.coord.y - self.rk(0, rt).ht1 - self.nodes[tn].coord.y + self.rk(0, rt).ht2;
             ydelta /= 6.0;
-            lb.ll.y = lb.ur.y - ydelta.max(5.0);
+            lb.ll.y = lb.ur.y - c_max(5.0, ydelta);
             let mut p = Path::default();
             let mut tend = PathEnd::default();
             let mut hend = PathEnd::default();

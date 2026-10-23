@@ -11,6 +11,7 @@ use super::splines::{
 };
 use super::types::{EdgeType, LGraph};
 use crate::cutil::DtTree;
+use graphviz_pure_core::cnum::{c_max, c_min};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{BoundingBox, Point};
 
@@ -793,10 +794,10 @@ enum LblRef {
 }
 
 fn adjust_bb(o: &Object, bb: &mut BoundingBox) {
-    bb.ll.x = bb.ll.x.min(o.pos.x);
-    bb.ll.y = bb.ll.y.min(o.pos.y);
-    bb.ur.x = bb.ur.x.max(o.pos.x + o.sz.x);
-    bb.ur.y = bb.ur.y.max(o.pos.y + o.sz.y);
+    bb.ll.x = c_min(bb.ll.x, o.pos.x);
+    bb.ll.y = c_min(bb.ll.y, o.pos.y);
+    bb.ur.x = c_max(bb.ur.x, o.pos.x + o.sz.x);
+    bb.ur.y = c_max(bb.ur.y, o.pos.y + o.sz.y);
 }
 
 /// `addLabelObj(lp, objp, bb)`.

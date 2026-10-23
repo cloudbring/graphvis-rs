@@ -15,6 +15,7 @@ use super::routespl::{Path, PathEnd};
 use super::shapes::{InsideCtx, NodeShape};
 use super::types::{Bezier, EdgeType, LGraph, PortInfo, TextLabel};
 use super::utils::late_double;
+use graphviz_pure_core::cnum::{c_max, c_min, is_exactly_zero};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{AttrMap, BoundingBox, Point};
 
@@ -204,12 +205,12 @@ pub fn inside_ctx<S: SplineGraph + ?Sized>(g: &S, n: usize, bp: Option<BoundingB
         } else {
             (g.lw(n) + g.rw(n), g.ht(n))
         };
-        let sx = if xsize == 0.0 {
+        let sx = if is_exactly_zero(xsize) {
             shape.width
         } else {
             shape.width / xsize
         };
-        let sy = if ysize == 0.0 {
+        let sy = if is_exactly_zero(ysize) {
             shape.height
         } else {
             shape.height / ysize
@@ -550,7 +551,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
             p.start.p.y += 1.0;
         } else if side & BOTTOM != 0 {
             endp.sidemask = BOTTOM;
-            b.ur.y = b.ur.y.max(p.start.p.y);
+            b.ur.y = c_max(b.ur.y, p.start.p.y);
             endp.boxes = vec![b];
             p.start.p.y -= 1.0;
         } else if side & LEFT != 0 {
@@ -575,7 +576,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
         let mut b = endp.nb;
         let mut b0 = BoundingBox::default();
         if side & TOP != 0 {
-            b.ll.y = b.ll.y.min(p.start.p.y);
+            b.ll.y = c_min(b.ll.y, p.start.p.y);
             endp.boxes = vec![b];
             p.start.p.y += 1.0;
         } else if side & BOTTOM != 0 {
@@ -590,7 +591,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
                 b.ur.x += 1.0;
                 endp.boxes = vec![b0, b];
             } else {
-                b.ur.y = b.ur.y.max(p.start.p.y);
+                b.ur.y = c_max(b.ur.y, p.start.p.y);
                 endp.boxes = vec![b];
             }
             p.start.p.y -= 1.0;
@@ -687,7 +688,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
         let mut b0 = BoundingBox::default();
         if side & TOP != 0 {
             endp.sidemask = TOP;
-            b.ll.y = b.ll.y.min(p.end.p.y);
+            b.ll.y = c_min(b.ll.y, p.end.p.y);
             endp.boxes = vec![b];
             p.end.p.y += 1.0;
         } else if side & BOTTOM != 0 {
@@ -736,7 +737,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
         let mut b = endp.nb;
         let mut b0 = BoundingBox::default();
         if side & TOP != 0 {
-            b.ll.y = b.ll.y.min(p.end.p.y);
+            b.ll.y = c_min(b.ll.y, p.end.p.y);
             endp.boxes = vec![b];
             p.end.p.y += 1.0;
         } else if side & BOTTOM != 0 {
@@ -751,7 +752,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
                 b.ll.x -= 1.0;
                 endp.boxes = vec![b0, b];
             } else {
-                b.ur.y = b.ur.y.max(p.start.p.y);
+                b.ur.y = c_max(b.ur.y, p.start.p.y);
                 endp.boxes = vec![b];
             }
             p.end.p.y -= 1.0;

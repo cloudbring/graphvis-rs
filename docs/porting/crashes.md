@@ -408,3 +408,57 @@ The port already clamped the edge as C does, and the error makes dot exit 1, as 
 - neato's overlap constraint graph (`constraint.c`) ranks with the same network simplex.
   Its edges weigh 1 or 100, so `x_cutval`'s sum cannot overflow for a graph that fits in
   memory, and the port ignores the error there.
+
+## C's numeric idioms
+
+Closed: #192, #194, #216, #272, #274, #292.
+
+Some C idioms look like a Rust operation but differ at NaN, at the ends of the integer
+ranges, or in how they print. A port of one of them uses the helper in
+`graphviz_pure_core::cnum`, which behaves as the reference build (clang on arm64, the macOS
+libc) does, not the Rust operation that looks the same:
+
+| C | Differs from Rust's look-alike in | Helper |
+|---|---|---|
+| `MIN(a,b)`, `MAX(a,b)` (`arith.h` ternaries) | the result is `b` whenever the test is false, so a NaN `b` is kept; `f64::min`/`max` drop it. `fmin`/`fmax` are Rust's. | `c_min`, `c_max` |
+| `is_exactly_zero`, `is_exactly_equal` (`gv_math.h`) | they compare bits: `-0.0` is not zero, and a NaN equals itself | `is_exactly_zero`, `is_exactly_equal` |
+| `ROUND(f)`, `POINTS(f)` | the result is an `int` | `c_round` |
+| `ROUND` in a pair that clang vectorizes | converts through 64 bits and keeps the low 32 | `c_round_low32` |
+| `strtol`, `sscanf("%ld")` | saturates at `LONG_MIN`/`LONG_MAX`, reads a prefix after white space | `strtol` |
+| `atoi`, `sscanf("%d")` | the saturated `long`, truncated to 32 bits | `atoi`, `scan_d` |
+| `late_int`, `mapBool` (`utils.c`) | built on these | `late_int`, `map_bool` |
+| `printf("%.Nf")`, `%g` | `nan`, not `NaN` | `fmt_f`, `fmt_g` |
+
+**Float-to-int conversions.** arm64's `fcvtzs`/`fcvtzu` into a 32-bit register saturate and
+give 0 for a NaN, as Rust's `as i32`/`as u32` do, so a plain `(int)d` is `d as i32`. The
+port has to convert to C's type (`int`, not `i64`), and then do C's `int` arithmetic, which
+wraps (fdp's `T_pass1 = T_unscaled * T_maxIters / 100` with `maxiter=INT_MAX` is 0 in C,
+where the 64-bit product ran 2^31 iterations, #272). Clang converts through 64 bits only
+where it vectorizes or widens. In the reference dylibs (`otool -tv`, looking for
+`fcvtzs x`, `fcvtzs.2d` and `fcvtzu`) that is: `gvRenderJobs` (`init_job_pagination`'s
+`job->width`/`height` and `setup_page`'s `pageBoundingBox`, #194), `cAdjust` (`initItem`,
+#240), `colorxlate` and `attach_edge_colors`, plus three conversions to 64-bit unsigned
+types (`RectArea`, `generateRandomOrdering`, `StressMajorizationSmoother_smooth`). A new
+conversion site follows the default unless its function is on this list.
+
+**C's font dictionary** (#274). C interns every label font in `gvc->textfont_dt`, a CDT
+splay tree whose comparison (`textfont_comparf`) orders sizes with `<` and `>`. A NaN
+`fontsize` compares equal to any size, so the label gets the font that the search reaches
+first: the most recently used font of that name, or, when a NaN font was interned first,
+later labels of that name get the NaN one. The port interns fonts in the same splay
+tree (`core::cdt`, moved from layout), one per thread and run, at C's sites: `storeline`,
+and for HTML labels `mkFont` (when the parser reads the token), `pushFont` and
+`size_html_txt`. C measures each label once and keeps the interned font in each span;
+the port measures some objects again (dot's node pre-pass, port lookups, patchwork, the
+root label after `graph_init`) and the renderer measures them all. So the geometry
+functions measure through `font::textfont_object` with the object's identity (`node:`,
+`edge:` with its id, `graph:`, `root:`): the first measurement in a layout interns and
+keeps the sizes, and later ones get the same sizes and leave the tree alone. Where the
+port's first measurement comes in a different order from C's (fdp's nested cluster
+labels, which C makes one level at a time in `deriveGraph`; C14), a NaN size can still
+meet a different font. The render-time `_ldraw_` fonts of `emit.c` are not interned.
+
+**Not this cause:** #249 (`overlap=prism` with pins near 1e7 inches). The divergence
+starts in the prism smoother's first iteration and only at that magnitude, C's residual
+there is 8.5e14, and the path has no conversion that differs from Rust, but its
+`SparseMatrix_multiply_vector` and `vector_product` are FMA-contracted: C11.

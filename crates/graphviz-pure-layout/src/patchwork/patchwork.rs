@@ -6,6 +6,7 @@ use super::tree_map::{Rectangle, tree_map};
 use crate::common::utils::late_double;
 use crate::cutil::qsort_by;
 use crate::fdpgen::{ClusterTree, subgraph_member_nodes};
+use graphviz_pure_core::cnum::is_exactly_zero;
 use graphviz_pure_core::{AttrMap, BoundingBox, Graph, Point};
 
 const DFLT_SZ: f64 = 1.0;
@@ -59,7 +60,7 @@ impl Builder<'_> {
     /// `getArea(obj, ap)`. An undeclared attribute reads like an empty one.
     fn get_area(attrs: &AttrMap) -> f64 {
         let mut area = late_double(attrs, "area", DFLT_SZ, 0.0);
-        if area == 0.0 {
+        if is_exactly_zero(area) {
             area = DFLT_SZ;
         }
         area * SCALE

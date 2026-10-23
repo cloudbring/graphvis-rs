@@ -9,12 +9,13 @@ use super::xlayout::XParams;
 use crate::common::types::{P_FIX, P_SET};
 use crate::common::utils::{late_double, late_int, parse_leading_int};
 use crate::cutil::{CRand, Drand48};
+use graphviz_pure_core::cnum::{c_max, c_min};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{AttrMap, Point};
 use std::f64::consts::PI;
 
 const EXPFACTOR: f64 = 1.2;
-const DFLT_MAXITERS: i64 = 600;
+const DFLT_MAXITERS: i32 = 600;
 const DFLT_K: f64 = 0.3;
 const DFLT_CELL: f64 = 0.0;
 const DFLT_SEED: i64 = 1;
@@ -29,8 +30,8 @@ pub const INIT_RANDOM: i32 = 2;
 pub struct FdpParms {
     pub use_grid: bool,
     pub use_new: bool,
-    pub num_iters: i64,
-    pub unscaled: i64,
+    pub num_iters: i32,
+    pub unscaled: i32,
     pub c: f64,
     pub tfact: f64,
     pub k: f64,
@@ -70,9 +71,9 @@ pub struct TParms {
     pub use_grid: bool,
     pub use_new: bool,
     pub seed: i64,
-    pub num_iters: i64,
-    pub max_iters: i64,
-    pub unscaled: i64,
+    pub num_iters: i32,
+    pub max_iters: i32,
+    pub unscaled: i32,
     pub c: f64,
     pub tfact: f64,
     pub k: f64,
@@ -81,8 +82,8 @@ pub struct TParms {
     pub cell: f64,
     pub wd: f64,
     pub ht: f64,
-    pub pass1: i64,
-    pub loopcnt: i64,
+    pub pass1: i32,
+    pub loopcnt: i32,
 }
 
 /// Global fdp state: parameters and the C library random generators.
@@ -94,9 +95,9 @@ pub struct TState {
 }
 
 impl TState {
-    /// `cool(t)`.
-    fn cool(&self, t: i64) -> f64 {
-        self.t.t0 * (self.t.max_iters - t) as f64 / self.t.max_iters as f64
+    /// `cool(t)`; the `int` difference wraps as in C.
+    fn cool(&self, t: i32) -> f64 {
+        self.t.t0 * f64::from(self.t.max_iters.wrapping_sub(t)) / f64::from(self.t.max_iters)
     }
 
     /// `rand()`.
@@ -164,7 +165,8 @@ pub fn fdp_init_params(attrs: &AttrMap) -> TState {
         graphviz_pure_core::diag::agwarningf("fdp does not support start=self - ignoring\n");
         t.seed = i64::from(INIT_RANDOM);
     }
-    t.pass1 = t.unscaled * t.max_iters / 100;
+    // `int` arithmetic, which wraps in C: maxiter=INT_MAX gives a pass 1 of 0 iterations.
+    t.pass1 = t.unscaled.wrapping_mul(t.max_iters) / 100;
     if t.use_grid && t.cell <= 0.0 {
         t.cell = 3.0 * t.k;
     }
@@ -186,14 +188,14 @@ fn init_params(st: &mut TState, nnodes: usize, xpms: &mut XParams) -> bool {
     xpms.t0 = st.cool(st.t.pass1);
     xpms.k = st.t.k;
     xpms.c = st.t.c;
-    xpms.num_iters = st.t.max_iters - st.t.pass1;
+    xpms.num_iters = st.t.max_iters.wrapping_sub(st.t.pass1);
     if st.t.num_iters >= 0 {
         if st.t.num_iters <= st.t.pass1 {
             st.t.loopcnt = st.t.num_iters;
             xpms.loopcnt = 0;
         } else if st.t.num_iters <= st.t.max_iters {
             st.t.loopcnt = st.t.pass1;
-            xpms.loopcnt = st.t.num_iters - st.t.pass1;
+            xpms.loopcnt = st.t.num_iters.wrapping_sub(st.t.pass1);
         }
     } else {
         st.t.loopcnt = st.t.pass1;
@@ -427,10 +429,11 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
         let nd = &dg.nodes[np];
         if nd.pinned != 0 {
             if n_pos > 0 {
-                llx = nd.pos[0].min(llx);
-                lly = nd.pos[1].min(lly);
-                urx = nd.pos[0].max(urx);
-                ury = nd.pos[1].max(ury);
+                // C's MIN/MAX ternaries: a NaN already in the box stays there.
+                llx = c_min(nd.pos[0], llx);
+                lly = c_min(nd.pos[1], lly);
+                urx = c_max(nd.pos[0], urx);
+                ury = c_max(nd.pos[1], ury);
             } else {
                 llx = nd.pos[0];
                 urx = llx;

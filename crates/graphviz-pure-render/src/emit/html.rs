@@ -12,7 +12,7 @@ use graphviz_pure_core::font::strdup_and_subst_obj;
 use graphviz_pure_core::{BoundingBox, Point};
 use graphviz_pure_geom::html_label::{
     BORDER_BOTTOM, BORDER_LEFT, BORDER_MASK, BORDER_RIGHT, BORDER_TOP, HtmlCellData, HtmlContent,
-    HtmlData, HtmlFont, HtmlLabel, HtmlTbl, HtmlText,
+    HtmlData, HtmlLabel, HtmlTbl, HtmlText,
 };
 
 struct Env {
@@ -127,15 +127,16 @@ impl<E: Engine> Emitter<'_, E> {
             };
             base_y -= span.lfsize;
             for item in &span.items {
-                let f: Option<&HtmlFont> = item.font.as_ref();
-                let size = f.filter(|f| f.size > 0.0).map_or(env.size, |f| f.size);
-                let name = f
-                    .and_then(|f| f.name.clone())
-                    .unwrap_or_else(|| env.name.clone());
-                let color = f
-                    .and_then(|f| f.color.clone())
-                    .unwrap_or_else(|| env.color.clone());
-                let flags = f.map_or(0, |f| f.flags);
+                // emit_htextspans: tl.font = ti->font, the font size_html_txt interned
+                // ti->font->size > 0 ? ti->font->size : finfo.size
+                let size = if item.font_size > 0.0 {
+                    item.font_size
+                } else {
+                    env.size
+                };
+                let name = item.font_name.clone();
+                let color = item.color.clone().unwrap_or_else(|| env.color.clone());
+                let flags = item.flags;
                 self.set_pencolor(&color);
                 let mut font = TextFont::new(&name, size, flags);
                 font.ps = graphviz_pure_core::font::translate_postscript_fontname(&item.font_name);
@@ -162,7 +163,7 @@ impl<E: Engine> Emitter<'_, E> {
             self.set_fillcolor(&c0);
             self.set_gradient_vals(
                 c1.as_deref().unwrap_or(DEFAULT_COLOR),
-                i64::from(angle),
+                i32::from(angle),
                 frac,
             );
             if radial { RGRADIENT } else { GRADIENT }

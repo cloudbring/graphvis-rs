@@ -4,52 +4,7 @@
 use super::Dot;
 use super::types::*;
 
-/// `strtol(p, &end, 10)` prefix parse: `None` when no digits were consumed.
-pub fn strtol_prefix(s: &str) -> Option<i64> {
-    let b = s.as_bytes();
-    let mut i = 0;
-    while i < b.len() && (b[i] as char).is_ascii_whitespace() {
-        i += 1;
-    }
-    let mut neg = false;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        neg = b[i] == b'-';
-        i += 1;
-    }
-    let start = i;
-    let mut v: i64 = 0;
-    while i < b.len() && b[i].is_ascii_digit() {
-        v = v.saturating_mul(10).saturating_add((b[i] - b'0') as i64);
-        i += 1;
-    }
-    if i == start {
-        return None;
-    }
-    Some(if neg { -v } else { v })
-}
-
-/// `atoi`
-pub fn atoi(s: &str) -> i32 {
-    strtol_prefix(s).map(|v| v as i32).unwrap_or(0)
-}
-
-/// `late_int` on an attribute value (`None` = attribute absent).
-pub fn late_int(v: Option<&str>, default: i32, minimum: i32) -> i32 {
-    let Some(p) = v else { return default };
-    if p.is_empty() {
-        return default;
-    }
-    let Some(rv) = strtol_prefix(p) else {
-        return default;
-    };
-    if rv > i32::MAX as i64 {
-        return default;
-    }
-    if rv < minimum as i64 {
-        return minimum;
-    }
-    rv as i32
-}
+pub use graphviz_pure_core::cnum::{atoi, late_int, map_bool, mapbool};
 
 /// `late_double`
 pub fn late_double(v: Option<&str>, default: f64, minimum: f64) -> f64 {
@@ -66,29 +21,6 @@ pub fn late_double(v: Option<&str>, default: f64, minimum: f64) -> f64 {
     rv
 }
 
-/// `mapBool`
-pub fn map_bool(p: Option<&str>, default: bool) -> bool {
-    let Some(p) = p else { return default };
-    if p.is_empty() {
-        return default;
-    }
-    if p.eq_ignore_ascii_case("false") || p.eq_ignore_ascii_case("no") {
-        return false;
-    }
-    if p.eq_ignore_ascii_case("true") || p.eq_ignore_ascii_case("yes") {
-        return true;
-    }
-    if p.as_bytes()[0].is_ascii_digit() {
-        return atoi(p) != 0;
-    }
-    default
-}
-
-/// `mapbool`
-pub fn mapbool(p: Option<&str>) -> bool {
-    map_bool(p, false)
-}
-
 /// `scale_clamp` (lib/util/gv_math.h)
 pub fn scale_clamp(original: i32, scale: f64) -> i32 {
     if scale < 0.0 {
@@ -103,11 +35,7 @@ pub fn scale_clamp(original: i32, scale: f64) -> i32 {
 /// `ROUND(f)` from lib/common/macros.h.
 #[inline]
 pub fn round_c(f: f64) -> i32 {
-    if f >= 0.0 {
-        (f + 0.5) as i32
-    } else {
-        (f - 0.5) as i32
-    }
+    graphviz_pure_core::cnum::c_round(f)
 }
 
 /// `POINTS(a_inches)` = `ROUND(a * 72)`.

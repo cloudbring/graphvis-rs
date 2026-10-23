@@ -3,6 +3,7 @@
 //! Per-node `rdata` lives in [`RData`], indexed by node like `ND_alg(n)`.
 
 use crate::common::types::{LGraph, Sub};
+use graphviz_pure_core::cnum::is_exactly_zero;
 use graphviz_pure_core::math;
 use graphviz_pure_core::strtod::strtod_rest;
 use std::collections::VecDeque;
@@ -168,7 +169,7 @@ fn set_child_subtree_spans(g: &LGraph<'_>, sg: &Sub, r: &mut RData, n: usize) {
         if r.d[next].parent != Some(n) {
             continue;
         }
-        if r.d[next].span != 0.0 {
+        if !is_exactly_zero(r.d[next].span) {
             continue;
         }
         r.d[next].span = ratio * r.d[next].subtree_size as f64;

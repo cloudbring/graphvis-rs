@@ -21,13 +21,7 @@ pub(crate) fn trim_zeros(mut s: String) -> String {
 /// C `printf("%.{prec}f", v)` on the reference platform (macOS libc): non-finite values
 /// print as `nan` (whatever the sign), `inf` and `-inf`.
 pub(crate) fn c_fixed(v: f64, prec: usize) -> String {
-    if v.is_nan() {
-        "nan".to_string()
-    } else if v.is_infinite() {
-        if v < 0.0 { "-inf" } else { "inf" }.to_string()
-    } else {
-        format!("{v:.prec$}")
-    }
+    graphviz_pure_core::cnum::fmt_f(v, prec)
 }
 
 /// `gvprintdouble`: `%.02f` with trailing zeros removed; values within 0.005 of zero print `0`.
@@ -70,7 +64,7 @@ pub(crate) fn fmt_g(v: f64, prec: usize) -> String {
 
 /// `%f` (six decimals).
 pub(crate) fn fmt_f6(v: f64) -> String {
-    format!("{v:.6}")
+    c_fixed(v, 6)
 }
 
 #[cfg(test)]

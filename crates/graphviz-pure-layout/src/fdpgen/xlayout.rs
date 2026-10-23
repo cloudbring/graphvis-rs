@@ -14,11 +14,11 @@ const DFLT_OVERLAP: &str = "9:prism";
 /// `xparams`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct XParams {
-    pub num_iters: i64,
+    pub num_iters: i32,
     pub t0: f64,
     pub k: f64,
     pub c: f64,
-    pub loopcnt: i64,
+    pub loopcnt: i32,
 }
 
 struct X {
@@ -50,8 +50,8 @@ impl X {
     }
 
     /// `cool(t)`.
-    fn cool(&self, t: i64) -> f64 {
-        self.p.t0 * (self.p.num_iters - t) as f64 / self.p.num_iters as f64
+    fn cool(&self, t: i32) -> f64 {
+        self.p.t0 * f64::from(self.p.num_iters.wrapping_sub(t)) / f64::from(self.p.num_iters)
     }
 
     /// `overlap(p, q)`.
@@ -286,7 +286,7 @@ pub fn fdp_x_layout(st: &mut TState, dg: &mut DG, comp: &Comp, xpms: &XParams) {
         .to_string();
     let (tries, rest) = match ovlp.find(':') {
         Some(i) if i == 0 || ovlp.as_bytes()[0].is_ascii_digit() => {
-            let t = crate::common::utils::atoi(&ovlp).max(0);
+            let t = i64::from(crate::common::utils::atoi(&ovlp)).max(0);
             (t, ovlp[i + 1..].to_string())
         }
         _ => (0, ovlp.clone()),

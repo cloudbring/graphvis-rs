@@ -139,14 +139,7 @@ pub(crate) fn set_z(node: &mut graphviz_pure_core::NodeData, z: f64) {
 
 /// `printf("%lf", v)`.
 fn c_lf(v: f64) -> String {
-    // The macOS libc prints a NaN as `nan` whatever its sign.
-    if v.is_nan() {
-        "nan".to_string()
-    } else if v.is_infinite() {
-        if v < 0.0 { "-inf" } else { "inf" }.to_string()
-    } else {
-        format!("{v:.6}")
-    }
+    graphviz_pure_core::cnum::fmt_f(v, 6)
 }
 
 /// `agnameof(g)` of the root graph: an anonymous root is `%1`.
@@ -282,7 +275,7 @@ fn check_exp(g: &LGraph<'_>) -> i32 {
         );
         2
     } else {
-        e as i32
+        e
     }
 }
 
@@ -420,7 +413,8 @@ fn neato_layout_component(
     am: &AdjustData,
 ) {
     let max_iter = match g.gattr("maxiter") {
-        Some(s) => atoi(s),
+        // `MaxIter = atoi(str)`: an `int`, so 2147483648 reads as INT_MIN.
+        Some(s) => i64::from(atoi(s)),
         None if layout_mode == MODE_MAJOR => DFLT_ITERATIONS,
         None if layout_mode == MODE_SGD => 30,
         None => 100 * sub.nodes.len() as i64,
@@ -566,7 +560,7 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
     let no_translate = mapbool(attrs.get("notranslate").map(String::as_str));
     let inputscale = crate::common::utils::get_inputscale(attrs);
     let outdim = late_int(attrs, "dimen", 2, 2);
-    let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i64) as usize;
+    let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i32) as usize;
 
     // `Reduce` (`dot -x`) deletes nodes in `scan_graph_mode`, per component once `pccomps`
     // has split the graph: the components are those of the whole graph, and one it empties
