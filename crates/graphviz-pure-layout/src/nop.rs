@@ -282,9 +282,10 @@ fn make_label_dimen(
 }
 
 fn attr_f64(attrs: &AttrMap, key: &str, default: f64, min: f64) -> f64 {
+    // late_double: `rv < low` keeps a NaN.
     match attrs.get(key).and_then(|s| strtod_rest(s)) {
-        Some((v, _)) if v >= min => v,
-        Some(_) => min,
+        Some((v, _)) if v < min => min,
+        Some((v, _)) => v,
         None => default,
     }
 }

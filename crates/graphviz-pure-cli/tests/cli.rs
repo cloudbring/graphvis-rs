@@ -568,6 +568,40 @@ fn viewport_with_an_unknown_focus_node_keeps_the_centre_like_c() {
     assert!(out.contains("translate(-26.5 54.25)"), "{out}");
 }
 
+// Issue #245 with mode=sgd: initial_positions' randompos also draws the third coordinate
+// (jitter3d), which addZ prints.
+#[test]
+fn neato_sgd_dim3_draws_z_like_c() {
+    let src =
+        "graph { layout=neato; mode=sgd; dim=3; node [z=\"\"]; a [pos=\"1,2!\"]; a -- b; b -- c }";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    for z in ["z=85.636391", "z=60.106840", "z=0.127218"] {
+        assert!(out.contains(z), "{z}: {out}");
+    }
+}
+
+// colorxlate's sscanf("%lf%lf%lf%lf") reads an HSV color written with hexadecimal floats.
+#[test]
+fn hsv_color_with_hex_floats_like_c() {
+    let src = "graph { a [style=filled, fillcolor=\"0x1p-1 1 1\"] }";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("fill=\"#00ffff\""), "{out}");
+}
+
+// graph_init: dpi = late_double(dpi, late_double(resolution, 0, 0), 0), so an unreadable
+// `dpi` falls back to `resolution`.
+#[test]
+fn unreadable_dpi_falls_back_to_resolution_like_c() {
+    let (out, err, ok) = run(&["-Tsvg"], "graph { dpi=\"x\"; resolution=144; a }");
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"124pt\" height=\"88pt\""),
+        "{out}"
+    );
+}
+
 // fdp's initialPositions (lib/fdpgen/fdpinit.c) warns about a `pos` it cannot read.
 #[test]
 fn fdp_warns_about_an_unreadable_pos_like_c() {
