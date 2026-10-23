@@ -149,15 +149,30 @@ fn c_lf(v: f64) -> String {
     }
 }
 
+/// `agnameof(g)` of the root graph: an anonymous root is `%1`.
+fn root_name(g: &LGraph<'_>) -> String {
+    if g.src.name.is_empty() {
+        "%1".to_string()
+    } else {
+        g.src.name.clone()
+    }
+}
+
 /// `neatoMode(g)`.
 fn neato_mode(g: &LGraph<'_>) -> i32 {
     match g.gattr("mode") {
+        None | Some("") | Some("major") => MODE_MAJOR,
         Some("KK") => MODE_KK,
-        Some("major") => MODE_MAJOR,
         Some("sgd") => MODE_SGD,
         Some("hier") => MODE_HIER,
         Some("ipsep") => MODE_IPSEP,
-        _ => MODE_MAJOR,
+        Some(s) => {
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "Illegal value {s} for attribute \"mode\" in graph {} - ignored\n",
+                root_name(g)
+            ));
+            MODE_MAJOR
+        }
     }
 }
 
@@ -171,10 +186,23 @@ fn neato_model(g: &LGraph<'_>) -> i32 {
             if g.edge_attr_declared("len") {
                 MODEL_MDS
             } else {
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "edges in graph {} have no len attribute. Hence, the mds model\n",
+                    root_name(g)
+                ));
+                graphviz_pure_core::diag::agerr_prev(
+                    "is inappropriate. Reverting to the shortest path model.\n",
+                );
                 MODEL_SHORTPATH
             }
         }
-        Some(_) => MODEL_SHORTPATH,
+        Some(s) => {
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "Unknown value {s} for attribute \"model\" in graph {} - ignored\n",
+                root_name(g)
+            ));
+            MODEL_SHORTPATH
+        }
     }
 }
 
@@ -234,6 +262,10 @@ fn init_regular(g: &mut LGraph<'_>, sub: &Sub, ng: usize) {
 pub fn check_start(g: &mut LGraph<'_>, sub: &Sub, ng: usize, dflt: i32, _p: &NeatoParams) -> i32 {
     let mut seed = 1i64;
     let init = set_seed(g, dflt, &mut seed);
+    // `N_pos`: the node attribute `pos` is declared.
+    if g.node_attr_declared("pos") && init != INIT_RANDOM {
+        graphviz_pure_core::diag::agwarningf("node positions are ignored unless start=random\n");
+    }
     if init == INIT_REGULAR {
         init_regular(g, sub, ng);
     }
@@ -244,7 +276,14 @@ pub fn check_start(g: &mut LGraph<'_>, sub: &Sub, ng: usize, dflt: i32, _p: &Nea
 /// `checkExp(G)`: the `stresswt` exponent (1 or 2).
 fn check_exp(g: &LGraph<'_>) -> i32 {
     let e = late_int(&g.src.graph_attrs, "stresswt", 2, 0);
-    if e == 0 || e > 2 { 2 } else { e as i32 }
+    if e == 0 || e > 2 {
+        graphviz_pure_core::diag::agwarningf(
+            "stresswt attribute value must be 1 or 2 - ignoring\n",
+        );
+        2
+    } else {
+        e as i32
+    }
 }
 
 /// `majorization(mg, g, nv, mode, model, dim, am)`.
@@ -375,6 +414,7 @@ fn majorization(
 fn neato_layout_component(
     g: &mut LGraph<'_>,
     sub: &Sub,
+    name: &str,
     layout_mode: i32,
     model: i32,
     am: &AdjustData,
@@ -387,6 +427,7 @@ fn neato_layout_component(
     };
     let mut p = NeatoParams {
         max_iter,
+        graph_name: name.to_string(),
         ..NeatoParams::default()
     };
     let (ng, kk) = scan_graph_mode(g, sub, layout_mode, &mut p);
@@ -614,8 +655,8 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
             None => pccomps(&g),
         };
         if ccs.len() > 1 {
-            for gc in ccs.iter_mut() {
-                layout_and_route(&mut g, gc, false, layout_mode, model, &am, no_translate);
+            for (i, gc) in ccs.iter_mut().enumerate() {
+                layout_and_route(&mut g, gc, Some(i), layout_mode, model, &am, no_translate);
             }
             let mut fixed = None;
             if pin {
@@ -632,7 +673,7 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
             layout_and_route(
                 &mut g,
                 &mut root,
-                true,
+                None,
                 layout_mode,
                 model,
                 &am,
@@ -648,7 +689,7 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
         layout_and_route(
             &mut g,
             &mut root,
-            true,
+            None,
             layout_mode,
             model,
             &am,
@@ -662,17 +703,27 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
     Ok(())
 }
 
+/// Lays out and routes `sub`: the root graph, or the component `pccomps` named
+/// `_neato_cc<cc>`.
 fn layout_and_route(
     g: &mut LGraph<'_>,
     sub: &mut Sub,
-    is_root: bool,
+    cc: Option<usize>,
     layout_mode: i32,
     model: i32,
     am: &AdjustData,
     no_translate: bool,
 ) {
-    neato_layout_component(g, sub, layout_mode, model, am);
+    let is_root = cc.is_none();
+    let name = match cc {
+        Some(i) => format!("_neato_cc{i}"),
+        None => root_name(g),
+    };
+    neato_layout_component(g, sub, &name, layout_mode, model, am);
     remove_overlap_with(g, sub, am);
+    if !is_root {
+        crate::common::init::component_set_edge_type(g);
+    }
     if no_translate {
         do_edges(g, sub, is_root);
     } else {

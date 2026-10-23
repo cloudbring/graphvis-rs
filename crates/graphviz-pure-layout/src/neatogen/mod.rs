@@ -65,6 +65,8 @@ pub struct NeatoParams {
     pub damping: f64,
     pub initial_dist: f64,
     pub max_iter: i64,
+    /// `agnameof(G)` of the graph being laid out, for the warnings.
+    pub graph_name: String,
 }
 
 /// A numeric solver failure (C returns a negative iteration count).

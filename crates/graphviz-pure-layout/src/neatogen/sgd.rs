@@ -74,6 +74,16 @@ fn extract_adjacency(g: &LGraph<'_>, sub: &Sub, model: i32) -> GraphSgd {
 
 /// `sgd(G, model)`.
 pub fn sgd(g: &mut LGraph<'_>, sub: &Sub, model: i32, p: &NeatoParams) {
+    if model == super::MODEL_CIRCUIT {
+        graphviz_pure_core::diag::agwarningf(
+            "circuit model not yet supported in Gmode=sgd, reverting to shortpath model\n",
+        );
+    }
+    if model == super::MODEL_MDS {
+        graphviz_pure_core::diag::agwarningf(
+            "mds model not yet supported in Gmode=sgd, reverting to shortpath model\n",
+        );
+    }
     let model = if model == MODEL_SUBSET {
         MODEL_SUBSET
     } else {
