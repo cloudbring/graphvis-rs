@@ -127,12 +127,18 @@ impl NsGraph for DotNs<'_, '_> {
 
 impl Dot<'_> {
     /// `rank2(g, balance, maxiter, search_size)`
-    pub fn rank2(&mut self, g: G, balance: i32, maxiter: i32, search_size: i32) -> i32 {
+    pub fn rank2(
+        &mut self,
+        g: G,
+        balance: i32,
+        maxiter: i32,
+        search_size: i32,
+    ) -> Result<i32, String> {
         ns::rank2(&mut DotNs { d: self, g }, balance, maxiter, search_size)
     }
 
     /// `rank(g, balance, maxiter)`
-    pub fn ns_rank(&mut self, g: G, balance: i32, maxiter: i32) -> i32 {
+    pub fn ns_rank(&mut self, g: G, balance: i32, maxiter: i32) -> Result<i32, String> {
         let search_size = match self.agget(g, "searchsize") {
             Some(s) => atoi(s),
             None => SEARCHSIZE,

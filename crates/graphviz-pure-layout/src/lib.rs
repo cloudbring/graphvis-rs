@@ -148,6 +148,74 @@ mod tests {
         assert!(!g.nodes[a.0 as usize].attrs.contains_key(key));
     }
 
+    /// An edge as (tail, head, attributes).
+    type TestEdge<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)]);
+
+    /// A directed graph with `edges`.
+    fn weighted_graph(edges: &[TestEdge]) -> Graph {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        for &(t, h, attrs) in edges {
+            let (t, h) = (g.ensure_node(t), g.ensure_node(h));
+            let attrs = attrs
+                .iter()
+                .map(|&(k, v)| (k.to_string(), v.to_string()))
+                .collect();
+            g.add_edge(t, h, attrs);
+        }
+        g
+    }
+
+    fn dot_error(g: &mut Graph) -> String {
+        match layout_graph(g, LayoutEngine::Dot) {
+            Err(graphviz_pure_core::GraphvizError::LayoutError { message, .. }) => message,
+            other => panic!("expected a layout error, got {other:?}"),
+        }
+    }
+
+    // Issue #252: C's `virtual_weight` (mincross.c:1725) exits with this error where the
+    // weight times the endpoint factor (up to 4, between two virtual nodes) overflows.
+    #[test]
+    fn virtual_weight_overflow_fails_the_layout_like_c() {
+        let w = [("weight", "2000000000"), ("minlen", "3")];
+        let mut g = weighted_graph(&[("a", "c", &w)]);
+        assert_eq!(
+            dot_error(&mut g),
+            "overflow when calculating virtual weight of edge"
+        );
+    }
+
+    // Issue #252: C's `x_cutval` (ns.c:1060) exits with this error where a cut value's
+    // weight sum overflows.
+    #[test]
+    fn cut_value_overflow_fails_the_layout_like_c() {
+        let w: &[(&str, &str)] = &[("weight", "2000000000")];
+        let mut g = weighted_graph(&[("a", "b", w), ("a", "c", w), ("b", "d", w), ("c", "d", w)]);
+        assert_eq!(dot_error(&mut g), "overflow when computing edge weight sum");
+    }
+
+    // Weight sums C leaves unchecked (`group`'s x100, merged parallel edges, newrank's
+    // merged constraint edges) wrap as in C instead of panicking in a build with overflow
+    // checks. Three parallel edges wrap back to a positive weight, and C draws the graph;
+    // two wrap negative, and C crashes in `update` (ns.c:710) for want of an entering edge,
+    // where the port fails the layout.
+    #[test]
+    fn unchecked_weight_sums_wrap_like_c() {
+        let w: &[(&str, &str)] = &[("weight", "2000000000")];
+        let mut three = weighted_graph(&[("a", "b", w), ("a", "b", w), ("a", "b", w)]);
+        layout_graph(&mut three, LayoutEngine::Dot).unwrap();
+
+        let mut grouped = weighted_graph(&[("a", "b", &[("weight", "30000000")])]);
+        for n in &mut grouped.nodes {
+            n.attrs.insert("group".into(), "g".into());
+        }
+        let mut parallel = weighted_graph(&[("a", "b", w), ("a", "b", w)]);
+        let mut newrank = weighted_graph(&[("a", "b", w), ("a", "b", w)]);
+        newrank.graph_attrs.insert("newrank".into(), "true".into());
+        for g in [&mut grouped, &mut parallel, &mut newrank] {
+            assert_eq!(dot_error(g), common::ns::NO_ENTERING_EDGE);
+        }
+    }
+
     #[test]
     fn test_engine_parse() {
         assert_eq!(LayoutEngine::parse("dot").unwrap(), LayoutEngine::Dot);

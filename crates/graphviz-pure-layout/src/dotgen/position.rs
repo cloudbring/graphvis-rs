@@ -11,7 +11,13 @@ impl Dot<'_> {
     /// `make_aux_edge`
     pub fn make_aux_edge(&mut self, u: N, v: N, len: f64, wt: i32) -> E {
         let e = self.alloc_edge(u, v);
+        // `largeMinlen`: C reports the clamp as an error and goes on.
         let len = if len > i32::MAX as f64 {
+            graphviz_pure_core::diag::agerrorf(&format!(
+                "Edge length {len:.6} larger than maximum {} allowed.\nCheck for overwide \
+                 node(s).\n",
+                i32::MAX
+            ));
             i32::MAX as f64
         } else {
             len
@@ -128,10 +134,10 @@ impl Dot<'_> {
             }
         }
         let it = self.nsiter2(g);
-        if self.ns_rank(g, 2, it) != 0 {
+        if self.ns_rank(g, 2, it)? != 0 {
             self.connect_graph(g);
             let it = self.nsiter2(g);
-            self.ns_rank(g, 2, it);
+            self.ns_rank(g, 2, it)?;
         }
         self.set_xcoords(g);
         self.set_aspect(g);
@@ -228,7 +234,8 @@ impl Dot<'_> {
                         {
                             std::mem::swap(&mut e0, &mut e1);
                         }
-                        let m0 = self.edges[e].minlen * nodesep / 2;
+                        // No overflow check in C (undefined behaviour); the port wraps.
+                        let m0 = self.edges[e].minlen.wrapping_mul(nodesep) / 2;
                         let (t0, h0) = (self.edges[e0].tail, self.edges[e0].head);
                         let m1 = m0 as f64 + self.nodes[h0].rw + self.nodes[t0].lw;
                         if !self.canreach(t0, h0) {
@@ -252,7 +259,8 @@ impl Dot<'_> {
                         (eh, et)
                     };
                     let width = self.nodes[t0].rw + self.nodes[h0].lw;
-                    let mut m0 = ((self.edges[e].minlen * nodesep) as f64 + width) as i32;
+                    // No overflow check in C (undefined behaviour); the port wraps.
+                    let mut m0 = (self.edges[e].minlen.wrapping_mul(nodesep) as f64 + width) as i32;
                     if let Some(e0) = self.find_fast_edge(t0, h0) {
                         let alt = width + nodesep as f64 + round_c(self.edges[e].dist) as f64;
                         m0 = (m0 as f64).max(alt) as i32;
@@ -300,14 +308,21 @@ impl Dot<'_> {
                 if m0 > 0 {
                     m1 = 0;
                 } else {
-                    m1 = -m0;
+                    m1 = m0.wrapping_neg();
                     m0 = 0;
                 }
+                // No overflow check in C (undefined behaviour). The reference build converts
+                // `m + 1` to `double` as `(double)m + 1`, which does not wrap: with
+                // `node [margin="-2147483648"]` (attr-extremes' dot-margin-N-v2-small),
+                // `largeMinlen` receives 2147483648. The rank below wraps.
                 let (t, h, w) = (self.edges[e].tail, self.edges[e].head, self.edges[e].weight);
-                self.make_aux_edge(sn, t, (m0 + 1) as f64, w);
-                self.make_aux_edge(sn, h, (m1 + 1) as f64, w);
-                self.nodes[sn].rank =
-                    (self.nodes[t].rank - m0 - 1).min(self.nodes[h].rank - m1 - 1);
+                self.make_aux_edge(sn, t, f64::from(m0) + 1.0, w);
+                self.make_aux_edge(sn, h, f64::from(m1) + 1.0, w);
+                let (rt, rh) = (self.nodes[t].rank, self.nodes[h].rank);
+                self.nodes[sn].rank = rt
+                    .wrapping_sub(m0)
+                    .wrapping_sub(1)
+                    .min(rh.wrapping_sub(m1).wrapping_sub(1));
             }
         }
     }
@@ -317,7 +332,9 @@ impl Dot<'_> {
             self.contain_nodes(g);
             let (ln, rn) = (self.graphs[g].ln.unwrap(), self.graphs[g].rn.unwrap());
             if let Some(e) = self.find_fast_edge(ln, rn) {
-                self.edges[e].weight += 128;
+                // No overflow check in C (undefined behaviour); the port wraps.
+                let w = &mut self.edges[e].weight;
+                *w = w.wrapping_add(128);
             } else {
                 self.make_aux_edge(ln, rn, 1.0, 128);
             }
