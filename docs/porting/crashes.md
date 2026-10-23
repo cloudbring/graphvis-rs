@@ -308,8 +308,8 @@ across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
     5 s of C's work. A segment under it is refined as in C. Past it, the remaining pieces
     are taken whole, and so is every later segment of that layout. Their control points
     enclose the curve, so the bb may be a little larger than C's, on a segment that takes C
-    seconds. The budget does not bound the depth: at 1e300 points a piece's half can round
-    back to the piece while `ptToLine2` overflows to NaN, and C recurses until its stack
+    seconds. The budget does not bound the depth: at 1e300 points the pieces stop shrinking
+    (a piece recurs two splits down) while `ptToLine2` overflows to NaN, and C recurses until its stack
     overflows (#269: `ratio` or `ranksep` at 1e300). The port refines on an explicit stack in
     C's order, and a piece deeper than C's stack holds ends the segment as the budget does.
   - **Path boxes `add_box` drops** (#270). Huge sizes or scales (`quantum` or `ratio` at

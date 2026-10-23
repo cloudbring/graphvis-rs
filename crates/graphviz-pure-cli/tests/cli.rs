@@ -3883,9 +3883,9 @@ fn issue30_fdp_cluster_edge_warnings() {
     }
 }
 
-// Issue #269: at 1e300 points, `update_bb_bz`'s halves of a piece round back to the piece and
-// `ptToLine2` overflows to NaN, so C recurses until its stack overflows (SIGSEGV). The port
-// refines on an explicit stack and takes the pieces whole past C's stack depth.
+// Issue #269: at 1e300 points, `update_bb_bz`'s pieces stop shrinking (one recurs two splits
+// down) and `ptToLine2` overflows to NaN, so C recurses until its stack overflows (SIGSEGV).
+// The port refines on an explicit stack and takes the pieces whole past C's stack depth.
 #[test]
 fn issue269_update_bb_bz_at_1e300_does_not_overflow_the_stack() {
     for (engine, src) in [

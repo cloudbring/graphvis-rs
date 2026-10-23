@@ -870,12 +870,14 @@ pub(crate) fn reset_bz_split_budget() {
 }
 
 /// Not in C: the deepest [`update_bb_bz`] refines one piece (#269). C recurses on both
-/// halves, left first, with no depth bound. At about 1e300 points the halves of a piece can
-/// round back to the piece itself while `ptToLine2` overflows to NaN, so
-/// `check_control_points` never accepts it and C recurses until its stack overflows (`ratio`
-/// or `ranksep` at 1e300). C's frame is 176 bytes (Homebrew 16.1.0, arm64), so its 8 MiB stack
-/// holds about 47,600 levels; this bound is above that, so every segment C finishes is refined
-/// as in C. A piece this deep ends the segment as running out of [`BZ_SPLIT_BUDGET`] does.
+/// halves, left first, with no depth bound. At about 1e300 points the pieces stop shrinking
+/// (the left half of a piece's right half rounds back to the piece) while `ptToLine2`
+/// overflows to NaN, so `check_control_points` never accepts them and C recurses until its
+/// stack overflows (`ratio` or `ranksep` at 1e300). A piece stops shrinking after about 2100
+/// halvings (the double exponent range and 53 bits), so a deeper one is such a cycle, which C
+/// never finishes whatever its stack. The bound is also above C's stack: C's frame is 176
+/// bytes (Homebrew 16.1.0, arm64), so 8 MiB holds about 47,600 levels. A piece this deep ends
+/// the segment as running out of [`BZ_SPLIT_BUDGET`] does.
 const BZ_MAX_DEPTH: usize = 1 << 16;
 
 /// `update_bb_bz`'s recursion, on an explicit stack in C's order (#269): a piece's left half,
@@ -1562,7 +1564,7 @@ mod tests {
         assert!(update_bb_bz_r(&mut fresh(), &curve(100.0), &mut short));
     }
 
-    /// #269: at 1e301 the halves of a piece can round back to the piece itself while
+    /// #269: at 1e301 the pieces stop shrinking (a piece recurs two splits down) while
     /// `ptToLine2` overflows to NaN, so C recurses on it until its stack overflows (the
     /// segment of `digraph{ratio="1e300"; f:n -> b}`). The port stops at `BZ_MAX_DEPTH` and
     /// takes the pieces whole; the bb still contains the curve.
