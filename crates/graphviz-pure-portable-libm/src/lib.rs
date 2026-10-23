@@ -3,8 +3,7 @@
 //!
 //! Built as a dylib and loaded into C `dot` with `DYLD_INSERT_LIBRARIES` (see
 //! `scripts/dot-portable-libm.sh`), it replaces every transcendental function Graphviz imports
-//! from macOS libm with the one `graphviz_pure_core::math` uses under the portable profile (Linux, wasm32,
-//! `--features graphviz-pure-core/portable-math`): `hypot` and `pow` from `graphviz_pure_core::math::portable`, the
+//! from macOS libm with the one `graphviz_pure_core::math` uses on every target: `hypot` and `pow` from `graphviz_pure_core::math::portable`, the
 //! rest from the `libm` crate. C then computes with the same bits as the portable port, and
 //! `gv-diff e2e --golden tests/golden/e2e.libm-matched.json` compares the two.
 //!

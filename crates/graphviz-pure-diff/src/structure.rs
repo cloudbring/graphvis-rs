@@ -546,7 +546,7 @@ pub fn main(args: Vec<String>) -> ExitCode {
     for c in CHECKS {
         println!("  {:<12} {}", c.name, per.get(c.name).copied().unwrap_or(0));
     }
-    crate::print_profile(&golden_path);
+    crate::print_baseline(&golden_path);
     if problems.is_empty() {
         ExitCode::SUCCESS
     } else {

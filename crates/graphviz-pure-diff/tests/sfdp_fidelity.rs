@@ -2,9 +2,8 @@
 //! further from C Graphviz than the sfdp baseline.
 //!
 //! Refresh the baseline after an improvement with
-//! `cargo run --release -p graphviz-pure-diff -- --golden tests/golden/sfdp --baseline tests/golden/sfdp-baseline.json --update tests/sfdp`. Add
-//! `--features graphviz-pure-core/portable-math` to refresh the portable baseline (`*.portable.json`), which
-//! gv-diff selects on every portable-math build (Linux, wasm32, or macOS with the feature).
+//! `cargo run --release -p graphviz-pure-diff -- --golden tests/golden/sfdp --baseline tests/golden/sfdp-baseline.portable.json --update tests/sfdp` (or run
+//! `scripts/update-baselines.sh`, which refreshes every baseline).
 
 use std::process::Command;
 
@@ -17,7 +16,7 @@ fn sfdp_corpus_fidelity_does_not_regress() {
             "--golden",
             "tests/golden/sfdp",
             "--baseline",
-            "tests/golden/sfdp-baseline.json",
+            "tests/golden/sfdp-baseline.portable.json",
             "--worst",
             "0",
             "tests/sfdp",

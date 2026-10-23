@@ -410,33 +410,6 @@ impl Baseline {
     }
 }
 
-/// The baseline file for this build's math profile ([`math::PROFILE`]). Apple builds use
-/// `path` itself, whose results are C's bit for bit; portable builds (Linux, wasm32, macOS
-/// with `portable-math`) use `NAME.portable.json` next to it, so every ratchet guards
-/// regressions on every platform while its Apple file stays the record of C parity.
-#[must_use]
-pub fn profile_baseline(path: &std::path::Path) -> std::path::PathBuf {
-    profile_baseline_for(path, math::PROFILE)
-}
-
-/// [`profile_baseline`] for an explicit profile.
-#[must_use]
-pub fn profile_baseline_for(path: &std::path::Path, profile: math::Profile) -> std::path::PathBuf {
-    if profile == math::Profile::Apple {
-        return path.to_path_buf();
-    }
-    let stem = path.file_stem().unwrap_or_default().to_string_lossy();
-    let suffix = format!(".{}", profile.name());
-    if stem.ends_with(&suffix) {
-        return path.to_path_buf();
-    }
-    let ext = path
-        .extension()
-        .map(|e| format!(".{}", e.to_string_lossy()))
-        .unwrap_or_default();
-    path.with_file_name(format!("{stem}{suffix}{ext}"))
-}
-
 /// Layout engine named by a graph's `layout` attribute, else `dot` (C precedence).
 pub fn engine_for(source: &str) -> String {
     graphviz_pure_parser::parse_dot(source)
@@ -481,28 +454,5 @@ pub fn compare_file(source: &str, golden_text: &str) -> FileReport {
             error: Some(e),
             ..FileReport::default()
         },
-    }
-}
-
-#[cfg(test)]
-mod profile_tests {
-    use super::*;
-    use std::path::Path;
-
-    #[test]
-    fn portable_baselines_sit_next_to_the_apple_ones() {
-        let p = |s: &str| profile_baseline_for(Path::new(s), math::Profile::Portable);
-        assert_eq!(
-            p("tests/golden/sfdp-baseline.json"),
-            Path::new("tests/golden/sfdp-baseline.portable.json")
-        );
-        assert_eq!(
-            p("tests/golden/sfdp-baseline.portable.json"),
-            Path::new("tests/golden/sfdp-baseline.portable.json")
-        );
-        assert_eq!(
-            profile_baseline_for(Path::new("a/b.json"), math::Profile::Apple),
-            Path::new("a/b.json")
-        );
     }
 }

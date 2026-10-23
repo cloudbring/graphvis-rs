@@ -7,9 +7,9 @@
 //! Only hashes of C's output are stored (`tests/golden/e2e.json`), written by
 //! `gv-diff e2e --generate` with the pango-free C build (`GVBINDIR`, see
 //! `scripts/gen-golden.sh`). Inputs whose C output changes from run to run are recorded
-//! as unstable and skipped (`--runs N` runs C N times instead of twice). The baseline (`tests/golden/e2e-baseline.json`, or
-//! `e2e-baseline.portable.json` for the portable math profile) lists the files that match; a
-//! file in it that stops matching fails the check.
+//! as unstable and skipped (`--runs N` runs C N times instead of twice). The baseline
+//! (`tests/golden/e2e-baseline.portable.json`) lists the files that match; a file in it that
+//! stops matching fails the check.
 //!
 //! `--c-dot PROG` runs PROG instead of `dot` for the C side, e.g.
 //! `scripts/dot-portable-libm.sh`, which runs C with the port's portable math functions.
@@ -176,7 +176,7 @@ pub(crate) fn parallel<T: Send>(
 
 pub fn main(args: Vec<String>) -> ExitCode {
     let mut golden_path = PathBuf::from("tests/golden/e2e.json");
-    let mut baseline_path = PathBuf::from("tests/golden/e2e-baseline.json");
+    let mut baseline_path = PathBuf::from("tests/golden/e2e-baseline.portable.json");
     let (mut generate, mut update, mut list) = (false, false, false);
     let mut filter: Option<String> = None;
     let mut hashes_path: Option<PathBuf> = None;
@@ -206,7 +206,6 @@ pub fn main(args: Vec<String>) -> ExitCode {
             }
         }
     }
-    let baseline_path = graphviz_pure_diff::profile_baseline(&baseline_path);
     let mut items = inputs(Path::new("."));
     if let Some(f) = &filter {
         items.retain(|(k, _)| k.contains(f.as_str()));
@@ -286,12 +285,12 @@ pub fn main(args: Vec<String>) -> ExitCode {
 
     if let Some(p) = &hashes_path {
         // Every output's hash, matching C or not: compares two builds (e.g. Linux against
-        // macOS with `portable-math`) more finely than the identical set does.
+        // macOS) more finely than the identical set does.
         let json = serde_json::to_string_pretty(&results).expect("serialize hashes");
         std::fs::write(p, json + "\n").expect("write hashes");
         println!("hashes written: {}", p.display());
     }
-    crate::print_profile(&baseline_path);
+    crate::print_baseline(&baseline_path);
     if update {
         let b = E2eBaseline { identical };
         let json = serde_json::to_string_pretty(&b).expect("serialize");
