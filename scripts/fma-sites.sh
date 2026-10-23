@@ -9,8 +9,9 @@
 # compiler and `-Os -g` (Homebrew's flags), checks that the fused instructions per function
 # match the installed dylibs, and maps each one to its source line with atos. Writes
 # OUT/fma-sites.tsv: C file:line, inlined function, instructions, C source text. macOS only.
+# GTS (Homebrew's libgts, used by neato) is not covered; docs/porting/libm.md says how it was checked.
 set -euo pipefail
-TARBALL="$1"
+TARBALL="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 OUT="$2"
 LIBS="lib/gvc/.libs/libgvc.7 lib/pathplan/.libs/libpathplan.4 plugin/core/.libs/libgvplugin_core.8
       plugin/dot_layout/.libs/libgvplugin_dot_layout.8 plugin/neato_layout/.libs/libgvplugin_neato_layout.8"

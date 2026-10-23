@@ -216,7 +216,8 @@ pub fn incircle(a: (f64, f64), b: (f64, f64), c: (f64, f64), d: (f64, f64)) -> f
     let (cdx, cdy) = (c.0 - d.0, c.1 - d.1);
     // C (clang) fuses the lifts, `det` and `permanent` (the `fmadd`s of
     // `_incircle` in libgts): `x*x + y*y` = fma(x, x, y*y), and
-    // `a*b + c*d + e*f` = fma(e, f, fma(a, b, c*d)).
+    // `a*b + c*d + e*f` = fma(e, f, fma(a, b, c*d)). This gives C's `det` bit for bit,
+    // but callers use only the sign, which is exact either way, so no output depends on it.
     let bdxcdy = bdx * cdy;
     let cdxbdy = cdx * bdy;
     let alift = adx.mul_add(adx, ady * ady);

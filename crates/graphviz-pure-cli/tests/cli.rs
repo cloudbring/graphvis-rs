@@ -1360,7 +1360,7 @@ fn folder_tab_corner_is_fused_like_clang() {
 // `start=regular` with `cos(a)` and `sin(a)`, which clang merges into one `__sincos_stret`
 // call. C with the port's math (scripts/dot-portable-libm.sh, which interposes
 // `__sincos_stret` with the portable `sin` and `cos`) lays a 37-node cycle out on a
-// 758x735pt canvas, and so must the port.
+// 758x735pt canvas with these node centres, and so must the port.
 #[test]
 fn start_regular_places_nodes_like_c_with_the_same_math() {
     let mut src = String::from("graph G { start=regular; mode=KK;\n");
@@ -1370,10 +1370,14 @@ fn start_regular_places_nodes_like_c_with_the_same_math() {
     src.push_str("}\n");
     let (out, err, ok) = run(&["-Kneato", "-Tsvg"], &src);
     assert!(ok, "{err}");
-    assert!(
-        out.contains("<svg width=\"758pt\" height=\"735pt\""),
-        "{out}"
-    );
+    for c in [
+        "<svg width=\"758pt\" height=\"735pt\"",
+        "cx=\"619.27\" cy=\"-429.2\"",
+        "cx=\"592.3\" cy=\"-488.82\"",
+        "cx=\"630.69\" cy=\"-548\"",
+    ] {
+        assert!(out.contains(c), "{c}: {out}");
+    }
 }
 
 // The circo variant of issue #13 (repro-circo.gv). With C's record box the guiding polygon

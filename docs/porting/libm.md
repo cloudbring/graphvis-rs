@@ -334,9 +334,9 @@ sources:
   `graphviz_pure_layout::cutil`, exported by `graphviz-pure-portable-libm --features apple-libc`) circo, osage,
   patchwork, sfdp and twopi match on every file.
 - **the rest**: 102 files, 97 of them neato. The ones checked differ by 0.01 in a spline
-  control point, a last-bit rounding difference with every node in the same place. The likely
-  cause is GTS, whose Debian build contracts differently from Homebrew's (see "Fused
-  multiply-adds" below). Not confirmed per file.
+  control point, a last-bit rounding difference with every node in the same place. Not
+  identified. It is not the fused multiply-adds of Graphviz's own code, which clang contracts
+  the same way on both (see "Fused multiply-adds" below).
 
 Two things that were checked and are not the cause: the clang version (14 and 19 give the same
 results), and `long double`, which is 128-bit on Linux aarch64 and 64-bit on Apple arm64 (the
@@ -371,8 +371,9 @@ unfused. The port's code says `C (clang) fuses …` at each site.
 builds the same sources with the same compiler and Homebrew's flags (`-Os -g`; at `-O2` clang
 inlines differently), checks that every function has the same fused instructions as the
 installed dylibs, and maps each instruction to its source line. For 16.1.0 the reference build has
-654 fused instructions (627 scalar `fmadd`/`fmsub`/`fnmadd`/`fnmsub`, 27 vector `fmla`/`fmls`)
-and 46 `__sincos_stret` calls, on 466 source lines in `libgvc`, `libpathplan`, and the core, dot
+616 fused instructions (589 scalar `fmadd`/`fmsub`/`fnmadd`/`fnmsub`, 27 vector `fmla`/`fmls`)
+and 38 `__sincos_stret` calls, on 466 source lines (18 of them line 0, code the debug
+information gives no line for) in `libgvc`, `libpathplan`, and the core, dot
 and neato plugins. The audit for C11 (#89, #90, #96) checked every line against the port (rows
 of the audit; a row can cover several lines, such as the two coordinates of one point):
 
@@ -380,7 +381,7 @@ of the audit; a row can cover several lines, such as the two coordinates of one 
 |---|---:|
 | the port already fused it | 259 |
 | fused by C11 (#96's folder corner, render arrows, ellipses, tapers, gradients, polygon outlines, HTML tables, `recPt`, `Initial_dist`, `medians`, dot's flat-edge boxes, patchwork, `POINTS`) | 77 |
-| exact either way (a product by a power of two, ±1 or a small integer) | 35 |
+| exact either way (a product by a power of two or ±1, or of integers too small to round) | 35 |
 | not ported (paging, z output, `Verbose` output, gvevent, tk, edgepaint and gvmap helpers) | 23 |
 | `__sincos_stret` (below) | 33 |
 
@@ -391,20 +392,23 @@ neato's `cola.rs`, `digcola.rs` and `stress.rs`, where C subtracts; they are exa
 the port: `graphviz-pure-portable-libm` interposes it with the portable `sin` and `cos`, so C
 with the port's math computes the same values whether or not clang merged the calls.
 
-**GTS**, which neato uses for triangulation, is contracted by the same compiler: Shewchuk's
-`incircle` fast stage (`predicates.c`) fuses its lifts, `det` and `permanent`, which the port's
-`neatogen/robust.rs` now does too, with the error-bound constants that GTS's generated
-`predicates_init.h` stores (`%.16g`, one ulp above the exact value). The fusions inside the
-adaptive and exact stages are on products of split halves, which are exact.
+**GTS**, which neato uses for triangulation, is contracted by the same compiler (checked by
+rebuilding GTS 0.7.6's `predicates.c` with `-Os -g` and comparing the fused instructions per
+function with Homebrew's `libgts`; `scripts/fma-sites.sh` does not cover it). Shewchuk's
+`incircle` fast stage fuses its lifts, `det` and `permanent`; `neatogen/robust.rs` does too,
+with the error-bound constants GTS's generated `predicates_init.h` stores (`%.16g`, one ulp
+above the exact value), so the port computes C's `det` bit for bit. No output depends on it:
+GTS and the port use only the sign of `orient2d` and `incircle`, and the predicates make the
+sign exact however the fast stage rounds.
 
 **Other C builds disagree with the reference.** C on x86-64 Linux has no fused operations at
 all. The Linux C oracle in `scripts/c-oracle-linux/` (Debian arm64) builds Graphviz with clang,
-which contracts the same expressions as on macOS, since contraction is decided per
-expression by the compiler's front end, not by the optimisation level. But it links Debian's
-GTS, which is compiled differently: in `libgts-0.7.so.5` of Debian bookworm arm64, `orient2d`
-has no fused instruction (8 in Homebrew's) and `incircle` has 7 (134 in Homebrew's). That is the
-likely source of the 97 neato files where C on Linux differs from C on macOS even with the same
-math and libc. None of these builds is the reference; the port follows the macOS arm64 build.
+which contracts the same expressions as on macOS: contraction is decided per expression by the
+compiler's front end, not by the optimisation level. It links Debian's GTS, which is compiled
+differently (in `libgts-0.7.so.5` of Debian bookworm arm64, `orient2d` has no fused
+instruction, 8 in Homebrew's, and `incircle` has 7, 134 in Homebrew's), but since only the
+predicates' signs are used, that cannot explain the Linux differences above. None of these
+builds is the reference; the port follows the macOS arm64 build.
 
 ## Provenance and licences
 
