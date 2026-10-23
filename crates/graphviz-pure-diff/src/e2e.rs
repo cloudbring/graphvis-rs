@@ -127,15 +127,18 @@ pub(crate) fn run_c(dot: &str, path: &Path) -> Option<String> {
 
 pub(crate) fn run_port(src: &str) -> Option<String> {
     let src = src.to_string();
-    // As dot does, the graphs read before a syntax error are rendered.
+    // As dot does, the graphs read before a syntax error are rendered, and the input is read
+    // as `dot` reads the file.
     let out = std::panic::catch_unwind(move || {
-        graphviz_pure::render_dot_all_partial(
-            &src,
-            "dot",
-            "svg",
-            &graphviz_pure_parser::GlobalAttrs::default(),
-            graphviz_pure::LayoutOptions::default(),
-        )
+        graphviz_pure_parser::reading_file("input", || {
+            graphviz_pure::render_dot_all_partial(
+                &src,
+                "dot",
+                "svg",
+                &graphviz_pure_parser::GlobalAttrs::default(),
+                graphviz_pure::LayoutOptions::default(),
+            )
+        })
     });
     match out {
         Ok((parts, _)) if !parts.is_empty() => Some(normalize(&parts.concat())),

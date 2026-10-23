@@ -11,7 +11,9 @@ pub const MAX_NODES: usize = 50;
 pub const MAX_EDGES: usize = 100;
 pub const MAX_SUBGRAPHS: usize = 25;
 
-/// DOT is read as bytes and decoded as UTF-8 with replacement, as the CLI reads files.
+/// DOT is read as bytes and decoded as UTF-8 with replacement. The targets parse it as the
+/// CLI reads a file ([`graphviz_pure_parser::reading_file`]: `fgets`, where a NUL hides the
+/// rest of its line), not as a library string, which ends at its first NUL.
 fn source(data: &[u8]) -> Option<String> {
     (data.len() <= MAX_INPUT).then(|| String::from_utf8_lossy(data).into_owned())
 }
@@ -19,8 +21,9 @@ fn source(data: &[u8]) -> Option<String> {
 /// The DOT parser and the canonical writer on every graph read before an error.
 pub fn parse(data: &[u8]) {
     let Some(src) = source(data) else { return };
-    let (graphs, _err) =
-        graphviz_pure_parser::parse_dot_all_partial(&src, &graphviz_pure::GlobalAttrs::default());
+    let (graphs, _err) = graphviz_pure_parser::reading_file("fuzz", || {
+        graphviz_pure_parser::parse_dot_all_partial(&src, &graphviz_pure::GlobalAttrs::default())
+    });
     for graph in &graphs {
         let _ = graphviz_pure_parser::write_canon(graph);
     }
@@ -35,7 +38,11 @@ pub fn parse_html(data: &[u8]) {
 /// Parse, lay out with `engine` (or the graph's own `layout`) and render SVG.
 pub fn render(data: &[u8], engine: &str) {
     let Some(src) = source(data) else { return };
-    let Ok(graph) = graphviz_pure::parse_dot(&src) else {
+    graphviz_pure_parser::reading_file("fuzz", || render_source(&src, engine));
+}
+
+fn render_source(src: &str, engine: &str) {
+    let Ok(graph) = graphviz_pure::parse_dot(src) else {
         return;
     };
     if graph.nodes.len() > MAX_NODES
@@ -44,5 +51,5 @@ pub fn render(data: &[u8], engine: &str) {
     {
         return;
     }
-    let _ = graphviz_pure::render_dot(&src, engine, "svg");
+    let _ = graphviz_pure::render_dot(src, engine, "svg");
 }

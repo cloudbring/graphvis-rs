@@ -343,7 +343,7 @@ fn main() -> ExitCode {
             }
         };
         // Raster formats are drawn from the SVG (graphviz-pure-raster); the rest are text.
-        let (outputs, err): (Vec<Vec<u8>>, _) = match raster {
+        let render = || match raster {
             Some(fmt) => {
                 let (svgs, mut err) = graphviz_pure::render_svg_all_partial(
                     &source,
@@ -378,6 +378,8 @@ fn main() -> ExitCode {
                 (bytes, err)
             }
         };
+        // `agread` on the file: read through `fgets`, named as `agconcat`'s `filename`.
+        let (outputs, err): (Vec<Vec<u8>>, _) = graphviz_pure_parser::reading_file(name, render);
         if let Some(e) = &err {
             failed = true;
             if outputs.is_empty() {

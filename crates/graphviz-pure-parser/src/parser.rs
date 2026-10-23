@@ -2,7 +2,7 @@
 //! with full lexical scoping for `graph`, `node`, and `edge` defaults across
 //! nested subgraphs and clusters.
 
-use crate::lexer::{Lexer, ScanState, Token, TokenKind};
+use crate::lexer::{Lexer, ScanInput, ScanState, Token, TokenKind};
 type AttrMap2 = std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>;
 
 use graphviz_pure_core::{
@@ -35,7 +35,11 @@ pub struct GlobalAttrs {
     pub edge: AttrMap,
 }
 
-pub struct Parser {
+pub struct Parser<'a> {
+    /// Read a token at a time, as bison calls `yylex`, so the scanner's warnings come when
+    /// C's do: never past the token where a syntax error stops the graph.
+    lexer: Lexer<'a>,
+    /// The tokens read so far; the last is [`TokenKind::Eof`] once the input has ended.
     tokens: Vec<Token>,
     pos: usize,
     graph: Graph,
@@ -50,6 +54,8 @@ pub struct Parser {
     anon_ctr: u64,
     /// Parent of each subgraph (`None`: the root graph).
     sub_parent: Vec<Option<usize>>,
+    /// Whether grammar.y's `startgraph` has run (the header was read).
+    started: bool,
 }
 
 /// Which dictionary of a graph an attribute belongs to.
@@ -60,12 +66,11 @@ enum DictKind {
     Edge,
 }
 
-impl Parser {
-    fn new(input: &str, globals: &GlobalAttrs) -> Result<Self> {
-        let mut lexer = Lexer::new(input);
-        let tokens = lexer.tokenize_all()?;
-        Ok(Self {
-            tokens,
+impl<'a> Parser<'a> {
+    fn new(lexer: Lexer<'a>, globals: &GlobalAttrs) -> Self {
+        Self {
+            lexer,
+            tokens: Vec::new(),
             pos: 0,
             graph: Graph::new("", GraphKind::Undirected, false),
             scope_stack: Vec::new(),
@@ -74,18 +79,19 @@ impl Parser {
             attr_order: Vec::new(),
             anon_ctr: 1,
             sub_parent: Vec::new(),
-        })
+            started: false,
+        }
     }
 
     /// Parses the first graph in `input`.
-    pub fn parse_str(input: &str) -> Result<Graph> {
-        let mut parser = Self::new(input, &GlobalAttrs::default())?;
-        parser.parse_graph()?;
+    pub fn parse_str(input: &'a str) -> Result<Graph> {
+        let mut parser = Self::new(Lexer::new(input), &GlobalAttrs::default());
+        parser.read_graph()?;
         Ok(parser.graph)
     }
 
     /// Parses every graph in `input`, applying `globals` before each graph body.
-    pub fn parse_all(input: &str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
+    pub fn parse_all(input: &'a str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
         match Self::parse_all_partial(input, globals) {
             (graphs, None) => Ok(graphs),
             (_, Some(e)) => Err(e),
@@ -100,49 +106,48 @@ impl Parser {
     /// is dropped, and the next graph is read from the next line, its line numbers
     /// counted from there.
     pub fn parse_all_partial(
-        input: &str,
+        input: &'a str,
         globals: &GlobalAttrs,
     ) -> (Vec<Graph>, Option<GraphvizError>) {
         let mut graphs = Vec::new();
-        let mut rest = input;
+        // Built once: every `agread` goes on reading the same stream.
+        let scan = ScanInput::new(input);
+        let mut from = 0;
         loop {
-            let mut parser = match Self::new(rest, globals) {
-                Ok(p) => p,
-                Err(e) => return (graphs, Some(e)),
-            };
+            let mut parser = Parser::new(Lexer::from_scan_input(&scan, from), globals);
             if parser.peek().kind == TokenKind::Eof {
                 return (graphs, None);
             }
-            if let Err(e) = parser.parse_graph() {
+            if let Err(e) = parser.read_graph() {
                 return (graphs, Some(e));
             }
             graphs.push(parser.graph);
-            // the byte after the `rbrace_line`-th newline
-            match rest
-                .match_indices('\n')
-                .nth(parser.rbrace_line.saturating_sub(1))
-            {
-                Some((i, _)) => rest = &rest[i + 1..],
+            match scan.line_end(from, parser.rbrace_line) {
+                Some(end) => from = end,
                 None => return (graphs, None),
             }
         }
     }
 
-    fn peek(&self) -> &Token {
-        self.tokens
-            .get(self.pos)
-            .unwrap_or_else(|| self.tokens.last().expect("tokens always ends with Eof"))
+    fn peek(&mut self) -> &Token {
+        self.peek_n(0)
     }
 
-    fn peek_n(&self, offset: usize) -> &Token {
-        self.tokens
-            .get(self.pos + offset)
-            .unwrap_or_else(|| self.tokens.last().expect("tokens always ends with Eof"))
+    /// The token `offset` places ahead, scanning up to it (the end of input stays the last).
+    fn peek_n(&mut self, offset: usize) -> &Token {
+        let want = self.pos + offset;
+        while self.tokens.len() <= want
+            && self.tokens.last().is_none_or(|t| t.kind != TokenKind::Eof)
+        {
+            self.tokens.push(self.lexer.scan());
+        }
+        let i = want.min(self.tokens.len() - 1);
+        &self.tokens[i]
     }
 
     fn advance(&mut self) -> Token {
         let tok = self.peek().clone();
-        if self.pos + 1 < self.tokens.len() {
+        if tok.kind != TokenKind::Eof {
             self.pos += 1;
         }
         tok
@@ -206,7 +211,7 @@ impl Parser {
 
     /// Checks how many tokens an atom (including `+` concatenations) spans starting at `start_offset`,
     /// so we can look ahead for `=` without mutating parser state.
-    fn atom_span_len(&self, start_offset: usize) -> Option<usize> {
+    fn atom_span_len(&mut self, start_offset: usize) -> Option<usize> {
         if !Self::is_atom_token(&self.peek_n(start_offset).kind) {
             return None;
         }
@@ -219,6 +224,23 @@ impl Parser {
             }
         }
         Some(len)
+    }
+
+    /// `graph : hdr body | error | /* empty */`. After a syntax error, bison's recovery
+    /// reduces `graph : error`, whose `graph_error` ends the scan (`aglexeof`) only when
+    /// `startgraph` opened a graph; before that, bison discards tokens until the end of the
+    /// input, so the scanner reads them all, and warns as it does.
+    fn read_graph(&mut self) -> Result<()> {
+        self.started = false;
+        let result = self.parse_graph();
+        // (unless the input has already ended: the error token was the end, or `@`)
+        if result.is_err()
+            && !self.started
+            && self.tokens.last().is_none_or(|t| t.kind != TokenKind::Eof)
+        {
+            while self.lexer.scan().kind != TokenKind::Eof {}
+        }
+        result
     }
 
     fn parse_graph(&mut self) -> Result<()> {
@@ -248,6 +270,7 @@ impl Parser {
             String::new()
         };
 
+        self.started = true;
         self.anon_ctr = if name.is_empty() { 3 } else { 1 };
         self.graph = Graph::new(name, kind, strict);
         self.graph.graph_attrs.extend(self.globals.graph.clone());
@@ -297,13 +320,8 @@ impl Parser {
         for (k, v) in declared {
             self.graph.graph_attrs.entry(k).or_insert(v);
         }
-        // Consume optional trailing semicolons
-        while self.peek().kind == TokenKind::Semi {
-            self.advance();
-        }
-
-        // Stray tokens after the closing brace are the next read's syntax error
-        // (`parse_all_partial`).
+        // `endgraph` ends the scan here (`aglexeof`), so nothing after the closing brace is
+        // read; stray tokens on the next lines are the next read's (`parse_all_partial`).
         Ok(())
     }
 
@@ -322,10 +340,22 @@ impl Parser {
     }
 
     fn parse_stmt(&mut self) -> Result<()> {
-        match self.peek().kind {
-            TokenKind::Graph | TokenKind::Node | TokenKind::Edge => self.parse_attr_stmt(),
-            TokenKind::Subgraph | TokenKind::LBrace => self.parse_compound(),
-            _ if Self::is_atom_token(&self.peek().kind) => {
+        enum Stmt {
+            Attr,
+            Compound,
+            Atom,
+            Other,
+        }
+        let stmt = match &self.peek().kind {
+            TokenKind::Graph | TokenKind::Node | TokenKind::Edge => Stmt::Attr,
+            TokenKind::Subgraph | TokenKind::LBrace => Stmt::Compound,
+            k if Self::is_atom_token(k) => Stmt::Atom,
+            _ => Stmt::Other,
+        };
+        match stmt {
+            Stmt::Attr => self.parse_attr_stmt(),
+            Stmt::Compound => self.parse_compound(),
+            Stmt::Atom => {
                 if let Some(span) = self.atom_span_len(0)
                     && self.peek_n(span).kind == TokenKind::Equals
                 {
@@ -344,7 +374,7 @@ impl Parser {
                 }
                 self.parse_compound()
             }
-            _ => Err(syntax_error(self.peek())),
+            Stmt::Other => Err(syntax_error(self.peek())),
         }
     }
 

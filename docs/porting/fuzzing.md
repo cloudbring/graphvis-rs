@@ -212,8 +212,11 @@ Errors and exit status
   no longer fails: an unmatched character is a token the grammar rejects, `@` ends the
   input, and an unterminated string or comment ends it in that state. This was open case
   `022-stderr-syntax-error-message` (issue #31); the tests are in
-  `crates/graphviz-pure-parser/tests/syntax_errors.rs`. Not yet ported: `chkNum`'s
-  "badly delimited number" warning.
+  `crates/graphviz-pure-parser/tests/syntax_errors.rs`. The lexer follows scan.l's rules in
+  order with flex's longest match (`chkNum`'s "badly delimited number" warning, the BOM rule)
+  and reads a file as `fgets` does (a NUL hides the rest of its line) and a library string as
+  `agmemread` does (a NUL ends it); `scripts/fuzz-scanner.py` sweeps it byte by byte (#97,
+  #112, #117, #120).
 * A concentrate failure, or an `install_in_rank` failure, abandons the layout as in C:
   no splines, no postprocessing. C then renders the half-made drawing (zero bounding
   box, empty cluster boxes, labels at the origin), and so does the port.
