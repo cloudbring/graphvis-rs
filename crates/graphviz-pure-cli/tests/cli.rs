@@ -1895,11 +1895,11 @@ fn flat_adjacent_aux_graph_repeats_invalid_utf8_warning_like_c() {
     ]
     .concat();
     assert_eq!(err, want);
-    // Only HTML labels in the aux graph: htmlEntityUTF8 is not called for it, lastg stays G,
-    // and the tooltip rendered later does not warn again.
+    // Only HTML labels in the aux graph, whose entities the HTML lexer decodes: htmlEntityUTF8
+    // is not called for it, lastg stays G, and the tooltip rendered later does not warn again.
     std::fs::write(
         &path,
-        b"digraph G { node [label=<x>]; {rank=same; a -> b [tailport=e]} \
+        b"digraph G { node [label=<x&amp;y>]; {rank=same; a -> b [tailport=e]} \
           c [label=\"\xe9\" tooltip=\"\xe9\"] }\n",
     )
     .unwrap();
