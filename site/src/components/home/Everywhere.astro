@@ -21,28 +21,27 @@ type Manifest = {
 const mPath = join(process.cwd(), 'public/cross-platform/manifest.json');
 const m: Manifest | null = existsSync(mPath) ? JSON.parse(readFileSync(mPath, 'utf8')) : null;
 const hasPage = existsSync(join(process.cwd(), 'src/pages/cross-platform.astro'));
-const ORDER = ['linux-x86_64', 'linux-arm64', 'windows-x86_64', 'macos-arm64', 'wasm32'];
+const ORDER = ['linux-x86_64', 'linux-arm64', 'windows-x86_64', 'macos-arm64', 'macos-x86_64', 'wasm32'];
 const plats = m ? [...m.platforms].sort((a, b) => ORDER.indexOf(a.dir) - ORDER.indexOf(b.dir)) : [];
 
-// Inputs the browser can re-derive exactly: identical across platforms and, under portable math, equal to C.
+// Inputs the browser can re-derive exactly: identical across platforms and equal to C with the same math.
 const list = samples
-	.filter((s) => s.identical_portable && (!m || m.samples.find((x) => x.name === s.name)?.identical))
+	.filter((s) => s.identical && (!m || m.samples.find((x) => x.name === s.name)?.identical))
 	.map((s) => {
 		const ms = m?.samples.find((x) => x.name === s.name);
 		const rows = ms
-			? plats.map((p) => ({ label: p.label.replace(' (portable-math)', '').replace(' (Node.js)', ''), note: p.build === 'wasm' ? p.runtime.replace(/ v(\d+).*/, ' $1') : p.label.includes('portable') ? 'portable math' : 'native', sha: ms.sha256[p.dir] ?? '' }))
+			? plats.map((p) => ({ label: p.label.replace(' (Node.js)', ''), note: p.build === 'wasm' ? p.runtime.replace(/ v(\d+).*/, ' $1') : 'native', sha: ms.sha256[p.dir] ?? '' }))
 			: [{ label: 'macOS arm64', note: 'gallery build', sha: s.sha256.rust }];
 		return { name: s.name, title: s.title, engine: s.engine, input: url(`samples/${s.name}/${s.wasm_input}`), c: url(`samples/${s.name}/c.svg`), bytes: s.bytes.rust, rows };
 	});
 const first = list.find((s) => s.name === 'fsm') ?? list[0];
 const corpus = m ? m.corpus_files : fidelity.e2e.total;
 const cc = platforms.c_linux_vs_macos;
-const cp = platforms.c_portable_math;
 const e2e = fidelity.e2e;
 const bars = [
 	{ k: 'C Graphviz built on Linux', d: 'compared with C Graphviz on a Mac', a: cc.agree, b: cc.total, cls: 'c' },
-	{ k: 'graphviz-pure off Apple Silicon', d: 'Linux, Windows, Intel Macs and browsers, compared with C Graphviz on a Mac', a: e2e.portable, b: e2e.total, cls: 'rs' },
-	{ k: 'graphviz-pure off Apple Silicon', d: 'compared with C Graphviz given the same math functions', a: cp.agree, b: cp.total, cls: 'rs' },
+	{ k: 'graphviz-pure, every machine', d: "Linux, Windows, Macs and browsers, compared with C Graphviz on a Mac, which uses Apple's libm", a: e2e.stock.identical, b: e2e.stock.total, cls: 'rs' },
+	{ k: 'graphviz-pure, every machine', d: 'compared with C Graphviz given the same math functions', a: e2e.identical, b: e2e.total, cls: 'rs' },
 ];
 const cells = Array.from({ length: 64 });
 ---
@@ -54,7 +53,7 @@ const cells = Array.from({ length: 64 });
 		<p class="intro">
 			graphviz-pure brings its own math functions instead of borrowing the operating system's, so nothing about the machine leaks into the
 			drawing. On every change, CI draws all {fmt(corpus)} test graphs and {samples.length} gallery samples on{' '}
-			{m ? plats.map((p) => p.label.replace(' (portable-math)', '')).join(', ') : 'Linux, Windows, macOS and WebAssembly'}, and fails if a
+			{m ? plats.map((p) => p.label).join(', ') : 'Linux, Windows, macOS and WebAssembly'}, and fails if a
 			single byte differs. Your browser can join in:
 		</p>
 	</header>

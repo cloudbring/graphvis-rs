@@ -1,7 +1,55 @@
-# Transcendental functions off macOS (`graphviz_pure_core::math`)
+# The math library (`graphviz_pure_core::math`)
 
-The native aarch64-apple-darwin build matches C Graphviz byte for byte on the whole corpus.
-The wasm32 build did not: 279 of the 2526 corpus files rendered differently (counting
+Every build of graphviz-pure computes its transcendental functions (`pow`, `sin`, `cos`,
+`atan2`, `hypot`, ...) with the same pure-Rust implementations, `graphviz_pure_core::math`, on
+every target: Linux x86-64 and arm64, Windows, macOS on Apple Silicon and Intel, and wasm32.
+No build calls a platform libm for them, and no feature brings one back: clippy's
+`disallowed-methods` (`clippy.toml`) rejects the `f64` methods everywhere except inside
+`math::portable`. So the same input gives the same bytes everywhere, which
+`.github/workflows/cross-platform.yml` checks on every push.
+
+C Graphviz, on the other hand, calls its platform's libm, so stock C writes different bytes on
+macOS and on Linux. The port is therefore compared with C computing with the port's own math
+functions (below), and a difference that comes only from a platform's libm is not a bug
+(`docs/versioning.md`).
+
+## How the port is compared with C
+
+`crates/graphviz-pure-portable-libm` exports the port's math functions under the libm names C
+imports, and `scripts/dot-portable-libm.sh` loads it into the unmodified C `dot`
+(`DYLD_INSERT_LIBRARIES` on macOS, `LD_PRELOAD` on Linux, see `scripts/c-oracle-linux/`). The
+corpus references are made with it:
+
+```sh
+cargo build --release -p graphviz-pure-portable-libm
+scripts/gen-golden.sh                                                  # layout goldens, 3 runs each
+GVBINDIR=~/src/gv-ref/lutplugins cargo run --release -p graphviz-pure-diff -- e2e --generate --runs 5
+cargo test --workspace                                                 # every ratchet against them
+```
+
+It covers every transcendental symbol that Graphviz 16.1.0's libraries and plugins, and GTS,
+import (`nm -u`: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `log2`,
+`log10`, `pow`, `hypot`, `cbrt` and clang's `__sincos_stret`); the rest (`sqrt`, `fmod`) are
+exact in IEEE arithmetic. Against it the port is byte-identical on all 2,592 stable corpus
+inputs (`gv-diff e2e`; 11 more are skipped because C's output changes from run to run).
+
+`gv-diff e2e --stock` compares with stock C on macOS instead (`tests/golden/e2e.json`, C with
+Apple's libm). It is a report and never fails: the port matches 2,471 of 2,591 inputs, and on
+every one of the other 120 it equals C with the same math, so they differ only through Apple's
+libm (114 sfdp, whose multilevel layout amplifies a last-bit difference in `pow`; 3 fdp; 1
+circo; 1 main).
+
+## History: why one math library
+
+Until 0.2.0, Apple targets called Apple's libm by default (the `portable-math` feature opted
+into the portable functions, and is now a deprecated no-op), so the port matched stock C on
+macOS byte for byte, but the Apple Silicon CLI, crate and Homebrew formula wrote different bytes
+from every other platform, and from the browser build on the same Mac. The rest of this page is
+how the portable functions were chosen. Measurements written "on macOS with `portable-math`"
+were taken with what is now every build, and "Apple profile" means the former default on macOS.
+
+The native aarch64-apple-darwin build with Apple's libm matched C Graphviz byte for byte on the
+whole corpus. The wasm32 build did not: 279 of the 2526 corpus files rendered differently (counting
 multi-graph files; 197 without them). The cause is libm. On macOS, Rust's `f64::hypot`,
 `powf`, `sin`, ... call the system libm (`libsystem_m`), the same one C Graphviz uses. On
 wasm32 they come from compiler-builtins' musl port, and on Linux from glibc. These disagree
@@ -83,9 +131,8 @@ Candidates were compared with the system results on the inputs above:
 `.powf(`, `.sin(`, ... call in the workspace became `math::hypot(a, b)` and so on, the way C
 writes `hypot(a, b)`. The rewrite was mechanical, done with a `syn`-based rewriter.
 
-- On Apple targets the functions call the `f64` methods, so native output is unchanged.
-- On every other target, or with `--features graphviz-pure-core/portable-math` on macOS, they use
-  `math::portable`:
+- On every target they call `math::portable` (at first only off Apple targets, where the
+  `f64` methods were used):
   - `hypot`: the formula above, with exact power-of-two scaling outside `[2^-500, 2^500]`.
   - `pow`: a Rust port of CORE-MATH's correctly rounded `pow` (`portable/pow/`, see below).
     Apple's `pow` is within 0.511 ulp and differs from the correctly rounded result only near
@@ -170,17 +217,15 @@ C, by corpus (`gv-diff e2e`):
 | render | 21 | 21 | 21 | 21 |
 | **all** | 2538 | 2538 | 2403 | 2419 |
 
-## Ratchet baselines per math profile
+## Ratchet baselines per math profile (history)
 
-`graphviz_pure_core::math::PROFILE` is `Profile::Apple` when the platform libm is used (Apple targets
-without `portable-math`) and `Profile::Portable` otherwise. Every corpus ratchet keeps one
-baseline per profile: `gv-diff` maps `--baseline X.json` to `X.portable.json` on portable
-builds (`graphviz_pure_diff::profile_baseline`), for reading and for `--update`, and prints which file it
-used. The Apple files stay the record of exact C parity; the portable files guard regressions
-on Linux and wasm, and their numbers document the gap to C. `scripts/update-baselines.sh
-[--portable]` refreshes all of them for one profile.
+While there were two profiles, every corpus ratchet kept one baseline per profile: `X.json` for
+the Apple profile and `X.portable.json` for the portable one. Since 0.2.0 the `*.portable.json`
+files are the only baselines, `scripts/update-baselines.sh` refreshes all of them, and the
+layout goldens they compare with are made by C with the port's math functions.
 
-These counts are from when the portable profile was introduced; the corpora have grown since.
+These counts are from when the portable profile was introduced, against stock C on macOS; the
+corpora have grown since.
 The current figures are on the documentation site's Fidelity page (`scripts/site-data.py`).
 
 | ratchet | baseline | Apple | portable |
@@ -234,7 +279,7 @@ The claim above, that every portable difference comes from libm, can be tested d
 with the port's portable math functions and compare. `crates/graphviz-pure-portable-libm` is a small
 library that replaces every transcendental function C Graphviz imports (`sin`, `cos`, `tan`,
 `asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `log2`, `log10`, `pow`, `hypot`, `cbrt`, and
-clang's combined `__sincos_stret`) with the ones `graphviz_pure_core::math` uses off macOS. It is loaded
+clang's combined `__sincos_stret`) with the ones `graphviz_pure_core::math` uses. It is loaded
 into the unmodified C `dot` with `DYLD_INSERT_LIBRARIES` on macOS (dyld interposition) and
 `LD_PRELOAD` on Linux; `scripts/dot-portable-libm.sh` does this. The remaining libm imports
 (`sqrt`, `sqrtf`, `fmod`) are exact in IEEE arithmetic.
@@ -302,7 +347,7 @@ Everything under `crates/graphviz-pure-core/src/math/`:
 
 | file | what | origin | licence |
 |---|---|---|---|
-| `mod.rs` | the `math::*` entry points, `PORTABLE`, `PROFILE` | written for this port | project licence |
+| `mod.rs` | the `math::*` entry points | written for this port | project licence |
 | `portable/mod.rs` | re-exports of the `libm` crate | written for this port | project licence |
 | `portable/pow/` | correctly rounded `pow` | Rust port of CORE-MATH `src/binary64/pow/` (Tom Hubrecht, Paul Zimmermann; Copyright (c) 2022-2025 CERN and Inria), tables converted mechanically; licence text kept in `pow/mod.rs` | MIT |
 | `portable/hypot.rs` | Apple-equivalent `hypot` | an original formula identified by black-box comparison with the system libm; no code copied | project licence |

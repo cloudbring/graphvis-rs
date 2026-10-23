@@ -106,16 +106,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # cargo: Apple Silicon keeps Apple's libm, which makes the output byte-identical to C on
-          # macOS (measured on arm64). Apple's Intel libm is a different implementation, never
-          # checked against C, and differs in the last bit (fdp-clusters moves), so the Intel build
-          # uses the portable math profile, like every other platform: the same bytes everywhere.
-          - { target: x86_64-unknown-linux-musl, runner: ubuntu-24.04, cargo: "" }
-          - { target: aarch64-unknown-linux-musl, runner: ubuntu-24.04-arm, cargo: "" }
-          - { target: aarch64-apple-darwin, runner: macos-15, cargo: "" }
-          - { target: x86_64-apple-darwin, runner: macos-15-intel, cargo: "--features graphviz-pure-core/portable-math" }
-          - { target: x86_64-pc-windows-msvc, runner: windows-2025, cargo: "" }
-          - { target: aarch64-pc-windows-msvc, runner: windows-11-arm, cargo: "" }
+          # Every target is a default build: one math library everywhere, so every binary writes
+          # the same bytes (the smoke test below checks the gallery's).
+          - { target: x86_64-unknown-linux-musl, runner: ubuntu-24.04 }
+          - { target: aarch64-unknown-linux-musl, runner: ubuntu-24.04-arm }
+          - { target: aarch64-apple-darwin, runner: macos-15 }
+          - { target: x86_64-apple-darwin, runner: macos-15-intel }
+          - { target: x86_64-pc-windows-msvc, runner: windows-2025 }
+          - { target: aarch64-pc-windows-msvc, runner: windows-11-arm }
     defaults:
       run:
         shell: bash
@@ -134,9 +132,7 @@ jobs:
           TARGET: ${{ matrix.target }}
           # Windows: link the C runtime statically, so the binary needs no VC++ redistributable.
           RUSTFLAGS: ${{ contains(matrix.target, 'windows') && '-C target-feature=+crt-static' || '' }}
-          CARGO_ARGS: ${{ matrix.cargo }}
-        # CARGO_ARGS is deliberately unquoted: it holds zero or more cargo arguments.
-        run: cargo build --release --locked --target "$TARGET" -p graphviz-pure-cli $CARGO_ARGS
+        run: cargo build --release --locked --target "$TARGET" -p graphviz-pure-cli
       - name: Smoke test (byte-identical gallery samples)
         env:
           TARGET: ${{ matrix.target }}

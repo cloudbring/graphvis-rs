@@ -46,33 +46,34 @@ const file = s.source.split('/').pop()!;
 		<div>
 			<dt class="label">Result</dt>
 			<dd class="marks">
-				{s.identical ? <Mark kind="register" label="identical on macOS" /> : <Mark kind="off" label="differs on macOS" />}
-				{s.identical_portable ? (
-					<Mark kind="register" label="identical under portable math" />
+				{s.identical ? <Mark kind="register" label="identical to C with the same math" /> : <Mark kind="off" label="differs from C with the same math" />}
+				{s.identical_stock ? (
+					<Mark kind="register" label="stock C on macOS: identical" />
 				) : (
-					<Mark kind="upstream" label="differs under portable math" />
+					<Mark kind="upstream" label="stock C on macOS: differs (Apple's libm)" />
 				)}
 			</dd>
 		</div>
 	</dl>
 
 	{
-		!s.identical_portable && (
+		!s.identical_stock && (
 			<p class="why">
-				This sample is here because it differs: under the portable math library used on Linux and in WASM, {s.engine === 'sfdp' ? "sfdp's multilevel layout" : 'the layout'} turns
-				last-bit differences in <code>pow</code>, <code>sin</code> or <code>cos</code> into a different drawing. The viewer compares the macOS build, which matches C; the live check
-				below runs the portable build in your browser and can load its output into the viewer. <a href={url('porting/libm/')}>Math off macOS</a>
+				This sample is here because stock C on macOS draws it differently. C there calls Apple's libm, and{' '}
+				{s.engine === 'sfdp' ? "sfdp's multilevel layout" : 'the layout'} turns last-bit differences in <code>pow</code>, <code>sin</code> or{' '}
+				<code>cos</code> into a different drawing. The port uses the same math library on every platform and never follows a platform libm; run
+				with those same functions, C writes the bytes in the viewer. <a href={url('porting/libm/')}>The math library</a>
 			</p>
 		)
 	}
 
-	<DiffViewer id="viewer" c={url(dir + 'c.svg')} rust={url(dir + 'rust.svg')} rightLabel="graphviz-pure, native macOS build" />
+	<DiffViewer id="viewer" c={url(dir + 'c.svg')} rust={url(dir + 'rust.svg')} rightLabel="graphviz-pure" />
 
 	<LiveCheck
 		input={url(dir + s.wasm_input)}
 		c={url(dir + 'c.svg')}
 		engine={s.engine}
-		expectIdentical={s.identical_portable}
+		expectIdentical={s.identical}
 		viewer="viewer"
 		injected={s.flags.map((f) => f.replace(/^-G/, '') + ';')}
 	/>

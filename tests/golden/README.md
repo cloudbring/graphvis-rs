@@ -8,17 +8,22 @@ as ratchets that fail on any regression.
 
 | path | what | written by |
 | :--- | :--- | :--- |
-| `*.dot` | C's `-Tdot` layouts of `tests/wild` and `tests/fixtures` | `scripts/gen-golden.sh` |
-| `baseline.json` | per-file layout scores the port must not fall below | `scripts/update-baselines.sh` |
-| `<engine>/`, `<engine>-baseline.json` | the same for each engine corpus (`tests/<engine>/`) | `scripts/gen-golden.sh`, `scripts/update-baselines.sh` |
-| `e2e.json` | hashes of C's `-Tsvg` for every corpus input, plus inputs whose C output is unstable | `gv-diff e2e --generate` |
-| `e2e-baseline.json` | the inputs whose port `-Tsvg` equals C's byte for byte | `gv-diff e2e --update` |
-| `structure.json` | a structural summary of C's `-Tsvg` for every corpus input (`docs/testing/structure-checks.md`) | `gv-diff structure --generate` |
+| `*.dot` | C's `-Tdot` layouts of `tests/wild` and `tests/fixtures`, computed with the port's math | `scripts/gen-golden.sh` |
+| `baseline.portable.json` | per-file layout scores the port must not fall below | `scripts/update-baselines.sh` |
+| `<engine>/`, `<engine>-baseline.portable.json` | the same for each engine corpus (`tests/<engine>/`) | `scripts/gen-golden.sh`, `scripts/update-baselines.sh` |
+| `e2e.libm-matched.json` | hashes of C's `-Tsvg` (with the port's math) for every corpus input, plus inputs whose C output is unstable | `gv-diff e2e --generate --runs 5` |
+| `e2e-baseline.libm-matched.portable.json` | the inputs whose port `-Tsvg` equals C's byte for byte | `gv-diff e2e --update` |
+| `e2e.json`, `e2e-baseline.portable.json` | the same against stock C on macOS (Apple's libm): informational, never a check | `gv-diff e2e --stock --generate`, `gv-diff e2e --stock --update` |
+| `structure.json` | a structural summary of stock C's `-Tsvg` for every corpus input (`docs/testing/structure-checks.md`) | `gv-diff structure --generate` |
 | `render.tar.xz` | the render corpus, compressed (see below) | `scripts/gen-render-golden.sh` |
-| `render/baseline.json` | render ratchet | `gv-diff render --update` |
+| `render/baseline.portable.json` | render ratchet | `gv-diff render --update` |
 
-Every baseline has a `*.portable.json` sibling, used by builds with the portable math profile
-(Linux, WASM, or macOS with `--features gv-core/portable-math`); see `docs/porting/libm.md`.
+The baselines are the `*.portable.json` files: every build uses the same (portable) math
+library, so one set serves every platform. The C references (`*.dot`, `<engine>/`,
+`e2e.libm-matched.json`) are made by C Graphviz computing with the port's math functions
+(`scripts/dot-portable-libm.sh`); `e2e.json` and `e2e-baseline.portable.json` hold the
+informational comparison with stock C on macOS (`gv-diff e2e --stock`). See
+`docs/porting/libm.md`.
 
 ## The render corpus is compressed
 

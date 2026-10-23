@@ -1,3 +1,4 @@
-cargo build --release -p graphviz-pure-cli --features graphviz-pure-core/portable-math   # or any Linux/WASM build
-GVBINDIR=$HOME/src/gv-ref/lutplugins dot -Tsvg repro.gv
+cargo build --release -p graphviz-pure-cli   # every build, on any platform, uses the same math library
+GVBINDIR=$HOME/src/gv-ref/lutplugins dot -Tsvg repro.gv                         # stock C on macOS: Apple's libm
+GVBINDIR=$HOME/src/gv-ref/lutplugins scripts/dot-portable-libm.sh -Tsvg repro.gv  # C with the port's math: identical
 graphviz-pure -Tsvg repro.gv

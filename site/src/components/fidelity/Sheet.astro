@@ -3,9 +3,14 @@
  * The press sheet: every file of the full-pipeline check as one patch, per corpus.
  * Blue: byte-identical. Magenta: differs. Yellow: skipped because C's own output changes
  * between runs. Hover a patch for its name.
+ *
+ * The first sheet is the check: C computing with the same math functions as the port. The
+ * second, for information, is the same build against stock C on macOS, which calls Apple's
+ * libm; cyan marks the files that differ there only through Apple's libm.
  */
 import { fidelity, fmt } from '../../lib/data';
 const e = fidelity.e2e;
+const st = e.stock;
 const COLS = 84, PITCH = 8, CELL = 6, LABEL = 96, GAP = 8;
 const corpora = e.corpora.map((c) => c.name);
 const byCorpus = (list: string[]) => {
@@ -13,63 +18,79 @@ const byCorpus = (list: string[]) => {
 	for (const f of list) m.get(f.split('/')[0])?.push(f);
 	return m;
 };
-const files = byCorpus(e.files);
-const unstable = byCorpus(e.unstable);
+// Every file of either reference, in one order, so the two sheets line up patch for patch.
+const files = byCorpus([...new Set([...e.files, ...e.unstable, ...st.unstable])].sort());
 
-function sheet(profile: 'apple' | 'portable') {
-	const off = new Set(e.differs[profile]);
+type Cell = { x: number; y: number; name: string };
+type Status = 'reg' | 'off' | 'libm' | 'y';
+const TITLE: Record<Status, string> = { reg: 'identical', off: 'differs', libm: "differs only through Apple's libm", y: 'C unstable, skipped' };
+
+function sheet(status: (f: string) => Status) {
 	let y = 0;
 	let reg = '';
-	const offCells: { x: number; y: number; name: string }[] = [];
-	const yCells: { x: number; y: number; name: string }[] = [];
+	const cells: Record<'off' | 'libm' | 'y', Cell[]> = { off: [], libm: [], y: [] };
 	const labels: { y: number; name: string; n: string }[] = [];
 	for (const c of corpora) {
-		const list = [...files.get(c)!, ...unstable.get(c)!];
-		const un = new Set(unstable.get(c));
-		const bad = list.filter((f) => off.has(f)).length;
-		labels.push({ y, name: c, n: bad ? `${bad} off` : '' });
+		const list = files.get(c)!;
+		let bad = 0;
 		list.forEach((f, i) => {
 			const x = LABEL + (i % COLS) * PITCH;
 			const yy = y + Math.floor(i / COLS) * PITCH;
-			if (un.has(f)) yCells.push({ x, y: yy, name: f });
-			else if (off.has(f)) offCells.push({ x, y: yy, name: f });
-			else reg += `M${x} ${yy}h${CELL}v${CELL}h-${CELL}z`;
+			const k = status(f);
+			if (k === 'reg') reg += `M${x} ${yy}h${CELL}v${CELL}h-${CELL}z`;
+			else cells[k].push({ x, y: yy, name: f });
+			if (k === 'off' || k === 'libm') bad++;
 		});
+		labels.push({ y, name: c, n: bad ? `${bad} off` : '' });
 		y += Math.ceil(list.length / COLS) * PITCH + GAP;
 	}
-	return { reg, offCells, yCells, labels, h: y - GAP, w: LABEL + COLS * PITCH };
+	return { reg, cells, labels, h: y - GAP, w: LABEL + COLS * PITCH };
 }
-const sheets = { apple: sheet('apple'), portable: sheet('portable') };
+
+// The two references share their inputs; they differ only in which ones C reproduces from run to run.
+const sameUn = new Set<string>(e.unstable), sameOff = new Set<string>(e.differs);
+const stockUn = new Set<string>(st.unstable), stockOff = new Set<string>(st.differs), stockOther = new Set<string>(st.other);
+const sheets = [
+	{
+		id: 'same',
+		button: 'C with the same math',
+		caption: `${fmt(e.identical)} identical · ${fmt(e.total - e.identical)} differ · ${e.unstable.length} skipped`,
+		label: `${fmt(e.total)} files, ${fmt(e.identical)} identical to C with the same math`,
+		...sheet((f) => (sameUn.has(f) ? 'y' : sameOff.has(f) ? 'off' : 'reg')),
+	},
+	{
+		id: 'stock',
+		button: 'Stock C on macOS, informational',
+		caption: `${fmt(st.identical)} identical · ${fmt(st.libm_only)} differ only through Apple's libm · ${fmt(st.other.length)} otherwise · ${st.unstable.length} skipped`,
+		label: `${fmt(st.total)} files, ${fmt(st.identical)} identical to stock C on macOS`,
+		...sheet((f) => (stockUn.has(f) ? 'y' : stockOther.has(f) ? 'off' : stockOff.has(f) ? 'libm' : 'reg')),
+	},
+];
 ---
 <div class="psheet not-content" data-psheet>
 	<div class="psheet-bar">
-		<div class="seg" role="group" aria-label="Math profile">
-			<button type="button" data-p="apple" aria-pressed="true">macOS, Apple libm</button>
-			<button type="button" data-p="portable" aria-pressed="false">Linux and WASM, portable math</button>
+		<div class="seg" role="group" aria-label="C reference">
+			{sheets.map((s, i) => <button type="button" data-p={s.id} aria-pressed={i === 0 ? 'true' : 'false'}>{s.button}</button>)}
 		</div>
 		<p class="psheet-legend">
-			<span class="sw reg"></span> identical <span class="sw off"></span> differs <span class="sw y"></span> C unstable, skipped
+			<span class="sw reg"></span> identical <span class="sw off"></span> differs <span class="sw libm"></span> Apple's libm only <span class="sw y"></span> C unstable, skipped
 		</p>
 	</div>
-	{(['apple', 'portable'] as const).map((p) => {
-		const s = sheets[p];
-		return (
-			<figure data-sheet={p} hidden={p !== 'apple'}>
-				<svg viewBox={`0 0 ${s.w} ${s.h}`} width={s.w} role="img" aria-label={`${fmt(e.total)} files, ${fmt(e[p])} identical`}>
-					{s.labels.map((l) => (
-						<>
-							<text x="0" y={l.y + 8} class="cl">{l.name}</text>
-							{l.n && <text x="0" y={l.y + 19} class="cn">{l.n}</text>}
-						</>
-					))}
-					<path d={s.reg} class="reg" />
-					{s.offCells.map((c) => <rect x={c.x} y={c.y} width="6" height="6" class="off"><title>{c.name}: differs</title></rect>)}
-					{s.yCells.map((c) => <rect x={c.x} y={c.y} width="6" height="6" class="y"><title>{c.name}: C unstable, skipped</title></rect>)}
-				</svg>
-				<figcaption class="mono">{fmt(e[p])} identical · {fmt(e.total - e[p])} differ · {e.unstable.length} skipped</figcaption>
-			</figure>
-		);
-	})}
+	{sheets.map((s, i) => (
+		<figure data-sheet={s.id} hidden={i !== 0}>
+			<svg viewBox={`0 0 ${s.w} ${s.h}`} width={s.w} role="img" aria-label={s.label}>
+				{s.labels.map((l) => (
+					<>
+						<text x="0" y={l.y + 8} class="cl">{l.name}</text>
+						{l.n && <text x="0" y={l.y + 19} class="cn">{l.n}</text>}
+					</>
+				))}
+				<path d={s.reg} class="reg" />
+				{(['off', 'libm', 'y'] as const).map((k) => s.cells[k].map((c) => <rect x={c.x} y={c.y} width="6" height="6" class={k}><title>{c.name}: {TITLE[k]}</title></rect>))}
+			</svg>
+			<figcaption class="mono">{s.caption}</figcaption>
+		</figure>
+	))}
 </div>
 <style>
 	.psheet { margin-block: 1.5rem; padding: 1rem; border: 0.5px solid var(--rule-default); border-radius: var(--r-panel); background: var(--stock-raised); }
@@ -78,6 +99,7 @@ const sheets = { apple: sheet('apple'), portable: sheet('portable') };
 	.sw { display: inline-block; width: 8px; height: 8px; border-radius: 1px; margin-left: 0.5rem; }
 	.sw.reg, svg .reg { background: var(--register); fill: var(--register); }
 	.sw.off, svg .off { background: var(--plate-m); fill: var(--plate-m); }
+	.sw.libm, svg .libm { background: var(--plate-c); fill: var(--plate-c); }
 	.sw.y, svg .y { background: var(--plate-y); fill: var(--plate-y); }
 	figure { margin: 0; overflow-x: auto; }
 	svg { display: block; max-width: 100%; height: auto; }

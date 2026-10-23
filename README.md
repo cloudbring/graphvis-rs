@@ -8,7 +8,7 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/graphviz-pure/graphviz-pure/badge)](https://scorecard.dev/viewer/?uri=github.com/graphviz-pure/graphviz-pure)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15718/badge)](https://www.bestpractices.dev/projects/15718)
 
-**A pure-Rust port of Graphviz 16.1.0, with the same output on every platform** ([documentation and evidence](https://graphviz-pure.github.io/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and on macOS with Apple Silicon its output is byte-identical to C Graphviz on every input in the project's test corpora. Everywhere else (Linux, Windows, Intel Macs, the browser) it writes one set of bytes, the same on every platform.
+**A pure-Rust port of Graphviz 16.1.0, with the same output on every platform** ([documentation and evidence](https://graphviz-pure.github.io/)) (`#![forbid(unsafe_code)]`, no C or FFI dependencies). It runs natively and in the browser (`wasm32-unknown-unknown`), and every build computes with the same math library, so it writes one set of bytes on Linux, Windows, macOS and in the browser. Given the same math functions, C Graphviz writes those bytes too: the port is byte-identical to C on every stable input in the project's test corpora.
 
 graphviz-pure is an independent port. It is not affiliated with or endorsed by the Graphviz project; "Graphviz" in the name says what it is a port of.
 
@@ -24,35 +24,37 @@ graphviz-pure is an independent port. It is not affiliated with or endorsed by t
 
 ### Fidelity against C Graphviz 16.1.0
 
-Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fail on any regression:
+Measured with `gv-diff`, which `cargo test --workspace` runs as ratchets that fail on any regression. The reference is C Graphviz computing with the port's math functions (`scripts/dot-portable-libm.sh` interposes them into the stock `dot`), so the comparison measures the port, not the platform's libm:
 
-| Check | macOS on Apple Silicon (Apple libm, as C uses) | Linux, Windows, Intel Macs and WASM |
-| :--- | :---: | :---: |
-| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (12 inputs skipped because C's own output changes between runs) | 2,591 / 2,591 | 2,471 / 2,591 |
-| Layout geometry, main corpus (566 files: wild graphs, upstream fixtures, fuzz reproducers) | 566 / 566 exact | 565 / 566 |
-| Per-engine corpora, exact | neato 442/442, sfdp 297/297, circo 281/281, fdp 388/388, osage 180/180, patchwork 141/141, twopi 282/289 | see `tests/golden/*.portable.json` |
-| Renderers given C's layout (`gv-diff render`, 547 layouts, 7 formats) | svg, xdot, dot, json, json0 all identical; plain and plain-ext 535/537 | same |
-| C's own test graphs (`graphs/`, `tests/graphs/`, `tests/regression_tests/`), dot with base, LR, ortho, concentrate and newrank variants | 379 / 379 per variant | not measured |
-| Differential fuzzing (6,000 random graphs, all engines, final round) | 98.8% identical | not measured |
+| Check | Every platform (Linux, Windows, macOS, WASM) |
+| :--- | :---: |
+| Full `-Tsvg` byte identity (`gv-diff e2e`), 9 corpora (11 inputs skipped because C's own output changes between runs) | 2,592 / 2,592 |
+| Layout geometry, main corpus (566 files: wild graphs, upstream fixtures, fuzz reproducers) | 566 / 566 exact |
+| Per-engine corpora, exact | neato 442/445, sfdp 297/297, circo 282/282, fdp 386/388, osage 180/180, patchwork 141/141, twopi 281/289 |
+| Renderers given C's layout (`gv-diff render`, 547 layouts, 7 formats) | svg, xdot, dot, json, json0 all identical; plain and plain-ext 535/537 |
+| C's own test graphs (`graphs/`, `tests/graphs/`, `tests/regression_tests/`), dot with base, LR, ortho, concentrate and newrank variants | 379 / 379 per variant |
+| Differential fuzzing (6,000 random graphs, all engines, final round) | 98.8% identical |
 
-- **Linux and WASM** use a portable math library. Apple's `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit (see `docs/porting/libm.md`). Linux on aarch64 and x86_64 and the WASM build give exactly the same output as each other. Run C with the same portable math functions (`scripts/dot-portable-libm.sh`) and the Linux and WASM builds match it on 2,592 of 2,592 inputs, so every one of those differences is the math library. For comparison, C Graphviz built on Linux matches C on macOS on only 2,005 of 2,586.
+- **One math library.** Every build calls the same pure-Rust math functions (`graphviz_pure_core::math`), on every target; no build option brings back a platform libm, and clippy rejects code that would. Stock C on macOS calls Apple's libm, whose `pow`, `sin`, `cos` and `atan2` are closed source and are not reproduced bit for bit, so against stock C on macOS the port matches 2,471 of 2,591 inputs: all 120 others differ only through the libm (the port equals C with the same math on every one; `gv-diff e2e --stock` lists them). That comparison is informational. See `docs/porting/libm.md`. For comparison, C Graphviz built on Linux matches C on macOS on only 2,005 of 2,586.
+- **neato and fdp:** neato's 3 inexact files are inputs C crashes on, so there is no C layout to compare with. fdp's 2 are layouts that change from run to run in C.
 - **plain/plain-ext:** in two Latin-1 files C prints an empty label where the port prints the text, because C reads the label from freed memory (`lib/common/output.c`); the same C bug makes 10 other references unstable.
-- **twopi:** the 7 inexact files are a floating-point tie in edge routing that C itself breaks differently from run to run.
+- **twopi:** the 8 inexact files are a floating-point tie in edge routing that C itself breaks differently from run to run.
 - **Fuzzing:** the remaining differences are documented in `docs/porting/fuzzing.md`. Most are C nondeterminism (results that depend on memory addresses) and C crashes.
 
 ## Checking fidelity yourself
 
 ```sh
 cargo test --workspace                                         # every ratchet
+cargo run --release -p graphviz-pure-diff -- e2e --stock                  # informational: against stock C on macOS
 cargo run --release -p graphviz-pure-diff -- e2e --list                   # full-SVG identity, list differences
 cargo run --release -p graphviz-pure-diff -- --filter clust --worst 20    # layout geometry, a subset
 cargo run --release -p graphviz-pure-diff -- render                       # renderers on C's own layouts
 cargo run --release -p graphviz-pure-diff -- structure                    # same nodes, edges and labels as C, on canvas
 node scripts/wasm-e2e.mjs --pkg <wasm-bindgen nodejs output>   # the same check under WASM
-scripts/update-baselines.sh [--portable]                       # after an improvement
+scripts/update-baselines.sh                                    # after an improvement
 ```
 
-Regenerating the C references needs Graphviz 16.1.0 installed: `scripts/gen-golden.sh`, `scripts/gen-render-golden.sh` and `GVBINDIR=<pango-free plugin dir> gv-diff e2e --generate`.
+Regenerating the C references needs Graphviz 16.1.0 installed and the interposer built (`cargo build --release -p graphviz-pure-portable-libm`): `scripts/gen-golden.sh`, `scripts/gen-render-golden.sh` and `GVBINDIR=<pango-free plugin dir> gv-diff e2e --generate --runs 5`.
 
 ## Performance
 
@@ -72,7 +74,7 @@ Output is identical in every row. The ortho speedup comes from data structures w
 
 ## Crates
 
-- [`graphviz-pure-core`](crates/graphviz-pure-core): graph IR, geometry, font metric tables, colour tables with `colorxlate` semantics, charset handling, and the math module (`math::PROFILE` selects Apple or portable).
+- [`graphviz-pure-core`](crates/graphviz-pure-core): graph IR, geometry, font metric tables, colour tables with `colorxlate` semantics, charset handling, and the math module (`math`: the same pure-Rust functions on every target).
 - [`graphviz-pure-parser`](crates/graphviz-pure-parser): DOT lexer and parser with cgraph's attribute, subgraph and ordering semantics, and the canonical writer.
 - [`graphviz-pure-geom`](crates/graphviz-pure-geom): node sizing (`shapes.c`, records, HTML tables, `labels.c`) and `pathplan`.
 - [`graphviz-pure-layout`](crates/graphviz-pure-layout): the engines (`dotgen`, `neatogen`, `fdpgen`, `sfdpgen`, `twopigen`, `circogen`, `osage`, `patchwork`), the shared `lib/common` code, plus `ortho`, `pack`, `vpsc`, `sparse` and no-layout mode.

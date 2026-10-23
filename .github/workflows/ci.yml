@@ -127,7 +127,7 @@ jobs:
           cmp "$RUNNER_TEMP/native-hashes.json" "$RUNNER_TEMP/wasm-hashes.json"
 
   # The npm package (wasm-bindgen --target web, built as the release builds it) loaded the way a
-  # user of each runtime would, rendering the portable gallery samples byte for byte; see
+  # user of each runtime would, rendering the gallery samples byte for byte; see
   # scripts/wasm-runtimes/run.mjs. Deno, Bun, wrangler and Playwright come from that
   # directory's package-lock.json (third-party setup actions are not allowed); the browser is
   # the runner image's Google Chrome.

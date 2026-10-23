@@ -4,15 +4,14 @@ import { fidelity, fmt } from '../../lib/data';
 const rows = fidelity.layout;
 ---
 <div class="scroll-x"><table class="ledger">
-	<thead><tr><th>Corpus</th><th class="n">Files</th><th class="n">macOS exact</th><th class="n">Linux, WASM exact</th><th>Not exact (macOS)</th></tr></thead>
+	<thead><tr><th>Corpus</th><th class="n">Files</th><th class="n">Exact</th><th>Not exact</th></tr></thead>
 	<tbody>
 		{rows.map((r) => (
 			<tr>
 				<td><strong>{r.name}</strong></td>
 				<td class="n">{fmt(r.total)}</td>
-				<td class="n">{fmt(r.apple)}<Bar a={r.apple} b={r.total} /></td>
-				<td class="n">{fmt(r.portable)}<Bar a={r.portable} b={r.total} /></td>
-				<td class="files">{r.apple_inexact.length ? r.apple_inexact.map((f) => <code>{f}</code>) : '·'}</td>
+				<td class="n">{fmt(r.exact)}<Bar a={r.exact} b={r.total} /></td>
+				<td class="files">{r.inexact.length ? r.inexact.map((f) => <code>{f}</code>) : '·'}</td>
 			</tr>
 		))}
 	</tbody>

@@ -9,19 +9,19 @@ import { fidelity, fmt, url } from '../lib/data';
 const f = fidelity;
 const layoutMain = f.layout.find((l) => l.name === 'main')!;
 const engines = f.layout.filter((l) => l.name !== 'main');
-const engApple = engines.reduce((a, l) => a + l.apple, 0);
+const engExact = engines.reduce((a, l) => a + l.exact, 0);
 const engTotal = engines.reduce((a, l) => a + l.total, 0);
-const rSvg = f.render.reduce((a, r) => a + r.apple, 0);
+const rSvg = f.render.reduce((a, r) => a + r.identical, 0);
 const rTotal = f.render.reduce((a, r) => a + r.total, 0);
 const cg = f.c_graphs.variants.reduce((a, v) => a + v.exact, 0);
 const cgTotal = f.c_graphs.variants.reduce((a, v) => a + v.total, 0);
 const lastFuzz = f.fuzz.rounds[f.fuzz.rounds.length - 1];
 
 const patches = [
-	{ k: 'Whole SVG files identical to Graphviz on macOS', a: f.e2e.apple, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
-	{ k: 'Identical on Linux, Windows and in the browser', a: f.e2e.portable, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
-	{ k: 'Layouts with every node and edge in place', a: layoutMain.apple, b: layoutMain.total, href: 'fidelity/#layout' },
-	{ k: 'The same check, engine by engine', a: engApple, b: engTotal, href: 'fidelity/#layout' },
+	{ k: 'Whole SVG files identical to Graphviz given the same math', a: f.e2e.identical, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
+	{ k: 'Identical to stock Graphviz on a Mac (Apple’s libm)', a: f.e2e.stock.identical, b: f.e2e.stock.total, href: 'fidelity/#stock-c-on-macos' },
+	{ k: 'Layouts with every node and edge in place', a: layoutMain.exact, b: layoutMain.total, href: 'fidelity/#layout' },
+	{ k: 'The same check, engine by engine', a: engExact, b: engTotal, href: 'fidelity/#layout' },
 	{ k: 'Output files in 7 formats, from Graphviz’s layouts', a: rSvg, b: rTotal, href: 'fidelity/#renderers' },
 	{ k: 'Graphviz’s own test graphs, 5 ways', a: cg, b: cgTotal, href: 'fidelity/#c-test-graphs' },
 	{ k: 'Random graphs that match', a: lastFuzz.all, b: 100, pct: true, cases: lastFuzz.cases, href: 'fidelity/#fuzzing' },

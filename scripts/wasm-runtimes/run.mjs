@@ -1,6 +1,6 @@
 // Checks that the npm package works in every runtime its description names: it packs web/ (as
 // `npm publish` would), installs the tarball into node_modules, loads it the way a user of each
-// runtime would, and renders the gallery samples that are the same under every math profile,
+// runtime would, and renders every gallery sample,
 // byte for byte against site/public/samples/NAME/rust.svg (as scripts/release-smoke-wasm.mjs
 // does for Node). Deno, Bun, wrangler (workerd) and the Playwright driver come from this
 // directory's package-lock.json; the browser is the installed Google Chrome, or CHROME_PATH.

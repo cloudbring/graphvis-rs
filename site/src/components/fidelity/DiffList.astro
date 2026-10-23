@@ -1,16 +1,28 @@
 ---
 import { fidelity } from '../../lib/data';
-const d = fidelity.e2e.differs;
+interface Props { stock?: boolean }
+const { stock = false } = Astro.props;
+const e = fidelity.e2e;
+const st = e.stock;
+const other = new Set<string>(st.other);
 ---
+{stock ? (
+	<details class="dlist">
+		<summary>The {st.differs.length} files that differ from stock C on macOS{st.other.length ? `, ${st.libm_only} of them only through Apple's libm` : ", all only through Apple's libm"}</summary>
+		<ul class="mono">{st.differs.map((f) => <li>{f}{other.has(f) && ' (also differs from C with the same math)'}</li>)}</ul>
+	</details>
+) : <>
+{e.differs.length > 0 && (
+	<details class="dlist">
+		<summary>The {e.differs.length} files that differ from C with the same math</summary>
+		<ul class="mono">{e.differs.map((f) => <li>{f}</li>)}</ul>
+	</details>
+)}
 <details class="dlist">
-	<summary>The {d.portable.length} files that differ under portable math{d.apple.length ? `, and the ${d.apple.length} that differ on macOS` : ''}</summary>
-	<ul class="mono">{d.portable.map((f) => <li>{f}</li>)}</ul>
-	{d.apple.length > 0 && <ul class="mono">{d.apple.map((f) => <li>{f}</li>)}</ul>}
+	<summary>The {e.unstable.length} inputs skipped because C's output changes between two runs</summary>
+	<ul class="mono">{e.unstable.map((f) => <li>{f}</li>)}</ul>
 </details>
-<details class="dlist">
-	<summary>The {fidelity.e2e.unstable.length} inputs skipped because C's output changes between two runs</summary>
-	<ul class="mono">{fidelity.e2e.unstable.map((f) => <li>{f}</li>)}</ul>
-</details>
+</>}
 <style>
 	.dlist { margin-block: 0.5rem; font-size: var(--sl-text-sm); }
 	.dlist summary { cursor: pointer; color: var(--key-2); }

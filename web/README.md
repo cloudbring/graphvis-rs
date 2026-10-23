@@ -2,8 +2,9 @@
 
 A Rust + WebAssembly port of [Graphviz](https://graphviz.org) 16.1.0: the DOT parser, all eight
 layout engines (dot, neato, fdp, sfdp, twopi, circo, osage, patchwork) and the svg, json, dot,
-xdot and plain renderers, with no C. Its output is the same bytes in every browser and on every
-platform. graphviz-pure is an independent port, not affiliated with or endorsed by the Graphviz
+xdot and plain renderers, with no C. Every build of graphviz-pure computes with the same math
+library, so its output is the same bytes in every browser, in Node.js, Deno and Bun, and as the
+native `graphviz-pure` command on Linux, Windows and macOS. graphviz-pure is an independent port, not affiliated with or endorsed by the Graphviz
 project.
 
 ```js

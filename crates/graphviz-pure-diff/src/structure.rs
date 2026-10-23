@@ -1,8 +1,8 @@
 //! Structural checks of the port's `-Tsvg` output (`gv-diff structure`).
 //!
-//! `gv-diff e2e` requires the port's SVG to equal C's byte for byte, which holds on macOS but
-//! not for every input under the portable math profile (Linux, WASM), where sfdp and a few
-//! other layouts take a different but equally valid shape. This mode checks what must hold
+//! `gv-diff e2e` requires the port's SVG to equal C's byte for byte, with C computing with the
+//! same math functions. The reference here is stock C on macOS (Apple's libm), where sfdp and a
+//! few other layouts take a different but equally valid shape. This mode checks what must hold
 //! whatever the layout: that each drawing contains the same nodes, edges, clusters and label
 //! text as C's, that nothing is drawn outside the canvas or at a non-finite coordinate, that
 //! the canvas is about the size of C's, and that nodes do not overlap much more than in C's

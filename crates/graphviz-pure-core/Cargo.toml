@@ -8,7 +8,7 @@ categories.workspace = true
 keywords.workspace = true
 readme.workspace = true
 homepage.workspace = true
-description = "Graph model, attributes, font metric tables, colour tables and math profiles for graphviz-pure"
+description = "Graph model, attributes, font metric tables, colour tables and the portable math library for graphviz-pure"
 
 [features]
 # Logs the arguments of every `math` call to `$GV_MATH_TRACE/` (see docs/porting/libm.md).

@@ -1,10 +1,10 @@
-//! Runs C Graphviz with the port's portable math functions, to test the claim that the port's
-//! remaining differences off macOS come from the math library alone.
+//! Runs C Graphviz with the port's math functions: the C reference of the corpus checks, so that
+//! the port and C compute with the same bits and every remaining difference is the port's.
 //!
 //! Built as a dylib and loaded into C `dot` with `DYLD_INSERT_LIBRARIES` (see
 //! `scripts/dot-portable-libm.sh`), it replaces every transcendental function Graphviz imports
-//! from macOS libm with the one `graphviz_pure_core::math` uses on every target: `hypot` and `pow` from `graphviz_pure_core::math::portable`, the
-//! rest from the `libm` crate. C then computes with the same bits as the portable port, and
+//! from macOS libm with the one `graphviz_pure_core::math` uses on every target: `hypot` and
+//! `pow` from `graphviz_pure_core::math::portable`, the rest from the `libm` crate. C then computes with the same bits as the portable port, and
 //! `gv-diff e2e --golden tests/golden/e2e.libm-matched.json` compares the two.
 //!
 //! The list is the libm symbols that Graphviz 16.1.0's libraries and plugins import

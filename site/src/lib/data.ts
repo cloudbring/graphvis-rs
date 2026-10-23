@@ -18,8 +18,10 @@ export interface Sample {
 	flags: string[];
 	source: string;
 	features: string[];
+	/** port vs C computing with the same math functions (c.svg) */
 	identical: boolean;
-	identical_portable: boolean;
+	/** port vs stock C on macOS (Apple's libm); informational */
+	identical_stock: boolean;
 	wasm_input: string;
 	sha256: { c: string; rust: string };
 	bytes: { input: number; c: number; rust: number };
