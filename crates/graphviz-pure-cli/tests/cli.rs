@@ -946,6 +946,15 @@ fn dimen_3_writes_three_coordinates() {
     assert!(ok, "{err}");
     assert!(out.contains("pos=\"27,18,57.091\""), "{out}");
     assert!(out.contains("pos=\"76,76,7\""), "{out}");
+    // A node without a position stops `-n` after `neato_init_graph` set GD_odim: the nodes
+    // are drawn at the origin, each with the coordinates `user_pos` gave it after `y`.
+    let (out, _, _) = run(
+        &["-Kneato", "-n", "-Tdot"],
+        "graph { dimen=3; a [pos=\"1,2,3\"]; b [pos=\"5,5\"]; c }\n",
+    );
+    for want in ["pos=\"0,0,3\"", "pos=\"0,0,85.636\"", "pos=\"0,0,0\""] {
+        assert!(out.contains(want), "{want} in {out}");
+    }
     for (engine, want) in [
         ("-Kneato", "pos=\"27,18,33.679\""),
         ("-Ksfdp", "pos=\"27,18,93.337\""),

@@ -951,10 +951,14 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
         graphviz_pure_core::diag::agerr_prev("as required by the -n flag\n");
         // `neato_layout` returns before any coordinate, spline or cluster is set, and
         // `dot` draws that: every node at the origin, no edge, the root label unplaced.
+        // `neato_init_graph` set GD_odim, and `user_pos` the coordinates after `y`.
+        let odim = (outdim as usize).min(ndim);
+        graph.layout.odim = odim;
         for (nd, n) in graph.nodes.iter_mut().zip(&g.nodes) {
             nd.pos = Point::default();
             nd.width = n.width;
             nd.height = n.height;
+            nd.layout.higher_dims = crate::common::init::higher_dims(&n.pos, odim);
         }
         for e in &mut graph.edges {
             e.spline = graphviz_pure_core::Spline::default();

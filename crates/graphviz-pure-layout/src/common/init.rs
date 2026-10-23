@@ -336,13 +336,7 @@ impl<'a> LGraph<'a> {
             nd.width = n.width;
             nd.height = n.height;
             nd.layout.xlabel = n.xlabel.as_ref().filter(|l| l.set).map(|l| l.pos);
-            nd.layout.higher_dims = if self.odim >= 3 {
-                (2..self.odim)
-                    .map(|k| 72.0 * n.pos.get(k).copied().unwrap_or(0.0))
-                    .collect()
-            } else {
-                Vec::new()
-            };
+            nd.layout.higher_dims = higher_dims(&n.pos, self.odim);
         }
         let place = |l: &Option<TextLabel>| {
             l.as_ref().map(|l| graphviz_pure_core::LabelPlace {
@@ -408,6 +402,17 @@ impl<'a> LGraph<'a> {
             }
         }
     }
+}
+
+/// `ND_pos(n)[2..odim]` in points, which `attach_attrs_and_arrows` writes after `x` and `y`
+/// when `GD_odim(g) >= 3`.
+pub fn higher_dims(pos: &[f64], odim: usize) -> Vec<f64> {
+    if odim < 3 {
+        return Vec::new();
+    }
+    (2..odim)
+        .map(|k| 72.0 * pos.get(k).copied().unwrap_or(0.0))
+        .collect()
 }
 
 /// `setEdgeType(gc, EDGETYPE_LINE)` on a component of neato or sfdp: the component's type
