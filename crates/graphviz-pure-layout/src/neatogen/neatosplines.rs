@@ -14,13 +14,24 @@ thread_local! {
     static NOP: std::cell::Cell<u8> = const { std::cell::Cell::new(0) };
 }
 
-/// Sets `Nop` for the layouts that follow.
-pub fn set_nop(nop: u8) {
-    NOP.with(|n| n.set(nop));
+/// Sets `Nop` while it lives; back to 0 when dropped, as after a panic.
+pub(crate) struct NopGuard;
+
+impl NopGuard {
+    pub(crate) fn set(nop: u8) -> Self {
+        NOP.with(|n| n.set(nop));
+        NopGuard
+    }
+}
+
+impl Drop for NopGuard {
+    fn drop(&mut self) {
+        NOP.with(|n| n.set(0));
+    }
 }
 
 /// `Nop`.
-pub fn nop() -> u8 {
+pub(crate) fn nop() -> u8 {
     NOP.with(std::cell::Cell::get)
 }
 

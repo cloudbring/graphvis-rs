@@ -3032,6 +3032,47 @@ fn nop3_single_point_spline_does_not_panic() {
     );
 }
 
+// C8: with -n2, orthoEdges skips an edge that has its spline (`Nop == 2 && ED_spl(e)`),
+// and spline_edges_ keeps it; the other edges are routed orthogonally. Graphviz 16.1.0.
+#[test]
+fn nop2_ortho_keeps_a_given_spline() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n2", "-Tplain"],
+        "digraph G { splines=ortho; a [pos=\"0,0\"]; b [pos=\"150,0\"]; c [pos=\"200,150\"]; \
+         a -> c [pos=\"e,190,140 20,10 60,60 120,100 180,130\"]; b -> c; a -> b [label=ab]; }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "edge a c 4 0.65278 0.38889 1.2083 1.0833 2.0417 1.6389 2.875 2.0556 solid black\n\
+             edge b c 7 2.4306 0.50546 2.4306 1.0618 2.4306 2.3333 2.4306 2.3333 2.4306 2.3333 \
+             2.6148 2.3333 2.6148 2.3333 solid black\n"
+        ),
+        "{out}"
+    );
+}
+
+// C8: with -n2, splineEdges puts an edge that has its spline in a class of its own, so
+// the other multi-edges are spread as if it were not there. Graphviz 16.1.0.
+#[test]
+fn nop2_given_spline_is_its_own_edge_class() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n2", "-Tplain"],
+        "digraph G { a [pos=\"0,0\"]; b [pos=\"100,0\"]; a -> b; a -> b; a -> b [label=m]; \
+         b -> a; a -> b [pos=\"e,80,0 20,0 40,10 60,10 70,0\"]; }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "edge a b 4 0.59201 0.46094 0.80707 0.53836 1.1405 0.55184 1.3968 0.50139 solid black\n\
+             edge a b 4 0.59201 0.039062 0.80707 -0.038359 1.1405 -0.051844 1.3968 -0.0013913 solid black\n\
+             edge a b 4 0.73267 0.16683 0.88982 0.15612 1.0773 0.15354 1.2491 0.1591 m 0.91525 0.27963 solid black\n\
+             edge a b 4 0.65278 0.25 0.93056 0.38889 1.2083 0.38889 1.3472 0.25 solid black\n"
+        ),
+        "{out}"
+    );
+}
+
 // C8: when spline_edges0 returns before splineEdges (splines=""), State stays below
 // GVSPLINES and attach_attrs_and_arrows writes no edge position: -n3 keeps the input `pos`
 // and `lp`, untranslated.

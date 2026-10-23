@@ -760,11 +760,24 @@ fn nop_init_edges(g: &mut LGraph<'_>, nop: u8) -> PosEdge {
     }
 }
 
-/// `freeEdgeInfo(g)`: drop the given splines. C frees the edge labels too but keeps the
-/// pointers, and goes on reading them; the port keeps the labels as they were.
+/// `freeEdgeInfo(g)`: drop the given splines and the label positions read with them. C
+/// frees the edge labels but keeps the pointers and reads them again: it crashes, or
+/// places them from freed memory. The port places them again on the new edges, as C does
+/// for the same edge without `pos`.
 fn free_edge_info(g: &mut LGraph<'_>) {
     for e in &mut g.edges {
         e.spl = None;
+        for l in [
+            &mut e.label,
+            &mut e.xlabel,
+            &mut e.head_label,
+            &mut e.tail_label,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            l.set = false;
+        }
     }
 }
 
@@ -928,9 +941,10 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
     };
     // The rest of init_nop's scan_graph: its `bad edge len` warnings.
     super::stuff::nop_check_edge_lens(graph);
-    super::neatosplines::set_nop(nop);
-    let done = init_nop(&mut g, nop);
-    super::neatosplines::set_nop(0);
+    let done = {
+        let _nop = super::neatosplines::NopGuard::set(nop);
+        init_nop(&mut g, nop)
+    };
     let Ok(splines_state) = done else {
         graphviz_pure_core::diag::agerr_prev("as required by the -n flag\n");
         // `neato_layout` returns before any coordinate, spline or cluster is set, and
@@ -1421,6 +1435,34 @@ mod tests {
             near(Point::new(r.values[0], r.values[1]), -3.5, 44.4),
             "{xlp}"
         );
+    }
+
+    // freeEdgeInfo: after `ratio` rescales the drawing, the given splines are dropped and
+    // the edges routed again. C reads the freed labels (it crashes or places them from freed
+    // memory); the port places them again, as for the same edge without `pos`: on the new
+    // edge, not at the scaled input `lp`.
+    #[test]
+    fn nop_rescale_places_the_edge_labels_again() {
+        let g = nop_graph(
+            false,
+            &[("ratio", "2")],
+            &[("a", &[("pos", "0,0")]), ("b", &[("pos", "100,0")])],
+            &[(
+                0,
+                1,
+                &[
+                    ("pos", "0,0 30,0 60,0 100,0"),
+                    ("label", "L"),
+                    ("lp", "50,10"),
+                ],
+            )],
+        );
+        let g = nop_layout(g, 2);
+        let e = &g.edges[0];
+        let y = e.spline.segments[0].points[0].y;
+        assert!(near(Point::new(0.0, y), 0.0, 152.31), "{:?}", e.spline);
+        let lp = e.label_pos.expect("label position");
+        assert!(!e.label_unplaced && (lp.y - y).abs() < 10.0, "{lp:?}");
     }
 
     // Issue #142: an edge label without `lp` is placed on the routed edge (addXLabels), at
