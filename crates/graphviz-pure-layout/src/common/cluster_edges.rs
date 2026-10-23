@@ -36,22 +36,19 @@ impl ClusterEdges {
 
 /// `processClusterEdges(g)`; `None` when the graph has no cluster edges.
 pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<ClusterEdges> {
-    // mkClustMap: first cluster of each name in preorder.
-    let mut cmap: HashMap<&str, usize> = HashMap::new();
-    for c in 0..tree.len() {
-        let name = graph.subgraphs[tree.subgraph[c]].name.as_str();
-        if cmap.contains_key(name) {
-            graphviz_pure_core::diag::agwarningf(&format!(
-                "Two clusters named {name} - the second will be ignored\n"
-            ));
-        } else {
-            cmap.insert(name, c);
+    fn preorder(tree: &ClusterTree, cs: &[usize], graph: &Graph, out: &mut Vec<(String, usize)>) {
+        for &c in cs {
+            out.push((graph.subgraph_name(tree.subgraph[c]), c));
+            preorder(tree, &tree.children[c], graph, out);
         }
     }
+    let mut clusters = Vec::new();
+    preorder(tree, &tree.root, graph, &mut clusters);
+    let cmap = crate::common::utils::mk_clust_map(clusters);
     let mapc = |n: usize| -> Option<usize> {
         let name = graph.nodes[n].name.as_str();
         if name.starts_with("cluster") {
-            cmap.get(name).copied()
+            cmap.get(name)
         } else {
             None
         }

@@ -6,9 +6,9 @@ use super::types::*;
 use crate::common::arrows::{arrow_end_clip, arrow_start_clip};
 use crate::common::geom::mid;
 use crate::common::splines::bezier_split;
+use crate::common::utils::{ClustMap, mk_clust_map};
 use graphviz_pure_core::Point;
 use graphviz_pure_core::cnum::c_min;
-use std::collections::BTreeMap;
 
 /// `boxIntersectf(pp, cp, bp)`: where segment `pp -> cp` leaves box `bp`.
 fn box_intersectf(pp: Point, cp: Point, bp: &BoxF) -> Point {
@@ -126,27 +126,20 @@ fn spline_intersectf(pts: &mut [Point; 4], bb: &BoxF) -> bool {
 }
 
 impl Dot<'_> {
-    /// `fillMap` / `mkClustMap`: cluster name -> cluster, first one wins.
-    fn mk_clust_map(&self, g: G, map: &mut BTreeMap<String, G>) {
+    /// `fillMap`'s preorder of the cluster tree under `g`, with each cluster's `agnameof`.
+    fn clusters_preorder(&self, g: G, out: &mut Vec<(String, G)>) {
         for &cl in &self.graphs[g].clust {
-            let name = &self.graphs[cl].name;
-            if map.contains_key(name) {
-                graphviz_pure_core::diag::agwarningf(&format!(
-                    "Two clusters named {name} - the second will be ignored\n"
-                ));
-            } else {
-                map.insert(name.clone(), cl);
-            }
-            self.mk_clust_map(cl, map);
+            out.push((self.graph_name(cl), cl));
+            self.clusters_preorder(cl, out);
         }
     }
 
     /// `makeCompoundEdge(e, clustMap)`.
-    fn make_compound_edge(&mut self, e: E, map: &BTreeMap<String, G>) {
+    fn make_compound_edge(&mut self, e: E, map: &ClustMap<G>) {
         // `getCluster`
         let get = |k: &str| {
             let s = self.edge_attr(e, k).filter(|s| !s.is_empty())?;
-            let c = map.get(s).copied();
+            let c = map.get(s);
             if c.is_none() {
                 graphviz_pure_core::diag::agwarningf(&format!("cluster named {s} not found\n"));
             }
@@ -332,8 +325,9 @@ impl Dot<'_> {
 
     /// `dot_compoundEdges(g)`.
     pub fn dot_compound_edges(&mut self) {
-        let mut map = BTreeMap::new();
-        self.mk_clust_map(0, &mut map);
+        let mut clusters = Vec::new();
+        self.clusters_preorder(0, &mut clusters);
+        let map = mk_clust_map(clusters);
         for n in self.nodes_of(0) {
             for e in self.out_edges(0, n) {
                 self.make_compound_edge(e, &map);

@@ -464,11 +464,7 @@ impl W<'_> {
         let name = match sub {
             None if g.is_anonymous() => "%1".to_string(),
             None => g.name.clone(),
-            Some(s) if g.subgraphs[s].is_anonymous() => format!(
-                "%{}",
-                g.anon_subgraph_ids.get(&(s as u32)).copied().unwrap_or(0)
-            ),
-            Some(s) => g.subgraphs[s].name.clone(),
+            Some(s) => g.subgraph_name(s),
         };
         stoj(&name, &mut self.out);
         if top {
@@ -721,16 +717,16 @@ pub(crate) fn write_json(
         cl: &mut BTreeMap<String, usize>,
     ) {
         gid[s] = *cnt;
-        let name = &g.subgraphs[s].name;
+        let name = g.subgraph_name(s);
         // `insert(map, agnameof(g), GD_gid(g))`: the first cluster of a name keeps it.
-        if crate::emit::model::is_a_cluster(name, &g.subgraphs[s].graph_attrs) {
-            match cl.get(name) {
+        if crate::emit::model::is_a_cluster(&name, &g.subgraphs[s].graph_attrs) {
+            match cl.get(&name) {
                 Some(&v) if v != *cnt => graphviz_pure_core::diag::agwarningf(&format!(
                     "Duplicate cluster name \"{name}\"\n"
                 )),
                 Some(_) => {}
                 None => {
-                    cl.insert(name.clone(), *cnt);
+                    cl.insert(name, *cnt);
                 }
             }
         }
