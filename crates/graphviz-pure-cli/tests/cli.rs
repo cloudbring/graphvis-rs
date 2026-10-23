@@ -948,9 +948,14 @@ fn dimen_3_writes_three_coordinates() {
     assert!(out.contains("pos=\"76,76,7\""), "{out}");
     // A node without a position stops `-n` after `neato_init_graph` set GD_odim: the nodes
     // are drawn at the origin, each with the coordinates `user_pos` gave it after `y`.
-    let (out, _, _) = run(
+    let (out, err, ok) = run(
         &["-Kneato", "-n", "-Tdot"],
         "graph { dimen=3; a [pos=\"1,2,3\"]; b [pos=\"5,5\"]; c }\n",
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: node c in graph %1 has no position\nas required by the -n flag\n"
     );
     for want in ["pos=\"0,0,3\"", "pos=\"0,0,85.636\"", "pos=\"0,0,0\""] {
         assert!(out.contains(want), "{want} in {out}");
@@ -975,6 +980,14 @@ fn a_cluster_keeps_the_bb_attach_attrs_set_on_it() {
     assert!(ok, "{err}");
     assert!(
         out.contains("subgraph clusterB {\n\t\tgraph [bb=\"0,0,100,100\"];"),
+        "{out}"
+    );
+    // The value stays the cluster's own for the jobs after it.
+    let (out, err, ok) = run(&["-Kneato", "-n", "-Tdot", "-Tcanon"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        out.matches("graph [bb=\"0,0,100,100\"];").count(),
+        2,
         "{out}"
     );
 }

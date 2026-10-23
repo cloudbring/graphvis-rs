@@ -492,3 +492,20 @@ fn port_string(p: &graphviz_pure_core::Port) -> Option<String> {
         (None, None) => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::strtoul0;
+
+    #[test]
+    fn strtoul0_reads_like_c() {
+        assert_eq!(strtoul0("12"), 12);
+        assert_eq!(strtoul0(" 0x1f"), 31);
+        assert_eq!(strtoul0("017"), 15);
+        assert_eq!(strtoul0("0x"), 0);
+        assert_eq!(strtoul0("+9z"), 9);
+        assert_eq!(strtoul0("junk"), 0);
+        assert_eq!(strtoul0("-1"), u64::MAX);
+        assert_eq!(strtoul0("99999999999999999999999"), u64::MAX);
+    }
+}

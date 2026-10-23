@@ -137,6 +137,7 @@ pub fn layout_graph_with_options(
 fn clear_layout_results(graph: &mut Graph) {
     use graphviz_pure_core::{EdgeLayout, GraphLayout, NodeLayout};
     graph.layout = GraphLayout::default();
+    graph.render_view = None;
     for s in &mut graph.subgraphs {
         s.layout = GraphLayout::default();
     }
@@ -147,6 +148,9 @@ fn clear_layout_results(graph: &mut Graph) {
         };
     }
     for e in &mut graph.edges {
+        e.spline = graphviz_pure_core::Spline::default();
+        e.label_pos = None;
+        e.label_unplaced = false;
         e.layout = EdgeLayout {
             seq: e.layout.seq,
             ..EdgeLayout::default()

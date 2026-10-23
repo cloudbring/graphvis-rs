@@ -323,11 +323,28 @@ fn cgraph_view(graph: &Graph) -> Graph {
 pub struct GraphJobs<'g> {
     graph: &'g Graph,
     set: Option<Graph>,
+    /// Per subgraph, the graph attributes earlier jobs set with `agxset` (see
+    /// [`sync_dicts`]): they stay local values of the subgraph for every later writer.
+    forced: Vec<std::collections::BTreeSet<String>>,
 }
 
 impl<'g> GraphJobs<'g> {
     pub fn new(graph: &'g Graph) -> Self {
-        GraphJobs { graph, set: None }
+        GraphJobs {
+            graph,
+            set: None,
+            forced: Vec::new(),
+        }
+    }
+
+    /// Adds what a job's `attach_attrs` set to what earlier jobs set.
+    fn keep_forced(&mut self, forced: &[std::collections::BTreeSet<String>]) {
+        if self.forced.len() < forced.len() {
+            self.forced.resize(forced.len(), Default::default());
+        }
+        for (into, from) in self.forced.iter_mut().zip(forced) {
+            into.extend(from.iter().cloned());
+        }
     }
 
     /// Runs the job for `format`; `name` is the `-T` name (`job->output_langname`), which
@@ -355,7 +372,7 @@ impl<'g> GraphJobs<'g> {
             with_earlier(&mut g, self.set.as_ref(), true);
             if format == OutputFormat::Canon {
                 if g.dicts.len() == g.subgraphs.len() + 1 {
-                    sync_dicts(&mut g, graph, &[]);
+                    sync_dicts(&mut g, graph, &self.forced);
                     return Ok(agwrite::agwrite(&g));
                 }
                 return Ok(write_canon(&g));
@@ -378,8 +395,9 @@ impl<'g> GraphJobs<'g> {
             OutputFormat::Json | OutputFormat::Json0 => {
                 // `json_begin_graph`: json renders the graph as xdot first, json0 attaches
                 // the layout attributes; then `emit_graph` runs for the json job itself.
-                let (mut g, _) = attached(&m, format == OutputFormat::Json, None);
+                let (mut g, forced) = attached(&m, format == OutputFormat::Json, None);
                 keep_set(&mut self.set, &g);
+                self.keep_forced(&forced);
                 emit_null(&m, JSON_FEATURES, name);
                 with_earlier(&mut g, self.set.as_ref(), false);
                 json::write_json(
@@ -405,8 +423,9 @@ impl<'g> GraphJobs<'g> {
                 }
                 with_earlier(&mut g, self.set.as_ref(), false);
                 keep_set(&mut self.set, &g);
+                self.keep_forced(&forced);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
-                    sync_dicts(&mut g, graph, &forced);
+                    sync_dicts(&mut g, graph, &self.forced);
                     agwrite::agwrite(&g)
                 } else {
                     emit::output::propagate_inherited(&mut g, graph, &forced);
