@@ -197,6 +197,7 @@ pub fn sfdp_layout(graph: &mut Graph) -> Result<()> {
                 if do_adjust {
                     remove_overlap_with(&mut g, sg, &am);
                 }
+                crate::common::init::component_set_edge_type(&g);
                 spline_edges(&mut g, sg, false);
             }
             // packSubgraphs: packGraphs, then the root's bounding box.
