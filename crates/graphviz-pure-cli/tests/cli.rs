@@ -1669,7 +1669,8 @@ fn labelled_flat_edge_on_an_unnormalised_top_rank_gets_a_label_rank() {
 // took the first created, and lost an arrowhead and its clip, or drew the wrong type. Each
 // input after the first two needs one more of the searches that shape the tree: the
 // parser's search before each insert, `agcontains` in mincross (`ordering=out`), and
-// `cccomps` (`pack`). The expected lines are C 16.1.0's.
+// `cccomps` (`pack`). In the last, a `key` names an edge, whose id sorts after every
+// anonymous one. The expected lines are C 16.1.0's.
 #[test]
 fn concentrated_edge_takes_the_arrowheads_of_the_opposing_edge_cgraph_finds() {
     for (src, want) in [
@@ -1715,6 +1716,15 @@ fn concentrated_edge_takes_the_arrowheads_of_the_opposing_edge_cgraph_finds() {
             &[
                 "<path fill=\"none\" stroke=\"black\" d=\"M43,-71.7C43,-64.41 43,-55.73 \
                43,-47.54\"/>",
+            ][..],
+        ),
+        (
+            "a -> c; c -> a [key=zz]; c -> a [arrowhead=dot]; b -> a;",
+            &[
+                "<path fill=\"none\" stroke=\"black\" d=\"M27,-60.24C27,-56.01 27,-51.66 \
+                 27,-47.44\"/>",
+                "<polygon fill=\"black\" stroke=\"black\" points=\"23.5,-60.18 27,-70.18 \
+                 30.5,-60.18 23.5,-60.18\"/>",
             ][..],
         ),
     ] {

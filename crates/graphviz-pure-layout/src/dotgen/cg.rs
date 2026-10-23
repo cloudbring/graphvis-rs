@@ -300,11 +300,29 @@ impl Dot<'_> {
             .unwrap_or(n)
     }
 
-    /// The order of input edge `e` in its head's `in_id` dictionary.
+    /// The order of input edge `e` in its head's `in_id` dictionary: tail id, then edge id.
     fn cg_in_id_key(&self, e: E) -> (usize, u64) {
-        self.edges
+        self.edges.get(e).map_or((usize::MAX, 0), |ed| {
+            (self.cg_node_id(ed.tail), self.cg_edge_id(e, ed.seq))
+        })
+    }
+
+    /// The order of input edge `e`'s id. An anonymous edge's id counts up (`2k + 1`);
+    /// a `key` names the edge, whose id is then the address of the key string, above
+    /// every anonymous id. Named edges are taken to grow in creation order too.
+    fn cg_edge_id(&self, e: E, seq: u64) -> u64 {
+        if self.cg_keyed(e) {
+            seq | (1 << 62)
+        } else {
+            seq
+        }
+    }
+
+    fn cg_keyed(&self, e: E) -> bool {
+        self.input
+            .edges
             .get(e)
-            .map_or((usize::MAX, 0), |ed| (self.cg_node_id(ed.tail), ed.seq))
+            .is_some_and(|ed| ed.attrs.contains_key("key"))
     }
 
     fn cg_head(&self, e: E) -> Option<N> {
@@ -328,18 +346,19 @@ impl Dot<'_> {
     /// `agcontains(g, e)` do: on the input root, it splays `e` in [`Dot::agfindedge_root`]'s
     /// dictionaries.
     pub fn agcontains_edge_hit(&self, g: G, e: E) {
-        if g == 0 && !self.comp && e < self.input.edges.len() {
+        if self.concentrate && g == 0 && !self.comp && e < self.input.edges.len() {
             self.in_id_hit(e);
         }
     }
 
     /// Runs `f` on the root graph's `in_id` dictionary of input node `h`, building it
     /// first if needed. Node ids are the addresses of the node names, taken here to
-    /// grow as the nodes were created. The parser creates each edge with
-    /// `installedge`, which searches the root's dictionaries for the edge (missing
-    /// it) and then inserts it. dot adds no edges to the root graph; the searches
-    /// that find one come from `cccomps` and from `agsubedge`/`agcontains`
-    /// ([`Dot::cg_in_id_hits`]).
+    /// grow as the nodes were created. The parser creates each edge with `agedge`:
+    /// for a named (`key`) edge, it first searches `g` and the root for it, and in an
+    /// undirected graph also the other way round, in the tail's dictionary; then
+    /// `installedge` searches for the edge (missing it) and inserts it. dot adds no
+    /// edges to the root graph; the searches that find one come from `cccomps` and from
+    /// `agsubedge`/`agcontains` ([`Dot::cg_in_id_hits`]).
     fn with_in_id<R>(&self, h: N, f: impl FnOnce(&mut crate::cdt::Cdt<E>) -> R) -> Option<R> {
         let mut dicts = self.cg_in_id.borrow_mut();
         if dicts.len() <= h {
@@ -348,21 +367,64 @@ impl Dot<'_> {
         let dict = dicts.get_mut(h)?.get_or_insert_with(|| {
             let mut d = crate::cdt::Cdt::new();
             let key = |e: E| self.cg_in_id_key(e);
-            let mut ins: Vec<E> = (0..self.input.edges.len())
-                .filter(|&e| self.cg_head(e) == Some(h))
-                .collect();
-            for &e in &ins {
-                let k = key(e);
+            let search = |d: &mut crate::cdt::Cdt<E>, k: (usize, u64)| {
                 d.find(&|&x: &E| k.cmp(&key(x)));
-                d.insert(e, &|&x: &E| k.cmp(&key(x)));
+            };
+            let real = self.input.edges.len();
+            let node = self.nodes.get(h);
+            let mut ins: Vec<E> = node
+                .map(|n| n.cg_in.iter().copied().filter(|&e| e < real).collect())
+                .unwrap_or_default();
+            ins.sort_by_key(|&e| self.edges.get(e).map(|ed| ed.seq));
+            let undirected = self.root_input.kind != graphviz_pure_core::GraphKind::Directed;
+            // Named edges from `h`, probed the other way round in an undirected graph.
+            let mut outs: Vec<E> = match node {
+                Some(n) if undirected => n
+                    .cg_out
+                    .iter()
+                    .copied()
+                    .filter(|&e| e < real && self.cg_keyed(e) && self.cg_head(e) != Some(h))
+                    .collect(),
+                _ => Vec::new(),
+            };
+            outs.sort_by_key(|&e| self.edges.get(e).map(|ed| ed.seq));
+            let mut events: Vec<(E, bool)> = ins.iter().map(|&e| (e, true)).collect();
+            events.extend(outs.iter().map(|&e| (e, false)));
+            events.sort_by_key(|&(e, _)| self.edges.get(e).map(|ed| ed.seq));
+            for (e, into_h) in events {
+                let Some(ed) = self.edges.get(e) else {
+                    continue;
+                };
+                let id = self.cg_edge_id(e, ed.seq);
+                if self.cg_keyed(e) {
+                    // agedge probes `g`, then the root: both are the root unless the
+                    // edge statement is in a subgraph.
+                    let in_subgraph = self
+                        .input
+                        .subgraphs
+                        .iter()
+                        .any(|s| s.edges.iter().any(|x| x.0 as usize == e));
+                    for _ in 0..if in_subgraph { 1 } else { 2 } {
+                        if into_h {
+                            search(&mut d, (self.cg_node_id(ed.tail), id));
+                        }
+                        if undirected && ed.tail == h {
+                            search(&mut d, (self.cg_node_id(ed.head), id));
+                        }
+                    }
+                }
+                if into_h {
+                    let k = key(e);
+                    search(&mut d, k);
+                    d.insert(e, &|&x: &E| k.cmp(&key(x)));
+                }
             }
             if self.cg_in_id_packed {
                 // graphviz_node_induce: the component's nodes in order, each one's
                 // out-edges in order.
-                ins.sort_by_key(|&e| key(e));
+                ins.sort_by_key(|&e| (key(e).0, self.edges.get(e).map(|ed| ed.seq)));
                 for &e in &ins {
-                    let k = key(e);
-                    d.find(&|&x: &E| k.cmp(&key(x)));
+                    search(&mut d, key(e));
                 }
             }
             for &e in self
@@ -371,8 +433,7 @@ impl Dot<'_> {
                 .iter()
                 .filter(|&&e| self.cg_head(e) == Some(h))
             {
-                let k = key(e);
-                d.find(&|&x: &E| k.cmp(&key(x)));
+                search(&mut d, key(e));
             }
             d
         });
