@@ -1132,7 +1132,8 @@ fn cylinder_port_endpoint_does_not_hang_the_router() {
 // Issue #191. The repeated cluster gives the osage graph an infinite bb, and
 // `xlhorder`'s `floor(log2(inf)) + 1` overflowed the Hilbert order in a debug build.
 // C fails an assertion in `xlhdxload` (lib/label/xlabels.c) on these inputs; the port
-// computes C's order (0) and exits cleanly.
+// computes C's order (0), stops where C asserts without placing a label (#301), and exits
+// cleanly.
 #[test]
 fn xlabels_with_an_infinite_bb_do_not_panic() {
     let cluster = "subgraph cluster_inner4{j1 j2}";
@@ -4284,6 +4285,64 @@ stop
         err.contains("Error: lost a c edge\n") && !err.contains("panicked"),
         "{err}"
     );
+}
+
+// Issue #301. An infinite (or 400-digit) edge label font size gives the label an infinite
+// size. C's `xlhdxload` (lib/label/xlabels.c:513) asserts that the label area's centre fits
+// an `int` and aborts; past that point, `adjust`'s slides stay at `-inf` forever. The
+// port takes `xlhdxload`'s own failure path there: no exterior label is placed.
+#[test]
+fn infinite_edge_label_size_does_not_hang_xlabel_placement() {
+    let huge = format!("1{}", "0".repeat(400));
+    for (engine, src) in [
+        (
+            "dot",
+            "digraph G { edge [labelfontsize=inf]; a -> b [headlabel=h]; }".to_string(),
+        ),
+        (
+            "neato",
+            "graph G { edge [labelfontsize=inf]; a -- b [headlabel=h]; }".to_string(),
+        ),
+        (
+            "dot",
+            format!("digraph G {{ edge [labelfontsize={huge}]; a -> b [headlabel=h]; }}"),
+        ),
+        // dot places the edge label itself; only the head label goes to xlabels.
+        (
+            "dot",
+            "digraph G { edge [fontsize=inf]; a -> b [label=ab, headlabel=h]; }".to_string(),
+        ),
+    ] {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+            .args(["-Tplain", &format!("-K{engine}")])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(src.as_bytes())
+            .unwrap();
+        // The output is a few lines, well under the pipe buffer, so polling cannot block.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+        while child.try_wait().unwrap().is_none() {
+            if std::time::Instant::now() > deadline {
+                child.kill().unwrap();
+                panic!("xlabel placement must terminate: {src}");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let out = child.wait_with_output().unwrap();
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert!(out.status.success(), "{src}: {err}");
+        assert!(
+            err.contains("0 out of 1 exterior labels positioned"),
+            "{src}: {err}"
+        );
+    }
 }
 
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
