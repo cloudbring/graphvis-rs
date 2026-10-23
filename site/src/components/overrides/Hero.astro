@@ -2,14 +2,26 @@
 /**
  * The home page's hero: the claim, set in Times-Roman (the face Graphviz has defaulted to
  * since 1991), over a live graph of this site that the port lays out in the reader's browser.
+ * Starlight's 404 page is also a splash page with a hero, but one with only a tagline; it gets
+ * a plain heading instead of the claim, which assumes the home page's title and figures.
  */
 import { fidelity, fmt, pct, url } from '../../lib/data';
 import LiveGraph from '../home/LiveGraph.astro';
 
-const hero = Astro.locals.starlightRoute.entry.data.hero!;
+const { title, hero } = Astro.locals.starlightRoute.entry.data;
 const e2e = fidelity.e2e;
 ---
 
+{!hero?.title ? (
+<section class="hero plain">
+	<p class="label">{title}</p>
+	<h1 id="_top">{hero?.tagline ?? title}</h1>
+	<div class="actions">
+		<a class="btn primary" href={url()}>Go to the overview</a>
+		<a class="btn" href={url('gallery/')}>Compare C and Rust</a>
+	</div>
+</section>
+) : (
 <section class="hero">
 	<div class="claim">
 		<p class="label">Graphviz 16.1.0, ported to Rust and WebAssembly</p>
@@ -28,6 +40,7 @@ const e2e = fidelity.e2e;
 	</div>
 	<LiveGraph />
 </section>
+)}
 
 <style>
 	:global(:root[data-has-hero]:not([data-has-sidebar])) {
@@ -41,6 +54,22 @@ const e2e = fidelity.e2e;
 		grid-template-columns: auto minmax(0, 1fr);
 		column-gap: 3rem;
 		align-items: end;
+	}
+	.plain {
+		padding-block: 2rem 4rem;
+	}
+	.plain .label {
+		margin: 0 0 0.75rem;
+	}
+	.plain h1 {
+		font-size: clamp(2rem, 3vw, 2.75rem);
+		line-height: 1.1;
+		white-space: normal;
+		text-wrap: balance;
+		max-width: 40rem;
+	}
+	.plain .actions {
+		margin-top: 2rem;
 	}
 	.claim .label {
 		grid-column: 1 / -1;
