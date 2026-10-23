@@ -66,7 +66,7 @@ layout/neatogen/bfs.rs	5	0	78	14
 layout/neatogen/call_tri.rs	0	0	2	2
 layout/neatogen/cola.rs	1	0	50	27
 layout/neatogen/conjgrad.rs	0	0	37	6
-layout/neatogen/constraint.rs	1	0	50	22
+layout/neatogen/constraint.rs	1	0	50	4
 layout/neatogen/delaunay.rs	0	1	61	8
 layout/neatogen/digcola.rs	3	0	265	65
 layout/neatogen/graphdata.rs	10	0	26	2
