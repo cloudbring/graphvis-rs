@@ -1823,11 +1823,49 @@ fn syntax_error_escapes_control_characters() {
     assert_eq!(err, "Error: a\\001b: syntax error in line 3 near ';'\n");
 }
 
-/// C: `Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits
-/// into two tokens` before the error (scan.l `chkNum`). The port splits the token the same way
-/// but does not warn.
+/// A byte-order mark is ignored wherever it stands alone (scan.l:125), and is part of a name
+/// when a letter or digit follows it: `LETTER` holds \200-\377, so `{NAME}` is the longer
+/// match (#117).
 #[test]
-#[ignore = "issue #97: scan.l chkNum's badly-delimited-number warning is not ported"]
+fn byte_order_mark_follows_scan_l() {
+    let (out, err, ok) = run(&["-Tcanon"], "digraph { \u{feff} a \u{feff}}");
+    assert!(ok, "{err}");
+    assert_eq!(out, "digraph {\n\tnode [label=\"\\N\"];\n\ta;\n}\n");
+    let (_, err, ok) = run(&["-Tcanon"], "\u{feff}digraph { a }");
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: <stdin>: syntax error in line 1 near '\u{feff}digraph'\n"
+    );
+}
+
+/// cgraph reads its input with `fgets` and `strlen` (`lib/cgraph/io.c:24`), so a NUL hides the
+/// rest of its line, newline included, and a line that starts with a NUL ends the input (#120).
+#[test]
+fn nul_hides_the_rest_of_its_line() {
+    let (_, err, _) = run(&["-Tcanon"], "digraph { a \0 b -> ; }\n c -> ;");
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near ';'\n");
+    let (_, err, _) = run(&["-Tcanon"], "digraph { \"x\0y\" -> ; }");
+    assert_eq!(
+        err,
+        "Error: <stdin>: syntax error in line 1 scanning a quoted string (missing endquote? \
+         longer than 16384?)\nString starting:\"x\n"
+    );
+    // The next graph is read from the line after the closing brace, as fgets reads it.
+    let (out, err, ok) = run(
+        &["-Tcanon"],
+        "digraph{a\0junk\n}\ndigraph{b}\n\0\ndigraph{c}\n",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "digraph {\n\tnode [label=\"\\N\"];\n\ta;\n}\ndigraph {\n\tnode [label=\"\\N\"];\n\tb;\n}\n"
+    );
+}
+
+/// C: `Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits
+/// into two tokens` before the error (scan.l `chkNum`), which splits the token in two (#97).
+#[test]
 fn badly_delimited_number_warns() {
     let (_, err, _) = run(&["-Tsvg"], "digraph G {\n a -> b -> 1a ; c -> ;\n}\n");
     assert_eq!(
@@ -1835,12 +1873,20 @@ fn badly_delimited_number_warns() {
         "Warning: syntax ambiguity - badly delimited number '1a' in line 2 of <stdin> splits \
          into two tokens\nError: <stdin>: syntax error in line 2 near ';'\n"
     );
+    // A line directive's file name, and a second `.`, as `twoDots` sees it.
+    let (out, err, ok) = run(&["-Tcanon"], "# 7 \"foo.gv\"\ndigraph { 1.2.3 }\n");
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: syntax ambiguity - badly delimited number '1.2.' in line 7 of foo.gv splits \
+         into two tokens\n"
+    );
+    assert!(out.contains("\t1.2;\n\t.3;\n"), "{out}");
 }
 
 /// C: a backslash before CR LF in a quoted string is kept with the CR and LF (scan.l:140
-/// ignores only a backslash before LF; rule 142 keeps the backslash). The port drops all three.
+/// ignores only a backslash before LF; rule 142 keeps the backslash) (#112).
 #[test]
-#[ignore = "issue #112: backslash + CRLF in a quoted string is dropped"]
 fn backslash_crlf_in_quoted_string_is_kept() {
     let (out, err, ok) = run(&["-Tdot"], "digraph G { a [label=\"x\\\r\ny\"] }");
     assert!(ok, "{err}");
