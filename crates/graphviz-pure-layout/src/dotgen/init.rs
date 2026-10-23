@@ -305,8 +305,16 @@ impl<'a> Dot<'a> {
         let (t, h) = (self.edges[e].tail, self.edges[e].head);
         let tg = self.node_attr(t, "group").unwrap_or("");
         let hg = self.node_attr(h, "group").unwrap_or("");
+        // `tailgroup == headgroup` compares interned strings, so the HTML flag counts.
+        let html = |n: N| {
+            self.nodes
+                .get(n)
+                .and_then(|nd| nd.real)
+                .and_then(|r| self.input.nodes.get(r))
+                .is_some_and(|nd| graphviz_pure_core::attr_is_html(&nd.attrs, "group"))
+        };
         let mut xpenalty = 1;
-        if !tg.is_empty() && tg == hg {
+        if !tg.is_empty() && tg == hg && html(t) == html(h) {
             xpenalty = CL_CROSS;
             // No overflow check in C (undefined behaviour); the port wraps.
             weight = weight.wrapping_mul(100);

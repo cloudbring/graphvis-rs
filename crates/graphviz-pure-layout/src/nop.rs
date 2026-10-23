@@ -22,6 +22,7 @@ use graphviz_pure_core::font::{DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstC
 use graphviz_pure_core::strtod::{atof, sscanf, strtod_rest};
 use graphviz_pure_core::{
     AttrMap, BezierSegment, BoundingBox, Graph, GraphKind, Point, Result, Spline, SubgraphId,
+    attr_is_html,
 };
 
 const POINTS_PER_INCH: f64 = 72.0;
@@ -333,13 +334,9 @@ fn add_label_bb(bb: &mut BoundingBox, l: &Lbl) {
 }
 
 /// Label of a graph or cluster (`do_graph_label`), with its `GD_label_pos` and border.
-fn graph_label(
-    attrs: &AttrMap,
-    name: &str,
-    is_root: bool,
-    html: &std::collections::BTreeSet<String>,
-) -> Option<(Lbl, u8, Point)> {
+fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> Option<(Lbl, u8, Point)> {
     let text = attrs.get("label").filter(|s| !s.is_empty())?;
+    let html = attr_is_html(attrs, "label");
     let fontsize = attr_f64(attrs, "fontsize", DEFAULT_FONT_SIZE, 1.0);
     let fontname = attr_str(attrs, "fontname", DEFAULT_FONT_NAME);
     let ctx = LabelSubstContext {
@@ -349,9 +346,9 @@ fn graph_label(
     // nop_init_graphs' do_graph_label makes the cluster labels, after the node and edge init;
     // the root label was made before the engine ran.
     let dimen = if is_root {
-        label_dimen(text, html.contains(text), fontname, fontsize, &ctx)
+        label_dimen(text, html, fontname, fontsize, &ctx)
     } else {
-        make_label_dimen(text, html.contains(text), fontname, fontsize, &ctx)
+        make_label_dimen(text, html, fontname, fontsize, &ctx)
     };
     let loc = attrs.get("labelloc").map(String::as_str).unwrap_or("");
     let mut pos_flag = 0u8;
@@ -461,7 +458,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
                 ..Default::default()
             };
             let mut l = Lbl {
-                dimen: label_dimen(t, graph.html_strings.contains(t), fname, fs, &ctx),
+                dimen: label_dimen(t, attr_is_html(&node.attrs, "xlabel"), fname, fs, &ctx),
                 pos: Point::default(),
                 set: false,
             };
@@ -475,7 +472,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
     }
 
     // nop_init_graphs: root label and the cluster tree.
-    let mut root_label = graph_label(&graph.graph_attrs, &graph.name, true, &graph.html_strings);
+    let mut root_label = graph_label(&graph.graph_attrs, &graph.name, true);
     if let Some((l, _, _)) = root_label.as_mut()
         && let Some((p, _)) = graph.graph_attrs.get("lp").and_then(|s| scan_point(s))
     {
@@ -508,7 +505,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             if bb.ll.y > bb.ur.y {
                 std::mem::swap(&mut bb.ll.y, &mut bb.ur.y);
             }
-            let mut label = graph_label(&sub.graph_attrs, &sub.name, false, &graph.html_strings);
+            let mut label = graph_label(&sub.graph_attrs, &sub.name, false);
             if let Some((l, _, _)) = label.as_mut()
                 && let Some((p, _)) = sub.graph_attrs.get("lp").and_then(|s| scan_point(s))
             {
@@ -585,7 +582,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
         let mk = |text_key: &str, pos_key: &str, fname: &str, fs: f64| {
             let t = e.attrs.get(text_key).filter(|s| !s.is_empty())?;
             let mut l = Lbl {
-                dimen: label_dimen(t, graph.html_strings.contains(t), fname, fs, &ctx),
+                dimen: label_dimen(t, attr_is_html(&e.attrs, text_key), fname, fs, &ctx),
                 pos: Point::default(),
                 set: false,
             };

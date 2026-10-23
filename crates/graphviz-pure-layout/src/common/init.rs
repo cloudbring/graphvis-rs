@@ -59,19 +59,11 @@ pub fn make_label(
 }
 
 /// `do_graph_label` for a graph or cluster: the label and `GD_label_pos`.
-pub fn graph_label(
-    attrs: &AttrMap,
-    name: &str,
-    is_root: bool,
-    html_strings: &std::collections::BTreeSet<String>,
-) -> (Option<TextLabel>, u8) {
+pub fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> (Option<TextLabel>, u8) {
     let Some(text) = attrs.get("label").filter(|s| !s.is_empty()) else {
         return (None, 0);
     };
-    let env = graphviz_pure_geom::NodeSizeEnv {
-        html_strings: Some(html_strings),
-        ..graphviz_pure_geom::NodeSizeEnv::new(name)
-    };
+    let env = graphviz_pure_geom::NodeSizeEnv::new(name);
     let make = || graphviz_pure_geom::graph_label_geometry_in(name, attrs, is_root, false, &env);
     // layout_graph_with_options made the root label first, as graph_init does.
     let geom = if is_root {
@@ -132,10 +124,8 @@ impl<'a> LGraph<'a> {
     fn common_init_edges(&mut self) {
         let graph = self.src;
         let directed = graph.kind == GraphKind::Directed;
-        let env = graphviz_pure_geom::NodeSizeEnv {
-            html_strings: Some(&graph.html_strings),
-            ..graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(&graph.name, &graph.graph_attrs)
-        };
+        let env =
+            graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(&graph.name, &graph.graph_attrs);
         let order: Vec<usize> = self.out.iter().flatten().copied().collect();
         for ei in order {
             let ed = &graph.edges[ei];
@@ -195,7 +185,7 @@ impl<'a> LGraph<'a> {
             mapbool(gattrs.get("landscape").map(String::as_str))
         };
         let concentrate = mapbool(gattrs.get("concentrate").map(String::as_str));
-        let (label, label_pos) = graph_label(gattrs, &graph.name, true, &graph.html_strings);
+        let (label, label_pos) = graph_label(gattrs, &graph.name, true);
 
         let edge_type = match gattrs.get("splines") {
             None => default_edge_type,
@@ -203,10 +193,7 @@ impl<'a> LGraph<'a> {
             Some(s) => edge_type_of(s, default_edge_type),
         };
 
-        let env = graphviz_pure_geom::NodeSizeEnv {
-            html_strings: Some(&graph.html_strings),
-            ..graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(&graph.name, gattrs)
-        };
+        let env = graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(&graph.name, gattrs);
         let mut nodes = Vec::with_capacity(graph.nodes.len());
         for nd in &graph.nodes {
             let geom = graphviz_pure_geom::node_geometry(nd, &env);

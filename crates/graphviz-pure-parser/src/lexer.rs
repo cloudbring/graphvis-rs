@@ -48,7 +48,8 @@ pub enum TokenKind {
     Ident(String),
     /// Double-quoted string literal `"..."`
     Quoted(String),
-    /// HTML-like string literal `<...>` (stored with outer `<` and `>` delimiters)
+    /// HTML-like string literal `<...>`: its inner text, without the outer `<` and `>`
+    /// (scan.l's `endstr_html` interns it with `agstrdup_html`; the variant is the flag).
     Html(String),
     /// Any other character (scan.l's `.` rule: `return aagget_text(yyscanner)[0]`). No
     /// grammar rule accepts it, so it is always a syntax error.
@@ -567,10 +568,9 @@ impl<'a> Lexer<'a> {
         // Consume opening `<`
         self.advance_char();
         let mut depth: usize = 1;
-        let mut buf = String::from("<");
+        let mut buf = String::new();
 
         while let Some(ch) = self.advance_char() {
-            buf.push(ch);
             if ch == '<' {
                 depth += 1;
             } else if ch == '>' {
@@ -579,9 +579,9 @@ impl<'a> Lexer<'a> {
                     return self.token(TokenKind::Html(buf), line, col, ">".to_string());
                 }
             }
+            buf.push(ch);
         }
 
-        buf.remove(0);
         self.eof(ScanState::HString(buf))
     }
 }
@@ -737,7 +737,7 @@ mod tests {
         assert_eq!(tokens[1].kind, TokenKind::Equals);
         assert_eq!(
             tokens[2].kind,
-            TokenKind::Html("<<TABLE><TR><TD>hello<BR/>world</TD></TR></TABLE>>".to_string())
+            TokenKind::Html("<TABLE><TR><TD>hello<BR/>world</TD></TR></TABLE>".to_string())
         );
     }
 }

@@ -249,13 +249,10 @@ impl Output {
             graph.nodes[i].rank = r;
             graph.nodes[i].order = o.max(0) as usize;
             if let Some(ph) = self.phase_attrs {
-                graph.nodes[i]
-                    .attrs
-                    .insert("rank".to_string(), r.to_string());
+                let a = &mut graph.nodes[i].attrs;
+                graphviz_pure_core::set_attr(a, "rank", r.to_string(), false);
                 if ph >= 2 {
-                    graph.nodes[i]
-                        .attrs
-                        .insert("order".to_string(), o.to_string());
+                    graphviz_pure_core::set_attr(a, "order", o.to_string(), false);
                 }
             }
         }

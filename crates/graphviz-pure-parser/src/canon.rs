@@ -1,7 +1,8 @@
 //! Canonical DOT writer (`dot -Tcanon`) matching Graphviz `lib/cgraph/write.c`.
 
 use graphviz_pure_core::{
-    AttrMap, EdgeData, EdgeId, Graph, GraphKind, NodeData, NodeId, Port, SubgraphId,
+    AttrMap, EdgeData, EdgeId, Graph, GraphKind, HTML_VALUE_PREFIX, NodeData, NodeId, Port,
+    SubgraphId, attr_is_html,
 };
 use std::collections::BTreeSet;
 
@@ -14,7 +15,6 @@ pub fn write_canon(graph: &Graph) -> String {
 /// the subgraph itself (a local dictionary entry in cgraph) and so are written even when
 /// they equal the parent's value.
 pub fn write_canon_forced(graph: &Graph, forced: &[BTreeSet<String>]) -> String {
-    let html = &graph.html_strings;
     let mut out = String::new();
     let mut state = WriteState {
         forced: forced.to_vec(),
@@ -47,9 +47,9 @@ pub fn write_canon_forced(graph: &Graph, forced: &[BTreeSet<String>]) -> String 
         .or_insert_with(|| "\\N".to_string());
     let root_edge_defaults = effective_edge_defaults(graph, &all_edges, &graph.edge_defaults);
 
-    write_dict(&mut out, 1, "graph", &graph.graph_attrs, None, html, None);
-    write_dict(&mut out, 1, "node", &root_node_defaults, None, html, None);
-    write_dict(&mut out, 1, "edge", &root_edge_defaults, None, html, None);
+    write_dict(&mut out, 1, "graph", &graph.graph_attrs, None, None);
+    write_dict(&mut out, 1, "node", &root_node_defaults, None, None);
+    write_dict(&mut out, 1, "edge", &root_edge_defaults, None, None);
 
     // Determine top-level subgraphs (those not nested inside another subgraph)
     let mut child_subgraphs = BTreeSet::new();
@@ -202,7 +202,7 @@ fn write_subgraph(
     push_indent(out, level);
     if !subg.name.is_empty() {
         out.push_str("subgraph ");
-        out.push_str(&canon_str(&subg.name));
+        out.push_str(&canon_value(&subg.name, subg.html_name));
         out.push_str(" {\n");
     } else {
         out.push_str("{\n");
@@ -215,7 +215,6 @@ fn write_subgraph(
         "graph",
         &subg.graph_attrs,
         Some(parent_graph_attrs),
-        &graph.html_strings,
         Some(&forced),
     );
     write_dict(
@@ -224,7 +223,6 @@ fn write_subgraph(
         "node",
         &subg_node_defaults,
         Some(parent_node_defaults),
-        &graph.html_strings,
         None,
     );
     write_dict(
@@ -233,7 +231,6 @@ fn write_subgraph(
         "edge",
         &subg_edge_defaults,
         Some(parent_edge_defaults),
-        &graph.html_strings,
         None,
     );
 
@@ -290,7 +287,7 @@ fn write_nodes_and_edges(
         if !state.written_nodes.contains(&node_id)
             && (!has_edges_in_scope || !non_default.is_empty())
         {
-            write_node_stmt(out, level, node, &non_default, &graph.html_strings, state);
+            write_node_stmt(out, level, node, &non_default, state);
         }
 
         // Out-edges iterate by head node sequence, then edge sequence (`agedgeseqcmpf`).
@@ -308,14 +305,7 @@ fn write_nodes_and_edges(
                     && !state.written_nodes.contains(&edge.head)
                     && !head_non_default.is_empty()
                 {
-                    write_node_stmt(
-                        out,
-                        level,
-                        head_node,
-                        &head_non_default,
-                        &graph.html_strings,
-                        state,
-                    );
+                    write_node_stmt(out, level, head_node, &head_non_default, state);
                 }
                 write_edge_stmt(out, level, graph, edge, edge_defaults, state);
             }
@@ -328,13 +318,12 @@ fn write_node_stmt(
     level: usize,
     node: &NodeData,
     non_default_attrs: &[(&String, &String)],
-    html: &BTreeSet<String>,
     state: &mut WriteState,
 ) {
     push_indent(out, level);
-    out.push_str(&canon_str(&node.name));
+    out.push_str(&canon_value(&node.name, node.html_name));
     if !state.attrs_written_nodes.contains(&node.id) && !non_default_attrs.is_empty() {
-        write_inline_attrs(out, level, non_default_attrs, html);
+        write_inline_attrs(out, level, non_default_attrs, &node.attrs);
         state.attrs_written_nodes.insert(node.id);
     }
     out.push_str(";\n");
@@ -353,7 +342,7 @@ fn write_edge_stmt(
     let head_node = &graph.nodes[edge.head.0 as usize];
 
     push_indent(out, level);
-    out.push_str(&canon_str(&tail_node.name));
+    out.push_str(&canon_value(&tail_node.name, tail_node.html_name));
     write_port(out, &edge.tail_port);
 
     match graph.kind {
@@ -361,12 +350,12 @@ fn write_edge_stmt(
         GraphKind::Undirected => out.push_str(" -- "),
     }
 
-    out.push_str(&canon_str(&head_node.name));
+    out.push_str(&canon_value(&head_node.name, head_node.html_name));
     write_port(out, &edge.head_port);
 
     let non_default = collect_non_default_edge_attrs(edge, edge_defaults);
     if !non_default.is_empty() {
-        write_inline_attrs(out, level, &non_default, &graph.html_strings);
+        write_inline_attrs(out, level, &non_default, &edge.attrs);
     }
 
     out.push_str(";\n");
@@ -392,14 +381,16 @@ fn write_dict(
     dict_name: &str,
     attrs: &AttrMap,
     parent_attrs: Option<&AttrMap>,
-    html: &BTreeSet<String>,
     forced: Option<&BTreeSet<String>>,
 ) {
     let entries: Vec<(&String, &String)> = attrs
         .iter()
+        .filter(|(k, _)| !k.starts_with(HTML_VALUE_PREFIX))
         .filter(|(k, v)| match parent_attrs {
             Some(_) if forced.is_some_and(|f| f.contains(*k)) => true,
-            Some(parent) => parent.get(*k) != Some(*v),
+            Some(parent) => {
+                parent.get(*k) != Some(*v) || attr_is_html(parent, k) != attr_is_html(attrs, k)
+            }
             None => !v.is_empty(),
         })
         .collect();
@@ -418,7 +409,7 @@ fn write_dict(
         }
         out.push_str(&canon_str(k));
         out.push('=');
-        out.push_str(&canon_value(v, html));
+        out.push_str(&canon_value(v, attr_is_html(attrs, k)));
     }
     if entries.len() > 1 {
         out.push('\n');
@@ -427,12 +418,7 @@ fn write_dict(
     out.push_str("];\n");
 }
 
-fn write_inline_attrs(
-    out: &mut String,
-    level: usize,
-    attrs: &[(&String, &String)],
-    html: &BTreeSet<String>,
-) {
+fn write_inline_attrs(out: &mut String, level: usize, attrs: &[(&String, &String)], all: &AttrMap) {
     out.push_str("\t[");
     for (idx, (k, v)) in attrs.iter().enumerate() {
         if idx > 0 {
@@ -441,7 +427,7 @@ fn write_inline_attrs(
         }
         out.push_str(&canon_str(k));
         out.push('=');
-        out.push_str(&canon_value(v, html));
+        out.push_str(&canon_value(v, attr_is_html(all, k)));
     }
     out.push(']');
 }
@@ -452,8 +438,11 @@ fn collect_non_default_node_attrs<'a>(
 ) -> Vec<(&'a String, &'a String)> {
     node.attrs
         .iter()
+        .filter(|(k, _)| !k.starts_with(HTML_VALUE_PREFIX))
         .filter(|(k, v)| match node_defaults.get(*k) {
-            Some(def_val) => *v != def_val,
+            Some(def_val) => {
+                *v != def_val || attr_is_html(&node.attrs, k) != attr_is_html(node_defaults, k)
+            }
             None => !(*k == "label" && *v == "\\N"),
         })
         .collect()
@@ -465,6 +454,7 @@ fn collect_non_default_edge_attrs<'a>(
 ) -> Vec<(&'a String, &'a String)> {
     edge.attrs
         .iter()
+        .filter(|(k, _)| !k.starts_with(HTML_VALUE_PREFIX))
         .filter(|(k, v)| {
             if (*k == "tailport" && edge.tail_port != Port::default())
                 || (*k == "headport" && edge.head_port != Port::default())
@@ -472,6 +462,7 @@ fn collect_non_default_edge_attrs<'a>(
                 return false;
             }
             edge_defaults.get(*k) != Some(*v)
+                || attr_is_html(&edge.attrs, k) != attr_is_html(edge_defaults, k)
         })
         .collect()
 }
@@ -503,37 +494,10 @@ fn push_indent(out: &mut String, level: usize) {
     }
 }
 
-/// Returns `true` if `s` is an HTML-like label string (`<...>`).
-pub fn is_html_string(s: &str) -> bool {
-    if !(s.starts_with('<') && s.ends_with('>') && s.len() >= 2) {
-        return false;
-    }
-    // Check that `<` and `>` are balanced and that the outer `<` closes only at the last byte
-    let mut depth = 0usize;
-    for (idx, ch) in s.char_indices() {
-        if ch == '<' {
-            depth += 1;
-        } else if ch == '>' {
-            if depth == 0 {
-                return false;
-            }
-            depth -= 1;
-            if depth == 0 && idx + ch.len_utf8() < s.len() {
-                return false;
-            }
-        }
-    }
-    depth == 0
-}
-
-/// Canonicalizes an attribute value: a string lexed as an HTML string (`<...>`, recorded in
-/// `html`) is emitted verbatim, anything else (including a quoted `"<x>"`) is quoted as needed.
-pub fn canon_value(s: &str, html: &BTreeSet<String>) -> String {
-    if html.contains(s) {
-        s.to_string()
-    } else {
-        canon_str(s)
-    }
+/// `agstrcanon`: an HTML string (`html`, with `s` its inner text) is written `<s>`; anything
+/// else (a quoted `"<x>"` too) is quoted as needed.
+pub fn canon_value(s: &str, html: bool) -> String {
+    if html { format!("<{s}>") } else { canon_str(s) }
 }
 
 /// Canonicalizes a single identifier or string value following `_agstrcanon` in `write.c`,

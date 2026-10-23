@@ -436,12 +436,6 @@ impl W<'_> {
                 let mut level = self.level;
                 write_xdots(&mut self.out, v, &mut level);
             } else {
-                // HTML strings are stored with their delimiters; C keeps only the content.
-                let v = if self.g.html_strings.contains(v) && v.len() >= 2 {
-                    &v[1..v.len() - 1]
-                } else {
-                    v
-                };
                 stoj(v, &mut self.out);
             }
         }
@@ -686,6 +680,10 @@ pub(crate) fn write_json(
     let mut ed: BTreeSet<String> = g.edge_defaults.keys().cloned().collect();
     for a in &edge_attrs {
         ed.extend(a.keys().cloned());
+    }
+    // (an HTML value's mark is not an attribute)
+    for d in [&mut gd, &mut nd, &mut ed] {
+        d.retain(|k| !k.starts_with(graphviz_pure_core::HTML_VALUE_PREFIX));
     }
     let mut is_child = vec![false; g.subgraphs.len()];
     for s in &g.subgraphs {

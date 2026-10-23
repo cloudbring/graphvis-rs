@@ -1,6 +1,6 @@
 use crate::geom::{BoundingBox, Point, Spline};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct NodeId(pub u32);
@@ -38,6 +38,10 @@ pub struct NodeData {
     pub height: f64,
     pub rank: i32,
     pub order: usize,
+    /// The name was an HTML string (`<b>`): `name` holds its inner text, and cgraph's
+    /// `aghtmlstr` is set on it. Writers print it as `<b>`; everything else sees `b`.
+    #[serde(default)]
+    pub html_name: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -59,6 +63,47 @@ pub struct EdgeData {
     /// gives every edge a `key` attribute.
     #[serde(default)]
     pub key: Option<String>,
+}
+
+/// Prefix of the private key that marks an attribute value as an HTML string (cgraph's
+/// `aghtmlstr` on the value): `attrs["\u{1}html:label"]` holds the value of `attrs["label"]`
+/// when that was written `<...>`. The value itself is the inner text, which is what every
+/// reader but the label makers and the writers sees. The mark is a key of the same map so
+/// that it travels with the value when the map is cloned or merged, as cgraph's flag travels
+/// with its string; it holds the value it marks so that writing another value (`agxset` of a
+/// plain string, such as a computed `bb`) unmarks it.
+pub const HTML_VALUE_PREFIX: &str = "\u{1}html:";
+
+/// The key of the mark [`HTML_VALUE_PREFIX`] puts on `key`.
+pub fn html_value_key(key: &str) -> String {
+    format!("{HTML_VALUE_PREFIX}{key}")
+}
+
+/// `aghtmlstr(agget(obj, key))`: whether the value of `key` in `attrs` is an HTML string.
+pub fn attr_is_html(attrs: &AttrMap, key: &str) -> bool {
+    attrs
+        .get(&html_value_key(key))
+        .is_some_and(|marked| attrs.get(key) == Some(marked))
+}
+
+/// `agxset` / `agxset_html`: sets `key` to `value`, an HTML string's inner text when `html`.
+pub fn set_attr(attrs: &mut AttrMap, key: &str, value: String, html: bool) {
+    let mark = html_value_key(key);
+    if html {
+        attrs.insert(mark, value.clone());
+    } else {
+        attrs.remove(&mark);
+    }
+    attrs.insert(key.to_string(), value);
+}
+
+/// Sets every attribute of `src` on `attrs`, each with its HTML mark (`applyattrs`).
+pub fn apply_attrs(attrs: &mut AttrMap, src: &AttrMap) {
+    for (k, v) in src {
+        if !k.starts_with(HTML_VALUE_PREFIX) {
+            set_attr(attrs, k, v.clone(), attr_is_html(src, k));
+        }
+    }
 }
 
 /// The name test of `is_a_cluster` (lib/common/utils.c): `strncasecmp(name, "cluster", 7)`.
@@ -83,6 +128,9 @@ pub struct SubgraphData {
     pub edges: Vec<EdgeId>,
     pub subgraphs: Vec<SubgraphId>,
     pub bb: BoundingBox,
+    /// The name was an HTML string; `name` holds its inner text (see [`NodeData::html_name`]).
+    #[serde(default)]
+    pub html_name: bool,
 }
 
 /// Node attribute set by a layout on a node it replaced by a cluster node
@@ -186,10 +234,6 @@ pub struct Graph {
     pub edges: Vec<EdgeData>,
     pub subgraphs: Vec<SubgraphData>,
     pub bb: BoundingBox,
-    /// Attribute values that were written as HTML strings (`<...>`) in the source, stored with
-    /// their delimiters. A quoted `"<x>"` is a plain string and is not recorded here.
-    #[serde(default)]
-    pub html_strings: BTreeSet<String>,
     /// cgraph's internal ids of anonymous subgraphs (subgraph index -> id); the root graph,
     /// anonymous subgraphs and edges draw odd ids from one counter in creation order. C
     /// prints an anonymous subgraph's name as `%<id>`.
@@ -218,6 +262,13 @@ pub struct AttrSym {
     /// `label` first). Only meaningful in the root's dictionaries.
     #[serde(default)]
     pub id: usize,
+    /// `aghtmlstr(sym->name)`: the attribute was first named by an HTML string (`<zzz>=1`).
+    /// The name is its inner text, which is how cgraph looks attributes up.
+    #[serde(default)]
+    pub html: bool,
+    /// `aghtmlstr(sym->defval)`: the default is an HTML string (its inner text).
+    #[serde(default)]
+    pub html_defval: bool,
 }
 
 /// The local graph, node and edge dictionaries of one graph or subgraph.
@@ -242,7 +293,6 @@ impl Graph {
             edges: Vec::new(),
             subgraphs: Vec::new(),
             bb: BoundingBox::default(),
-            html_strings: BTreeSet::new(),
             anon_subgraph_ids: BTreeMap::new(),
             dicts: Vec::new(),
             render_view: None,
@@ -250,9 +300,27 @@ impl Graph {
     }
 
     pub fn ensure_node(&mut self, name: &str) -> NodeId {
-        if let Some(&id) = self.node_lookup.get(name) {
+        self.ensure_node_html(name, false)
+    }
+
+    /// The `node_lookup` key of a node named `name`. cgraph keeps an HTML string apart from
+    /// the plain string with the same text (`refstr_eq` compares the flag), so `<b>` and `b`
+    /// are two nodes. An HTML name is keyed with a NUL in front, which no C string holds.
+    pub fn node_key(name: &str, html: bool) -> std::borrow::Cow<'_, str> {
+        if html {
+            std::borrow::Cow::Owned(format!("\0{name}"))
+        } else {
+            std::borrow::Cow::Borrowed(name)
+        }
+    }
+
+    /// [`Graph::ensure_node`] for a node whose name may be an HTML string.
+    pub fn ensure_node_html(&mut self, name: &str, html: bool) -> NodeId {
+        let key = Self::node_key(name, html);
+        if let Some(&id) = self.node_lookup.get(key.as_ref()) {
             return id;
         }
+        let key = key.into_owned();
         let id = NodeId(self.nodes.len() as u32);
         let mut attrs = self.node_defaults.clone();
         attrs
@@ -267,8 +335,9 @@ impl Graph {
             height: 0.5,
             rank: 0,
             order: id.0 as usize,
+            html_name: html,
         });
-        self.node_lookup.insert(name.to_string(), id);
+        self.node_lookup.insert(key, id);
         id
     }
 

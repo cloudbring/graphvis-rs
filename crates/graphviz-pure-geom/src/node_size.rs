@@ -11,11 +11,11 @@
 //! `ND_ht`).
 
 use crate::html_label::HtmlLabel;
+use graphviz_pure_core::attr_is_html;
 use graphviz_pure_core::math;
 use graphviz_pure_core::strtod::{sscanf, strtod};
-use std::collections::BTreeSet;
 
-use crate::shapes::{RecordField, ShapeKind, html_label_layout, is_html_label};
+use crate::shapes::{RecordField, ShapeKind, html_label_layout};
 use graphviz_pure_core::charset::Charset;
 use graphviz_pure_core::font::{
     DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext, MIN_FONT_SIZE, TextLabelLayout,
@@ -263,9 +263,6 @@ pub struct NodeSizeEnv<'a> {
     pub quantum: f64,
     /// `GD_charset(g)` of the root graph.
     pub charset: Charset,
-    /// Values written as `<...>` HTML strings in the source (`aghtmlstr`). When `None`,
-    /// HTML-ness is guessed from the text.
-    pub html_strings: Option<&'a BTreeSet<String>>,
 }
 
 impl<'a> NodeSizeEnv<'a> {
@@ -276,15 +273,6 @@ impl<'a> NodeSizeEnv<'a> {
             realflip: false,
             quantum: 0.0,
             charset: graphviz_pure_core::charset::current(),
-            html_strings: None,
-        }
-    }
-
-    /// `aghtmlstr(s)`: whether an attribute value was an HTML string in the source.
-    pub fn is_html(&self, s: &str) -> bool {
-        match self.html_strings {
-            Some(set) => set.contains(s),
-            None => is_html_value(s),
         }
     }
 
@@ -299,10 +287,7 @@ impl<'a> NodeSizeEnv<'a> {
     /// Reads `rankdir`, `quantum` and `charset` from the root graph attributes
     /// (`graph_init` / `init_ugraph` in `lib/common/input.c`).
     pub fn from_graph(graph: &'a Graph) -> Self {
-        Self {
-            html_strings: Some(&graph.html_strings),
-            ..Self::from_graph_attrs(&graph.name, &graph.graph_attrs)
-        }
+        Self::from_graph_attrs(&graph.name, &graph.graph_attrs)
     }
 
     /// Like [`Self::from_graph`] but from a name and an attribute map.
@@ -312,7 +297,6 @@ impl<'a> NodeSizeEnv<'a> {
             realflip: rankdir_is_flipped(attrs.get("rankdir").map_or("", String::as_str)),
             quantum: late_double(attrs, "quantum", 0.0, 0.0),
             charset: Charset::from_attr(attrs.get("charset").map(String::as_str)),
-            html_strings: None,
         }
     }
 }
@@ -409,8 +393,8 @@ fn get_pen_color(attrs: &AttrMap) -> Option<&str> {
 }
 
 /// `lp->text` of a non-record label made by [`make_label`] from attribute value `raw`: the
-/// substituted, charset-converted text of a plain label, the source of an HTML label without
-/// its delimiters, or `"<TABLE>"` for an HTML table.
+/// substituted, charset-converted text of a plain label, the source of an HTML label, or
+/// `"<TABLE>"` for an HTML table.
 pub fn label_text(l: &LabelGeometry, raw: &str) -> String {
     label_l_text(l, raw, false)
 }
@@ -420,7 +404,7 @@ pub fn label_text(l: &LabelGeometry, raw: &str) -> String {
 /// for HTML text and `<TABLE>` for a table (`make_html_label`).
 fn label_l_text(l: &LabelGeometry, raw: &str, is_record: bool) -> String {
     if is_record {
-        return if l.html { html_inner_text(raw) } else { raw }.to_string();
+        return raw.to_string();
     }
     if let Some(t) = &l.text {
         return t.source.clone();
@@ -429,29 +413,15 @@ fn label_l_text(l: &LabelGeometry, raw: &str, is_record: bool) -> String {
         if matches!(l.html_label.as_deref(), Some(HtmlLabel::Table(_))) {
             return "<TABLE>".to_string();
         }
-        return html_inner_text(raw).to_string();
+        return raw.to_string();
     }
     String::new()
 }
 
-fn html_inner_text(raw: &str) -> &str {
-    if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
-        &raw[1..raw.len() - 1]
-    } else {
-        raw
-    }
-}
-
-/// `aghtmlstr`: the parser keeps an HTML string's `<`...`>` delimiters, so an HTML label is a
-/// value whose first `<` is closed by its final `>`.
-pub fn is_html_value(label: &str) -> bool {
-    is_html_label(label, ShapeKind::Box)
-}
-
 /// `make_label` for the plain-text and HTML cases: returns the label geometry with
 /// `space = dimen`. `obj` describes the owning object for escape substitution; `is_html` is
-/// `aghtmlstr(str)` (use [`is_html_value`] for attribute values). An HTML label is given with
-/// its `<`...`>` delimiters.
+/// `aghtmlstr(str)` ([`graphviz_pure_core::attr_is_html`] for an attribute value), and
+/// `label` is then the HTML string's inner text.
 pub fn make_label(
     label: &str,
     is_html: bool,
@@ -547,7 +517,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
             dimen: Point::default(),
             space: Point::default(),
             valign: 'c',
-            html: env.is_html(label_str),
+            html: attr_is_html(attrs, "label"),
             html_label: None,
             html_failed: false,
             text: None,
@@ -557,7 +527,7 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     } else {
         make_label(
             label_str,
-            env.is_html(label_str),
+            attr_is_html(attrs, "label"),
             &obj,
             font_name,
             font_size,
@@ -571,10 +541,10 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
         has_label: true,
         ..obj.clone()
     };
-    let xlabel = attrs
-        .get("xlabel")
-        .filter(|s| !s.is_empty())
-        .map(|s| make_label(s, env.is_html(s), &xobj, font_name, font_size, env.charset));
+    let xlabel = attrs.get("xlabel").filter(|s| !s.is_empty()).map(|s| {
+        let html = attr_is_html(attrs, "xlabel");
+        make_label(s, html, &xobj, font_name, font_size, env.charset)
+    });
 
     let mut geom = NodeGeometry {
         shape,
@@ -658,7 +628,7 @@ pub fn graph_label_geometry_in(
     };
     let label = make_label(
         s,
-        env.is_html(s),
+        attr_is_html(attrs, "label"),
         &obj,
         late_nnstring(attrs, "fontname", DEFAULT_FONT_NAME),
         late_double(attrs, "fontsize", DEFAULT_FONT_SIZE, MIN_FONT_SIZE),
@@ -753,7 +723,7 @@ pub fn edge_label_geometry(
         attrs
             .get(key)
             .filter(|s| !s.is_empty())
-            .map(|s| make_label(s, env.is_html(s), obj, name, size, env.charset))
+            .map(|s| make_label(s, attr_is_html(attrs, key), obj, name, size, env.charset))
     };
     let label = mk("label", &obj, fontname, fontsize);
     // Later labels see `\L` = the main label's `lp->text`.
@@ -779,11 +749,7 @@ pub fn edge_label_geometry(
 pub fn size_graph_nodes(graph: &mut Graph) {
     let env_attrs = graph.graph_attrs.clone();
     let name = graph.name.clone();
-    let html = graph.html_strings.clone();
-    let env = NodeSizeEnv {
-        html_strings: Some(&html),
-        ..NodeSizeEnv::from_graph_attrs(&name, &env_attrs)
-    };
+    let env = NodeSizeEnv::from_graph_attrs(&name, &env_attrs);
     for node in &mut graph.nodes {
         let geom = node_geometry(node, &env);
         node.width = geom.width;
@@ -1612,12 +1578,7 @@ fn label_fields(
     charset: Charset,
 ) {
     if let Some(text) = &f.text {
-        let src = if html {
-            format!("<{text}>")
-        } else {
-            text.clone()
-        };
-        f.lp = Some(make_label(&src, html, obj, font_name, font_size, charset));
+        f.lp = Some(make_label(text, html, obj, font_name, font_size, charset));
     }
     for sub in &mut f.flds {
         label_fields(sub, html, obj, font_name, font_size, charset);
@@ -1638,11 +1599,7 @@ fn to_record_field(f: &Field) -> RecordField {
 
 /// `parse_reclbl` on `label` for `record_init`, falling back to `\N` on a syntax error.
 fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
-    let src = if html {
-        &label[1..label.len() - 1]
-    } else {
-        label
-    };
+    let src = label;
     let len = src.len().max(1).max(2);
     let mut p = RecParser {
         src: src.as_bytes(),
@@ -1710,6 +1667,7 @@ mod tests {
             height: 0.0,
             rank: 0,
             order: 0,
+            html_name: false,
         };
         for (k, v) in attrs {
             n.attrs.insert((*k).into(), (*v).into());
@@ -1773,7 +1731,7 @@ mod tests {
         assert_eq!(format!("{:.2}", g.label.dimen.y / 72.0), "0.67");
         assert_eq!(g.pos_flag, LABEL_AT_BOTTOM);
         assert!(g.border.is_none());
-        a.insert("label".into(), "<<B>Bold</B> x>".into());
+        graphviz_pure_core::set_attr(&mut a, "label", "<B>Bold</B> x".into(), true);
         let c = graph_label_geometry("cluster_x", &a, false, false, Charset::Utf8).unwrap();
         assert!((c.label.dimen.x - (40.02 + 15.0)).abs() < 0.01);
         assert!((c.label.dimen.y - 24.0).abs() < 1e-9);
@@ -1812,19 +1770,11 @@ mod tests {
     #[test]
     fn quoted_angle_label_is_text_not_html() {
         // `label="<x>"` is plain text in C (aghtmlstr is false); `label=<x>` is HTML.
-        let n = node(&[("label", "<x>")]);
-        let none = BTreeSet::new();
-        let quoted = NodeSizeEnv {
-            html_strings: Some(&none),
-            ..NodeSizeEnv::new("G")
-        };
-        let html_set: BTreeSet<String> = ["<x>".to_string()].into();
-        let html = NodeSizeEnv {
-            html_strings: Some(&html_set),
-            ..NodeSizeEnv::new("G")
-        };
-        let q = node_geometry(&n, &quoted);
-        let h = node_geometry(&n, &html);
+        let env = NodeSizeEnv::new("G");
+        let q = node_geometry(&node(&[("label", "<x>")]), &env);
+        let mut n = node(&[]);
+        graphviz_pure_core::set_attr(&mut n.attrs, "label", "x".into(), true);
+        let h = node_geometry(&n, &env);
         assert!(!q.label.html);
         assert!(h.label.html);
         assert!(

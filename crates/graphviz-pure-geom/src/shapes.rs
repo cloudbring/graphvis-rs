@@ -276,71 +276,13 @@ impl RecordField {
     }
 }
 
-/// Returns `true` if `label` is an HTML-like label (`<...>`), accounting for `record` port syntax.
-pub(crate) fn is_html_label(label: &str, shape: ShapeKind) -> bool {
-    let trimmed = label.trim();
-    if !(trimmed.starts_with('<') && trimmed.ends_with('>') && trimmed.len() >= 2) {
-        return false;
-    }
-    // Verify balanced angle brackets where outer `<` closes only at the end.
-    let mut depth = 0usize;
-    for (idx, ch) in trimmed.char_indices() {
-        if ch == '<' {
-            depth += 1;
-        } else if ch == '>' {
-            if depth == 0 {
-                return false;
-            }
-            depth -= 1;
-            if depth == 0 && idx + ch.len_utf8() < trimmed.len() {
-                return false;
-            }
-        }
-    }
-    if depth != 0 {
-        return false;
-    }
-    let inner = &trimmed[1..trimmed.len() - 1];
-    if shape.is_record() {
-        // In record shapes, `<p1>` is a port name unless inner contains HTML tags.
-        let lower = inner.to_ascii_lowercase();
-        lower.contains("<table")
-            || lower.contains("<tr")
-            || lower.contains("<td")
-            || lower.contains("<br")
-            || lower.contains("<font")
-            || lower.contains("<b>")
-            || lower.contains("<i>")
-            || lower.contains("<u>")
-    } else {
-        true
-    }
-}
-
-/// Strips the `<`...`>` delimiters the parser keeps around HTML strings.
-pub(crate) fn html_inner(raw: &str) -> &str {
-    if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
-        &raw[1..raw.len() - 1]
-    } else {
-        raw
-    }
-}
-
-/// `make_html_label` for an HTML-like label value `<...>` (with delimiters).
+/// `make_html_label` for an HTML label (the inner text of the HTML string).
 pub(crate) fn html_label_layout(
-    raw_label: &str,
+    label: &str,
     obj: &LabelSubstContext<'_>,
     font_name: &str,
     font_size: f64,
     cs: graphviz_pure_core::charset::Charset,
 ) -> HtmlLabelLayout {
-    make_html_label(
-        html_inner(raw_label),
-        obj,
-        font_name,
-        font_size,
-        None,
-        obj.pen_color,
-        cs,
-    )
+    make_html_label(label, obj, font_name, font_size, None, obj.pen_color, cs)
 }

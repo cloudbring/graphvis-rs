@@ -373,6 +373,7 @@ mod tests {
             edges: Vec::new(),
             subgraphs: Vec::new(),
             bb: Default::default(),
+            html_name: false,
         });
 
         layout_graph(&mut g, LayoutEngine::Dot).unwrap();
