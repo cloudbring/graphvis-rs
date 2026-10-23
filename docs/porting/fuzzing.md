@@ -46,6 +46,29 @@ python3 -I scripts/fuzz-gen.py --seed 17                                        
   subgraphs, then chunks of statements (ddmin), then subgraph braces, then single
   attributes.
 
+### Extreme attribute values
+
+`scripts/attr-extremes.py` sets one numeric attribute at a time to a value at the edge of
+what C parses (`2147483647`, `2147483648`, `-1`, `0`, `1e300`, `nan`, `-inf`, 400-digit
+numbers and their `x,y` forms) on two small graphs, for every engine, and compares C and
+the port on exit status, stderr and `-Tplain`. `--mix N` instead sets 2 to 4 such
+attributes per case. Positions are left to the "Extreme coordinates" cause
+(`crashes.md`). Build the port with overflow checks, so that arithmetic C lets wrap shows
+up as a panic:
+
+```sh
+CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=true CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true \
+  cargo build --release -p graphviz-pure-cli
+python3 -I scripts/attr-extremes.py run --out /tmp/ax/r1                 # 23,528 cases
+python3 -I scripts/attr-extremes.py run --out /tmp/ax/mix --mix 4000 --seed 1
+python3 -I scripts/attr-extremes.py summary /tmp/ax/r1                   # by outcome, attribute, panic site
+```
+
+`--engine` and `--attr` narrow a run, and `--jobs` defaults to half the cores. Cases that
+are not `same` are copied to `OUT/diff/`. `start` values that don't start with a digit
+differ on every run, because C seeds those from `time(NULL)`. The first campaign
+(2026-10-22) filed #269–#275.
+
 ## Coverage-guided fuzzing (cargo-fuzz, ClusterFuzzLite)
 
 The differential fuzzer checks fidelity and needs C. A second fuzzer checks robustness
