@@ -15,6 +15,7 @@ use graphviz_pure_core::attr_is_html;
 use graphviz_pure_core::cnum::{is_exactly_equal, is_exactly_zero};
 use graphviz_pure_core::math;
 use graphviz_pure_core::strtod::{sscanf, strtod};
+use graphviz_pure_core::usershape;
 
 use crate::shapes::{RecordField, ShapeKind, html_label_layout};
 use graphviz_pure_core::charset::Charset;
@@ -134,6 +135,7 @@ impl ShapeKind {
         use ShapeKind as S;
         let p = match self {
             S::Record | S::Mrecord => return (ShapeInit::Record, None),
+            S::Epsf => return (ShapeInit::Epsf, None),
             S::Point => return (ShapeInit::Point, Some(pd(true, 1, 1))),
             S::Polygon => pd(false, 1, 0),
             S::Ellipse => pd(false, 1, 1),
@@ -312,6 +314,9 @@ pub struct NodeGeometry {
     pub polygon: Option<PolygonGeometry>,
     /// `ND_shape_info` for records: field tree positioned around `(0, 0)`.
     pub record: Option<RecordField>,
+    /// `ND_shape_info` for `epsf`: set only when the `shapefile` loaded (`epsf_t.offset`,
+    /// in points). Without it, `epsf_gencode` draws nothing.
+    pub epsf: Option<Point>,
 }
 
 impl NodeGeometry {
@@ -427,16 +432,26 @@ pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
 fn node_geometry_measured(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
     let attrs = &node.attrs;
     let shape_name = late_nnstring(attrs, "shape", "ellipse");
-    // bind_shape: a `shapefile` (except with epsf) makes the shape `custom`, a user shape
-    // that copies `Shapes[0]` (box).
-    let custom = shape_name != "epsf" && attrs.get("shapefile").is_some_and(|f| !f.is_empty());
+    // bind_shape: a `shapefile` that `safefile` accepts (except with epsf) makes the shape
+    // `custom`, a user shape that copies `Shapes[0]` (box).
+    let custom = usershape::binds_custom(shape_name, attrs.get("shapefile").map(String::as_str));
+    let unknown = !custom
+        && ShapeKind::parse(shape_name) == ShapeKind::Box
+        && !matches!(shape_name, "box" | "rect" | "rectangle");
+    // `ND_shape(n)->usershape`: `custom`, by shapefile or by name.
+    let usershape = custom || shape_name == "custom";
+    // (once, as C binds each node's shape once: not in the port's repeat sizings)
+    if graphviz_pure_core::diag::reporting() {
+        if usershape {
+            usershape::register_user_shape("custom");
+        } else if unknown {
+            usershape::register_user_shape(shape_name);
+        }
+    }
     // user_shape (shapes.c:3955-3962): a name outside the Shapes table becomes a copy of
     // `box`, with a warning the first time the name is seen.
-    if !custom
+    if unknown
         && shape_name != "custom"
-        && shape_name != "epsf"
-        && ShapeKind::parse(shape_name) == ShapeKind::Box
-        && !matches!(shape_name, "box" | "rect" | "rectangle")
         && graphviz_pure_core::diag::reporting()
         && graphviz_pure_core::diag::emit_once(&format!("\0shape\0{shape_name}"))
     {
@@ -508,11 +523,14 @@ fn node_geometry_measured(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometr
         xlabel,
         polygon: None,
         record: None,
+        epsf: None,
     };
     match init {
-        ShapeInit::Poly | ShapeInit::Epsf => {
-            poly_init(node, shape, desc.unwrap_or(pd(false, 1, 4)), env, &mut geom);
+        ShapeInit::Poly => {
+            let desc = desc.unwrap_or(pd(false, 1, 4));
+            poly_init(node, shape, desc, usershape, env, &mut geom);
         }
+        ShapeInit::Epsf => epsf_init(node, &mut geom),
         ShapeInit::Point => point_init(node, desc.map_or(1, |d| d.peripheries), &mut geom),
         ShapeInit::Record => record_init(node, label_str, &xobj, env, &mut geom),
     }
@@ -854,10 +872,31 @@ fn pad_dimen(attrs: &AttrMap, mut dimen: Point, clamp: bool) -> Point {
     dimen
 }
 
+/// `epsf_init`: a node whose `shapefile` has a `%%BoundingBox` takes its size, and the
+/// offset `epsf_gencode` draws it at; otherwise it keeps `width` and `height` and no shape
+/// information.
+fn epsf_init(node: &NodeData, geom: &mut NodeGeometry) {
+    let sfile = node.attrs.get("shapefile").map(String::as_str);
+    let Some([lx, ly, ux, uy]) = usershape::epsf_bounding_box(sfile, &node.name) else {
+        return;
+    };
+    let dx = f64::from(ux) - f64::from(lx);
+    let dy = f64::from(uy) - f64::from(ly);
+    geom.width = ps2inch(dx);
+    geom.height = ps2inch(dy);
+    geom.outline_width = geom.width;
+    geom.outline_height = geom.height;
+    geom.epsf = Some(Point::new(
+        -f64::from(lx) - dx / 2.0,
+        -f64::from(ly) - dy / 2.0,
+    ));
+}
+
 fn poly_init(
     node: &NodeData,
     shape: ShapeKind,
     desc: PolygonDesc,
+    usershape: bool,
     env: &NodeSizeEnv<'_>,
     geom: &mut NodeGeometry,
 ) {
@@ -913,8 +952,28 @@ fn poly_init(
         dimen.y = quant(dimen.y, q);
     }
 
-    // Images (`image`, `shapefile`) are not supported: imagesize stays (0, 0).
+    // The port reads no image sizes: an image that loads keeps imagesize (0, 0). A file C
+    // cannot load is reported as C does.
     let imagesize = Point::new(0.0, 0.0);
+    if usershape {
+        // custom requires a shapefile
+        let sfile = usershape::agget_shapefile(attrs.get("shapefile").map(String::as_str));
+        if !usershape::usershape_loads(sfile) && graphviz_pure_core::diag::reporting() {
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "No or improper shapefile=\"{}\" for node \"{}\"\n",
+                sfile.unwrap_or("<nil>"),
+                node.name
+            ));
+        }
+    } else if let Some(sfile) = attrs.get("image").filter(|f| !f.is_empty())
+        && !usershape::usershape_loads(Some(sfile))
+        && graphviz_pure_core::diag::reporting()
+    {
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "No or improper image=\"{sfile}\" for node \"{}\"\n",
+            node.name
+        ));
+    }
     let mut bb = Point::new(dimen.x.max(imagesize.x), dimen.y.max(imagesize.y));
 
     if sides <= 2 && (!is_exactly_zero(distortion) || !is_exactly_zero(skew)) {

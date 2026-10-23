@@ -12,6 +12,7 @@ pub mod geom;
 pub mod graph;
 pub mod math;
 pub mod strtod;
+pub mod usershape;
 
 pub use color::{
     RgbaColor, format_svg_color, resolve_color, resolve_color_with_scheme, warn_unknown_color,

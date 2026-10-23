@@ -68,6 +68,8 @@ pub enum ShapeKind {
     Lpromoter,
     Rarrow,
     Larrow,
+    /// `epsf`: a PostScript user shape (`epsf_init`, `epsf_gencode`).
+    Epsf,
 }
 
 impl ShapeKind {
@@ -110,6 +112,7 @@ impl ShapeKind {
             "square" => Self::Square,
             "Msquare" => Self::Msquare,
             "record" => Self::Record,
+            "epsf" => Self::Epsf,
             "Mrecord" => Self::Mrecord,
             "cylinder" => Self::Cylinder,
             "note" => Self::Note,

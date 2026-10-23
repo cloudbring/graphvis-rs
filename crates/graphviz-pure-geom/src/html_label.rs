@@ -341,8 +341,10 @@ fn xml_decode(s: &[u8], in_attr: bool) -> LexResult<Vec<u8>> {
                 };
                 let bad = || "reference to invalid character number".to_string();
                 let ch = char::from_u32(v).ok_or_else(bad)?;
-                // XML Char production
-                if !(ch == '\t' || ch == '\n' || ch == '\r' || ch >= ' ') {
+                // XML Char production (which leaves out U+FFFE and U+FFFF)
+                if !(ch == '\t' || ch == '\n' || ch == '\r' || ch >= ' ')
+                    || matches!(ch, '\u{FFFE}' | '\u{FFFF}')
+                {
                     return Err(bad());
                 }
                 ch
@@ -1020,16 +1022,21 @@ pub struct HtmlError {
     pub unit: usize,
     /// `findNext` units (raw source, plus the `<HTML>`/`</HTML>` wrappers).
     pub units: Vec<String>,
+    /// `XML_GetCurrentLineNumber` where it is not the start of `unit`: expat counts the lines
+    /// up to the byte it rejects, which an encoding error leaves in an earlier unit.
+    pub line: Option<usize>,
 }
 
 impl HtmlError {
     /// The `agerrorf` texts and their `AGPREV` context line (`error_context`), or only the
     /// first for `lexerror`'s unknown elements (twice for an empty one).
     pub fn report(&self) -> (Vec<String>, Option<String>) {
-        let line = 1 + self.units[..self.unit]
-            .iter()
-            .map(|u| u.bytes().filter(|&c| c == b'\n').count())
-            .sum::<usize>();
+        let line = self.line.unwrap_or_else(|| {
+            1 + self.units[..self.unit]
+                .iter()
+                .map(|u| u.bytes().filter(|&c| c == b'\n').count())
+                .sum::<usize>()
+        });
         if let Some(m) = self.msg.strip_prefix('\0') {
             let (m, n) = m.strip_prefix('\0').map_or((m, 1), |m| (m, 2));
             return (vec![format!("{m} on line {line} \n"); n], None);
@@ -1055,10 +1062,218 @@ struct Lexed {
     warnings: Vec<(usize, String, bool)>,
 }
 
+/// The first character of an expat unit that expat's UTF-8 decoder rejects (`utf8tab.h`,
+/// `UTF8_INVALID2..4` in `xmltok.c`): its offset and the bytes expat needs to see before it
+/// can reject it (`BT_LEAD2..4`; one for a stray trail byte or `BT_NONXML`/`BT_MALFORM`).
+/// Expat's rules are UTF-8's, plus U+FFFE and U+FFFF, which it does not take as characters.
+fn expat_bad_char(d: &[u8]) -> Option<(usize, usize)> {
+    let valid = std::str::from_utf8(d).map_or_else(|e| e.valid_up_to(), |_| d.len());
+    if let Some(i) = d[..valid]
+        .windows(3)
+        .position(|w| w[0] == 0xEF && w[1] == 0xBF && w[2] >= 0xBE)
+    {
+        return Some((i, 3));
+    }
+    let n = match *d.get(valid)? {
+        0xC0..=0xDF => 2,
+        0xE0..=0xEF => 3,
+        0xF0..=0xF4 => 4,
+        _ => 1,
+    };
+    Some((valid, n))
+}
+
+/// Where expat's tag tokenizer (`scanLt`, `scanEndTag`, `scanAtts` and `scanComment` in
+/// `xmltok_impl.c`) stands after `p`, the start of a tag unit up to a rejected character:
+/// `None` if it rejects `p` itself; `Some(true)` if it tests the next byte as part of a name,
+/// an attribute value or a comment, where a lead byte waits for the rest of its character;
+/// `Some(false)` if it rejects at once any byte that is not a delimiter.
+fn tag_waits_for_char(p: &[u8]) -> Option<bool> {
+    #[derive(Clone, Copy)]
+    enum S {
+        Lt,
+        Excl,
+        ExclDash,
+        Comment,
+        CommentDash,
+        CommentEnd,
+        Pi,
+        EndStart,
+        EndName,
+        EndWs,
+        Name,
+        Ws,
+        AttName,
+        AttWs,
+        Eq,
+        Val(u8),
+        Quote,
+        QuoteWs,
+        Sol,
+    }
+    let mut st = S::Lt;
+    for &c in p.get(1..)? {
+        st = match st {
+            S::Lt => match c {
+                b'!' => S::Excl,
+                b'?' => S::Pi,
+                b'/' => S::EndStart,
+                c if is_name_start(c) => S::Name,
+                _ => return None,
+            },
+            S::Excl if c == b'-' => S::ExclDash,
+            S::ExclDash if c == b'-' => S::Comment,
+            S::Comment | S::CommentDash if c != b'-' => S::Comment,
+            S::Comment => S::CommentDash,
+            S::CommentDash => S::CommentEnd,
+            S::Pi => S::Pi,
+            S::EndStart if is_name_start(c) => S::EndName,
+            S::EndName if is_name_char(c) => S::EndName,
+            S::EndName | S::EndWs if is_ws(c) => S::EndWs,
+            S::Name if is_name_char(c) => S::Name,
+            S::Name | S::Ws if is_ws(c) => S::Ws,
+            S::Ws | S::QuoteWs if is_name_start(c) => S::AttName,
+            S::Name | S::Ws | S::Quote | S::QuoteWs if c == b'/' => S::Sol,
+            S::AttName if is_name_char(c) => S::AttName,
+            S::AttName | S::AttWs if is_ws(c) => S::AttWs,
+            S::AttName | S::AttWs if c == b'=' => S::Eq,
+            S::Eq if is_ws(c) => S::Eq,
+            S::Eq if c == b'"' || c == b'\'' => S::Val(c),
+            S::Val(q) if c == q => S::Quote,
+            S::Val(q) if c != b'<' => S::Val(q),
+            S::Quote | S::QuoteWs if is_ws(c) => S::QuoteWs,
+            _ => return None,
+        };
+    }
+    Some(matches!(
+        st,
+        S::Lt
+            | S::Comment
+            | S::CommentDash
+            | S::Pi
+            | S::EndStart
+            | S::EndName
+            | S::Name
+            | S::Ws
+            | S::AttName
+            | S::Val(_)
+            | S::QuoteWs
+    ))
+}
+
+/// Lines expat counts in `d` (`XmlUpdatePosition`: LF, CR and CR LF each end one).
+fn expat_lines(d: &[u8]) -> usize {
+    d.iter()
+        .enumerate()
+        .filter(|&(i, &c)| c == b'\n' || (c == b'\r' && d.get(i + 1) != Some(&b'\n')))
+        .count()
+}
+
+/// `XML_CONTEXT_BYTES` and `INIT_BUFFER_SIZE` in expat's `xmlparse.c`.
+const XML_CONTEXT_BYTES: usize = 1024;
+const INIT_BUFFER_SIZE: usize = 1024;
+
+/// What expat does with one unit `htmllex` hands to `XML_Parse`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Fed {
+    /// Tokenized up to the end, or up to a partial token.
+    Parsed,
+    /// Not tokenized: a partial token waits for more bytes.
+    Waiting,
+    /// The rejected character is complete: `XML_STATUS_ERROR`.
+    Error,
+}
+
+/// Expat 2.7's input buffer (`XML_GetBuffer`, `XML_ParseBuffer`) and the reparse deferral of
+/// `callProcessor`, which tokenizes a partial token again only once its bytes have doubled.
+/// They decide which unit an encoding error is reported in: a character cut off by the end
+/// of a unit is a partial token, rejected when expat next parses past it.
+#[derive(Debug, Default)]
+struct ExpatFeed {
+    /// `m_bufferPtr`, `m_bufferEnd` and `m_bufferLim` as offsets into `m_buffer` (`lim` is 0
+    /// before the first allocation).
+    ptr: usize,
+    end: usize,
+    lim: usize,
+    /// `m_partialTokenBytesBefore`.
+    had: usize,
+    /// The partial token at `ptr` holds a rejected character: the bytes from `ptr` expat
+    /// needs before it reports it.
+    bad: Option<usize>,
+}
+
+impl ExpatFeed {
+    /// `XML_GetBuffer(len)`: makes room for `len` bytes after `end`.
+    fn get_buffer(&mut self, len: usize) {
+        if self.lim != 0 && len <= self.lim - self.end {
+            return;
+        }
+        let keep = self.ptr.min(XML_CONTEXT_BYTES);
+        let needed = len + (self.end - self.ptr) + keep;
+        if self.lim != 0 && needed <= self.lim {
+            let off = self.ptr - keep;
+            self.end -= off;
+            self.ptr -= off;
+        } else {
+            let mut size = if self.lim == 0 {
+                INIT_BUFFER_SIZE
+            } else {
+                self.lim
+            };
+            loop {
+                size *= 2;
+                if size >= needed {
+                    break;
+                }
+            }
+            if self.lim == 0 {
+                self.end = 0;
+                self.ptr = 0;
+            } else {
+                self.end = self.end - self.ptr + keep;
+                self.ptr = keep;
+            }
+            self.lim = size;
+        }
+    }
+
+    /// `XML_Parse` of a unit of `len` bytes. `bad` is the rejected character in it, as the
+    /// offsets where its token starts and where the character ends; `cr`: the unit is text
+    /// ending in a carriage return, which expat holds back as `XML_TOK_TRAILING_CR`.
+    fn parse(&mut self, len: usize, bad: Option<(usize, usize)>, cr: bool) -> Fed {
+        self.get_buffer(len);
+        let unit = self.end;
+        self.end += len;
+        let have = self.end - self.ptr;
+        let available = self.ptr - self.ptr.min(XML_CONTEXT_BYTES) + (self.lim - self.end);
+        // m_lastBufferRequestSize is `len`
+        if have < 2 * self.had && len <= available {
+            return Fed::Waiting;
+        }
+        if let Some(need) = self.bad {
+            if have >= need {
+                return Fed::Error;
+            }
+            self.had = have;
+            return Fed::Waiting;
+        }
+        let start = self.ptr;
+        match bad {
+            Some((_, e)) if e <= len => return Fed::Error,
+            Some((s, e)) => {
+                self.ptr = unit + s;
+                self.bad = Some(e - s);
+            }
+            None => self.ptr = self.end - usize::from(cr),
+        }
+        self.had = if self.ptr == start { have } else { 0 };
+        Fed::Parsed
+    }
+}
+
 /// Splits a label into `findNext` units and lexes them.
 /// The tokens, and the lexer error that stopped them, if any.
-fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
-    let s = src.as_bytes();
+fn lex(s: &[u8]) -> (Lexed, Option<HtmlError>) {
     let mut lx = Lexer {
         toks: Vec::new(),
         in_cell: true,
@@ -1069,12 +1284,58 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
     };
     let mut units: Vec<String> = Vec::new();
     let mut tok_unit: Vec<usize> = Vec::new();
+    let mut expat = ExpatFeed::default();
+    // expat's line count before the current unit, and its line at a rejected character
+    let mut lines = 0;
+    let mut bad_line = None;
     let mut feed = |lx: &mut Lexer, raw: &[u8], data: &[u8], is_tag: bool| {
-        units.push(String::from_utf8_lossy(raw).into_owned());
-        let r = lx.unit(data, is_tag);
+        units.push(charset::decode_slice(raw));
         let u = units.len() - 1;
+        let bad = expat_bad_char(data).and_then(|(o, n)| {
+            if !is_tag {
+                return Some((o, n));
+            }
+            // a tag expat rejects before the character is the lexer's to report
+            tag_waits_for_char(&data[..o]).map(|waits| (o, if waits { n } else { 1 }))
+        });
+        if let Some((o, _)) = bad {
+            bad_line = bad_line.or(Some(1 + lines + expat_lines(&data[..o])));
+        }
+        lines += expat_lines(data);
+        // protect_rsqb: a trailing `]` reaches expat as `&#93;`
+        let len = data.len()
+            + if !is_tag && data.ends_with(b"]") {
+                4
+            } else {
+                0
+            };
+        let cr = !is_tag && data.ends_with(b"\r");
+        let token = bad.map(|(o, n)| (if is_tag { 0 } else { o }, o + n));
+        let fed = expat.parse(len, token, cr);
+        let r = match fed {
+            Fed::Error => {
+                // expat first rejects anything wrong in the text before the character; the
+                // text's own token is lost to the error (`T_error` replaces `T_string`)
+                if let Some((o, _)) = bad
+                    && !is_tag
+                    && o > 0
+                {
+                    let ntoks = lx.toks.len();
+                    lx.unit(&data[..o], false).map_err(|msg| (msg, u, None))?;
+                    lx.toks.truncate(ntoks);
+                }
+                return Err((NOT_WELL_FORMED.to_string(), u, bad_line));
+            }
+            Fed::Waiting => Ok(()),
+            Fed::Parsed => match bad {
+                None => lx.unit(data, is_tag),
+                // characterData for the text before a partial character
+                Some((o, _)) if !is_tag && o > 0 => lx.unit(&data[..o], false),
+                Some(_) => Ok(()),
+            },
+        };
         tok_unit.resize(lx.toks.len(), u);
-        r.map(|()| u).map_err(|msg| (msg, u))
+        r.map(|()| (u, fed)).map_err(|msg| (msg, u, None))
     };
     let res = (|| {
         feed(&mut lx, b"<HTML>", b"<HTML>", true)?;
@@ -1101,8 +1362,8 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
                         "Label closed before end of HTML element\n",
                     );
                     let raw = &s[pos..];
-                    let u = feed(&mut lx, raw, raw, true)?;
-                    return Err(("unclosed token".to_string(), u));
+                    let (u, _) = feed(&mut lx, raw, raw, true)?;
+                    return Err(("unclosed token".to_string(), u, None));
                 }
                 t += 1;
                 feed(&mut lx, &s[pos..t], &s[pos..t], true)?;
@@ -1118,14 +1379,14 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
                         t += 1;
                     }
                 }
-                // protect_rsqb only affects expat buffering, not the result
                 feed(&mut lx, &s[pos..t], &buf, false)?;
                 pos = t;
             }
         }
-        let u = feed(&mut lx, b"</HTML>", b"</HTML>", true)?;
-        if !lx.stack.is_empty() {
-            return Err(("mismatched tag".to_string(), u));
+        let (u, fed) = feed(&mut lx, b"</HTML>", b"</HTML>", true)?;
+        // expat parses `</HTML>` unless a partial token holds it back
+        if fed == Fed::Parsed && !lx.stack.is_empty() {
+            return Err(("mismatched tag".to_string(), u, None));
         }
         Ok(())
     })();
@@ -1139,14 +1400,19 @@ fn lex(src: &str) -> (Lexed, Option<HtmlError>) {
             },
             None,
         ),
-        Err((msg, unit)) => (
+        Err((msg, unit, line)) => (
             Lexed {
                 toks: lx.toks,
                 tok_unit,
                 units: units.clone(),
                 warnings: lx.warnings,
             },
-            Some(HtmlError { msg, unit, units }),
+            Some(HtmlError {
+                msg,
+                unit,
+                units,
+                line,
+            }),
         ),
     }
 }
@@ -1551,9 +1817,8 @@ pub fn parse_html_cs(text: &str, cs: Charset) -> Option<HtmlLabel> {
     parse_html_report(text, cs).ok()
 }
 
-/// [`parse_html_cs`] with the error C reports; `Err(None)` where the port does not
-/// reproduce the message (encodings).
-pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, Option<HtmlError>> {
+/// [`parse_html_cs`] with the error C reports.
+pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, HtmlError> {
     parse_html_warn(text, cs).0
 }
 
@@ -1563,25 +1828,30 @@ pub type HtmlWarnings = Vec<(String, bool)>;
 
 /// [`parse_html_report`] plus the `doAttrs` warnings of the tokens C's on-demand lexer
 /// reads before it succeeds or fails.
-pub fn parse_html_warn(
-    text: &str,
-    cs: Charset,
-) -> (Result<HtmlLabel, Option<HtmlError>>, HtmlWarnings) {
-    let decoded;
-    let text = match cs {
-        Charset::Big5 => return (Err(None), Vec::new()),
-        Charset::Utf8 if charset::has_raw(text) => return (Err(None), Vec::new()),
-        Charset::Utf8 => text,
-        Charset::Latin1 => {
-            decoded = charset::encode(text)
+pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>, HtmlWarnings) {
+    let bytes = match cs {
+        // XML_ParserCreate("BIG-5"): expat has no such encoding and rejects the first unit.
+        Charset::Big5 => {
+            let e = HtmlError {
+                msg: "unknown encoding".to_string(),
+                unit: 0,
+                units: vec!["<HTML>".to_string()],
+                line: Some(1),
+            };
+            return (Err(e), Vec::new());
+        }
+        // The label's own bytes: expat rejects those that are not UTF-8.
+        Charset::Utf8 => charset::encode(text),
+        Charset::Latin1 => std::borrow::Cow::Owned(
+            charset::encode(text)
                 .iter()
                 .map(|&b| char::from(b))
-                .collect::<String>();
-            &decoded
-        }
+                .collect::<String>()
+                .into_bytes(),
+        ),
     };
     // C lexes on demand: yacc can reject a token before the lexer reaches a later error.
-    let (lexed, lex_err) = lex(text);
+    let (lexed, lex_err) = lex(&bytes);
     let Lexed {
         toks,
         tok_unit,
@@ -1614,7 +1884,7 @@ pub fn parse_html_warn(
         if res.is_err() && p.furthest.get() < ntoks {
             // the parser failed on a token it was given
         } else {
-            return (Err(Some(e)), warnings);
+            return (Err(e), warnings);
         }
     }
     let res = res.map_err(|()| {
@@ -1623,11 +1893,12 @@ pub fn parse_html_warn(
             .get(p.furthest.get())
             .copied()
             .unwrap_or(units.len() - 1);
-        Some(HtmlError {
+        HtmlError {
             msg: p.err_msg.unwrap_or("syntax error").to_string(),
             unit,
             units,
-        })
+            line: None,
+        }
     });
     (res, warnings)
 }
@@ -1823,6 +2094,28 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
     ftxt.bx = BoundingBox::new(0.0, 0.0, xsize, if nspans == 1 { mxysize } else { ysize });
 }
 
+/// `size_html_img`: an image C cannot load is an error, and the label's `rv` is 1. The
+/// port reads no image sizes, so an image that loads is 0x0 too.
+fn size_html_img(img: &mut HtmlImage, env: &mut Env<'_>) {
+    img.bx = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
+    let loads = if env.report {
+        graphviz_pure_core::usershape::usershape_loads(img.src.as_deref())
+    } else {
+        graphviz_pure_core::diag::quietly(|| {
+            graphviz_pure_core::usershape::usershape_loads(img.src.as_deref())
+        })
+    };
+    if !loads {
+        if env.report {
+            graphviz_pure_core::diag::agerrorf(&format!(
+                "No or improper image file=\"{}\"\n",
+                img.src.as_deref().unwrap_or("(null)")
+            ));
+        }
+        env.warn = true;
+    }
+}
+
 /// `size_html_cell`.
 fn size_html_cell(cp: &mut HtmlCellData, parent: &HtmlTbl, env: &mut Env<'_>) {
     if cp.data.flags & PAD_SET == 0 {
@@ -1847,8 +2140,7 @@ fn size_html_cell(cp: &mut HtmlCellData, parent: &HtmlTbl, env: &mut Env<'_>) {
             Point::new(t.data.bx.ur.x, t.data.bx.ur.y)
         }
         HtmlContent::Image(img) => {
-            // gvusershape_size cannot load images here: C reports an error and uses 0x0.
-            img.bx = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
+            size_html_img(img, env);
             Point::new(0.0, 0.0)
         }
         HtmlContent::Text(t) => {
@@ -2326,7 +2618,7 @@ pub fn make_html_label(
     let mut lbl = match res {
         Ok(l) => l,
         Err(e) => {
-            if report && let Some(e) = e {
+            if report {
                 let (msgs, context) = e.report();
                 for msg in &msgs {
                     graphviz_pure_core::diag::agerrorf(msg);
@@ -2480,6 +2772,68 @@ mod tests {
             panic!("latin1 label");
         };
         assert_eq!(t.spans[0].items[0].text, "caf\u{e9}");
+    }
+
+    /// The `agerrorf` text and the `error_context` line C prints for a label's bytes
+    /// (C 16.1.0 with expat 2.7).
+    fn encoding_error(bytes: &[u8], cs: Charset) -> (String, String) {
+        let text = graphviz_pure_core::charset::decode(bytes.to_vec());
+        let e = parse_html_report(&text, cs).expect_err("expat rejects the label");
+        let (msgs, context) = e.report();
+        let context =
+            graphviz_pure_core::charset::encode(&context.unwrap_or_default()).into_owned();
+        (
+            msgs.concat(),
+            String::from_utf8_lossy(&context).into_owned(),
+        )
+    }
+
+    #[test]
+    fn expat_reports_bytes_that_are_not_utf8_where_it_parses_them() {
+        let nwf = "not well-formed (invalid token) in line 1 \n";
+        for (label, context) in [
+            // complete: rejected in its own unit
+            (&b"caf\xe9 more<B>x</B>"[..], "<HTML>caf\u{FFFD} more"),
+            (b"caf\x80<B>x</B>", "<HTML>caf\u{FFFD}"),
+            (
+                b"<FONT COLOR=\"r\xe9d\">x</FONT>",
+                "<HTML><FONT COLOR=\"r\u{FFFD}d\">",
+            ),
+            (b"ab\xef\xbf\xbecd", "<HTML>ab\u{FFFE}cd"),
+            // cut off by the end of the unit: rejected with the next one
+            (b"caf\xe9", "caf\u{FFFD}</HTML>"),
+            (b"\xc3<B>x</B>", "\u{FFFD}<B>"),
+            // a partial tag waits until its bytes have doubled: `<B\xe9>x` is too short
+            (b"<B\xe9>x</B>", "x</B>"),
+            // after an attribute value expat rejects any byte that is not a delimiter
+            (b"<B x=\"1\"\xe9>t</B>", "<HTML><B x=\"1\"\u{FFFD}>"),
+        ] {
+            assert_eq!(
+                encoding_error(label, Charset::Utf8),
+                (nwf.to_string(), format!("... {context} ...\n")),
+                "{}",
+                String::from_utf8_lossy(label)
+            );
+        }
+        // an error in the text before the character comes first
+        let (msg, _) = encoding_error(b"x&#0;\ny\xe9ab", Charset::Utf8);
+        assert_eq!(msg, "reference to invalid character number in line 1 \n");
+        // expat counts lines up to the byte it rejects
+        let (msg, _) = encoding_error(b"x\n\ny\xe9<BR/>z", Charset::Utf8);
+        assert_eq!(msg, "not well-formed (invalid token) in line 3 \n");
+        // `</HTML>` held back behind a partial tag: yacc reaches the end of input
+        let (msg, _) = encoding_error(b"<TABLE><TR><TD>x</TD></TR></TABLE\xf0\x90>", Charset::Utf8);
+        assert_eq!(msg, "syntax error in line 1 \n");
+        assert_eq!(
+            encoding_error(b"<B>x</B>", Charset::Big5),
+            (
+                "unknown encoding in line 1 \n".to_string(),
+                "... <HTML> ...\n".to_string()
+            )
+        );
+        // a valid character reference to U+FFFE is not an XML character
+        let (msg, _) = encoding_error(b"a&#xFFFE;b", Charset::Utf8);
+        assert_eq!(msg, "reference to invalid character number in line 1 \n");
     }
 
     #[test]
