@@ -1865,6 +1865,38 @@ fn flat_adjacent_aux_graph_repeats_label_diagnostics_like_c() {
     );
 }
 
+// Issue #144: htmlEntityUTF8 warns about invalid UTF-8 once per graph, and starts again when
+// called with another graph (`lastg`): the aux graph's dot_init_node_edge warns for `auxg`,
+// and the next component's for `G` again.
+#[test]
+fn flat_adjacent_aux_graph_repeats_invalid_utf8_warning_like_c() {
+    let path = tmp("issue144_utf8.gv");
+    std::fs::write(
+        &path,
+        b"digraph G { pack=true; {rank=same; a -> b [tailport=e label=\"\xe9\"];} \
+          c [label=\"\xe9\"] }\n",
+    )
+    .unwrap();
+    let (_, err, ok) = run(&["-Kdot", "-Tsvg", path.to_str().unwrap()], "");
+    assert!(ok, "{err}");
+    let utf8 = |g: &str| {
+        format!(
+            "Warning: Invalid 3-byte UTF8 found in input of graph {g} - treated as Latin-1. \
+             Perhaps \"-Gcharset=latin1\" is needed?\n"
+        )
+    };
+    let want = [
+        utf8("G"),
+        "Warning: Warning: no value for width of non-ASCII character 195. Falling back to \
+         width of space character\n"
+            .to_string(),
+        utf8("auxg"),
+        utf8("G"),
+    ]
+    .concat();
+    assert_eq!(err, want);
+}
+
 // Issue #105: with pack, doDot runs cccomps before dotLayout's dot_init_node_edge sizes the
 // nodes, so its `two non-nested clusters` error comes before the font warning, with one
 // component and with several.
@@ -1885,6 +1917,24 @@ fn pack_cccomps_error_precedes_node_sizing_warnings_like_c() {
             "{src}"
         );
     }
+    // The port's sizing pre-pass is quiet, so it neither prints nor uses up the invalid UTF-8
+    // warning, which comes from dot_init_node_edge after cccomps.
+    let path = tmp("issue105_utf8.gv");
+    std::fs::write(
+        &path,
+        b"digraph G { pack=true; subgraph cluster_a { x } subgraph cluster_b { x } \
+          y [label=\"\xe9\"] }\n",
+    )
+    .unwrap();
+    let (_, err, _) = run(&["-Kdot", "-Tsvg", path.to_str().unwrap()], "");
+    assert_eq!(
+        err,
+        "Error: node \"x\" belongs to two non-nested clusters \"cluster_b\" and \"cluster_a\"\n\
+         Warning: Invalid 3-byte UTF8 found in input of graph G - treated as Latin-1. Perhaps \
+         \"-Gcharset=latin1\" is needed?\n\
+         Warning: Warning: no value for width of non-ASCII character 195. Falling back to width \
+         of space character\n"
+    );
 }
 
 // Issue #21: `label_float` declared after the edge. cgraph gives the existing edge ""

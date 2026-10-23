@@ -1110,6 +1110,8 @@ impl Dot<'_> {
         // Its diagnostics print there, below, through the symbols above: C repeats the
         // label diagnostics of the copies, but not `size too small for label` (N_fixed).
         let _fonts = graphviz_pure_core::font::textfont_other_graph();
+        // htmlEntityUTF8's lastg: its invalid UTF-8 warning names auxg, once more.
+        let _charset = graphviz_pure_core::charset::enter_graph(&aux.name);
         graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::size_graph_nodes(&mut aux));
 
         let mut d = Dot::new(&aux);

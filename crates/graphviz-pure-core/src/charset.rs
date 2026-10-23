@@ -163,9 +163,26 @@ pub fn current() -> Charset {
     CURRENT.with(Cell::get)
 }
 
-/// `htmlEntityUTF8`'s warning: printed at most once per graph.
+/// `htmlEntityUTF8(s, g)` called with another `g` than the last call (`lastg`): makes
+/// `graph_name` the graph the warning names and clears its once-per-graph flag, until the
+/// returned guard puts the previous graph back, clearing the flag again.
+pub fn enter_graph(graph_name: &str) -> impl Drop + use<> {
+    struct Guard(String);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            GRAPH.with(|g| std::mem::swap(&mut *g.borrow_mut(), &mut self.0));
+            WARNED.with(|w| w.set(false));
+        }
+    }
+    let prev = GRAPH.with(|g| g.replace(graph_name.to_string()));
+    WARNED.with(|w| w.set(false));
+    Guard(prev)
+}
+
+/// `htmlEntityUTF8`'s warning: printed at most once per graph. A repeat inside
+/// [`crate::diag::quietly`] neither prints it nor uses up the graph's warning.
 pub(crate) fn warn_invalid_utf8(msg: impl FnOnce(&str) -> String) {
-    if WARNED.with(|w| w.replace(true)) {
+    if !crate::diag::reporting() || WARNED.with(|w| w.replace(true)) {
         return;
     }
     let text = GRAPH.with(|g| msg(&g.borrow()));
