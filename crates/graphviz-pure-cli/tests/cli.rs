@@ -5033,6 +5033,25 @@ fn infinite_edge_label_size_does_not_hang_xlabel_placement() {
     }
 }
 
+// Issue #273. sfdp's `rotate` (lib/sfdpgen/spring_electrical.c:935) asserts `dim == 2`, so
+// C aborts on `rotation` with `dim` or `dimen` above 2; the port indexed its 2-element centre
+// out of bounds. It now lays out as without `rotation`, with a warning.
+#[test]
+fn sfdp_rotation_in_3d_is_skipped_with_a_warning() {
+    for dims in ["dim=3", "dimen=3", "dimen=2147483647"] {
+        let src = |rot: &str| format!("graph {{ {dims}; {rot} a -- b; b -- c; c -- a }}");
+        let (out, err, ok) = run(&["-Ksfdp", "-Tplain"], &src("rotation=10;"));
+        assert!(ok, "{dims}: {err}");
+        assert!(
+            err.contains("rotation needs a 2-dimensional layout"),
+            "{dims}: {err}"
+        );
+        let (unrotated, err, ok) = run(&["-Ksfdp", "-Tplain"], &src(""));
+        assert!(ok, "{dims}: {err}");
+        assert_eq!(out, unrotated, "{dims}");
+    }
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
