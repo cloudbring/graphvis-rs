@@ -16,7 +16,7 @@ use super::qsort::qsort;
 use super::types::*;
 use crate::common::geom::add;
 use crate::common::routespl::{
-    Path, PathEnd, add_box, routepolylines, routesplines, simple_spline_route,
+    Path, PathEnd, RealEdge, add_box, routepolylines, routesplines, simple_spline_route,
 };
 use crate::common::splines::{
     EDGETYPEMASK, FLATEDGE, LabelKind, REGULAREDGE, SELFNPEDGE, SELFWPEDGE, beginpath,
@@ -1270,11 +1270,15 @@ impl Dot<'_> {
     fn route(&self, p: &mut Path, spline: bool) -> Option<Vec<Point>> {
         let real = orig_edge(self, p.data);
         let (t, h) = (self.edges[real].tail, self.edges[real].head);
-        let loop_head = (t == h).then(|| self.nodes[h].name.as_str());
+        let real = RealEdge {
+            tail: &self.nodes[t].name,
+            head: &self.nodes[h].name,
+            is_loop: t == h,
+        };
         if spline {
-            routesplines(p, loop_head)
+            routesplines(p, real)
         } else {
-            routepolylines(p, loop_head)
+            routepolylines(p, real)
         }
     }
 
