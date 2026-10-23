@@ -3,6 +3,8 @@
 #
 #   ci-result-cache.sh lookup KIND   writes hit=true|false, run_id and key to $GITHUB_OUTPUT
 #   ci-result-cache.sh name KIND     prints the marker artifact's name for this checkout
+#   ci-result-cache.sh changed KIND BASE
+#                                    exits 0 if a file in the KEY differs between BASE and HEAD
 #
 # A workflow that passes uploads an artifact named pass-KIND-KEY. KEY hashes the path, mode and
 # blob of every tracked file the skipped jobs can read, so it names the files tested, not the
@@ -16,8 +18,8 @@
 # Needs GH_TOKEN (actions: read), GITHUB_REPOSITORY and GITHUB_REPOSITORY_ID.
 set -euo pipefail
 
-cmd=${1:?usage: ci-result-cache.sh lookup|name KIND}
-kind=${2:?usage: ci-result-cache.sh lookup|name KIND}
+cmd=${1:?usage: ci-result-cache.sh lookup|name|changed KIND [BASE]}
+kind=${2:?usage: ci-result-cache.sh lookup|name|changed KIND [BASE]}
 
 # Paths that no job this script skips reads (ci.yml: verify, wasm-e2e, wasm-runtimes;
 # cross-platform.yml: the platform renders and compare). The site job, the supply-chain job and
@@ -79,6 +81,11 @@ name="pass-$kind-$key"
 case "$cmd" in
   name)
     echo "$name"
+    ;;
+  changed)
+    base=${3:?usage: ci-result-cache.sh changed KIND BASE}
+    ! git diff --quiet "$base" HEAD -- . "${ignored[@]/#/:(exclude,glob)}" ||
+      ! git diff --quiet "$base" HEAD -- "${read_by_jobs[@]}"
     ;;
   lookup)
     run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name&per_page=100" \

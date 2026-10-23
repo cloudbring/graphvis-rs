@@ -8,10 +8,12 @@ name: Cross-platform
 # reader's browser draws each platform's SVG with one renderer and diffs the pixels.
 #
 # The last job builds the documentation site (site/, Astro Starlight, with the WASM package for
-# its live checks and rustdoc under /api/) from this run's results, on every run, and uploads it
-# as the `site` artifact. The graphviz-pure.github.io repository publishes it: its workflow polls
-# for the latest successful run on master and deploys that artifact, so neither repository holds
-# a credential for the other. The site's fidelity data, gallery outputs and C references are
+# its live checks and rustdoc under /api/) from this run's results and uploads it as the `site`
+# artifact. It runs only when something the site shows changed: the files the platform renders
+# read, or the site's own sources (site/, docs/, CHANGELOG.md, scripts/site-*). The
+# graphviz-pure.github.io repository publishes it: its workflow polls for the newest successful
+# run on master that has a `site` artifact and deploys it, so neither repository holds a
+# credential for the other. The site's fidelity data, gallery outputs and C references are
 # committed, since they need the C oracle, which CI does not have.
 #
 # Jobs run on GitHub-hosted runners, which are free for a public repository. The platform renders
@@ -49,6 +51,7 @@ jobs:
     outputs:
       hit: ${{ steps.lookup.outputs.hit }}
       run_id: ${{ steps.lookup.outputs.run_id }}
+      site: ${{ steps.site.outputs.build }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,6 +61,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
         run: scripts/ci-result-cache.sh lookup cross-platform
+      # Whether the site needs building: yes when a file the renders read or one of the site's
+      # own sources differs from the base (the previous master, the pull request's base or the
+      # merge queue's base), and always when there is no base to compare or on a manual run.
+      - id: site
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          build=true
+          if [ "$EVENT" != workflow_dispatch ] && [ -n "${BASE//0/}" ] \
+            && git fetch -q --depth=1 origin "$BASE" \
+            && ! scripts/ci-result-cache.sh changed cross-platform "$BASE" \
+            && git diff --quiet "$BASE" HEAD -- site docs CHANGELOG.md 'scripts/site-*'; then
+            build=false
+          fi
+          echo "Build the site: $build"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
 
   native:
     name: ${{ matrix.label }}
@@ -195,9 +215,9 @@ jobs:
   site:
     name: Build the documentation site
     needs: [lookup, compare]
-    # A failed comparison is still published, so the page shows it; a cancelled run is not. It
-    # also runs when the inputs already passed: the site deploy takes master's latest `site`.
-    if: ${{ !cancelled() }}
+    # A failed comparison is still published, so the page shows it; a cancelled run is not. When
+    # nothing the site shows changed, the deploy keeps the `site` of an earlier master run.
+    if: ${{ !cancelled() && needs.lookup.outputs.site == 'true' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -299,12 +319,15 @@ jobs:
         with:
           name: site
           path: site/dist
-          retention-days: 30
+          # The deploy may serve this artifact until the site next changes.
+          retention-days: 90
 
   # Records that these inputs passed, so a later run with the same inputs skips the renders.
   record:
     name: Record the result for these inputs
     needs: [compare, site]
+    # Only after a passing comparison, and a site build that passed or had nothing to build.
+    if: ${{ !cancelled() && needs.compare.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.site.result) }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
