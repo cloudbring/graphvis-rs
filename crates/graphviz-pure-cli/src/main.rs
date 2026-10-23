@@ -181,7 +181,7 @@ fn atoi(s: &str) -> i32 {
 
 /// `strtod(s, &end)`: the value, or `None` when nothing was read (`end == s`).
 fn strtod(s: &str) -> Option<f64> {
-    match graphviz_pure_geom::node_size::strtod_prefix(s) {
+    match graphviz_pure_core::strtod::strtod(s) {
         (_, 0) => None,
         (v, _) => Some(v),
     }
@@ -261,10 +261,14 @@ fn set_fdp_attr(fdp: &mut FdpParms, arg: &str) -> Result<(), ()> {
     let mut chars = arg.chars();
     let flag = chars.next();
     let val = chars.as_str();
-    // `setDouble`/`setInt`: the error names the flag, `-L` and all.
-    let bad = || agerrorf(&format!("bad value in flag -L{arg} - ignored\n"));
-    let double = |v: &str| strtod(v).ok_or_else(bad);
-    let int = |v: &str| strtol(v).map(|i| i64::from(i as i32)).ok_or_else(bad);
+    // `setDouble`/`setInt` name the flag from the character before the value they were
+    // given: the flag letter, or the `*` of `-LT*`.
+    let bad = |v: &str| {
+        let named = &arg[arg.len() - v.len() - 1..];
+        agerrorf(&format!("bad value in flag -L{named} - ignored\n"));
+    };
+    let double = |v: &str| strtod(v).ok_or_else(|| bad(v));
+    let int = |v: &str| strtol(v).map(|i| i64::from(i as i32)).ok_or_else(|| bad(v));
     match flag {
         Some('g') => fdp.use_grid = false,
         Some('O') => fdp.use_new = false,
@@ -497,7 +501,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                     let scale = if rest.is_empty() {
                         72.0
                     } else {
-                        strtod(rest).unwrap_or(0.0)
+                        graphviz_pure_core::strtod::atof(rest)
                     };
                     if scale < 0.0 {
                         fprintf_stderr(&format!("Invalid parameter \"{rest}\" for -s flag\n"));

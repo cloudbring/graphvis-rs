@@ -160,7 +160,6 @@ version = "0.1.2"
 dependencies = [
  "graphviz-pure",
  "graphviz-pure-core",
- "graphviz-pure-geom",
  "graphviz-pure-parser",
  "graphviz-pure-raster",
 ]

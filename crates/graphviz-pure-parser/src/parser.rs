@@ -950,9 +950,6 @@ impl<'a> Parser<'a> {
 /// flex's `YY_BUF_SIZE`, which `aagerror` names as a possible cause.
 const YY_BUF_SIZE: usize = 16384;
 
-/// `aagerror` (`lib/cgraph/scan.l`) for bison's "syntax error" on lookahead token `tok`:
-/// the line the scanner is on once `tok` is read, then `near '<yytext>'`, or, when yytext
-/// is empty (end of input), the start condition the scanner was left in.
 /// The graphs of one input, read one at a time as `dot` reads them (`gvNextInputGraph`,
 /// one `agread` per graph), so that each graph is laid out and rendered before the next
 /// one is read.
@@ -995,6 +992,9 @@ impl<'a> GraphStream<'a> {
     }
 }
 
+/// `aagerror` (`lib/cgraph/scan.l`) for bison's "syntax error" on lookahead token `tok`:
+/// the line the scanner is on once `tok` is read, then `near '<yytext>'`, or, when yytext
+/// is empty (end of input), the start condition the scanner was left in.
 fn syntax_error(tok: &Token) -> GraphvizError {
     let mut message = format!("syntax error in line {}", tok.c_line);
     if !tok.text.is_empty() {

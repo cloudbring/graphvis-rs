@@ -277,6 +277,12 @@ fn fdp_flags_and_extra_argument_passes() {
         err.starts_with("Error: bad value in flag -Lnx - ignored\nUsage: "),
         "{err}"
     );
+    // `setDouble` names the flag from the `*` of `-LT*`.
+    let (_, err, _) = run(&["-Tplain", "-LT*x"], "graph { a }");
+    assert!(
+        err.starts_with("Error: bad value in flag -L*x - ignored\n"),
+        "{err}"
+    );
     let dir = scratch("c2_passes");
     let (_, err, code) = run_in(&dir, &["-Tplain", "-o", "-Lg", "o.plain"], "graph { a }");
     assert_eq!(code, 0, "{err}");
@@ -299,6 +305,10 @@ fn reduce_flag_prunes_trees_like_c() {
         !out.contains("id=\"node1\"") && out.contains("id=\"node2\""),
         "{out}"
     );
+    // Per component, after `pccomps`: a component Reduce empties is still packed.
+    let src = "graph { a -- b -- c -- a; d; e -- f; g -- h -- i -- g; i -- j -- k }";
+    let (out, _, _) = run(&["-Kneato", "-x", "-Tplain"], src);
+    assert!(out.starts_with("graph 1 3.3779 2.2418\n"), "{out}");
 }
 
 // Issue #294: `-s` sets `PSinputscale`, which `get_inputscale` prefers to `inputscale`.

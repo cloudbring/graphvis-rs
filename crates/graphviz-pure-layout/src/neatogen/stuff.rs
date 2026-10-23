@@ -21,12 +21,12 @@ pub fn set_reduce(on: bool) {
     REDUCE.with(|r| r.set(on));
 }
 
-/// `scan_graph_mode`'s `Reduce` pass: singletons and trees are deleted from the root graph
-/// (`degreeKind`, `prune`). A pruned node's chain is followed while its other end is left
-/// with one neighbour.
-pub fn reduce_graph(graph: &mut graphviz_pure_core::Graph) {
+/// `scan_graph_mode`'s `Reduce` pass: which nodes it deletes from the root graph, none
+/// unless `dot -x` set `Reduce`. Singletons and trees go (`degreeKind`, `prune`): a pruned
+/// node's chain is followed while its other end is left with one neighbour.
+pub fn reduce_set(graph: &graphviz_pure_core::Graph) -> Option<Vec<bool>> {
     if !REDUCE.with(std::cell::Cell::get) {
-        return;
+        return None;
     }
     let n = graph.nodes.len();
     // Each node's edges, as (edge ends).
@@ -79,7 +79,12 @@ pub fn reduce_graph(graph: &mut graphviz_pure_core::Graph) {
             });
         }
     }
-    if deleted.contains(&true) {
+    deleted.contains(&true).then_some(deleted)
+}
+
+/// Deletes the nodes of [`reduce_set`] from the graph.
+pub fn reduce_graph(graph: &mut graphviz_pure_core::Graph) {
+    if let Some(deleted) = reduce_set(graph) {
         graph.delete_nodes(&deleted);
     }
 }

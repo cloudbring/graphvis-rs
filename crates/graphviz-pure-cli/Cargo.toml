@@ -18,7 +18,6 @@ doc = false
 
 [dependencies]
 graphviz-pure-core.workspace = true
-graphviz-pure-geom.workspace = true
 graphviz-pure-parser.workspace = true
 graphviz-pure.workspace = true
 graphviz-pure-raster.workspace = true

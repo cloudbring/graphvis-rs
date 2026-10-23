@@ -76,7 +76,17 @@ impl OutputFormat {
 }
 
 pub fn render_graph(graph: &Graph, format: OutputFormat) -> Result<String> {
-    render_graph_named(graph, format, "")
+    // The format's own name, which the render diagnostics print.
+    let name = match format {
+        OutputFormat::Svg => "svg",
+        OutputFormat::Json => "json",
+        OutputFormat::Json0 => "json0",
+        OutputFormat::Dot => "dot",
+        OutputFormat::Xdot => "xdot",
+        OutputFormat::Canon => "canon",
+        OutputFormat::Plain => "plain",
+    };
+    render_graph_named(graph, format, name)
 }
 
 /// `agfstnode`/`agfstout` edge order of an unlaid graph.
