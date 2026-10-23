@@ -71,7 +71,7 @@ fn add_z(graph: &mut Graph) {
         || graph.nodes.iter().any(|n| n.attrs.contains_key("z"));
     let outdim = late_int(&graph.graph_attrs, "dimen", 2, 2);
     let ndim = late_int(&graph.graph_attrs, "dim", outdim, 2)
-        .min(crate::common::types::MAXDIM as i64) as usize;
+        .min(crate::common::types::MAXDIM as i32) as usize;
     if ndim < 3 || !z_declared {
         return;
     }
@@ -103,13 +103,7 @@ fn exact_point(p: Point) -> String {
     format!("{:?},{:?}", p.x, p.y)
 }
 
-fn mapbool(v: Option<&str>) -> bool {
-    match v.map(str::trim) {
-        Some(s) if s.eq_ignore_ascii_case("true") || s.eq_ignore_ascii_case("yes") => true,
-        Some(s) => s.parse::<i64>().is_ok_and(|n| n != 0),
-        None => false,
-    }
-}
+use crate::common::utils::mapbool;
 
 fn is_a_cluster(name: &str, attrs: &AttrMap) -> bool {
     graphviz_pure_core::has_cluster_prefix(name)

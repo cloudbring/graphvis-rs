@@ -10,6 +10,7 @@
 //! this module rebuilds C's vertex arrays from the final size, which agrees with
 //! `poly_init` up to rounding because the vertices scale linearly with the size.
 
+use graphviz_pure_core::cnum::{c_max, c_min, is_exactly_equal, is_exactly_zero};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{NodeData, Point};
 
@@ -213,16 +214,8 @@ fn late_double(node: &NodeData, key: &str, def: f64, low: f64) -> f64 {
     }
 }
 
-fn late_int(node: &NodeData, key: &str, def: i64, low: i64) -> i64 {
-    match node
-        .attrs
-        .get(key)
-        .and_then(|s| crate::common::utils::parse_leading_int(s))
-    {
-        Some(v) if v < low => low,
-        Some(v) => v,
-        None => def,
-    }
+fn late_int(node: &NodeData, key: &str, def: i32, low: i32) -> i32 {
+    crate::common::utils::late_int(&node.attrs, key, def, low)
 }
 
 const ALPHA: f64 = std::f64::consts::PI / 10.0;
@@ -295,7 +288,10 @@ fn regular_unit_vertices(sides: usize, orientation: f64, distortion: f64, skew: 
     let (mut sinx, mut cosx) = (math::sin(angle), math::cos(angle));
     let mut r = Point::new(0.5 * cosx, 0.5 * sinx);
     angle += (PI - sectorangle) / 2.0;
-    let is_box = sides == 4 && (orientation % 90.0).abs() < 0.5 && distortion == 0.0 && skew == 0.0;
+    let is_box = sides == 4
+        && (orientation % 90.0).abs() < 0.5
+        && is_exactly_zero(distortion)
+        && is_exactly_zero(skew);
     let mut v = vec![Point::default(); sides];
     for i in 0..sides {
         angle += sectorangle;
@@ -346,7 +342,7 @@ fn add_peripheries(
     let mut q = v[0];
     for j in 1..sides {
         q = v[(i_end - j) % sides];
-        if q.x != rr.x || q.y != rr.y {
+        if !is_exactly_equal(q.x, rr.x) || !is_exactly_equal(q.y, rr.y) {
             break;
         }
     }
@@ -354,11 +350,11 @@ fn add_peripheries(
     let mut qprev = q;
     for i in 0..sides {
         let mut q = v[i];
-        if !(q.x == qprev.x && q.y == qprev.y) {
+        if !(is_exactly_equal(q.x, qprev.x) && is_exactly_equal(q.y, qprev.y)) {
             let mut r = q;
             for j in 1..sides {
                 r = v[(i + j) % sides];
-                if r.x != q.x || r.y != q.y {
+                if !is_exactly_equal(r.x, q.x) || !is_exactly_equal(r.y, q.y) {
                     break;
                 }
             }
@@ -408,7 +404,7 @@ impl NodeShape {
         let width = node.width * 72.0;
         let height = node.height * 72.0;
         let penwidth = late_double(node, "penwidth", DEFAULT_NODEPENWIDTH, 0.0);
-        let peripheries = late_int(node, "peripheries", desc.peripheries as i64, 0) as usize;
+        let peripheries = late_int(node, "peripheries", desc.peripheries as i32, 0) as usize;
         let mut sides = desc.sides;
         let mut orientation = desc.orientation;
         let mut distortion = desc.distortion;
@@ -484,7 +480,7 @@ impl NodeShape {
             sides = late_int(node, "sides", 4, 0) as usize;
             distortion = late_double(node, "distortion", 0.0, -100.0);
         }
-        if sides <= 2 && (distortion != 0.0 || skew != 0.0) {
+        if sides <= 2 && (!is_exactly_zero(distortion) || !is_exactly_zero(skew)) {
             sides = 120;
         }
         let mut outp = peripheries.max(1);
@@ -698,10 +694,10 @@ impl NodeShape {
             ur: verts[0],
         };
         for v in &verts[1..self.sides] {
-            bb.ll.x = bb.ll.x.min(v.x);
-            bb.ll.y = bb.ll.y.min(v.y);
-            bb.ur.x = bb.ur.x.max(v.x);
-            bb.ur.y = bb.ur.y.max(v.y);
+            bb.ll.x = c_min(bb.ll.x, v.x);
+            bb.ll.y = c_min(bb.ll.y, v.y);
+            bb.ur.x = c_max(bb.ur.x, v.x);
+            bb.ur.y = c_max(bb.ur.y, v.y);
         }
         bb
     }

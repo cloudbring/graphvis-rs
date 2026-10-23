@@ -7,6 +7,7 @@ use crate::common::arrows::{arrow_end_clip, arrow_start_clip};
 use crate::common::geom::mid;
 use crate::common::splines::bezier_split;
 use graphviz_pure_core::Point;
+use graphviz_pure_core::cnum::c_min;
 use std::collections::BTreeMap;
 
 /// `boxIntersectf(pp, cp, bp)`: where segment `pp -> cp` leaves box `bp`.
@@ -114,7 +115,7 @@ fn spline_intersectf(pts: &mut [Point; 4], bb: &BoxF) -> bool {
         (bb.ur.y, bb.ll.x, bb.ur.x, false),
     ];
     for (i, (c, lo, hi, vert)) in tries.into_iter().enumerate() {
-        let tmax = if i == 0 { 1.0 } else { tmin.min(1.0) };
+        let tmax = if i == 0 { 1.0 } else { c_min(1.0, tmin) };
         let t = find_cross(pts, 0.0, tmax, c, lo, hi, vert);
         if t >= 0.0 && t < tmin {
             *pts = bezier_split(&orig, t).1;

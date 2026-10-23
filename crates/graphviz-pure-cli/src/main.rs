@@ -156,28 +156,13 @@ fn strerror(e: &io::Error) -> String {
 
 /// `strtol(s, &end, 10)`: the value, or `None` when no digits were read (`end == s`).
 fn strtol(s: &str) -> Option<i64> {
-    let s = s.trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r']);
-    let (neg, digits) = match s.as_bytes().first() {
-        Some(b'-') => (true, &s[1..]),
-        Some(b'+') => (false, &s[1..]),
-        _ => (false, s),
-    };
-    if !digits.starts_with(|c: char| c.is_ascii_digit()) {
-        return None;
+    match graphviz_pure_core::cnum::strtol(s) {
+        (_, 0) => None,
+        (v, _) => Some(v),
     }
-    // strtol saturates at the `long` range.
-    let mut v: i64 = 0;
-    for b in digits.bytes().take_while(u8::is_ascii_digit) {
-        v = v.saturating_mul(10).saturating_add(i64::from(b - b'0'));
-    }
-    Some(if neg { v.saturating_neg() } else { v })
 }
 
-/// `atoi(s)`: C's white space, a sign, then digits; what it gives an `int` beyond its range.
-fn atoi(s: &str) -> i32 {
-    // `atoi` is `(int)strtol(s, NULL, 10)`.
-    strtol(s).unwrap_or(0) as i32
-}
+use graphviz_pure_core::cnum::atoi;
 
 /// `strtod(s, &end)`: the value, or `None` when nothing was read (`end == s`).
 fn strtod(s: &str) -> Option<f64> {
@@ -280,7 +265,7 @@ fn set_fdp_attr(fdp: &mut FdpParms, arg: &str) -> Result<(), ()> {
         agerrorf(&format!("bad value in flag -L{named} - ignored\n"));
     };
     let double = |v: &str| strtod(v).ok_or_else(|| bad(v));
-    let int = |v: &str| strtol(v).map(|i| i64::from(i as i32)).ok_or_else(|| bad(v));
+    let int = |v: &str| strtol(v).map(|i| i as i32).ok_or_else(|| bad(v));
     match flag {
         Some('g') => fdp.use_grid = false,
         Some('O') => fdp.use_new = false,
@@ -519,7 +504,12 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                         fprintf_stderr(&format!("Invalid parameter \"{rest}\" for -s flag\n"));
                         return Parsed::Exit(usage(argv0, 1));
                     }
-                    opts.layout.inputscale = if scale == 0.0 { 72.0 } else { scale };
+                    // is_exactly_zero: `-s-0` keeps -0, which then does not scale.
+                    opts.layout.inputscale = if graphviz_pure_core::cnum::is_exactly_zero(scale) {
+                        72.0
+                    } else {
+                        scale
+                    };
                 }
                 'y' => opts.y_invert = true,
                 _ => {

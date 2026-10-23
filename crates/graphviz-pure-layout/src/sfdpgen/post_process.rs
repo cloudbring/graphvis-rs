@@ -4,6 +4,7 @@
 use super::spring_electrical::SpringElectricalControl;
 use crate::cutil::CRand;
 use crate::sparse::{SparseMatrix, distance, drand, vector_product};
+use graphviz_pure_core::cnum::is_exactly_equal;
 use graphviz_pure_core::math;
 
 /// `StressMajorizationSmoother_struct` (normal scheme, no edge-label data).
@@ -504,7 +505,7 @@ pub fn sparse_stress_majorization_smoother_new(
     crand: &mut CRand,
 ) -> Option<(StressMajorizationSmoother, f64)> {
     let m = a.m;
-    if x[..m * dim].iter().all(|&v| v == 0.0) {
+    if x[..m * dim].iter().all(|&v| is_exactly_equal(v, 0.0)) {
         for v in x[..m * dim].iter_mut() {
             *v = 72.0 * drand(crand);
         }

@@ -17,6 +17,7 @@ use super::stress::*;
 use super::{MODEL_CIRCUIT, MODEL_MDS, MODEL_SUBSET, SolverError};
 use crate::common::types::LGraph;
 use crate::cutil::{CRand, Drand48, qsort_by};
+use graphviz_pure_core::cnum::c_max;
 
 const LOCAL_CONSTR_MAJOR_ITERATIONS: i32 = 15;
 const LEVELS_SEP_TOL: f64 = 1e-1;
@@ -113,7 +114,7 @@ pub fn compute_hierarchy(
     }
     let yo = |i: usize| y[ordering[i] as usize];
     let hierarchy_span = yo(n - 1) - yo(0);
-    let tol = abs_tol.max(relative_tol * hierarchy_span / (n as f64 - 1.0));
+    let tol = c_max(abs_tol, relative_tol * hierarchy_span / (n as f64 - 1.0));
     let mut levels = Vec::new();
     for i in 1..n {
         if yo(i) - yo(i - 1) > tol {
@@ -861,8 +862,10 @@ pub fn stress_majorization_with_hierarchy(
             let mut displacement = 0.0f64;
             for i in 0..nl {
                 let li = l[i] as usize;
-                displacement += 0.0f64
-                    .max(levels_gap - (y[o[li] as usize] + displacement - y[o[li - 1] as usize]));
+                displacement += c_max(
+                    0.0,
+                    levels_gap - (y[o[li] as usize] + displacement - y[o[li - 1] as usize]),
+                );
                 let stop = if i < nl - 1 { l[i + 1] as usize } else { n };
                 for j in li..stop {
                     y[o[j] as usize] += displacement;

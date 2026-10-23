@@ -10,6 +10,7 @@
 //! (`make_html_label` returns 3 and the label keeps `dimen = (0, 0)`).
 
 use graphviz_pure_core::charset::{self, Charset};
+use graphviz_pure_core::cnum::{c_max, c_round};
 use graphviz_pure_core::font::{
     LINESPACING, LabelSubstContext, estimate_text_size_styled, strdup_and_subst_obj,
 };
@@ -1769,10 +1770,10 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
             item.flags = flags;
             item.color = color;
             width += sx;
-            mxfsize = mxfsize.max(size);
-            mxysize = mxysize.max(sy);
-            maxoffset = maxoffset.max(item.yoffset_centerline);
-            maxlayout = maxlayout.max(item.yoffset_layout);
+            mxfsize = c_max(size, mxfsize);
+            mxysize = c_max(sy, mxysize);
+            maxoffset = c_max(item.yoffset_centerline, maxoffset);
+            maxlayout = c_max(item.yoffset_layout, maxlayout);
         }
         span.size = width;
         let lsize;
@@ -1792,7 +1793,7 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
             };
         }
         curbline += span.lfsize;
-        xsize = xsize.max(width);
+        xsize = c_max(width, xsize);
         ysize += lsize;
     }
     ftxt.bx = BoundingBox::new(0.0, 0.0, xsize, if nspans == 1 { mxysize } else { ysize });
@@ -1848,8 +1849,8 @@ fn size_html_cell(cp: &mut HtmlCellData, parent: &HtmlTbl, env: &mut Env<'_>) {
     cp.data.bx = BoundingBox::new(
         0.0,
         0.0,
-        sz.x.max(f64::from(cp.data.width)),
-        sz.y.max(f64::from(cp.data.height)),
+        c_max(sz.x, f64::from(cp.data.width)),
+        c_max(sz.y, f64::from(cp.data.height)),
     );
 }
 
@@ -2039,15 +2040,6 @@ fn size_html_tbl(tbl: &mut HtmlTbl, _parent: Option<&HtmlData>, env: &mut Env<'_
 // Positioning
 // ---------------------------------------------------------------------------------------------
 
-#[allow(clippy::cast_possible_truncation)]
-fn c_round(f: f64) -> i64 {
-    if f >= 0.0 {
-        (f + 0.5) as i64
-    } else {
-        (f - 0.5) as i64
-    }
-}
-
 /// `pos_html_txt`.
 fn pos_html_txt(ftxt: &mut HtmlText, c: char) {
     for s in &mut ftxt.spans {
@@ -2208,7 +2200,13 @@ fn pos_html_tbl(tbl: &mut HtmlTbl, mut pos: BoundingBox, sides: u8, parent_pen: 
     let extra = delx / ncols;
     let plus = c_round(delx - extra * ncols);
     for i in 0..=tbl.column_count {
-        let d = tbl.widths[i] + extra + if (i as i64) < plus { 1.0 } else { 0.0 };
+        let d = tbl.widths[i]
+            + extra
+            + if i <= i32::MAX as usize && (i as i32) < plus {
+                1.0
+            } else {
+                0.0
+            };
         tbl.widths[i] = x;
         x += d + space;
     }
@@ -2217,7 +2215,13 @@ fn pos_html_tbl(tbl: &mut HtmlTbl, mut pos: BoundingBox, sides: u8, parent_pen: 
     let extra = dely / nrows;
     let plus = c_round(dely - extra * nrows);
     for i in 0..=tbl.row_count {
-        let d = tbl.heights[i] + extra + if (i as i64) < plus { 1.0 } else { 0.0 };
+        let d = tbl.heights[i]
+            + extra
+            + if i <= i32::MAX as usize && (i as i32) < plus {
+                1.0
+            } else {
+                0.0
+            };
         tbl.heights[i] = y;
         y -= d + space;
     }

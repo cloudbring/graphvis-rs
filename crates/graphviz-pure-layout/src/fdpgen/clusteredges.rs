@@ -208,18 +208,23 @@ fn touch_warning(lg: &LGraph<'_>, pm: &Expand) {
     let pack = crate::pack::get_pack(lg.gattr("pack"), off, off);
     let f = |v: f64| f64::from(v as f32);
     let (px, py) = (f(pm.x), f(pm.y));
+    let f3 = |v: f64| graphviz_pure_core::cnum::fmt_f(v, 3);
     graphviz_pure_core::diag::agwarningf(
         "compoundEdges: nodes touch - falling back to straight line edges\n",
     );
     if pack as f64 <= px || pack as f64 <= py {
         graphviz_pure_core::diag::agerr_prev(&format!(
-            "pack value {pack} is smaller than esep ({px:.3},{py:.3})\n"
+            "pack value {pack} is smaller than esep ({},{})\n",
+            f3(px),
+            f3(py)
         ));
     } else if f(margin.x) <= px || f(margin.y) <= py {
         graphviz_pure_core::diag::agerr_prev(&format!(
-            "sep value ({:.3},{:.3}) is smaller than esep ({px:.3},{py:.3})\n",
-            f(margin.x),
-            f(margin.y)
+            "sep value ({},{}) is smaller than esep ({},{})\n",
+            f3(f(margin.x)),
+            f3(f(margin.y)),
+            f3(px),
+            f3(py)
         ));
     }
 }

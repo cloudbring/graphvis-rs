@@ -186,11 +186,11 @@ pub fn rgb2hsv(r: f64, g: f64, b: f64) -> (f64, f64, f64) {
         let rc = (rgbmax - r) / denom;
         let gc = (rgbmax - g) / denom;
         let bc = (rgbmax - b) / denom;
-        if (r - rgbmax).abs() == 0.0 {
+        if crate::cnum::is_exactly_equal(r, rgbmax) {
             ht = bc - gc;
-        } else if (g - rgbmax).abs() == 0.0 {
+        } else if crate::cnum::is_exactly_equal(g, rgbmax) {
             ht = 2.0 + rc - bc;
-        } else if (b - rgbmax).abs() == 0.0 {
+        } else if crate::cnum::is_exactly_equal(b, rgbmax) {
             ht = 4.0 + gc - rc;
         }
         ht *= 60.0;

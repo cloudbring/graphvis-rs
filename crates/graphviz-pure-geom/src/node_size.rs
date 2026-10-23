@@ -12,6 +12,7 @@
 
 use crate::html_label::HtmlLabel;
 use graphviz_pure_core::attr_is_html;
+use graphviz_pure_core::cnum::{is_exactly_equal, is_exactly_zero};
 use graphviz_pure_core::math;
 use graphviz_pure_core::strtod::{sscanf, strtod};
 
@@ -59,30 +60,6 @@ fn ps2inch(x: f64) -> f64 {
 // C attribute helpers (`lib/common/utils.c`)
 // ---------------------------------------------------------------------------------------------
 
-/// C `strtol(p, &endp, 10)` prefix parse: `(value, consumed)`.
-fn strtol_prefix(s: &str) -> (i64, usize) {
-    let b = s.as_bytes();
-    let mut i = 0;
-    while i < b.len() && matches!(b[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
-        i += 1;
-    }
-    let mut neg = false;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        neg = b[i] == b'-';
-        i += 1;
-    }
-    let ds = i;
-    let mut v: i64 = 0;
-    while i < b.len() && b[i].is_ascii_digit() {
-        v = v.saturating_mul(10).saturating_add(i64::from(b[i] - b'0'));
-        i += 1;
-    }
-    if i == ds {
-        return (0, 0);
-    }
-    (if neg { -v } else { v }, i)
-}
-
 /// `late_double` from `lib/common/utils.c`.
 pub fn late_double(attrs: &AttrMap, key: &str, default: f64, minimum: f64) -> f64 {
     let Some(p) = attrs.get(key).filter(|p| !p.is_empty()) else {
@@ -97,18 +74,7 @@ pub fn late_double(attrs: &AttrMap, key: &str, default: f64, minimum: f64) -> f6
 
 /// `late_int` from `lib/common/utils.c`.
 pub fn late_int(attrs: &AttrMap, key: &str, default: i32, minimum: i32) -> i32 {
-    let Some(p) = attrs.get(key).filter(|p| !p.is_empty()) else {
-        return default;
-    };
-    let (rv, used) = strtol_prefix(p);
-    if used == 0 || rv > i64::from(i32::MAX) {
-        return default;
-    }
-    if rv < i64::from(minimum) {
-        minimum
-    } else {
-        rv as i32
-    }
+    graphviz_pure_core::cnum::late_int(attrs.get(key).map(String::as_str), default, minimum)
 }
 
 /// `late_nnstring` from `lib/common/utils.c`.
@@ -120,28 +86,7 @@ pub fn late_nnstring<'a>(attrs: &'a AttrMap, key: &str, default: &'a str) -> &'a
         .unwrap_or(default)
 }
 
-/// `mapBool` from `lib/common/utils.c`.
-pub fn map_bool(p: Option<&str>, default: bool) -> bool {
-    let Some(p) = p.filter(|p| !p.is_empty()) else {
-        return default;
-    };
-    if p.eq_ignore_ascii_case("false") || p.eq_ignore_ascii_case("no") {
-        return false;
-    }
-    if p.eq_ignore_ascii_case("true") || p.eq_ignore_ascii_case("yes") {
-        return true;
-    }
-    if p.as_bytes()[0].is_ascii_digit() {
-        // atoi
-        return strtol_prefix(p).0 != 0;
-    }
-    default
-}
-
-/// `mapbool` from `lib/common/utils.c`.
-pub fn mapbool(p: Option<&str>) -> bool {
-    map_bool(p, false)
-}
+pub use graphviz_pure_core::cnum::{map_bool, mapbool};
 
 // ---------------------------------------------------------------------------------------------
 // Shape descriptors (`Shapes[]`, `polygon_t p_*` in shapes.c)
@@ -926,7 +871,7 @@ fn poly_init(
     let imagesize = Point::new(0.0, 0.0);
     let mut bb = Point::new(dimen.x.max(imagesize.x), dimen.y.max(imagesize.y));
 
-    if sides <= 2 && (distortion != 0.0 || skew != 0.0) {
+    if sides <= 2 && (!is_exactly_zero(distortion) || !is_exactly_zero(skew)) {
         sides = 120;
     }
 
@@ -937,7 +882,10 @@ fn poly_init(
     };
     geom.label.valign = valign;
 
-    let is_box = sides == 4 && (orientation % 90.0).abs() < 0.5 && distortion == 0.0 && skew == 0.0;
+    let is_box = sides == 4
+        && (orientation % 90.0).abs() < 0.5
+        && is_exactly_zero(distortion)
+        && is_exactly_zero(skew);
     let has_gen = matches!(shape, ShapeKind::Star | ShapeKind::Cylinder);
     if is_box {
         // exact fit
@@ -1129,7 +1077,7 @@ fn poly_init(
             let mut q = r;
             for j in 1..sides {
                 q = vertices[(i0 - j) % sides];
-                if q.x != r.x || q.y != r.y {
+                if !is_exactly_equal(q.x, r.x) || !is_exactly_equal(q.y, r.y) {
                     break;
                 }
             }
@@ -1137,10 +1085,10 @@ fn poly_init(
             let mut qprev = q;
             for i in 0..sides {
                 q = vertices[i];
-                if !(q.x == qprev.x && q.y == qprev.y) {
+                if !(is_exactly_equal(q.x, qprev.x) && is_exactly_equal(q.y, qprev.y)) {
                     for j in 1..sides {
                         r = vertices[(i + j) % sides];
-                        if r.x != q.x || r.y != q.y {
+                        if !is_exactly_equal(r.x, q.x) || !is_exactly_equal(r.y, q.y) {
                             break;
                         }
                     }

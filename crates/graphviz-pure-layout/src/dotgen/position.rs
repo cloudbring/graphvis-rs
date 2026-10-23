@@ -6,6 +6,7 @@ use super::Dot;
 use super::types::*;
 use super::utils::*;
 use graphviz_pure_core::Point;
+use graphviz_pure_core::cnum::{c_max, c_min};
 use graphviz_pure_core::strtod::atof;
 
 impl Dot<'_> {
@@ -264,7 +265,7 @@ impl Dot<'_> {
                     let mut m0 = (self.edges[e].minlen.wrapping_mul(nodesep) as f64 + width) as i32;
                     if let Some(e0) = self.find_fast_edge(t0, h0) {
                         let alt = width + nodesep as f64 + round_c(self.edges[e].dist) as f64;
-                        m0 = (m0 as f64).max(alt) as i32;
+                        m0 = c_max(m0 as f64, alt) as i32;
                         self.edges[e0].minlen = self.edges[e0].minlen.max(m0);
                         self.edges[e0].weight = self.edges[e0].weight.max(self.edges[e].weight);
                     } else if self.edges[e].label.is_none() {
@@ -463,7 +464,7 @@ impl Dot<'_> {
         }
         self.contain_nodes(g);
         let x = if !self.graphs[g].flip() { p.x } else { p.y };
-        let x = x.min(u16::MAX as f64);
+        let x = c_min(x, u16::MAX as f64);
         let (ln, rn) = (self.graphs[g].ln.unwrap(), self.graphs[g].rn.unwrap());
         self.make_aux_edge(ln, rn, x, 1000);
     }
@@ -568,9 +569,10 @@ impl Dot<'_> {
         self.graphs[g].ht1 = ht1;
         self.graphs[g].ht2 = ht2;
         if g != 0 && self.graphs[g].label.is_some() {
-            let lht = self.graphs[g].border[LEFT_IX]
-                .y
-                .max(self.graphs[g].border[RIGHT_IX].y);
+            let lht = c_max(
+                self.graphs[g].border[LEFT_IX].y,
+                self.graphs[g].border[RIGHT_IX].y,
+            );
             let maxr = self.graphs[g].maxrank;
             let minr = self.graphs[g].minrank;
             let rht = self.rank0_y(minr) - self.rank0_y(maxr);
@@ -597,10 +599,10 @@ impl Dot<'_> {
         for subg in self.graphs[g].clust.clone() {
             have_label |= self.clust_ht(subg);
             if self.graphs[subg].maxrank == self.graphs[g].maxrank {
-                ht1 = ht1.max(self.graphs[subg].ht1 + margin as f64);
+                ht1 = c_max(ht1, self.graphs[subg].ht1 + margin as f64);
             }
             if self.graphs[subg].minrank == self.graphs[g].minrank {
-                ht2 = ht2.max(self.graphs[subg].ht2 + margin as f64);
+                ht2 = c_max(ht2, self.graphs[subg].ht2 + margin as f64);
             }
         }
         if g != 0 && self.graphs[g].label.is_some() {
@@ -615,9 +617,9 @@ impl Dot<'_> {
         if g != 0 {
             let (minr, maxr) = (self.graphs[g].minrank, self.graphs[g].maxrank);
             let rk = self.rk_mut(0, minr);
-            rk.ht2 = rk.ht2.max(ht2);
+            rk.ht2 = c_max(rk.ht2, ht2);
             let rk = self.rk_mut(0, maxr);
-            rk.ht1 = rk.ht1.max(ht1);
+            rk.ht1 = c_max(rk.ht1, ht1);
         }
         have_label
     }
@@ -731,7 +733,7 @@ impl Dot<'_> {
                 }
                 if self.nodes[v].node_type == NORMAL {
                     let x = self.nodes[v].coord.x - self.nodes[v].lw;
-                    ll.x = ll.x.min(x);
+                    ll.x = c_min(ll.x, x);
                 } else {
                     continue;
                 }
@@ -742,14 +744,14 @@ impl Dot<'_> {
                     c -= 1;
                 }
                 let x = self.nodes[v].coord.x + self.nodes[v].rw;
-                ur.x = ur.x.max(x);
+                ur.x = c_max(ur.x, x);
             }
             let offset = CL_OFFSET as f64;
             for c in self.graphs[g].clust.clone() {
                 let x = self.graphs[c].bb.ll.x - offset;
-                ll.x = ll.x.min(x);
+                ll.x = c_min(ll.x, x);
                 let x = self.graphs[c].bb.ur.x + offset;
-                ur.x = ur.x.max(x);
+                ur.x = c_max(ur.x, x);
             }
         } else {
             ll.x = self.nodes[self.graphs[g].ln.unwrap()].rank as f64;
@@ -951,8 +953,8 @@ impl Dot<'_> {
         if xf >= 1.0 && yf >= 1.0 {
             return false;
         }
-        let f = xf.min(yf);
-        let s = f.max(minallowed);
+        let f = c_min(xf, yf);
+        let s = c_max(f, minallowed);
         let r = (s * b.x / relpage.x).ceil();
         let xf = r * relpage.x / b.x;
         let r = (s * b.y / relpage.y).ceil();

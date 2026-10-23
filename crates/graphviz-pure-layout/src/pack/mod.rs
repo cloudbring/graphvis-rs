@@ -11,7 +11,7 @@
 
 use crate::common::geom::{add, sub as psub};
 use crate::common::types::{Bezier, LGraph, P_PIN, Sub};
-use crate::common::utils::{compute_bb, coord, parse_leading_int};
+use crate::common::utils::{compute_bb, coord, scan_d};
 use crate::cutil::qsort_by;
 
 pub mod cccomps;
@@ -82,10 +82,11 @@ pub fn get_pack_mode_info(p: Option<&str>, dflt: PackMode, pinfo: &mut PackInfo)
         if let Some(r) = p.strip_prefix("array") {
             pinfo.mode = PackMode::Array;
             let r = chk_flags(r, pinfo);
-            if let Some(i) = parse_leading_int(r)
+            // sscanf(p, "%d", &i) > 0 && i > 0
+            if let Some(i) = scan_d(r)
                 && i > 0
             {
-                pinfo.sz = i as i32;
+                pinfo.sz = i;
             }
         } else if let Some(r) = p.strip_prefix("aspect") {
             pinfo.mode = PackMode::Aspect;
@@ -108,8 +109,9 @@ pub fn get_pack_mode_info(p: Option<&str>, dflt: PackMode, pinfo: &mut PackInfo)
 /// `getPack(g, not_def, dflt)`: the `pack` attribute.
 pub fn get_pack(p: Option<&str>, not_def: i64, dflt: i64) -> i64 {
     let Some(p) = p else { return not_def };
-    match parse_leading_int(p) {
-        Some(i) if i >= 0 => i,
+    // sscanf(p, "%d", &i) == 1 && i >= 0: 2147483648 reads as INT_MIN
+    match scan_d(p) {
+        Some(i) if i >= 0 => i64::from(i),
         Some(_) => not_def,
         None if p.starts_with('t') || p.starts_with('T') => dflt,
         None => not_def,
@@ -380,7 +382,7 @@ pub fn shift_beziers(spl: &mut [Bezier], dx: f64, dy: f64) {
 const C: f64 = 100.0;
 
 fn c_round(f: f64) -> i64 {
-    crate::common::utils::c_round(f)
+    i64::from(crate::common::utils::c_round(f))
 }
 
 /// `GRID(x, s)`.
@@ -1101,7 +1103,7 @@ pub fn put_graphs_in<P: PackGraph + ?Sized>(g: &mut P, pinfo: &mut PackInfo) -> 
             let vals = (0..ng)
                 .map(|i| {
                     g.pk_sortv(i)
-                        .and_then(parse_leading_int)
+                        .and_then(scan_d)
                         .filter(|&v| v >= 0)
                         .unwrap_or(0) as u32
                 })

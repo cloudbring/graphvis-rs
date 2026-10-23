@@ -162,7 +162,7 @@ impl<E: Engine> Emitter<'_, E> {
             self.set_fillcolor(&c0);
             self.set_gradient_vals(
                 c1.as_deref().unwrap_or(DEFAULT_COLOR),
-                i64::from(angle),
+                i32::from(angle),
                 frac,
             );
             if radial { RGRADIENT } else { GRADIENT }

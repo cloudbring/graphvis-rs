@@ -93,7 +93,7 @@ pub(crate) struct ObjState {
     pub pencolor: GvColor,
     pub fillcolor: GvColor,
     pub stopcolor: GvColor,
-    pub gradient_angle: i64,
+    pub gradient_angle: i32,
     pub gradient_frac: f64,
     pub pen: Pen,
     pub penwidth: f64,
@@ -252,13 +252,11 @@ pub(crate) struct Job<'a> {
     pub layer_list: Option<Vec<i32>>,
 }
 
+/// `ROUND(f)` in `init_job_pagination` and `setup_page`: the reference build vectorizes
+/// each pair, converting through 64 bits and keeping the low 32 (`fcvtzs.2d`, `xtn`/`uzp1`),
+/// so an infinite page width is -1 where `(int)` would give `INT_MAX`.
 fn round(v: f64) -> i32 {
-    // ROUND(f) ((f>=0)?(int)(f + .5):(int)(f - .5))
-    if v >= 0.0 {
-        (v + 0.5) as i32
-    } else {
-        (v - 0.5) as i32
-    }
+    graphviz_pure_core::cnum::c_round_low32(v)
 }
 
 impl<'a> Job<'a> {
@@ -537,7 +535,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
         }
     }
 
-    pub fn set_gradient_vals(&mut self, stopcolor: &str, angle: i64, frac: f64) {
+    pub fn set_gradient_vals(&mut self, stopcolor: &str, angle: i32, frac: f64) {
         let c = self.job.resolve_color(stopcolor);
         let o = self.job.obj_mut();
         o.stopcolor = c;

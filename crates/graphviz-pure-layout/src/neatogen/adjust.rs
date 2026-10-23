@@ -159,8 +159,9 @@ const TABLE: &[(AdjustMode, &str)] = &[
 ];
 
 fn set_prism_values(g: &LGraph<'_>, s: &str, dp: &mut AdjustData) {
-    dp.value = match crate::common::utils::parse_leading_int(s) {
-        Some(v) if v >= 0 => v as i32,
+    // sscanf(s, "%d", &v) > 0 && v >= 0
+    dp.value = match crate::common::utils::scan_d(s) {
+        Some(v) if v >= 0 => v,
         _ => 1000,
     };
     dp.scaling =

@@ -2,52 +2,16 @@
 //! `strtol` prefix parsing, `late_*`, `mapbool` (`strtod` is `graphviz_pure_core::strtod`).
 
 use graphviz_pure_core::AttrMap;
+use graphviz_pure_core::cnum;
 
-/// `strtol(p, &end, 10)` / `atoi` / `sscanf("%d")`.
+/// `strtol(p, &end, 10)` or `sscanf("%ld")`: `None` when there are no digits; saturates at
+/// the range of `long`.
 pub fn parse_leading_int(s: &str) -> Option<i64> {
-    let t = s.trim_start();
-    let b = t.as_bytes();
-    let mut i = 0;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-    }
-    let ds = i;
-    while i < b.len() && b[i].is_ascii_digit() {
-        i += 1;
-    }
-    if i == ds {
-        return None;
-    }
-    t[..i].parse::<i64>().ok()
+    let (v, n) = cnum::strtol(s);
+    (n > 0).then_some(v)
 }
 
-/// `atoi`: 0 when nothing parses.
-pub fn atoi(s: &str) -> i64 {
-    parse_leading_int(s).unwrap_or(0)
-}
-
-/// `mapBool(p, dflt)`.
-pub fn map_bool(p: Option<&str>, dflt: bool) -> bool {
-    let Some(p) = p else { return dflt };
-    if p.is_empty() {
-        return dflt;
-    }
-    if p.eq_ignore_ascii_case("false") || p.eq_ignore_ascii_case("no") {
-        return false;
-    }
-    if p.eq_ignore_ascii_case("true") || p.eq_ignore_ascii_case("yes") {
-        return true;
-    }
-    if p.as_bytes()[0].is_ascii_digit() {
-        return atoi(p) != 0;
-    }
-    dflt
-}
-
-/// `mapbool(p)`.
-pub fn mapbool(p: Option<&str>) -> bool {
-    map_bool(p, false)
-}
+pub use graphviz_pure_core::cnum::{atoi, map_bool, mapbool, scan_d};
 
 thread_local! {
     /// `PSinputscale` as `dot -s` set it (0 when not set).
@@ -67,7 +31,8 @@ pub fn get_inputscale(attrs: &AttrMap) -> f64 {
         return ps;
     }
     let d = late_double(attrs, "inputscale", -1.0, 0.0);
-    if d == 0.0 { 72.0 } else { d }
+    // is_exactly_zero: `-0` is kept, and then does not scale.
+    if cnum::is_exactly_zero(d) { 72.0 } else { d }
 }
 
 /// `late_double` on an attribute map (absent or empty means "use default").
@@ -84,17 +49,8 @@ pub fn late_double(attrs: &AttrMap, key: &str, def: f64, low: f64) -> f64 {
 }
 
 /// `late_int` on an attribute map.
-pub fn late_int(attrs: &AttrMap, key: &str, def: i64, low: i64) -> i64 {
-    match attrs.get(key) {
-        None => def,
-        Some(s) if s.is_empty() => def,
-        Some(s) => match parse_leading_int(s) {
-            None => def,
-            Some(v) if v > i64::from(i32::MAX) => def,
-            Some(v) if v < low => low,
-            Some(v) => v,
-        },
-    }
+pub fn late_int(attrs: &AttrMap, key: &str, def: i32, low: i32) -> i32 {
+    cnum::late_int(attrs.get(key).map(String::as_str), def, low)
 }
 
 /// `late_nnstring`: non-empty value or the default.
@@ -105,14 +61,7 @@ pub fn late_nnstring<'a>(attrs: &'a AttrMap, key: &str, def: &'a str) -> &'a str
     }
 }
 
-/// `ROUND(f)` from `arith.h`: round half away from zero to an int.
-pub fn c_round(f: f64) -> i64 {
-    if f >= 0.0 {
-        (f + 0.5) as i64
-    } else {
-        (f - 0.5) as i64
-    }
-}
+pub use graphviz_pure_core::cnum::c_round;
 
 /// `compute_bb(g)` for a subgraph view: nodes, edge control points and
 /// positioned labels, top-level cluster boxes and (for the root) the graph

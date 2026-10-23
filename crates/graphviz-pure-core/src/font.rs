@@ -65,6 +65,82 @@ pub struct TextLineLayout {
     pub height: f64,
     /// Horizontal justification of this line (`\n`, `\l`, `\r`).
     pub justify: TextJustify,
+    /// The size of the line's interned font (`span->font->size`): the label's font size,
+    /// except where C's font dictionary hands a NaN size another font (see
+    /// [`textfont_intern`]). An empty line has no font and keeps the label's size.
+    #[serde(default)]
+    pub font_size: f64,
+}
+
+/// A `textfont_t` key in C's font dictionary (`gvc->textfont_dt`).
+#[derive(Debug, Clone)]
+struct TextFontKey {
+    name: Option<String>,
+    color: Option<String>,
+    flags: u32,
+    size: f64,
+}
+
+/// `textfont_comparf` (`lib/common/textspan.c`): names, colours, flags, then sizes with
+/// `<` and `>`, so a NaN size compares equal to any size.
+fn textfont_cmp(k1: &TextFontKey, k2: &TextFontKey) -> std::cmp::Ordering {
+    use std::cmp::Ordering::{Equal, Greater, Less};
+    fn opt(a: &Option<String>, b: &Option<String>) -> std::cmp::Ordering {
+        match (a, b) {
+            (None, None) => Equal,
+            (None, Some(_)) => Less,
+            (Some(_), None) => Greater,
+            (Some(a), Some(b)) => a.as_bytes().cmp(b.as_bytes()),
+        }
+    }
+    let rc = opt(&k1.name, &k2.name);
+    if rc != Equal {
+        return rc;
+    }
+    let rc = opt(&k1.color, &k2.color);
+    if rc != Equal {
+        return rc;
+    }
+    if k1.flags != k2.flags {
+        return k1.flags.cmp(&k2.flags);
+    }
+    if k1.size < k2.size {
+        Less
+    } else if k1.size > k2.size {
+        Greater
+    } else {
+        Equal
+    }
+}
+
+thread_local! {
+    /// `gvc->textfont_dt`, which lives as long as the GVC: one per run of `dot`.
+    static TEXTFONT_DT: std::cell::RefCell<crate::cdt::Cdt<TextFontKey>> =
+        std::cell::RefCell::new(crate::cdt::Cdt::new());
+}
+
+/// `dtinsert(gvc->textfont_dt, &tf)`: interns a font and returns the size of the font in
+/// the dictionary. That is `size`, except for a NaN: C's comparison finds it equal to the
+/// first font with the same name, colour and flags that the splay tree's search reaches,
+/// and a NaN font interned first is found for later sizes too (#274).
+pub fn textfont_intern(name: Option<&str>, color: Option<&str>, flags: u32, size: f64) -> f64 {
+    let key = TextFontKey {
+        name: name.map(str::to_string),
+        color: color.map(str::to_string),
+        flags,
+        size,
+    };
+    TEXTFONT_DT.with(|dt| {
+        let mut dt = dt.borrow_mut();
+        let cmp = |e: &TextFontKey| textfont_cmp(&key, e);
+        let (i, _) = dt.insert(key.clone(), &cmp);
+        dt.get(i).size
+    })
+}
+
+/// Empties the font dictionary, as a new GVC starts with an empty one.
+pub fn textfont_dict_reset() {
+    TEXTFONT_DT.with(|dt| *dt.borrow_mut() = crate::cdt::Cdt::new());
 }
 
 /// Measured layout of a multiline Graphviz label in points.
@@ -615,12 +691,16 @@ pub fn strdup_and_subst_obj(s: &str, ctx: &LabelSubstContext<'_>) -> String {
 /// label. Empty lines get height `(int)(fontsize * LINESPACING)` (C truncates; non-empty
 /// lines do not), see GV-BUG-012 in `docs/c-bugs-ledger.md`.
 fn storeline(layout: &mut TextLabelLayout, line: String, terminator: TextJustify) {
-    let (width, height) = if line.is_empty() {
-        (0.0, (layout.font_size * LINESPACING).trunc())
+    let (width, height, font_size) = if line.is_empty() {
+        let size = layout.font_size;
+        (0.0, (size * LINESPACING).trunc(), size)
     } else {
-        estimate_text_size(&line, &layout.font_name, layout.font_size)
+        // span->font = dtinsert(gvc->textfont_dt, &tf); textspan_size measures that font
+        let size = textfont_intern(Some(&layout.font_name), None, 0, layout.font_size);
+        let (w, h) = estimate_text_size(&line, &layout.font_name, size);
+        (w, h, size)
     };
-    layout.width = layout.width.max(width);
+    layout.width = crate::cnum::c_max(layout.width, width);
     layout.height += height;
     layout.line_widths.push(width);
     layout.lines.push(TextLineLayout {
@@ -628,6 +708,7 @@ fn storeline(layout: &mut TextLabelLayout, line: String, terminator: TextJustify
         width,
         height,
         justify: terminator,
+        font_size,
     });
 }
 

@@ -94,8 +94,8 @@ impl TextLabel {
                     },
                     width: line.width,
                     height: line.height,
-                    yoffset_centerline: 0.1 * g.font_size,
-                    font: TextFont::new(&g.font_name, g.font_size, 0),
+                    yoffset_centerline: 0.1 * line.font_size,
+                    font: TextFont::new(&g.font_name, line.font_size, 0),
                 });
             }
         }

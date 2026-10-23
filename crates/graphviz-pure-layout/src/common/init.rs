@@ -157,7 +157,10 @@ impl<'a> LGraph<'a> {
     /// the edge record).
     pub fn new_unported(graph: &'a Graph, ndim: usize, default_edge_type: EdgeType) -> Self {
         let gattrs = &graph.graph_attrs;
-        let nodesep = c_round(late_double(gattrs, "nodesep", DEFAULT_NODESEP, MIN_NODESEP) * 72.0);
+        // `GD_nodesep = POINTS(…)`, an `int`: 1e300 inches saturates at INT_MAX points.
+        let nodesep = i64::from(c_round(
+            late_double(gattrs, "nodesep", DEFAULT_NODESEP, MIN_NODESEP) * 72.0,
+        ));
         let mut drawing = Drawing::default();
         if let Some(p) = gattrs.get("ratio") {
             match p.as_str() {

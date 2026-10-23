@@ -2,6 +2,7 @@
 
 use super::Dot;
 use super::types::*;
+use graphviz_pure_core::cnum::c_max;
 
 const HLB: usize = 0;
 const HRB: usize = 1;
@@ -337,7 +338,7 @@ impl Dot<'_> {
                     if self.edges[e].adjacent {
                         let d = self.labels[l].dimen;
                         let lw = if flip { d.y } else { d.x };
-                        self.edges[le].dist = lw.max(self.edges[le].dist);
+                        self.edges[le].dist = c_max(lw, self.edges[le].dist);
                     } else {
                         reset = true;
                         self.flat_node(e);

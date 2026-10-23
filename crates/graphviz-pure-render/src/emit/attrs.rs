@@ -5,55 +5,13 @@
 use graphviz_pure_core::AttrMap;
 use graphviz_pure_core::strtod::strtod_rest;
 
-/// `strtol(s, &end, 10)`: the value and the unparsed rest.
+/// `strtol(s, &end, 10)`: the value and the unparsed rest, or `None` with no digits.
 pub(crate) fn strtol(s: &str) -> Option<(i64, &str)> {
-    let t = s.trim_start_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c']);
-    let b = t.as_bytes();
-    let mut i = 0;
-    let neg = if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-        b[0] == b'-'
-    } else {
-        false
-    };
-    let start = i;
-    let mut v: i64 = 0;
-    while i < b.len() && b[i].is_ascii_digit() {
-        v = v.saturating_mul(10).saturating_add(i64::from(b[i] - b'0'));
-        i += 1;
-    }
-    if i == start {
-        return None;
-    }
-    Some((if neg { -v } else { v }, &t[i..]))
+    let (v, n) = graphviz_pure_core::cnum::strtol(s);
+    (n > 0).then(|| (v, &s[n..]))
 }
 
-/// `atoi`.
-pub(crate) fn atoi(s: &str) -> i64 {
-    strtol(s).map_or(0, |x| x.0)
-}
-
-/// `mapBool(p, dflt)`.
-pub(crate) fn map_bool(p: Option<&str>, dflt: bool) -> bool {
-    let Some(p) = p.filter(|p| !p.is_empty()) else {
-        return dflt;
-    };
-    if p.eq_ignore_ascii_case("false") || p.eq_ignore_ascii_case("no") {
-        return false;
-    }
-    if p.eq_ignore_ascii_case("true") || p.eq_ignore_ascii_case("yes") {
-        return true;
-    }
-    if p.as_bytes()[0].is_ascii_digit() {
-        return atoi(p) != 0;
-    }
-    dflt
-}
-
-/// `mapbool(p)`.
-pub(crate) fn mapbool(p: Option<&str>) -> bool {
-    map_bool(p, false)
-}
+pub(crate) use graphviz_pure_core::cnum::{atoi, mapbool};
 
 /// Read-only view of an object's attributes with the `late_*` helpers.
 #[derive(Clone, Copy)]
@@ -78,13 +36,8 @@ impl<'a> Attrs<'a> {
         }
     }
 
-    pub fn late_int(&self, k: &str, dflt: i64, min: i64) -> i64 {
-        match self.get(k).filter(|s| !s.is_empty()).and_then(strtol) {
-            Some((v, _)) if v > i64::from(i32::MAX) => dflt,
-            Some((v, _)) if v < min => min,
-            Some((v, _)) => v,
-            None => dflt,
-        }
+    pub fn late_int(&self, k: &str, dflt: i32, min: i32) -> i32 {
+        graphviz_pure_core::cnum::late_int(self.get(k), dflt, min)
     }
 
     pub fn late_string(&self, k: &str, dflt: &'a str) -> &'a str {

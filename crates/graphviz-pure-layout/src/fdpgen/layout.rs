@@ -878,7 +878,7 @@ impl Fdp<'_, '_> {
         let margin = if is_root || is_empty {
             0
         } else {
-            late_int(self.gattrs(g), "margin", CL_OFFSET, 0)
+            late_int(self.gattrs(g), "margin", CL_OFFSET as i32, 0)
         } as f64;
         let pt = Point::new(-bb.ll.x + margin, -bb.ll.y + margin + border[0].y);
         bb.ll = Point::new(0.0, 0.0);
@@ -1171,7 +1171,7 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
         .map(|n| ce.as_ref().is_some_and(|c| c.is_clust_node(n)))
         .collect();
     let attrs = &src.graph_attrs;
-    let ndim = late_int(attrs, "dim", 2, 2).min(MAXDIM as i64) as usize;
+    let ndim = late_int(attrs, "dim", 2, 2).min(MAXDIM as i32) as usize;
     let mut g = LGraph::new(&src, ndim, EdgeType::Line);
     let tree = mk_clusters(&src);
     graphviz_pure_core::diag::quietly(|| register_clusters(&mut g, &tree));

@@ -51,8 +51,10 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
                 continue;
             };
             if n.attrs.get("fontsize").is_none_or(|s| s.is_empty()) {
-                n.attrs
-                    .insert("fontsize".to_string(), format!("{:.3}", size.y * 0.7));
+                n.attrs.insert(
+                    "fontsize".to_string(),
+                    graphviz_pure_core::cnum::fmt_f(size.y * 0.7, 3),
+                );
             }
         }
     }
