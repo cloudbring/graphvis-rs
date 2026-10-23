@@ -276,6 +276,8 @@ fn bounding_box(data: &[u8]) -> Option<[i32; 4]> {
             .map_or(rest.len().min(BUFSIZ - 1), |i| i + 1);
         let (line, tail) = rest.split_at(len);
         rest = tail;
+        // sscanf and strstr read the line as a C string
+        let line = &line[..line.iter().position(|&c| c == 0).unwrap_or(line.len())];
         if scan_bounding_box(line, &mut bb) == 4 {
             saw_bb = true;
         }
@@ -317,14 +319,18 @@ fn scan_bounding_box(line: &[u8], v: &mut [i32; 4]) -> usize {
         if digits == 0 {
             return k;
         }
+        // strtol: clamped to the long range, then stored into an int
+        let neg = s.first() == Some(&b'-');
         let mut n: i64 = 0;
         for &d in &s[sign..sign + digits] {
-            n = n.saturating_mul(10).saturating_add(i64::from(d - b'0'));
+            let d = i64::from(d - b'0');
+            n = n.saturating_mul(10);
+            n = if neg {
+                n.saturating_sub(d)
+            } else {
+                n.saturating_add(d)
+            };
         }
-        if s.first() == Some(&b'-') {
-            n = -n;
-        }
-        // strtol's long, stored into an int
         *x = n as i32;
         s = &s[sign + digits..];
     }
@@ -386,6 +392,16 @@ mod tests {
         assert_eq!(
             bounding_box(b"%%BoundingBox: 0 0 100 50\n%%BoundingBox: 7 8 (atend)\n"),
             Some([7, 8, 100, 50])
+        );
+        // strtol clamps, and the int keeps the low bits
+        assert_eq!(
+            bounding_box(b"%%BoundingBox: -99999999999999999999 0 100 50\n"),
+            Some([0, 0, 100, 50])
+        );
+        // a NUL ends the line for sscanf and strstr
+        assert_eq!(
+            bounding_box(b"%%BoundingBox: 0 0 100 50\n\0read\n%%BoundingBox: 0 0 10 10\n"),
+            Some([0, 0, 10, 10])
         );
         // ... unless a non-comment line with `read` came before
         assert_eq!(
