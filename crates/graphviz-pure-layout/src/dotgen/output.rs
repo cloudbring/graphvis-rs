@@ -385,7 +385,9 @@ impl Output {
             }
         }
         for (si, nodes, edges) in self.membership {
-            let s = &mut graph.subgraphs[si];
+            let Some(s) = graph.subgraphs.get_mut(si) else {
+                continue;
+            };
             s.nodes = nodes
                 .into_iter()
                 .map(|n| graphviz_pure_core::NodeId(n as u32))
