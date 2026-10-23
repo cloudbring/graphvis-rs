@@ -888,7 +888,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
     fn emit_node(&mut self, n: usize, drawn: &mut [bool]) {
         let m = self.job.m;
         let nd = &m.nodes[n];
-        if drawn[n] || nd.attrs.get(super::model::CLUST_NODE_KEY).is_some() {
+        if drawn[n] || m.g.nodes[n].layout.clust_node {
             return;
         }
         let half = Point::new(nd.lw, nd.ht / 2.0);

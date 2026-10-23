@@ -202,6 +202,8 @@ pub fn sfdp_layout(graph: &mut Graph) -> Result<()> {
         }
     }
     gv_postprocess(&mut g, true);
+    // GD_odim(g->root) = MIN(outdim, Ndim)
+    g.odim = (outdim as usize).min(ndim);
     g.write_back(graph);
     Ok(())
 }

@@ -103,10 +103,7 @@ fn input_edge_order(g: &Graph) -> Vec<usize> {
 
 /// `IS_CLUST_NODE(n)` for each node.
 fn clust_nodes(g: &Graph) -> Vec<bool> {
-    g.nodes
-        .iter()
-        .map(|n| n.attrs.contains_key(graphviz_pure_core::CLUST_NODE_KEY))
-        .collect()
+    g.nodes.iter().map(|n| n.layout.clust_node).collect()
 }
 
 /// Edge iteration order of `agfstnode`/`agfstout` (numbering of `_gvid` in JSON).
@@ -305,37 +302,10 @@ fn with_earlier(g: &mut Graph, earlier: Option<&Graph>, over: bool) {
 }
 
 /// The graph as cgraph holds it for the writers that do not attach layout attributes
-/// (`canon`, `dot_json`, `xdot_json`): without the port's private layout keys.
+/// (`canon`, `dot_json`, `xdot_json`): fdp's render view is not part of it.
 fn cgraph_view(graph: &Graph) -> Graph {
     let mut g = graph.clone();
     g.render_view = None;
-    let private = |a: &mut graphviz_pure_core::AttrMap| {
-        // The input values of the label positions the layout wrote for the renderers.
-        for k in graphviz_pure_core::LAYOUT_LABEL_POS_KEYS {
-            if let Some(v) = a.get(&format!("{}{k}", graphviz_pure_core::LAYOUT_INPUT_PREFIX)) {
-                a.insert(k.to_string(), v.clone());
-            } else if a.contains_key(&format!(
-                "{}{k}",
-                graphviz_pure_core::LAYOUT_NO_INPUT_PREFIX
-            )) {
-                a.remove(k);
-            }
-        }
-        // (the writers read the HTML marks)
-        a.retain(|k, _| {
-            !k.starts_with('\u{1}') || k.starts_with(graphviz_pure_core::HTML_VALUE_PREFIX)
-        });
-    };
-    private(&mut g.graph_attrs);
-    for sg in &mut g.subgraphs {
-        private(&mut sg.graph_attrs);
-    }
-    for n in &mut g.nodes {
-        private(&mut n.attrs);
-    }
-    for e in &mut g.edges {
-        private(&mut e.attrs);
-    }
     g
 }
 
@@ -460,7 +430,7 @@ mod tests {
     // once each below the root: a bad list from a caller that skipped layout cannot
     // make the cluster tree cyclic or multiply it.
     #[test]
-    fn cluster_list_key_keeps_only_descendants() {
+    fn cluster_list_keeps_only_descendants() {
         let mut g = parse_dot(
             "digraph G { subgraph cluster_a { a subgraph cluster_c { c } } subgraph cluster_b { b } }",
         )
@@ -471,10 +441,7 @@ mod tests {
         for s in &mut g.subgraphs {
             s.bb = BoundingBox::new(10.0, 10.0, 50.0, 50.0);
         }
-        g.subgraphs[a].graph_attrs.insert(
-            graphviz_pure_core::CLUSTER_LIST_KEY.to_string(),
-            format!("{a} {c} {c} {b} 99"),
-        );
+        g.subgraphs[a].layout.clusters = Some(vec![a, c, c, b, 99]);
         let svg = render_graph(&g, OutputFormat::Svg).expect("render");
         let titles: Vec<&str> = svg
             .split("class=\"cluster\">\n<title>")

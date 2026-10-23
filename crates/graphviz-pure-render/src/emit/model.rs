@@ -4,14 +4,17 @@
 //!
 //! Node shapes and labels come from `graphviz_pure_geom::node_size` (`common_init_node` and the shape
 //! init functions); positions come from the layout (`NodeData::pos`, `EdgeData::spline`,
-//! `EdgeData::label_pos`, `SubgraphData::bb`, `Graph::bb`) and the label position attributes
-//! (`lp`, `xlp`, `head_lp`, `tail_lp`).
+//! `EdgeData::label_pos`, `SubgraphData::bb`, `Graph::bb`, and the `layout` fields of each
+//! object). Attributes such as `xlp` or `lp` in the input are not layout results: only
+//! `neato -n` reads them, as its layout.
 
 use super::arrows::arrow_flags;
 use super::attrs::Attrs;
 use graphviz_pure_core::font::{PostscriptFontAlias, TextJustify, translate_postscript_fontname};
 use graphviz_pure_core::strtod::sscanf;
-use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
+use graphviz_pure_core::{
+    AttrMap, BoundingBox, ClusterReg, Graph, GraphKind, GraphLayout, LabelPlace, Point,
+};
 use graphviz_pure_geom::html_label::HtmlLabel;
 use graphviz_pure_geom::node_size::{
     LABEL_AT_LEFT, LABEL_AT_RIGHT, LABEL_AT_TOP, LabelGeometry, NodeGeometry, NodeSizeEnv,
@@ -163,10 +166,6 @@ pub(crate) struct RCluster<'g> {
     pub nodes: Vec<usize>,
 }
 
-/// Private attribute with a layout-computed graph or cluster label position (exact).
-pub(crate) const LABEL_POS_KEY: &str = "\u{1}lp";
-pub(crate) use graphviz_pure_core::CLUST_NODE_KEY;
-
 /// `GD_has_labels` bits.
 pub(crate) const EDGE_LABEL: u32 = 1 << 0;
 pub(crate) const HEAD_LABEL: u32 = 1 << 1;
@@ -193,24 +192,12 @@ pub(crate) struct Model<'g> {
 impl Model<'_> {
     /// `AGSEQ(n)`.
     pub fn node_seq(&self, n: usize) -> usize {
-        seq_of(&self.g.nodes[n].attrs, n)
+        self.g.nodes[n].layout.seq.unwrap_or(n + 1)
     }
     /// `AGSEQ(e)`.
     pub fn edge_seq(&self, e: usize) -> usize {
-        seq_of(&self.g.edges[e].attrs, e)
+        self.g.edges[e].layout.seq.unwrap_or(e + 1)
     }
-}
-
-fn seq_of(attrs: &AttrMap, index: usize) -> usize {
-    attrs
-        .get(graphviz_pure_core::SEQ_KEY)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(index + 1)
-}
-
-fn parse_point(s: Option<&str>) -> Option<Point> {
-    let r = sscanf(s?, "%lf,%lf");
-    (r.count == 2).then(|| Point::new(r.values[0], r.values[1]))
 }
 
 /// `is_a_cluster(g)` for a subgraph (`lib/common/utils.c`).
@@ -294,7 +281,7 @@ impl<'g> Model<'g> {
             let xlabel = geom.xlabel.as_ref().map(|xg| {
                 has_labels |= NODE_XLABEL;
                 let mut l = TextLabel::from_geometry(xg, a.get("xlabel").unwrap_or(""), fontcolor);
-                if let Some(p) = parse_point(a.get("xlp")) {
+                if let Some(p) = n.layout.xlabel {
                     l.pos = p;
                     l.set = true;
                 }
@@ -302,12 +289,7 @@ impl<'g> Model<'g> {
             });
             let w = n.width * 72.0;
             // The layout's ND_lw/ND_rw when they differ (dot's self-loop space in ND_rw).
-            let (lw, rw) = n
-                .attrs
-                .get(graphviz_pure_core::NODE_LW_RW_KEY)
-                .and_then(|s| s.split_once(','))
-                .and_then(|(l, r)| Some((l.parse().ok()?, r.parse().ok()?)))
-                .unwrap_or((w / 2.0, w / 2.0));
+            let (lw, rw) = n.layout.lw_rw.unwrap_or((w / 2.0, w / 2.0));
             nodes.push(RNode {
                 name: &n.name,
                 attrs: a,
@@ -321,9 +303,7 @@ impl<'g> Model<'g> {
             });
         }
 
-        let no_edge_init = g
-            .graph_attrs
-            .contains_key(graphviz_pure_core::NO_EDGE_INIT_KEY);
+        let no_edge_init = g.layout.no_edge_init;
         let mut edges = Vec::with_capacity(g.edges.len());
         let mut out_edges = vec![Vec::new(); g.nodes.len()];
         for (ei, e) in g.edges.iter().enumerate() {
@@ -348,16 +328,7 @@ impl<'g> Model<'g> {
                 }
             }
             // The layout's own flags, where cgraph's choice of opposing edge decides them.
-            let mut conc_flags = e
-                .attrs
-                .get(graphviz_pure_core::CONC_ARROW_FLAGS_KEY)
-                .map(|v| v.split(' '))
-                .into_iter()
-                .flatten()
-                .map(|f| {
-                    let (s, e) = f.split_once(',').unwrap_or_default();
-                    (s.parse().unwrap_or(0), e.parse().unwrap_or(0))
-                });
+            let mut conc_flags = e.layout.conc_arrows.iter().flatten().copied();
             let bz = e
                 .spline
                 .segments
@@ -402,48 +373,30 @@ impl<'g> Model<'g> {
             };
             let fontcolor = a.late_nnstring("fontcolor", "black");
             let lfontcolor = a.late_nnstring("labelfontcolor", fontcolor);
+            // The layout's `pos` and `set` of each label.
             let mk = |geo: &Option<LabelGeometry>,
                       key: &str,
-                      pos: Option<Point>,
+                      place: Option<LabelPlace>,
                       color: &str|
              -> Option<TextLabel> {
                 geo.as_ref().map(|lgeo| {
                     let mut l = TextLabel::from_geometry(lgeo, a.get(key).unwrap_or(""), color);
-                    if let Some(p) = pos {
-                        l.pos = p;
-                        l.set = true;
+                    if let Some(p) = place {
+                        l.pos = p.pos;
+                        l.set = p.set;
                     }
                     l
                 })
             };
-            let mut label = mk(&lg.label, "label", e.label_pos, fontcolor);
-            if e.label_unplaced
-                && let Some(l) = label.as_mut()
-            {
-                l.set = false;
-            }
-            let xlabel = mk(&lg.xlabel, "xlabel", parse_point(a.get("xlp")), fontcolor);
-            let mut head_label = mk(
-                &lg.head_label,
-                "headlabel",
-                parse_point(a.get("head_lp")),
-                lfontcolor,
-            );
-            let mut tail_label = mk(
-                &lg.tail_label,
-                "taillabel",
-                parse_point(a.get("tail_lp")),
-                lfontcolor,
-            );
-            if let Some(u) = e.attrs.get(graphviz_pure_core::UNPLACED_PORT_LABELS_KEY) {
-                for (c, l) in [('h', &mut head_label), ('t', &mut tail_label)] {
-                    if u.contains(c)
-                        && let Some(l) = l.as_mut()
-                    {
-                        l.set = false;
-                    }
-                }
-            }
+            let main = e.label_pos.map(|pos| LabelPlace {
+                pos,
+                set: !e.label_unplaced,
+            });
+            let label = mk(&lg.label, "label", main, fontcolor);
+            let placed = |pos| LabelPlace { pos, set: true };
+            let xlabel = mk(&lg.xlabel, "xlabel", e.layout.xlabel.map(placed), fontcolor);
+            let head_label = mk(&lg.head_label, "headlabel", e.layout.head_label, lfontcolor);
+            let tail_label = mk(&lg.tail_label, "taillabel", e.layout.tail_label, lfontcolor);
             if label.is_some() {
                 has_labels |= EDGE_LABEL;
             }
@@ -465,30 +418,22 @@ impl<'g> Model<'g> {
                 xlabel,
                 head_label,
                 tail_label,
-                tail_port: e
-                    .attrs
-                    .get(graphviz_pure_core::TAIL_PORT_NAME_KEY)
-                    .map_or_else(
-                        || {
-                            e.tail_port
-                                .compass
-                                .as_deref()
-                                .or(e.tail_port.name.as_deref())
-                        },
-                        |s| Some(s.as_str()).filter(|s| !s.is_empty()),
-                    ),
-                head_port: e
-                    .attrs
-                    .get(graphviz_pure_core::HEAD_PORT_NAME_KEY)
-                    .map_or_else(
-                        || {
-                            e.head_port
-                                .compass
-                                .as_deref()
-                                .or(e.head_port.name.as_deref())
-                        },
-                        |s| Some(s.as_str()).filter(|s| !s.is_empty()),
-                    ),
+                tail_port: match &e.layout.port_names {
+                    Some((t, _)) => Some(t.as_str()).filter(|s| !s.is_empty()),
+                    None => e
+                        .tail_port
+                        .compass
+                        .as_deref()
+                        .or(e.tail_port.name.as_deref()),
+                },
+                head_port: match &e.layout.port_names {
+                    Some((_, h)) => Some(h.as_str()).filter(|s| !s.is_empty()),
+                    None => e
+                        .head_port
+                        .compass
+                        .as_deref()
+                        .or(e.head_port.name.as_deref()),
+                },
             });
         }
 
@@ -518,19 +463,14 @@ impl<'g> Model<'g> {
             flip: bool,
         ) {
             let s = &g.subgraphs[sid];
-            if is_a_cluster(&s.name, &s.graph_attrs)
-                && (s.bb != BoundingBox::default()
-                    || s.graph_attrs
-                        .contains_key(graphviz_pure_core::REGISTERED_CLUSTER_KEY))
-                && !s
-                    .graph_attrs
-                    .contains_key(graphviz_pure_core::UNREGISTERED_CLUSTER_KEY)
-            {
+            let drawn = match s.layout.reg {
+                ClusterReg::Registered => true,
+                ClusterReg::Unregistered => false,
+                ClusterReg::Unknown => s.bb != BoundingBox::default(),
+            };
+            if is_a_cluster(&s.name, &s.graph_attrs) && drawn {
                 let a = Attrs(&s.graph_attrs);
-                let label = if s
-                    .graph_attrs
-                    .contains_key(graphviz_pure_core::NO_GRAPH_LABEL_KEY)
-                {
+                let label = if s.layout.no_label {
                     None
                 } else {
                     graph_label_geometry_in(&s.name, s.html_name, &s.graph_attrs, false, flip, env)
@@ -542,25 +482,23 @@ impl<'g> Model<'g> {
                         a.get("label").unwrap_or(""),
                         a.late_nnstring("fontcolor", "black"),
                     );
-                    l.pos = parse_point(a.get(LABEL_POS_KEY))
-                        .or_else(|| parse_point(a.get("lp")))
-                        .unwrap_or_else(|| {
-                            let d = gl.border.map_or(Point::default(), |b| b.1);
-                            let bb = s.bb;
-                            let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
-                                bb.ur.y - d.y / 2.0
-                            } else {
-                                bb.ll.y + d.y / 2.0
-                            };
-                            let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
-                                bb.ur.x - d.x / 2.0
-                            } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
-                                bb.ll.x + d.x / 2.0
-                            } else {
-                                (bb.ll.x + bb.ur.x) / 2.0
-                            };
-                            Point::new(x, y)
-                        });
+                    l.pos = s.layout.label_pos.unwrap_or_else(|| {
+                        let d = gl.border.map_or(Point::default(), |b| b.1);
+                        let bb = s.bb;
+                        let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
+                            bb.ur.y - d.y / 2.0
+                        } else {
+                            bb.ll.y + d.y / 2.0
+                        };
+                        let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
+                            bb.ur.x - d.x / 2.0
+                        } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
+                            bb.ll.x + d.x / 2.0
+                        } else {
+                            (bb.ll.x + bb.ur.x) / 2.0
+                        };
+                        Point::new(x, y)
+                    });
                     l.set = true;
                     l
                 });
@@ -625,23 +563,25 @@ impl<'g> Model<'g> {
             }
             false
         };
-        let listed = |attrs: &AttrMap, owner: Option<usize>| -> Option<Vec<usize>> {
-            let list = attrs.get(graphviz_pure_core::CLUSTER_LIST_KEY)?;
+        let listed = |layout: &GraphLayout, owner: Option<usize>| -> Option<Vec<usize>> {
             Some(
-                list.split_ascii_whitespace()
-                    .filter_map(|si| si.parse::<usize>().ok())
+                layout
+                    .clusters
+                    .as_ref()?
+                    .iter()
+                    .copied()
                     .filter(|&si| si < parent.len() && below(si, owner))
                     .filter_map(|si| of_sub[si])
                     .collect(),
             )
         };
-        if let Some(list) = listed(&g.graph_attrs, None) {
+        if let Some(list) = listed(&g.layout, None) {
             root_clusters = list;
         }
         // Only the root's list repeats clusters (`copyClusterInfo`); repeats below it
         // would multiply at every level.
         for c in &mut clusters {
-            if let Some(mut list) = listed(&g.subgraphs[c.sub].graph_attrs, Some(c.sub)) {
+            if let Some(mut list) = listed(&g.subgraphs[c.sub].layout, Some(c.sub)) {
                 let mut seen = std::collections::HashSet::new();
                 list.retain(|&k| seen.insert(k));
                 c.children = list;
@@ -657,25 +597,23 @@ impl<'g> Model<'g> {
                 ga.get("label").unwrap_or(""),
                 ga.late_nnstring("fontcolor", "black"),
             );
-            l.pos = parse_point(ga.get(LABEL_POS_KEY))
-                .or_else(|| parse_point(ga.get("lp")))
-                .unwrap_or_else(|| {
-                    // place_root_label
-                    let d = Point::new(gl.label.dimen.x + 16.0, gl.label.dimen.y + 8.0);
-                    let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
-                        bb.ur.x - d.x / 2.0
-                    } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
-                        bb.ll.x + d.x / 2.0
-                    } else {
-                        (bb.ll.x + bb.ur.x) / 2.0
-                    };
-                    let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
-                        bb.ur.y - d.y / 2.0
-                    } else {
-                        bb.ll.y + d.y / 2.0
-                    };
-                    Point::new(x, y)
-                });
+            l.pos = g.layout.label_pos.unwrap_or_else(|| {
+                // place_root_label
+                let d = Point::new(gl.label.dimen.x + 16.0, gl.label.dimen.y + 8.0);
+                let x = if gl.pos_flag & LABEL_AT_RIGHT != 0 {
+                    bb.ur.x - d.x / 2.0
+                } else if gl.pos_flag & LABEL_AT_LEFT != 0 {
+                    bb.ll.x + d.x / 2.0
+                } else {
+                    (bb.ll.x + bb.ur.x) / 2.0
+                };
+                let y = if gl.pos_flag & LABEL_AT_TOP != 0 {
+                    bb.ur.y - d.y / 2.0
+                } else {
+                    bb.ll.y + d.y / 2.0
+                };
+                Point::new(x, y)
+            });
             l.set = true;
             l
         });

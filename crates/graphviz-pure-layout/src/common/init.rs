@@ -309,6 +309,7 @@ impl<'a> LGraph<'a> {
             out,
             inn,
             ndim,
+            odim: 0,
             nodesep,
             bb: BoundingBox::default(),
             label,
@@ -328,12 +329,27 @@ impl<'a> LGraph<'a> {
     /// Writes positions, splines, label positions and bounding boxes back
     /// into `graph` (points, with the final translation already applied).
     pub fn write_back(&self, graph: &mut Graph) {
+        graph.layout.odim = self.odim;
         for (i, n) in self.nodes.iter().enumerate() {
             let nd = &mut graph.nodes[i];
             nd.pos = n.coord;
             nd.width = n.width;
             nd.height = n.height;
+            nd.layout.xlabel = n.xlabel.as_ref().filter(|l| l.set).map(|l| l.pos);
+            nd.layout.higher_dims = if self.odim >= 3 {
+                (2..self.odim)
+                    .map(|k| 72.0 * n.pos.get(k).copied().unwrap_or(0.0))
+                    .collect()
+            } else {
+                Vec::new()
+            };
         }
+        let place = |l: &Option<TextLabel>| {
+            l.as_ref().map(|l| graphviz_pure_core::LabelPlace {
+                pos: l.pos,
+                set: l.set,
+            })
+        };
         for (i, e) in self.edges.iter().enumerate() {
             let ed = &mut graph.edges[i];
             ed.spline = graphviz_pure_core::Spline {
@@ -355,43 +371,9 @@ impl<'a> LGraph<'a> {
             // unplaced position is the origin, moved by the final translation).
             ed.label_pos = e.label.as_ref().map(|l| l.pos);
             ed.label_unplaced = e.label.as_ref().is_some_and(|l| !l.set);
-            // emit_edge_label draws only placed head and tail labels.
-            let unplaced: String = [('h', &e.head_label), ('t', &e.tail_label)]
-                .into_iter()
-                .filter(|(_, l)| l.as_ref().is_some_and(|l| !l.set))
-                .map(|(c, _)| c)
-                .collect();
-            if !unplaced.is_empty() {
-                ed.attrs.insert(
-                    graphviz_pure_core::UNPLACED_PORT_LABELS_KEY.to_string(),
-                    unplaced,
-                );
-            }
-            // Exact values, as the no-layout engine stores them: the renderer works from
-            // these positions as C works from ED_head_label(e)->pos, and the output
-            // formatters round them when they print `head_lp`, `tail_lp` and `xlp`.
-            // attach_attrs_and_arrows: only edges with splines get label positions, and
-            // xlp only when the xlabel was placed.
-            for (key, lbl) in [
-                ("head_lp", &e.head_label),
-                ("tail_lp", &e.tail_label),
-                ("xlp", &e.xlabel),
-            ] {
-                if let Some(l) = lbl
-                    .as_ref()
-                    .filter(|l| e.spl.is_some() && (key != "xlp" || l.set))
-                {
-                    ed.attrs
-                        .insert(key.to_string(), format!("{:?},{:?}", l.pos.x, l.pos.y));
-                }
-            }
-        }
-        for (i, n) in self.nodes.iter().enumerate() {
-            if let Some(l) = n.xlabel.as_ref().filter(|l| l.set) {
-                graph.nodes[i]
-                    .attrs
-                    .insert("xlp".to_string(), format!("{:?},{:?}", l.pos.x, l.pos.y));
-            }
+            ed.layout.xlabel = e.xlabel.as_ref().filter(|l| l.set).map(|l| l.pos);
+            ed.layout.head_label = place(&e.head_label);
+            ed.layout.tail_label = place(&e.tail_label);
         }
         graph.bb = self.bb;
         // Clusters the layout did not register keep the `bb` they were given,
@@ -409,36 +391,20 @@ impl<'a> LGraph<'a> {
             let sg = &mut graph.subgraphs[c.subgraph];
             sg.bb = c.bb;
             // GD_clust holds it even with an empty box, which is drawn.
-            sg.graph_attrs.insert(
-                graphviz_pure_core::REGISTERED_CLUSTER_KEY.to_string(),
-                String::new(),
-            );
+            sg.layout.reg = graphviz_pure_core::ClusterReg::Registered;
             registered[c.subgraph] = true;
         }
         for (i, sg) in graph.subgraphs.iter_mut().enumerate() {
             if !registered[i] && sg.bb != graphviz_pure_core::BoundingBox::default() {
-                sg.graph_attrs.insert(
-                    graphviz_pure_core::UNREGISTERED_CLUSTER_KEY.to_string(),
-                    String::new(),
-                );
+                sg.layout.reg = graphviz_pure_core::ClusterReg::Unregistered;
             }
         }
-        // Placed graph and cluster labels go to the renderer through the private
-        // key the no-layout engine uses; it would otherwise re-place them with
+        // Placed graph and cluster labels; the renderer would otherwise re-place them with
         // dot's rules (which flip for rankdir).
-        let exact = |p: Point| format!("{:?},{:?}", p.x, p.y);
-        if let Some(l) = self.label.as_ref().filter(|l| l.set) {
-            graph.graph_attrs.insert(
-                crate::common::postproc::LABEL_POS_KEY.to_string(),
-                exact(l.pos),
-            );
-        }
+        graph.layout.label_pos = self.label.as_ref().filter(|l| l.set).map(|l| l.pos);
         for c in &self.clusters {
             if let Some(l) = c.label.as_ref().filter(|l| l.set) {
-                graph.subgraphs[c.subgraph].graph_attrs.insert(
-                    crate::common::postproc::LABEL_POS_KEY.to_string(),
-                    exact(l.pos),
-                );
+                graph.subgraphs[c.subgraph].layout.label_pos = Some(l.pos);
             }
         }
     }

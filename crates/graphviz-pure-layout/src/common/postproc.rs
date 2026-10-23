@@ -7,21 +7,13 @@ use super::init::pad;
 use super::types::{LABEL_AT_LEFT, LABEL_AT_RIGHT, LABEL_AT_TOP, LGraph};
 use graphviz_pure_core::Point;
 
-/// Graph attribute holding a graph or cluster label position computed by the layout, in
-/// exact notation. Renderers prefer it to `lp`; output writers never print it.
-pub const LABEL_POS_KEY: &str = "\u{1}lp";
-
 /// For engines that return before `dotneato_postprocess` on a graph without nodes
 /// (`twopi_layout`, `circo_layout`, `patchwork_layout`): the graph and cluster labels
 /// keep their zeroed position, which C draws and prints at the origin.
 pub(crate) fn labels_at_origin(graph: &mut graphviz_pure_core::Graph) {
-    let origin = "0.0,0.0".to_string();
-    graph
-        .graph_attrs
-        .insert(LABEL_POS_KEY.to_string(), origin.clone());
+    graph.layout.label_pos = Some(Point::default());
     for sg in &mut graph.subgraphs {
-        sg.graph_attrs
-            .insert(LABEL_POS_KEY.to_string(), origin.clone());
+        sg.layout.label_pos = Some(Point::default());
     }
 }
 

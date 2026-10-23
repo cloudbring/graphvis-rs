@@ -4,7 +4,7 @@
 use super::model::Model;
 use super::num::fmt_g;
 use super::{y_dir, y_offset};
-use graphviz_pure_core::{Graph, HTML_VALUE_PREFIX, Point, attr_is_html, set_attr};
+use graphviz_pure_core::{Graph, Point, attr_is_html, set_attr};
 use graphviz_pure_geom::shapes::{RecordField, ShapeKind};
 use std::collections::BTreeSet;
 use std::fmt::Write;
@@ -39,25 +39,15 @@ fn record_rects(f: &RecordField, c: Point, y_off: f64, out: &mut String) {
 /// edge has start or end arrows.
 pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<String>>) {
     let mut g = m.g.clone();
-    // (the writers read the HTML marks)
-    let private = |k: &str| k.starts_with('\u{1}') && !k.starts_with(HTML_VALUE_PREFIX);
-    g.graph_attrs.retain(|k, _| !private(k));
-    for sg in &mut g.subgraphs {
-        sg.graph_attrs.retain(|k, _| !private(k));
-    }
-    for e in &mut g.edges {
-        e.attrs.retain(|k, _| !private(k));
-    }
     let (mut s_arrows, mut e_arrows) = (false, false);
     let y_off = y_offset(m.bb);
     let pt = |p: Point| pt(p, y_off);
     for (i, n) in m.nodes.iter().enumerate() {
-        let a = &mut g.nodes[i].attrs;
-        let clust_node = a.contains_key(super::model::CLUST_NODE_KEY);
-        a.retain(|k, _| !private(k));
-        if clust_node {
+        let layout = &m.g.nodes[i].layout;
+        if layout.clust_node {
             continue;
         }
+        let a = &mut g.nodes[i].attrs;
         set_attr(a, "pos", pt(n.coord), false);
         set_attr(a, "height", g5(n.ht / 72.0), false);
         set_attr(a, "width", g5((n.lw + n.rw) / 72.0), false);
@@ -77,19 +67,8 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
         if e.bz.is_empty() {
             continue;
         }
-        // `if (ED_edge_type(e) == IGNORED) continue;`: the layout's label positions,
-        // written for the renderer, give way to the input values.
-        let src = &m.g.edges[i].attrs;
-        if src.contains_key(graphviz_pure_core::IGNORED_EDGE_KEY) {
-            let a = &mut g.edges[i].attrs;
-            for (k, ik) in graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS {
-                match src.get(ik) {
-                    Some(v) => set_attr(a, k, v.clone(), attr_is_html(src, ik)),
-                    None => {
-                        a.remove(k);
-                    }
-                };
-            }
+        // `if (ED_edge_type(e) == IGNORED) continue;`, and no edge below `GVSPLINES`.
+        if m.g.edges[i].layout.no_attrs {
             continue;
         }
         let mut s = String::new();
@@ -314,7 +293,7 @@ pub(crate) fn write_plain(
     );
     for (i, n) in m.nodes.iter().enumerate() {
         let a = n.attrs;
-        if a.get(super::model::CLUST_NODE_KEY).is_some() {
+        if g.nodes[i].layout.clust_node {
             continue;
         }
         let lbl = if n.label.is_html {

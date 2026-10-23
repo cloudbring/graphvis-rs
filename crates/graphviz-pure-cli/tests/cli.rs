@@ -859,6 +859,55 @@ fn fdp_nodes_pinned_near_1e17_lay_out_like_c() {
     }
 }
 
+// Issue #110: attribute names the port once reserved for layout results (`\x01…`) are
+// ordinary attributes, as they are to C: they change no drawing and every writer prints them.
+#[test]
+fn control_character_attribute_names_are_ordinary_attributes() {
+    let src = "digraph G { \"\u{1}unregclust\"=\"1\"; subgraph cluster_0 { a b } a -> b }\n";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(svg_cluster_titles(&out), ["cluster_0"]);
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("subgraph cluster_0 {\n\t\tgraph [bb=\"8,8,78,132\"];"),
+        "{out}"
+    );
+    let (out, err, ok) = run(&["-Tjson"], "digraph G { \"\u{1}seq\"=\"x\"; a }\n");
+    assert!(ok, "{err}");
+    assert!(out.contains("\"\u{1}seq\": \"x\","), "{out}");
+    let (out, err, ok) = run(&["-Tdot"], "digraph G { a [\"\u{1}lwrw\"=\"1,100\"] }\n");
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "a\t[\"\u{1}lwrw\"=\"1,100\",\n\t\theight=0.5,\n\t\tpos=\"27,18\",\n\t\twidth=0.75];"
+        ),
+        "{out}"
+    );
+}
+
+// Issue #124: label positions in the input are not layout results. An edge with no spline,
+// no main label and an unplaced xlabel is not emitted (`edge_in_box`), and an xlabel
+// `placeLabels` left unplaced is not drawn (`emit_edge_label` tests `lp->set`).
+#[test]
+fn input_label_positions_are_not_placed_labels() {
+    let src =
+        "digraph { splines=none; a -> b [xlabel=X xlp=\"1,2\" headlabel=H head_lp=\"3,4\"]; }\n";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(!out.contains("class=\"edge\""), "{out}");
+    let src = "digraph G { forcelabels=false; splines=\"ortho\"; concentrate=\"true\"; \
+        nodesep=0.05; ranksep=0.05; \
+        node [xlabel=\"NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN\"]; \
+        \"8\" -> \"9\" [xlabel=\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\" xlp=\"11,11\"]; \
+        \"8\" -> \"13\"; \"9\" -> \"14\"; \"14\" -> \"13\"; \
+        \"13\" -> \"14\" [xlabel=\"EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\" xlp=\"3,4\"]; }\n";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: 4 out of 6 exterior labels positioned.\n");
+    assert!(!out.contains("AAAA") && !out.contains("EEEE"), "{out}");
+}
+
 // Extreme coordinates (docs/porting/crashes.md): C's `sscanf("%lf")` reads `nan` and `inf` in
 // `pos`, and a finite `pos` can overflow once scaled to points. Where C produces output (often
 // a component at NaN) the port matches it; where C crashes or hangs, the port must not. These

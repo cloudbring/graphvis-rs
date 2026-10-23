@@ -1727,6 +1727,7 @@ mod tests {
             rank: 0,
             order: 0,
             html_name: false,
+            layout: Default::default(),
         };
         for (k, v) in attrs {
             n.attrs.insert((*k).into(), (*v).into());

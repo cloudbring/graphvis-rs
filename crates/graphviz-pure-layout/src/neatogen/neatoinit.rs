@@ -961,46 +961,22 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
             e.label_pos = None;
         }
         for sg in graph.subgraphs.iter_mut().filter(|s| s.is_cluster) {
-            sg.graph_attrs.insert(
-                graphviz_pure_core::UNREGISTERED_CLUSTER_KEY.to_string(),
-                String::new(),
-            );
+            sg.layout.reg = graphviz_pure_core::ClusterReg::Unregistered;
         }
         graph.bb = graphviz_pure_core::BoundingBox::default();
-        graph.graph_attrs.insert(
-            crate::common::postproc::LABEL_POS_KEY.to_string(),
-            "0.0,0.0".to_string(),
-        );
+        graph.layout.label_pos = Some(Point::default());
         return;
     };
     gv_postprocess(&mut g, false);
+    // GD_odim(g->root) = MIN(outdim, Ndim)
+    g.odim = (outdim as usize).min(ndim);
+    g.write_back(graph);
     // With State below GVSPLINES, attach_attrs_and_arrows writes no edge position: the
     // given splines are drawn, and the edges keep their input attributes, as an IGNORED
     // edge's do.
-    let kept: Vec<Vec<(&str, String)>> = if splines_state {
-        Vec::new()
-    } else {
-        graph
-            .edges
-            .iter()
-            .map(|e| {
-                graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS
-                    .iter()
-                    .filter_map(|(k, ik)| e.attrs.get(*k).map(|v| (*ik, v.clone())))
-                    .collect()
-            })
-            .collect()
-    };
-    g.write_back(graph);
-    for ((e, ge), input) in graph.edges.iter_mut().zip(&g.edges).zip(kept) {
-        if ge.spl.is_some() {
-            e.attrs.insert(
-                graphviz_pure_core::IGNORED_EDGE_KEY.to_string(),
-                String::new(),
-            );
-            for (ik, v) in input {
-                e.attrs.insert(ik.to_string(), v);
-            }
+    if !splines_state {
+        for (e, ge) in graph.edges.iter_mut().zip(&g.edges) {
+            e.layout.no_attrs = ge.spl.is_some();
         }
     }
 }
@@ -1148,6 +1124,8 @@ pub fn neato_layout(graph: &mut Graph, nop: u8) -> Result<()> {
         add_z(&g, z_declared, graph);
     }
     gv_postprocess(&mut g, !no_translate);
+    // GD_odim(g->root) = MIN(outdim, Ndim)
+    g.odim = (outdim as usize).min(ndim);
     g.write_back(graph);
     Ok(())
 }
@@ -1428,12 +1406,8 @@ mod tests {
             "{:?}",
             g.bb
         );
-        let xlp = g.nodes[0].attrs.get("xlp").expect("xlp");
-        let r = sscanf(xlp, "%lf,%lf");
-        assert!(
-            near(Point::new(r.values[0], r.values[1]), -3.5, 44.4),
-            "{xlp}"
-        );
+        let xlp = g.nodes[0].layout.xlabel.expect("xlp");
+        assert!(near(xlp, -3.5, 44.4), "{xlp:?}");
     }
 
     // freeEdgeInfo: after `ratio` rescales the drawing, the given splines are dropped and

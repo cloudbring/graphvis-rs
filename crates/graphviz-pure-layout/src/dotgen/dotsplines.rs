@@ -1031,6 +1031,7 @@ impl Dot<'_> {
             bb: Default::default(),
             html_name: false,
             empty_name: false,
+            layout: Default::default(),
         });
         // (main edge, aux edge) pairs and the "heavy" edge.
         let mut pairs: Vec<(E, usize)> = Vec::new();
