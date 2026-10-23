@@ -23,10 +23,12 @@ use crate::pack::{
 };
 use graphviz_pure_core::{BoundingBox, Graph, Point};
 
-/// One packed component: its nodes, top-level clusters (indices of
-/// [`PClust`]s) and `GD_bb` of the component subgraph.
+/// One packed component: its nodes, its edges (the root's edges with both
+/// ends in it), top-level clusters (indices of [`PClust`]s) and `GD_bb` of the
+/// component subgraph.
 struct CompInfo {
     nodes: Vec<N>,
+    edges: std::collections::HashSet<E>,
     clusters: Vec<usize>,
     bb: BoundingBox,
 }
@@ -71,8 +73,15 @@ impl<'a> Dot<'a> {
     /// `i`, `out = agsubg(g, "_cc_<i>", 1)` holding its nodes and induced
     /// edges (`unionNodes`, `graphviz_node_induce(out, NULL)`), with the
     /// root's subgraphs projected into it (`subGInduce`: `projectG` clones,
-    /// `agcopyattr` of the original's values). Returns the `_cc_<i>` graphs.
-    fn attach_cc_subgraphs(&mut self, graph: &Graph, ccs: &[CComp]) -> Vec<G> {
+    /// `agcopyattr` of the original's values). `laid_out[i]` holds what component
+    /// `i`'s own layout left in its projections, when it ran on its own. Returns
+    /// the `_cc_<i>` graphs.
+    fn attach_cc_subgraphs(
+        &mut self,
+        graph: &Graph,
+        ccs: &[CComp],
+        laid_out: &[Vec<Option<Membership>>],
+    ) -> Vec<G> {
         // A new subgraph of the root takes the root dictionary's defaults. A
         // parsed graph always has dictionaries; a graph built without them has
         // no declared defaults, so its own values stand in.
@@ -108,16 +117,26 @@ impl<'a> Dot<'a> {
             self.graphs[0].subgs.push(g);
             // Projected subgraphs, preorder (parents first).
             let mut ids: Vec<G> = Vec::with_capacity(cc.subgraphs.len());
-            for p in &cc.subgraphs {
+            let laid_out = laid_out.get(i);
+            for (k, p) in cc.subgraphs.iter().enumerate() {
                 let parent = p.parent.map_or(g, |k| ids[k]);
                 let s = self.graphs.len();
+                let (nodes, edges) = match laid_out.and_then(|l| l.get(k)).and_then(Option::as_ref)
+                {
+                    Some(m) => (m.nodes.clone(), m.edges.clone()),
+                    None => (
+                        p.nodes.iter().copied().collect(),
+                        p.edges.iter().copied().collect(),
+                    ),
+                };
                 self.graphs.push(GraphInfo {
                     name: graph.subgraphs[p.orig].name.clone(),
                     root: 0,
                     cg_parent: Some(parent),
-                    nodes: p.nodes.iter().copied().collect(),
-                    edges: p.edges.iter().copied().collect(),
+                    nodes,
+                    edges,
                     attrs: graph.subgraphs[p.orig].graph_attrs.clone(),
+                    proj_of: Some(p.orig),
                     ..GraphInfo::default()
                 });
                 self.graphs[parent].subgs.push(s);
@@ -140,6 +159,7 @@ impl<'a> Dot<'a> {
         // `GD_has_labels(g->root)`: the root's flags so far (its own label and
         // the components initialised before this one).
         g.has_labels = r.has_labels;
+        c.root_bb = r.bb;
         c.cl_type = root.cl_type;
         c.concentrate = root.concentrate;
         c
@@ -257,6 +277,7 @@ impl<'a> Dot<'a> {
         let b = c.graphs[0].bb;
         CompInfo {
             nodes: cg.nodes.clone(),
+            edges: cg.edges.iter().copied().collect(),
             clusters,
             bb: BoundingBox::new(b.ll.x, b.ll.y, b.ur.x, b.ur.y),
         }
@@ -279,6 +300,39 @@ impl<'a> Dot<'a> {
         d.bound = true;
         p.orig
     }
+}
+
+/// The nodes and edges (root indices) of a projected subgraph after its
+/// component's layout.
+struct Membership {
+    nodes: std::collections::BTreeSet<N>,
+    edges: std::collections::BTreeSet<E>,
+}
+
+/// [`Membership`] of each of `cc`'s projected subgraphs that the component's
+/// layout `c` knows (by index into `cc.subgraphs`).
+fn projected_membership(c: &Dot<'_>, cg: &CompGraph, cc: &CComp) -> Vec<Option<Membership>> {
+    let mut out: Vec<Option<Membership>> = (0..cc.subgraphs.len()).map(|_| None).collect();
+    for s in &c.graphs {
+        let Some(slot) = s.sub_index.and_then(|k| out.get_mut(k)) else {
+            continue;
+        };
+        *slot = Some(Membership {
+            nodes: s
+                .nodes
+                .iter()
+                .filter_map(|&n| c.nodes.get(n)?.real.and_then(|r| cg.nodes.get(r)))
+                .copied()
+                .collect(),
+            edges: s
+                .edges
+                .iter()
+                .filter_map(|&e| c.edges.get(e)?.real.and_then(|r| cg.edges.get(r)))
+                .copied()
+                .collect(),
+        });
+    }
+    out
 }
 
 /// A cluster subgraph of a component (`projectG`'s clone), with the
@@ -309,8 +363,16 @@ impl DotPack<'_, '_> {
         BoundingBox::new(b.ll.x, b.ll.y, b.ur.x, b.ur.y)
     }
 
-    /// `compute_bb(g)` over `nodes`, with the top-level `clusters`.
-    fn compute_bb(&self, nodes: &[N], clusters: &[G]) -> Option<BoundingBox> {
+    /// `compute_bb(g)` over `nodes`, with the top-level `clusters`. `agfstout(g, n)`
+    /// walks `g`'s own out-edges: a component's are `edges` (a node of two
+    /// non-nested clusters is in two components, and its edges into the other
+    /// one are not in this one, #100); the root's are all of them (`None`).
+    fn compute_bb(
+        &self,
+        nodes: &[N],
+        edges: Option<&std::collections::HashSet<E>>,
+        clusters: &[G],
+    ) -> Option<BoundingBox> {
         let d = &*self.d;
         if nodes.is_empty() && clusters.is_empty() {
             return None;
@@ -333,6 +395,9 @@ impl DotPack<'_, '_> {
             );
             lbb(&mut bb, nd.xlabel);
             for &e in &nd.cg_out {
+                if edges.is_some_and(|edges| !edges.contains(&e)) {
+                    continue;
+                }
                 let ed = &d.edges[e];
                 let Some(spl) = ed.spl.as_ref() else { continue };
                 for b in spl {
@@ -358,7 +423,8 @@ impl PackGraph for DotPack<'_, '_> {
         self.comps.len()
     }
     fn pk_compute_bb(&mut self, i: usize) {
-        if let Some(bb) = self.compute_bb(&self.comps[i].nodes, &self.comps[i].clusters) {
+        let c = &self.comps[i];
+        if let Some(bb) = self.compute_bb(&c.nodes, Some(&c.edges), &c.clusters) {
             self.comps[i].bb = bb;
         }
         if std::env::var_os("GVDUMP").is_some() {
@@ -475,9 +541,11 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         // are still children of g, so dot sees them (e.g. a root `rank` value
         // they inherit makes each one a rank set). They are deleted only after
         // the layout succeeded (`dot_cleanup_graph` + `agdelete`).
-        let ccsubs = d.attach_cc_subgraphs(graph, &ccs);
+        let ccsubs = d.attach_cc_subgraphs(graph, &ccs, &[]);
         d.dot_layout()?;
-        if !d.aborted {
+        if d.aborted {
+            d.cc_kept = ccsubs;
+        } else {
             let ccsubs: std::collections::BTreeSet<G> = ccsubs.into_iter().collect();
             d.graphs[0].subgs.retain(|s| !ccsubs.contains(s));
         }
@@ -494,7 +562,12 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
     let mut nclust: Vec<Option<PkClust>> = vec![None; d.nodes.len()];
     let mut pcl: Vec<PClust> = Vec::new();
     let mut comps = Vec::with_capacity(ccs.len());
+    // What each laid-out component's dot left in its projected subgraphs (dot's
+    // node_induce adds the induced edges to its cluster clones and drops nodes from
+    // them), which a failed layout leaves in the root.
+    let mut projected: Vec<Vec<Option<Membership>>> = Vec::with_capacity(ccs.len());
     let mut any_splines = false;
+    d.cc_laid_out = true;
     for (ci, cc) in ccs.iter().enumerate() {
         let cg = cc.to_graph(graph);
         if std::env::var_os("GVDUMP").is_some() {
@@ -510,13 +583,18 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         c.cg_in_id_packed = true;
         c.cg_root_node = Some(cg.nodes.clone());
         c.dot_layout()?;
+        // `clip_and_install` grew the root's box.
+        d.graphs[0].bb = c.root_bb;
         // The component's nodes and edges are the root's objects in C, so what
         // its layout wrote before failing (dot_init_node_edge's sizes, ...)
         // stays visible to the root.
         let comp = d.absorb(&c, &cg, ci, &clust_of_sub, &mut pcl, &mut nclust);
+        projected.push(projected_membership(&c, &cg, cc));
         if c.aborted {
-            // doDot returns the component's failure before packing
+            // doDot returns the component's failure before packing, so neither
+            // dot_cleanup_graph nor agdelete runs: the `_cc_<i>` subgraphs stay.
             d.aborted = true;
+            d.cc_kept = d.attach_cc_subgraphs(graph, &ccs, &projected);
             return Ok(());
         }
         any_splines |= c.splines_done;
@@ -541,7 +619,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
     // packSubgraphs
     if pack_graphs_in(&mut pk, &pinfo) {
         let all = pk.d.nodes_of(0);
-        let mut bb = pk.compute_bb(&all, &[]).unwrap_or_default();
+        let mut bb = pk.compute_bb(&all, None, &[]).unwrap_or_default();
         for c in &pk.comps {
             for &k in &c.clusters {
                 expandbb(&mut bb, &DotPack::bb_of(pk.pcl[k].bb));

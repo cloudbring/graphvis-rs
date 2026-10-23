@@ -126,8 +126,8 @@
         "diff_lines": 0
       },
       "fuzz_concentrate_abort": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_curved_selfloop_width": {
         "identical": true,
@@ -206,8 +206,8 @@
         "diff_lines": 0
       },
       "fuzz_lost_edge_label": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_newrank_pack_sink": {
         "identical": true,
@@ -218,8 +218,8 @@
         "diff_lines": 0
       },
       "fuzz_pack_splines_none": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_port_attr_precedence": {
         "identical": true,
@@ -250,8 +250,8 @@
         "diff_lines": 0
       },
       "fuzz_subgraph_splines_root": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_tapered_fma": {
         "identical": true,
@@ -266,12 +266,12 @@
         "diff_lines": 0
       },
       "fuzz_xlabel_backslash_l": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_xlabel_empty_label": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -2472,8 +2472,8 @@
         "diff_lines": 0
       },
       "fuzz_concentrate_abort": {
-        "identical": false,
-        "diff_lines": 160
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_curved_selfloop_width": {
         "identical": true,
@@ -2552,8 +2552,8 @@
         "diff_lines": 0
       },
       "fuzz_lost_edge_label": {
-        "identical": false,
-        "diff_lines": 22
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_newrank_pack_sink": {
         "identical": true,
@@ -2564,8 +2564,8 @@
         "diff_lines": 0
       },
       "fuzz_pack_splines_none": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_port_attr_precedence": {
         "identical": true,
@@ -2596,8 +2596,8 @@
         "diff_lines": 0
       },
       "fuzz_subgraph_splines_root": {
-        "identical": false,
-        "diff_lines": 36
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_tapered_fma": {
         "identical": true,
@@ -2612,12 +2612,12 @@
         "diff_lines": 0
       },
       "fuzz_xlabel_backslash_l": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_xlabel_empty_label": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -4682,8 +4682,8 @@
         "diff_lines": 0
       },
       "fuzz_concentrate_abort": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_curved_selfloop_width": {
         "identical": true,
@@ -4762,8 +4762,8 @@
         "diff_lines": 0
       },
       "fuzz_lost_edge_label": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_newrank_pack_sink": {
         "identical": true,
@@ -4774,8 +4774,8 @@
         "diff_lines": 0
       },
       "fuzz_pack_splines_none": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_port_attr_precedence": {
         "identical": true,
@@ -4806,8 +4806,8 @@
         "diff_lines": 0
       },
       "fuzz_subgraph_splines_root": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_tapered_fma": {
         "identical": true,
@@ -4822,12 +4822,12 @@
         "diff_lines": 0
       },
       "fuzz_xlabel_backslash_l": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_xlabel_empty_label": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -7008,8 +7008,8 @@
         "diff_lines": 0
       },
       "fuzz_concentrate_abort": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_curved_selfloop_width": {
         "identical": true,
@@ -7088,8 +7088,8 @@
         "diff_lines": 0
       },
       "fuzz_lost_edge_label": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_newrank_pack_sink": {
         "identical": true,
@@ -7100,8 +7100,8 @@
         "diff_lines": 0
       },
       "fuzz_pack_splines_none": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_port_attr_precedence": {
         "identical": true,
@@ -7132,8 +7132,8 @@
         "diff_lines": 0
       },
       "fuzz_subgraph_splines_root": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_tapered_fma": {
         "identical": true,
@@ -7148,12 +7148,12 @@
         "diff_lines": 0
       },
       "fuzz_xlabel_backslash_l": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_xlabel_empty_label": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -9318,8 +9318,8 @@
         "diff_lines": 0
       },
       "fuzz_concentrate_abort": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_curved_selfloop_width": {
         "identical": true,
@@ -9398,8 +9398,8 @@
         "diff_lines": 0
       },
       "fuzz_lost_edge_label": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_newrank_pack_sink": {
         "identical": true,
@@ -9410,8 +9410,8 @@
         "diff_lines": 0
       },
       "fuzz_pack_splines_none": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_port_attr_precedence": {
         "identical": true,
@@ -9442,8 +9442,8 @@
         "diff_lines": 0
       },
       "fuzz_subgraph_splines_root": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_tapered_fma": {
         "identical": true,
@@ -9458,12 +9458,12 @@
         "diff_lines": 0
       },
       "fuzz_xlabel_backslash_l": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_xlabel_empty_label": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -11652,8 +11652,8 @@
         "diff_lines": 0
       },
       "fuzz_concentrate_abort": {
-        "identical": false,
-        "diff_lines": 14
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_curved_selfloop_width": {
         "identical": true,
@@ -11732,8 +11732,8 @@
         "diff_lines": 0
       },
       "fuzz_lost_edge_label": {
-        "identical": false,
-        "diff_lines": 1
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_newrank_pack_sink": {
         "identical": true,
@@ -11744,8 +11744,8 @@
         "diff_lines": 0
       },
       "fuzz_pack_splines_none": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_port_attr_precedence": {
         "identical": true,
@@ -11776,8 +11776,8 @@
         "diff_lines": 0
       },
       "fuzz_subgraph_splines_root": {
-        "identical": false,
-        "diff_lines": 6
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_tapered_fma": {
         "identical": true,
@@ -11792,12 +11792,12 @@
         "diff_lines": 0
       },
       "fuzz_xlabel_backslash_l": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_xlabel_empty_label": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,
@@ -14002,8 +14002,8 @@
         "diff_lines": 0
       },
       "fuzz_concentrate_abort": {
-        "identical": false,
-        "diff_lines": 18
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_curved_selfloop_width": {
         "identical": true,
@@ -14082,8 +14082,8 @@
         "diff_lines": 0
       },
       "fuzz_lost_edge_label": {
-        "identical": false,
-        "diff_lines": 3
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_newrank_pack_sink": {
         "identical": true,
@@ -14094,8 +14094,8 @@
         "diff_lines": 0
       },
       "fuzz_pack_splines_none": {
-        "identical": false,
-        "diff_lines": 4
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_port_attr_precedence": {
         "identical": true,
@@ -14126,8 +14126,8 @@
         "diff_lines": 0
       },
       "fuzz_subgraph_splines_root": {
-        "identical": false,
-        "diff_lines": 5
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_tapered_fma": {
         "identical": true,
@@ -14142,12 +14142,12 @@
         "diff_lines": 0
       },
       "fuzz_xlabel_backslash_l": {
-        "identical": false,
-        "diff_lines": 12
+        "identical": true,
+        "diff_lines": 0
       },
       "fuzz_xlabel_empty_label": {
-        "identical": false,
-        "diff_lines": 10
+        "identical": true,
+        "diff_lines": 0
       },
       "gallery_TBbalance_0_6d7295": {
         "identical": true,

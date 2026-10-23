@@ -279,6 +279,41 @@ before `dot_concentrate` rewired it, and it goes wrong in two ways:
 Both change output only where C crashes. (With `splines=line`, C survives the deleted-node
 case because `makeLineEdge` never reads the head; the redirect changes nothing there either.)
 
+## dot's pack components
+
+Closed: #100, #226, #312; #101 is not matched (below).
+
+With `pack` or `packmode`, `doDot` (`lib/dotgen/dotinit.c`) splits the graph with `cccomps`
+into subgraphs `_cc_<i>` of the root, each with clones of the root's clusters (`projectG`),
+and lays each one out with `dotLayout(sg)`. The port lays each component out as a standalone
+copy and copies the results back to the root. What follows from C's components being
+subgraphs, the port now does too:
+
+- **A component's box** (`compute_bb`, `pack.c:801`) walks the component's own out-edges, not
+  the root's (#100).
+- **Cluster edges.** dot's `node_induce` adds the edges between a cluster's nodes to the
+  component's clone, which `agdelete` removes after packing. The root's clusters keep the
+  edges they were declared with, so `-Tdot` writes the others at the root (#312).
+- **A failed component.** When `dotLayout(sg)` fails (ortho cannot build its maze), `doDot`
+  returns before `attachPos` and `agdelete`. The earlier components keep their positions, the
+  `_cc_<i>` subgraphs and their clones stay in the output, and the root's box is what each
+  component's `clip_and_install` grew it to (#226). Some of these inputs make C fail
+  `bezier_bb`'s assertion (`emit.c:4082`) while drawing, for example with the failing
+  component first; the port draws the nodes and exits 0.
+
+**#101 is not matched.** A node in two non-nested clusters is in two components. In C both
+components share its one `Agnodeinfo_t`, and the edges between two shared nodes their
+`Agedgeinfo_t`: the second layout starts from what the first left in those records, and
+`new_spline` appends a second bezier to a shared edge. The port lays every component out on
+fresh records, and the later component's results win. Matching C would mean laying the
+components out in turn on one shared store and reproducing exactly which fields
+`dot_init_node` and `dot_init_edge` do not reset, on inputs where C prints an error
+(`node … belongs to two non-nested clusters`) but still draws and exits 0. On those inputs the
+port prints the same errors and draws a different layout; where C stops
+(`install_in_rank … _cc_2`, exit 1), the port can stop at another check (`expand_cluster`), also
+with exit status 1. Where no node is in two non-nested clusters, the components share no node or
+edge, and the port lays them out as C does.
+
 ## Extreme coordinates
 
 The plan was to validate positions once, where they are parsed. Running C showed this would
@@ -296,7 +331,13 @@ across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
   in `update_bb_bz` covers #201; ortho's failure boundary covers #228 (see above).
 - **Finite positions are laid out exactly by C up to 1e306 inches**, except in algorithms that
   have a limit of their own:
-  - **Packing** (#174) was budgeted in 0.1.1. A non-finite pin gives a component an infinite
+  - **Packing** (#174) was budgeted in 0.1.1, at 2^24 cells once `computeStep` saturates.
+    That refused #250's input, which C packs in 1 s, so the budget is now 2^27 cells. Measured
+    on the reference build with one long edge (#250's input, scaled): C takes 0.9 s and 1.1 GB
+    at 3.4e7 cells, 3.9 s and 4.3 GB at 2^27, 10.5 s and 9.2 GB at 3.4e8, and 47 s and 18 GB
+    at 1e9. The port takes 13 s and 6 GB at 2^27, with C's output. Past 2^27, where C needs more
+    than 4 GB, the port skips packing with a warning. On 32-bit targets (wasm32, at most 4 GiB)
+    the budget is 2^25 cells, about 1.5 GB in the port, which still covers #250. A non-finite pin gives a component an infinite
     box; where its width or height is NaN (`inf - inf`), `computeStep`'s discriminant is NaN
     and C fails `assert(d >= 0)` (#239). The port returns step 0 there, which takes C's own
     `stepSize <= 0` exit: packing is skipped with a warning.
@@ -337,7 +378,7 @@ across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
     infinity, #191) fails; past it, the placement slide never ends. The port stops there as
     `xlhdxload`'s own failure return does: no exterior label is placed, with a warning (#301).
 
-Closed: #227, #239, #240, #269, #270, #301.
+Closed: #227, #239, #240, #250, #269, #270, #301.
 The round-1 guards stay, because they match C and finite or NaN positions still reach them:
 #206 (the Hilbert order and shift for a bb above 2^32 points, or an infinite one), #207 (the
 wrapping grid cell index at 1e17), and #187's finiteness test in `update_bb_bz` (#173, #201).

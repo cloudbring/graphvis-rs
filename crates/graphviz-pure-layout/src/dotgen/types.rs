@@ -294,6 +294,9 @@ pub struct GraphInfo {
     pub attrs: graphviz_pure_core::AttrMap,
     /// Index in `Graph::subgraphs` for input subgraphs.
     pub sub_index: Option<usize>,
+    /// Index in `Graph::subgraphs` of the subgraph a `cccomps` projection
+    /// (`projectG`) copies.
+    pub proj_of: Option<usize>,
 
     pub drawing: Drawing,
     pub label: Option<L>,

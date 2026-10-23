@@ -3383,6 +3383,136 @@ fn newrank_rank_max_cluster_emptied_by_node_induce_does_not_panic() {
     );
 }
 
+// #100: pack's `compute_bb` (lib/pack/pack.c:801) measures a component by its own edges.
+// v6 is in two components; its edge v6 -> v0 belongs to _cc_1 only, so it must not widen
+// _cc_0's box (C: _cc_0 is 8 0 78 176.48, and the cluster boxes below).
+#[test]
+fn pack_component_box_takes_only_its_own_edges() {
+    let (out, _, _) = run(
+        &["-Kdot", "-Tdot"],
+        "digraph G { pack=true; v5; subgraph cluster_0 { v6 [height=1.34] } \
+         subgraph cluster_2 { v6 -> v0; v1 -> v5 } v1 -> v0 }\n",
+    );
+    assert!(out.contains("graph [bb=\"0,0,317,340.48\""), "{out}");
+    assert!(out.contains("graph [bb=\"114,167,184,279.48\"]"), "{out}");
+    assert!(out.contains("graph [bb=\"78,0,220,154.24\"]"), "{out}");
+}
+
+// #101: a node of two non-nested clusters is in two pack components. C lays the second out
+// on the records the first left; the port lays out each one on fresh records (not matched,
+// see docs/porting/crashes.md, "dot's pack components"). It reports what C reports and
+// draws one spline for the shared edge.
+#[test]
+fn pack_node_in_two_non_nested_clusters_lays_out_each_component_afresh() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        "digraph G { pack=true; subgraph cluster_0 { v0; v6 } subgraph cluster_2 { v6 -> v0 } }\n",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Error: node \"v0\" belongs to two non-nested clusters \"cluster_2\" and \"cluster_0\"\n\
+         Error: node \"v6\" belongs to two non-nested clusters \"cluster_2\" and \"cluster_0\"\n"
+    );
+    assert!(
+        out.contains("v6 -> v0\t[pos=\"e,99,36.104 99,71.697 99,64.407 99,55.726 99,47.536\"]"),
+        "{out}"
+    );
+}
+
+// #312: dot's node_induce gives a packed component's cluster clone the edges between its
+// nodes; agdelete drops the clone, so -Tdot writes a loop declared at the root at the root
+// (C), not inside the original cluster.
+#[test]
+fn pack_cluster_loop_edge_stays_at_the_root_in_dot_output() {
+    let (out, err, ok) = run(
+        &["-Kdot", "-Tdot"],
+        "graph { pack=true; n5; subgraph cluster_c { label=C; n0; n1 }; n0 -- n0 }\n",
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("\n\tn0 -- n0\t[pos="), "{out}");
+    assert!(!out.contains("\t\tn0 -- n0"), "{out}");
+}
+
+// #226: when a later component's ortho maze cannot be built, doDot returns before packing
+// (lib/dotgen/dotinit.c): the earlier component keeps its layout, the `_cc_<i>` subgraphs
+// stay, and the root's box is what clip_and_install grew it to (C: 0,0,0,43.595).
+#[test]
+fn pack_failed_component_keeps_cc_subgraphs_and_root_box() {
+    let input = "digraph{pack=true a[shape=box width=1 height=0.5 label=A] \
+        b[shape=box width=1 height=0.5 label=B] a->b splines=ortho nodesep=0 ranksep=0.02\n\
+        node[shape=point width=0.05 height=0.01 fixedsize=true label=\"\"]\n\
+        n3->n2 n10->n7 n1->n11 n10->n4 n8->n2 n5->n3 n6->n4 n3->n10 n6->n3 n6->n0 n3->n6\n\
+        n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}\n";
+    let (out, err, ok) = run(&["-Kdot", "-Tdot"], input);
+    assert!(ok, "{err}");
+    assert!(out.contains("graph [bb=\"0,0,0,43.595\""), "{out}");
+    assert!(out.contains("\tsubgraph _cc_0 {\n"), "{out}");
+    assert!(out.contains("\tsubgraph _cc_1 {\n"), "{out}");
+    assert!(
+        out.contains("\t\ta -> b\t[pos=\"e,0,36.473 0,43.595 0,43.595 0,42.883 0,42.883\"];"),
+        "{out}"
+    );
+    let (svg, _, _) = run(&["-Kdot", "-Tsvg"], input);
+    assert!(svg.contains("<svg width=\"8pt\" height=\"52pt\""), "{svg}");
+}
+
+// #226 with clusters: the failed layout keeps `_cc_0`'s clones of cluster_a and cluster_b, each
+// declaring the graph attributes agcopyattr copied, with the edges dot's node_induce gave them
+// (C's -Tdot, verbatim). An anonymous subgraph's projection keeps its `%<id>` name (-Tjson).
+#[test]
+fn pack_failed_component_keeps_cluster_clones_like_c() {
+    let ortho = "node[shape=point width=0.05 height=0.01 fixedsize=true label=\"\"]\n\
+        n3->n2 n10->n7 n1->n11 n10->n4 n8->n2 n5->n3 n6->n4 n3->n10 n6->n3 n6->n0 n3->n6\n\
+        n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}\n";
+    let input = format!(
+        "digraph{{pack=true splines=ortho nodesep=0 ranksep=0.02\n\
+         subgraph cluster_a {{ label=A; x1; subgraph cluster_b {{ x2; x3 }} x1->x2 }}\n\
+         x2->x3 x3->x1\n{ortho}"
+    );
+    let (out, err, ok) = run(&["-Kdot", "-Tdot"], &input);
+    assert!(ok, "{err}");
+    let expected = concat!(
+        "\tsubgraph _cc_0 {\n",
+        "\t\tsubgraph cluster_a {\n",
+        "\t\t\tgraph [label=A,\n",
+        "\t\t\t\tnodesep=0,\n",
+        "\t\t\t\tpack=true,\n",
+        "\t\t\t\tranksep=0.02,\n",
+        "\t\t\t\tsplines=ortho\n",
+        "\t\t\t];\n",
+        "\t\t\tsubgraph cluster_b {\n",
+        "\t\t\t\tgraph [label=A,\n",
+        "\t\t\t\t\tnodesep=0,\n",
+        "\t\t\t\t\tpack=true,\n",
+        "\t\t\t\t\tranksep=0.02,\n",
+        "\t\t\t\t\tsplines=ortho\n",
+        "\t\t\t\t];\n",
+        "\t\t\t\tx2;\n",
+        "\t\t\t\tx3;\n",
+        "\t\t\t\tx2 -> x3\t[pos=\"e,51,96.473 51,103.59 51,103.59 51,102.88 51,102.88\"];\n",
+        "\t\t\t}\n",
+        "\t\t\tx1;\n",
+        "\t\t\tx1 -> x2;\n",
+        "\t\t\tx3 -> x1\t[pos=\"e,53,44.265 53,59.813 53,59.813 53,55.778 53,55.778\"];\n",
+        "\t\t}\n",
+        "\t}\n"
+    );
+    let start = out.find("\tsubgraph _cc_0 {").expect("_cc_0");
+    let end = out.find("\tsubgraph _cc_1 {").expect("_cc_1");
+    assert_eq!(&out[start..end], expected);
+
+    let input = format!(
+        "digraph{{pack=true splines=ortho nodesep=0 ranksep=0.02\n\
+         subgraph s1 {{ x1; x2 }} {{rank=same; x3; x4}} subgraph {{ x5 }} \
+         x1->x3 x2->x4 x3->x5 x4->x5\n{ortho}"
+    );
+    let (json, err, ok) = run(&["-Kdot", "-Tjson"], &input);
+    assert!(ok, "{err}");
+    assert_eq!(json.matches("\"name\": \"%3\"").count(), 2, "{json}");
+    assert_eq!(json.matches("\"name\": \"%5\"").count(), 2, "{json}");
+}
+
 // With a non-default ratio C's doDot lays out the root with dotLayout(g) even with several
 // components (lib/dotgen/dotinit.c:466-494), and the `_cc_<i>` subgraphs exist meanwhile.
 // Each inherits rank=max, so a, b, c and d share one rank (C: 216x34pt). Without pack they
