@@ -133,7 +133,8 @@ impl<'a> Tree<'a> {
         for &s in subs {
             let sg = &self.g.subgraphs[s];
             if is_a_cluster(sg) {
-                let dn = dg.agnode(&sg.name);
+                let name = self.g.subgraph_name(s);
+                let dn = dg.agnode(&name);
                 dg.ptr[dn] = DPtr::Clust(s);
                 for &n in &self.nodes[s] {
                     if let Some(old) = dn_of[n] {
@@ -145,7 +146,7 @@ impl<'a> Tree<'a> {
                         // fprintf(stderr, ...): not agerr, so not filtered, counted or escaped.
                         graphviz_pure_core::diag::fprintf_stderr(&format!(
                             "Error: node \"{}\" belongs to two non-nested clusters \"{}\" and \"{}\"\n",
-                            self.g.nodes[n].name, sg.name, old_name
+                            self.g.nodes[n].name, name, old_name
                         ));
                     }
                     dn_of[n] = Some(dn);
@@ -328,6 +329,10 @@ impl CComp {
             });
         }
         for (i, p) in self.subgraphs.iter().enumerate() {
+            // `projectG` names the copy `agnameof(subg)`: an anonymous original's `%<id>`.
+            if let Some(&id) = root.anon_subgraph_ids.get(&(p.orig as u32)) {
+                graph.anon_subgraph_ids.insert(i as u32, id);
+            }
             if let Some(par) = p.parent {
                 graph.subgraphs[par].subgraphs.push(SubgraphId(i as u32));
             }
@@ -338,5 +343,56 @@ impl CComp {
             edges,
             subgraphs: self.subgraphs.iter().map(|p| p.orig).collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use graphviz_pure_core::{AttrMap, GraphKind};
+
+    /// `digraph { subgraph {cluster=true; a} subgraph {cluster=true; b} }` with the
+    /// anonymous ids `%3` and `%5`.
+    fn two_anonymous_clusters() -> Graph {
+        let mut g = Graph::new("", GraphKind::Directed, false);
+        for (i, n) in ["a", "b"].into_iter().enumerate() {
+            let id = g.ensure_node(n);
+            g.subgraphs.push(SubgraphData {
+                id: SubgraphId(i as u32),
+                name: String::new(),
+                is_cluster: false,
+                graph_attrs: [("cluster".to_string(), "true".to_string())].into(),
+                node_defaults: AttrMap::new(),
+                edge_defaults: AttrMap::new(),
+                nodes: vec![id],
+                edges: Vec::new(),
+                subgraphs: Vec::new(),
+                bb: Default::default(),
+                html_name: false,
+                empty_name: false,
+            });
+            g.anon_subgraph_ids.insert(i as u32, 3 + 2 * i as u64);
+        }
+        g
+    }
+
+    // Issue #345: deriveClusters names a cluster's derived node `agnameof(subg)`, so two
+    // anonymous clusters are two derived nodes, and two components.
+    #[test]
+    fn anonymous_clusters_are_derived_nodes_of_their_own() {
+        let g = two_anonymous_clusters();
+        let ccs = cccomps(&g);
+        assert_eq!(ccs.len(), 2);
+        assert_eq!(ccs[0].nodes, [0]);
+        assert_eq!(ccs[1].nodes, [1]);
+    }
+
+    // Issue #345: projectG names the copy `agnameof(subg)`, the original's `%<id>`.
+    #[test]
+    fn projections_keep_the_anonymous_id_of_the_original() {
+        let g = two_anonymous_clusters();
+        let ccs = cccomps(&g);
+        let cg = ccs[1].to_graph(&g);
+        assert_eq!(cg.graph.subgraph_name(0), "%5");
     }
 }

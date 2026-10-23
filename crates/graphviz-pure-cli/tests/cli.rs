@@ -5321,6 +5321,30 @@ fn writers_read_the_membership_dot_left() {
     );
 }
 
+// Issue #345: dot's pack names an anonymous cluster `agnameof(subg)`, `%<id>`, in
+// deriveClusters and in projectG's copies, where findCluster finds it. Graphviz 16.1.0
+// lays these out with no message.
+#[test]
+fn dot_pack_keeps_the_names_of_anonymous_clusters() {
+    for src in [
+        "digraph{pack=true; subgraph {cluster=true; a} subgraph {cluster=true; b} a->b; z}",
+        "digraph{compound=true; pack=true; subgraph {cluster=true; a} z; x->a [lhead=\"%3\"]}",
+        "digraph{compound=true; pack=true; subgraph {cluster=true; a; subgraph {cluster=true; c}} \
+         c->a [ltail=\"%5\"]; q->r}",
+    ] {
+        let (_, err, ok) = run(&["-Kdot", "-Tdot"], src);
+        assert!(ok, "{src}");
+        assert_eq!(err, "", "{src}");
+    }
+    // Two components, side by side.
+    let (out, _, ok) = run(
+        &["-Kdot", "-Tdot"],
+        "digraph{pack=true; subgraph {cluster=true; a} subgraph {cluster=true; b}}",
+    );
+    assert!(ok);
+    assert!(out.contains("graph [bb=\"0,0,166,140\","), "{out}");
+}
+
 /// `doAttrs` and its attribute actions (`lib/common/htmllex.c:80-552`; the `doInt`
 /// messages have no newline), `size_html_cell`'s fixed-size check
 /// (`lib/common/htmltable.c:1141-1153`), then `make_label`'s `in label of ...`
