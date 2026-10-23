@@ -1,8 +1,8 @@
 //! Structural checks of the port's `-Tsvg` output (`gv-diff structure`).
 //!
-//! `gv-diff e2e` requires the port's SVG to equal C's byte for byte, which holds on macOS but
-//! not for every input under the portable math profile (Linux, WASM), where sfdp and a few
-//! other layouts take a different but equally valid shape. This mode checks what must hold
+//! `gv-diff e2e` requires the port's SVG to equal C's byte for byte, with C computing with the
+//! same math functions. The reference here is stock C on macOS (Apple's libm), where sfdp and a
+//! few other layouts take a different but equally valid shape. This mode checks what must hold
 //! whatever the layout: that each drawing contains the same nodes, edges, clusters and label
 //! text as C's, that nothing is drawn outside the canvas or at a non-finite coordinate, that
 //! the canvas is about the size of C's, and that nodes do not overlap much more than in C's
@@ -15,6 +15,7 @@
 //! are checked for content only, since C's own geometry changes from run to run there.
 
 use crate::e2e;
+use graphviz_pure_core::math;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -223,7 +224,8 @@ fn parse_transform(t: &str) -> Affine {
             ("translate", [tx, ty, ..]) => [1.0, 0.0, 0.0, 1.0, *tx, *ty],
             ("translate", [tx]) => [1.0, 0.0, 0.0, 1.0, *tx, 0.0],
             ("rotate", [deg, ..]) => {
-                let (s, c) = deg.to_radians().sin_cos();
+                let r = deg.to_radians();
+                let (s, c) = (math::sin(r), math::cos(r));
                 [c, s, -s, c, 0.0, 0.0]
             }
             _ => continue,
@@ -546,7 +548,7 @@ pub fn main(args: Vec<String>) -> ExitCode {
     for c in CHECKS {
         println!("  {:<12} {}", c.name, per.get(c.name).copied().unwrap_or(0));
     }
-    crate::print_profile(&golden_path);
+    crate::print_baseline(&golden_path);
     if problems.is_empty() {
         ExitCode::SUCCESS
     } else {

@@ -10,7 +10,7 @@ interface Props {
 	input: string;
 	c: string;
 	engine: string;
-	/** Whether the portable-math build matched C when the sample was made. */
+	/** Whether the port matched C (computing with the same math) when the sample was made. */
 	expectIdentical: boolean;
 	/** id of the DiffViewer that can show the browser's output */
 	viewer?: string;
@@ -32,9 +32,9 @@ const { input, c, engine, expectIdentical, viewer, injected = [] } = Astro.props
 		<button type="button" class="btn" data-show>Compare the browser's output in the viewer</button>
 	</div>
 	<p class="live-note">
-		The browser runs <code>renderAllBytes(input, "{engine}", "svg")</code> on the same bytes the C reference read. WASM uses the portable math
-		library, not Apple's libm, so a layout that depends on the last bit of <code>sin</code> or <code>pow</code> can legitimately differ (<a
-			href={url('porting/libm/')}>why</a
+		The browser runs <code>renderAllBytes(input, "{engine}", "svg")</code> on the same bytes the C reference read. The WASM build computes
+		with the same math library as every other build, and the C reference with those same functions, so the bytes should match exactly (<a
+			href={url('porting/libm/')}>the math library</a
 		>).
 		{injected.length > 0 && <>The WASM API takes no <code>-G</code> flags, so this check reads a copy with <code>{injected.join(' ')}</code> written at the top of the graph; C gives the same bytes for that copy (checked when the sample was built).</>}
 	</p>
@@ -126,7 +126,7 @@ const { input, c, engine, expectIdentical, viewer, injected = [] } = Astro.props
 			}
 			const same = normalise(res.text) === normalise(cText);
 			const bytes = new Blob([normalise(res.text)]).size.toLocaleString('en-US');
-			detail.textContent = `${version}, wasm32, portable math · ${ms} · ${bytes} bytes compared`;
+			detail.textContent = `${version}, wasm32 · ${ms} · ${bytes} bytes compared`;
 			if (same) {
 				el.dataset.state = 'register';
 				status.innerHTML = markHTML('register', "Your browser just reproduced C's output byte for byte.");
@@ -134,8 +134,8 @@ const { input, c, engine, expectIdentical, viewer, injected = [] } = Astro.props
 				const expected = el.dataset.expect === 'false';
 				el.dataset.state = expected ? 'expected' : 'off';
 				status.innerHTML = expected
-					? markHTML('upstream', "Your browser's output differs from C here, as expected: this sample depends on Apple's libm, which the portable build does not reproduce.")
-					: markHTML('off', "Your browser's output differs from C. This sample matched under portable math when it was built, so this is worth reporting.");
+					? markHTML('upstream', "Your browser's output differs from C here, as it did when the sample was built.")
+					: markHTML('off', "Your browser's output differs from C. This sample matched when it was built, so this is worth reporting.");
 				const viewer = el.dataset.viewer && document.getElementById(el.dataset.viewer);
 				if (viewer) {
 					actions.hidden = false;

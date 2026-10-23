@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Renders the cross-platform check's outputs for one platform into OUT:
-#   platform.json   which platform, toolchain and math profile produced them
+#   platform.json   which platform and toolchain produced them
 #   hashes.json     gv-diff e2e --hashes: the -Tsvg hash of every corpus input
 #   samples/NAME.svg  graphviz-pure -Tsvg of each site gallery sample, byte for byte as written
 #   samples/NAME.png  its -Tpng (native platforms; must match too)
@@ -8,7 +8,7 @@
 # scripts/cross-platform-compare.py then requires every platform's files to be identical.
 #
 # Usage: scripts/cross-platform-render.sh OUT ID LABEL [cargo args...]
-#   e.g. scripts/cross-platform-render.sh out/macos macos-arm64 "macOS arm64" --features graphviz-pure-core/portable-math
+#   e.g. scripts/cross-platform-render.sh out/macos macos-arm64 "macOS arm64"
 set -euo pipefail
 OUT="$1"; ID="$2"; LABEL="$3"; shift 3
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,9 +16,7 @@ cd "$ROOT"
 mkdir -p "$OUT/samples"
 cargo build --release -q -p graphviz-pure-cli -p graphviz-pure-diff "$@"
 EXE=""; case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) EXE=.exe ;; esac
-# The run must show the portable profile, or it is not the build this check is about.
 ./target/release/gv-diff$EXE e2e --hashes "$OUT/hashes.json" | tee "$OUT/e2e.txt"
-grep -q "math profile: portable" "$OUT/e2e.txt"
 "${PYTHON:-python3}" - "$OUT" "$EXE" <<'PY'
 import json, subprocess, sys
 out, exe = sys.argv[1], sys.argv[2]

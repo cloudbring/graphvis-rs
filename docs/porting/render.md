@@ -37,10 +37,11 @@ neatogen `spline_edges_` machinery (ports, equivalence classes, straight or
 ## Fidelity
 
 The render corpus isolates the renderers: C lays every `tests/wild`,
-`tests/fixtures` and `tests/render` graph out (`dot -Tdot`), then both C and
+`tests/fixtures` and `tests/render` graph out (`dot -Tdot`, with the port's math functions
+interposed, `scripts/dot-portable-libm.sh`), then both C and
 the port render that file in no-layout mode (`neato -n2`). See
 `scripts/gen-render-golden.sh` and `gv-diff render`
-(`crates/graphviz-pure-diff/src/render.rs`, ratchet `tests/golden/render/baseline.json`,
+(`crates/graphviz-pure-diff/src/render.rs`, ratchet `tests/golden/render/baseline.portable.json`,
 test `crates/graphviz-pure-diff/tests/render_fidelity.rs`). The SVG generator comment is
 the only line ignored. `tests/render/*.gv` are 21 feature graphs (all arrow
 types, styles, shapes, gradients, HTML, records, URLs, labels, rotation,

@@ -39,8 +39,8 @@ trap 'rm -f "$raw" "$tmp"' EXIT
 
 # --workspace: the CLI and the wasm crate are both workspace members; the other members add no
 # third-party crates of their own today, and workspace crates are left out by the template.
-# --all-features matches deny.toml (release builds enable graphviz-pure-core/portable-math on
-# one target). --fail: an unresolved licence is an error, not a silent canonical text.
+# --all-features matches deny.toml (the optional features, such as graphviz-pure-core/math-trace,
+# add no crates today, but would be covered if they did). --fail: an unresolved licence is an error, not a silent canonical text.
 cargo about generate \
   --manifest-path "$root/Cargo.toml" \
   --config "$root/about.toml" \

@@ -4,7 +4,7 @@ graph clus {
 	];
 	node [label="\N"];
 	subgraph cluster_a {
-		graph [bb="0,47.313,135.89,172.95",
+		graph [bb="-1.5987e-14,47.313,135.89,172.95",
 			label=A,
 			lheight=0.23,
 			lp="67.946,160.55",

@@ -1,17 +1,19 @@
 //! Transcendental functions, called as `math::hypot(x, y)` the way the C sources call
 //! `hypot(x, y)`.
 //!
-//! On macOS, `f64::hypot` and friends call the system libm, the same one C Graphviz uses, so
-//! the port reproduces C's last bits. On other targets Rust takes them from a different libm
-//! (glibc on Linux, compiler-builtins' musl port on wasm32) that disagrees in the last ulp on
-//! some inputs, which is enough to change a force-directed layout. Every call in the port goes
-//! through this module, and on those targets it uses [`portable`] implementations: a
-//! reproduction of Apple's `hypot`, and the `libm` crate (the musl port Rust itself uses on
-//! wasm32) for the rest, so that every non-Apple target computes the same bits. See `docs/porting/libm.md`.
+//! The platform libms disagree in the last ulp on some inputs (Apple's `libsystem_m`, glibc,
+//! compiler-builtins' musl port on wasm32), which is enough to change a force-directed layout.
+//! So every call in the port goes through this module, and every function here calls the
+//! [`portable`] implementation, on every target: a reproduction of Apple's `hypot`, a port of
+//! CORE-MATH's correctly rounded `pow`, and the `libm` crate (the musl port Rust itself uses on
+//! wasm32) for the rest. Every build computes the same bits, and no build calls a platform libm
+//! for a transcendental function (clippy's `disallowed-methods` enforces it). The fidelity
+//! checks compare the port with C Graphviz running these same functions; see
+//! `docs/porting/libm.md`.
 //!
 //! `sqrt` and `mul_add` are correctly rounded everywhere and stay `f64` methods.
 
-/// The pure-Rust functions behind the portable profile, exposed for `graphviz-pure-portable-libm`.
+/// The pure-Rust functions every `math` function calls, exposed for `graphviz-pure-portable-libm`.
 #[doc(hidden)]
 pub mod portable;
 #[cfg(feature = "math-trace")]
@@ -22,49 +24,12 @@ mod trace {
     pub fn log(_name: u8, _x: f64, _y: f64) {}
 }
 
-/// Whether this build uses [`portable`] rather than the platform libm. The `portable-math`
-/// feature forces it on macOS, to check the portable code against the corpus natively.
-pub const PORTABLE: bool = cfg!(any(not(target_vendor = "apple"), feature = "portable-math"));
-
-/// Which libm this build computes with. The corpus ratchets keep one baseline per profile:
-/// `Apple` results are C's bit for bit, `Portable` ones document the gap to C (see
-/// `docs/porting/libm.md`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Profile {
-    /// The system libm on Apple targets, the one C Graphviz uses there.
-    Apple,
-    /// [`portable`]: identical on every target (Linux, wasm32, macOS with `portable-math`).
-    Portable,
-}
-
-impl Profile {
-    /// Lower-case name, as used in baseline file names (`baseline.portable.json`).
-    #[must_use]
-    pub const fn name(self) -> &'static str {
-        match self {
-            Profile::Apple => "apple",
-            Profile::Portable => "portable",
-        }
-    }
-}
-
-/// The math profile of this build.
-pub const PROFILE: Profile = if PORTABLE {
-    Profile::Portable
-} else {
-    Profile::Apple
-};
-
 /// C `hypot(x, y)`.
 #[inline]
 #[must_use]
 pub fn hypot(x: f64, y: f64) -> f64 {
     trace::log(0, x, y);
-    if PORTABLE {
-        portable::hypot(x, y)
-    } else {
-        x.hypot(y)
-    }
+    portable::hypot(x, y)
 }
 
 /// C `pow(x, y)`.
@@ -72,11 +37,7 @@ pub fn hypot(x: f64, y: f64) -> f64 {
 #[must_use]
 pub fn powf(x: f64, y: f64) -> f64 {
     trace::log(1, x, y);
-    if PORTABLE {
-        portable::pow(x, y)
-    } else {
-        x.powf(y)
-    }
+    portable::pow(x, y)
 }
 
 /// C `atan2(y, x)` is `math::atan2(y, x)`.
@@ -84,11 +45,7 @@ pub fn powf(x: f64, y: f64) -> f64 {
 #[must_use]
 pub fn atan2(y: f64, x: f64) -> f64 {
     trace::log(2, y, x);
-    if PORTABLE {
-        portable::atan2(y, x)
-    } else {
-        y.atan2(x)
-    }
+    portable::atan2(y, x)
 }
 
 /// C `sin(x)`.
@@ -96,7 +53,7 @@ pub fn atan2(y: f64, x: f64) -> f64 {
 #[must_use]
 pub fn sin(x: f64) -> f64 {
     trace::log(3, x, 0.0);
-    if PORTABLE { portable::sin(x) } else { x.sin() }
+    portable::sin(x)
 }
 
 /// C `cos(x)`.
@@ -104,7 +61,7 @@ pub fn sin(x: f64) -> f64 {
 #[must_use]
 pub fn cos(x: f64) -> f64 {
     trace::log(4, x, 0.0);
-    if PORTABLE { portable::cos(x) } else { x.cos() }
+    portable::cos(x)
 }
 
 /// C `tan(x)`.
@@ -112,7 +69,7 @@ pub fn cos(x: f64) -> f64 {
 #[must_use]
 pub fn tan(x: f64) -> f64 {
     trace::log(5, x, 0.0);
-    if PORTABLE { portable::tan(x) } else { x.tan() }
+    portable::tan(x)
 }
 
 /// C `asin(x)`.
@@ -120,11 +77,7 @@ pub fn tan(x: f64) -> f64 {
 #[must_use]
 pub fn asin(x: f64) -> f64 {
     trace::log(6, x, 0.0);
-    if PORTABLE {
-        portable::asin(x)
-    } else {
-        x.asin()
-    }
+    portable::asin(x)
 }
 
 /// C `acos(x)`.
@@ -132,11 +85,7 @@ pub fn asin(x: f64) -> f64 {
 #[must_use]
 pub fn acos(x: f64) -> f64 {
     trace::log(7, x, 0.0);
-    if PORTABLE {
-        portable::acos(x)
-    } else {
-        x.acos()
-    }
+    portable::acos(x)
 }
 
 /// C `exp(x)`.
@@ -144,7 +93,7 @@ pub fn acos(x: f64) -> f64 {
 #[must_use]
 pub fn exp(x: f64) -> f64 {
     trace::log(8, x, 0.0);
-    if PORTABLE { portable::exp(x) } else { x.exp() }
+    portable::exp(x)
 }
 
 /// C `log(x)`.
@@ -152,7 +101,7 @@ pub fn exp(x: f64) -> f64 {
 #[must_use]
 pub fn ln(x: f64) -> f64 {
     trace::log(9, x, 0.0);
-    if PORTABLE { portable::log(x) } else { x.ln() }
+    portable::log(x)
 }
 
 /// C `log2(x)`.
@@ -160,11 +109,7 @@ pub fn ln(x: f64) -> f64 {
 #[must_use]
 pub fn log2(x: f64) -> f64 {
     trace::log(10, x, 0.0);
-    if PORTABLE {
-        portable::log2(x)
-    } else {
-        x.log2()
-    }
+    portable::log2(x)
 }
 
 /// C `cbrt(x)`.
@@ -172,12 +117,10 @@ pub fn log2(x: f64) -> f64 {
 #[must_use]
 pub fn cbrt(x: f64) -> f64 {
     trace::log(11, x, 0.0);
-    if PORTABLE {
-        portable::cbrt(x)
-    } else {
-        x.cbrt()
-    }
+    portable::cbrt(x)
 }
 
-#[cfg(all(test, target_vendor = "apple"))]
+// The portable `hypot` reproduces Apple's arm64 libm; Apple's Intel libm is a different
+// implementation, so the comparison only holds on Apple Silicon.
+#[cfg(all(test, target_vendor = "apple", target_arch = "aarch64"))]
 mod tests;

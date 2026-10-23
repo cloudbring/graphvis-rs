@@ -1,10 +1,10 @@
 name: Cross-platform
 
-# Off macOS the port uses its portable math profile, which is pure Rust and should give the
-# same bits on every platform. This workflow checks that it does: each platform renders the
-# whole corpus (the -Tsvg hash of every input, through all eight engines) and the site's
-# gallery samples (full SVG bytes), and the compare job fails unless every platform's output
-# is byte-identical. The comparison is published on the site's Cross-platform page, where the
+# Every build uses the same math library (graphviz_pure_core::math, pure Rust), so every
+# platform should write the same bits. This workflow checks that it does, with default builds
+# and no feature flags: each platform renders the whole corpus (the -Tsvg hash of every input,
+# through all eight engines) and the site's gallery samples (full SVG bytes), and the compare
+# job fails unless every platform's output is byte-identical. The comparison is published on the site's Cross-platform page, where the
 # reader's browser draws each platform's SVG with one renderer and diffs the pixels.
 #
 # The last job builds the documentation site (site/, Astro Starlight, with the WASM package for
@@ -88,12 +88,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { id: linux-x86_64, label: "Linux x86-64", runner: ubuntu-24.04, cargo: "" }
-          - { id: linux-arm64, label: "Linux arm64", runner: ubuntu-24.04-arm, cargo: "" }
-          - { id: windows-x86_64, label: "Windows x86-64", runner: windows-2025, cargo: "" }
-          # macOS defaults to Apple's libm (to match C on macOS); the feature selects the
-          # portable profile the other platforms use.
-          - { id: macos-arm64, label: "macOS arm64 (portable-math)", runner: macos-15, cargo: "--features graphviz-pure-core/portable-math" }
+          - { id: linux-x86_64, label: "Linux x86-64", runner: ubuntu-24.04 }
+          - { id: linux-arm64, label: "Linux arm64", runner: ubuntu-24.04-arm }
+          - { id: windows-x86_64, label: "Windows x86-64", runner: windows-2025 }
+          - { id: macos-arm64, label: "macOS arm64", runner: macos-15 }
+          - { id: macos-x86_64, label: "macOS x86-64", runner: macos-15-intel }
     defaults:
       run:
         shell: bash
@@ -112,9 +111,7 @@ jobs:
           PYTHON: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
           ID: ${{ matrix.id }}
           LABEL: ${{ matrix.label }}
-          CARGO_ARGS: ${{ matrix.cargo }}
-        # CARGO_ARGS is deliberately unquoted: it holds zero or more cargo arguments.
-        run: scripts/cross-platform-render.sh "out/$ID" "$ID" "$LABEL" $CARGO_ARGS
+        run: scripts/cross-platform-render.sh "out/$ID" "$ID" "$LABEL"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: xp-${{ matrix.id }}
@@ -122,9 +119,7 @@ jobs:
       # The full test suite, so Windows and arm64 Linux are tested like x86-64 Linux in ci.yml.
       - name: Run the workspace tests
         if: matrix.id != 'linux-x86_64'
-        env:
-          CARGO_ARGS: ${{ matrix.cargo }}
-        run: cargo test --workspace --release $CARGO_ARGS
+        run: cargo test --workspace --release
 
   wasm:
     name: WebAssembly (Node.js)
@@ -199,7 +194,7 @@ jobs:
         run: |
           # Every platform must have uploaded its outputs; a failed job shows up as missing.
           python3 scripts/cross-platform-compare.py xp \
-            --expect linux-x86_64,linux-arm64,windows-x86_64,macos-arm64,wasm32 \
+            --expect linux-x86_64,linux-arm64,windows-x86_64,macos-arm64,macos-x86_64,wasm32 \
             --commit "$COMMIT" --run-url "$RUN_URL" \
             | tee -a "$GITHUB_STEP_SUMMARY"
       # The site's Cross-platform page is built from this (the site job below).

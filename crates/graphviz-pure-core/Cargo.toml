@@ -8,12 +8,14 @@ categories.workspace = true
 keywords.workspace = true
 readme.workspace = true
 homepage.workspace = true
-description = "Graph model, attributes, font metric tables, colour tables and math profiles for graphviz-pure"
+description = "Graph model, attributes, font metric tables, colour tables and the portable math library for graphviz-pure"
 
 [features]
 # Logs the arguments of every `math` call to `$GV_MATH_TRACE/` (see docs/porting/libm.md).
 math-trace = []
-# Uses the portable `math` implementations on macOS too (to check them against the corpus).
+# Deprecated, does nothing; to be removed in the next minor release. It used to select the
+# portable `math` implementations on Apple targets, which every build now uses on every target.
+# Kept so existing `--features graphviz-pure-core/portable-math` invocations still build.
 portable-math = []
 
 [dependencies]

@@ -5,8 +5,8 @@ import Thumb from '../../components/Thumb.astro';
 import { ENGINES, cmdline, samples, url } from '../../lib/data';
 
 const groups = ENGINES.map((e) => ({ engine: e, items: samples.filter((s) => s.engine === e) })).filter((g) => g.items.length);
-const native = samples.filter((s) => s.identical).length;
-const portable = samples.filter((s) => s.identical_portable).length;
+const same = samples.filter((s) => s.identical).length;
+const stock = samples.filter((s) => s.identical_stock).length;
 ---
 
 <StarlightPage frontmatter={{ title: 'Gallery: C and Rust', description: 'Curated inputs across all eight Graphviz engines, rendered by C Graphviz 16.1.0 and by graphviz-pure, with every comparison view.', tableOfContents: false }}>
@@ -14,14 +14,15 @@ const portable = samples.filter((s) => s.identical_portable).length;
 	<p class="intro">
 		{samples.length} inputs chosen to cover each engine and the features that are hardest to get right: clusters, records and HTML tables,
 		orthogonal routing, concentrated edges, spline modes, arrowheads, colours, gradients and non-ASCII text. Each was rendered by the C
-		reference and by the port when the site was built. Every thumbnail is the two outputs overprinted, C in cyan and the port in magenta, so a
+		reference, computing with the same math functions as the port, and by the port when the site was built; every platform's build writes
+		the same bytes. Every thumbnail is the two outputs overprinted, C in cyan and the port in magenta, so a
 		sample in register looks like a single blue drawing.
 	</p>
 	<div class="checkall not-content" data-checkall>
 		<div>
 			<p class="tally">
-				<Mark kind="register" label={`${native} of ${samples.length} byte-identical on macOS`} />
-				<Mark kind={portable === samples.length ? 'register' : 'upstream'} label={`${portable} of ${samples.length} under portable math`} />
+				<Mark kind={same === samples.length ? 'register' : 'off'} label={`${same} of ${samples.length} byte-identical to C with the same math`} />
+				<Mark kind={stock === samples.length ? 'register' : 'upstream'} label={`${stock} of ${samples.length} identical to stock C on macOS (informational)`} />
 			</p>
 			<p class="status" data-status aria-live="polite">Re-render all of them with the WASM build, here, and compare with C's stored bytes.</p>
 		</div>
@@ -33,15 +34,15 @@ const portable = samples.filter((s) => s.identical_portable).length;
 			<h2><code>{g.engine}</code><span>{g.items.length}</span></h2>
 			<ul class="contact not-content">
 				{g.items.map((s) => (
-					<li data-sample={s.name} data-engine={s.engine} data-input={url(`samples/${s.name}/${s.wasm_input}`)} data-c={url(`samples/${s.name}/c.svg`)} data-expect={String(s.identical_portable)}>
+					<li data-sample={s.name} data-engine={s.engine} data-input={url(`samples/${s.name}/${s.wasm_input}`)} data-c={url(`samples/${s.name}/c.svg`)} data-expect={String(s.identical)}>
 						<a href={url(`gallery/${s.name}/`)} class="item">
 							<Thumb s={s} />
 							<span class="title">{s.title}</span>
 						</a>
 						<code class="cmd">{cmdline(s).replace('input.gv', s.source.split('/').pop()!)}</code>
 						<span class="marks">
-							{s.identical ? <Mark kind="register" label="macOS" /> : <Mark kind="off" label="macOS" />}
-							{s.identical_portable ? <Mark kind="register" label="portable" /> : <Mark kind="upstream" label="portable differs" />}
+							{s.identical ? <Mark kind="register" label="identical" /> : <Mark kind="off" label="differs" />}
+							{s.identical_stock ? <Mark kind="register" label="stock C" /> : <Mark kind="upstream" label="stock C: Apple libm" />}
 							<span data-live-mark></span>
 						</span>
 					</li>
@@ -98,7 +99,7 @@ const portable = samples.filter((s) => s.identical_portable).length;
 			li.querySelector('[data-live-mark]')!.innerHTML = ok ? markHTML('register', 'your browser') : markHTML(expected ? 'upstream' : 'off', expected ? 'browser differs, as expected' : 'browser differs');
 		}
 		const secs = ((performance.now() - t0) / 1000).toFixed(1);
-		status.innerHTML = `${markHTML(unexpected ? 'off' : 'register', `${same} of ${items.length} reproduced byte for byte in your browser`)} <span>${expectedOff ? `${expectedOff} differ${expectedOff === 1 ? 's' : ''} as expected under portable math. ` : ''}${unexpected ? `${unexpected} differ unexpectedly. ` : ''}${secs} s including downloads.</span>`;
+		status.innerHTML = `${markHTML(unexpected ? 'off' : 'register', `${same} of ${items.length} reproduced byte for byte in your browser`)} <span>${expectedOff ? `${expectedOff} differ${expectedOff === 1 ? 's' : ''} as expected. ` : ''}${unexpected ? `${unexpected} differ unexpectedly. ` : ''}${secs} s including downloads.</span>`;
 		btn.disabled = false;
 		btn.textContent = 'Check again';
 	});

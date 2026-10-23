@@ -1,9 +1,8 @@
 //! Structural ratchet: on every corpus input, the port's `-Tsvg` must contain what C's does
 //! (nodes, edges, clusters, label text), stay on its canvas with finite coordinates, and keep
 //! C's canvas size and node overlaps within tolerance (`gv-diff structure`, see
-//! `docs/testing/structure-checks.md`). It runs in both math profiles: on macOS the output
-//! equals C's anyway, so the checks matter for the portable profile (Linux, WASM), where some
-//! layouts differ from C's.
+//! `docs/testing/structure-checks.md`). Its reference is stock C on macOS, whose layouts
+//! differ from the port's on the inputs where Apple's libm moves them.
 
 use std::process::Command;
 

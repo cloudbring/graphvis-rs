@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 # Runs C Graphviz `dot` with graphviz-pure's portable math functions in place of the system libm.
 #
-# Off macOS (Linux, wasm32) the port cannot use Apple's closed-source sin, cos, pow and
-# atan2, so it uses portable ones (`graphviz_pure_core::math::portable`). This script gives C the same
-# functions, by loading crates/graphviz-pure-portable-libm into dot with DYLD_INSERT_LIBRARIES, so that
-# the two can be compared with the math library taken out of the equation:
+# Every build of the port computes with the same portable math functions
+# (`graphviz_pure_core::math::portable`), never a platform libm. This script gives C the same
+# functions, by loading crates/graphviz-pure-portable-libm into dot, so that the two can be
+# compared with the math library taken out of the equation. It is the C reference of the corpus
+# checks (`gv-diff e2e`, `scripts/gen-golden.sh`):
 #
 #   cargo build --release -p graphviz-pure-portable-libm
-#   GVBINDIR=~/src/gv-ref/lutplugins cargo run --release -p graphviz-pure-diff -- e2e --generate \
-#     --c-dot scripts/dot-portable-libm.sh --golden tests/golden/e2e.libm-matched.json
-#   cargo run --release -p graphviz-pure-diff --features graphviz-pure-core/portable-math -- e2e \
-#     --golden tests/golden/e2e.libm-matched.json --baseline tests/golden/e2e-baseline.libm-matched.json
+#   GVBINDIR=~/src/gv-ref/lutplugins cargo run --release -p graphviz-pure-diff -- e2e --generate --runs 5
+#   cargo run --release -p graphviz-pure-diff -- e2e
 #
 # On macOS the library is loaded with DYLD_INSERT_LIBRARIES and interposes libm; on Linux,
 # with LD_PRELOAD (scripts/c-oracle-linux/). The variable is set here rather than inherited

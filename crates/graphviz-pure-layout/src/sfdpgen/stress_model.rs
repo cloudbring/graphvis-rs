@@ -54,7 +54,8 @@ mod tests {
         let mut r = CRand::default();
         stress_model(&b, &mut x, 100, &mut r).unwrap();
         let d = |i: usize, j: usize| {
-            ((x[2 * i] - x[2 * j]).powi(2) + (x[2 * i + 1] - x[2 * j + 1]).powi(2)).sqrt()
+            let (dx, dy) = (x[2 * i] - x[2 * j], x[2 * i + 1] - x[2 * j + 1]);
+            (dx * dx + dy * dy).sqrt()
         };
         assert!((d(1, 2) / d(0, 1) - 2.0).abs() < 0.05, "{x:?}");
     }

@@ -12,9 +12,12 @@ export const ENGINES = ['dot', 'neato', 'fdp', 'sfdp', 'twopi', 'circo', 'osage'
 export type Engine = (typeof ENGINES)[number];
 
 export interface Figures {
-	apple: number;
-	portable: number;
+	/** files byte-identical to C computing with the same math functions, of `total` */
+	identical: number;
 	total: number;
+	/** files byte-identical to stock C on macOS (Apple's libm), of `stockTotal`; informational */
+	stock: number;
+	stockTotal: number;
 	/** root-relative URLs for the link nodes, already under the site's base */
 	links: Record<Exclude<LinkId, 'platforms'>, string> & { platforms?: string };
 }
@@ -130,15 +133,15 @@ export function homeSource(f: Figures, o: SourceOptions): string {
     }
   }
   ${nd('same', `shape=diamond, style=filled, fillcolor=${q(p.ask)}`, 'same\\nbytes?')}
-  ${nd('mac', 'shape=record', rec('macOS, Apple Silicon', `${n(f.apple)} of ${n(f.total)}`))}
-  ${nd('lin', 'shape=record', rec('Linux, Windows, Intel Mac, WASM', `${n(f.portable)} of ${n(f.total)}`))}
+  ${nd('eq', 'shape=record', rec('C with the same math, every platform', `${n(f.identical)} of ${n(f.total)}`))}
+  ${nd('stock', 'shape=record', rec('stock C on macOS', `${n(f.stock)} of ${n(f.stockTotal)}`))}
 
   input -> c; input -> rs;
   rs -> {${ENGINES.map((e) => engineNode(e)).join(' ')}} [arrowhead=none, color=${q(p.spoke)}];
   {${ENGINES.map((e) => engineNode(e)).join(' ')}} -> wasm [arrowhead=none, color=${q(p.spoke)}];
   c -> same; wasm -> same;
-  same -> mac [label="Apple libm"];
-  same -> lin [label="portable libm"];
+  same -> eq [label="same math"];
+  same -> stock [label="Apple libm"];
 
   node [shape=box, style=rounded, fontsize=${pw ? 10 : 13}];
   ${link('Fidelity', 'Fidelity', 'fidelity')}
@@ -149,13 +152,13 @@ export function homeSource(f: Figures, o: SourceOptions): string {
   ${link('API', 'API', 'api')}
   ${link('notes', 'Porting notes', 'notes')}
   ${f.links.platforms ? `${link('xp', 'Cross-platform', 'platforms')}
-  lin -> xp;` : ''}
-  mac -> Fidelity; lin -> Fidelity; lin -> left; same -> Gallery; same -> Verify;
+  eq -> xp;` : ''}
+  eq -> Fidelity; stock -> Fidelity; eq -> left; same -> Gallery; same -> Verify;
   wasm -> Playground; rs -> API; rs -> notes;
 ${portrait ? `
   // Portrait only: push siblings into lower ranks so the drawing fits a phone's width.
   K_dot -> K_sfdp -> K_osage [style=invis]; K_neato -> K_twopi -> K_patchwork [style=invis]; K_fdp -> K_circo [style=invis];
-  wasm -> c [style=invis]; Gallery -> Verify [style=invis]; mac -> lin [style=invis]; API -> notes [style=invis];${f.links.platforms ? ' Verify -> xp [style=invis];' : ''}` : ''}
+  wasm -> c [style=invis]; Gallery -> Verify [style=invis]; eq -> stock [style=invis]; API -> notes [style=invis];${f.links.platforms ? ' Verify -> xp [style=invis];' : ''}` : ''}
 }
 `;
 }

@@ -8,23 +8,19 @@ Everything on the [Fidelity](../fidelity/) page comes from commands you can run 
 ## The checks
 
 ```sh
-cargo test --workspace                                         # every ratchet, both kinds of check
+cargo test --workspace                                                    # every ratchet
 cargo run --release -p graphviz-pure-diff -- e2e --list                   # full-SVG identity, list differences
+cargo run --release -p graphviz-pure-diff -- e2e --stock                  # against stock C on macOS, a report
 cargo run --release -p graphviz-pure-diff -- --filter clust --worst 20    # layout geometry, a subset
 cargo run --release -p graphviz-pure-diff -- render                       # renderers on C's own layouts
 cargo run --release -p graphviz-pure-diff -- structure                    # same nodes, edges and labels as C, on canvas
-node scripts/wasm-e2e.mjs --pkg <wasm-bindgen nodejs output>   # the same check under WASM
-scripts/update-baselines.sh [--portable]                       # after an improvement
+node scripts/wasm-e2e.mjs --pkg <wasm-bindgen nodejs output>              # the same check under WASM
+scripts/update-baselines.sh                                               # after an improvement
 ```
 
-`cargo test --workspace` runs the corpus checks as ratchets (`crates/graphviz-pure-diff/tests/*_fidelity.rs`): each one fails if a file listed in its baseline stops matching. The profile is chosen by the build: macOS uses Apple's libm and the `*.json` baselines; Linux, WASM, or macOS with `--features graphviz-pure-core/portable-math` use the portable math library and the `*.portable.json` baselines.
+`cargo test --workspace` runs the corpus checks as ratchets (`crates/graphviz-pure-diff/tests/*_fidelity.rs`): each one fails if a file listed in its baseline stops matching. There are no feature flags and no per-platform baselines: every build computes with the same math library, so one set of baselines (`tests/golden/*.portable.json`) serves every platform.
 
-To see the portable profile on a Mac:
-
-```sh
-cargo build --release -p graphviz-pure-diff --features graphviz-pure-core/portable-math --target-dir target/portable
-target/portable/release/gv-diff e2e
-```
+`e2e --stock` compares with stock C on macOS, which calls Apple's libm. It is a report, never a check: it always succeeds, and it splits the files that differ into those that differ only through Apple's libm (the port equals C with the same math on them) and the rest.
 
 ## The WASM build
 
@@ -36,14 +32,14 @@ wasm-bindgen --target nodejs --out-dir /tmp/gvwasm/pkg \
   target/wasm32-unknown-unknown/release/graphviz_pure_wasm.wasm
 node scripts/wasm-e2e.mjs --pkg /tmp/gvwasm/pkg --hashes /tmp/wasm-hashes.json
 cargo build --release -p graphviz-pure-diff && target/release/gv-diff e2e --hashes /tmp/native-hashes.json
-cmp /tmp/native-hashes.json /tmp/wasm-hashes.json   # on Linux: WASM and native agree on every file
+cmp /tmp/native-hashes.json /tmp/wasm-hashes.json   # WASM and native agree on every file
 ```
 
 `wasm-bindgen-cli` must match the `wasm-bindgen` version in `Cargo.lock` exactly; CI reads it from there.
 
 ## The C reference
 
-The reference is Graphviz 16.1.0 with only three of its plugins loaded: core, dot layout and neato layout. With no Pango text-layout plugin available, C measures text with the built-in font metric tables in `lib/common/textspan_lut.c`, which is what the port does. A default Graphviz installation measures text with Pango and cairo, places labels differently, and matches neither build.
+The reference is Graphviz 16.1.0 with only three of its plugins loaded: core, dot layout and neato layout. With no Pango text-layout plugin available, C measures text with the built-in font metric tables in `lib/common/textspan_lut.c`, which is what the port does. A default Graphviz installation measures text with Pango and cairo, places labels differently, and does not match.
 
 `scripts/gen-golden.sh` builds such a plugin directory from an installed Graphviz 16.1.0 (Homebrew's by default) and points `GVBINDIR` at it:
 
@@ -54,28 +50,38 @@ GVBINDIR=~/src/gv-ref/lutplugins dot -c            # writes the plugin config
 GVBINDIR=~/src/gv-ref/lutplugins dot -V            # dot - graphviz version 16.1.0
 ```
 
+C then runs with the port's math functions in place of the system libm, so that the two compute with the same bits. `crates/graphviz-pure-portable-libm` builds them as a shared library, and `scripts/dot-portable-libm.sh` runs the unmodified C `dot` with it loaded: through `DYLD_INSERT_LIBRARIES` on macOS, and `LD_PRELOAD` on Linux (`scripts/c-oracle-linux/` builds the Linux reference in a container).
+
+```sh
+cargo build --release -p graphviz-pure-portable-libm
+GVBINDIR=~/src/gv-ref/lutplugins scripts/dot-portable-libm.sh -V   # dot - graphviz version 16.1.0
+```
+
 Then compare one file yourself. Pass files as arguments, not on stdin, as every check does:
 
 ```sh
 cargo build --release -p graphviz-pure-cli
-GVBINDIR=~/src/gv-ref/lutplugins dot -Kneato -Tsvg graph.gv | grep -v '^<!-- Generated by ' > c.svg
+GVBINDIR=~/src/gv-ref/lutplugins scripts/dot-portable-libm.sh -Kneato -Tsvg graph.gv | grep -v '^<!-- Generated by ' > c.svg
 target/release/graphviz-pure -Kneato -Tsvg graph.gv              | grep -v '^<!-- Generated by ' > rust.svg
 cmp c.svg rust.svg && echo identical
 ```
 
-The `grep` drops the generator comment, the one line gv-diff ignores (`normalize` in `crates/graphviz-pure-diff/src/e2e.rs`). Regenerating the references takes the same setup: `scripts/gen-golden.sh`, `scripts/gen-render-golden.sh` and `GVBINDIR=<plugin dir> gv-diff e2e --generate`.
+Run plain `dot` instead of `scripts/dot-portable-libm.sh` to compare with stock C, which on macOS calls Apple's libm: some files, most of them sfdp layouts, then differ, only through Apple's libm (the [Fidelity](../fidelity/#stock-c-on-macos) page lists them).
 
-C's output for some inputs is not stable: it depends on heap addresses, or C reads freed memory. `gv-diff e2e --generate` runs C twice and records those inputs as unstable; they are skipped, and listed on the Fidelity page.
+The `grep` drops the generator comment, the one line gv-diff ignores (`normalize` in `crates/graphviz-pure-diff/src/e2e.rs`). Regenerating the references takes the same setup: `scripts/gen-golden.sh`, `scripts/gen-render-golden.sh` and `GVBINDIR=<plugin dir> gv-diff e2e --generate --runs 5`, which run C through `scripts/dot-portable-libm.sh`.
+
+C's output for some inputs is not stable: it depends on heap addresses, or C reads freed memory. `gv-diff e2e --generate` runs C several times (`--runs N`) and records those inputs as unstable; they are skipped, and listed on the Fidelity page.
 
 ## Where the goldens live
 
 | Path | What it holds | Used by |
 | :--- | :--- | :--- |
 | `tests/wild`, `tests/fixtures`, `tests/<engine>/`, `tests/render` | The inputs (`.gv`) of the nine corpora | every check |
-| `tests/golden/e2e.json` | 64-bit FNV-1a hashes of C's normalised `-Tsvg`, and the unstable list | `gv-diff e2e` |
-| `tests/golden/e2e-baseline{,.portable}.json` | The files that match, per profile | e2e ratchet |
+| `tests/golden/e2e.libm-matched.json` | 64-bit FNV-1a hashes of C's normalised `-Tsvg`, C computing with the port's math, and the unstable list | `gv-diff e2e` |
+| `tests/golden/e2e-baseline.libm-matched.portable.json` | The files that match | e2e ratchet |
+| `tests/golden/e2e.json`, `tests/golden/e2e-baseline.portable.json` | The same against stock C on macOS (Apple's libm), and the files that match it | `gv-diff e2e --stock`, a report |
 | `tests/golden/*.dot`, `tests/golden/<engine>/*.dot` | C's `-Tdot` layouts | layout check |
-| `tests/golden/*baseline{,.portable}.json` | Per-file element counts and errors, per profile | layout ratchets |
+| `tests/golden/*baseline.portable.json` | Per-file element counts and errors | layout ratchets |
 | `tests/golden/render/` | C's layouts (`laid/`) and its renderings in seven formats | `gv-diff render` |
 
 The render goldens are moving into a compressed archive, `tests/golden/render.tar.xz`, which the harness unpacks before comparing; the baselines stay as JSON.
@@ -85,7 +91,7 @@ The render goldens are moving into a compressed archive, `tests/golden/render.ta
 The site is built from the same files:
 
 ```sh
-python3 -I scripts/site-data.py --measure   # runs gv-diff e2e in both profiles -> site/src/data/fidelity.json
+python3 -I scripts/site-data.py --measure   # runs gv-diff e2e -> site/src/data/fidelity.json
 scripts/site-samples.sh                      # needs the C reference -> site/public/samples, samples.json
 node scripts/site-issues.mjs                 # docs/issues/manifest.json -> What's left
 node scripts/site-sync-docs.mjs              # docs/porting/*.md -> Porting notes

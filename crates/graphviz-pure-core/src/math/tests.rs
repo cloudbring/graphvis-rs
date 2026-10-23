@@ -1,4 +1,7 @@
-//! On macOS, checks each portable function against the system libm it reproduces.
+//! On Apple Silicon, checks each portable function against the system libm it reproduces.
+
+// The point of these tests is to call the system libm, which the rest of the workspace may not.
+#![allow(clippy::disallowed_methods)]
 
 use super::portable;
 

@@ -2,7 +2,7 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { ENGINES, samples, url } from '../lib/data';
 
-const starters = samples.filter((s) => s.identical_portable && s.wasm_input === 'input.gv' && s.bytes.input < 3000).slice(0, 8);
+const starters = samples.filter((s) => s.identical && s.wasm_input === 'input.gv' && s.bytes.input < 3000).slice(0, 8);
 const initial = `digraph proof {
   rankdir=LR;
   node [shape=box, style=rounded];

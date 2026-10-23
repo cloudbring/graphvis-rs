@@ -1,6 +1,6 @@
 ---
 /**
- * Cross-platform: the portable build's output on every platform CI runs, drawn by the
+ * Cross-platform: the port's output on every platform CI runs, drawn by the
  * reader's browser. The SVGs and manifest come from the Cross-platform workflow's
  * `cross-platform-site` artifact (scripts/cross-platform-compare.py), which pages.yml copies
  * into public/cross-platform/ before building; scripts/site-cross-platform.sh fetches it for
@@ -27,7 +27,7 @@ type Manifest = {
 };
 const path = join(process.cwd(), 'public/cross-platform/manifest.json');
 const m: Manifest | null = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null;
-const order = ['linux-x86_64', 'linux-arm64', 'windows-x86_64', 'macos-arm64', 'wasm32'];
+const order = ['linux-x86_64', 'linux-arm64', 'windows-x86_64', 'macos-arm64', 'macos-x86_64', 'wasm32'];
 const plats = m ? [...m.platforms].sort((a, b) => order.indexOf(a.dir) - order.indexOf(b.dir)) : [];
 const ref = m?.reference ?? 'linux-x86_64';
 const other = plats.find((p) => p.dir === 'windows-x86_64') ?? plats.find((p) => p.dir !== ref);
@@ -42,7 +42,7 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 <StarlightPage
 	frontmatter={{
 		title: 'Cross-platform',
-		description: "The portable build's output on Linux, Windows, macOS and WebAssembly, compared byte for byte by CI and drawn by your browser.",
+		description: "graphviz-pure's output on Linux, Windows, macOS and WebAssembly, compared byte for byte by CI and drawn by your browser.",
 		tableOfContents: false,
 	}}
 >
@@ -53,8 +53,8 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 	</style>
 
 	<p class="intro">
-		Off macOS the port computes with its own math functions, written in Rust and compiled into the program, so the result should not depend on the
-		operating system, the CPU or the browser. CI checks it on every push: each platform below renders every corpus input and the gallery samples, and the
+		Every build of the port computes with the same math functions, written in Rust and compiled into the program, so the result does not depend
+		on the operating system, the CPU or the browser. CI checks it on every push: each platform below renders every corpus input and the gallery samples, and the
 		check fails unless all of them write the same bytes. The drawings on this page are those platforms' files, all drawn by your browser, so one
 		renderer and one set of fonts: any difference you could see would be a difference in the files.
 	</p>
@@ -107,8 +107,8 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 				</table>
 				<p class="note">
 					A corpus input counts as equal when the hash of its <code>-Tsvg</code> output (every graph in the file) is the same; a sample, when the whole SVG
-					file is. macOS appears with <code>--features graphviz-pure-core/portable-math</code>: by default the macOS build uses Apple's libm, to match C on macOS
-					byte for byte (<a href={url('porting/libm/')}>why</a>).
+					file is. Every platform runs the default build, with no feature flags: there is one math library and no option to use a platform's
+					libm (<a href={url('porting/libm/')}>the math library</a>).
 				</p>
 
 				<h2 id="compare">Compare two platforms</h2>
@@ -192,7 +192,7 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 				<ul>
 					<li>
 						<a href={`${REPO}/blob/master/.github/workflows/cross-platform.yml`}><code>.github/workflows/cross-platform.yml</code></a> runs{' '}
-						<code>scripts/cross-platform-render.sh</code> on GitHub's Linux x86-64, Linux arm64, Windows and macOS runners, and{' '}
+						<code>scripts/cross-platform-render.sh</code> on GitHub's Linux x86-64, Linux arm64, Windows, macOS arm64 and macOS x86-64 runners, with default builds, and{' '}
 						<code>scripts/cross-platform-wasm.mjs</code> with the WASM package under Node.js.
 					</li>
 					<li>

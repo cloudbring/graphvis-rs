@@ -11,7 +11,8 @@ share one version number, set in `[workspace.package]` in `Cargo.toml` and in
 - **The command line:** options, accepted `-T` formats, exit status.
 - **Output.** Because the project exists to reproduce Graphviz's output exactly, every change
   to the bytes the port writes for an existing input is listed in the changelog, whatever its
-  size.
+  size. Every build computes with the same math library, so the bytes are the same on every
+  platform.
 
 ## What each kind of change bumps
 
@@ -31,6 +32,20 @@ From `1.0`:
 
 Output that moves *away* from C Graphviz is a bug, never a release decision: the fidelity
 ratchets in CI refuse it.
+
+## What "identical to C" means
+
+Fidelity means identical to C Graphviz when C computes with the same math. Floating-point
+functions such as `pow`, `sin` and `atan2` differ in the last bit from one platform's libm to
+another, and C Graphviz uses whatever libm its platform has, so stock C itself writes different
+bytes on macOS and on Linux. graphviz-pure instead computes with one math library on every
+platform (`graphviz_pure_core::math`), and is compared with C running those same functions
+(`scripts/dot-portable-libm.sh`; see [porting/libm.md](porting/libm.md)).
+
+- An output difference that comes only from a platform's libm is not a bug: for example, stock
+  C on macOS calls Apple's libm, and differs from the port on the inputs that
+  `gv-diff e2e --stock` lists as libm-only.
+- The port never follows a platform libm. No build or feature switches to one.
 
 ## Making a release
 

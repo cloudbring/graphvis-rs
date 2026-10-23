@@ -23,7 +23,7 @@ const order = {
 	'fdp-osage-patchwork.md': ['fdp, osage, patchwork', 'Cluster-aware force-directed layout, cluster packing and treemaps.'],
 	'circo-twopi.md': ['circo, twopi', 'Circular and radial layouts.'],
 	'render.md': ['Renderers', 'The emit code and output plugins.'],
-	'libm.md': ['Math off macOS', 'Why Linux and WASM use a portable math library, and what that costs.'],
+	'libm.md': ['The math library', 'Why every build uses the same math library, and how the port is compared with C.'],
 	'fuzzing.md': ['Differential fuzzing', 'Random graphs against C, round by round.'],
 	'c-bugs-ledger.md': ['C bug ledger', 'C bugs and hazards found while porting.'],
 	'structure-checks.md': ['Structural checks', 'What gv-diff structure checks, and how to add a check.'],

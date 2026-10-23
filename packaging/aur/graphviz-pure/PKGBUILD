@@ -33,7 +33,7 @@ build() {
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR=target
   # Only the command line, and no --all-features: the core crate's math-trace feature is a
-  # debugging aid that logs every math call. Linux always uses the portable math profile.
+  # debugging aid that logs every math call. Every build uses the same math library.
   cargo build --frozen --release -p graphviz-pure-cli
 }
 

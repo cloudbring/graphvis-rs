@@ -1,4 +1,4 @@
-//! Pure-Rust implementations used off macOS (and with the `portable-math` feature).
+//! Pure-Rust implementations behind every `graphviz_pure_core::math` function, on every target.
 //!
 //! `hypot` reproduces macOS arm64 libm bit for bit (an original formula found by black-box
 //! comparison). `pow` is a port of CORE-MATH's correctly rounded `pow` (MIT): Apple's `pow` is

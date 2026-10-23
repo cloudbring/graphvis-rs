@@ -1,10 +1,11 @@
 # Structural checks (`gv-diff structure`)
 
-`gv-diff e2e` requires the port's `-Tsvg` to equal C's byte for byte. That holds on macOS, but
-under the portable math profile (Linux, Windows, WASM) 119 corpus inputs come out as a
-different, equally valid layout of the same graph (mostly sfdp; see `docs/porting/libm.md`).
-Byte identity cannot judge those. The structural checks can: they test what must hold whatever
-the layout, on every corpus input, in both profiles.
+`gv-diff e2e` requires the port's `-Tsvg` to equal C's byte for byte, with C computing with the
+port's math functions. Against stock C on macOS, which calls Apple's libm, 120 corpus inputs come
+out as a different, equally valid layout of the same graph (mostly sfdp; see
+`docs/porting/libm.md`). Byte identity cannot judge those against stock C. The structural checks
+can: they test what must hold whatever the layout, on every corpus input, with stock C's output
+as the reference.
 
 ## What is checked
 
@@ -24,7 +25,7 @@ For each graph in each corpus input, the port's drawing is compared with a summa
 Geometric checks are skipped for the inputs that `tests/golden/e2e.json` records as unstable,
 because C's own geometry changes from run to run there.
 
-Where the tolerances come from: in a review of the 119 inputs that differ under portable math
+Where the tolerances come from: in a review of the 119 inputs that differed from stock C at the time
 (the automated measures below, plus looking at every pair side by side), the
 canvas area ratio ranges from 0.79 to 1.19, and the port has more overlapping node pairs than C
 on 12 inputs, fewer on 9 and the same on 98 (16,694 in total against C's 16,740). The worst
@@ -33,13 +34,12 @@ case, `sfdp/fx_abstract`, has 14 against C's 10.
 ## Running it
 
 ```sh
-cargo run --release -p graphviz-pure-diff -- structure                                       # Apple profile on macOS
-cargo run --release -p graphviz-pure-diff --features graphviz-pure-core/portable-math -- structure      # portable profile
-cargo run --release -p graphviz-pure-diff -- structure --filter sfdp/                        # a subset
+cargo run --release -p graphviz-pure-diff -- structure                  # every corpus input
+cargo run --release -p graphviz-pure-diff -- structure --filter sfdp/   # a subset
 ```
 
 `cargo test --workspace` runs it (`crates/graphviz-pure-diff/tests/structure_fidelity.rs`), so CI checks
-it on Linux, and the cross-platform workflow on Windows, arm64 Linux and macOS.
+it on Linux, and the cross-platform workflow on Windows, arm64 Linux and macOS (arm64 and x86-64).
 
 The reference is `tests/golden/structure.json`, a summary per input: the counts and hashes of
 the four multisets, the canvas size, and C's own non-finite, off-canvas and overlap counts.
@@ -70,7 +70,7 @@ Everything lives in `crates/graphviz-pure-diff/src/structure.rs`.
    remove a node, change a label, move the drawing off its canvas, insert `nan`, shrink the
    `viewBox` and stack nodes on top of each other.
 4. **Regenerate the reference** (`--generate`, above) if you added a field, and run the check
-   in both profiles. If it reports problems, look at the drawings before loosening anything:
+   (`cargo test --workspace`). If it reports problems, look at the drawings before loosening anything:
    `gv-diff structure --filter NAME` lists the failing inputs, and the C and port SVGs can be
    compared in a browser or with the site's diff viewer.
 5. **Add the check to the table above** with its rule and tolerance.
@@ -80,4 +80,4 @@ Everything lives in `crates/graphviz-pure-diff/src/structure.rs`.
 The checks cover every input of the corpora `gv-diff e2e` uses (`CORPORA` in
 `crates/graphviz-pure-diff/src/e2e.rs`): put new `.gv` files in one of those directories, regenerate
 `tests/golden/structure.json` and `tests/golden/e2e.json`, and refresh the baselines
-(`scripts/update-baselines.sh` and `scripts/update-baselines.sh --portable`).
+(`scripts/update-baselines.sh`).

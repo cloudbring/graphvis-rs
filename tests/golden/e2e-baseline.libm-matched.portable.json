@@ -1,5 +1,7 @@
 {
   "identical": [
+    "circo/fuzz_blockpath_edgeless_block",
+    "circo/fuzz_xlabels_hilbert_signed_key",
     "circo/fx_ER",
     "circo/fx_Heawood",
     "circo/fx_NaN",
@@ -284,6 +286,7 @@
     "fdp/fuzz_noncomparable_clusters",
     "fdp/fuzz_voronoi_record",
     "fdp/fuzz_voronoi_shape",
+    "fdp/fuzz_xlabels_hilbert_signed_key",
     "fdp/fx_ER",
     "fdp/fx_Heawood",
     "fdp/fx_NaN",

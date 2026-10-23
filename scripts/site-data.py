@@ -2,17 +2,24 @@
 """Writes site/src/data/fidelity.json, the data behind the site's Fidelity page.
 
     python3 -I scripts/site-data.py              # count the committed ratchet baselines
-    python3 -I scripts/site-data.py --measure    # run gv-diff e2e under both math profiles
+    python3 -I scripts/site-data.py --measure    # build gv-diff and run the full -Tsvg check again
+
+Every build of the port computes with the same portable math library, on every platform, so
+there is one set of numbers. The reference is C Graphviz 16.1.0 computing with the same math
+functions (scripts/dot-portable-libm.sh interposes the port's math into C's dot).
 
 Without --measure the numbers come from the baseline files that `cargo test --workspace`
-enforces (tests/golden/*baseline*.json): a file listed there is checked on every test run
-and fails the build if it stops matching. With --measure the full -Tsvg check is run again
-here, for the Apple profile (macOS only) and the portable profile, and the identical sets
-are taken from the hashes it writes; the script fails if a measurement disagrees with the
-committed baseline, so the page never shows a number the ratchets do not back.
+enforces (tests/golden/*baseline*.portable.json): a file listed there is checked on every test
+run and fails the build if it stops matching. With --measure the full -Tsvg check is run again
+here, and the identical set is taken from the hashes it writes; the script fails if a file in the
+committed baseline no longer matches, so the page never shows a number the ratchets do not back.
 
-The C reference is only needed to regenerate tests/golden/e2e.json, not for this script:
-the e2e check compares against the stored hashes of C's output.
+The same numbers against stock C on macOS (C computing with Apple's libm) are reported too, for
+information: tests/golden/e2e.json and tests/golden/e2e-baseline.portable.json. A file that
+differs from stock C but equals C with the same math differs only through Apple's libm.
+
+The C reference is only needed to regenerate the goldens, not for this script: the e2e check
+compares against the stored hashes of C's output.
 """
 
 import argparse
@@ -57,9 +64,9 @@ def git(*args):
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
 
 
-def layout_file(corpus, portable):
+def layout_file(corpus):
     stem = "baseline" if corpus == "main" else f"{corpus}-baseline"
-    return GOLDEN / f"{stem}.{'portable.json' if portable else 'json'}"
+    return GOLDEN / f"{stem}.portable.json"
 
 
 def exact(r):
@@ -76,7 +83,7 @@ def exact(r):
 
 def render_unstable():
     """The (format, stem) pairs gv-diff render skips, read from its source."""
-    src = (ROOT / "crates" / "gv-diff" / "src" / "render.rs").read_text(encoding="utf-8")
+    src = (ROOT / "crates" / "graphviz-pure-diff" / "src" / "render.rs").read_text(encoding="utf-8")
     block = src.split("pub const UNSTABLE", 1)[1].split("];", 1)[0]
     return re.findall(r'\("([^"]+)",\s*"([^"]+)"\)', block)
 
@@ -105,83 +112,118 @@ def fuzz_rounds():
     return out
 
 
-def measure(portable):
-    """Runs gv-diff e2e for one math profile; returns the set of identical files."""
-    feat = ["--features", "graphviz-pure-core/portable-math", "--target-dir", "target/portable"] if portable else []
-    subprocess.run(["cargo", "build", "--release", "-p", "gv-diff", *feat], cwd=ROOT, check=True)
-    exe = ROOT / ("target/portable/release/gv-diff" if portable else "target/release/gv-diff")
-    golden = load(GOLDEN / "e2e.json")["files"]
+def measure(*extra):
+    """Runs gv-diff e2e (with EXTRA arguments, e.g. --stock); returns the hash of every output
+    it renders, which are the inputs of that run's golden."""
+    exe = ROOT / "target" / "release" / "gv-diff"
     with tempfile.TemporaryDirectory() as td:
         hp = Path(td) / "hashes.json"
-        r = subprocess.run([str(exe), "e2e", "--hashes", str(hp)], cwd=ROOT, capture_output=True, text=True)
+        r = subprocess.run([str(exe), "e2e", *extra, "--hashes", str(hp)], cwd=ROOT, capture_output=True, text=True)
         sys.stderr.write(r.stdout[-1500:])
-        hashes = load(hp)
+        return load(hp)
+
+
+def matching(hashes, golden):
     return {k for k, h in hashes.items() if h is not None and golden.get(k) == h}
+
+
+def corpus(f):
+    return f.split("/")[0]
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--measure", action="store_true", help="run gv-diff e2e under both math profiles")
+    ap.add_argument("--measure", action="store_true", help="build gv-diff and run gv-diff e2e")
     ap.add_argument("--out", type=Path, default=OUT)
     a = ap.parse_args()
 
-    golden = load(GOLDEN / "e2e.json")
-    files = sorted(golden["files"])
-    base = {
-        "apple": set(load(GOLDEN / "e2e-baseline.json")["identical"]),
-        "portable": set(load(GOLDEN / "e2e-baseline.portable.json")["identical"]),
-    }
-    ident = dict(base)
-    measured = {"apple": False, "portable": False}
+    golden = load(GOLDEN / "e2e.libm-matched.json")
+    stock_golden = load(GOLDEN / "e2e.json")
+    ident = set(load(GOLDEN / "e2e-baseline.libm-matched.portable.json")["identical"])
+    stock_ident = set(load(GOLDEN / "e2e-baseline.portable.json")["identical"])
     if a.measure:
-        profiles = ["portable"] + (["apple"] if platform.system() == "Darwin" else [])
-        for prof in profiles:
-            got = measure(prof == "portable")
-            lost = base[prof] - got
-            if lost:
-                sys.exit(f"{prof}: {len(lost)} files in the committed baseline no longer match C, e.g. {sorted(lost)[:5]}")
-            ident[prof] = got
-            measured[prof] = True
+        subprocess.run(["cargo", "build", "--release", "-p", "graphviz-pure-diff"], cwd=ROOT, check=True)
+        hashes = measure()
+        got = matching(hashes, golden["files"])
+        lost = ident - got
+        if lost:
+            sys.exit(f"{len(lost)} files in the committed baseline no longer match C, e.g. {sorted(lost)[:5]}")
+        ident = got
+        stock_ident = matching(measure("--stock"), stock_golden["files"])
 
-    total = Counter(f.split("/")[0] for f in files)
+    files = sorted(golden["files"])
     unstable = sorted(golden["unstable"])
-    unstable_by = Counter(f.split("/")[0] for f in unstable)
-    corpora = []
-    for name, (dirs, desc) in E2E_CORPORA.items():
-        row = {"name": name, "dirs": dirs, "description": desc, "total": total[name], "unstable": unstable_by[name]}
-        for prof in ("apple", "portable"):
-            row[prof] = sum(1 for f in ident[prof] if f.split("/")[0] == name)
-        corpora.append(row)
+    total = Counter(map(corpus, files))
+    unstable_by = Counter(map(corpus, unstable))
+    ident_by = Counter(map(corpus, ident))
+
+    stock_files = sorted(stock_golden["files"])
+    stock_total = Counter(map(corpus, stock_files))
+    stock_ident_by = Counter(map(corpus, stock_ident))
+    stock_differs = sorted(set(stock_files) - stock_ident)
+    libm_only = [f for f in stock_differs if f in ident]
+    # As gv-diff e2e --stock: inputs C with the same math has no stable output for.
+    no_reference = [f for f in stock_differs if f not in golden["files"]]
+
     e2e = {
-        "corpora": corpora,
+        "corpora": [
+            {
+                "name": name,
+                "dirs": dirs,
+                "description": desc,
+                "total": total[name],
+                "identical": ident_by[name],
+                "unstable": unstable_by[name],
+            }
+            for name, (dirs, desc) in E2E_CORPORA.items()
+        ],
         "total": len(files),
-        "apple": len(ident["apple"]),
-        "portable": len(ident["portable"]),
+        "identical": len(ident),
         "unstable": unstable,
         "files": files,
-        "differs": {p: sorted(set(files) - ident[p]) for p in ("apple", "portable")},
+        "differs": sorted(set(files) - ident),
+        # Informational: stock C on macOS computes with Apple's libm, which no build follows.
+        "stock": {
+            "corpora": [
+                {"name": name, "total": stock_total[name], "identical": stock_ident_by[name]}
+                for name in E2E_CORPORA
+            ],
+            "total": len(stock_files),
+            "identical": len(stock_ident),
+            "unstable": sorted(stock_golden["unstable"]),
+            "differs": stock_differs,
+            "libm_only": len(libm_only),
+            "no_reference": sorted(no_reference),
+            "other": sorted(set(stock_differs) - set(libm_only) - set(no_reference)),
+        },
     }
 
     layout = []
     for c in LAYOUT_CORPORA:
-        row = {"name": c}
-        for prof, portable in (("apple", False), ("portable", True)):
-            rep = load(layout_file(c, portable))["files"]
-            row["total"] = len(rep)
-            row[prof] = sum(1 for r in rep.values() if exact(r))
-            row[prof + "_inexact"] = sorted(k for k, r in rep.items() if not exact(r))
-        layout.append(row)
+        rep = load(layout_file(c))["files"]
+        layout.append(
+            {
+                "name": c,
+                "total": len(rep),
+                "exact": sum(1 for r in rep.values() if exact(r)),
+                "inexact": sorted(k for k, r in rep.items() if not exact(r)),
+            }
+        )
 
     skipped = render_unstable()
+    render_base = load(GOLDEN / "render" / "baseline.portable.json")["formats"]
     render = []
     for fmt in RENDER_FORMATS:
-        row = {"format": fmt, "skipped": sum(1 for f, _ in skipped if f == fmt)}
-        for prof, name in (("apple", "baseline.json"), ("portable", "baseline.portable.json")):
-            m = load(GOLDEN / "render" / name)["formats"][fmt]
-            row["total"] = len(m)
-            row[prof] = sum(1 for r in m.values() if r["identical"])
-            row[prof + "_differs"] = sorted(k for k, r in m.items() if not r["identical"])
-        render.append(row)
+        m = render_base[fmt]
+        render.append(
+            {
+                "format": fmt,
+                "total": len(m),
+                "identical": sum(1 for r in m.values() if r["identical"]),
+                "skipped": sum(1 for f, _ in skipped if f == fmt),
+                "differs": sorted(k for k, r in m.items() if not r["identical"]),
+            }
+        )
 
     commit = git("rev-parse", "HEAD")
     data = {
@@ -189,12 +231,13 @@ def main():
         "commit": commit,
         "commit_short": commit[:7],
         "commit_date": git("show", "-s", "--format=%cI", "HEAD"),
-        "source": "measured" if any(measured.values()) else "baselines",
-        "measured": measured,
-        "measured_on": f"{platform.system()} {platform.machine()}" if any(measured.values()) else None,
+        "source": "measured" if a.measure else "baselines",
+        "measured_on": f"{platform.system()} {platform.machine()}" if a.measure else None,
         "oracle": {
             "version": "16.1.0",
-            "command": "GVBINDIR=~/src/gv-ref/lutplugins dot -Tsvg FILE",
+            "math": "the port's portable math functions, interposed into C's dot (crates/graphviz-pure-portable-libm)",
+            "command": "GVBINDIR=~/src/gv-ref/lutplugins scripts/dot-portable-libm.sh -Tsvg FILE",
+            "stock_command": "GVBINDIR=~/src/gv-ref/lutplugins dot -Tsvg FILE",
             "normalisation": "the line starting with '<!-- Generated by ' is dropped from both outputs",
         },
         "e2e": e2e,
@@ -217,7 +260,11 @@ def main():
     }
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"wrote {a.out.relative_to(ROOT)}: e2e apple {e2e['apple']}/{e2e['total']}, portable {e2e['portable']}/{e2e['total']} ({data['source']})")
+    st = e2e["stock"]
+    print(
+        f"wrote {a.out.relative_to(ROOT)}: e2e {e2e['identical']}/{e2e['total']} against C with the same math; "
+        f"stock C on macOS {st['identical']}/{st['total']} ({st['libm_only']} libm-only) ({data['source']})"
+    )
 
 
 if __name__ == "__main__":

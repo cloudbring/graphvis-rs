@@ -15,9 +15,10 @@ import { ENGINES, homeSource, type Figures } from '../../lib/home/source';
 
 const hasCrossPlatform = existsSync(join(process.cwd(), 'src/pages/cross-platform.astro'));
 const figures: Figures = {
-	apple: fidelity.e2e.apple,
-	portable: fidelity.e2e.portable,
+	identical: fidelity.e2e.identical,
 	total: fidelity.e2e.total,
+	stock: fidelity.e2e.stock.identical,
+	stockTotal: fidelity.e2e.stock.total,
 	links: {
 		fidelity: url('fidelity/'),
 		gallery: url('gallery/'),

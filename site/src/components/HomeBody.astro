@@ -8,13 +8,16 @@ import SlugLine from './SlugLine.astro';
 import { fidelity, fmt, issues, samples, url } from '../lib/data';
 
 const f = fidelity;
-const off = f.e2e.total - f.e2e.portable;
-const sfdpOff = f.e2e.corpora.filter((c) => /sfdp/.test(c.name)).reduce((a, c) => a + c.total - c.portable, 0);
+const off = f.e2e.corpora
+	.map((c) => ({ name: c.name, n: c.total - c.identical }))
+	.filter((c) => c.n > 0)
+	.sort((a, b) => b.n - a.n);
+const stock = f.e2e.stock;
 const twopi = f.layout.find((l) => l.name === 'twopi')!;
 const lastFuzz = f.fuzz.rounds[f.fuzz.rounds.length - 1];
 const portBugs = issues.filter((i) => !i.upstream_c).length;
 const upstream = issues.length - portBugs;
-const live = samples.filter((s) => s.identical_portable).length;
+const live = samples.filter((s) => s.identical).length;
 ---
 
 <div class="home">
@@ -36,8 +39,9 @@ const live = samples.filter((s) => s.identical_portable).length;
 				exactly. <a href={url('verify/#the-c-reference')}>Set up the reference</a>
 			</p>
 			<p>
-				<strong>On a stated machine.</strong> Graphviz on a Mac uses Apple's math library, and graphviz-pure on Apple Silicon reproduces it
-				exactly. Every other build uses math compiled into graphviz-pure itself. That is what makes them identical to each other.{' '}
+				<strong>The same math everywhere.</strong> graphviz-pure brings its own math functions and uses them on every machine, Macs
+				included, so every build draws the same bytes. To compare like with like, the reference Graphviz runs with those same functions in
+				place of the system's math library.{' '}
 				<a href={url('porting/libm/')}>Why the math matters</a>
 			</p>
 		</div>
@@ -46,6 +50,15 @@ const live = samples.filter((s) => s.identical_portable).length;
 	<section aria-labelledby="not-yet">
 		<h2 id="not-yet">What isn't there yet</h2>
 		<ul class="left">
+			{off.length > 0 && (
+				<li>
+					<Mark kind="off" />
+					<span>
+						<strong class="num">{fmt(f.e2e.total - f.e2e.identical)}</strong> test graphs differ from Graphviz given the same math:{' '}
+						{off.map((c, i) => <>{i > 0 && ', '}{c.name} {c.n}</>)}.
+					</span>
+				</li>
+			)}
 			<li>
 				<Mark kind="pending" />
 				<span>
@@ -55,17 +68,17 @@ const live = samples.filter((s) => s.identical_portable).length;
 				</span>
 			</li>
 			<li>
-				<Mark kind="off" />
+				<Mark kind="upstream" />
 				<span>
-					<strong class="num">{fmt(off)}</strong> of the {fmt(f.e2e.total)} test graphs come out differently from Graphviz on a Mac when
-					graphviz-pure runs anywhere else, {fmt(sfdpOff)} of them sfdp layouts, which magnify tiny rounding differences. Apple's math library is
-					closed source, so it can't be copied bit for bit.
+					<strong class="num">{fmt(stock.libm_only)}</strong> of the {fmt(stock.total)} test graphs come out differently from stock Graphviz on
+					a Mac, because Graphviz there uses Apple's math library. Given the same math functions, Graphviz draws them exactly as graphviz-pure
+					does, so they are not bugs.
 				</span>
 			</li>
 			<li>
 				<Mark kind="upstream" />
 				<span>
-					<strong class="num">{twopi.total - twopi.apple}</strong> of {twopi.total} twopi layouts hit a tie that Graphviz itself breaks
+					<strong class="num">{twopi.total - twopi.exact}</strong> of {twopi.total} twopi layouts hit a tie that Graphviz itself breaks
 					differently from one run to the next, and <strong class="num">{f.e2e.unstable.length}</strong> test graphs are left out because
 					Graphviz's own output changes between runs.
 				</span>

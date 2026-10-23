@@ -23,13 +23,13 @@ list; check it first.
 You need a recent stable Rust (`rustup` installs it). Then:
 
 ```sh
-cargo test --workspace                                            # everything, as CI runs it on macOS
-cargo test --workspace --features graphviz-pure-core/portable-math  # the profile Linux, Windows and WASM use
+cargo test --workspace                      # everything, as CI runs it on every platform
 cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
 ```
 
 `cargo test` runs the fidelity ratchets: they compare the port with C Graphviz's committed
-outputs on about 2,600 inputs and fail if any file that matched C stops matching. They need
+outputs on about 2,600 inputs, computed by C with the port's own math functions (every build
+uses the same math library; see [docs/porting/libm.md](docs/porting/libm.md)), and fail if any file that matched C stops matching. They need
 no C installation. Regenerating the C references does; see
 [tests/golden/README.md](tests/golden/README.md). CI also runs `scripts/panic-sites.sh`, which
 fails if the layout or geom crates gain an `unwrap`, `expect`, index or integer-overflow site
@@ -42,7 +42,7 @@ fails if the layout or geom crates gain an `unwrap`, `expect`, index or integer-
   and in the pull request, and keep the structure recognisable.
 - **Prove it.** A fix for a difference from C comes with the input that showed it, ideally added
   to a corpus under `tests/`, and the ratchet baselines refreshed if more files now match
-  (`scripts/update-baselines.sh`, and `--portable` for the portable profile). A change must not
+  (`scripts/update-baselines.sh`). A change must not
   make any file that matched C stop matching.
 - **Where C crashes, the port must not.** Fix a panic at its cause, not at the line that
   panics, and group crashes that share a cause into one fix
@@ -64,7 +64,7 @@ fails if the layout or geom crates gain an `unwrap`, `expect`, index or integer-
   CI (`scripts/check-crate-notices.sh`) fails when one differs.
 - **Changelog:** add a line under "Unreleased" in [CHANGELOG.md](CHANGELOG.md) for anything a
   user would notice, including changes to output bytes.
-- **Pull requests** need the CI checks to pass (tests in both math profiles, the supply-chain
+- **Pull requests** need the CI checks to pass (tests on every platform, the supply-chain
   check, and the cross-platform check that every platform writes the same bytes) and all review
   threads resolved. The "PR risk report" job lists what a maintainer will read most closely:
   changes to workflows, scripts, build scripts and dependencies

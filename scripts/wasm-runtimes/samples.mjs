@@ -1,4 +1,4 @@
-// The gallery samples that are the same under every math profile, with their committed output
+// The gallery samples, with their committed output
 // (site/public/samples/NAME/rust.svg), as scripts/release-smoke-wasm.mjs checks them. Uses only
 // node:fs, which Node.js, Deno and Bun all provide.
 import fs from 'node:fs';
@@ -8,17 +8,15 @@ const root = new URL('../../', import.meta.url);
 
 export function loadSamples() {
   const all = JSON.parse(fs.readFileSync(new URL('site/src/data/samples.json', root), 'utf8'));
-  return all
-    .filter((s) => s.identical_portable)
-    .map((s) => {
-      const dir = new URL(`site/public/samples/${s.name}/`, root);
-      return {
-        name: s.name,
-        engine: s.engine,
-        input: new Uint8Array(fs.readFileSync(new URL(s.wasm_input, dir))),
-        expected: new Uint8Array(fs.readFileSync(new URL('rust.svg', dir))),
-      };
-    });
+  return all.map((s) => {
+    const dir = new URL(`site/public/samples/${s.name}/`, root);
+    return {
+      name: s.name,
+      engine: s.engine,
+      input: new Uint8Array(fs.readFileSync(new URL(s.wasm_input, dir))),
+      expected: new Uint8Array(fs.readFileSync(new URL('rust.svg', dir))),
+    };
+  });
 }
 
 export function sameBytes(a, b) {
