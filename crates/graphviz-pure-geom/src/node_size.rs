@@ -782,9 +782,10 @@ fn star_vertices(vertices: &mut [Point], bb: &mut Point) {
     let offset = (r * (1.0 - math::sin(alpha3))) / 2.0;
     let mut theta = alpha;
     for i in (0..10).step_by(2) {
-        vertices[i] = Point::new(r * math::cos(theta), r * math::sin(theta) - offset);
+        // C (clang) fuses `r * sin(theta) - offset`.
+        vertices[i] = Point::new(r * math::cos(theta), r.mul_add(math::sin(theta), -offset));
         theta += alpha2;
-        vertices[i + 1] = Point::new(r0 * math::cos(theta), r0 * math::sin(theta) - offset);
+        vertices[i + 1] = Point::new(r0 * math::cos(theta), r0.mul_add(math::sin(theta), -offset));
         theta += alpha2;
     }
     *bb = sz;
@@ -802,7 +803,8 @@ fn cylinder_vertices(v: &mut [Point], bb: &mut Point) {
     let y = bb.y / 2.0;
     let yr = bb.y / 11.0;
     v[0] = Point::new(x, y - yr);
-    v[1] = Point::new(x, y - (1.0 - 0.551784) * yr);
+    // C (clang) fuses `y - (1 - 0.551784) * yr`.
+    v[1] = Point::new(x, (-(1.0 - 0.551784f64)).mul_add(yr, y));
     v[2] = Point::new(0.551784 * x, y);
     v[3] = Point::new(0.0, y);
     v[4] = Point::new(-0.551784 * x, y);

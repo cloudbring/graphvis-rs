@@ -66,7 +66,8 @@ impl Dot<'_> {
         let nu = &self.nodes[u];
         let (x1, y1) = (nu.coord.x, nu.coord.y);
         let r = (nu.lw + nu.rw).max(nu.ht + self.graphs[0].ranksep as f64);
-        let (x2, y2) = (x * r + x1, y * r + y1);
+        // C (clang) fuses these multiply-adds.
+        let (x2, y2) = (x.mul_add(r, x1), y.mul_add(r, y1));
         // now move (x1,y1) to the node boundary
         let mut curve = [
             Point::new(x1, y1),

@@ -226,8 +226,8 @@ impl<'g> Model<'g> {
     /// `getdoubles2ptf` in `lib/common/input.c` reads them.
     pub fn drawing_size(&self) -> Option<(f64, f64, bool)> {
         let p = self.root_attrs().get("size")?;
-        // POINTS(a): ROUND(a * 72).
-        let points = |a: f64| f64::from(graphviz_pure_core::cnum::c_round(a * 72.0));
+        // POINTS(a): ROUND(a * 72), with `a * 72 ± .5` fused by C (clang).
+        let points = |a: f64| f64::from(graphviz_pure_core::cnum::c_round_mul(a, 72.0));
         let r = sscanf(p, "%lf,%lf%c");
         let [x, y, ..] = r.values;
         if r.count > 1 && x > 0.0 && y > 0.0 {

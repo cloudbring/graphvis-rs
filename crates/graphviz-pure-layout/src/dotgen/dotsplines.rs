@@ -107,7 +107,8 @@ fn box_ok(b: &BoxF) -> bool {
 
 /// `leftOf(p1, p2, p3)`: whether `p3` is left of the ray `p1 -> p2`.
 fn left_of(p1: Point, p2: Point, p3: Point) -> bool {
-    (p1.y - p2.y) * (p3.x - p2.x) - (p3.y - p2.y) * (p1.x - p2.x) > 0.0
+    // C (clang) fuses this multiply-subtract.
+    (p1.y - p2.y).mul_add(p3.x - p2.x, -((p3.y - p2.y) * (p1.x - p2.x))) > 0.0
 }
 
 impl Dot<'_> {
@@ -1374,12 +1375,18 @@ impl Dot<'_> {
         for (i, &e) in edges.iter().enumerate() {
             let fi = (i + 1) as f64;
             let b = *tend.boxes.last().unwrap();
-            let b0 = BoxF::new(b.ll.x, b.ll.y - fi * stepy, b.ur.x + fi * stepx, b.ll.y);
+            // C (clang) fuses the `(i + 1) * step` multiply-adds of this loop.
+            let b0 = BoxF::new(
+                b.ll.x,
+                (-fi).mul_add(stepy, b.ll.y),
+                fi.mul_add(stepx, b.ur.x),
+                b.ll.y,
+            );
             let tl = *tend.boxes.last().unwrap();
             let hl = *hend.boxes.last().unwrap();
             let b1 = BoxF::new(tl.ll.x, b0.ll.y - stepy, hl.ur.x, b0.ll.y);
             let b = hl;
-            let b2 = BoxF::new(b.ll.x - fi * stepx, b1.ur.y, b.ur.x, b.ll.y);
+            let b2 = BoxF::new((-fi).mul_add(stepx, b.ll.x), b1.ur.y, b.ur.x, b.ll.y);
             for bx in &tend.boxes {
                 add_box(&mut p, *bx);
             }
@@ -1461,12 +1468,18 @@ impl Dot<'_> {
         for (i, &e) in edges.iter().enumerate() {
             let fi = (i + 1) as f64;
             let b = *tend.boxes.last().unwrap();
-            let b0 = BoxF::new(b.ll.x, b.ur.y, b.ur.x + fi * stepx, b.ur.y + fi * stepy);
+            // C (clang) fuses the `(i + 1) * step` multiply-adds of this loop.
+            let b0 = BoxF::new(
+                b.ll.x,
+                b.ur.y,
+                fi.mul_add(stepx, b.ur.x),
+                fi.mul_add(stepy, b.ur.y),
+            );
             let tl = *tend.boxes.last().unwrap();
             let hl = *hend.boxes.last().unwrap();
             let b1 = BoxF::new(tl.ll.x, b0.ur.y, hl.ur.x, b0.ur.y + stepy);
             let b = hl;
-            let b2 = BoxF::new(b.ll.x - fi * stepx, b.ur.y, b.ur.x, b1.ll.y);
+            let b2 = BoxF::new((-fi).mul_add(stepx, b.ll.x), b.ur.y, b.ur.x, b1.ll.y);
             for bx in &tend.boxes {
                 add_box(&mut p, *bx);
             }

@@ -4,7 +4,7 @@
 
 use super::shapes::NodeShape;
 use super::types::*;
-use super::utils::{c_round, late_double, map_bool, mapbool};
+use super::utils::{late_double, map_bool, mapbool};
 use crate::cutil::{CRand, Drand48};
 use graphviz_pure_core::font::{LabelSubstContext, measure_multiline_label_with_context};
 use graphviz_pure_core::strtod::{atof, sscanf};
@@ -16,9 +16,9 @@ pub const DEFAULT_FONTNAME: &str = "Times-Roman";
 pub const DEFAULT_NODESEP: f64 = 0.25;
 pub const MIN_NODESEP: f64 = 0.02;
 
-/// `POINTS(a)`: inches to integral points.
+/// `POINTS(a)`: inches to integral points. C (clang) fuses `a * 72 ± .5`.
 pub fn points(inches: f64) -> f64 {
-    c_round(inches * 72.0) as f64
+    f64::from(graphviz_pure_core::cnum::c_round_mul(inches, 72.0))
 }
 
 /// `getdoubles2ptf`: a `size`/`page` attribute in points and its `!` flag.
@@ -165,8 +165,9 @@ impl<'a> LGraph<'a> {
     pub fn new_unported(graph: &'a Graph, ndim: usize, default_edge_type: EdgeType) -> Self {
         let gattrs = &graph.graph_attrs;
         // `GD_nodesep = POINTS(…)`, an `int`: 1e300 inches saturates at INT_MAX points.
-        let nodesep = i64::from(c_round(
-            late_double(gattrs, "nodesep", DEFAULT_NODESEP, MIN_NODESEP) * 72.0,
+        let nodesep = i64::from(graphviz_pure_core::cnum::c_round_mul(
+            late_double(gattrs, "nodesep", DEFAULT_NODESEP, MIN_NODESEP),
+            72.0,
         ));
         let mut drawing = Drawing::default();
         if let Some(p) = gattrs.get("ratio") {

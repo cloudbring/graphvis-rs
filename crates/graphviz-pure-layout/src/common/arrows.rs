@@ -153,8 +153,9 @@ fn miter_shape(base_left: Point, p: Point, base_right: Point, penwidth: f64) -> 
         -math::acos(cos_alpha)
     };
     let p1 = Point::new(
-        p.x - penwidth / 2.0 * sin_alpha,
-        p.y + penwidth / 2.0 * cos_alpha,
+        // C (clang) fuses each `P ± penwidth / 2.0 * …` of `miter_shape` into one fma.
+        (-(penwidth / 2.0)).mul_add(sin_alpha, p.x),
+        (penwidth / 2.0).mul_add(cos_alpha, p.y),
     );
     let dxb = base_right.x - p.x;
     let dyb = base_right.y - p.y;
@@ -175,15 +176,15 @@ fn miter_shape(base_left: Point, p: Point, base_right: Point, penwidth: f64) -> 
     let normalized_miter_length = 1.0 / math::sin(theta / 2.0);
     let sin_beta = dyb / hypotb;
     let p2 = Point::new(
-        p.x + penwidth / 2.0 * -sin_beta,
-        p.y - penwidth / 2.0 * -cos_beta,
+        (penwidth / 2.0).mul_add(-sin_beta, p.x),
+        (-(penwidth / 2.0)).mul_add(-cos_beta, p.y),
     );
     if normalized_miter_length > 4.0 {
         let pb = Point::new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0);
         return Tri { p: [pb, p1, p2] };
     }
     let l = penwidth / 2.0 / math::tan(theta / 2.0);
-    let p3 = Point::new(p1.x + l * cos_alpha, p1.y + l * sin_alpha);
+    let p3 = Point::new(l.mul_add(cos_alpha, p1.x), l.mul_add(sin_alpha, p1.y));
     Tri { p: [p3, p1, p2] }
 }
 
@@ -472,17 +473,21 @@ fn len_for(t: u32, lenfact: f64, arrowsize: f64, penwidth: f64, flag: u32) -> f6
         }
         ARR_TYPE_TEE => {
             let mut length = nominal;
-            let start = penwidth / 2.0 - (1.0 - 0.6) * nominal;
+            // C (clang) fuses `penwidth / 2 - k * nominal_length` into one fma.
+            let start = (-(1.0 - 0.6f64)).mul_add(nominal, penwidth / 2.0);
             if start > 0.0 {
                 length += start;
             }
-            let end = penwidth / 2.0 - 0.2 * nominal;
+            let end = (-0.2f64).mul_add(nominal, penwidth / 2.0);
             if start > 0.0 {
                 length += end;
             }
             length
         }
-        ARR_TYPE_BOX | ARR_TYPE_CURVE => nominal + penwidth / 2.0,
+        // C (clang) fuses `lenfact * arrowsize * ARROW_LENGTH + penwidth…`.
+        ARR_TYPE_BOX | ARR_TYPE_CURVE => {
+            (lenfact * arrowsize).mul_add(ARROW_LENGTH, penwidth / 2.0)
+        }
         ARR_TYPE_DIAMOND => {
             let mut a = [o; 5];
             let q = arrow_type_diamond0(o, u, penwidth, flag, &mut a);
@@ -492,7 +497,7 @@ fn len_for(t: u32, lenfact: f64, arrowsize: f64, penwidth: f64, flag: u32) -> f6
             let full_base_width = nominal_base_width * full_length / nominal_length;
             2.0 * full_length - full_length * penwidth / full_base_width
         }
-        ARR_TYPE_DOT => nominal + penwidth,
+        ARR_TYPE_DOT => (lenfact * arrowsize).mul_add(ARROW_LENGTH, penwidth),
         _ => nominal,
     }
 }

@@ -240,9 +240,10 @@ fn star_vertices(sz0: Point) -> (Vec<Point>, Point) {
     let mut v = vec![Point::default(); 10];
     let mut i = 0;
     while i < 10 {
-        v[i] = Point::new(r * math::cos(theta), r * math::sin(theta) - offset);
+        // C (clang) fuses `r * sin(theta) - offset`.
+        v[i] = Point::new(r * math::cos(theta), r.mul_add(math::sin(theta), -offset));
         theta += ALPHA2;
-        v[i + 1] = Point::new(r0 * math::cos(theta), r0 * math::sin(theta) - offset);
+        v[i + 1] = Point::new(r0 * math::cos(theta), r0.mul_add(math::sin(theta), -offset));
         theta += ALPHA2;
         i += 2;
     }
@@ -255,7 +256,8 @@ fn cylinder_vertices(bb: Point) -> Vec<Point> {
     let yr = bb.y / 11.0;
     let mut v = vec![Point::default(); 19];
     v[0] = Point::new(x, y - yr);
-    v[1] = Point::new(x, y - (1.0 - 0.551784) * yr);
+    // C (clang) fuses `y - (1 - 0.551784) * yr`.
+    v[1] = Point::new(x, (-(1.0 - 0.551784f64)).mul_add(yr, y));
     v[2] = Point::new(0.551784 * x, y);
     v[3] = Point::new(0.0, y);
     v[4] = Point::new(-0.551784 * x, y);
@@ -297,9 +299,13 @@ fn regular_unit_vertices(sides: usize, orientation: f64, distortion: f64, skew: 
         angle += sectorangle;
         sinx = math::sin(angle);
         cosx = math::cos(angle);
-        r.x += sidelength * cosx;
-        r.y += sidelength * sinx;
-        let mut p = Point::new(r.x * (skewdist + r.y * gdistortion) + r.y * gskew, r.y);
+        // C (clang) fuses these multiply-adds (the `fmadd`s in poly_init of libgvc).
+        r.x = sidelength.mul_add(cosx, r.x);
+        r.y = sidelength.mul_add(sinx, r.y);
+        let mut p = Point::new(
+            r.x.mul_add(r.y.mul_add(gdistortion, skewdist), r.y * gskew),
+            r.y,
+        );
         // RADIANS(orientation) + atan2(P.y, P.x), fused
         let alpha = (orientation / 180.0).mul_add(PI, math::atan2(p.y, p.x));
         let (s, c) = (math::sin(alpha), math::cos(alpha));

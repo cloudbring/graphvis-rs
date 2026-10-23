@@ -98,7 +98,8 @@ pub fn tree_map(area: &[f64], fillrec: Rectangle) -> Option<Vec<Rectangle>> {
     for &a in area {
         total += a;
     }
-    if total > fillrec.size[0] * fillrec.size[1] + 0.001 {
+    // C (clang) fuses this multiply-add.
+    if total > fillrec.size[0].mul_add(fillrec.size[1], 0.001) {
         return None;
     }
     let mut recs = vec![Rectangle::default(); area.len()];

@@ -1055,7 +1055,9 @@ fn rm_equality(info: &mut [Info]) -> Vec<usize> {
         if kp < n && info[order[kp]].coord.y == ci.y {
             let xdel = (info[order[kp]].coord.x - ci.x) / f64::from(cnt);
             for (i, j) in ((ip + 1)..kp).enumerate() {
-                info[order[j]].coord.x += (i + 1) as f64 * xdel;
+                // C (clang) fuses `coord.x += i * xdel`.
+                let x = &mut info[order[j]].coord.x;
+                *x = ((i + 1) as f64).mul_add(xdel, *x);
             }
         } else {
             for (a, j) in (ip..).zip((ip + 1)..kp) {

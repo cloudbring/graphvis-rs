@@ -1342,6 +1342,44 @@ a -- b;
     );
 }
 
+// Issue #96. `round_corners` (lib/common/shapes.c:814) computes the folder tab's corner
+// `AF[0].x - 2.25 * (AF[0].x - B[1].x)`, which clang fuses into one fmadd. Unfused, the
+// corner rounds to -2.51 instead of C's -2.52.
+#[test]
+fn folder_tab_corner_is_fused_like_clang() {
+    let src = "digraph G{layout=neato; notranslate=true; a [shape=folder, \
+               width=0.13972222222222222, height=0.2, fixedsize=true, label=\"\", pos=\"0,0!\"];}\n";
+    let (out, err, ok) = run(&["-Kneato", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    let c_points = "points=\"5.03,-7.2 4.19,-8.32 -1.68,-8.32 -2.52,-7.2 -5.03,-7.2 \
+                    -5.03,7.2 5.03,7.2 5.03,-7.2\"";
+    assert!(out.contains(c_points), "{out}");
+}
+
+// Issue #89. `initRegular` (lib/neatogen/neatoinit.c:896) places the nodes of
+// `start=regular` with `cos(a)` and `sin(a)`, which clang merges into one `__sincos_stret`
+// call. C with the port's math (scripts/dot-portable-libm.sh, which interposes
+// `__sincos_stret` with the portable `sin` and `cos`) lays a 37-node cycle out on a
+// 758x735pt canvas with these node centres, and so must the port.
+#[test]
+fn start_regular_places_nodes_like_c_with_the_same_math() {
+    let mut src = String::from("graph G { start=regular; mode=KK;\n");
+    for i in 0..37 {
+        src.push_str(&format!("  n{i} -- n{};\n", (i + 1) % 37));
+    }
+    src.push_str("}\n");
+    let (out, err, ok) = run(&["-Kneato", "-Tsvg"], &src);
+    assert!(ok, "{err}");
+    for c in [
+        "<svg width=\"758pt\" height=\"735pt\"",
+        "cx=\"619.27\" cy=\"-429.2\"",
+        "cx=\"592.3\" cy=\"-488.82\"",
+        "cx=\"630.69\" cy=\"-548\"",
+    ] {
+        assert!(out.contains(c), "{c}: {out}");
+    }
+}
+
 // The circo variant of issue #13 (repro-circo.gv). With C's record box the guiding polygon
 // does not triangulate, so `Pshortestpath` fails, genroute warns (multispline.c:703) and
 // the edge falls back to a straight line.

@@ -173,7 +173,8 @@ pub fn scan_graph_mode(
     }
     p.initial_dist = match g.gattr("defaultdist").filter(|s| !s.is_empty()) {
         Some(s) => p.epsilon.max(atof(s)),
-        None => total_len / (if ne > 0 { ne } else { 1 }) as f64 * (nv as f64).sqrt() + 1.0,
+        // C (clang) fuses `total_len / nE * sqrt(nV) + 1`.
+        None => (total_len / (if ne > 0 { ne } else { 1 }) as f64).mul_add((nv as f64).sqrt(), 1.0),
     };
     let kk = (mode == MODE_KK).then(|| KkState {
         dist: vec![vec![p.initial_dist; nv]; nv],

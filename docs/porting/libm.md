@@ -334,15 +334,81 @@ sources:
   `graphviz_pure_layout::cutil`, exported by `graphviz-pure-portable-libm --features apple-libc`) circo, osage,
   patchwork, sfdp and twopi match on every file.
 - **the rest**: 102 files, 97 of them neato. The ones checked differ by 0.01 in a spline
-  control point, a last-bit rounding difference with every node in the same place; the likely
-  cause is the compilers contracting `a*b + c` into fused multiply-adds in different places
-  (Apple clang 21 against Debian clang 14 and 19). Not confirmed.
+  control point, a last-bit rounding difference with every node in the same place. Not
+  identified. It is not the fused multiply-adds of Graphviz's own code, which clang contracts
+  the same way on both (see "Fused multiply-adds" below).
 
 Two things that were checked and are not the cause: the clang version (14 and 19 give the same
 results), and `long double`, which is 128-bit on Linux aarch64 and 64-bit on Apple arm64 (the
 only use, neato's `stress_majorization_kD_mkernel` accumulator, makes no difference on the
 corpus). The first Linux build lacked GTS, which changes neato's and sfdp's overlap removal; the
 Dockerfile now checks that GTS is configured.
+
+## Fused multiply-adds: the reference build decides
+
+The math library is not the only place where two builds of the same C compute different bits.
+A compiler may contract `a * b + c` into one fused multiply-add, which rounds once instead of
+twice. Clang does this by default (`-ffp-contract=on`) within one expression, and only on
+targets with an FMA instruction. So C Graphviz computes different bits on Apple Silicon, where
+every `fmadd` is used, and on x86-64 Linux, whose baseline instruction set has none.
+
+**The reference is Homebrew's Graphviz 16.1.0 on macOS arm64**, the build the corpus goldens
+come from (`scripts/gen-golden.sh`). The port computes what that build computes, on every
+target: where it fuses, the port calls `f64::mul_add` explicitly; where it does not, the port
+does not. `mul_add` is correctly rounded on every target (hardware FMA, or a software `fma` on
+x86-64 without FMA and on wasm32), so the port's bits do not depend on the platform. Rust never
+contracts on its own.
+
+How a site is decided: within one C expression, clang fuses a product that is an operand of an
+addition or subtraction, preferring the left operand. So `a*b + c*d` is `fma(a, b, c*d)`,
+`c - a*b` is `fma(-a, b, c)`, `x += a*b` is `fma(a, b, x)`, and
+`a*b + c*d + e*f` is `fma(e, f, fma(a, b, c*d))`. Macros count (`DIST2`, `SQR`, `ROUND`,
+`POINTS`: `ROUND(x * 72)` tests the sign of the rounded product, then fuses `x * 72 ± .5`, which
+is `graphviz_pure_core::cnum::c_round_mul`). A product by a power of two is exact, so it is left
+unfused. The port's code says `C (clang) fuses …` at each site.
+
+`scripts/fma-sites.sh` lists the sites. Homebrew's dylibs have no debug information, so it
+builds the same sources with the same compiler and Homebrew's flags (`-Os -g`; at `-O2` clang
+inlines differently), checks that every function has the same fused instructions as the
+installed dylibs, and maps each instruction to its source line. For 16.1.0 the reference build has
+616 fused instructions (589 scalar `fmadd`/`fmsub`/`fnmadd`/`fnmsub`, 27 vector `fmla`/`fmls`)
+and 38 `__sincos_stret` calls, on 466 source lines (18 of them line 0, code the debug
+information gives no line for) in `libgvc`, `libpathplan`, and the core, dot
+and neato plugins. The audit for C11 (#89, #90, #96) checked every line against the port (rows
+of the audit; a row can cover several lines, such as the two coordinates of one point):
+
+| status | rows |
+|---|---:|
+| the port already fused it | 259 |
+| fused by C11 (#96's folder corner, render arrows, ellipses, tapers, gradients, polygon outlines, HTML tables, `recPt`, `Initial_dist`, `medians`, dot's flat-edge boxes, patchwork, `POINTS`) | 77 |
+| exact either way (a product by a power of two or ±1, or of integers too small to round) | 35 |
+| not ported (paging, z output, `Verbose` output, gvevent, tk, edgepaint and gvmap helpers) | 23 |
+| `__sincos_stret` (below) | 33 |
+
+Every `mul_add` in the port is at a site C fuses, except three `(-1.0).mul_add(x, c)` in
+neato's `cola.rs`, `digcola.rs` and `stress.rs`, where C subtracts; they are exact.
+
+`__sincos_stret` is clang merging a `sin(a)` and a `cos(a)` into one call. It needs nothing in
+the port: `graphviz-pure-portable-libm` interposes it with the portable `sin` and `cos`, so C
+with the port's math computes the same values whether or not clang merged the calls.
+
+**GTS**, which neato uses for triangulation, is contracted by the same compiler (checked by
+rebuilding GTS 0.7.6's `predicates.c` with `-Os -g` and comparing the fused instructions per
+function with Homebrew's `libgts`; `scripts/fma-sites.sh` does not cover it). Shewchuk's
+`incircle` fast stage fuses its lifts, `det` and `permanent`; `neatogen/robust.rs` does too,
+with the error-bound constants GTS's generated `predicates_init.h` stores (`%.16g`, one ulp
+above the exact value), so the port computes C's `det` bit for bit. No output depends on it:
+GTS and the port use only the sign of `orient2d` and `incircle`, and the predicates make the
+sign exact however the fast stage rounds.
+
+**Other C builds disagree with the reference.** C on x86-64 Linux has no fused operations at
+all. The Linux C oracle in `scripts/c-oracle-linux/` (Debian arm64) builds Graphviz with clang,
+which contracts the same expressions as on macOS: contraction is decided per expression by the
+compiler's front end, not by the optimisation level. It links Debian's GTS, which is compiled
+differently (in `libgts-0.7.so.5` of Debian bookworm arm64, `orient2d` has no fused
+instruction, 8 in Homebrew's, and `incircle` has 7, 134 in Homebrew's), but since only the
+predicates' signs are used, that cannot explain the Linux differences above. None of these
+builds is the reference; the port follows the macOS arm64 build.
 
 ## Provenance and licences
 

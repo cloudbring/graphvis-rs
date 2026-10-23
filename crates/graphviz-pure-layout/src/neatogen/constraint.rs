@@ -307,13 +307,9 @@ fn overlaps(items: &[NItem]) -> bool {
     false
 }
 
-/// `ROUND(f)` where clang contracts `f*72 + .5` into an fma.
+/// `POINTS(f)`, with `f*72 ± .5` fused as clang does.
 fn points_fma(f: f64) -> i32 {
-    if f * 72.0 >= 0.0 {
-        f.mul_add(72.0, 0.5) as i32
-    } else {
-        f.mul_add(72.0, -0.5) as i32
-    }
+    graphviz_pure_core::cnum::c_round_mul(f, 72.0)
 }
 
 /// `POINTS(f)` for `initItem`'s `x` and `y`. The reference build converts the two with a

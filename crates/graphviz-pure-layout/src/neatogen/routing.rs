@@ -124,19 +124,20 @@ pub fn make_obstacle(g: &LGraph<'_>, n: usize, pmargin: &Expand) -> Option<Vec<P
                     Point::new(urx + pmargin.x, ury + pmargin.y),
                     Point::new(urx + pmargin.x, lly - pmargin.y),
                 ]
+                .map(|p| Point::new(p.x + c.x, p.y + c.y))
             } else {
+                // recPt: C (clang) fuses `x * m->x + c.x`.
+                let rec_pt = |x: f64, y: f64| {
+                    Point::new(x.mul_add(pmargin.x, c.x), y.mul_add(pmargin.y, c.y))
+                };
                 [
-                    Point::new(llx * pmargin.x, lly * pmargin.y),
-                    Point::new(llx * pmargin.x, ury * pmargin.y),
-                    Point::new(urx * pmargin.x, ury * pmargin.y),
-                    Point::new(urx * pmargin.x, lly * pmargin.y),
+                    rec_pt(llx, lly),
+                    rec_pt(llx, ury),
+                    rec_pt(urx, ury),
+                    rec_pt(urx, lly),
                 ]
             };
-            Some(
-                pts.iter()
-                    .map(|p| Point::new(p.x + c.x, p.y + c.y))
-                    .collect(),
-            )
+            Some(pts.to_vec())
         }
     }
 }
