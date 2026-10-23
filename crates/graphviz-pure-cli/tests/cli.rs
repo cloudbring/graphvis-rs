@@ -1610,6 +1610,25 @@ c -> d [fontcolor=blue, penwidth=3.99];
         assert!(ok, "{src}: {err}");
         assert!(out.contains(path), "{src}: {out}");
     }
+    // `label` is the ProtoGraph's node symbol 0, so `aaa` is id 1 in both graphs and
+    // N_penwidth (id 2) reads `penwidth`; sorted by name, id 2 would be `label`.
+    let src = "digraph G { node [penwidth=1, aaa=9, shape=box]; {rank=same; a -> b [tailport=e]; a -> b [label=x];} }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg"], src);
+    assert!(ok, "{err}");
+    for path in [
+        "d=\"M54,-18C64.27,-18 59.23,-31.57 68.5,-36 70.21,-36.82 71.31,-36.88 74.95,-35.97\"",
+        "d=\"M58.07,-15.69C61.58,-15.49 65.12,-15.32 68.5,-15.2 70.4,-15.13 72.35,-15.1 74.31,-15.1\"",
+    ] {
+        assert!(out.contains(path), "{out}");
+    }
+    // `-G` attributes reach auxg through the ProtoGraph: the aux layout orders its edges.
+    let src = "graph G { node [shape=box]; {rank=same; a -- b [tailport=s, label=\"long label one\", headlabel=\"H\"]; a -- b [headport=n, label=\"two\"]; a -- b [headport=s, label=\"three\", taillabel=\"T\"];} c -- a; }";
+    let (out, err, ok) = run(&["-Kdot", "-Tsvg", "-Gordering=out"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"213pt\" height=\"159pt\""),
+        "{out}"
+    );
     // `-E` declares `penwidth` on cgraph's ProtoGraph, so it keeps id 0 in auxg too, and
     // E_penwidth reads itself; sorted by name, id 0 would be `arrowsize` (3).
     let src = "digraph G { edge [arrowsize=3]; {rank=same; a -> b [tailport=e];} }";

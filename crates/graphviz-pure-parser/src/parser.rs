@@ -367,7 +367,9 @@ impl<'a> Parser<'a> {
                 proto: true,
             },
         );
-        // Command-line defaults come from cgraph's ProtoGraph dictionaries.
+        // Command-line defaults come from cgraph's ProtoGraph dictionaries. C numbers them in
+        // command-line order and these in name order; every graph copies the ProtoGraph with
+        // its ids, so no lookup by id can tell the two apart.
         for (kind, map) in [
             (DictKind::Graph, self.globals.graph.clone()),
             (DictKind::Node, self.globals.node.clone()),

@@ -148,10 +148,10 @@ impl<'g> AuxSyms<'g> {
     ];
 
     fn new(main: &'g graphviz_pure_core::AttrDicts) -> Self {
+        // gvContext declares the node `label` on the ProtoGraph first: id 0 in every root.
         let mut node = Self::names(&main.node);
-        if !main.node.contains_key("label") {
-            node.insert(0, "label".to_string());
-        }
+        node.retain(|k| k != "label");
+        node.insert(0, "label".to_string());
         let mut edge = Self::names(&main.edge);
         for k in ["headport", "tailport", "weight"] {
             if !main.edge.contains_key(k) {
@@ -989,6 +989,12 @@ impl Dot<'_> {
         let input = self.input;
         // cloneGraph: node/edge attribute declarations, rankdir turned.
         let mut aux = graphviz_pure_core::Graph::new("auxg", input.kind, false);
+        // agopen copies the ProtoGraph's graph attributes (`-G`) to auxg, as to the root.
+        if let Some(main) = input.dicts.first() {
+            for (k, sym) in main.graph.iter().filter(|(_, s)| s.proto) {
+                aux.graph_attrs.insert(k.clone(), sym.defval.clone());
+            }
+        }
         aux.graph_attrs.insert("rank".to_string(), String::new());
         // GD_drawing(auxg)->quantum and GD_charset(auxg) come from the main graph.
         for k in ["quantum", "charset"] {
