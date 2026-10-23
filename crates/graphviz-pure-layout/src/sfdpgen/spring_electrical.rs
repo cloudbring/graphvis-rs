@@ -990,7 +990,15 @@ pub fn multilevel_spring_electrical_embedding(
         pcp_rotate(n, dim, x);
     }
     if ctrl.rotation != 0.0 {
-        rotate(n, dim, x, ctrl.rotation);
+        // C's `rotate` asserts `dim == 2` and aborts on `dim=3` or `dimen=3`
+        // (#273). The port lays out as without `rotation`, with a warning.
+        if dim == 2 {
+            rotate(n, dim, x, ctrl.rotation);
+        } else {
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "sfdp: rotation needs a 2-dimensional layout (dim={dim}); the layout is not rotated\n"
+            ));
+        }
     }
     remove_overlap_ctrl(dim, &mut a, x, label_sizes, ctrl, edge_label_nodes, crand);
     *ctrl = ctrl0;
