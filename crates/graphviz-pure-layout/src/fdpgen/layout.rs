@@ -491,6 +491,14 @@ impl Fdp<'_, '_> {
 
     /// `deriveGraph(g, infop)`; `None` when a node lies in two
     /// non-comparable clusters.
+    ///
+    /// C names each derived node (`mkDeriveNode(dg, agnameof(...))`) in a root graph of its
+    /// own, whose dictionary has no HTML strings: a node `<G>` and a node `G`, two clusters of
+    /// one name, or a cluster and a node of one name are one derived node there. Each call
+    /// still takes the next `ND_id`, so the merged node's id reaches `agnnodes(dg)`, and C
+    /// fails `bitarray_get`'s bounds assertion in `findCComp` (`comp.c`). C produces no layout
+    /// for such a graph; the port keeps the derived nodes apart, as C does when the names
+    /// differ.
     fn derive_graph(&mut self, g: Option<usize>) -> Option<DG> {
         let mut dg = DG {
             uid: self.next_uid,
@@ -516,7 +524,8 @@ impl Fdp<'_, '_> {
             // do_graph_label(subg): the label's diagnostics print here, a graph's clusters
             // before their own; register_clusters made the labels quietly.
             let sg = &src.subgraphs[self.tree.subgraph[c]];
-            let _ = crate::common::init::graph_label(&sg.graph_attrs, &sg.name, false);
+            let _ =
+                crate::common::init::graph_label(&sg.graph_attrs, &sg.name, sg.html_name, false);
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));

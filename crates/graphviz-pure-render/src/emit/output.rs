@@ -241,9 +241,54 @@ pub(crate) fn propagate_inherited(g: &mut Graph, orig: &Graph, explicit: &[BTree
     }
 }
 
+/// Whether the root graph's string dictionary holds `s` as a plain string (not an HTML one):
+/// a name, an attribute name or a plain attribute value.
+fn root_holds_plain(g: &Graph, s: &str) -> bool {
+    let in_map = |m: &graphviz_pure_core::AttrMap| {
+        m.iter()
+            .any(|(k, v)| !k.starts_with('\u{1}') && (k == s || (v == s && !attr_is_html(m, k))))
+    };
+    (!g.empty_name && g.name == s)
+        || in_map(&g.graph_attrs)
+        || in_map(&g.node_defaults)
+        || in_map(&g.edge_defaults)
+        || g.subgraphs.iter().any(|sg| {
+            (!sg.html_name && sg.name == s)
+                || in_map(&sg.graph_attrs)
+                || in_map(&sg.node_defaults)
+                || in_map(&sg.edge_defaults)
+        })
+        || g.nodes
+            .iter()
+            .any(|n| (!n.html_name && n.name == s) || in_map(&n.attrs))
+        || g.edges
+            .iter()
+            .any(|e| (!e.key_html && e.key.as_deref() == Some(s)) || in_map(&e.attrs))
+        || g.dicts.iter().any(|d| {
+            [&d.graph, &d.node, &d.edge]
+                .iter()
+                .any(|m| m.iter().any(|(k, sym)| k == s || sym.defval == s))
+        })
+}
+
+/// `canon` in `output.c`, for the text of an edge label or of a node's non-HTML label. It interns the text in the root graph
+/// (`agstrdup`), canonicalizes it, and frees it again (`agstrfree`): when `agstrcanon` needs no
+/// quotes it returns the interned string itself, which that free releases unless the
+/// dictionary held the plain string already. C then prints freed memory, a byte that differs
+/// from run to run or nothing; the port writes the empty field. An HTML edge label whose text
+/// is not also a name or a plain value takes that path, and so does the default label of a
+/// node with an HTML name.
+fn plain_label_canon(g: &Graph, text: &str) -> String {
+    let c = graphviz_pure_parser::canon_str(text);
+    if c == text && !root_holds_plain(g, text) {
+        return String::new();
+    }
+    c
+}
+
 /// `write_plain` (`-Tplain`, `-Tplain-ext`).
 pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
-    use graphviz_pure_parser::{canon_str, canon_value};
+    use graphviz_pure_parser::canon_value;
     let g = m.g;
     let mut out = String::new();
     let y_off = y_offset(m.bb);
@@ -262,7 +307,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
         let lbl = if n.label.is_html {
             canon_value(a.get("label").unwrap_or(""), true)
         } else {
-            canon_str(&n.label.text)
+            plain_label_canon(g, &n.label.text)
         };
         let fill = a
             .nonempty("fillcolor")
@@ -335,7 +380,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
                 let _ = write!(
                     out,
                     " {} {} {}",
-                    canon_str(&l.text),
+                    plain_label_canon(g, &l.text),
                     g5(l.pos.x / 72.0),
                     g5(y_dir(l.pos.y, y_off) / 72.0)
                 );

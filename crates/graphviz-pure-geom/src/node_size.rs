@@ -424,7 +424,9 @@ pub fn node_font(attrs: &AttrMap) -> (&str, f64) {
 
 /// `common_init_node` + shape `initfn`: the exact size and label geometry of `node`.
 pub fn node_geometry(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometry {
-    graphviz_pure_core::font::textfont_object(format!("node:{}", node.name), || {
+    // `<G>` and `G` are two nodes: the tag keeps the HTML flag, as the node lookup does
+    let key = graphviz_pure_core::Graph::node_key(&node.name, node.html_name);
+    graphviz_pure_core::font::textfont_object(format!("node:{key}"), || {
         node_geometry_measured(node, env)
     })
 }
@@ -578,18 +580,22 @@ pub fn graph_label_geometry(
         charset,
         ..NodeSizeEnv::new(name)
     };
-    graph_label_geometry_in(name, attrs, is_root, flip, &env)
+    graph_label_geometry_in(name, false, attrs, is_root, flip, &env)
 }
 
-/// [`graph_label_geometry`] with HTML strings and charset taken from `env`.
+/// [`graph_label_geometry`] with HTML strings and charset taken from `env`. `html_name`: the
+/// graph is named by an HTML string, which makes it another object than the graph named by
+/// the same plain text.
 pub fn graph_label_geometry_in(
     name: &str,
+    html_name: bool,
     attrs: &AttrMap,
     is_root: bool,
     flip: bool,
     env: &NodeSizeEnv<'_>,
 ) -> Option<GraphLabelGeometry> {
-    let tag = format!("{}:{name}", if is_root { "root" } else { "graph" });
+    let key = graphviz_pure_core::Graph::node_key(name, html_name);
+    let tag = format!("{}:{key}", if is_root { "root" } else { "graph" });
     graphviz_pure_core::font::textfont_object(tag, || {
         graph_label_geometry_measured(name, attrs, is_root, flip, env)
     })

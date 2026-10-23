@@ -199,10 +199,14 @@ impl<'a> Dot<'a> {
     pub fn do_graph_label(&mut self, sg: G) {
         let flip = self.graphs[0].flip();
         let name = self.graphs[sg].name.clone();
+        let html_name = self.graphs[sg]
+            .sub_index
+            .is_some_and(|i| self.input.subgraphs[i].html_name);
         let env = graphviz_pure_geom::NodeSizeEnv::from_graph(self.input);
         let make = || {
             graphviz_pure_geom::graph_label_geometry_in(
                 &name,
+                html_name,
                 &self.graphs[sg].attrs,
                 sg == 0,
                 flip,

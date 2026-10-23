@@ -9,6 +9,7 @@
 //! values, known entities) are reproduced, because any error makes C drop the label entirely
 //! (`make_html_label` returns 3 and the label keeps `dimen = (0, 0)`).
 
+use crate::expat;
 use graphviz_pure_core::charset::{self, Charset};
 use graphviz_pure_core::cnum::{c_max, c_round};
 use graphviz_pure_core::font::{
@@ -261,22 +262,17 @@ enum Pending {
 struct Lexer {
     toks: Vec<Tok>,
     in_cell: bool,
-    stack: Vec<String>,
-    /// The token produced by the current `htmllex` unit (C's `ctx->tok`).
+    /// The token produced by the current `htmllex` call (C's `ctx->tok`). A `Tok::String`
+    /// stands for `T_string`; its text is in `xb`.
     cur: Option<Tok>,
     pending: Pending,
+    /// `ctx->xb`: the text `characterData` gathers for `T_string`.
+    xb: Vec<u8>,
+    /// `lexerror`'s messages.
+    unknown: Vec<String>,
     /// `doAttrs` warnings: the index of the token whose unit printed them, the message and
     /// whether it sets `ctx->warn`.
     warnings: Vec<(usize, String, bool)>,
-}
-
-/// Lexer errors carry expat's message (`XML_ErrorString`) or `htmllex.c`'s own.
-type LexResult<T> = Result<T, String>;
-
-const NOT_WELL_FORMED: &str = "not well-formed (invalid token)";
-
-fn nwf<T>() -> LexResult<T> {
-    Err(NOT_WELL_FORMED.to_string())
 }
 
 /// `scanEntity` from `lib/common/utils.c`: `t` starts after `&`; appends `&` (and `#N;` for a
@@ -291,113 +287,13 @@ fn scan_entity(t: &[u8], out: &mut Vec<u8>) -> usize {
     if key.len() > 8 || key.len() < 2 {
         return 0;
     }
-    let Ok(name) = std::str::from_utf8(key) else {
-        return 0;
-    };
-    match html_entity_value(name) {
+    match graphviz_pure_core::font::html_entity_value(key) {
         Some(v) => {
             out.extend_from_slice(format!("#{v};").as_bytes());
             semi + 1
         }
         None => 0,
     }
-}
-
-fn html_entity_value(name: &str) -> Option<u32> {
-    // Same table as `htmlEntityUTF8` (entities.h).
-    let probe = format!("&{name};");
-    let decoded = graphviz_pure_core::font::html_entity_utf8_probe(&probe);
-    if decoded == probe {
-        return None;
-    }
-    decoded.chars().next().map(u32::from)
-}
-
-/// Decodes XML character/entity references as expat does; errors on anything malformed.
-fn xml_decode(s: &[u8], in_attr: bool) -> LexResult<Vec<u8>> {
-    let mut out = Vec::with_capacity(s.len());
-    let mut i = 0;
-    while i < s.len() {
-        let c = s[i];
-        if c == b'&' {
-            let semi = s[i + 1..]
-                .iter()
-                .position(|&b| b == b';')
-                .ok_or_else(|| NOT_WELL_FORMED.to_string())?;
-            let name = std::str::from_utf8(&s[i + 1..i + 1 + semi])
-                .map_err(|_| NOT_WELL_FORMED.to_string())?;
-            let ch = if let Some(num) = name.strip_prefix('#') {
-                let v = if let Some(hex) = num.strip_prefix('x') {
-                    if hex.is_empty() || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
-                        return nwf();
-                    }
-                    u32::from_str_radix(hex, 16).map_err(|_| NOT_WELL_FORMED.to_string())?
-                } else {
-                    if num.is_empty() || !num.bytes().all(|b| b.is_ascii_digit()) {
-                        return nwf();
-                    }
-                    num.parse::<u32>()
-                        .map_err(|_| NOT_WELL_FORMED.to_string())?
-                };
-                let bad = || "reference to invalid character number".to_string();
-                let ch = char::from_u32(v).ok_or_else(bad)?;
-                // XML Char production (which leaves out U+FFFE and U+FFFF)
-                if !(ch == '\t' || ch == '\n' || ch == '\r' || ch >= ' ')
-                    || matches!(ch, '\u{FFFE}' | '\u{FFFF}')
-                {
-                    return Err(bad());
-                }
-                ch
-            } else {
-                match name {
-                    "amp" => '&',
-                    "lt" => '<',
-                    "gt" => '>',
-                    "quot" => '"',
-                    "apos" => '\'',
-                    _ => return Err("undefined entity".to_string()),
-                }
-            };
-            let mut buf = [0u8; 4];
-            out.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
-            i += semi + 2;
-            continue;
-        }
-        if c == b'<' && in_attr {
-            return nwf();
-        }
-        if c < b' ' && c != b'\t' && c != b'\n' && c != b'\r' {
-            return nwf();
-        }
-        if c == b'\r' {
-            // line-end normalisation
-            out.push(if in_attr { b' ' } else { b'\n' });
-            if s.get(i + 1) == Some(&b'\n') {
-                i += 1;
-            }
-            i += 1;
-            continue;
-        }
-        if in_attr && (c == b'\t' || c == b'\n') {
-            out.push(b' ');
-        } else {
-            out.push(c);
-        }
-        i += 1;
-    }
-    Ok(out)
-}
-
-fn is_name_start(c: u8) -> bool {
-    c.is_ascii_alphabetic() || c == b'_' || c == b':' || c >= 0x80
-}
-
-fn is_name_char(c: u8) -> bool {
-    is_name_start(c) || c.is_ascii_digit() || c == b'-' || c == b'.'
-}
-
-fn is_ws(c: u8) -> bool {
-    matches!(c, b' ' | b'\t' | b'\n' | b'\r')
 }
 
 /// The `agwarningf` messages of `doAttrs` and its attribute actions for one element, each
@@ -745,7 +641,7 @@ fn mk_br(atts: &[(String, String)], w: &mut AttrWarnings) -> char {
 }
 
 impl Lexer {
-    fn start_element(&mut self, name: &str, atts: &[(String, String)]) -> LexResult<()> {
+    fn start_element(&mut self, name: &str, atts: &[(String, String)]) -> Result<(), ()> {
         let n = name.to_ascii_uppercase();
         self.pending = Pending::None;
         let mut w = AttrWarnings::default();
@@ -789,7 +685,7 @@ impl Lexer {
             }
             "HTML" => Tok::Html,
             // lexerror
-            _ => return Err(format!("\0Unknown HTML element <{name}>")),
+            _ => return Err(()),
         };
         let at = self.toks.len();
         self.warnings
@@ -798,7 +694,7 @@ impl Lexer {
         Ok(())
     }
 
-    fn end_element(&mut self, name: &str) -> LexResult<()> {
+    fn end_element(&mut self, name: &str) -> Result<(), ()> {
         let n = name.to_ascii_uppercase();
         let same_unit = |l: &Lexer, p: Pending| l.cur.is_some() && l.pending == p;
         let tok = match n.as_str() {
@@ -854,147 +750,70 @@ impl Lexer {
                     Tok::EndImg
                 }
             }
-            _ => return Err(format!("\0Unknown HTML element <{name}>")),
+            _ => return Err(()),
         };
         self.pending = Pending::None;
         self.cur = Some(tok);
         Ok(())
     }
 
-    /// Feeds one `findNext` unit through the XML parser.
-    fn unit(&mut self, u: &[u8], is_tag: bool) -> LexResult<()> {
+    /// `lexerror`.
+    fn lexerror(&mut self, name: &str, line: usize) {
         self.cur = None;
-        self.pending = Pending::None;
-        if is_tag {
-            self.tag(u)?;
-        } else {
-            let text = xml_decode(u, false)?;
-            if text.windows(3).any(|w| w == b"]]>") {
-                return nwf();
-            }
-            // characterData
-            if self.in_cell {
-                let kept: Vec<u8> = text.into_iter().filter(|&c| c >= b' ').collect();
-                if !kept.is_empty() {
-                    let s = String::from_utf8_lossy(&kept).into_owned();
-                    self.cur = Some(Tok::String(s));
-                }
-            }
-        }
-        if let Some(t) = self.cur.take() {
-            self.toks.push(t);
-        }
-        Ok(())
+        self.unknown
+            .push(format!("Unknown HTML element <{name}> on line {line} \n"));
     }
 
-    fn tag(&mut self, u: &[u8]) -> LexResult<()> {
-        if u.starts_with(b"<!--") {
-            if u.len() < 7 || !u.ends_with(b"-->") {
-                return nwf();
-            }
-            return Ok(());
-        }
-        if u.starts_with(b"<?") || u.starts_with(b"<!") {
-            return nwf();
-        }
-        if !u.ends_with(b">") {
-            return nwf();
-        }
-        let body = &u[1..u.len() - 1];
-        if let Some(rest) = body.strip_prefix(b"/") {
-            let mut e = rest.len();
-            while e > 0 && is_ws(rest[e - 1]) {
-                e -= 1;
-            }
-            let name = &rest[..e];
-            if name.is_empty() || !is_name_start(name[0]) || !name.iter().all(|&c| is_name_char(c))
-            {
-                return nwf();
-            }
-            let name = String::from_utf8_lossy(name).into_owned();
-            if self.stack.pop().as_deref() != Some(name.as_str()) {
-                return Err("mismatched tag".to_string());
-            }
-            return self.end_element(&name);
-        }
-        // start tag
-        let mut i = 0;
-        if body.is_empty() || !is_name_start(body[0]) {
-            return nwf();
-        }
-        while i < body.len() && is_name_char(body[i]) {
-            i += 1;
-        }
-        let name = String::from_utf8_lossy(&body[..i]).into_owned();
-        let mut atts: Vec<(String, String)> = Vec::new();
-        let mut empty = false;
-        loop {
-            let ws_start = i;
-            while i < body.len() && is_ws(body[i]) {
-                i += 1;
-            }
-            if i >= body.len() {
-                break;
-            }
-            if body[i] == b'/' {
-                if i + 1 != body.len() {
-                    return nwf();
+    /// The token `htmllex` returns once `XML_Parse` has produced one.
+    ///
+    /// `characterData` gathers text in `ctx->xb` until the parser reduces `string`, which it
+    /// does only after reading the next token. A parse that sets another token after text
+    /// (a deferred comment ends, then `</HTML>`) adds that text to the string before it, or
+    /// leaves it for the next one.
+    fn push_token(&mut self) {
+        if let Some(t) = self.cur.take() {
+            let t = match t {
+                Tok::String(_) => {
+                    Tok::String(String::from_utf8_lossy(&std::mem::take(&mut self.xb)).into_owned())
                 }
-                empty = true;
-                break;
-            }
-            if i == ws_start || !is_name_start(body[i]) {
-                return nwf();
-            }
-            let ns = i;
-            while i < body.len() && is_name_char(body[i]) {
-                i += 1;
-            }
-            let an = String::from_utf8_lossy(&body[ns..i]).into_owned();
-            while i < body.len() && is_ws(body[i]) {
-                i += 1;
-            }
-            if i >= body.len() || body[i] != b'=' {
-                return nwf();
-            }
-            i += 1;
-            while i < body.len() && is_ws(body[i]) {
-                i += 1;
-            }
-            if i >= body.len() || (body[i] != b'"' && body[i] != b'\'') {
-                return nwf();
-            }
-            let q = body[i];
-            i += 1;
-            let vs = i;
-            while i < body.len() && body[i] != q {
-                i += 1;
-            }
-            if i >= body.len() {
-                return nwf();
-            }
-            let v = xml_decode(&body[vs..i], true)?;
-            i += 1;
-            if atts.iter().any(|(n, _)| *n == an) {
-                return Err("duplicate attribute".to_string());
-            }
-            atts.push((an, String::from_utf8_lossy(&v).into_owned()));
+                t => {
+                    if let Some(Tok::String(prev)) = self.toks.last_mut()
+                        && !self.xb.is_empty()
+                    {
+                        prev.push_str(&String::from_utf8_lossy(&std::mem::take(&mut self.xb)));
+                    }
+                    t
+                }
+            };
+            self.toks.push(t);
         }
-        self.stack.push(name.clone());
-        if let Err(e) = self.start_element(&name, &atts) {
-            // lexerror does not stop expat: for an empty element it goes on to endElement,
-            // which reports the unknown element a second time.
-            return Err(if empty && e.starts_with('\0') {
-                format!("\0{e}")
-            } else {
-                e
-            });
+        self.pending = Pending::None;
+    }
+}
+
+impl expat::Handler for Lexer {
+    fn start_element(&mut self, name: &str, atts: &[(String, String)], line: usize) {
+        if self.start_element(name, atts).is_err() {
+            self.lexerror(name, line);
         }
-        if empty {
-            self.stack.pop();
-            self.end_element(&name)?;
+    }
+
+    fn end_element(&mut self, name: &str, line: usize) {
+        if self.end_element(name).is_err() {
+            self.lexerror(name, line);
         }
-        Ok(())
+    }
+
+    /// `characterData`: text only counts directly inside `<TD>` or `<HTML>`; formatting
+    /// characters are dropped.
+    fn character_data(&mut self, s: &[u8]) {
+        if self.in_cell {
+            let n = self.xb.len();
+            self.xb.extend(s.iter().filter(|&&c| c >= b' '));
+            if self.xb.len() > n {
+                self.cur = Some(Tok::String(String::new()));
+            }
+        }
     }
 }
 
@@ -1022,25 +841,28 @@ pub struct HtmlError {
     pub unit: usize,
     /// `findNext` units (raw source, plus the `<HTML>`/`</HTML>` wrappers).
     pub units: Vec<String>,
-    /// `XML_GetCurrentLineNumber` where it is not the start of `unit`: expat counts the lines
-    /// up to the byte it rejects, which an encoding error leaves in an earlier unit.
+    /// `XML_GetCurrentLineNumber`: for an expat error the line of the byte expat rejects, for
+    /// a syntax error the line of expat's position after its last parse. `None`: the line
+    /// where `unit` starts.
     pub line: Option<usize>,
+    /// `lexerror`'s messages, each complete with its line; when there are any, they are
+    /// what C prints, without `msg` or a context line.
+    pub unknown: Vec<String>,
 }
 
 impl HtmlError {
-    /// The `agerrorf` texts and their `AGPREV` context line (`error_context`), or only the
-    /// first for `lexerror`'s unknown elements (twice for an empty one).
+    /// The `agerrorf` texts and their `AGPREV` context line (`error_context`), or only
+    /// `lexerror`'s messages for unknown elements.
     pub fn report(&self) -> (Vec<String>, Option<String>) {
+        if !self.unknown.is_empty() {
+            return (self.unknown.clone(), None);
+        }
         let line = self.line.unwrap_or_else(|| {
             1 + self.units[..self.unit]
                 .iter()
                 .map(|u| u.bytes().filter(|&c| c == b'\n').count())
                 .sum::<usize>()
         });
-        if let Some(m) = self.msg.strip_prefix('\0') {
-            let (m, n) = m.strip_prefix('\0').map_or((m, 1), |m| (m, 2));
-            return (vec![format!("{m} on line {line} \n"); n], None);
-        }
         let prev = self
             .unit
             .checked_sub(1)
@@ -1058,287 +880,47 @@ struct Lexed {
     toks: Vec<Tok>,
     tok_unit: Vec<usize>,
     units: Vec<String>,
+    /// `XML_GetCurrentLineNumber` after each unit's `XML_Parse`: the line of expat's buffer
+    /// position, where `htmlerror` reports a syntax error found after reading the unit.
+    unit_line: Vec<usize>,
     /// [`Lexer::warnings`].
     warnings: Vec<(usize, String, bool)>,
 }
 
-/// The first character of an expat unit that expat's UTF-8 decoder rejects (`utf8tab.h`,
-/// `UTF8_INVALID2..4` in `xmltok.c`): its offset and the bytes expat needs to see before it
-/// can reject it (`BT_LEAD2..4`; one for a stray trail byte or `BT_NONXML`/`BT_MALFORM`).
-/// Expat's rules are UTF-8's, plus U+FFFE and U+FFFF, which it does not take as characters.
-fn expat_bad_char(d: &[u8]) -> Option<(usize, usize)> {
-    let valid = std::str::from_utf8(d).map_or_else(|e| e.valid_up_to(), |_| d.len());
-    if let Some(i) = d[..valid]
-        .windows(3)
-        .position(|w| w[0] == 0xEF && w[1] == 0xBF && w[2] >= 0xBE)
-    {
-        return Some((i, 3));
-    }
-    let n = match *d.get(valid)? {
-        0xC0..=0xDF => 2,
-        0xE0..=0xEF => 3,
-        0xF0..=0xF4 => 4,
-        _ => 1,
-    };
-    Some((valid, n))
-}
-
-/// Where expat's tag tokenizer (`scanLt`, `scanEndTag`, `scanAtts` and `scanComment` in
-/// `xmltok_impl.c`) stands after `p`, the start of a tag unit up to a rejected character:
-/// `None` if it rejects `p` itself; `Some(true)` if it tests the next byte as part of a name,
-/// an attribute value or a comment, where a lead byte waits for the rest of its character;
-/// `Some(false)` if it rejects at once any byte that is not a delimiter.
-fn tag_waits_for_char(p: &[u8]) -> Option<bool> {
-    #[derive(Clone, Copy)]
-    enum S {
-        Lt,
-        Excl,
-        ExclDash,
-        Comment,
-        CommentDash,
-        CommentEnd,
-        Pi,
-        EndStart,
-        EndName,
-        EndWs,
-        Name,
-        Ws,
-        AttName,
-        AttWs,
-        Eq,
-        Val(u8),
-        Quote,
-        QuoteWs,
-        Sol,
-    }
-    let mut st = S::Lt;
-    for &c in p.get(1..)? {
-        st = match st {
-            S::Lt => match c {
-                b'!' => S::Excl,
-                b'?' => S::Pi,
-                b'/' => S::EndStart,
-                c if is_name_start(c) => S::Name,
-                _ => return None,
-            },
-            S::Excl if c == b'-' => S::ExclDash,
-            S::ExclDash if c == b'-' => S::Comment,
-            S::Comment | S::CommentDash if c != b'-' => S::Comment,
-            S::Comment => S::CommentDash,
-            S::CommentDash => S::CommentEnd,
-            S::Pi => S::Pi,
-            S::EndStart if is_name_start(c) => S::EndName,
-            S::EndName if is_name_char(c) => S::EndName,
-            S::EndName | S::EndWs if is_ws(c) => S::EndWs,
-            S::Name if is_name_char(c) => S::Name,
-            S::Name | S::Ws if is_ws(c) => S::Ws,
-            S::Ws | S::QuoteWs if is_name_start(c) => S::AttName,
-            S::Name | S::Ws | S::Quote | S::QuoteWs if c == b'/' => S::Sol,
-            S::AttName if is_name_char(c) => S::AttName,
-            S::AttName | S::AttWs if is_ws(c) => S::AttWs,
-            S::AttName | S::AttWs if c == b'=' => S::Eq,
-            S::Eq if is_ws(c) => S::Eq,
-            S::Eq if c == b'"' || c == b'\'' => S::Val(c),
-            S::Val(q) if c == q => S::Quote,
-            S::Val(q) if c != b'<' => S::Val(q),
-            S::Quote | S::QuoteWs if is_ws(c) => S::QuoteWs,
-            _ => return None,
-        };
-    }
-    Some(matches!(
-        st,
-        S::Lt
-            | S::Comment
-            | S::CommentDash
-            | S::Pi
-            | S::EndStart
-            | S::EndName
-            | S::Name
-            | S::Ws
-            | S::AttName
-            | S::Val(_)
-            | S::QuoteWs
-    ))
-}
-
-/// Lines expat counts in `d` (`XmlUpdatePosition`: LF, CR and CR LF each end one).
-fn expat_lines(d: &[u8]) -> usize {
-    d.iter()
-        .enumerate()
-        .filter(|&(i, &c)| c == b'\n' || (c == b'\r' && d.get(i + 1) != Some(&b'\n')))
-        .count()
-}
-
-/// `XML_CONTEXT_BYTES` and `INIT_BUFFER_SIZE` in expat's `xmlparse.c`.
-const XML_CONTEXT_BYTES: usize = 1024;
-const INIT_BUFFER_SIZE: usize = 1024;
-
-/// What expat does with one unit `htmllex` hands to `XML_Parse`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Fed {
-    /// Tokenized up to the end, or up to a partial token.
-    Parsed,
-    /// Not tokenized: a partial token waits for more bytes.
-    Waiting,
-    /// The rejected character is complete: `XML_STATUS_ERROR`.
-    Error,
-}
-
-/// Expat 2.7's input buffer (`XML_GetBuffer`, `XML_ParseBuffer`) and the reparse deferral of
-/// `callProcessor`, which tokenizes a partial token again only once its bytes have doubled.
-/// They decide which unit an encoding error is reported in: a character cut off by the end
-/// of a unit is a partial token, rejected when expat next parses past it.
-#[derive(Debug, Default)]
-struct ExpatFeed {
-    /// `m_bufferPtr`, `m_bufferEnd` and `m_bufferLim` as offsets into `m_buffer` (`lim` is 0
-    /// before the first allocation).
-    ptr: usize,
-    end: usize,
-    lim: usize,
-    /// `m_partialTokenBytesBefore`.
-    had: usize,
-    /// The partial token at `ptr` holds a rejected character: the bytes from `ptr` expat
-    /// needs before it reports it.
-    bad: Option<usize>,
-}
-
-impl ExpatFeed {
-    /// `XML_GetBuffer(len)`: makes room for `len` bytes after `end`.
-    fn get_buffer(&mut self, len: usize) {
-        if self.lim != 0 && len <= self.lim - self.end {
-            return;
-        }
-        let keep = self.ptr.min(XML_CONTEXT_BYTES);
-        let needed = len + (self.end - self.ptr) + keep;
-        if self.lim != 0 && needed <= self.lim {
-            let off = self.ptr - keep;
-            self.end -= off;
-            self.ptr -= off;
-        } else {
-            let mut size = if self.lim == 0 {
-                INIT_BUFFER_SIZE
-            } else {
-                self.lim
-            };
-            loop {
-                size *= 2;
-                if size >= needed {
-                    break;
-                }
-            }
-            if self.lim == 0 {
-                self.end = 0;
-                self.ptr = 0;
-            } else {
-                self.end = self.end - self.ptr + keep;
-                self.ptr = keep;
-            }
-            self.lim = size;
-        }
-    }
-
-    /// `XML_Parse` of a unit of `len` bytes. `bad` is the rejected character in it, as the
-    /// offsets where its token starts and where the character ends; `cr`: the unit is text
-    /// ending in a carriage return, which expat holds back as `XML_TOK_TRAILING_CR`.
-    fn parse(&mut self, len: usize, bad: Option<(usize, usize)>, cr: bool) -> Fed {
-        self.get_buffer(len);
-        let unit = self.end;
-        self.end += len;
-        let have = self.end - self.ptr;
-        let available = self.ptr - self.ptr.min(XML_CONTEXT_BYTES) + (self.lim - self.end);
-        // m_lastBufferRequestSize is `len`
-        if have < 2 * self.had && len <= available {
-            return Fed::Waiting;
-        }
-        if let Some(need) = self.bad {
-            if have >= need {
-                return Fed::Error;
-            }
-            self.had = have;
-            return Fed::Waiting;
-        }
-        let start = self.ptr;
-        match bad {
-            Some((_, e)) if e <= len => return Fed::Error,
-            Some((s, e)) => {
-                self.ptr = unit + s;
-                self.bad = Some(e - s);
-            }
-            None => self.ptr = self.end - usize::from(cr),
-        }
-        self.had = if self.ptr == start { have } else { 0 };
-        Fed::Parsed
-    }
-}
-
-/// Splits a label into `findNext` units and lexes them.
+/// `htmllex` over a whole label: splits it into `findNext` units and hands each to expat.
 /// The tokens, and the lexer error that stopped them, if any.
-fn lex(s: &[u8]) -> (Lexed, Option<HtmlError>) {
+fn lex(s: &[u8], enc: expat::Enc) -> (Lexed, Option<HtmlError>) {
     let mut lx = Lexer {
         toks: Vec::new(),
         in_cell: true,
-        stack: Vec::new(),
         cur: None,
         pending: Pending::None,
+        xb: Vec::new(),
+        unknown: Vec::new(),
         warnings: Vec::new(),
     };
     let mut units: Vec<String> = Vec::new();
     let mut tok_unit: Vec<usize> = Vec::new();
-    let mut expat = ExpatFeed::default();
-    // expat's line count before the current unit, and its line at a rejected character
-    let mut lines = 0;
-    let mut bad_line = None;
-    let mut feed = |lx: &mut Lexer, raw: &[u8], data: &[u8], is_tag: bool| {
+    let mut unit_line: Vec<usize> = Vec::new();
+    let mut xml = expat::Parser::new(enc);
+    let mut feed = |lx: &mut Lexer, raw: &[u8], data: &[u8]| {
         units.push(charset::decode_slice(raw));
         let u = units.len() - 1;
-        let bad = expat_bad_char(data).and_then(|(o, n)| {
-            if !is_tag {
-                return Some((o, n));
-            }
-            // a tag expat rejects before the character is the lexer's to report
-            tag_waits_for_char(&data[..o]).map(|waits| (o, if waits { n } else { 1 }))
-        });
-        if let Some((o, _)) = bad {
-            bad_line = bad_line.or(Some(1 + lines + expat_lines(&data[..o])));
+        let r = xml.parse(data, lx);
+        if !lx.unknown.is_empty() {
+            return Err((String::new(), u, None));
         }
-        lines += expat_lines(data);
-        // protect_rsqb: a trailing `]` reaches expat as `&#93;`
-        let len = data.len()
-            + if !is_tag && data.ends_with(b"]") {
-                4
-            } else {
-                0
-            };
-        let cr = !is_tag && data.ends_with(b"\r");
-        let token = bad.map(|(o, n)| (if is_tag { 0 } else { o }, o + n));
-        let fed = expat.parse(len, token, cr);
-        let r = match fed {
-            Fed::Error => {
-                // expat first rejects anything wrong in the text before the character; the
-                // text's own token is lost to the error (`T_error` replaces `T_string`)
-                if let Some((o, _)) = bad
-                    && !is_tag
-                    && o > 0
-                {
-                    let ntoks = lx.toks.len();
-                    lx.unit(&data[..o], false).map_err(|msg| (msg, u, None))?;
-                    lx.toks.truncate(ntoks);
-                }
-                return Err((NOT_WELL_FORMED.to_string(), u, bad_line));
-            }
-            Fed::Waiting => Ok(()),
-            Fed::Parsed => match bad {
-                None => lx.unit(data, is_tag),
-                // characterData for the text before a partial character
-                Some((o, _)) if !is_tag && o > 0 => lx.unit(&data[..o], false),
-                Some(_) => Ok(()),
-            },
-        };
+        if let Err(e) = r {
+            // T_error replaces the parse's token
+            return Err((e.msg.to_string(), u, Some(xml.line(e.at))));
+        }
+        unit_line.push(xml.line(xml.position()));
+        lx.push_token();
         tok_unit.resize(lx.toks.len(), u);
-        r.map(|()| (u, fed)).map_err(|msg| (msg, u, None))
+        Ok(())
     };
     let res = (|| {
-        feed(&mut lx, b"<HTML>", b"<HTML>", true)?;
+        feed(&mut lx, b"<HTML>", b"<HTML>")?;
         let mut pos = 0;
         while pos < s.len() {
             if s[pos] == b'<' {
@@ -1357,16 +939,13 @@ fn lex(s: &[u8]) -> (Lexed, Option<HtmlError>) {
                     }
                 }
                 if t >= s.len() {
-                    // findNext warns, and expat sees an unterminated tag.
                     graphviz_pure_core::diag::agwarningf(
                         "Label closed before end of HTML element\n",
                     );
-                    let raw = &s[pos..];
-                    let (u, _) = feed(&mut lx, raw, raw, true)?;
-                    return Err(("unclosed token".to_string(), u, None));
+                } else {
+                    t += 1;
                 }
-                t += 1;
-                feed(&mut lx, &s[pos..t], &s[pos..t], true)?;
+                feed(&mut lx, &s[pos..t], &s[pos..t])?;
                 pos = t;
             } else {
                 let mut buf = Vec::new();
@@ -1379,39 +958,35 @@ fn lex(s: &[u8]) -> (Lexed, Option<HtmlError>) {
                         t += 1;
                     }
                 }
-                feed(&mut lx, &s[pos..t], &buf, false)?;
+                // protect_rsqb: a trailing `]` reaches expat as `&#93;`
+                if buf.ends_with(b"]") {
+                    buf.pop();
+                    buf.extend_from_slice(b"&#93;");
+                }
+                feed(&mut lx, &s[pos..t], &buf)?;
                 pos = t;
             }
         }
-        let (u, fed) = feed(&mut lx, b"</HTML>", b"</HTML>", true)?;
-        // expat parses `</HTML>` unless a partial token holds it back
-        if fed == Fed::Parsed && !lx.stack.is_empty() {
-            return Err(("mismatched tag".to_string(), u, None));
-        }
-        Ok(())
+        feed(&mut lx, b"</HTML>", b"</HTML>")
     })();
+    let unknown = std::mem::take(&mut lx.unknown);
+    let lexed = Lexed {
+        toks: lx.toks,
+        tok_unit,
+        units: units.clone(),
+        unit_line,
+        warnings: lx.warnings,
+    };
     match res {
-        Ok(()) => (
-            Lexed {
-                toks: lx.toks,
-                tok_unit,
-                units,
-                warnings: lx.warnings,
-            },
-            None,
-        ),
+        Ok(()) => (lexed, None),
         Err((msg, unit, line)) => (
-            Lexed {
-                toks: lx.toks,
-                tok_unit,
-                units: units.clone(),
-                warnings: lx.warnings,
-            },
+            lexed,
             Some(HtmlError {
                 msg,
                 unit,
                 units,
                 line,
+                unknown,
             }),
         ),
     }
@@ -1829,7 +1404,7 @@ pub type HtmlWarnings = Vec<(String, bool)>;
 /// [`parse_html_report`] plus the `doAttrs` warnings of the tokens C's on-demand lexer
 /// reads before it succeeds or fails.
 pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>, HtmlWarnings) {
-    let bytes = match cs {
+    let enc = match cs {
         // XML_ParserCreate("BIG-5"): expat has no such encoding and rejects the first unit.
         Charset::Big5 => {
             let e = HtmlError {
@@ -1837,25 +1412,22 @@ pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>
                 unit: 0,
                 units: vec!["<HTML>".to_string()],
                 line: Some(1),
+                unknown: Vec::new(),
             };
             return (Err(e), Vec::new());
         }
-        // The label's own bytes: expat rejects those that are not UTF-8.
-        Charset::Utf8 => charset::encode(text),
-        Charset::Latin1 => std::borrow::Cow::Owned(
-            charset::encode(text)
-                .iter()
-                .map(|&b| char::from(b))
-                .collect::<String>()
-                .into_bytes(),
-        ),
+        Charset::Utf8 => expat::Enc::Utf8,
+        Charset::Latin1 => expat::Enc::Latin1,
     };
+    // The label's own bytes, which expat reads in the graph's encoding.
+    let bytes = charset::encode(text);
     // C lexes on demand: yacc can reject a token before the lexer reaches a later error.
-    let (lexed, lex_err) = lex(&bytes);
+    let (lexed, lex_err) = lex(&bytes, enc);
     let Lexed {
         toks,
         tok_unit,
         units,
+        unit_line,
         warnings,
     } = lexed;
     let ntoks = toks.len();
@@ -1897,7 +1469,8 @@ pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>
             msg: p.err_msg.unwrap_or("syntax error").to_string(),
             unit,
             units,
-            line: None,
+            line: unit_line.get(unit).copied(),
+            unknown: Vec::new(),
         }
     });
     (res, warnings)
@@ -2834,6 +2407,111 @@ mod tests {
         // a valid character reference to U+FFFE is not an XML character
         let (msg, _) = encoding_error(b"a&#xFFFE;b", Charset::Utf8);
         assert_eq!(msg, "reference to invalid character number in line 1 \n");
+    }
+
+    /// The `agerrorf` text and the `error_context` line C prints for a UTF-8 label.
+    fn label_error(label: &str) -> (String, String) {
+        encoding_error(label.as_bytes(), Charset::Utf8)
+    }
+
+    fn label_text(label: &str) -> String {
+        let Some(HtmlLabel::Text(t)) = parse_html(label) else {
+            panic!("{label}: not a text label");
+        };
+        t.spans
+            .iter()
+            .flat_map(|l| l.items.iter().map(|i| i.text.as_str()))
+            .collect()
+    }
+
+    // #316: eatComment ends a comment at the `>` that balances its `<`s, but expat reads the
+    // comment on until `-->`, through the units after it. Expat tokenizes the partial comment
+    // again only once its bytes have doubled, so what follows it can reach the parser in one
+    // parse with `</HTML>`.
+    #[test]
+    fn a_comment_closed_by_gt_goes_on_until_dashes() {
+        let nwf = "not well-formed (invalid token) in line 1 \n";
+        assert_eq!(
+            label_error("hello<!-- x >world"),
+            (
+                "syntax error in line 1 \n".to_string(),
+                "... world</HTML> ...\n".to_string()
+            )
+        );
+        assert_eq!(
+            label_error("<!-- x ><z-->w").1,
+            "... w</HTML> ...\n".to_string()
+        );
+        assert_eq!(label_text("w<!-- x ><z-->"), "w");
+        let Some(HtmlLabel::Text(t)) = parse_html("<!-- x ><z--><b>q</b>") else {
+            panic!("bold text");
+        };
+        assert_eq!(t.spans[0].items[0].text, "q");
+        assert_eq!(
+            t.spans[0].items[0].font.as_ref().map(|f| f.flags),
+            Some(HTML_BF)
+        );
+        // the text gathered with the comment's end joins the string the parser holds
+        assert_eq!(label_text("x<!-- y ><z-->  "), "x  ");
+        // `--` inside a comment
+        assert_eq!(
+            label_error("<!-- x -- y -->w"),
+            (
+                nwf.to_string(),
+                "... <HTML><!-- x -- y --> ...\n".to_string()
+            )
+        );
+        // other markup expat reads in content
+        assert_eq!(label_text("a<![CDATA[x]]>"), "ax");
+        assert_eq!(label_text("<?foo bar?>x"), "x");
+        assert_eq!(
+            label_error("<?xml v?>x").0,
+            "XML or text declaration not at start of entity in line 1 \n"
+        );
+    }
+
+    // #348: expat reports the line of the byte it rejects, and a syntax error on the line of
+    // its position after the last parse.
+    #[test]
+    fn errors_are_on_the_line_expat_counts_to() {
+        let (msg, context) = label_error("<TABLE\nFOO BAR=\"1\"><TR><TD>x</TD></TR></TABLE>");
+        assert_eq!(msg, "not well-formed (invalid token) in line 2 \n");
+        assert_eq!(context, "... <HTML><TABLE\nFOO BAR=\"1\"> ...\n");
+        let (msg, _) = label_error("x\ny\n&#0;zab");
+        assert_eq!(msg, "reference to invalid character number in line 3 \n");
+        let (msg, _) = label_error("<TABLE><TR><TD>]</TD></TR></TABLE><BR\n/>");
+        assert_eq!(msg, "syntax error in line 2 \n");
+        // a partial comment holds expat's position on its first line
+        let (msg, _) = label_error("<!-- x >\n\nw");
+        assert_eq!(msg, "syntax error in line 1 \n");
+    }
+
+    // #349: names take XML's name characters (`nametab.h`), not every byte from 0x80.
+    #[test]
+    fn non_ascii_names_follow_xml_name_classes() {
+        assert_eq!(
+            label_error("<B€>t</B€>"),
+            (
+                "not well-formed (invalid token) in line 1 \n".to_string(),
+                "... <HTML><B€> ...\n".to_string()
+            )
+        );
+        let e = parse_html_report("<é>t</é>", Charset::Utf8).expect_err("unknown element");
+        assert_eq!(
+            e.report(),
+            (
+                vec!["Unknown HTML element <é> on line 1 \n".to_string()],
+                None
+            )
+        );
+        // `scanEntity` takes only a whole entity name: `&b&amp;` is not one
+        assert_eq!(
+            label_error("a&b&amp;"),
+            (
+                "not well-formed (invalid token) in line 1 \n".to_string(),
+                "... <HTML>a&b&amp; ...\n".to_string()
+            )
+        );
     }
 
     #[test]

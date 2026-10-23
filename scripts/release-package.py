@@ -31,6 +31,7 @@ files = [
     (os.path.join(root, "README.md"), "README.md", 0o644),
     # The licences of third-party code compiled into the binary (see NOTICE).
     (os.path.join(root, "LICENSES", "MIT-CORE-MATH.txt"), "LICENSES/MIT-CORE-MATH.txt", 0o644),
+    (os.path.join(root, "LICENSES", "MIT-EXPAT.txt"), "LICENSES/MIT-EXPAT.txt", 0o644),
 ] + [
     (os.path.join(fonts, f), f"LICENSES/{f}", 0o644)
     for f in sorted(os.listdir(fonts))

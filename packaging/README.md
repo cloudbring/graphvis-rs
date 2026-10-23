@@ -101,10 +101,10 @@ Host aur.archlinux.org
 release binary byte for byte. Both packages provide `graphviz-pure` and conflict with each
 other. `license` is the SPDX expression `EPL-2.0 AND OFL-1.1 AND MIT`: the port, the Tinos,
 Arimo and Cousine fonts compiled into the binary for PNG and JPEG text, and the CORE-MATH `pow`
-port, the same as the conda-forge and nixpkgs recipes. `LICENSE`, `NOTICE`,
-`THIRD-PARTY-LICENSES.md` (the licences of the Rust crates compiled in), `MIT-CORE-MATH.txt` and
-the three `OFL-*.txt` files are installed under `/usr/share/licenses/$pkgname/`. The release
-archives carry the last four in `LICENSES/`; the source package takes them from the source tree.
+and expat ports, the same as the conda-forge and nixpkgs recipes. `LICENSE`, `NOTICE`,
+`THIRD-PARTY-LICENSES.md` (the licences of the Rust crates compiled in), `MIT-CORE-MATH.txt`,
+`MIT-EXPAT.txt` and the three `OFL-*.txt` files are installed under
+`/usr/share/licenses/$pkgname/`. The release archives carry the last five in `LICENSES/`; the source package takes them from the source tree.
 
 ## nixpkgs
 
@@ -159,8 +159,8 @@ statically linked crates, which conda-forge requires), stripped symbols and fat 
    arrive as pull requests from the autotick bot.
 
 `license` is `EPL-2.0 AND OFL-1.1 AND MIT`: the port, the fonts compiled into the binary, and the
-CORE-MATH `pow` port (see `NOTICE`), whose texts (`LICENSES/MIT-CORE-MATH.txt` and the fonts'
-`OFL-*.txt`) are in `license_file`. Crate dependencies are covered twice: `THIRDPARTY.yml`, which
+CORE-MATH `pow` and expat ports (see `NOTICE`), whose texts (`LICENSES/MIT-CORE-MATH.txt`,
+`LICENSES/MIT-EXPAT.txt` and the fonts' `OFL-*.txt`) are in `license_file`. Crate dependencies are covered twice: `THIRDPARTY.yml`, which
 conda-forge requires and the build generates from exactly the crates it compiled, and the
 repository's `THIRD-PARTY-LICENSES.md` (cargo-about), which also carries each crate's copyright
 notices and authors.

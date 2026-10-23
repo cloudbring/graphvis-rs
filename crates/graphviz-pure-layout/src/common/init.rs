@@ -59,12 +59,19 @@ pub fn make_label(
 }
 
 /// `do_graph_label` for a graph or cluster: the label and `GD_label_pos`.
-pub fn graph_label(attrs: &AttrMap, name: &str, is_root: bool) -> (Option<TextLabel>, u8) {
+pub fn graph_label(
+    attrs: &AttrMap,
+    name: &str,
+    html_name: bool,
+    is_root: bool,
+) -> (Option<TextLabel>, u8) {
     let Some(text) = attrs.get("label").filter(|s| !s.is_empty()) else {
         return (None, 0);
     };
     let env = graphviz_pure_geom::NodeSizeEnv::new(name);
-    let make = || graphviz_pure_geom::graph_label_geometry_in(name, attrs, is_root, false, &env);
+    let make = || {
+        graphviz_pure_geom::graph_label_geometry_in(name, html_name, attrs, is_root, false, &env)
+    };
     // layout_graph_with_options made the root label first, as graph_init does.
     let geom = if is_root {
         graphviz_pure_core::diag::quietly(make)
@@ -196,7 +203,7 @@ impl<'a> LGraph<'a> {
             mapbool(gattrs.get("landscape").map(String::as_str))
         };
         let concentrate = mapbool(gattrs.get("concentrate").map(String::as_str));
-        let (label, label_pos) = graph_label(gattrs, &graph.name, true);
+        let (label, label_pos) = graph_label(gattrs, &graph.name, false, true);
 
         let edge_type = match gattrs.get("splines") {
             None => default_edge_type,

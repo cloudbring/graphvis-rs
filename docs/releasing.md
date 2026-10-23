@@ -167,7 +167,7 @@ the same fields just before pushing the first tag, then release within 48 hours.
 JSR has no staged-approval step like npm's: `deno publish` makes the version live, and the
 `release` environment's approval is the only gate. The JSR package holds the npm tarball's
 files as listed in `web/jsr.json` (README.md, LICENSE, NOTICE, THIRD-PARTY-LICENSES.md,
-`LICENSES/MIT-CORE-MATH.txt` and `pkg/`), so both registries show `web/README.md`; npm's
+`LICENSES/MIT-CORE-MATH.txt`, `LICENSES/MIT-EXPAT.txt` and `pkg/`), so both registries show `web/README.md`; npm's
 `package.json` is not part of it.
 In Deno, `init()` fetches the `.wasm` next to the module, so a script importing
 `jsr:@graphviz-pure/wasm` needs `--allow-net=jsr.io` (or passes the bytes to `init`).

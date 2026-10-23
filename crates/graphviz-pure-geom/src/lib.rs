@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod expat;
 pub mod html_label;
 pub mod node_size;
 pub mod pathplan;
