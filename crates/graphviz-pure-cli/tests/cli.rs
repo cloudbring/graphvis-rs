@@ -218,6 +218,12 @@ fn args_c_option_and_error_paths() {
     // An input that cannot be opened counts in `graphviz_errors` and as an error.
     let (_, err, code) = run_in(&dir, &["-Tplain", "nosuch.gv"], "");
     assert_eq!(code, 2);
+    // (`strerror`'s text is the OS's.)
+    assert!(
+        err.starts_with("Error: graphviz-pure: can't open nosuch.gv: "),
+        "{err}"
+    );
+    #[cfg(unix)]
     assert_eq!(
         err,
         "Error: graphviz-pure: can't open nosuch.gv: No such file or directory\n"
