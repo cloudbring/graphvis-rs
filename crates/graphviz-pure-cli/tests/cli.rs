@@ -3949,7 +3949,7 @@ stop
 
 // Issue #301. An infinite (or 400-digit) edge label font size gives the label an infinite
 // size. C's `xlhdxload` (lib/label/xlabels.c:513) asserts that the label area's centre fits
-// an `int` and aborts; past that point, `adjust`'s slide never ends at `-inf >= -inf`. The
+// an `int` and aborts; past that point, `adjust`'s slides stay at `-inf` forever. The
 // port takes `xlhdxload`'s own failure path there: no exterior label is placed.
 #[test]
 fn infinite_edge_label_size_does_not_hang_xlabel_placement() {

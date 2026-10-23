@@ -726,9 +726,10 @@ fn place_labels(objs: &[Object], lbls: &mut [XLabel], bb: BoundingBox, force: bo
         let y = r.b[1] + (r.b[3] - r.b[1]) / 2.0;
         // xlhdxload asserts `x >= INT_MIN && x <= INT_MAX` (and the same for
         // `y`) before the `(int)` cast, and aborts on an infinite, NaN or huge
-        // centre (#191, #301; past it, `adjust`'s slide never ends on an
-        // infinite label). The port stops there as `xlhdxload`'s own failure
-        // does: `placeLabels` returns -1 and `addXLabels` places no label.
+        // centre (#191, #301; past it, on an infinite label, `adjust`'s
+        // downward and leftward slides stay at `-inf` forever). The port stops
+        // there as `xlhdxload`'s own failure does: `placeLabels` returns -1
+        // and `addXLabels` places no label.
         let in_int = |v: f64| v >= f64::from(i32::MIN) && v <= f64::from(i32::MAX);
         if !in_int(x) || !in_int(y) {
             graphviz_pure_core::diag::agwarningf(
