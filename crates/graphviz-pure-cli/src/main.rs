@@ -243,15 +243,27 @@ fn global_def(spec: &str) -> (String, String) {
     }
 }
 
-/// `dotneato_basename`: the command name in an `argv[0]`.
-fn basename(argv0: &str) -> &str {
+/// `dotneato_basename`: the command name in an `argv[0]`. On Windows, as there, without its
+/// `.exe` and in lower case.
+fn basename(argv0: &str) -> String {
+    #[cfg(windows)]
+    let argv0 = match argv0.rfind('.') {
+        Some(dot) if argv0[dot + 1..].eq_ignore_ascii_case("exe") => &argv0[..dot],
+        _ => argv0,
+    };
     let trimmed = argv0.trim_end_matches(['/', '\\']);
-    if trimmed.is_empty() {
-        return &argv0[..argv0.len().min(1)];
-    }
-    match trimmed.rfind(['/', '\\']) {
-        Some(at) => &trimmed[at + 1..],
-        None => trimmed,
+    let name = if trimmed.is_empty() {
+        &argv0[..argv0.len().min(1)]
+    } else {
+        match trimmed.rfind(['/', '\\']) {
+            Some(at) => &trimmed[at + 1..],
+            None => trimmed,
+        }
+    };
+    if cfg!(windows) {
+        name.to_ascii_lowercase()
+    } else {
+        name.to_string()
     }
 }
 
@@ -303,7 +315,7 @@ fn job_at(jobs: &mut Vec<Job>, n: usize) -> &mut Job {
 /// File names (`-o` and the inputs) are kept as the OS gave them, so a name that is not valid
 /// UTF-8 still opens.
 fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
-    let cmdname = basename(argv0).to_string();
+    let cmdname = basename(argv0);
     let mut layout = LayoutOptions::default();
     let mut auto_output = false;
     let mut config = false;
