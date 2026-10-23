@@ -233,7 +233,11 @@ impl<'a> Parser<'a> {
     fn read_graph(&mut self) -> Result<()> {
         self.started = false;
         let result = self.parse_graph();
-        if result.is_err() && !self.started {
+        // (unless the input has already ended: the error token was the end, or `@`)
+        if result.is_err()
+            && !self.started
+            && self.tokens.last().is_none_or(|t| t.kind != TokenKind::Eof)
+        {
             while self.lexer.scan().kind != TokenKind::Eof {}
         }
         result

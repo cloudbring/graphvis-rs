@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "graphviz-pure-geom",
@@ -59,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-core"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "libm",
  "serde",
@@ -78,14 +78,14 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-geom"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
 ]
 
 [[package]]
 name = "graphviz-pure-layout"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "graphviz-pure-geom",
@@ -93,7 +93,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-parser"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "thiserror",
@@ -101,7 +101,7 @@ dependencies = [
 
 [[package]]
 name = "graphviz-pure-render"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "graphviz-pure-core",
  "graphviz-pure-geom",

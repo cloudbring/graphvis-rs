@@ -1879,6 +1879,9 @@ fn scanner_warnings_come_from_the_tokens_c_reads() {
         "Warning: syntax ambiguity - badly delimited number '2x' in line 1 of <stdin> splits \
          into two tokens\n"
     );
+    // `@` is scan.l's end of input: recovery stops there.
+    let (_, err, _) = run(&["-Tcanon"], "strict @ 2x\n");
+    assert_eq!(err, "Error: <stdin>: syntax error in line 1 near '@'\n");
     let (_, err, _) = run(&["-Tcanon"], "; 2x\n3y\n");
     let mut lines: Vec<_> = err.lines().collect();
     lines.sort_unstable();
