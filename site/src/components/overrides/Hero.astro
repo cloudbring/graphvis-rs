@@ -5,11 +5,11 @@
  * Starlight's 404 page is also a splash page with a hero, but one with only a tagline; it gets
  * a plain heading instead of the claim, which assumes the home page's title and figures.
  */
-import { fidelity, fmt, pct, url } from '../../lib/data';
+import { latest } from '../../lib/changelog';
+import { url } from '../../lib/data';
 import LiveGraph from '../home/LiveGraph.astro';
 
 const { title, hero } = Astro.locals.starlightRoute.entry.data;
-const e2e = fidelity.e2e;
 ---
 
 {!hero?.title ? (
@@ -24,17 +24,19 @@ const e2e = fidelity.e2e;
 ) : (
 <section class="hero">
 	<div class="claim">
-		<p class="label">Graphviz 16.1.0, ported to Rust and WebAssembly</p>
+		<p class="label">
+			Graphviz 16.1.0, ported to Rust and WebAssembly
+			{latest && <a class="version" href={url('changelog/')}>v{latest.version}</a>}
+		</p>
 		<h1 id="_top">{hero.title} <em>{hero.tagline}</em></h1>
 		<div class="side">
 			<p class="lead">
-				The same <code>-Tsvg</code> bytes as C Graphviz on <strong class="num">{fmt(e2e.apple)} of {fmt(e2e.total)}</strong> test inputs on
-				macOS. Everywhere else one set of bytes on every platform, equal to C on macOS for <strong class="num">{fmt(e2e.portable)}</strong>{' '}
-				({pct(e2e.portable, e2e.total)}).
+				Give graphviz-pure the DOT file you would give Graphviz, and it draws the same picture: from the command line, inside a Rust
+				program, or in JavaScript on a server or in a browser tab. Unlike Graphviz, the picture is the same on every machine.
 			</p>
 			<div class="actions">
-				<a class="btn primary" href={url('fidelity/')}>Read the evidence</a>
-				<a class="btn" href={url('gallery/')}>Compare C and Rust</a>
+				<a class="btn primary" href="#get-started">Get started</a>
+				<a class="btn" href={url('gallery/')}>Compare it with Graphviz</a>
 			</div>
 		</div>
 	</div>
@@ -102,12 +104,20 @@ const e2e = fidelity.e2e;
 		color: var(--key-2);
 		max-width: 28rem;
 	}
-	.lead strong {
-		color: var(--key);
-		font-weight: 650;
+	.version {
+		margin-left: 0.5rem;
+		padding: 0.0625rem 0.375rem;
+		border: 0.5px solid var(--rule-strong);
+		border-radius: var(--r-control);
+		font-family: var(--face-mono);
+		letter-spacing: 0;
+		text-transform: none;
+		color: var(--key-2);
+		text-decoration: none;
 	}
-	.lead code {
-		font-size: 0.88em;
+	.version:hover {
+		color: var(--register);
+		border-color: var(--register);
 	}
 	.actions {
 		display: flex;

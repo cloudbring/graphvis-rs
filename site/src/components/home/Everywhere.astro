@@ -40,9 +40,9 @@ const cc = platforms.c_linux_vs_macos;
 const cp = platforms.c_portable_math;
 const e2e = fidelity.e2e;
 const bars = [
-	{ k: 'C Graphviz on Linux', d: 'built the way Homebrew builds it on macOS', a: cc.agree, b: cc.total, cls: 'c' },
-	{ k: 'graphviz-pure, portable build', d: 'Linux, Windows, Intel Macs, WASM, your browser', a: e2e.portable, b: e2e.total, cls: 'rs' },
-	{ k: 'graphviz-pure, portable build', d: 'against C running the same math functions', a: cp.agree, b: cp.total, cls: 'rs' },
+	{ k: 'C Graphviz built on Linux', d: 'compared with C Graphviz on a Mac', a: cc.agree, b: cc.total, cls: 'c' },
+	{ k: 'graphviz-pure off Apple Silicon', d: 'Linux, Windows, Intel Macs and browsers, compared with C Graphviz on a Mac', a: e2e.portable, b: e2e.total, cls: 'rs' },
+	{ k: 'graphviz-pure off Apple Silicon', d: 'compared with C Graphviz given the same math functions', a: cp.agree, b: cp.total, cls: 'rs' },
 ];
 const cells = Array.from({ length: 64 });
 ---
@@ -50,12 +50,12 @@ const cells = Array.from({ length: 64 });
 <section class="everywhere not-content" data-everywhere data-list={JSON.stringify(list)} data-start={first?.name}>
 	<header class="head">
 		<p class="label">Same picture everywhere</p>
-		<h2>One input, one set of bytes, on every machine.</h2>
+		<h2>One graph, the same bytes on every machine.</h2>
 		<p class="intro">
-			Off macOS the port does its floating-point math with functions compiled into it, so its output does not depend on the operating system,
-			the CPU or the browser. CI renders all {fmt(corpus)} corpus inputs and {samples.length} gallery samples on{' '}
-			{m ? plats.map((p) => p.label.replace(' (portable-math)', '')).join(', ') : 'Linux, Windows, macOS and WebAssembly'}, and fails unless
-			every file comes out the same. Your browser is one more machine:
+			graphviz-pure brings its own math functions instead of borrowing the operating system's, so nothing about the machine leaks into the
+			drawing. On every change, CI draws all {fmt(corpus)} test graphs and {samples.length} gallery samples on{' '}
+			{m ? plats.map((p) => p.label.replace(' (portable-math)', '')).join(', ') : 'Linux, Windows, macOS and WebAssembly'}, and fails if a
+			single byte differs. Your browser can join in:
 		</p>
 	</header>
 
@@ -106,7 +106,7 @@ const cells = Array.from({ length: 64 });
 							<code data-mine-hex>waiting…</code>
 						</span>
 					</div>
-					<p class="verdict" data-verdict aria-live="polite">Your browser renders this when the section scrolls into view.</p>
+					<p class="verdict" data-verdict aria-live="polite">Your browser draws this graph when you scroll here.</p>
 				</div>
 			</div>
 		)
@@ -114,7 +114,8 @@ const cells = Array.from({ length: 64 });
 
 	<div class="contrast">
 		<p class="lede">
-			C Graphviz itself is not the same everywhere. Compiled on Linux, it takes that platform's math library, <code>qsort</code> and <code>rand</code>, and drifts from C on macOS:
+			The original C Graphviz can't promise this. Built on Linux, it uses that system's math, sorting and random numbers, and draws many
+			graphs differently from C Graphviz on a Mac:
 		</p>
 		<ul class="bars">
 			{
@@ -138,8 +139,7 @@ const cells = Array.from({ length: 64 });
 			}
 		</ul>
 		<p class="foot">
-			Inputs whose <code>-Tsvg</code> equals C Graphviz 16.1.0 on macOS, the first two; the third against C linked with the port's portable
-			math. {hasPage ? <a href={url('cross-platform/')}>Every platform's files, side by side</a> : <a href={url('fidelity/')}>Every check, per corpus</a>}
+			Test graphs whose SVG is byte-identical. The last row shows that every remaining difference comes from the math library. {hasPage ? <a href={url('cross-platform/')}>Every platform's files, side by side</a> : <a href={url('fidelity/')}>Every check, per corpus</a>}
 			{m && (
 				<>
 					{' · '}

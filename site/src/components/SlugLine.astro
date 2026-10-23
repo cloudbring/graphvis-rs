@@ -18,13 +18,13 @@ const cgTotal = f.c_graphs.variants.reduce((a, v) => a + v.total, 0);
 const lastFuzz = f.fuzz.rounds[f.fuzz.rounds.length - 1];
 
 const patches = [
-	{ k: 'Full -Tsvg bytes, macOS', a: f.e2e.apple, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
-	{ k: 'Full -Tsvg bytes, Linux and WASM', a: f.e2e.portable, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
-	{ k: 'Layout geometry, main corpus', a: layoutMain.apple, b: layoutMain.total, href: 'fidelity/#layout' },
-	{ k: 'Layout geometry, 7 engine corpora', a: engApple, b: engTotal, href: 'fidelity/#layout' },
-	{ k: 'Renderers on C’s layouts, 7 formats', a: rSvg, b: rTotal, href: 'fidelity/#renderers' },
-	{ k: 'C’s own test graphs, 5 variants', a: cg, b: cgTotal, href: 'fidelity/#c-test-graphs' },
-	{ k: `Random graphs, fuzz round ${lastFuzz.round}`, a: lastFuzz.all, b: 100, pct: true, cases: lastFuzz.cases, href: 'fidelity/#fuzzing' },
+	{ k: 'Whole SVG files identical to Graphviz on macOS', a: f.e2e.apple, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
+	{ k: 'Identical on Linux, Windows and in the browser', a: f.e2e.portable, b: f.e2e.total, href: 'fidelity/#full-pipeline' },
+	{ k: 'Layouts with every node and edge in place', a: layoutMain.apple, b: layoutMain.total, href: 'fidelity/#layout' },
+	{ k: 'The same check, engine by engine', a: engApple, b: engTotal, href: 'fidelity/#layout' },
+	{ k: 'Output files in 7 formats, from Graphviz’s layouts', a: rSvg, b: rTotal, href: 'fidelity/#renderers' },
+	{ k: 'Graphviz’s own test graphs, 5 ways', a: cg, b: cgTotal, href: 'fidelity/#c-test-graphs' },
+	{ k: 'Random graphs that match', a: lastFuzz.all, b: 100, pct: true, cases: lastFuzz.cases, href: 'fidelity/#fuzzing' },
 ];
 ---
 
@@ -51,7 +51,7 @@ const patches = [
 					</span>
 					<span class="k">
 						{p.k}
-						{p.cases && <> ({fmt(p.cases)} cases)</>}
+						{p.cases && <>, of {fmt(p.cases)} tried</>}
 					</span>
 				</a>
 			</li>

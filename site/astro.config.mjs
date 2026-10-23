@@ -65,6 +65,7 @@ export default defineConfig({
 					],
 				},
 				{ label: "What's left", link: '/whats-left/' },
+				{ label: 'Changelog', link: '/changelog/' },
 				{ label: 'Porting notes', items: [{ autogenerate: { directory: 'porting' } }] },
 				{ label: 'API (rustdoc)', link: '/api/', attrs: { 'data-external-ish': '' } },
 			],
@@ -74,7 +75,7 @@ export default defineConfig({
 					errorOnRelativeLinks: false,
 					// Custom pages (src/pages) and rustdoc (copied into dist/api by CI) are not in
 					// the docs collection; scripts/site-check-links.mjs checks every built link.
-					exclude: ['gallery/**', 'whats-left/**', 'playground/', 'cross-platform/', 'api/**', 'samples/**'].map((p) => BASE + p),
+					exclude: ['gallery/**', 'whats-left/**', 'playground/', 'cross-platform/', 'changelog/', 'api/**', 'samples/**'].map((p) => BASE + p),
 				}),
 			],
 		}),
