@@ -379,6 +379,12 @@ fn nesting_runs_out_of_bisons_stack_where_c_does() {
         "memory exhausted in line 1 near '{'",
     );
     check(&nested(3332, "", ""), "memory exhausted in line 1 near '}'");
+    // `optstmtlist`'s default reduction comes before the bad token is found
+    check(
+        &nested(3332, "", "]"),
+        "memory exhausted in line 1 near ']'",
+    );
+    check(&nested(3331, "", "]"), "syntax error in line 1 near ']'");
     assert_eq!(error_of(&nested(2498, "x ", "a")), None);
     check(
         &nested(2499, "x ", "a"),

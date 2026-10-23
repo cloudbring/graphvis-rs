@@ -440,8 +440,13 @@ impl<'a> Parser<'a> {
                     self.reduce(0)?;
                 }
                 self.rcompound(items)?
-            } else {
+            } else if self.starts_stmt() {
                 self.stmt()?
+            } else {
+                // bison reduces `optstmtlist` by default before it finds the token wrong, and
+                // that push can be the one its stack has no room for.
+                self.reduce(usize::from(has_stmts))?;
+                return Err(syntax_error(self.peek()));
             };
             match step {
                 Step::Open(items) => {
@@ -462,6 +467,19 @@ impl<'a> Parser<'a> {
                 }
             }
         }
+    }
+
+    /// Whether the lookahead can start a `stmt`.
+    fn starts_stmt(&mut self) -> bool {
+        let kind = &self.peek().kind;
+        matches!(
+            kind,
+            TokenKind::Graph
+                | TokenKind::Node
+                | TokenKind::Edge
+                | TokenKind::Subgraph
+                | TokenKind::LBrace
+        ) || Self::is_atom_token(kind)
     }
 
     /// `stmt`, up to `optsemi`: `attrstmt`, or `compound : simple rcompound optattr`.
