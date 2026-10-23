@@ -77,9 +77,9 @@ impl TextLabel {
                 Some(HtmlLabel::Table(_)) => "<TABLE>".to_string(),
                 // `make_html_label` after a parse error: `lp->html` is cleared and
                 // `lp->text` stays the unconverted source.
-                None if g.html_failed => shapes_html_inner(raw).to_string(),
+                None if g.html_failed => raw.to_string(),
                 // HTML text: `lp->text` is the source string, entities not decoded.
-                _ => shapes_html_inner(raw).to_string(),
+                _ => raw.to_string(),
             };
         }
         if let Some(t) = &g.text {
@@ -113,15 +113,6 @@ impl TextLabel {
             is_html: g.html && !g.html_failed,
             spans,
         }
-    }
-}
-
-/// `raw` without the `<`...`>` delimiters the parser keeps around HTML strings.
-fn shapes_html_inner(raw: &str) -> &str {
-    if raw.len() >= 2 && raw.starts_with('<') && raw.ends_with('>') {
-        &raw[1..raw.len() - 1]
-    } else {
-        raw
     }
 }
 

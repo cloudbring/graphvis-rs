@@ -1,7 +1,7 @@
 //! `agwrite` (`lib/cgraph/write.c`) over the parsed cgraph dictionaries kept in
 //! [`Graph::dicts`]: the writer behind `-Tdot`, `-Txdot` and `-Tcanon`.
 
-use graphviz_pure_core::{AttrMap, AttrSym, Graph, GraphKind};
+use graphviz_pure_core::{AttrMap, AttrSym, Graph, GraphKind, attr_is_html};
 use graphviz_pure_parser::canon_str_with;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -38,9 +38,10 @@ fn empty_sym() -> AttrSym {
 }
 
 impl W<'_> {
-    fn canon(&self, s: &str) -> String {
-        if self.g.html_strings.contains(s) {
-            s.to_string()
+    /// `agstrcanon`: an HTML string (`html`, `s` its inner text) is written `<s>`.
+    fn canon(&self, s: &str, html: bool) -> String {
+        if html {
+            format!("<{s}>")
         } else {
             canon_str_with(s, self.maxline)
         }
@@ -87,7 +88,7 @@ impl W<'_> {
     }
 
     fn write_dict(&mut self, gi: usize, name: &str, k: Kind, top: bool) {
-        let mut entries: Vec<(String, String)> = Vec::new();
+        let mut entries: Vec<(String, bool, String, bool)> = Vec::new();
         for (n, sym) in self.dict(gi, k) {
             if sym.defval.is_empty() && !sym.print {
                 if top {
@@ -99,12 +100,12 @@ impl W<'_> {
                     continue;
                 }
             }
-            entries.push((n.clone(), sym.defval.clone()));
+            entries.push((n.clone(), sym.html, sym.defval.clone(), sym.html_defval));
         }
         if entries.is_empty() {
             return;
         }
-        for (i, (n, v)) in entries.iter().enumerate() {
+        for (i, (n, html, v, html_v)) in entries.iter().enumerate() {
             if i == 0 {
                 self.indent();
                 self.out.push_str(name);
@@ -114,7 +115,7 @@ impl W<'_> {
                 self.out.push_str(",\n");
                 self.indent();
             }
-            let (cn, cv) = (self.canon(n), self.canon(v));
+            let (cn, cv) = (self.canon(n, *html), self.canon(v, *html_v));
             self.out.push_str(&cn);
             self.out.push('=');
             self.out.push_str(&cv);
@@ -136,6 +137,10 @@ impl W<'_> {
         (!n.is_empty() && !n.starts_with('%')).then_some(n.as_str())
     }
 
+    fn graph_name_html(&self, gi: usize) -> bool {
+        gi > 0 && self.g.subgraphs[gi - 1].html_name
+    }
+
     fn write_hdr(&mut self, gi: usize) {
         let top = gi == 0;
         let name = self.graph_name(gi).map(str::to_string);
@@ -152,7 +157,7 @@ impl W<'_> {
             self.out.push_str("subgraph ");
         }
         if let Some(n) = &name {
-            let c = canon_str_with(n, self.maxline);
+            let c = self.canon(n, self.graph_name_html(gi));
             self.out.push_str(&c);
             self.out.push(' ');
         }
@@ -208,17 +213,19 @@ impl W<'_> {
 
     fn write_nondefault(&mut self, gi: usize, attrs: &AttrMap, k: Kind) {
         let mut cnt = 0;
-        let view: Vec<(String, String)> = self
+        let view: Vec<(String, bool, String, bool)> = self
             .view_all(gi, k)
             .into_iter()
-            .map(|(n, s)| (n.to_string(), s.defval.clone()))
+            .map(|(n, s)| (n.to_string(), s.html, s.defval.clone(), s.html_defval))
             .collect();
-        for (n, defval) in view {
+        for (n, html, defval, html_defval) in view {
             if k == Kind::Edge && (n == "tailport" || n == "headport") {
                 continue;
             }
             let v = Self::value(attrs, &n);
-            if v != defval {
+            let html_v = attr_is_html(attrs, &n);
+            // `data->str[sym->id] != sym->defval` compares interned strings, flag included.
+            if (v, html_v) != (defval.as_str(), html_defval) {
                 if cnt == 0 {
                     self.out.push_str("\t[");
                     self.level += 1;
@@ -227,7 +234,7 @@ impl W<'_> {
                     self.indent();
                 }
                 cnt += 1;
-                let (cn, cv) = (self.canon(&n), self.canon(v));
+                let (cn, cv) = (self.canon(&n, html), self.canon(v, html_v));
                 self.out.push_str(&cn);
                 self.out.push('=');
                 self.out.push_str(&cv);
@@ -241,10 +248,9 @@ impl W<'_> {
 
     fn not_default_attrs(&self, n: usize) -> bool {
         let attrs = &self.g.nodes[n].attrs;
-        self.g.dicts[0]
-            .node
-            .iter()
-            .any(|(k, s)| Self::value(attrs, k) != s.defval)
+        self.g.dicts[0].node.iter().any(|(k, s)| {
+            (Self::value(attrs, k), attr_is_html(attrs, k)) != (s.defval.as_str(), s.html_defval)
+        })
     }
 
     fn has_no_edges(&self, gi: usize, n: usize) -> bool {
@@ -263,7 +269,8 @@ impl W<'_> {
 
     fn write_node(&mut self, gi: usize, n: usize) {
         self.indent();
-        let name = canon_str_with(&self.g.nodes[n].name, self.maxline);
+        let nd = &self.g.nodes[n];
+        let name = self.canon(&nd.name, nd.html_name);
         self.out.push_str(&name);
         if !self.node_attrs_written[n] {
             let attrs = self.g.nodes[n].attrs.clone();
@@ -280,8 +287,9 @@ impl W<'_> {
             return;
         }
         self.out.push(':');
-        if self.g.html_strings.contains(&v) {
-            self.out.push_str(&v);
+        if attr_is_html(&self.edge_attrs[e], key) {
+            let c = self.canon(&v, true);
+            self.out.push_str(&c);
         } else if let Some((a, b)) = v.split_once(':') {
             let (a, b) = (
                 canon_str_with(a, self.maxline),
@@ -300,7 +308,7 @@ impl W<'_> {
         let ed = &self.g.edges[e];
         let (t, h) = (ed.tail.0 as usize, ed.head.0 as usize);
         self.indent();
-        let tn = canon_str_with(&self.g.nodes[t].name, self.maxline);
+        let tn = self.canon(&self.g.nodes[t].name, self.g.nodes[t].html_name);
         self.out.push_str(&tn);
         self.write_port(e, "tailport");
         self.out.push_str(if self.g.kind == GraphKind::Directed {
@@ -308,7 +316,7 @@ impl W<'_> {
         } else {
             " -- "
         });
-        let hn = canon_str_with(&self.g.nodes[h].name, self.maxline);
+        let hn = self.canon(&self.g.nodes[h].name, self.g.nodes[h].html_name);
         self.out.push_str(&hn);
         self.write_port(e, "headport");
         if !self.edge_attrs_written[e] {

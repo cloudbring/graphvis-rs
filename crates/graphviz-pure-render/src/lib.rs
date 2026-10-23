@@ -138,7 +138,13 @@ fn attached(
             if let emit::job::ObjKind::Cluster(c) = kind {
                 forced[m.clusters[c].sub].insert(name.to_string());
             }
-            attrs.insert(name.to_string(), value);
+            // `xd->version_s = agget(g, "xdotversion")` is set back as it is, flag included.
+            let root = &m.g.graph_attrs;
+            let html = name == "xdotversion"
+                && fixed_xdot.is_none()
+                && root.get(name) == Some(&value)
+                && graphviz_pure_core::attr_is_html(root, name);
+            graphviz_pure_core::set_attr(attrs, name, value, html);
         }
     }
     (g, forced)
@@ -154,19 +160,24 @@ const NO_LOW_CLUSTERS_KEY: &str = "\u{1}nolowclust";
 /// Records the attributes the layout and renderers set in cgraph's dictionaries:
 /// `safe_dcl` for node and edge attributes, and graph values as local symbols (`agxset`).
 fn sync_dicts(g: &mut Graph, orig: &Graph) {
-    use graphviz_pure_core::AttrSym;
+    use graphviz_pure_core::{AttrSym, HTML_VALUE_PREFIX, attr_is_html};
+    let mark = |k: &str| k.starts_with(HTML_VALUE_PREFIX);
     let set_graph = |d: &mut std::collections::BTreeMap<String, AttrSym>,
                      now: &graphviz_pure_core::AttrMap,
                      before: &graphviz_pure_core::AttrMap| {
         for (k, v) in now {
-            if before.get(k) != Some(v) {
-                d.entry(k.clone()).or_default().defval = v.clone();
+            if !mark(k)
+                && (before.get(k) != Some(v) || attr_is_html(before, k) != attr_is_html(now, k))
+            {
+                let sym = d.entry(k.clone()).or_default();
+                sym.defval = v.clone();
+                sym.html_defval = attr_is_html(now, k);
             }
         }
     };
     let (root_now, root_before) = (g.graph_attrs.clone(), &orig.graph_attrs);
     // safe_dcl declares graph attributes on the root before setting them.
-    for k in root_now.keys() {
+    for k in root_now.keys().filter(|k| !mark(k)) {
         if !root_before.contains_key(k) {
             g.dicts[0].graph.entry(k.clone()).or_default();
         }
@@ -174,7 +185,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
     set_graph(&mut g.dicts[0].graph, &root_now, root_before);
     for i in 0..g.subgraphs.len() {
         let now = g.subgraphs[i].graph_attrs.clone();
-        for k in now.keys() {
+        for k in now.keys().filter(|k| !mark(k)) {
             if !orig.subgraphs[i].graph_attrs.contains_key(k) {
                 g.dicts[0].graph.entry(k.clone()).or_default();
             }
@@ -189,7 +200,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
     for n in &g.nodes {
         node_keys.extend(n.attrs.keys().cloned());
     }
-    for k in node_keys {
+    for k in node_keys.into_iter().filter(|k| !mark(k)) {
         if !g.dicts.iter().any(|d| d.node.contains_key(&k)) {
             g.dicts[0].node.insert(k, AttrSym::default());
         }
@@ -198,7 +209,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
     for e in &g.edges {
         edge_keys.extend(e.attrs.keys().cloned());
     }
-    for k in edge_keys {
+    for k in edge_keys.into_iter().filter(|k| !mark(k)) {
         if !g.dicts.iter().any(|d| d.edge.contains_key(&k)) {
             g.dicts[0].edge.insert(k, AttrSym::default());
         }
@@ -346,7 +357,10 @@ fn cgraph_view(graph: &Graph) -> Graph {
                 a.remove(k);
             }
         }
-        a.retain(|k, _| !k.starts_with('\u{1}'));
+        // (the writers read the HTML marks)
+        a.retain(|k, _| {
+            !k.starts_with('\u{1}') || k.starts_with(graphviz_pure_core::HTML_VALUE_PREFIX)
+        });
     };
     private(&mut g.graph_attrs);
     for sg in &mut g.subgraphs {

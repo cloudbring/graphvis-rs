@@ -854,7 +854,6 @@ impl Dot<'_> {
         }
         aux.node_defaults = input.node_defaults.clone();
         aux.edge_defaults = input.edge_defaults.clone();
-        aux.html_strings = input.html_strings.clone();
         // setState: these symbols are NULL while the clone is laid out.
         for k in [
             "xlabel",
@@ -956,7 +955,7 @@ impl Dot<'_> {
         let (tn, hn) = if flip { (hn0, tn0) } else { (tn0, hn0) };
         let clone_node = |aux: &mut graphviz_pure_core::Graph, n: N| {
             let src = &input.nodes[self.nodes[n].real.unwrap()];
-            let id = aux.ensure_node(&src.name);
+            let id = aux.ensure_node_html(&src.name, src.html_name);
             let nd = &mut aux.nodes[id.0 as usize];
             nd.attrs = src.attrs.clone();
             // stale symbols read the clone's copied values, NULLed symbols included
@@ -988,6 +987,7 @@ impl Dot<'_> {
             edges: Vec::new(),
             subgraphs: Vec::new(),
             bb: Default::default(),
+            html_name: false,
         });
         // (main edge, aux edge) pairs and the "heavy" edge.
         let mut pairs: Vec<(E, usize)> = Vec::new();

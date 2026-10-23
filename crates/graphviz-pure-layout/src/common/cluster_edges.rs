@@ -197,7 +197,6 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
     work.graph_attrs = graph.graph_attrs.clone();
     work.node_defaults = graph.node_defaults.clone();
     work.edge_defaults = graph.edge_defaults.clone();
-    work.html_strings = graph.html_strings.clone();
     let mut node_map = vec![None; graph.nodes.len()];
     for (i, nd) in graph.nodes.iter().enumerate() {
         if deleted[i] {
@@ -206,7 +205,8 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
         let id = work.nodes.len();
         let mut d = nd.clone();
         d.id = NodeId(id as u32);
-        work.node_lookup.insert(d.name.clone(), d.id);
+        work.node_lookup
+            .insert(Graph::node_key(&d.name, d.html_name).into_owned(), d.id);
         work.nodes.push(d);
         node_map[i] = Some(id);
     }
@@ -447,7 +447,9 @@ fn renumber_undone(ce: &ClusterEdges, work: &Graph, graph: &mut Graph, new_id: &
     for (k, &n) in order.iter().enumerate() {
         let mut d = old_nodes[n].take().expect("each node once");
         d.id = NodeId(k as u32);
-        graph.node_lookup.insert(d.name.clone(), d.id);
+        graph
+            .node_lookup
+            .insert(Graph::node_key(&d.name, d.html_name).into_owned(), d.id);
         graph.nodes.push(d);
     }
     for sg in &mut graph.subgraphs {

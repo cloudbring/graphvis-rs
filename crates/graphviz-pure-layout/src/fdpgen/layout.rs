@@ -516,12 +516,7 @@ impl Fdp<'_, '_> {
             // do_graph_label(subg): the label's diagnostics print here, a graph's clusters
             // before their own; register_clusters made the labels quietly.
             let sg = &src.subgraphs[self.tree.subgraph[c]];
-            let _ = crate::common::init::graph_label(
-                &sg.graph_attrs,
-                &sg.name,
-                false,
-                &src.html_strings,
-            );
+            let _ = crate::common::init::graph_label(&sg.graph_attrs, &sg.name, false);
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));

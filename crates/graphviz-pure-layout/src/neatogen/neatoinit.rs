@@ -134,7 +134,7 @@ fn add_z(g: &LGraph<'_>, z_declared: bool, graph: &mut Graph) {
 
 /// `addZ`'s `agxset(n, N_z, "%lf" of POINTS_PER_INCH * ND_pos(n)[2])`.
 pub(crate) fn set_z(node: &mut graphviz_pure_core::NodeData, z: f64) {
-    node.attrs.insert("z".to_string(), c_lf(72.0 * z));
+    graphviz_pure_core::set_attr(&mut node.attrs, "z", c_lf(72.0 * z), false);
 }
 
 /// `printf("%lf", v)`.
@@ -429,8 +429,7 @@ fn add_cluster(g: &mut LGraph<'_>) {
         if !is_a_cluster(sg) {
             continue;
         }
-        let (label, label_pos) =
-            crate::common::init::graph_label(&sg.graph_attrs, &sg.name, false, &src.html_strings);
+        let (label, label_pos) = crate::common::init::graph_label(&sg.graph_attrs, &sg.name, false);
         let mut border = [Point::default(); 4];
         if let Some(l) = &label {
             let d = crate::common::init::pad(l.dimen);

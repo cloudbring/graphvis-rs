@@ -5,9 +5,7 @@ pub mod canon;
 pub mod lexer;
 pub mod parser;
 
-pub use canon::{
-    canon_str, canon_str_with, canon_value, is_html_string, write_canon, write_canon_forced,
-};
+pub use canon::{canon_str, canon_str_with, canon_value, write_canon, write_canon_forced};
 pub use lexer::{Lexer, Token, TokenKind, reading_file};
 pub use parser::{GlobalAttrs, GraphStream, Parser};
 
@@ -274,7 +272,10 @@ mod tests {
         assert_eq!(html.edges.len(), 2);
         for node in &html.nodes {
             let label = node.attrs.get("label").expect("missing label");
-            assert!(is_html_string(label), "expected HTML label, got {label}");
+            assert!(
+                graphviz_pure_core::attr_is_html(&node.attrs, "label"),
+                "expected HTML label, got {label}"
+            );
             assert!(label.contains("<TABLE"));
         }
         assert_eq!(html.edges[0].tail_port.name.as_deref(), Some("f1"));
@@ -288,11 +289,11 @@ mod tests {
         assert_eq!(html2.subgraphs.len(), 1);
         assert_eq!(html2.edges[0].tail_port.name.as_deref(), Some("here"));
         assert_eq!(html2.edges[0].head_port.name.as_deref(), Some("there"));
-        let edge_label = html2.edges[2]
-            .attrs
-            .get("label")
-            .expect("missing edge label");
-        assert!(is_html_string(edge_label));
+        assert!(html2.edges[2].attrs.contains_key("label"));
+        assert!(graphviz_pure_core::attr_is_html(
+            &html2.edges[2].attrs,
+            "label"
+        ));
     }
 
     #[test]
@@ -430,5 +431,63 @@ mod tests {
         for name in ["nodes", "edged", "graphx"] {
             assert!(g.node_lookup.contains_key(name), "{name}");
         }
+    }
+
+    // #81: `concat` joins an HTML operand's inner text into a plain string.
+    #[test]
+    fn concatenation_joins_inner_text_into_a_plain_string() {
+        use graphviz_pure_core::attr_is_html;
+        let g = parse_dot("digraph { a [label=\"x\" + <b>, xlabel=<b> + \"y\"] }").unwrap();
+        let a = &g.nodes[0].attrs;
+        assert_eq!(a.get("label").map(String::as_str), Some("xb"));
+        assert_eq!(a.get("xlabel").map(String::as_str), Some("by"));
+        assert!(!attr_is_html(a, "label") && !attr_is_html(a, "xlabel"));
+        let g = parse_dot("digraph { a [label=<b>] }").unwrap();
+        let a = &g.nodes[0].attrs;
+        assert_eq!(a.get("label").map(String::as_str), Some("b"));
+        assert!(attr_is_html(a, "label"));
+    }
+
+    // #98: `concatPort` makes `port:compass` a plain string; a lone HTML port stays HTML.
+    #[test]
+    fn html_port_with_compass_is_a_plain_string() {
+        use graphviz_pure_core::attr_is_html;
+        let g = parse_dot("digraph { a:<foo>:n -> b:<x> }").unwrap();
+        let e = &g.edges[0];
+        assert_eq!(e.attrs.get("tailport").map(String::as_str), Some("foo:n"));
+        assert!(!attr_is_html(&e.attrs, "tailport"));
+        assert_eq!(e.tail_port.name.as_deref(), Some("foo"));
+        assert_eq!(e.tail_port.compass.as_deref(), Some("n"));
+        assert_eq!(e.attrs.get("headport").map(String::as_str), Some("x"));
+        assert!(attr_is_html(&e.attrs, "headport"));
+        assert_eq!(e.head_port.name.as_deref(), Some("x"));
+    }
+
+    // #99: an attribute is named by the inner text; the first declaration's flag names it.
+    #[test]
+    fn html_attribute_name_is_its_inner_text() {
+        let g = parse_dot("digraph { a [<zzz>=1]; b [zzz=2]; c [label=1, <label>=2] }").unwrap();
+        assert_eq!(g.nodes[0].attrs.get("zzz").map(String::as_str), Some("1"));
+        assert_eq!(g.nodes[1].attrs.get("zzz").map(String::as_str), Some("2"));
+        assert!(g.dicts[0].node["zzz"].html);
+        // `label` is declared by the ProtoGraph, as plain text.
+        assert_eq!(g.nodes[2].attrs.get("label").map(String::as_str), Some("2"));
+        assert!(!g.dicts[0].node["label"].html);
+    }
+
+    // #119: a node name keeps the flag; `<b>`, `b` and `"<b>"` are three nodes (`refstr_eq`).
+    #[test]
+    fn html_node_name_is_its_inner_text_and_a_flag() {
+        let g = parse_dot("digraph <G> { <b>; b; \"<b>\"; subgraph <s> { <b> } }").unwrap();
+        assert_eq!(g.name, "G");
+        let names: Vec<(&str, bool)> = g
+            .nodes
+            .iter()
+            .map(|n| (n.name.as_str(), n.html_name))
+            .collect();
+        assert_eq!(names, [("b", true), ("b", false), ("<b>", false)]);
+        assert_eq!(g.subgraphs[0].name, "s");
+        assert!(g.subgraphs[0].html_name);
+        assert_eq!(g.subgraphs[0].nodes, [g.nodes[0].id]);
     }
 }

@@ -539,6 +539,153 @@ fn overlap_prism_prefix_with_multibyte_char_does_not_panic() {
     }
 }
 
+// Issues #81, #98, #99, #119: cgraph's scanner gives an HTML string its inner text and a flag
+// (scan.l `endstr_html`, `agstrdup_html`); `concat` and `concatPort` make plain strings and the
+// writers test the flag (write.c `agstrcanon`). Expected output is Graphviz 16.1.0's.
+#[test]
+fn html_strings_keep_their_inner_text_and_a_flag() {
+    let dot = |src: &str| {
+        let (out, err, ok) = run(&["-Tdot"], src);
+        assert!(ok, "{err}");
+        (out, err)
+    };
+    // #81: `+` joins the inner texts into a plain string.
+    let (out, _) = dot("digraph { a [label=\"x\" + <b>]; c [label=<b> + \"y\"] }");
+    assert_eq!(
+        out,
+        "digraph {\n\tgraph [bb=\"0,0,126,36\"];\n\tnode [label=\"\\N\"];\n\
+         \ta\t[height=0.5,\n\t\tlabel=xb,\n\t\tpos=\"27,18\",\n\t\twidth=0.75];\n\
+         \tc\t[height=0.5,\n\t\tlabel=by,\n\t\tpos=\"99,18\",\n\t\twidth=0.75];\n}\n"
+    );
+    // #98: `port:compass` is a plain string; the port name is the inner text.
+    let (out, err) = dot("digraph G { a:<foo>:n -> b }");
+    assert_eq!(err, "Warning: node a, port foo unrecognized\n");
+    assert!(out.contains("\ta:foo:n -> b\t[pos="), "{out}");
+    // #99: an attribute is named by the inner text, which orders it.
+    let (out, _) = dot("digraph G { a [<zzz>=1] }");
+    assert!(
+        out.contains("\ta\t[height=0.5,\n\t\tpos=\"27,18\",\n\t\twidth=0.75,\n\t\t<zzz>=1];"),
+        "{out}"
+    );
+    // #119: a node named `<b>` is not `b` nor `"<b>"`, and is written `<b>`.
+    let (out, _, ok) = run(&["-Tcanon"], "digraph { <b>; b; \"<b>\" }");
+    assert!(ok);
+    assert_eq!(
+        out,
+        "digraph {\n\tnode [label=\"\\N\"];\n\t<b>;\n\tb;\n\t\"<b>\";\n}\n"
+    );
+}
+
+// Same cause, other routes: every reader but the label makers sees an HTML value's inner text
+// (`shape=<box>`), an empty HTML label is plain (`make_label`), a record field is found by an
+// HTML port's inner text, and `<x>` and `"<x>"` stay apart in one graph.
+#[test]
+fn html_values_are_their_inner_text_to_other_readers() {
+    let (out, err, ok) = run(&["-Tdot"], "digraph { a [shape=<box>, label=<>] }");
+    assert!(ok);
+    assert_eq!(err, "");
+    assert!(
+        out.contains("\t\tlabel=<>,\n") && out.contains("\t\tshape=<box>,\n"),
+        "{out}"
+    );
+    let (out, err, ok) = run(
+        &["-Tdot"],
+        "digraph { a [shape=record, label=\"<f0> x|<f1> y\"]; a:<f0> -> b }",
+    );
+    assert!(ok);
+    assert_eq!(err, "");
+    assert!(out.contains("graph [bb=\"0,0,67,109\"];"), "{out}");
+    assert!(out.contains("\ta:<f0> -> b\t[pos="), "{out}");
+    let (out, _, ok) = run(&["-Tdot"], "digraph { a [label=<x>, xlabel=\"<x>\"] }");
+    assert!(ok);
+    assert!(out.contains("graph [bb=\"0,0,76.791,52.8\"];"), "{out}");
+    assert!(out.contains("\t\tlabel=<x>,\n") && out.contains("\t\txlabel=\"<x>\",\n"));
+    // A value the layout computes is plain, whatever the input wrote (`agxset`).
+    let (out, _, ok) = run(&["-Tdot"], "digraph { graph [bb=<0,0,1,1>]; a }");
+    assert!(ok);
+    assert!(out.contains("\tgraph [bb=\"0,0,54,36\"];\n"), "{out}");
+    // ... even when it has the input's text.
+    let (out, _, ok) = run(&["-Tdot"], "digraph { a [width=<0.75>, height=<0.5>] }");
+    assert!(ok);
+    assert!(
+        out.contains("\ta\t[height=0.5,\n\t\tpos=\"27,18\",\n\t\twidth=0.75];"),
+        "{out}"
+    );
+    // `agfindnode` tells `a` from `<a>`: twopi roots this graph at the plain `a`.
+    let (out, _, ok) = run(
+        &["-Ktwopi", "-Tdot"],
+        "graph { <a> -- b; a -- c; c -- d; d -- e; root=a }",
+    );
+    assert!(ok);
+    assert!(
+        out.contains("\tgraph [bb=\"0,0,324,113\",\n\t\troot=a\n"),
+        "{out}"
+    );
+    // `-Tplain-ext` writes names and ports with `agcanonStr` (output.c `writenodeandport`).
+    let (out, _, ok) = run(
+        &["-Tplain-ext"],
+        "digraph { a [shape=record, label=\"<p> x|y\"]; a:<p> -> <h> }",
+    );
+    assert!(ok);
+    assert!(out.contains("\nnode <h> 0.375 0.25 "), "{out}");
+    assert!(out.contains("\nedge a:<p> <h> 4 "), "{out}");
+    // Values the layouts write are plain: dot's phase rank/order, neato's z, patchwork's
+    // shape. xdot sets back the input's own `xdotversion` string, flag included.
+    // (arguments, input, expected in the output, not expected)
+    type Case<'a> = (&'a [&'a str], &'a str, &'a [&'a str], &'a [&'a str]);
+    let cases: [Case; 4] = [
+        (
+            &["-Tdot"],
+            "digraph { phase=2; a [order=<0>, rank=<0>] }",
+            &["\t\torder=0,\n", "\t\trank=0,\n"],
+            &["<0>"],
+        ),
+        (
+            &["-Kneato", "-Tdot"],
+            "graph { dim=3; a [pos=\"1,2,3!\", z=<216.000000>] }",
+            &["\t\tz=216.000000];"],
+            &["z=<"],
+        ),
+        (
+            &["-Kpatchwork", "-Tdot"],
+            "graph { node [shape=<box>]; a [shape=<box>] }",
+            &["\t\tshape=box\n\t];\n"],
+            &["<box>", "\t\tshape=box,"],
+        ),
+        (
+            &["-Txdot"],
+            "digraph { xdotversion=<1.7>; a }",
+            &["\t\txdotversion=<1.7>\n"],
+            &[],
+        ),
+    ];
+    for (args, src, want, not) in cases {
+        let (out, err, ok) = run(args, src);
+        assert!(ok, "{src}: {err}");
+        for w in want {
+            assert!(out.contains(w), "{src}: {out}");
+        }
+        for n in not {
+            assert!(!out.contains(n), "{src}: {out}");
+        }
+    }
+    // dot's `group` compares interned strings: `<g>` is not the group `g`.
+    let (out, _, ok) = run(
+        &["-Tplain"],
+        "digraph { n0->n2; n0->n3; n0->n6; n1->n3; n1->n4; n3->n4; n3->n5; n3->n6; \
+         n6 [group=<g>]; n0 [group=g]; n3 [group=g] }",
+    );
+    assert!(ok);
+    assert!(out.contains("\nnode n0 1.9028 2.25 "), "{out}");
+    // A viewport focus name is plain, so it does not find the node `<a>`.
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { viewport=\"100,100,1,'a'\"; <a> -> b -> c -> d }",
+    );
+    assert!(ok);
+    assert!(out.contains("translate(23 176)"), "{out}");
+}
+
 // Issue #166, same root cause: neato's ipsep mode matches diredgeconstraints="hier..." with
 // strncasecmp(str, "hier", 4) (lib/neatogen/neatoinit.c, majorization).
 #[test]

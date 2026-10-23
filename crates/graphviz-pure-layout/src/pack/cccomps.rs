@@ -280,7 +280,6 @@ impl CComp {
         graph.graph_attrs = root.graph_attrs.clone();
         graph.node_defaults = root.node_defaults.clone();
         graph.edge_defaults = root.edge_defaults.clone();
-        graph.html_strings = root.html_strings.clone();
         // A component is a subgraph of the root (`agsubg`), so it shares the root's
         // attribute dictionaries and symbol ids. make_flat_adj_edges' setState keeps some
         // main-graph Agsyms and reads them by id; it needs the root's declarations.
@@ -290,7 +289,9 @@ impl CComp {
             local[n] = i;
             let mut nd = root.nodes[n].clone();
             nd.id = NodeId(i as u32);
-            graph.node_lookup.insert(nd.name.clone(), nd.id);
+            graph
+                .node_lookup
+                .insert(Graph::node_key(&nd.name, nd.html_name).into_owned(), nd.id);
             graph.nodes.push(nd);
         }
         let mut edges = Vec::new();
@@ -322,6 +323,7 @@ impl CComp {
                 edges: p.edges.iter().map(|&e| EdgeId(elocal[e] as u32)).collect(),
                 subgraphs: Vec::new(),
                 bb: Default::default(),
+                html_name: s.html_name,
             });
         }
         for (i, p) in self.subgraphs.iter().enumerate() {

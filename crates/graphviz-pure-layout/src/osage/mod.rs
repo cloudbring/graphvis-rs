@@ -245,7 +245,7 @@ impl Osage<'_, '_> {
 pub fn register_clusters(g: &mut LGraph<'_>, tree: &ClusterTree) {
     for c in 0..tree.len() {
         let sg = &g.src.subgraphs[tree.subgraph[c]];
-        let (label, label_pos) = graph_label(&sg.graph_attrs, &sg.name, false, &g.src.html_strings);
+        let (label, label_pos) = graph_label(&sg.graph_attrs, &sg.name, false);
         let mut border = [Point::default(); 4];
         if let Some(l) = &label {
             border[if label_pos & LABEL_AT_TOP != 0 { 2 } else { 0 }] = pad(l.dimen);

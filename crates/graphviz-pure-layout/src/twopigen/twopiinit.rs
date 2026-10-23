@@ -28,7 +28,12 @@ pub fn twopi_layout(graph: &mut Graph) -> Result<()> {
     let mut set_root = false;
     if let Some(s) = g.gattr("root") {
         if !s.is_empty() {
-            ctr = src.nodes.iter().position(|n| n.name == s);
+            // `agfindnode` maps the interned value, flag included, to a node.
+            let html = graphviz_pure_core::attr_is_html(&src.graph_attrs, "root");
+            ctr = src
+                .nodes
+                .iter()
+                .position(|n| n.name == s && n.html_name == html);
             if ctr.is_none() {
                 // C warns: specified root node was not found.
                 set_root = true;
@@ -97,12 +102,18 @@ pub fn twopi_layout(graph: &mut Graph) -> Result<()> {
             .insert("root".to_string(), "1".to_string());
     }
     if set_root && let Some(c) = ctr {
-        let name = graph.nodes[c].name.clone();
+        // `agnameof(ctr)` keeps an HTML name's flag (`agstrdup` of an interned string).
+        let (name, html) = {
+            let nd = &graph.nodes[c];
+            (nd.name.clone(), nd.html_name)
+        };
         // agset on the root graph also updates the attribute's default.
         if let Some(d) = graph.dicts.first_mut() {
-            d.graph.entry("root".to_string()).or_default().defval = name.clone();
+            let sym = d.graph.entry("root".to_string()).or_default();
+            sym.defval = name.clone();
+            sym.html_defval = html;
         }
-        graph.graph_attrs.insert("root".to_string(), name);
+        graphviz_pure_core::set_attr(&mut graph.graph_attrs, "root", name, html);
     }
     Ok(())
 }

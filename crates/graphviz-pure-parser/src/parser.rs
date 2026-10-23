@@ -6,20 +6,32 @@ use crate::lexer::{Lexer, ScanInput, ScanState, Token, TokenKind};
 type AttrMap2 = std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>;
 
 use graphviz_pure_core::{
-    AttrMap, BoundingBox, EdgeId, Graph, GraphKind, GraphvizError, NodeId, Port, Result,
-    SubgraphData, SubgraphId,
+    AttrMap, BoundingBox, EdgeId, Graph, GraphKind, GraphvizError, HTML_VALUE_PREFIX, NodeId, Port,
+    Result, SubgraphData, SubgraphId, apply_attrs, attr_is_html, set_attr,
 };
 
 const MAX_SUBGRAPH_DEPTH: usize = 256;
 
+/// An atom as grammar.y's semantic values carry it: its text, and whether cgraph's
+/// `aghtmlstr` is set on it (an HTML string, `<...>`, whose text is the inner part).
+#[derive(Debug, Clone)]
+struct Atom {
+    text: String,
+    html: bool,
+}
+
+/// An edge endpoint: the node, and its port as `concatPort` makes it (the `tailport` or
+/// `headport` value, and whether it is an HTML string).
+type Endpoint = (NodeId, Option<(String, bool)>);
+
 #[derive(Debug, Clone)]
 enum SimpleItem {
-    Nodes(Vec<(NodeId, Port)>),
-    Subgraph(Vec<(NodeId, Port)>),
+    Nodes(Vec<Endpoint>),
+    Subgraph(Vec<Endpoint>),
 }
 
 impl SimpleItem {
-    fn into_endpoints(self) -> Vec<(NodeId, Port)> {
+    fn into_endpoints(self) -> Vec<Endpoint> {
         match self {
             Self::Nodes(v) | Self::Subgraph(v) => v,
         }
@@ -50,6 +62,9 @@ pub struct Parser<'a> {
     /// Keys of the last attribute list in source order: cgraph declares them in this
     /// order, which fixes their `sym->id`.
     attr_order: Vec<String>,
+    /// The keys in [`Parser::attr_order`] whose first occurrence was an HTML string: the
+    /// first declaration names the attribute symbol, flag included (`bindattrs`).
+    html_keys: std::collections::BTreeSet<String>,
     /// cgraph's id counter for anonymous objects (`ctr` in `idmap`).
     anon_ctr: u64,
     /// Parent of each subgraph (`None`: the root graph).
@@ -77,6 +92,7 @@ impl<'a> Parser<'a> {
             globals: globals.clone(),
             rbrace_line: 0,
             attr_order: Vec::new(),
+            html_keys: std::collections::BTreeSet::new(),
             anon_ctr: 1,
             sub_parent: Vec::new(),
             started: false,
@@ -164,40 +180,30 @@ impl<'a> Parser<'a> {
     /// scan.l (matched case-insensitively), not `T_atom`, so an unquoted
     /// keyword is a syntax error wherever an atom is expected: attribute
     /// names and values, node names, ports and compass points (issue #29).
-    fn parse_atom(&mut self) -> Result<String> {
+    fn parse_atom(&mut self) -> Result<Atom> {
         let tok = self.peek().clone();
-        let mut is_html = false;
-        let mut val = match tok.kind {
-            TokenKind::Ident(s) | TokenKind::Quoted(s) => {
-                self.advance();
-                s
-            }
-            TokenKind::Html(s) => {
-                self.advance();
-                is_html = true;
-                s
-            }
+        let mut atom = match tok.kind {
+            TokenKind::Ident(text) | TokenKind::Quoted(text) => Atom { text, html: false },
+            TokenKind::Html(text) => Atom { text, html: true },
             _ => return Err(syntax_error(&tok)),
         };
+        self.advance();
 
-        // Support string concatenation with `+` (`qatom '+' T_qatom` in grammar.y)
+        // `qatom '+' T_qatom`: `concat` joins the texts (an HTML string's inner text) into a
+        // plain string (`agstrdup`).
         while self.peek().kind == TokenKind::Plus {
             self.advance();
             let next_tok = self.peek().clone();
             match next_tok.kind {
                 TokenKind::Ident(s) | TokenKind::Quoted(s) | TokenKind::Html(s) => {
                     self.advance();
-                    is_html = false;
-                    val.push_str(&s);
+                    atom.html = false;
+                    atom.text.push_str(&s);
                 }
                 _ => return Err(syntax_error(&next_tok)),
             }
         }
-
-        if is_html {
-            self.graph.html_strings.insert(val.clone());
-        }
-        Ok(val)
+        Ok(atom)
     }
 
     /// Checks how many tokens an atom (including `+` concatenations) spans starting at `start_offset`,
@@ -266,8 +272,9 @@ impl<'a> Parser<'a> {
             _ => return Err(syntax_error(&tok)),
         };
 
+        // `agopen` copies the name into the new root's own string dictionary, as plain text.
         let name = if Self::is_atom_token(&self.peek().kind) {
-            self.parse_atom()?
+            self.parse_atom()?.text
         } else {
             String::new()
         };
@@ -287,6 +294,8 @@ impl<'a> Parser<'a> {
                 defval: "\\N".to_string(),
                 print: false,
                 id: 0,
+                html: false,
+                html_defval: false,
             },
         );
         // Command-line defaults come from cgraph's ProtoGraph dictionaries.
@@ -304,6 +313,8 @@ impl<'a> Parser<'a> {
                         defval: v,
                         print: false,
                         id,
+                        html: false,
+                        html_defval: false,
                     },
                 );
             }
@@ -364,9 +375,14 @@ impl<'a> Parser<'a> {
                     let key = self.parse_atom()?;
                     self.expect(&TokenKind::Equals)?;
                     let val = self.parse_atom()?;
+                    self.html_keys.clear();
+                    if key.html {
+                        self.html_keys.insert(key.text.clone());
+                    }
+                    let key = key.text;
                     if !self.fixed_at_root(DictKind::Graph, &key) {
-                        self.attr_stmt(DictKind::Graph, &key, &val);
-                        self.current_graph_attrs_mut().insert(key, val);
+                        self.attr_stmt(DictKind::Graph, &key, &val.text, val.html);
+                        set_attr(self.current_graph_attrs_mut(), &key, val.text, val.html);
                     } else {
                         if let Some(sym) = self.dict_mut(0, DictKind::Graph).get_mut(&key) {
                             sym.print = true;
@@ -402,38 +418,43 @@ impl<'a> Parser<'a> {
         };
         // `-G`/`-N`/`-E` symbols are `fixed`: root attribute statements keep them.
         let mut kept = AttrMap::new();
-        for (k, v) in attrs {
+        for (k, v) in &attrs {
+            if k.starts_with(HTML_VALUE_PREFIX) {
+                continue;
+            }
             // `bindattrs` skips an edge `key`, and `attrstmt` then skips the unbound item:
             // `edge [key=k]` sets nothing.
             if kind == DictKind::Edge && k == "key" {
                 continue;
             }
-            if self.fixed_at_root(kind, &k) {
-                if let Some(sym) = self.dict_mut(0, kind).get_mut(&k) {
+            if self.fixed_at_root(kind, k) {
+                if let Some(sym) = self.dict_mut(0, kind).get_mut(k) {
                     sym.print = true;
                 }
             } else {
-                kept.insert(k, v);
+                set_attr(&mut kept, k, v.clone(), attr_is_html(&attrs, k));
             }
         }
         let attrs = kept;
         for k in std::mem::take(&mut self.attr_order) {
             if let Some(v) = attrs.get(&k) {
-                self.attr_stmt(kind, &k, v);
+                self.attr_stmt(kind, &k, v, attr_is_html(&attrs, &k));
             }
         }
-        match attr_tok.kind {
-            TokenKind::Graph => self.current_graph_attrs_mut().extend(attrs),
-            TokenKind::Node => self.current_node_defaults_mut().extend(attrs),
-            TokenKind::Edge => self.current_edge_defaults_mut().extend(attrs),
+        let target = match attr_tok.kind {
+            TokenKind::Graph => self.current_graph_attrs_mut(),
+            TokenKind::Node => self.current_node_defaults_mut(),
+            TokenKind::Edge => self.current_edge_defaults_mut(),
             _ => unreachable!(),
-        }
+        };
+        apply_attrs(target, &attrs);
         Ok(())
     }
 
     fn parse_opt_attr_list(&mut self) -> Result<AttrMap> {
         let mut attrs = AttrMap::new();
         self.attr_order.clear();
+        self.html_keys.clear();
         while self.peek().kind == TokenKind::LBracket {
             self.advance(); // consume `[`
             // attrdefs: `atom '=' atom` followed by at most one `,` or `;`.
@@ -441,10 +462,14 @@ impl<'a> Parser<'a> {
                 let key = self.parse_atom()?;
                 self.expect(&TokenKind::Equals)?;
                 let val = self.parse_atom()?;
+                let (key, html) = (key.text, key.html);
                 if !attrs.contains_key(&key) {
+                    if html {
+                        self.html_keys.insert(key.clone());
+                    }
                     self.attr_order.push(key.clone());
                 }
-                attrs.insert(key, val);
+                set_attr(&mut attrs, &key, val.text, val.html);
                 if matches!(self.peek().kind, TokenKind::Comma | TokenKind::Semi) {
                     self.advance();
                 }
@@ -506,9 +531,7 @@ impl<'a> Parser<'a> {
                 && !attrs.is_empty()
             {
                 for (node_id, _port) in nodes {
-                    self.graph.nodes[node_id.0 as usize]
-                        .attrs
-                        .extend(attrs.clone());
+                    apply_attrs(&mut self.graph.nodes[node_id.0 as usize].attrs, &attrs);
                 }
             }
         }
@@ -530,7 +553,7 @@ impl<'a> Parser<'a> {
             }
             ids.sort_by_key(|n| n.0);
             ids.dedup();
-            let endpoints = ids.into_iter().map(|nid| (nid, Port::default())).collect();
+            let endpoints = ids.into_iter().map(|nid| (nid, None)).collect();
             Ok(SimpleItem::Subgraph(endpoints))
         } else {
             let mut nodes = vec![self.parse_node_ref()?];
@@ -542,22 +565,22 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_node_ref(&mut self) -> Result<(NodeId, Port)> {
+    fn parse_node_ref(&mut self) -> Result<Endpoint> {
         let name = self.parse_atom()?;
-        let mut port = Port::default();
+        let mut port = None;
         if self.peek().kind == TokenKind::Colon {
             self.advance();
             let p1 = self.parse_atom()?;
             if self.peek().kind == TokenKind::Colon {
                 self.advance();
                 let p2 = self.parse_atom()?;
-                port.name = Some(p1);
-                port.compass = Some(p2);
+                // `concatPort` joins `port:compass` into a plain string.
+                port = Some((format!("{}:{}", p1.text, p2.text), false));
             } else {
-                port.name = Some(p1);
+                port = Some((p1.text, p1.html));
             }
         }
-        let node_id = self.ensure_scoped_node(&name);
+        let node_id = self.ensure_scoped_node(&name.text, name.html);
         Ok((node_id, port))
     }
 
@@ -567,10 +590,16 @@ impl<'a> Parser<'a> {
             if Self::is_atom_token(&self.peek().kind) {
                 self.parse_atom()?
             } else {
-                String::new()
+                Atom {
+                    text: String::new(),
+                    html: false,
+                }
             }
         } else {
-            String::new()
+            Atom {
+                text: String::new(),
+                html: false,
+            }
         };
 
         if self.scope_stack.len() >= MAX_SUBGRAPH_DEPTH {
@@ -583,7 +612,8 @@ impl<'a> Parser<'a> {
             });
         }
 
-        let subg_id = self.open_subgraph(name.clone());
+        let subg_id = self.open_subgraph(name.text.clone(), name.html);
+        let name = name.text;
 
         if self.peek().kind == TokenKind::LBrace {
             self.scope_stack.push(subg_id);
@@ -598,11 +628,11 @@ impl<'a> Parser<'a> {
         Ok(subg_id)
     }
 
-    fn open_subgraph(&mut self, name: String) -> SubgraphId {
+    fn open_subgraph(&mut self, name: String, html: bool) -> SubgraphId {
         let current_parent = self.scope_stack.last().copied();
         if !name.is_empty()
             && let Some(existing_id) = self.graph.subgraphs.iter().find_map(|s| {
-                if s.name != name {
+                if s.name != name || s.html_name != html {
                     return None;
                 }
                 let has_same_parent = match current_parent {
@@ -654,6 +684,7 @@ impl<'a> Parser<'a> {
             edges: Vec::new(),
             subgraphs: Vec::new(),
             bb: BoundingBox::default(),
+            html_name: html,
         });
 
         id
@@ -715,12 +746,14 @@ impl<'a> Parser<'a> {
         let gi = self.scope_dict();
         let unknown = !self.lookup_view(gi, kind, name);
         if unknown {
+            let html = self.html_keys.contains(name);
             let d = self.dict_mut(0, kind);
             let id = d.len();
             d.insert(
                 name.to_string(),
                 graphviz_pure_core::AttrSym {
                     id,
+                    html,
                     ..Default::default()
                 },
             );
@@ -729,7 +762,7 @@ impl<'a> Parser<'a> {
     }
 
     /// `attrstmt` + `setattr`: a default set in the current scope.
-    fn attr_stmt(&mut self, kind: DictKind, name: &str, value: &str) {
+    fn attr_stmt(&mut self, kind: DictKind, name: &str, value: &str, value_html: bool) {
         let unknown = self.bind_attr(kind, name);
         let gi = self.scope_dict();
         // `setattr` warns when it updates a subgraph's own `layout` symbol. A graph
@@ -743,6 +776,8 @@ impl<'a> Parser<'a> {
                 "layout attribute is invalid except on the root graph\n",
             );
         }
+        // `attrstmt` names local symbols with the root symbol's name, flag included.
+        let html = self.dict(0, kind).get(name).is_some_and(|s| s.html);
         if self.dict(gi, kind).contains_key(name) {
             if kind == DictKind::Graph {
                 // unviewsubgraphsattr: direct children without a local value keep theirs.
@@ -759,27 +794,31 @@ impl<'a> Parser<'a> {
                 };
                 for c in children {
                     if !self.graph.dicts[c + 1].graph.contains_key(name) {
-                        let v = self.graph.subgraphs[c]
-                            .graph_attrs
-                            .get(name)
-                            .cloned()
-                            .unwrap_or_default();
+                        let attrs = &self.graph.subgraphs[c].graph_attrs;
+                        let v = attrs.get(name).cloned().unwrap_or_default();
+                        let html_defval = attr_is_html(attrs, name);
                         self.graph.dicts[c + 1].graph.insert(
                             name.to_string(),
                             graphviz_pure_core::AttrSym {
                                 defval: v,
+                                html,
+                                html_defval,
                                 ..Default::default()
                             },
                         );
                     }
                 }
             }
-            self.dict_mut(gi, kind).get_mut(name).unwrap().defval = value.to_string();
+            let sym = self.dict_mut(gi, kind).get_mut(name).unwrap();
+            sym.defval = value.to_string();
+            sym.html_defval = value_html;
         } else {
             self.dict_mut(gi, kind).insert(
                 name.to_string(),
                 graphviz_pure_core::AttrSym {
                     defval: value.to_string(),
+                    html,
+                    html_defval: value_html,
                     ..Default::default()
                 },
             );
@@ -789,9 +828,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn ensure_scoped_node(&mut self, name: &str) -> NodeId {
-        let is_new = !self.graph.node_lookup.contains_key(name);
-        let node_id = self.graph.ensure_node(name);
+    fn ensure_scoped_node(&mut self, name: &str, html: bool) -> NodeId {
+        let is_new = !self
+            .graph
+            .node_lookup
+            .contains_key(Graph::node_key(name, html).as_ref());
+        let node_id = self.graph.ensure_node_html(name, html);
         if is_new {
             let mut attrs = self.current_node_defaults().clone();
             attrs
@@ -806,13 +848,13 @@ impl<'a> Parser<'a> {
     fn create_edge(
         &mut self,
         tail: NodeId,
-        mut tail_port: Port,
+        mut tail_port: Option<(String, bool)>,
         head: NodeId,
-        mut head_port: Port,
+        mut head_port: Option<(String, bool)>,
         edge_attrs: &AttrMap,
     ) -> EdgeId {
         let mut merged_attrs = self.current_edge_defaults().clone();
-        merged_attrs.extend(edge_attrs.clone());
+        apply_attrs(&mut merged_attrs, edge_attrs);
 
         // agedge on a strict graph returns the existing edge, to which applyattrs adds
         // only this statement's attributes (the defaults applied when it was made).
@@ -846,7 +888,7 @@ impl<'a> Parser<'a> {
             // bound this statement's list. Symbol ids count it at that point, which the
             // nested flat-edge layout's stale `E_arrowsz` lookup depends on.
             for (key, endpoint) in [("tailport", &tail_port), ("headport", &head_port)] {
-                if *endpoint != Port::default() {
+                if endpoint.is_some() {
                     self.bind_attr(DictKind::Edge, key);
                 }
             }
@@ -857,11 +899,13 @@ impl<'a> Parser<'a> {
             // an explicit `tailport`/`headport` in the list wins over `n:port`, which wins
             // over a default.
             for (key, endpoint) in [("tailport", &tail_port), ("headport", &head_port)] {
-                if *endpoint != Port::default() && !edge_attrs.contains_key(key) {
-                    merged_attrs.insert(key.to_string(), port_to_str(endpoint));
+                if let Some((v, html)) = endpoint
+                    && !edge_attrs.contains_key(key)
+                {
+                    set_attr(&mut merged_attrs, key, v.clone(), *html);
                 }
             }
-            edge.attrs.extend(merged_attrs);
+            apply_attrs(&mut edge.attrs, &merged_attrs);
             edge.tail_port = edge
                 .attrs
                 .get("tailport")
@@ -1036,16 +1080,8 @@ fn syntax_error(tok: &Token) -> GraphvizError {
     }
 }
 
-/// grammar.y `concatPort`: `name` or `name:compass`.
-fn port_to_str(p: &Port) -> String {
-    match (&p.name, &p.compass) {
-        (Some(n), Some(c)) => format!("{n}:{c}"),
-        (Some(n), None) => n.clone(),
-        (None, Some(c)) => c.clone(),
-        (None, None) => String::new(),
-    }
-}
-
+/// A `tailport`/`headport` value (an HTML string's inner text, as `agget` gives it), split
+/// at its first `:` into port name and compass point.
 fn parse_port_str(s: &str) -> Port {
     if s.is_empty() {
         return Port::default();
