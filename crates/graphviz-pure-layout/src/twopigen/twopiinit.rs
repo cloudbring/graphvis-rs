@@ -35,7 +35,10 @@ pub fn twopi_layout(graph: &mut Graph) -> Result<()> {
                 .iter()
                 .position(|n| n.name == s && n.html_name == html);
             if ctr.is_none() {
-                // C warns: specified root node was not found.
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "specified root node \"{s}\" was not found."
+                ));
+                graphviz_pure_core::diag::agerr_prev("Using default calculation for root node\n");
                 set_root = true;
             }
         } else {
