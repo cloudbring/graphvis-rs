@@ -480,7 +480,10 @@ stops at the same token with the same message and renders the same partial graph
 next `agread` starts after the last line `fgets` read, whatever statement that leaves
 unfinished, and so does the port's; C splits a line longer than flex's 8 KB read into
 pieces, which the port does not, so after such a line only C goes on to a second error.
-Measured on the reference build: 3331 nested anonymous
+The layouts and writers still recurse once per subgraph level, as C's do on its 8 MB main
+stack: at 3331 levels the release build needs 2 to 4 MB, more than Windows' 1 MB main
+thread, so the CLI runs on a 64 MB thread (`DOT_STACK`). Measured on the reference build:
+3331 nested anonymous
 subgraphs take C 0.05 s and 34 MB, and the port 0.03 s and 14 MB, in every engine.
 2498 nested clusters, each with a node, take C 0.3 to 13 s and up to 400 MB; the port
 takes up to 35 s, and fdp needs 11.5 GB. That cost is the engines' (#323), not the parser's.
