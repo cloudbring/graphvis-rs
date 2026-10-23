@@ -7,7 +7,6 @@ pub mod cutil;
 pub mod dotgen;
 pub mod fdpgen;
 pub mod neatogen;
-pub mod nop;
 pub mod ortho;
 pub mod osage;
 pub mod pack;
@@ -120,10 +119,10 @@ pub fn layout_graph_with_options(
     let input = label_pos_inputs(graph);
     let result = match effective_engine {
         LayoutEngine::Dot => dotgen::layout_dot(graph),
-        LayoutEngine::Neato if options.nop > 0 => nop::layout_nop(graph, options.nop),
-        LayoutEngine::Nop1 => nop::layout_nop(graph, 1),
-        LayoutEngine::Nop2 => nop::layout_nop(graph, 2),
-        LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph),
+        LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph, options.nop),
+        // nop1_layout and nop2_layout: neato_layout with Nop set.
+        LayoutEngine::Nop1 => neatogen::neatoinit::neato_layout(graph, 1),
+        LayoutEngine::Nop2 => neatogen::neatoinit::neato_layout(graph, 2),
         LayoutEngine::Fdp => fdpgen::layout::fdp_layout(graph),
         LayoutEngine::Sfdp => sfdpgen::sfdpinit::sfdp_layout(graph),
         LayoutEngine::Twopi => twopigen::twopiinit::twopi_layout(graph),

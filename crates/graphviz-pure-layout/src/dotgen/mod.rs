@@ -315,7 +315,7 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
     result.apply(graph);
     if aborted {
         // no place_graph_label: labels keep their zeroed position
-        crate::nop::labels_at_origin(graph);
+        crate::common::postproc::labels_at_origin(graph);
     }
     Ok(())
 }

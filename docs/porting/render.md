@@ -27,12 +27,11 @@ positions come from the layout.
 | `agwrite.rs` | `lib/cgraph/write.c` (`-Tdot`, `-Txdot`, `-Tcanon`) over the cgraph dictionaries recorded by the parser (`Graph::dicts`: `bindattrs`, `attrstmt`/`setattr`, `unviewsubgraphsattr`, `sym->print`, ProtoGraph `label`) |
 | `lib.rs` | format dispatch, `safe_dcl`/`agxset` bookkeeping (`sync_dicts`), dot's `mark_lowclusters` edge membership |
 
-`graphviz-pure-layout/src/nop.rs` ports neato's `Nop` path (`init_nop`, `user_pos`,
-`user_spline`, `nop_init_graphs`, `nop_init_edges`, `chkBB`, `compute_bb`,
-`neato_translate`, `neato_set_aspect`, `place_graph_label`) for `-n`, `-n1`,
-`-n2`, `-Knop`/`nop1`/`nop2`. Edges without a usable `pos` go through the
-neatogen `spline_edges_` machinery (ports, equivalence classes, straight or
-`splines=` routing, clipping).
+`-n`, `-n1`, `-n2`, `-n3` and `-Knop`/`nop1`/`nop2` run `neato_layout`'s `Nop`
+branch (`graphviz-pure-layout/src/neatogen/neatoinit.rs`: `init_nop`, `user_pos`,
+`user_spline`, `nop_init_graphs`, `nop_init_edges`, `chkBB`), then neato's own
+`neato_translate`, `neato_set_aspect`, `spline_edges0` (with C's `Nop` global in
+`neatosplines.rs`) and `gv_postprocess`, as C does.
 
 ## Fidelity
 

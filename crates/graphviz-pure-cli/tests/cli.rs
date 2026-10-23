@@ -2956,6 +2956,99 @@ n10->n9 n0->n2 n5->n10 n8->n4 n1->n11 n10->n8 n3->n10 n4->n1 n1->n6 n3->n0}
     );
 }
 
+// C8 (#150): a node without a position ends only its graph's layout (`neato_layout`
+// returns after init_nop's two-line error); `dot` draws it and goes on to the next graph.
+// stdout, stderr and exit status are Graphviz 16.1.0's.
+#[test]
+fn nop_missing_position_ends_only_that_graph() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n", "-Tplain"],
+        "graph A { a; b [pos=\"0,0\"] }\ngraph B { c [pos=\"1,1\"] }\n",
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: node a in graph A has no position\nas required by the -n flag\n"
+    );
+    assert_eq!(
+        out,
+        "graph 1 0 0\nnode a 0 0 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 0 0 0.75 0.5 b solid ellipse black lightgrey\nstop\n\
+         graph 1 0.75 0.5\nnode c 0.375 0.25 0.75 0.5 c solid ellipse black lightgrey\nstop\n"
+    );
+}
+
+// C8 (#300): -n runs neato_init_node_edge's user_pos, which reports a `pos` it cannot
+// read before init_nop reports the node as unplaced.
+#[test]
+fn nop_reports_an_unreadable_pos_like_c() {
+    let (_, err, ok) = run(
+        &["-Kneato", "-n", "-Tplain"],
+        "graph G { a [pos=\" 3 , 4 \"]; b [pos=\"1,1\"]; a -- b }",
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: node a, position  3 , 4 , expected two doubles\n\
+         Error: node a in graph G has no position\nas required by the -n flag\n"
+    );
+}
+
+// C8 (#317): with -n3, spline_edges_ keeps the first bezier of the edge's `pos`, warns
+// about the others, and clips and installs it again.
+#[test]
+fn nop3_keeps_the_first_bezier_and_warns() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n3", "-Tplain"],
+        "graph G { a [pos=\"0,0\"]; b [pos=\"100,100\"]; \
+         a -- b [pos=\"0,0 10,10 20,20 30,30;40,40 50,50 60,60 70,70\"] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: edge a -> b : set more than one spline. First used, other dropped.\n"
+    );
+    assert!(
+        out.contains(
+            "edge a b 4 0.58333 0.45833 0.65061 0.52561 0.71788 0.59288 0.78516 0.66016 solid"
+        ),
+        "{out}"
+    );
+}
+
+// C8: with -n3, a straight edge between overlapping nodes is a single point, which C's
+// clip_and_install reads past the end of (it prints garbage). The port keeps the point.
+#[test]
+fn nop3_single_point_spline_does_not_panic() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n3", "-Tplain"],
+        "graph { splines=polyline; node [width=2.46]; a [height=1.47, pos=\"88.56,143.48\"]; \
+         b [pos=\"132.58,86.155\"]; b -- a; b -- a }",
+    );
+    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(
+        out.contains("edge b a 1 1.6244 0.34779 solid black"),
+        "{out}"
+    );
+}
+
+// C8: when spline_edges0 returns before splineEdges (splines=""), State stays below
+// GVSPLINES and attach_attrs_and_arrows writes no edge position: -n3 keeps the input `pos`
+// and `lp`, untranslated.
+#[test]
+fn nop3_without_splines_keeps_the_input_edge_attributes() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n3", "-Tdot"],
+        "graph { splines=none; a [pos=\"0,0\"]; b [pos=\"100,100\"]; \
+         a -- b [pos=\"0,0 10,10 20,20 30,30\" label=L lp=\"15,15\"] }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("\ta -- b\t[label=L,\n\t\tlp=\"15,15\",\n\t\tpos=\"0,0 10,10 20,20 30,30\"];"),
+        "{out}"
+    );
+}
+
 /// Fuzz case 019-neato-polyline-compass-port-endpoint (issue #28), minimised to fixed
 /// positions. The head port `10:n` lies on the node boundary, so `spline_edges_` sends the
 /// edge to the GTS router (`makeMultiSpline`, `lib/neatogen/multispline.c`). The two

@@ -1305,6 +1305,10 @@ impl crate::ortho::OrthoGraph for LGraph<'_> {
     fn ortho_concentrate(&self) -> bool {
         self.concentrate
     }
+    fn ortho_keeps_spline(&self, e: usize) -> bool {
+        crate::neatogen::neatosplines::nop() == 2
+            && self.edges.get(e).is_some_and(|ed| ed.spl.is_some())
+    }
     fn node_seq(&self, n: usize) -> usize {
         n
     }

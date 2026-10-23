@@ -232,6 +232,3 @@ cdt splay tree; `edge_attr_declared` is cached (it made splines quadratic).
 
 * `pack` with nodes in two non-nested clusters would need the components to
   share node records (C lays such nodes out repeatedly).
-* `neato -n2` (`nop.rs`) does not run `addXLabels`, so an edge `xlabel`
-  without `xlp` in its input (dot's pack branch leaves edge xlabels unplaced)
-  is placed by C but not by the port.

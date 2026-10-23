@@ -44,6 +44,10 @@ pub trait OrthoGraph: SplineGraph {
     fn ortho_out_edges(&self, n: usize) -> Vec<usize>;
     /// The `Concentrate` global.
     fn ortho_concentrate(&self) -> bool;
+    /// `Nop == 2 && ED_spl(e)`: the edge keeps the spline it was given.
+    fn ortho_keeps_spline(&self, _e: usize) -> bool {
+        false
+    }
     /// `AGSEQ(n)`.
     fn node_seq(&self, n: usize) -> usize;
     /// `agnameof(n)` (debug dumps).
@@ -1144,6 +1148,9 @@ fn route_edges<S: OrthoGraph + ?Sized>(
     let mut es: Vec<(f64, usize)> = Vec::new();
     for &n in nodes {
         for e in g.ortho_out_edges(n) {
+            if g.ortho_keeps_spline(e) {
+                continue;
+            }
             if concentrate {
                 let ti = g.node_seq(g.tail(e));
                 let hi = g.node_seq(g.head(e));

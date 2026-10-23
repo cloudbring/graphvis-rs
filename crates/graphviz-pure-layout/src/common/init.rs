@@ -424,15 +424,17 @@ impl<'a> LGraph<'a> {
             .insert("\u{1}nolowclust".to_string(), String::new());
         let exact = |p: Point| format!("{:?},{:?}", p.x, p.y);
         if let Some(l) = self.label.as_ref().filter(|l| l.set) {
-            graph
-                .graph_attrs
-                .insert(crate::nop::LABEL_POS_KEY.to_string(), exact(l.pos));
+            graph.graph_attrs.insert(
+                crate::common::postproc::LABEL_POS_KEY.to_string(),
+                exact(l.pos),
+            );
         }
         for c in &self.clusters {
             if let Some(l) = c.label.as_ref().filter(|l| l.set) {
-                graph.subgraphs[c.subgraph]
-                    .graph_attrs
-                    .insert(crate::nop::LABEL_POS_KEY.to_string(), exact(l.pos));
+                graph.subgraphs[c.subgraph].graph_attrs.insert(
+                    crate::common::postproc::LABEL_POS_KEY.to_string(),
+                    exact(l.pos),
+                );
             }
         }
     }
