@@ -43,14 +43,19 @@ C_ENV = dict(os.environ, GVBINDIR=GVBINDIR)
 TIMEOUT = 20
 
 # Runs ARGV in a process group of its own and kills the whole group when the alarm
-# fires or when this supervisor is told to stop, so neither the command nor anything
-# it starts (a wrapper script that does not exec) outlives TIMEOUT. The child also
-# carries an alarm of its own across exec, in case the supervisor is killed outright.
-# Exits with the command's status, 128+N for signal N, and 142 on timeout.
+# fires, or at once when this supervisor gets TERM, INT or HUP, so neither the command
+# nor anything it starts (a wrapper script that does not exec) outlives TIMEOUT while
+# the supervisor lives. The child also carries an alarm across exec, which covers a
+# command that execs if the supervisor itself is SIGKILLed.
+# Exits with the command's status, 128+N for signal N, 142 on timeout and 143 when
+# stopped. dot and the port exit with small statuses (dot.c's MAX(rc, error count),
+# copied by the CLI), so a status above 128 is always a signal here.
 SUPERVISE = r"""
-$t = shift; $p = fork; defined $p or exit 127;
-if (!$p) { setpgrp(0, 0); alarm $t + 2; exec @ARGV; exit 127 }
-for my $s (qw(ALRM TERM INT HUP)) { $SIG{$s} = sub { kill 'KILL', -$p; exit($_[0] eq 'ALRM' ? 142 : 143) } }
+$t = shift; $p = 0;
+for my $s (qw(ALRM TERM INT HUP)) { $SIG{$s} = sub { kill 'KILL', -$p if $p; exit($_[0] eq 'ALRM' ? 142 : 143) } }
+$p = fork; defined $p or exit 127;
+if (!$p) { $SIG{$_} = 'DEFAULT' for qw(ALRM TERM INT HUP); setpgrp(0, 0); alarm $t + 2; exec @ARGV; exit 127 }
+setpgrp($p, $p);
 alarm $t; waitpid($p, 0);
 exit($? & 127 ? 128 + ($? & 127) : $? >> 8);
 """
@@ -67,6 +72,8 @@ def run(cmd, path, timeout=TIMEOUT, env=None):
     st = p.returncode
     if st == 142:
         return "timeout", ""
+    if st == 143 or st < 0:  # the supervisor was stopped: the run is being interrupted
+        raise KeyboardInterrupt
     if st > 128:  # killed by a signal (directly, or reported by a wrapper shell)
         st = 128 - st
     return st, p.stderr.decode("utf-8", "replace")
@@ -156,11 +163,13 @@ def cmd_min(a):
         site = port_hit(st, err)
         return site, (c_outcome(run([C_BIN], path, a.timeout, C_ENV)[0]) if site else None)
 
+    if not pathlib.Path(a.case).is_file():
+        sys.exit(f"fuzz-crash: no such file: {a.case}")
     target = key(a.case)
     if target[0] is None:
         sys.exit("the port does not panic or hang on this case")
     fr.classify = lambda path, **kw: ("hit" if key(path) == target else "miss", {})
-    res = fr.minimize(a.case, "hit")
+    res = fr.minimize(a.case, "hit", log=lambda msg: print(msg, file=sys.stderr))
     if res is None:
         sys.exit(1)
     if a.o:
