@@ -2950,6 +2950,54 @@ fn render_warnings_are_worded_like_c() {
     );
 }
 
+// The callers of `parseSegs` continue its message with `agerr(AGPREV, ...)`: `in node`
+// (`poly_gencode` for wedged and striped), `in cluster` (`emit_clusters`) and `in edge`
+// (`multicolor`). One run each: C reports only the first bad spec of a process.
+#[test]
+fn color_spec_messages_name_the_object_like_c() {
+    for (src, want) in [
+        (
+            "digraph { a [shape=box style=striped fillcolor=\"red;0.8:blue;0.7\"] }",
+            "Warning: Total size > 1 in \"red;0.8:blue;0.7\" color spec in node a\n",
+        ),
+        (
+            "digraph { a [style=wedged fillcolor=\"red;x:blue\"] }",
+            "Error: Illegal value in \"red;x:blue\" color attribute; float expected after ';'\n\
+             in node a\n",
+        ),
+        (
+            "digraph { subgraph cluster_c { style=striped fillcolor=\"red;0.8:blue;0.7\"; a } }",
+            "Warning: Total size > 1 in \"red;0.8:blue;0.7\" color spec in cluster cluster_c\n",
+        ),
+        (
+            "digraph { a -> b [color=\"red;0.8:blue;0.7\"] }",
+            "Warning: Total size > 1 in \"red;0.8:blue;0.7\" color spec in edge a -> b\n",
+        ),
+        (
+            "graph { a -- b [color=\"red;x:blue\"] }",
+            "Error: Illegal value in \"red;x:blue\" color attribute; float expected after ';'\n\
+             in edge a -- b\n",
+        ),
+    ] {
+        let (_, err, _) = run(&["-Tsvg"], src);
+        assert_eq!(err, want, "{src}");
+    }
+}
+
+// `neato_extra_args` takes `-n` out of the arguments before the others are read, so the file
+// after `-o -n2` is the output file, as in C 16.1.0.
+#[test]
+fn n_flag_is_taken_out_before_the_other_options_like_c() {
+    let path = tmp("n_flag_taken_out.svg");
+    let _ = std::fs::remove_file(&path);
+    let (_, err, ok) = run(
+        &["-o", "-n2", path.to_str().unwrap(), "-Tsvg"],
+        "digraph { a [pos=\"0,0\"] }",
+    );
+    assert!(ok, "{err}");
+    assert!(std::fs::read_to_string(&path).unwrap().contains("</svg>"));
+}
+
 // Issue #150 (its message only): `init_nop` reports a node with no position and
 // `neato_layout` continues the message with `agerr(AGPREV, ...)`, on a second line, as
 // C 16.1.0 does. `-q2` drops both lines, the continuation at the level of the first. The port's

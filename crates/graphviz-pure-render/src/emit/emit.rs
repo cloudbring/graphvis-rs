@@ -11,7 +11,7 @@ use super::job::{
     GVRENDER_DOES_TOOLTIPS, GVRENDER_NO_WHITE_BG, ObjKind, RGRADIENT,
 };
 use super::model::{Bz, TextLabel};
-use graphviz_pure_core::diag::{agerrorf, agwarningf};
+use graphviz_pure_core::diag::{agerr_prev, agerrorf, agwarningf};
 use graphviz_pure_core::font::{LabelSubstContext, convert_label_text, strdup_and_subst_obj};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{BoundingBox, Point};
@@ -33,7 +33,8 @@ fn aeq0(x: f64) -> bool {
 
 /// `parseSegs`: `Err(1|2)` on error, `Ok((segs, rval))` with `rval` 0 or 3. Like C's
 /// `static atomic_flag warned`, only the first bad spec reports (2, 3); later ones give 1
-/// and 0.
+/// and 0. The flag is never reset, so on a thread that renders again a bad spec is drawn as
+/// C's second one is.
 pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
     thread_local! {
         static WARNED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
@@ -425,7 +426,13 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let mut delims = a.get("layersep").unwrap_or(":\t ").to_string();
         let mut list_delims = a.get("layerlistsep").unwrap_or(",").to_string();
         // strpbrk(layerDelims, layerListDelims)
-        if let Some(tok) = delims.bytes().find(|b| list_delims.as_bytes().contains(b)) {
+        // On C's bytes: a raw (non-UTF-8) byte is one char of the raw-byte range here.
+        let list_bytes = graphviz_pure_core::charset::encode(&list_delims);
+        if let Some(tok) = graphviz_pure_core::charset::encode(&delims)
+            .iter()
+            .copied()
+            .find(|b| list_bytes.contains(b))
+        {
             // `'%c'` of `*tok`: one byte, which need not be a whole character.
             let tok = match tok {
                 b if b.is_ascii() => b as char,
@@ -810,7 +817,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 } else {
                     self.set_pencolor(pencolor);
                 }
-                self.striped_box(&af, fillcolor, false);
+                if self.striped_box(&af, fillcolor, false) > 1 {
+                    agerr_prev(&format!("in cluster {}\n", cl.name));
+                }
                 self.boxf(bb, 0);
             } else if peripheries != 0 {
                 self.set_pencolor(pencolor);
@@ -1463,9 +1472,26 @@ impl<'a, E: Engine> Emitter<'a, E> {
     ) -> bool {
         let m = self.job.m;
         let ed = &m.edges[e];
+        let in_edge = || {
+            let arrow = if m.directed { " -> " } else { " -- " };
+            agerr_prev(&format!(
+                "in edge {}{arrow}{}\n",
+                m.nodes[ed.tail].name, m.nodes[ed.head].name
+            ));
+        };
         let segs = match parse_segs(colors) {
-            Ok((s, _)) => s,
-            Err(_) => return true,
+            Ok((s, rv)) => {
+                if rv > 1 {
+                    in_edge();
+                }
+                s
+            }
+            Err(rv) => {
+                if rv > 1 {
+                    in_edge();
+                }
+                return true;
+            }
         };
         let n = ed.bz.len();
         for bz in &ed.bz {

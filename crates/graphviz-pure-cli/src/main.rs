@@ -159,8 +159,6 @@ fn global_def(spec: &str) -> (String, String) {
 /// Mirrors `dotneato_args_initialize`. File names (`-o` and the inputs) are kept as the OS
 /// gave them, so a name that is not valid UTF-8 still opens.
 fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
-    let args: Vec<String> = os_args.iter().map(|a| arg_text(a)).collect();
-    let args = args.as_slice();
     let mut opts = Options {
         engine: "dot".to_string(),
         format: "dot".to_string(),
@@ -176,11 +174,17 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         Parsed::Exit(ExitCode::FAILURE)
     };
 
-    // `neato_extra_args` (`args.c`) reads `-n` before `dotneato_args_initialize` reads the
-    // rest, so its error comes before any `-q` takes effect.
+    // `neato_extra_args` (`args.c`) takes `-n` and `-x` out of the arguments before
+    // `dotneato_args_initialize` reads the rest, so its error comes before any `-q` takes
+    // effect, and `-o -n2 file` names `file`.
+    let mut kept: Vec<OsString> = Vec::with_capacity(os_args.len());
     for os_arg in os_args {
         let bytes = arg_bytes(os_arg);
-        if bytes.len() < 2 || bytes[0] != b'-' || bytes[1] != b'n' {
+        if bytes.len() < 2 || bytes[0] != b'-' || !matches!(bytes[1], b'n' | b'x') {
+            kept.push(os_arg.clone());
+            continue;
+        }
+        if bytes[1] == b'x' {
             continue;
         }
         let rest = bytes_text(&bytes[2..]);
@@ -198,6 +202,9 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
             }
         }
     }
+    let os_args = kept.as_slice();
+    let args: Vec<String> = os_args.iter().map(|a| arg_text(a)).collect();
+    let args = args.as_slice();
 
     let mut i = 0;
     while i < args.len() {
@@ -256,8 +263,6 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                     }
                 }
                 'O' => opts.auto_output = true,
-                // Read by the `neato_extra_args` pass above.
-                'n' => {}
                 // `-q` is `-q1`: warnings are dropped; `-q2` and up drop errors too.
                 'q' => {
                     if rest.is_empty() {
@@ -276,7 +281,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                         }
                     }
                 }
-                'v' | 's' | 'x' | 'y' | 'P' | 'c' | 'L' => {}
+                'v' | 's' | 'y' | 'P' | 'c' | 'L' => {}
                 _ => {
                     agerrorf(&format!("{argv0}: option -{flag} unrecognized\n\n"));
                     fprintf_stderr(&usage(argv0));

@@ -276,7 +276,12 @@ impl<E: Engine> Emitter<'_, E> {
             if sides <= 2 {
                 if style.wedged && j == 0 && fillcolor.contains(':') {
                     let fc = fillcolor.clone();
-                    self.wedged_ellipse(&af, &fc);
+                    if self.wedged_ellipse(&af, &fc) > 1 {
+                        graphviz_pure_core::diag::agerr_prev(&format!(
+                            "in node {}\n",
+                            self.job.m.nodes[n].name
+                        ));
+                    }
                     filled = 0;
                 }
                 self.ellipse([af[0], af[1]], filled);
@@ -284,8 +289,11 @@ impl<E: Engine> Emitter<'_, E> {
                     self.mcircle_hack(n);
                 }
             } else if style.striped {
-                if j == 0 {
-                    self.striped_box(&af, &fillcolor, true);
+                if j == 0 && self.striped_box(&af, &fillcolor, true) > 1 {
+                    graphviz_pure_core::diag::agerr_prev(&format!(
+                        "in node {}\n",
+                        self.job.m.nodes[n].name
+                    ));
                 }
                 self.polygon(&af, 0);
             } else if style.underline {
@@ -308,10 +316,11 @@ impl<E: Engine> Emitter<'_, E> {
         }
     }
 
-    /// `wedgedEllipse`.
-    fn wedged_ellipse(&mut self, pf: &[Point], clrs: &str) {
-        let Ok((segs, _)) = super::emit::parse_segs(clrs) else {
-            return;
+    /// `wedgedEllipse`: `parseSegs`' value (2 and 3 have printed a message).
+    fn wedged_ellipse(&mut self, pf: &[Point], clrs: &str) -> i32 {
+        let (segs, rv) = match super::emit::parse_segs(clrs) {
+            Ok(x) => x,
+            Err(e) => return e,
         };
         let ctr = Point::new((pf[0].x + pf[1].x) / 2.0, (pf[0].y + pf[1].y) / 2.0);
         let semi = Point::new(pf[1].x - ctr.x, pf[1].y - ctr.y);
@@ -339,6 +348,7 @@ impl<E: Engine> Emitter<'_, E> {
         if save > 0.5 {
             self.set_penwidth(save);
         }
+        rv
     }
 
     fn mcircle_hack(&mut self, n: usize) {
