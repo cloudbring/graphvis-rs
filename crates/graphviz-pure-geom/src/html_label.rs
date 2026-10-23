@@ -1389,7 +1389,8 @@ impl Parser {
         } else {
             HtmlLabel::Text(self.fonttext()?)
         };
-        if !matches!(self.next()?, Tok::EndHtml) || self.pos != self.toks.len() {
+        // yacc reads the token after `T_end_html` to find the end of input
+        if !matches!(self.next()?, Tok::EndHtml) || self.peek().is_some() {
             return Err(());
         }
         Ok(lbl)
@@ -2585,6 +2586,12 @@ mod tests {
         );
         assert_eq!(&diags[..3], &[unclosed(), q(), q()]);
         assert!(matches!(&diags[3], HtmlDiag::Warning(m, _) if m.contains("FOO")));
+    }
+
+    // a syntax error after `T_end_html` is reported at the token yacc reads next
+    #[test]
+    fn a_token_after_the_end_html_is_the_error_context() {
+        assert_eq!(label_error("x<HTML/>y").1, "... <HTML/>y ...\n".to_string());
     }
 
     // #349: names take XML's name characters (`nametab.h`), not every byte from 0x80.
