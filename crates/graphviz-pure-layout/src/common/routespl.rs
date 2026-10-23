@@ -124,10 +124,18 @@ fn limit_boxes(boxes: &mut [BoundingBox], pps: &[Point], delta: f64) {
 const INIT_DELTA: f64 = 10.0;
 const LOOP_TRIES: i32 = 15;
 
-/// `routesplines_(pp, &npoints, polyline)`. `loop_head` is the head name when the
-/// path's real edge is a self loop (C refuses those). Returns `None` where C
-/// returns NULL (and `npoints == 0`).
-pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> Option<Vec<Point>> {
+/// `realedge`, the path's real edge (found through `ED_to_orig`), for the messages.
+#[derive(Debug, Clone, Copy)]
+pub struct RealEdge<'a> {
+    pub tail: &'a str,
+    pub head: &'a str,
+    /// The edge is a self loop, which C refuses.
+    pub is_loop: bool,
+}
+
+/// `routesplines_(pp, &npoints, polyline)`. Returns `None` where C returns NULL (and
+/// `npoints == 0`).
+pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Option<Vec<Point>> {
     if checkpath(pp) {
         return None;
     }
@@ -165,8 +173,11 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
     } else {
         false
     };
-    if let Some(h) = loop_head {
-        agerrorf(&format!("in routesplines, edge is a loop at {h}\n"));
+    if real.is_loop {
+        agerrorf(&format!(
+            "in routesplines, edge is a loop at {}\n",
+            real.head
+        ));
         return None;
     }
     let pt = |x: f64, y: f64| Point::new(x, y);
@@ -345,6 +356,11 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
         loopcnt += 1;
     }
     if unbounded {
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "Unable to reclaim box space in spline routing for edge \"{}\" -> \"{}\". \
+             Something is probably seriously wrong.\n",
+            real.tail, real.head
+        ));
         let polyspl = make_polyline(&pl);
         limit_boxes(boxes, &polyspl, INIT_DELTA);
     }
@@ -359,13 +375,13 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, loop_head: Option<&str>) -> 
 }
 
 /// `routesplines(pp, &npoints)`.
-pub fn routesplines(pp: &mut Path, loop_head: Option<&str>) -> Option<Vec<Point>> {
-    routesplines_(pp, false, loop_head)
+pub fn routesplines(pp: &mut Path, real: RealEdge<'_>) -> Option<Vec<Point>> {
+    routesplines_(pp, false, real)
 }
 
 /// `routepolylines(pp, &npoints)`.
-pub fn routepolylines(pp: &mut Path, loop_head: Option<&str>) -> Option<Vec<Point>> {
-    routesplines_(pp, true, loop_head)
+pub fn routepolylines(pp: &mut Path, real: RealEdge<'_>) -> Option<Vec<Point>> {
+    routesplines_(pp, true, real)
 }
 
 /// `overlap(i0, i1, j0, j1)`: length of the intersection of two intervals.
@@ -701,7 +717,12 @@ mod tests {
             ],
             data: 0,
         };
-        let ps = routesplines(&mut p, None).unwrap();
+        let real = RealEdge {
+            tail: "a",
+            head: "b",
+            is_loop: false,
+        };
+        let ps = routesplines(&mut p, real).unwrap();
         assert_eq!(ps.len(), 4);
         assert!(ps.iter().all(|q| (q.x - 10.0).abs() < 1e-9));
         assert!(p.boxes.iter().all(|b| b.ll.x == 10.0 && b.ur.x == 10.0));

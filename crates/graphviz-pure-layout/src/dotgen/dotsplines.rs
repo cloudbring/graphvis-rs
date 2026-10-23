@@ -16,7 +16,7 @@ use super::qsort::qsort;
 use super::types::*;
 use crate::common::geom::add;
 use crate::common::routespl::{
-    Path, PathEnd, add_box, routepolylines, routesplines, simple_spline_route,
+    Path, PathEnd, RealEdge, add_box, routepolylines, routesplines, simple_spline_route,
 };
 use crate::common::splines::{
     EDGETYPEMASK, FLATEDGE, LabelKind, REGULAREDGE, SELFNPEDGE, SELFWPEDGE, beginpath,
@@ -227,6 +227,15 @@ impl Dot<'_> {
         let edge_base = self.edges.len();
         if et == EdgeType::Curved {
             self.reset_rw();
+            if self
+                .graphs
+                .first()
+                .is_some_and(|g| g.has_labels & EDGE_LABEL != 0)
+            {
+                graphviz_pure_core::diag::agwarningf(
+                    "edge labels with splines=curved not supported in dot - use xlabels\n",
+                );
+            }
         }
         if et == EdgeType::Ortho && ORTHO_PORTED {
             self.reset_rw();
@@ -1265,11 +1274,15 @@ impl Dot<'_> {
     fn route(&self, p: &mut Path, spline: bool) -> Option<Vec<Point>> {
         let real = orig_edge(self, p.data);
         let (t, h) = (self.edges[real].tail, self.edges[real].head);
-        let loop_head = (t == h).then(|| self.nodes[h].name.as_str());
+        let real = RealEdge {
+            tail: self.nodes.get(t).map_or("", |n| n.name.as_str()),
+            head: self.nodes.get(h).map_or("", |n| n.name.as_str()),
+            is_loop: t == h,
+        };
         if spline {
-            routesplines(p, loop_head)
+            routesplines(p, real)
         } else {
-            routepolylines(p, loop_head)
+            routepolylines(p, real)
         }
     }
 

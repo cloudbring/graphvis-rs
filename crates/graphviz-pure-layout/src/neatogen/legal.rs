@@ -234,9 +234,11 @@ fn find_ints(vs: &Verts<'_>) -> bool {
                     active[templ] = Some(templ);
                 }
                 1 => {
-                    // "trying to delete a non-line": C reports an error and the
-                    // arrangement counts as illegal.
-                    let Some(t) = active[templ] else { return true };
+                    // C reports the error and the arrangement counts as illegal.
+                    let Some(t) = active[templ] else {
+                        graphviz_pure_core::diag::agerrorf("trying to delete a non-line\n");
+                        return true;
+                    };
                     if let Some(pos) = all.iter().position(|&x| x == t) {
                         all.remove(pos);
                     }

@@ -652,3 +652,22 @@ impl<'a, E: Engine> Emitter<'a, E> {
         self.begin_anchor(u.as_deref(), t.as_deref(), g.as_deref(), i.as_deref());
     }
 }
+
+/// `init_job_pagination`'s `pagedir` check: `pagecode` of its first two characters must
+/// give one vertical (`B`, `T`) and one horizontal (`L`, `R`) direction, or C warns and
+/// uses `BL`, which the port's single page does anyway. Once per [`super::run`]: the
+/// port builds a [`Job`] more than once for some outputs.
+pub(crate) fn check_pagedir(pagedir: &str) {
+    let code = |c: Option<u8>| match c {
+        Some(b'T') => (0, -1),
+        Some(b'B') => (0, 1),
+        Some(b'L') => (1, 0),
+        Some(b'R') => (-1, 0),
+        _ => (0, 0),
+    };
+    let b = pagedir.as_bytes();
+    let (major, minor) = (code(b.first().copied()), code(b.get(1).copied()));
+    if i32::abs(major.0 + minor.0) != 1 || i32::abs(major.1 + minor.1) != 1 {
+        graphviz_pure_core::diag::agwarningf(&format!("pagedir={pagedir} ignored\n"));
+    }
+}

@@ -99,20 +99,23 @@ pub struct KkState {
     pub moves: i64,
 }
 
-/// `lenattr`: the edge's `len`, or `None` to use the default. C also warns about a bad
-/// value (`bad edge len`), which the port does not print yet.
-fn lenattr(g: &LGraph<'_>, e: usize, declared: bool) -> Option<f64> {
+/// `lenattr`: the edge's `len`, or `None` to use the default. A bad value warns
+/// (`bad edge len`), and the caller continues the message with the graph's name.
+fn lenattr(g: &LGraph<'_>, e: usize, declared: bool) -> Result<f64, bool> {
     if !declared {
-        return None;
+        return Err(false);
     }
-    let s = g.eattr(e, "len")?;
+    let s = g.eattr(e, "len").ok_or(false)?;
     if s.is_empty() {
-        return None;
+        return Err(false);
     }
-    // Nop is never set here: `neato -n` does not reach scan_graph_mode.
+    // Nop is never set here: `neato -n` has [`nop_check_edge_lens`].
     match scan_lf(s) {
-        Some((v, _)) if v > 0.0 || v.is_nan() => Some(v),
-        _ => None,
+        Some((v, _)) if v > 0.0 || v.is_nan() => Ok(v),
+        _ => {
+            graphviz_pure_core::diag::agwarningf(&format!("bad edge len \"{s}\""));
+            Err(true)
+        }
     }
 }
 
@@ -154,7 +157,16 @@ pub fn scan_graph_mode(
         g.nodes[np].heapindex = -1;
         let outs: Vec<usize> = g.outs(sub, np).collect();
         for e in outs {
-            let len = lenattr(g, e, len_declared).unwrap_or(dfltlen);
+            // `setEdgeLen`
+            let len = lenattr(g, e, len_declared).unwrap_or_else(|bad| {
+                if bad {
+                    graphviz_pure_core::diag::agerr_prev(&format!(
+                        " in {} - setting to {dfltlen:.2}\n",
+                        p.graph_name
+                    ));
+                }
+                dfltlen
+            });
             g.edges[e].dist = len;
             total_len += len;
         }
@@ -174,13 +186,47 @@ pub fn scan_graph_mode(
     (nv, kk)
 }
 
+/// `initial_positions`' warning for `start=self`, once per process (C's `static atomic_flag
+/// once`). KK and sgd both reach it.
+pub(super) fn warn_start_self(init: i32) {
+    if init == INIT_SELF && graphviz_pure_core::diag::emit_once("\0neato\0start=self") {
+        graphviz_pure_core::diag::agwarningf("start=0 not supported with mode=self - ignored\n");
+    }
+}
+
+/// `scan_graph`'s `setEdgeLen` under `neato -n` (`Nop`, where `len=0` is good): of its work
+/// only the `bad edge len` warnings show. Edges go by tail, as `agfstout` gives them.
+pub fn nop_check_edge_lens(graph: &graphviz_pure_core::Graph) {
+    let declared = graph.edge_defaults.contains_key("len")
+        || graph.edges.iter().any(|e| e.attrs.contains_key("len"));
+    if !declared {
+        return;
+    }
+    let name = if graph.name.is_empty() {
+        "%1"
+    } else {
+        graph.name.as_str()
+    };
+    let mut by_tail: Vec<&graphviz_pure_core::EdgeData> = graph.edges.iter().collect();
+    by_tail.sort_by_key(|e| e.tail.0);
+    for e in by_tail {
+        let Some(s) = e.attrs.get("len").filter(|s| !s.is_empty()) else {
+            continue;
+        };
+        if !matches!(scan_lf(s), Some((v, _)) if v >= 0.0 || v.is_nan()) {
+            graphviz_pure_core::diag::agwarningf(&format!("bad edge len \"{s}\""));
+            graphviz_pure_core::diag::agerr_prev(&format!(" in {name} - setting to 1.00\n"));
+        }
+    }
+}
+
 /// `initial_positions(G, nG)` for KK.
 fn initial_positions(g: &mut LGraph<'_>, sub: &Sub, ng: usize, p: &NeatoParams) {
     let init = super::neatoinit::check_start(g, sub, ng, INIT_RANDOM, p);
     if init == INIT_REGULAR {
         return;
     }
-    let _ = INIT_SELF;
+    warn_start_self(init);
     for &np in &sub.nodes {
         if has_pos(g, np) {
             continue;
@@ -361,6 +407,12 @@ fn solve_model(g: &mut LGraph<'_>, kk: &mut KkState, ng: usize, p: &NeatoParams)
     while let Some(m) = choose_node(g, kk, ng, p) {
         move_node(g, kk, ng, m, p);
     }
+    if kk.moves == p.max_iter {
+        graphviz_pure_core::diag::agwarningf(&format!(
+            "Max. iterations ({}) reached on graph {}\n",
+            p.max_iter, p.graph_name
+        ));
+    }
 }
 
 /// `shortest_path(G, nG)` / `s1`: Dijkstra from every node with the
@@ -496,6 +548,14 @@ pub fn kk_neato(
         }
     } else if model == MODEL_CIRCUIT {
         if !circuit_model_kk(g, sub, kk, ng) {
+            use graphviz_pure_core::diag::{agerr_prev, agwarningf};
+            agwarningf(&format!(
+                "graph {} is disconnected. Hence, the circuit model\n",
+                p.graph_name
+            ));
+            agerr_prev("is undefined. Reverting to the shortest path model.\n");
+            agerr_prev("Alternatively, consider running neato using -Gpack=true or decomposing\n");
+            agerr_prev("the graph into connected components.\n");
             shortest_path(g, sub, kk, ng, p.initial_dist);
         }
     } else if model == MODEL_MDS {

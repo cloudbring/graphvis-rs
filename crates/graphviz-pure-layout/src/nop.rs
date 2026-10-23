@@ -402,6 +402,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
 
     // init_nop's scan_graph, which applies `Reduce`.
     crate::neatogen::stuff::reduce_graph(graph);
+    crate::neatogen::stuff::nop_check_edge_lens(graph);
     // user_pos: positions in points, stored in inches as ND_pos.
     let mut npos: Vec<(f64, f64)> = Vec::with_capacity(graph.nodes.len());
     for node in &graph.nodes {

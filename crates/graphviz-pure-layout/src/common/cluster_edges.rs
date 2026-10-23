@@ -39,8 +39,14 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
     // mkClustMap: first cluster of each name in preorder.
     let mut cmap: HashMap<&str, usize> = HashMap::new();
     for c in 0..tree.len() {
-        cmap.entry(graph.subgraphs[tree.subgraph[c]].name.as_str())
-            .or_insert(c);
+        let name = graph.subgraphs[tree.subgraph[c]].name.as_str();
+        if cmap.contains_key(name) {
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "Two clusters named {name} - the second will be ignored\n"
+            ));
+        } else {
+            cmap.insert(name, c);
+        }
     }
     let mapc = |n: usize| -> Option<usize> {
         let name = graph.nodes[n].name.as_str();

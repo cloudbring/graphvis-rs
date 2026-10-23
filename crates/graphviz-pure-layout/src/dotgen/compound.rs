@@ -128,17 +128,28 @@ impl Dot<'_> {
     /// `fillMap` / `mkClustMap`: cluster name -> cluster, first one wins.
     fn mk_clust_map(&self, g: G, map: &mut BTreeMap<String, G>) {
         for &cl in &self.graphs[g].clust {
-            map.entry(self.graphs[cl].name.clone()).or_insert(cl);
+            let name = &self.graphs[cl].name;
+            if map.contains_key(name) {
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "Two clusters named {name} - the second will be ignored\n"
+                ));
+            } else {
+                map.insert(name.clone(), cl);
+            }
             self.mk_clust_map(cl, map);
         }
     }
 
     /// `makeCompoundEdge(e, clustMap)`.
     fn make_compound_edge(&mut self, e: E, map: &BTreeMap<String, G>) {
+        // `getCluster`
         let get = |k: &str| {
-            self.edge_attr(e, k)
-                .filter(|s| !s.is_empty())
-                .and_then(|s| map.get(s).copied())
+            let s = self.edge_attr(e, k).filter(|s| !s.is_empty())?;
+            let c = map.get(s).copied();
+            if c.is_none() {
+                graphviz_pure_core::diag::agwarningf(&format!("cluster named {s} not found\n"));
+            }
+            c
         };
         let lh = get("lhead");
         let lt = get("ltail");
@@ -148,14 +159,28 @@ impl Dot<'_> {
         let Some(spl) = self.edges[e].spl.as_ref() else {
             return;
         };
+        let (head, tail) = (self.edges[e].head, self.edges[e].tail);
+        // `agnameof(agtail(e)), agnameof(aghead(e))`, then `agget(e, ...)`.
+        let name = |n: N| self.nodes.get(n).map_or("", |d| d.name.as_str());
+        let warn = |what: &str, key: &str| {
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "{} -> {}: {what} {}\n",
+                name(tail),
+                name(head),
+                self.edge_attr(e, key).unwrap_or("")
+            ));
+        };
         if spl.len() > 1 {
-            // C warns: spline size > 1 not supported.
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "{} -> {}: spline size > 1 not supported\n",
+                name(tail),
+                name(head)
+            ));
             return;
         }
         let mut bez = spl[0].clone();
         let size = bez.list.len();
         let attrs = self.input.edges[self.edges[e].real.unwrap()].attrs.clone();
-        let (head, tail) = (self.edges[e].head, self.edges[e].tail);
         let (hc, tc) = (self.nodes[head].coord, self.nodes[tail].coord);
         let mut nbez = Bezier {
             eflag: bez.eflag,
@@ -167,9 +192,13 @@ impl Dot<'_> {
         let mut fixed = false;
         if let Some(lh) = lh {
             let bb = self.graphs[lh].bb;
-            if in_boxf(hc, &bb) {
+            if !in_boxf(hc, &bb) {
+                warn("head not inside head cluster", "lhead");
+            } else {
                 if in_boxf(bez.list[0], &bb) {
-                    if !in_boxf(tc, &bb) && !in_boxf(bez.sp, &bb) {
+                    if in_boxf(tc, &bb) {
+                        warn("tail is inside head cluster", "lhead");
+                    } else if !in_boxf(bez.sp, &bb) {
                         let p = box_intersectf(bez.list[0], bez.sp, &bb);
                         bez.list[3] = p;
                         bez.list[1] = mid(p, bez.sp);
@@ -232,9 +261,13 @@ impl Dot<'_> {
         fixed = false;
         if let Some(lt) = lt {
             let bb = self.graphs[lt].bb;
-            if in_boxf(tc, &bb) {
+            if !in_boxf(tc, &bb) {
+                warn("tail not inside tail cluster", "ltail");
+            } else {
                 if in_boxf(bez.list[endi], &bb) {
-                    if !in_boxf(hc, &bb) && bez.eflag != 0 && !in_boxf(nbez.ep, &bb) {
+                    if in_boxf(hc, &bb) {
+                        warn("head is inside tail cluster", "ltail");
+                    } else if bez.eflag != 0 && !in_boxf(nbez.ep, &bb) {
                         let p = box_intersectf(bez.list[endi], nbez.ep, &bb);
                         starti = endi - 3;
                         bez.list[starti] = p;

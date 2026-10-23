@@ -161,7 +161,7 @@ pub fn fdp_init_params(attrs: &AttrMap) -> TState {
     t.seed = DFLT_SEED;
     t.smode = set_seed(attrs, INIT_RANDOM, &mut t.seed);
     if t.smode == INIT_SELF {
-        // C: "fdp does not support start=self - ignoring".
+        graphviz_pure_core::diag::agwarningf("fdp does not support start=self - ignoring\n");
         t.seed = i64::from(INIT_RANDOM);
     }
     t.pass1 = t.unscaled * t.max_iters / 100;

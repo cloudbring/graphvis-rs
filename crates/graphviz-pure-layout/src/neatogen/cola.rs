@@ -110,6 +110,14 @@ pub fn stress_majorization_cola(
         dij = Some(compute_apsp_artificial_weights_packed(graph, n));
     } else if model == MODEL_CIRCUIT {
         dij = circuit_model(graph, n);
+        if dij.is_none() {
+            graphviz_pure_core::diag::agwarningf(
+                "graph is disconnected. Hence, the circuit model\n",
+            );
+            graphviz_pure_core::diag::agerr_prev(
+                "is undefined. Reverting to the shortest path model.\n",
+            );
+        }
     } else if model == MODEL_MDS {
         dij = mds_model(graph, n);
     }

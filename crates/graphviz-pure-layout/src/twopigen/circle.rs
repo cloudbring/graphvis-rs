@@ -287,8 +287,10 @@ pub fn circle_layout(
     };
     let max_n_steps_to_center = set_parent_nodes(g, sg, r, center);
     if max_n_steps_to_center == u64::MAX {
-        // C reports "use of weight=0 creates disconnected component" and
-        // leaves the positions untouched.
+        // C leaves the positions untouched.
+        graphviz_pure_core::diag::agerrorf(
+            "twopi: use of weight=0 creates disconnected component.\n",
+        );
         return Some(center);
     }
     set_subtree_size(sg, r);

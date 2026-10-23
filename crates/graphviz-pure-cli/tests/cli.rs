@@ -3976,6 +3976,547 @@ fn neato_n_missing_pos_is_reported_on_two_lines_like_c() {
     assert!(!err.contains("as required"), "{err}");
 }
 
+// Issues #255, #256, #257 (C22): `lib/neatogen/stuff.c`, `sgd.c`, `neatoinit.c` and `stress.c`
+// warnings the port handled silently. A component is named `_neato_cc<i>`, as `pccomps` names it.
+#[test]
+fn neato_stuff_sgd_neatoinit_warn_like_c() {
+    for (args, src, want, code) in [
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { a -- b [len=-1]; b -- c }",
+            "Warning: bad edge len \"-1\" in G - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G {pack=false; a -- b [len=-1]; c -- d [len=-2]}",
+            "Warning: bad edge len \"-1\" in _neato_cc0 - setting to 1.00\nWarning: bad edge len \"-2\" in _neato_cc1 - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { mode=KK; a -- b [len=x]; c -- d }",
+            "Warning: bad edge len \"x\" in G - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G {mode=sgd; a -- b [len=0]}",
+            "Warning: bad edge len \"0\" in G - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { mode=KK; maxiter=1; a -- b -- c -- a; c -- d }",
+            "Warning: Max. iterations (1) reached on graph G\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { mode=KK; start=self; a -- b -- c; d -- e }",
+            "Warning: start=0 not supported with mode=self - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { mode=sgd; model=circuit; a -- b -- c }",
+            "Warning: circuit model not yet supported in Gmode=sgd, reverting to shortpath model\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { mode=sgd; model=mds; a -- b [len=2]; b -- c }",
+            "Warning: mds model not yet supported in Gmode=sgd, reverting to shortpath model\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { start=regular; a [pos=\"1,1\"]; a -- b -- c }",
+            "Warning: node positions are ignored unless start=random\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { mode=KK; start=self; a [pos=\"1,1\"]; a -- b -- c }",
+            "Warning: node positions are ignored unless start=random\nWarning: start=0 not supported with mode=self - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { stresswt=3; a -- b -- c }",
+            "Warning: stresswt attribute value must be 1 or 2 - ignoring\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { model=bogus; a -- b }",
+            "Warning: Unknown value bogus for attribute \"model\" in graph G - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { mode=bogus; a -- b }",
+            "Warning: Illegal value bogus for attribute \"mode\" in graph G - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph { mode=bogus; model=bogus; a -- b }",
+            "Warning: Illegal value bogus for attribute \"mode\" in graph %1 - ignored\nWarning: Unknown value bogus for attribute \"model\" in graph %1 - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { model=mds; a -- b }",
+            "Warning: edges in graph G have no len attribute. Hence, the mds model\nis inappropriate. Reverting to the shortest path model.\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { model=circuit; mode=major; a [pos=\"0,0!\"]; c [pos=\"1,1!\"]; a -- b; c -- d }",
+            "Warning: graph is disconnected. Hence, the circuit model\nis undefined. Reverting to the shortest path model.\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { model=circuit; mode=ipsep; a [pos=\"0,0!\"]; c [pos=\"1,1!\"]; a -- b; c -- d }",
+            "Warning: graph is disconnected. Hence, the circuit model\nis undefined. Reverting to the shortest path model.\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { model=circuit; mode=hier; a [pos=\"0,0!\"]; c [pos=\"1,1!\"]; a -- b; c -- d }",
+            "Warning: node positions are ignored unless start=random\nWarning: graph is disconnected. Hence, the circuit model\nis undefined. Reverting to the shortest path model.\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-q", "-Tplain"][..],
+            "graph G { mode=bogus; a -- b [len=-1] }",
+            "",
+            0,
+        ),
+    ] {
+        let (_, err, status) = run_in(&std::env::temp_dir(), args, src);
+        assert_eq!((err.as_str(), status), (want, code), "{args:?} {src}");
+    }
+}
+
+// Issues #258, #259, #262 (C22): `mincross.c`'s `ordering` errors raise the exit status;
+// `aspect.c` and `dotsplines.c` warn. One aspect warning per packed component, as `dotLayout` gives.
+#[test]
+fn dot_ordering_aspect_curved_diagnostics_like_c() {
+    for (args, src, want, code) in [
+        (
+            &["-Tplain"][..],
+            "digraph G { aspect=2; a -> b }",
+            "Warning: the aspect attribute has been disabled due to implementation flaws - attribute ignored.\n",
+            0,
+        ),
+        (&["-Tplain"][..], "digraph G { aspect=x; a -> b }", "", 0),
+        (
+            &["-Tplain"][..],
+            "digraph G { aspect=\"1.5,3\"; pack=true; a -> b; c -> d }",
+            "Warning: the aspect attribute has been disabled due to implementation flaws - attribute ignored.\nWarning: the aspect attribute has been disabled due to implementation flaws - attribute ignored.\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { splines=curved; a -> b [label=x] }",
+            "Warning: edge labels with splines=curved not supported in dot - use xlabels\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { ordering=bogus; a -> b; a -> c }",
+            "Error: ordering 'bogus' not recognized.\n",
+            1,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { a [ordering=bogus]; a -> b; a -> c }",
+            "Error: ordering 'bogus' not recognized for node 'a'.\n",
+            1,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { subgraph cluster_x { ordering=bad; a -> b; a -> c } }",
+            "Error: ordering 'bad' not recognized.\n",
+            1,
+        ),
+        (
+            &["-q", "-Tplain"][..],
+            "digraph G { ordering=bogus; a -> b }",
+            "Error: ordering 'bogus' not recognized.\n",
+            1,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { nodesep=\"2147483647\"; a; b }",
+            "Error: Edge length 2147483701.000000 larger than maximum 2147483647 allowed.\nCheck for overwide node(s).\n",
+            1,
+        ),
+    ] {
+        let (_, err, status) = run_in(&std::env::temp_dir(), args, src);
+        assert_eq!((err.as_str(), status), (want, code), "{args:?} {src}");
+    }
+}
+
+// Issues #262, #307 (C22): twopi's `circle.c` error for a weight=0 component and
+// `twopiinit.c`'s warning for a `root` that names no node (C prints no space after the full stop).
+#[test]
+fn twopi_weight0_and_missing_root_diagnostics_like_c() {
+    for (args, src, want, code) in [
+        (
+            &["-Ktwopi", "-Tplain"][..],
+            "graph G { a -- b [weight=0]; a -- c }",
+            "Error: twopi: use of weight=0 creates disconnected component.\n",
+            1,
+        ),
+        (
+            &["-Ktwopi", "-Tplain"][..],
+            "graph { root=zz; a -- b }",
+            "Warning: specified root node \"zz\" was not found.Using default calculation for root node\n",
+            0,
+        ),
+    ] {
+        let (_, err, status) = run_in(&std::env::temp_dir(), args, src);
+        assert_eq!((err.as_str(), status), (want, code), "{args:?} {src}");
+    }
+}
+
+// Issues #260 (pagedir), #275, #287 (C22): `init_job_pagination`'s pagedir warning, once per
+// output; sfdp's `spring_electrical_embedding_slow` trace (no newline); `routesplines_`'s
+// box-space warning, naming the real edge.
+#[test]
+fn emit_pagedir_sfdp_slow_and_routespl_messages_like_c() {
+    for (args, src, want, code) in [
+        (
+            &["-Tplain"][..],
+            "digraph G { pagedir=XX; a -> b }",
+            "Warning: pagedir=XX ignored\n",
+            0,
+        ),
+        (
+            &["-Ksfdp", "-Tplain"][..],
+            "graph{quadtree=\"0\"; a--b; b--c}",
+            "spring_electrical_embedding_slow",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { subgraph cluster0 { c; f subgraph cluster0_in { b } } b -> h [tailport=sw,minlen=0]; }",
+            "Warning: Unable to reclaim box space in spline routing for edge \"b\" -> \"h\". Something is probably seriously wrong.\n",
+            0,
+        ),
+    ] {
+        let (_, err, status) = run_in(&std::env::temp_dir(), args, src);
+        assert_eq!((err.as_str(), status), (want, code), "{args:?} {src}");
+    }
+}
+
+// Cause C22 siblings: `compound.c`'s lhead/ltail warnings, `utils.c`'s duplicate cluster and
+// unknown `splines` warnings (again per neato and sfdp component, as `setEdgeType` runs there),
+// and cgraph's `attribute macros not implemented` (no newline).
+#[test]
+fn compound_cluster_splines_and_macro_warnings_like_c() {
+    for (args, src, want, code) in [
+        (
+            &["-Tplain"][..],
+            "digraph G { compound=true; subgraph cluster_a { subgraph cluster_x {a} } subgraph cluster_b { subgraph cluster_x {b} } a -> b [lhead=cluster_x] }",
+            "Warning: Two clusters named cluster_x - the second will be ignored\nWarning: a -> b: head not inside head cluster cluster_x\n",
+            0,
+        ),
+        (
+            &["-Kfdp", "-Tplain"][..],
+            "digraph G { subgraph cluster_a { subgraph cluster_x {a} } subgraph cluster_b { subgraph cluster_x {b} } a -> b }",
+            "Warning: Two clusters named cluster_x - the second will be ignored\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { compound=true; subgraph cluster_x {b} a -> c [lhead=cluster_x] }",
+            "Warning: a -> c: head not inside head cluster cluster_x\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { compound=true; subgraph cluster_x {a b} a -> b [lhead=cluster_x] }",
+            "Warning: a -> b: tail is inside head cluster cluster_x\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { compound=true; subgraph cluster_x {b} a -> c [ltail=cluster_x] }",
+            "Warning: a -> c: tail not inside tail cluster cluster_x\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { compound=true; subgraph cluster_x {a b} a -> b [ltail=cluster_x] }",
+            "Warning: a -> b: head is inside tail cluster cluster_x\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { subgraph cluster_a { subgraph cluster_x {a} } subgraph cluster_b { subgraph cluster_x {b} } a -> b [lhead=cluster_x] }",
+            "",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph G { splines=bogus; a -> b }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph { node m = [color=red]; a }",
+            "Warning: attribute macros not implemented",
+            0,
+        ),
+        (
+            &["-Kdot", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kdot", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kfdp", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kfdp", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Ksfdp", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Ksfdp", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\nWarning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Ktwopi", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Ktwopi", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kcirco", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kcirco", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kosage", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kosage", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kpatchwork", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kpatchwork", "-Tplain"][..],
+            "graph G { splines=bogus; pack=true; a -- b; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+    ] {
+        let (_, err, status) = run_in(&std::env::temp_dir(), args, src);
+        assert_eq!((err.as_str(), status), (want, code), "{args:?} {src}");
+    }
+}
+
+// Issue #255 (C22): C prints the KK circuit model's warning, in four lines, then crashes on
+// this input some of the time (undefined behaviour after the warning); the port goes on with
+// the shortest-path model.
+#[test]
+fn neato_kk_disconnected_circuit_model_warns_like_c() {
+    let (_, err, status) = run_in(
+        &std::env::temp_dir(),
+        &["-Kneato", "-Tplain"],
+        "graph G { model=circuit; mode=KK; a -- b; c -- d }",
+    );
+    assert_eq!(
+        (err.as_str(), status),
+        (
+            "Warning: graph G is disconnected. Hence, the circuit model\n\
+             is undefined. Reverting to the shortest path model.\n\
+             Alternatively, consider running neato using -Gpack=true or decomposing\n\
+             the graph into connected components.\n",
+            0
+        )
+    );
+}
+
+// Cause C22, review of #318: the `splines` warning once under `-x` and `-n` (the port's
+// repeat graphs are built `silently`); compound.c's `getCluster`; fdp's `start=self`
+// (tlayout.c); sgd's `initial_positions`; and `scan_graph`'s `bad edge len` under `-n`, where
+// `len=0` is good.
+#[test]
+fn review_c22_siblings_like_c() {
+    for (args, src, want, code) in [
+        (
+            &["-Kneato", "-x", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b -- c -- a; c -- d }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n", "-Tplain"][..],
+            "graph G { splines=bogus; node [pos=\"0,0\"]; a -- b; b [pos=\"100,100\"] }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n2", "-Tplain"][..],
+            "graph G { splines=bogus; node [pos=\"0,0\"]; a -- b; b [pos=\"100,100\"] }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Kpatchwork", "-Tplain"][..],
+            "graph G { splines=bogus; a -- b }",
+            "Warning: Unknown \"splines\" value: \"bogus\" - ignored\n",
+            0,
+        ),
+        (
+            &["-Tplain"][..],
+            "digraph { compound=true; subgraph cluster_a { a } b -> a [lhead=cluster_zz, ltail=nope] }",
+            "Warning: cluster named cluster_zz not found\nWarning: cluster named nope not found\n",
+            0,
+        ),
+        (
+            &["-Kfdp", "-Tplain"][..],
+            "graph { start=self; a -- b }",
+            "Warning: fdp does not support start=self - ignoring\n",
+            0,
+        ),
+        (
+            &["-Kfdp", "-Tplain"][..],
+            "graph { start=self; subgraph cluster_x { a -- b } c -- a }",
+            "Warning: fdp does not support start=self - ignoring\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Gmode=sgd", "-Tplain"][..],
+            "graph { start=self; a -- b }",
+            "Warning: start=0 not supported with mode=self - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-Gmode=sgd", "-Tplain"][..],
+            "graph { start=self; a -- b; c -- d }",
+            "Warning: start=0 not supported with mode=self - ignored\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n", "-Tplain"][..],
+            "graph G { node [pos=\"0,0\"]; a -- b [len=-1]; b -- c [len=0]; c -- d [len=abc] }",
+            "Warning: bad edge len \"-1\" in G - setting to 1.00\nWarning: bad edge len \"abc\" in G - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n", "-Tplain"][..],
+            "graph G { node [pos=\"0,0\"]; c -- a [len=-3]; a -- b [len=-1]; b -- c [len=x] }",
+            "Warning: bad edge len \"-3\" in G - setting to 1.00\nWarning: bad edge len \"-1\" in G - setting to 1.00\nWarning: bad edge len \"x\" in G - setting to 1.00\n",
+            0,
+        ),
+        (
+            &["-Kneato", "-n2", "-Tplain"][..],
+            "graph { node [pos=\"0,0\"]; a -- b [len=-1] }",
+            "Warning: bad edge len \"-1\" in %1 - setting to 1.00\n",
+            0,
+        ),
+    ] {
+        let (_, err, status) = run_in(&std::env::temp_dir(), args, src);
+        assert_eq!((err.as_str(), status), (want, code), "{args:?} {src}");
+    }
+}
+
+// Issue #311 (C22): `legal.c`'s `find_ints` reports a backward edge with no active line as an
+// error, so the exit status is 1, and the arrangement is illegal (straight lines), as in C.
+#[test]
+fn fdp_legal_arrangement_non_line_is_an_error_like_c() {
+    let src = "graph { splines=polyline; overlap=true; n0 [pos=\"0,1e-300!\"]; n1 [pos=\"2.5,nan!\"]; n2 [pos=\"1e-300,1e-300\"]; n3 [pos=\"-1e7,2.5!\", fontsize=nan]; n4 [pos=\"0,3e6\"]; n0 -- n1; n3 -- n4; n4 -- n1; n4 -- n1; n1 -- n0; n1 -- n2; n4 -- n0 }";
+    let (_, err, status) = run_in(&std::env::temp_dir(), &["-Kfdp", "-Tdot"], src);
+    assert_eq!(
+        (err.as_str(), status),
+        (
+            "Error: trying to delete a non-line\n\
+             Warning: some nodes with margin (3.20,3.20) touch - falling back to straight line \
+             edges\n",
+            1
+        )
+    );
+}
+
+// Issue #261 (C22): `eatComment` warns about a comment closed by a `>` without `--`. The error
+// after it is still the port's (C's expat reads on into the following units); only the warning
+// is checked.
+#[test]
+fn html_unclosed_comment_warns_like_c() {
+    let (_, err, status) = run_in(
+        &std::env::temp_dir(),
+        &["-Tplain"],
+        "digraph G { a [label=<hello<!-- x >world>] }",
+    );
+    assert!(
+        err.starts_with("Warning: Unclosed comment\nError: "),
+        "{err}"
+    );
+    assert_eq!(status, 1);
+}
+
 /// The issue's reproducer, verbatim: an illegal HTML attribute, an unknown port and an edge
 /// label with no spline to place it on.
 #[test]

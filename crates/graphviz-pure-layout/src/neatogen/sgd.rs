@@ -74,6 +74,16 @@ fn extract_adjacency(g: &LGraph<'_>, sub: &Sub, model: i32) -> GraphSgd {
 
 /// `sgd(G, model)`.
 pub fn sgd(g: &mut LGraph<'_>, sub: &Sub, model: i32, p: &NeatoParams) {
+    if model == super::MODEL_CIRCUIT {
+        graphviz_pure_core::diag::agwarningf(
+            "circuit model not yet supported in Gmode=sgd, reverting to shortpath model\n",
+        );
+    }
+    if model == super::MODEL_MDS {
+        graphviz_pure_core::diag::agwarningf(
+            "mds model not yet supported in Gmode=sgd, reverting to shortpath model\n",
+        );
+    }
     let model = if model == MODEL_SUBSET {
         MODEL_SUBSET
     } else {
@@ -101,6 +111,7 @@ pub fn sgd(g: &mut LGraph<'_>, sub: &Sub, model: i32, p: &NeatoParams) {
     let lambda = math::ln(eta_max / eta_min) / (p.max_iter - 1) as f64;
     // initial_positions(G, n)
     let init = super::neatoinit::check_start(g, sub, n, INIT_RANDOM, p);
+    super::stuff::warn_start_self(init);
     if init != super::INIT_REGULAR {
         for &np in &sub.nodes {
             if super::stress::has_pos(g, np) {

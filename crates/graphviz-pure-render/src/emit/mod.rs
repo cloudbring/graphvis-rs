@@ -70,6 +70,7 @@ fn order_flags(m: &Model<'_>) -> u32 {
 pub(crate) fn run<E: Engine>(m: &Model<'_>, eng: E) -> E {
     let features = eng.features();
     let flags = order_flags(m);
+    job::check_pagedir(m.root_attrs().nonempty("pagedir").unwrap_or("BL"));
     let job = Job::new(m, features, flags);
     let mut em = Emitter { job, eng };
     em.emit_graph();

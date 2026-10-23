@@ -387,6 +387,8 @@ fn spring_electrical_embedding_slow(
     flag: &mut i32,
     crand: &mut CRand,
 ) {
+    // C's own trace, with no newline, on every call.
+    graphviz_pure_core::diag::fprintf_stderr("spring_electrical_embedding_slow");
     let maxiter = f64::from(ctrl.maxiter);
     let mut step = ctrl.step;
     let adaptive_cooling = ctrl.adaptive_cooling;
