@@ -998,6 +998,7 @@ impl Dot<'_> {
             subgraphs: Vec::new(),
             bb: Default::default(),
             html_name: false,
+            empty_name: false,
         });
         // (main edge, aux edge) pairs and the "heavy" edge.
         let mut pairs: Vec<(E, usize)> = Vec::new();

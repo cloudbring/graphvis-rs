@@ -399,6 +399,12 @@ impl<'a> Lexer<'a> {
     }
 
     /// The next token. Like flex's `yylex`, it never fails.
+    /// The line (1-based, from where this read starts) the scanner is on: the line whose
+    /// `fgets` holds the end of the last token read.
+    pub(crate) fn line(&self) -> usize {
+        self.line
+    }
+
     pub(crate) fn scan(&mut self) -> Token {
         if let Some(state) = self.skip_whitespace_and_comments() {
             return self.eof(state);

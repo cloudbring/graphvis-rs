@@ -490,4 +490,113 @@ mod tests {
         assert!(g.subgraphs[0].html_name);
         assert_eq!(g.subgraphs[0].nodes, [g.nodes[0].id]);
     }
+
+    fn edge_list(
+        g: &graphviz_pure_core::Graph,
+    ) -> Vec<(String, String, Option<String>, Option<&str>)> {
+        g.edges
+            .iter()
+            .map(|e| {
+                (
+                    g.nodes[e.tail.0 as usize].name.clone(),
+                    g.nodes[e.head.0 as usize].name.clone(),
+                    e.key.clone(),
+                    e.attrs.get("color").map(String::as_str),
+                )
+            })
+            .collect()
+    }
+
+    // #92: in a strict graph, `agedge` with a key that names no edge makes none where the
+    // nodes already have one (`ok_to_make_edge`), so `newedge` skips `mkport` and
+    // `applyattrs`; the list's attributes are still declared (`bindattrs`).
+    #[test]
+    fn strict_graph_new_key_on_an_existing_edge_makes_nothing() {
+        let g = parse_dot("strict digraph G { a -> b; a -> b:n [key=x, color=red]; }").unwrap();
+        assert_eq!(edge_list(&g), [("a".into(), "b".into(), None, None)]);
+        assert!(!g.edges[0].attrs.contains_key("headport"));
+        assert!(g.dicts[0].edge.contains_key("color"));
+        // `ok_to_make_edge` looks in the current subgraph only, and only from tail to head.
+        let g = parse_dot("strict digraph { a -> b; subgraph s { a -> b [key=x, color=red] } }")
+            .unwrap();
+        assert_eq!(g.edges.len(), 2);
+        assert_eq!(g.subgraphs[0].edges, [g.edges[1].id]);
+        let g = parse_dot("strict graph { a -- b; b -- a [key=x, color=red] }").unwrap();
+        assert_eq!(g.edges.len(), 2);
+        // Without a key, the existing edge takes the statement's attributes.
+        let g = parse_dot("strict graph { a -- b; b -- a [color=red] }").unwrap();
+        assert_eq!(edge_list(&g), [("a".into(), "b".into(), None, Some("red"))]);
+    }
+
+    // #295: a key names one edge between two nodes (either way round when undirected), in
+    // any graph; `key` is the edge's name, not an attribute (#297).
+    #[test]
+    fn a_repeated_key_names_the_same_edge() {
+        let g =
+            parse_dot("digraph { a -> b [key=x, color=red]; a -> b [key=x, label=y] }").unwrap();
+        assert_eq!(
+            edge_list(&g),
+            [("a".into(), "b".into(), Some("x".into()), Some("red"))]
+        );
+        assert_eq!(g.edges[0].attrs.get("label").map(String::as_str), Some("y"));
+        assert!(!g.edges[0].attrs.contains_key("key"));
+        let g = parse_dot("graph { a -- b [key=x]; b -- a [key=x, color=red]; a -- b }").unwrap();
+        assert_eq!(g.edges.len(), 2);
+        assert_eq!(
+            g.edges[0].attrs.get("color").map(String::as_str),
+            Some("red")
+        );
+        // the HTML flag is part of the name
+        let g = parse_dot("digraph { a -> b [key=<x>]; a -> b [key=\"x\"]; a -> b [key=<x>] }")
+            .unwrap();
+        assert_eq!(g.edges.len(), 2);
+        assert!(g.edges[0].key_html && !g.edges[1].key_html);
+    }
+
+    // An edge statement's subgraph gives its nodes as they are once the statement is read.
+    #[test]
+    fn an_edge_statement_takes_a_subgraphs_nodes_at_its_end() {
+        let g = parse_dot("digraph { subgraph s {a} -> subgraph s {b} }").unwrap();
+        let ends: Vec<(String, String)> = edge_list(&g)
+            .into_iter()
+            .map(|(t, h, _, _)| (t, h))
+            .collect();
+        let pairs = [("a", "a"), ("a", "b"), ("b", "a"), ("b", "b")];
+        assert_eq!(ends, pairs.map(|(t, h)| (t.to_string(), h.to_string())));
+    }
+
+    // #303: only a missing name makes a graph anonymous; "" and <> are names.
+    #[test]
+    fn an_empty_name_is_a_name() {
+        let g = parse_dot(
+            "digraph { subgraph \"\" { a } subgraph \"\" { b } { c } subgraph <> { d } }",
+        )
+        .unwrap();
+        assert_eq!(g.subgraphs.len(), 3);
+        assert!(!g.subgraphs[0].is_anonymous() && g.subgraphs[0].nodes.len() == 2);
+        assert!(g.subgraphs[1].is_anonymous());
+        assert!(!g.subgraphs[2].is_anonymous() && g.subgraphs[2].html_name);
+        assert_eq!(g.anon_subgraph_ids.keys().collect::<Vec<_>>(), [&1]);
+        assert!(g.is_anonymous());
+        assert!(!parse_dot("digraph \"\" { }").unwrap().is_anonymous());
+    }
+
+    // A local name (`%…`) takes an anonymous id from the counter the root, anonymous
+    // subgraphs and keyless edges share, once per name, and is then called `%<id>`.
+    #[test]
+    fn local_names_take_anonymous_ids() {
+        let g = parse_dot(
+            "digraph { \"%l\" -> b; \"%l\" -> \"%3\"; subgraph \"%s\" { c } { d } subgraph \"%s\" { e } }",
+        )
+        .unwrap();
+        let names: Vec<&str> = g.nodes.iter().map(|n| n.name.as_str()).collect();
+        assert_eq!(names, ["%3", "b", "%7", "c", "d", "e"]);
+        let ids: Vec<u64> = g.anon_subgraph_ids.values().copied().collect();
+        assert_eq!(ids, [11, 13]);
+        assert_eq!(g.subgraphs.len(), 2);
+        // a local key names its edge while the graph is read, and no edge once it is
+        let g =
+            parse_dot("digraph { a -> b [key=\"%k\"]; a -> b [key=\"%k\", color=red] }").unwrap();
+        assert_eq!(g.edges.len(), 1);
+    }
 }

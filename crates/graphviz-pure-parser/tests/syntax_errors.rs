@@ -270,23 +270,132 @@ fn line_directives_renumber_lines() {
 }
 
 /// C: `Error: <file>: syntax error in line 3 near '}'` (grammar.y `subgraph: optsubghdr
-/// body`: a subgraph always has a body). The port accepts `subgraph x` alone.
+/// body`: a subgraph always has a body), issue #111.
 #[test]
-#[ignore = "issue #111: the parser accepts a subgraph without a body"]
 fn subgraph_without_body() {
     check(
         "digraph G {\n subgraph x\n}\n",
         "syntax error in line 3 near '}'",
     );
+    check("digraph G { subgraph }", "syntax error in line 1 near '}'");
+    check(
+        "digraph G { a -> subgraph x; }",
+        "syntax error in line 1 near ';'",
+    );
 }
 
 /// C: `Error: <file>: syntax error in line 2 near 'y'` (grammar.y `qatom: qatom '+'
-/// T_qatom`: only quoted strings concatenate). The port accepts unquoted atoms.
+/// T_qatom`: only quoted and HTML strings concatenate), issue #80.
 #[test]
-#[ignore = "issue #80: the parser concatenates unquoted atoms with '+'"]
 fn plus_concatenates_only_quoted_strings() {
     check(
         "digraph G {\n a -> b [label=\"x\" + y]\n}\n",
         "syntax error in line 2 near 'y'",
     );
+    check(
+        "digraph { a [label=x + \"y\"] }",
+        "syntax error in line 1 near '+'",
+    );
+    check(
+        "digraph { a [label=\"x\" + 1] }",
+        "syntax error in line 1 near '1'",
+    );
+    check("digraph { \"x\" + y }", "syntax error in line 1 near 'y'");
+    check("digraph a + \"b\" { }", "syntax error in line 1 near '+'");
+    assert_eq!(error_of("digraph { a [label=\"x\" + <y> + \"z\"] }"), None);
+}
+
+/// Issue #116: `stmt : attrstmt optsemi | compound optsemi`, so a `;` only ends a statement.
+#[test]
+fn a_lone_semicolon_is_an_error() {
+    check("digraph { ; }", "syntax error in line 1 near ';'");
+    check("digraph { a; ; }", "syntax error in line 1 near ';'");
+    check("digraph { { ; }", "syntax error in line 1 near ';'");
+    check(
+        "digraph { a [x=y]; b = c;; }",
+        "syntax error in line 1 near ';'",
+    );
+    assert_eq!(error_of("digraph { a; {b;}; c = d; node [x=y]; }"), None);
+}
+
+/// Issue #115: `attrstmt : attrtype optmacroname attrlist`, `optmacroname : atom '='`.
+#[test]
+fn an_attribute_statement_may_name_a_macro() {
+    check("digraph { node a }", "syntax error in line 1 near '}'");
+    check("digraph { node a b }", "syntax error in line 1 near 'b'");
+    check("digraph { edge a = }", "syntax error in line 1 near '}'");
+    check(
+        "digraph { graph \"a\" + b = [x=y] }",
+        "syntax error in line 1 near 'b'",
+    );
+    check(
+        "digraph { node a = [x] }",
+        "syntax error in line 1 near ']'",
+    );
+    assert_eq!(error_of("digraph { node a = [color=red] b }"), None);
+}
+
+/// `attrlist : optattr '[' optattrdefs ']'`, `attrdefs : attrassignment optseparator`: one
+/// separator at most, after an assignment.
+#[test]
+fn attribute_lists_take_one_separator_after_each_assignment() {
+    check(
+        "digraph { a [x=y,,z=w] }",
+        "syntax error in line 1 near ','",
+    );
+    check("digraph { a [,] }", "syntax error in line 1 near ','");
+    check("digraph { a [x=y] = }", "syntax error in line 1 near '='");
+    assert_eq!(error_of("digraph { a [x=y; z=w,][] [v=u] }"), None);
+}
+
+fn nested(levels: usize, before: &str, inner: &str) -> String {
+    format!(
+        "digraph G {{{}{inner}{}}}",
+        format!("{before}{{").repeat(levels),
+        "}".repeat(levels)
+    )
+}
+
+/// Issue #118: bison's stack holds `YYMAXDEPTH` (10000) states, three for each anonymous
+/// subgraph level (`optsubghdr`, `$@1`, `{`) and four with a statement before it, or for
+/// each edge operator. C 16.1.0 reads 3331 nested levels and stops at 3332 with
+/// `memory exhausted`, keeping the graph read so far.
+#[test]
+fn nesting_runs_out_of_bisons_stack_where_c_does() {
+    let (graphs, err) = parse_dot_all_partial(&nested(3331, "", "a"), &GlobalAttrs::default());
+    assert_eq!(err, None);
+    assert_eq!(graphs[0].subgraphs.len(), 3331);
+    let (graphs, err) = parse_dot_all_partial(&nested(3332, "", "a"), &GlobalAttrs::default());
+    assert_eq!(
+        err.map(|e| e.to_string()).as_deref(),
+        Some("memory exhausted in line 1 near 'a'")
+    );
+    // `agread` returns the graph as read: every subgraph opened, no node yet.
+    assert_eq!(graphs.len(), 1);
+    assert_eq!(graphs[0].subgraphs.len(), 3332);
+    assert!(graphs[0].nodes.is_empty());
+    check(
+        &nested(3333, "", "a"),
+        "memory exhausted in line 1 near '{'",
+    );
+    check(&nested(3332, "", ""), "memory exhausted in line 1 near '}'");
+    // `optstmtlist`'s default reduction comes before the bad token is found
+    check(
+        &nested(3332, "", "]"),
+        "memory exhausted in line 1 near ']'",
+    );
+    check(&nested(3331, "", "]"), "syntax error in line 1 near ']'");
+    assert_eq!(error_of(&nested(2498, "x ", "a")), None);
+    check(
+        &nested(2499, "x ", "a"),
+        "memory exhausted in line 1 near 'a'",
+    );
+    check(
+        &nested(2500, "x ", "a"),
+        "memory exhausted in line 1 near 'x'",
+    );
+    let chain = |n: usize| format!("digraph G {{{}b }}", "a -> ".repeat(n));
+    assert_eq!(error_of(&chain(2498)), None);
+    check(&chain(2499), "memory exhausted in line 1 near '}'");
+    check(&chain(2500), "memory exhausted in line 1 near '->'");
 }

@@ -740,7 +740,27 @@ impl Run<'_> {
     }
 }
 
+/// The stack `dot`'s work runs on. The layouts and writers recurse once per subgraph level,
+/// as C's do on its 8 MB main stack, and the parser takes the 3331 levels bison's stack
+/// allows (#118). Measured on macOS arm64 with that nesting: the release build needs 2 to
+/// 4 MB in every engine and format, the debug build less than 4 MB. Windows gives the main
+/// thread 1 MB.
+const DOT_STACK: usize = 64 << 20;
+
 fn main() -> ExitCode {
+    match std::thread::Builder::new()
+        .name("dot".into())
+        .stack_size(DOT_STACK)
+        .spawn(dot_main)
+    {
+        Ok(work) => work
+            .join()
+            .unwrap_or_else(|panic| std::panic::resume_unwind(panic)),
+        Err(_) => dot_main(),
+    }
+}
+
+fn dot_main() -> ExitCode {
     // `args_os`: `args` panics on an argument that is not valid UTF-8.
     let raw: Vec<OsString> = env::args_os().collect();
     let argv0 = raw

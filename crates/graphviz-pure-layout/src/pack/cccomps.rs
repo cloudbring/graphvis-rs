@@ -324,6 +324,7 @@ impl CComp {
                 subgraphs: Vec::new(),
                 bb: Default::default(),
                 html_name: s.html_name,
+                empty_name: s.empty_name,
             });
         }
         for (i, p) in self.subgraphs.iter().enumerate() {

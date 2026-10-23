@@ -2488,6 +2488,84 @@ fn round_corners_interpolation_is_fused_like_clang() {
     assert!(out.contains(c_points), "{out}");
 }
 
+// Issue #115: `optmacroname : atom '='` (grammar.y). `attrstmt` warns, without a newline,
+// and applies the list as usual. C 16.1.0's stderr and -Tcanon.
+#[test]
+fn attribute_macro_name_warns_and_applies_the_list() {
+    let (out, err, ok) = run(&["-Tcanon"], "digraph { node a = [color=red] b }");
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: attribute macros not implemented");
+    assert_eq!(
+        out,
+        "digraph {\n\tnode [color=red,\n\t\tlabel=\"\\N\"\n\t];\n\tb;\n}\n"
+    );
+}
+
+// Issue #297: an edge's key is its cgraph name, which `agwrite` prints first
+// (`write_edge_name`), and again alone where the edge is written a second time; `-Tjson`
+// prints declared attributes only, so never `key`. C 16.1.0's output.
+#[test]
+fn edge_key_is_the_edges_name_in_the_writers() {
+    let src =
+        "digraph G { subgraph s { e -> f [key=q, color=red] } subgraph t { e -> f [key=q] } }";
+    let (out, err, ok) = run(&["-Tcanon"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "digraph G {\n\tnode [label=\"\\N\"];\n\tsubgraph s {\n\t\te -> f\t[key=q,\n\t\t\tcolor=red];\n\t}\n\
+         \tsubgraph t {\n\t\te -> f\t[key=q];\n\t}\n}\n"
+    );
+    let (out, _, _) = run(&["-Txdot"], "digraph G { e -> f [key=q]; }");
+    assert!(out.contains("\te -> f\t[key=q,\n\t\t_draw_="), "{out}");
+    let (out, _, _) = run(&["-Tjson"], "digraph G { e -> f [key=q]; }");
+    assert!(!out.contains("\"key\""), "{out}");
+}
+
+// Issue #303: `subgraph ""` and `subgraph <>` are named (grammar.y `opensubg` passes the
+// name to `agsubg`), so `write_hdr` writes them. C 16.1.0's -Tcanon.
+#[test]
+fn subgraph_named_by_the_empty_string_is_written() {
+    let (out, err, ok) = run(
+        &["-Tcanon"],
+        "digraph { subgraph \"\" { a } subgraph <> { b } }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "digraph {\n\tnode [label=\"\\N\"];\n\tsubgraph \"\" {\n\t\ta;\n\t}\n\tsubgraph <> {\n\t\tb;\n\t}\n}\n"
+    );
+    let (out, _, _) = run(&["-Tcanon"], "digraph \"\" { }");
+    assert!(out.starts_with("digraph \"\" {\n"), "{out}");
+}
+
+// Issue #118: nesting is limited by bison's stack (`YYMAXDEPTH`), as in C 16.1.0: 3331
+// anonymous levels are laid out; at 3332 `aagparse` stops with `memory exhausted`, and
+// `agread` returns the graph read so far, which dot lays out and writes, exit status 1.
+#[test]
+fn deep_subgraph_nesting_stops_where_bisons_stack_does() {
+    let nest = |n: usize| format!("digraph G {{{}a{}}}", "{".repeat(n), "}".repeat(n));
+    let (out, err, ok) = run(&["-Tsvg"], &nest(3331));
+    assert!(ok, "{err}");
+    assert!(out.contains("<title>a</title>"), "{out}");
+    let (out, err, ok) = run(&["-Tcanon"], &nest(3332));
+    assert!(!ok);
+    assert_eq!(err, "Error: <stdin>: memory exhausted in line 1 near 'a'\n");
+    assert_eq!(out, "digraph G {\n\tnode [label=\"\\N\"];\n}\n");
+    // The next `agread` starts on the next line, in the middle of the statement, its lines
+    // counted from 1.
+    let (out, err, ok) = run(
+        &["-Tcanon"],
+        &format!("{}\n{{\n}}\ndigraph Z {{ z }}\n", nest(3332)),
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: <stdin>: memory exhausted in line 1 near 'a'\n\
+         Error: <stdin>: syntax error in line 1 near '{'\n"
+    );
+    assert_eq!(out, "digraph G {\n\tnode [label=\"\\N\"];\n}\n");
+}
+
 /// Issue #29 (was open case `tests/fuzz-open/020-parser-keyword-as-attribute-value`).
 /// scan.l lexes `node`, `edge`, `graph`, `digraph`, `subgraph` and `strict`
 /// (case-insensitively) as keyword tokens, and grammar.y's `atom : T_atom | qatom`

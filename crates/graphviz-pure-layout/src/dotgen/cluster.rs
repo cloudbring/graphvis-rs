@@ -296,11 +296,21 @@ impl Dot<'_> {
         if g == 0 && self.comp {
             return format!("_cc_{}", self.comp_index);
         }
-        let name = &self.graphs[g].name;
-        if !name.is_empty() {
-            return name.clone();
+        let graph = &self.graphs[g];
+        // `subgraph "" {` is named, by "" (`agnameof`).
+        let anonymous = match (g, graph.sub_index) {
+            (0, _) => self.input.is_anonymous(),
+            (_, Some(si)) => self
+                .input
+                .subgraphs
+                .get(si)
+                .is_none_or(|s| s.is_anonymous()),
+            _ => graph.name.is_empty(),
+        };
+        if !anonymous {
+            return graph.name.clone();
         }
-        match (g, self.graphs[g].sub_index) {
+        match (g, graph.sub_index) {
             (0, _) => "%1".to_string(),
             (_, Some(si)) => match self.input.anon_subgraph_ids.get(&(si as u32)) {
                 Some(id) => format!("%{id}"),
