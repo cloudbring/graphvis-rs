@@ -112,13 +112,13 @@ def fuzz_rounds():
     return out
 
 
-def measure():
-    """Builds gv-diff and runs gv-diff e2e; returns the hash of every output."""
-    subprocess.run(["cargo", "build", "--release", "-p", "graphviz-pure-diff"], cwd=ROOT, check=True)
+def measure(*extra):
+    """Runs gv-diff e2e (with EXTRA arguments, e.g. --stock); returns the hash of every output
+    it renders, which are the inputs of that run's golden."""
     exe = ROOT / "target" / "release" / "gv-diff"
     with tempfile.TemporaryDirectory() as td:
         hp = Path(td) / "hashes.json"
-        r = subprocess.run([str(exe), "e2e", "--hashes", str(hp)], cwd=ROOT, capture_output=True, text=True)
+        r = subprocess.run([str(exe), "e2e", *extra, "--hashes", str(hp)], cwd=ROOT, capture_output=True, text=True)
         sys.stderr.write(r.stdout[-1500:])
         return load(hp)
 
@@ -142,13 +142,14 @@ def main():
     ident = set(load(GOLDEN / "e2e-baseline.libm-matched.portable.json")["identical"])
     stock_ident = set(load(GOLDEN / "e2e-baseline.portable.json")["identical"])
     if a.measure:
+        subprocess.run(["cargo", "build", "--release", "-p", "graphviz-pure-diff"], cwd=ROOT, check=True)
         hashes = measure()
         got = matching(hashes, golden["files"])
         lost = ident - got
         if lost:
             sys.exit(f"{len(lost)} files in the committed baseline no longer match C, e.g. {sorted(lost)[:5]}")
         ident = got
-        stock_ident = matching(hashes, stock_golden["files"])
+        stock_ident = matching(measure("--stock"), stock_golden["files"])
 
     files = sorted(golden["files"])
     unstable = sorted(golden["unstable"])

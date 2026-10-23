@@ -70,7 +70,7 @@ Everything lives in `crates/graphviz-pure-diff/src/structure.rs`.
    remove a node, change a label, move the drawing off its canvas, insert `nan`, shrink the
    `viewBox` and stack nodes on top of each other.
 4. **Regenerate the reference** (`--generate`, above) if you added a field, and run the check
-   in both profiles. If it reports problems, look at the drawings before loosening anything:
+   (`cargo test --workspace`). If it reports problems, look at the drawings before loosening anything:
    `gv-diff structure --filter NAME` lists the failing inputs, and the C and port SVGs can be
    compared in a browser or with the site's diff viewer.
 5. **Add the check to the table above** with its rule and tolerance.

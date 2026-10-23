@@ -1,4 +1,5 @@
-# gv-diff e2e: in tests/golden/e2e-baseline.json (Apple libm) but not in e2e-baseline.portable.json (119 of 2589)
+# Differ from stock C on macOS only through Apple's libm (gv-diff e2e --stock; 119 of 2589 when filed, 120 of 2591 now).
+# Not a bug since #327: every build uses the same math library and equals C computing with it.
 circo/wild_gv16_undirected_ngk10_4_793340
 fdp/wild_gv16_graphs_b15_8c212e
 fdp/wild_gv16_graphs_b51_33bcb0

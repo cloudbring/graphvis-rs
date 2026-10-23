@@ -22,10 +22,11 @@ C_DOT="${C_DOT:-$REPO_ROOT/scripts/dot-portable-libm.sh}"
 PLUGIN_SRC="${1:-/opt/homebrew/lib/graphviz}"
 OUT="$REPO_ROOT/tests/golden"
 
-version="$(dot -V 2>&1)"
+# Through C_DOT, so a missing interposer library stops here instead of emptying every golden.
+version="$("$C_DOT" -V 2>&1 || true)"
 case "$version" in
   *"version 16.1.0"*) ;;
-  *) echo "need Graphviz 16.1.0, found: $version" >&2; exit 1 ;;
+  *) echo "need Graphviz 16.1.0 as $C_DOT, found: $version" >&2; exit 1 ;;
 esac
 
 PLUGINS="$(mktemp -d)"

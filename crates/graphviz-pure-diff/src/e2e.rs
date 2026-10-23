@@ -16,10 +16,13 @@
 //!
 //! `--c-dot PROG` runs PROG instead of `scripts/dot-portable-libm.sh` for the C side.
 //!
-//! `--stock` compares with stock C on macOS instead (`tests/golden/e2e.json`, C with Apple's
-//! libm; baseline `tests/golden/e2e-baseline.portable.json`). It is a report, never a check: it
-//! always succeeds, and it splits the differing files into those where the port equals C with the
-//! same math (they differ only through Apple's libm) and the rest (which the main check fails on).
+//! `--stock` compares with stock C on macOS instead (its defaults become `tests/golden/e2e.json`,
+//! C with Apple's libm, baseline `tests/golden/e2e-baseline.portable.json` and `dot`; explicit
+//! options still win). It is a report, never a check: differences never make it fail, and it
+//! splits the differing files into those where the port equals C with the same math (they differ
+//! only through Apple's libm), those C with the same math has no stable output for, and the rest
+//! (which the main check fails on). With `--generate --filter`, only the filtered inputs of the
+//! golden are replaced.
 //!
 //! `--hashes FILE` also writes the hash of every output (matching C or not), to compare two
 //! builds bit for bit.
@@ -185,12 +188,12 @@ pub(crate) fn parallel<T: Send>(
 const SAME_MATH_GOLDEN: &str = "tests/golden/e2e.libm-matched.json";
 
 pub fn main(args: Vec<String>) -> ExitCode {
-    let mut golden_path = PathBuf::from(SAME_MATH_GOLDEN);
-    let mut baseline_path = PathBuf::from("tests/golden/e2e-baseline.libm-matched.portable.json");
+    let mut golden_path: Option<PathBuf> = None;
+    let mut baseline_path: Option<PathBuf> = None;
+    let mut c_dot: Option<String> = None;
     let (mut generate, mut update, mut list, mut stock) = (false, false, false, false);
     let mut filter: Option<String> = None;
     let mut hashes_path: Option<PathBuf> = None;
-    let mut c_dot = String::from("scripts/dot-portable-libm.sh");
     let mut runs = 2usize;
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -198,17 +201,12 @@ pub fn main(args: Vec<String>) -> ExitCode {
             "--generate" => generate = true,
             "--update" => update = true,
             "--list" => list = true,
-            "--stock" => {
-                stock = true;
-                golden_path = "tests/golden/e2e.json".into();
-                baseline_path = "tests/golden/e2e-baseline.portable.json".into();
-                c_dot = "dot".into();
-            }
+            "--stock" => stock = true,
             "--hashes" => hashes_path = Some(it.next().expect("--hashes FILE").into()),
-            "--golden" => golden_path = it.next().expect("--golden FILE").into(),
-            "--baseline" => baseline_path = it.next().expect("--baseline FILE").into(),
+            "--golden" => golden_path = Some(it.next().expect("--golden FILE").into()),
+            "--baseline" => baseline_path = Some(it.next().expect("--baseline FILE").into()),
             "--filter" => filter = it.next(),
-            "--c-dot" => c_dot = it.next().expect("--c-dot PROG"),
+            "--c-dot" => c_dot = Some(it.next().expect("--c-dot PROG")),
             "--runs" => {
                 runs = it
                     .next()
@@ -222,6 +220,23 @@ pub fn main(args: Vec<String>) -> ExitCode {
             }
         }
     }
+    // `--stock` changes the defaults only; explicit options win, in any order.
+    let (default_golden, default_baseline, default_c_dot) = if stock {
+        (
+            "tests/golden/e2e.json",
+            "tests/golden/e2e-baseline.portable.json",
+            "dot",
+        )
+    } else {
+        (
+            SAME_MATH_GOLDEN,
+            "tests/golden/e2e-baseline.libm-matched.portable.json",
+            "scripts/dot-portable-libm.sh",
+        )
+    };
+    let golden_path = golden_path.unwrap_or_else(|| default_golden.into());
+    let baseline_path = baseline_path.unwrap_or_else(|| default_baseline.into());
+    let c_dot = c_dot.unwrap_or_else(|| default_c_dot.into());
     let mut items = inputs(Path::new("."));
     if let Some(f) = &filter {
         items.retain(|(k, _)| k.contains(f.as_str()));
@@ -232,7 +247,19 @@ pub fn main(args: Vec<String>) -> ExitCode {
         let others: Vec<_> = (1..runs)
             .map(|_| parallel(&items, |p| run_c(&c_dot, p)))
             .collect();
-        let mut g = Golden::default();
+        // With --filter, only the filtered inputs are replaced; the rest of the golden stays.
+        let mut g = if filter.is_some() {
+            std::fs::read_to_string(&golden_path)
+                .ok()
+                .and_then(|s| serde_json::from_str::<Golden>(&s).ok())
+                .unwrap_or_default()
+        } else {
+            Golden::default()
+        };
+        for k in first.keys() {
+            g.files.remove(k);
+            g.unstable.remove(k);
+        }
         for (k, a) in &first {
             let stable = a.as_ref().is_some_and(|a| {
                 others
@@ -301,30 +328,39 @@ pub fn main(args: Vec<String>) -> ExitCode {
 
     if stock {
         // Which differences come from Apple's libm alone: the port equals C with the same math.
-        let same_math: Golden = std::fs::read_to_string(SAME_MATH_GOLDEN)
+        let same_math: Option<Golden> = std::fs::read_to_string(SAME_MATH_GOLDEN)
             .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default();
-        let (mut libm, mut other) = (Vec::new(), Vec::new());
+            .and_then(|s| serde_json::from_str(&s).ok());
+        if same_math.is_none() {
+            println!("cannot read {SAME_MATH_GOLDEN}: differences not classified");
+        }
+        let same_math = same_math.unwrap_or_default();
+        let (mut libm, mut unknown, mut other) = (Vec::new(), Vec::new(), Vec::new());
         for (k, h) in &results {
             if identical.contains(k) {
                 continue;
             }
-            if h.is_some() && h.as_ref() == same_math.files.get(k) {
-                libm.push(k);
-            } else {
-                other.push(k);
+            match same_math.files.get(k) {
+                // C with the same math is unstable on it, or has no reference for it.
+                None => unknown.push(k),
+                Some(c) if h.as_ref() == Some(c) => libm.push(k),
+                Some(_) => other.push(k),
             }
         }
         println!(
-            "differ from stock C on macOS: {} only through Apple's libm (equal to C with the same math), {} otherwise",
+            "differ from stock C on macOS: {} only through Apple's libm (equal to C with the same math), \
+             {} with no stable same-math reference, {} otherwise",
             libm.len(),
+            unknown.len(),
             other.len()
         );
         if list {
             for k in &libm {
                 println!("  libm only: {k}");
             }
+        }
+        for k in &unknown {
+            println!("  no same-math reference: {k}");
         }
         for k in &other {
             println!("  not explained by libm: {k}");
@@ -350,7 +386,11 @@ pub fn main(args: Vec<String>) -> ExitCode {
             "no baseline at {}; run with --update",
             baseline_path.display()
         );
-        return ExitCode::FAILURE;
+        return if stock {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        };
     };
     let base: E2eBaseline = serde_json::from_str(&text).expect("parse e2e baseline");
     if stock {

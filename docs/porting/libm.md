@@ -6,7 +6,9 @@ every target: Linux x86-64 and arm64, Windows, macOS on Apple Silicon and Intel,
 No build calls a platform libm for them, and no feature brings one back: clippy's
 `disallowed-methods` (`clippy.toml`) rejects the `f64` methods everywhere except inside
 `math::portable`. So the same input gives the same bytes everywhere, which
-`.github/workflows/cross-platform.yml` checks on every push.
+`.github/workflows/cross-platform.yml` checks on every push. One exception remains outside the
+port's own code: `-Tpng` and `-Tjpeg` rasterize the SVG with resvg and tiny-skia, which call `f32`
+functions directly (#339); the cross-platform check compares their PNGs too, and they agree today.
 
 C Graphviz, on the other hand, calls its platform's libm, so stock C writes different bytes on
 macOS and on Linux. The port is therefore compared with C computing with the port's own math
@@ -271,7 +273,7 @@ CI (`.github/workflows/ci.yml`, `ubuntu-latest`): the `verify` job runs fmt, cli
 `cargo test --workspace` (so every ratchet against its portable baseline) and the wasm32
 check. The `wasm-e2e` job installs `wasm-bindgen-cli` at the `wasm-bindgen` version in
 `Cargo.lock` (0.2.129, cached), builds the package, runs `scripts/wasm-e2e.mjs` against
-`e2e-baseline.portable.json`, and `cmp`s the wasm output hashes with native Linux's.
+`e2e-baseline.portable.json` (now `e2e-baseline.libm-matched.portable.json`), and `cmp`s the wasm output hashes with native Linux's.
 
 ## Is the gap only libm? C with the port's math functions
 

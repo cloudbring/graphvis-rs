@@ -16,7 +16,7 @@ as ratchets that fail on any regression.
 | `e2e.json`, `e2e-baseline.portable.json` | the same against stock C on macOS (Apple's libm): informational, never a check | `gv-diff e2e --stock --generate`, `gv-diff e2e --stock --update` |
 | `structure.json` | a structural summary of stock C's `-Tsvg` for every corpus input (`docs/testing/structure-checks.md`) | `gv-diff structure --generate` |
 | `render.tar.xz` | the render corpus, compressed (see below) | `scripts/gen-render-golden.sh` |
-| `render/baseline.portable.json` | render ratchet | `gv-diff render --update` |
+| `render/baseline.portable.json` | render ratchet | `gv-diff render --baseline tests/golden/render/baseline.portable.json --update` |
 
 The baselines are the `*.portable.json` files: every build uses the same (portable) math
 library, so one set serves every platform. The C references (`*.dot`, `<engine>/`,

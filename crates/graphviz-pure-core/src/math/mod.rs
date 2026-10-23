@@ -120,5 +120,7 @@ pub fn cbrt(x: f64) -> f64 {
     portable::cbrt(x)
 }
 
-#[cfg(all(test, target_vendor = "apple"))]
+// The portable `hypot` reproduces Apple's arm64 libm; Apple's Intel libm is a different
+// implementation, so the comparison only holds on Apple Silicon.
+#[cfg(all(test, target_vendor = "apple", target_arch = "aarch64"))]
 mod tests;
