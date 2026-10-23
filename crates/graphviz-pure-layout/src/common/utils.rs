@@ -1,73 +1,7 @@
 //! Attribute parsing helpers with C semantics (`lib/common/utils.c`):
-//! `strtod`/`strtol` prefix parsing, `late_*`, `mapbool`.
+//! `strtol` prefix parsing, `late_*`, `mapbool` (`strtod` is `graphviz_pure_core::strtod`).
 
 use graphviz_pure_core::AttrMap;
-
-/// Length of the longest prefix of `s` (after leading white space) that
-/// `strtod` would consume, and its value. Handles decimal and exponent forms.
-fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
-    let b = s.as_bytes();
-    let mut i = 0;
-    while i < b.len() && (b[i] as char).is_ascii_whitespace() {
-        i += 1;
-    }
-    let start = i;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-    }
-    let rest = &s[i..];
-    let lower = rest.to_ascii_lowercase();
-    for (word, val) in [
-        ("infinity", f64::INFINITY),
-        ("inf", f64::INFINITY),
-        ("nan", f64::NAN),
-    ] {
-        if lower.starts_with(word) {
-            let neg = b.get(start) == Some(&b'-');
-            let v = if neg { -val } else { val };
-            return Some((v, i + word.len()));
-        }
-    }
-    let mut digits = 0;
-    while i < b.len() && b[i].is_ascii_digit() {
-        i += 1;
-        digits += 1;
-    }
-    if i < b.len() && b[i] == b'.' {
-        i += 1;
-        while i < b.len() && b[i].is_ascii_digit() {
-            i += 1;
-            digits += 1;
-        }
-    }
-    if digits == 0 {
-        return None;
-    }
-    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
-        let mut j = i + 1;
-        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
-            j += 1;
-        }
-        let ds = j;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        if j > ds {
-            i = j;
-        }
-    }
-    s[start..i].parse::<f64>().ok().map(|v| (v, i))
-}
-
-/// `strtod` / `sscanf("%lf")`: the value of the longest numeric prefix.
-pub fn parse_leading_f64(s: &str) -> Option<f64> {
-    strtod_prefix(s).map(|(v, _)| v)
-}
-
-/// Like [`parse_leading_f64`] but also returns the unparsed remainder.
-pub fn parse_f64_rest(s: &str) -> Option<(f64, &str)> {
-    strtod_prefix(s).map(|(v, n)| (v, &s[n..]))
-}
 
 /// `strtol(p, &end, 10)` / `atoi` / `sscanf("%d")`.
 pub fn parse_leading_int(s: &str) -> Option<i64> {
@@ -90,11 +24,6 @@ pub fn parse_leading_int(s: &str) -> Option<i64> {
 /// `atoi`: 0 when nothing parses.
 pub fn atoi(s: &str) -> i64 {
     parse_leading_int(s).unwrap_or(0)
-}
-
-/// `atof`: 0 when nothing parses.
-pub fn atof(s: &str) -> f64 {
-    parse_leading_f64(s).unwrap_or(0.0)
 }
 
 /// `mapBool(p, dflt)`.
@@ -125,7 +54,7 @@ pub fn late_double(attrs: &AttrMap, key: &str, def: f64, low: f64) -> f64 {
     match attrs.get(key) {
         None => def,
         Some(s) if s.is_empty() => def,
-        Some(s) => match strtod_prefix(s) {
+        Some(s) => match graphviz_pure_core::strtod::strtod_rest(s) {
             None => def,
             Some((v, _)) if v < low => low,
             Some((v, _)) => v,
@@ -228,12 +157,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn strtod_prefixes() {
-        assert_eq!(parse_leading_f64(" 2.5in"), Some(2.5));
-        assert_eq!(parse_leading_f64("-.5"), Some(-0.5));
-        assert_eq!(parse_leading_f64("1e2x"), Some(100.0));
-        assert_eq!(parse_leading_f64("1e"), Some(1.0));
-        assert_eq!(parse_leading_f64("abc"), None);
+    fn strtol_prefixes_and_mapbool() {
         assert_eq!(parse_leading_int("12,3"), Some(12));
         assert!(mapbool(Some("TRUE")));
         assert!(mapbool(Some("2")));

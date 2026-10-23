@@ -201,7 +201,7 @@ fn describe(name: &str) -> Desc {
 
 fn attr_f64(node: &NodeData, key: &str) -> Option<f64> {
     let s = node.attrs.get(key)?;
-    crate::common::utils::parse_leading_f64(s)
+    graphviz_pure_core::strtod::strtod_rest(s).map(|(v, _)| v)
 }
 
 /// `late_double`: attribute value if it parses, clamped below by `low`.

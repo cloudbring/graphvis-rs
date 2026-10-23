@@ -2,9 +2,9 @@
 //! (`fdp_init_node_edge`, `init_edge`, `initialPositions`). Node geometry
 //! comes from [`LGraph::new`] (`common_init_node` + `gv_nodesize`).
 
-use crate::common::init::scan_pair;
 use crate::common::types::{LGraph, P_PIN, P_SET};
 use crate::common::utils::{late_double, mapbool};
+use graphviz_pure_core::strtod::sscanf;
 
 /// `init_edge(e, E_len)` for every edge: `ED_factor` from `weight` (no lower
 /// bound but 0) and `ED_dist` from `len` (default `K`).
@@ -26,8 +26,9 @@ pub fn initial_positions(g: &mut LGraph<'_>, inputscale: f64) {
         let Some(p) = g.nattr(n, "pos").filter(|s| !s.is_empty()) else {
             continue;
         };
-        let (cnt, x, y, c) = scan_pair(p);
-        if cnt < 2 {
+        let r = sscanf(p, "%lf,%lf%c");
+        let [x, y, ..] = r.values;
+        if r.count < 2 {
             // fprintf(stderr, ...): not agerr, so it does not count as an error and its
             // bytes are written as they are, without agerr's escaping of control characters.
             let name = g.src.nodes.get(n).map_or("", |nd| nd.name.as_str());
@@ -44,7 +45,7 @@ pub fn initial_positions(g: &mut LGraph<'_>, inputscale: f64) {
             nd.pos[1] /= inputscale;
         }
         nd.pinned = P_SET;
-        if c == Some('!') || pin {
+        if r.c == Some(b'!') || pin {
             nd.pinned = P_PIN;
         }
     }

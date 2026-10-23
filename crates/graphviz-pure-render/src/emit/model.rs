@@ -8,8 +8,9 @@
 //! (`lp`, `xlp`, `head_lp`, `tail_lp`).
 
 use super::arrows::arrow_flags;
-use super::attrs::{Attrs, strtod};
+use super::attrs::Attrs;
 use graphviz_pure_core::font::{PostscriptFontAlias, TextJustify, translate_postscript_fontname};
+use graphviz_pure_core::strtod::sscanf;
 use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
 use graphviz_pure_geom::html_label::HtmlLabel;
 use graphviz_pure_geom::node_size::{
@@ -217,10 +218,8 @@ fn seq_of(attrs: &AttrMap, index: usize) -> usize {
 }
 
 fn parse_point(s: Option<&str>) -> Option<Point> {
-    let s = s?;
-    let (x, rest) = strtod(s)?;
-    let (y, _) = strtod(rest.strip_prefix(',')?)?;
-    Some(Point::new(x, y))
+    let r = sscanf(s?, "%lf,%lf");
+    (r.count == 2).then(|| Point::new(r.values[0], r.values[1]))
 }
 
 fn is_a_cluster(name: &str, attrs: &AttrMap) -> bool {
@@ -232,16 +231,27 @@ impl<'g> Model<'g> {
         Attrs(&self.g.graph_attrs)
     }
 
-    /// `GD_drawing(g)->size` in points and `filled` (a trailing `!`).
+    /// `GD_drawing(g)->size` in points and `filled` (a `!` right after the numbers), as
+    /// `getdoubles2ptf` in `lib/common/input.c` reads them.
     pub fn drawing_size(&self) -> Option<(f64, f64, bool)> {
-        let s = self.root_attrs().nonempty("size")?;
-        let (w, rest) = strtod(s)?;
-        let (h, rest) = match rest.strip_prefix(',').and_then(strtod) {
-            Some((h, r)) => (h, r),
-            None => (w, rest),
+        let p = self.root_attrs().get("size")?;
+        // POINTS(a): ROUND(a * 72).
+        let points = |a: f64| {
+            let f = a * 72.0;
+            f64::from(if f >= 0.0 {
+                (f + 0.5) as i32
+            } else {
+                (f - 0.5) as i32
+            })
         };
-        let filled = rest.trim_start().starts_with('!');
-        Some((w * 72.0, h * 72.0, filled))
+        let r = sscanf(p, "%lf,%lf%c");
+        let [x, y, ..] = r.values;
+        if r.count > 1 && x > 0.0 && y > 0.0 {
+            return Some((points(x), points(y), r.c == Some(b'!')));
+        }
+        let r = sscanf(p, "%lf%c");
+        let x = r.values[0];
+        (r.count > 0 && x > 0.0).then(|| (points(x), points(x), r.c == Some(b'!')))
     }
 
     pub fn landscape(&self) -> bool {

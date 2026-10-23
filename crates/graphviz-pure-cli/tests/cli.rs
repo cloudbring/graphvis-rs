@@ -468,6 +468,140 @@ fn vpsc_overlap_removal_with_extreme_positions_finishes() {
     assert!(out.contains("pos=\"77.499,nan\""), "{out}");
 }
 
+// Issue #220: C reads `pos` with the C library's sscanf("%lf"), which takes hexadecimal
+// floats and `nan(chars)`. The expected values are C Graphviz 16.1.0's output.
+#[test]
+fn neato_n_reads_hex_and_nan_chars_positions_like_c() {
+    let src = "digraph { a [pos=\"0x10,0\"]; b [pos=\"30,30\"]; a -> b }";
+    let (out, err, ok) = run(&["-Kneato", "-n2", "-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("pos=\"27,18\"") && out.contains("pos=\"41,48\""),
+        "{out}"
+    );
+    let edge = |p: &str| {
+        format!(
+            "digraph {{ a [pos=\"0,0\"]; b [pos=\"30,30\"]; a -> b [pos=\"{p},0 10,10 20,20 30,30\"] }}"
+        )
+    };
+    let (out, err, ok) = run(&["-Kneato", "-n2", "-Tsvg"], &edge("0x10"));
+    assert!(ok && err.is_empty(), "{err}");
+    assert!(out.contains("d=\"M43,-18C37,-28 47,-38 57,-48\""), "{out}");
+    let (out, err, ok) = run(&["-Kneato", "-n2", "-Tsvg"], &edge("nan(1)"));
+    assert!(ok && err.is_empty(), "{err}");
+    assert!(out.contains("d=\"Mnan,-18C37,-28 47,-38 57,-48\""), "{out}");
+}
+
+// Issue #220 (fdp): initialPositions' sscanf("%lf,%lf%c") reads `0x1p3` as 8.
+#[test]
+fn fdp_reads_a_hex_float_pos_like_c() {
+    let (out, err, ok) = run(
+        &["-Tdot"],
+        "graph { layout=fdp; a [pos=\"0x1p3,2\"]; a -- b }",
+    );
+    assert!(ok && err.is_empty(), "{err}");
+    assert!(out.contains("pos=\"89.637,24.219\""), "{out}");
+}
+
+// fdp's chkPos (lib/fdpgen/layout.c) warns about a cluster `coords` it cannot read.
+#[test]
+fn fdp_warns_about_unreadable_cluster_coords_like_c() {
+    let src = "graph { layout=fdp; subgraph cluster_a { coords=\"1,2,x\"; a } a -- b }";
+    let (_, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: graph cluster_a, coord 1,2,x, expected four doubles\n"
+    );
+}
+
+// Issue #245: with dim=3, user_pos (lib/neatogen/neatoinit.c) reads `z` when `pos` has two
+// values, or else draws one with jitter3d, and addZ writes every node's `z` back. The
+// expected values are C Graphviz 16.1.0's output.
+#[test]
+fn neato_dim3_reads_and_writes_z_like_c() {
+    let src = "graph { layout=neato; dim=3; a [pos=\"1,2\" z=\"3\"]; a -- b; b -- c }";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("bb=\"0,0,66.816,77.847\""), "{out}");
+    for z in ["z=66.978896", "z=2.061028", "z=-69.039923"] {
+        assert!(out.contains(z), "{z}: {out}");
+    }
+    // The -n path runs user_pos and addZ too.
+    let src = "graph { dim=3; a [pos=\"10,20,5\" z=\"3\"]; b [pos=\"30,40\"]; a -- b }";
+    let (out, err, ok) = run(&["-Kneato", "-n", "-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("z=5.000000") && out.contains("z=57.090927"),
+        "{out}"
+    );
+}
+
+// input.c's graph_init reads `ranksep` with sscanf("%lf"): for a blank value it returns EOF
+// and assigns nothing, so the rank separation keeps the `nodesep` just read.
+#[test]
+fn blank_ranksep_takes_the_nodesep_like_c() {
+    let (out, err, ok) = run(&["-Tdot"], "digraph { ranksep=\"\"; nodesep=1.5; a -> b }");
+    assert!(ok, "{err}");
+    assert!(out.contains("bb=\"0,0,54,180\""), "{out}");
+}
+
+// getdoubles2ptf (lib/common/input.c) rounds `size` to whole points.
+#[test]
+fn fractional_size_is_rounded_to_points_like_c() {
+    let src = "digraph { size=\"1.013,1.017\"; a -> b -> c; a -> c }";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("transform=\"scale(0.388298 0.388298)"),
+        "{out}"
+    );
+}
+
+// init_job_viewport (lib/common/emit.c) reads `viewport="8,4,8,4"` with its second sscanf,
+// "%lf,%lf,%lf,%[^,]%c", as a focus node named `4`; there is none, so the focus stays at the
+// centre of the drawing.
+#[test]
+fn viewport_with_an_unknown_focus_node_keeps_the_centre_like_c() {
+    let (out, err, ok) = run(&["-Tsvg"], "graph { viewport=\"8,4,8,4\"; a -- b }");
+    assert!(ok, "{err}");
+    assert!(out.contains("translate(-26.5 54.25)"), "{out}");
+}
+
+// Issue #245 with mode=sgd: initial_positions' randompos also draws the third coordinate
+// (jitter3d), which addZ prints.
+#[test]
+fn neato_sgd_dim3_draws_z_like_c() {
+    let src =
+        "graph { layout=neato; mode=sgd; dim=3; node [z=\"\"]; a [pos=\"1,2!\"]; a -- b; b -- c }";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    for z in ["z=85.636391", "z=60.106840", "z=0.127218"] {
+        assert!(out.contains(z), "{z}: {out}");
+    }
+}
+
+// colorxlate's sscanf("%lf%lf%lf%lf") reads an HSV color written with hexadecimal floats.
+#[test]
+fn hsv_color_with_hex_floats_like_c() {
+    let src = "graph { a [style=filled, fillcolor=\"0x1p-1 1 1\"] }";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(out.contains("fill=\"#00ffff\""), "{out}");
+}
+
+// graph_init: dpi = late_double(dpi, late_double(resolution, 0, 0), 0), so an unreadable
+// `dpi` falls back to `resolution`.
+#[test]
+fn unreadable_dpi_falls_back_to_resolution_like_c() {
+    let (out, err, ok) = run(&["-Tsvg"], "graph { dpi=\"x\"; resolution=144; a }");
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<svg width=\"124pt\" height=\"88pt\""),
+        "{out}"
+    );
+}
+
 // fdp's initialPositions (lib/fdpgen/fdpinit.c) warns about a `pos` it cannot read.
 #[test]
 fn fdp_warns_about_an_unreadable_pos_like_c() {

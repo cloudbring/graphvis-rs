@@ -4,9 +4,10 @@
 
 use super::shapes::NodeShape;
 use super::types::*;
-use super::utils::{c_round, late_double, map_bool, mapbool, parse_f64_rest};
+use super::utils::{c_round, late_double, map_bool, mapbool};
 use crate::cutil::{CRand, Drand48};
 use graphviz_pure_core::font::{LabelSubstContext, measure_multiline_label_with_context};
+use graphviz_pure_core::strtod::{atof, sscanf};
 use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
 
 pub const DEFAULT_FONTSIZE: f64 = 14.0;
@@ -20,35 +21,21 @@ pub fn points(inches: f64) -> f64 {
     c_round(inches * 72.0) as f64
 }
 
-/// `sscanf(p, "%lf,%lf%c")`: number of conversions and the values.
-pub fn scan_pair(p: &str) -> (usize, f64, f64, Option<char>) {
-    let Some((x, rest)) = parse_f64_rest(p) else {
-        return (0, 0.0, 0.0, None);
-    };
-    let Some(rest) = rest.strip_prefix(',') else {
-        return (1, x, 0.0, rest.chars().next());
-    };
-    let Some((y, rest)) = parse_f64_rest(rest) else {
-        return (1, x, 0.0, None);
-    };
-    let c = rest.chars().next();
-    (if c.is_some() { 3 } else { 2 }, x, y, c)
-}
-
 /// `getdoubles2ptf`: a `size`/`page` attribute in points and its `!` flag.
-fn getdoubles2ptf(p: Option<&str>) -> (Point, bool) {
+pub(crate) fn getdoubles2ptf(p: Option<&str>) -> (Point, bool) {
     let mut res = Point::default();
     let Some(p) = p else { return (res, false) };
-    let (i, x, y, c) = scan_pair(p);
-    if i > 1 && x > 0.0 && y > 0.0 {
+    let r = sscanf(p, "%lf,%lf%c");
+    let [x, y, ..] = r.values;
+    if r.count > 1 && x > 0.0 && y > 0.0 {
         res = Point::new(points(x), points(y));
-        return (res, c == Some('!'));
+        return (res, r.c == Some(b'!'));
     }
-    if let Some((x, rest)) = parse_f64_rest(p)
-        && x > 0.0
-    {
+    let r = sscanf(p, "%lf%c");
+    let x = r.values[0];
+    if r.count > 0 && x > 0.0 {
         res = Point::new(points(x), points(x));
-        return (res, rest.starts_with('!'));
+        return (res, r.c == Some(b'!'));
     }
     (res, false)
 }
@@ -189,7 +176,7 @@ impl<'a> LGraph<'a> {
                 "expand" => drawing.ratio_kind = RatioKind::Expand,
                 "fill" => drawing.ratio_kind = RatioKind::Fill,
                 _ => {
-                    let r = super::utils::atof(p);
+                    let r = atof(p);
                     if r > 0.0 {
                         drawing.ratio_kind = RatioKind::Value;
                         drawing.ratio = r;

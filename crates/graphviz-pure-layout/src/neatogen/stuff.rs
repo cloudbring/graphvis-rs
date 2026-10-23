@@ -8,8 +8,8 @@ use super::linalg::{solve, solve_circuit};
 use super::stress::has_pos;
 use super::{INIT_RANDOM, INIT_REGULAR, INIT_SELF, MODE_KK, MODE_SGD, NeatoParams};
 use crate::common::types::{LGraph, P_SET, Sub};
-use crate::common::utils::parse_leading_f64;
 use graphviz_pure_core::math;
+use graphviz_pure_core::strtod::{atof, scan_lf};
 
 /// KK working arrays (`GD_dist`, `GD_spring`, `GD_sum_t`, `GD_t`).
 pub struct KkState {
@@ -21,7 +21,8 @@ pub struct KkState {
     pub moves: i64,
 }
 
-/// `lenattr`: the edge's `len`, or `None` to use the default.
+/// `lenattr`: the edge's `len`, or `None` to use the default. C also warns about a bad
+/// value (`bad edge len`), which the port does not print yet.
 fn lenattr(g: &LGraph<'_>, e: usize, declared: bool) -> Option<f64> {
     if !declared {
         return None;
@@ -30,8 +31,9 @@ fn lenattr(g: &LGraph<'_>, e: usize, declared: bool) -> Option<f64> {
     if s.is_empty() {
         return None;
     }
-    match parse_leading_f64(s) {
-        Some(v) if v > 0.0 => Some(v),
+    // Nop is never set here: `neato -n` does not reach scan_graph_mode.
+    match scan_lf(s) {
+        Some((v, _)) if v > 0.0 || v.is_nan() => Some(v),
         _ => None,
     }
 }
@@ -49,7 +51,7 @@ pub fn scan_graph_mode(
     let ne = g.nedges(sub);
     let len_declared = g.edge_attr_declared("len");
     let getdouble = |g: &LGraph<'_>, name: &str, v: &mut f64| {
-        if let Some(f) = g.gattr(name).and_then(parse_leading_f64) {
+        if let Some((f, _)) = g.gattr(name).and_then(scan_lf) {
             *v = f;
         }
     };
@@ -59,7 +61,7 @@ pub fn scan_graph_mode(
         p.epsilon = 0.0001 * nv as f64;
         getdouble(g, "epsilon", &mut p.epsilon);
         p.damping = match g.gattr("Damping") {
-            Some(s) => crate::common::utils::atof(s),
+            Some(s) => atof(s),
             None => 0.99,
         };
     } else if mode == MODE_SGD {
@@ -80,7 +82,7 @@ pub fn scan_graph_mode(
         }
     }
     p.initial_dist = match g.gattr("defaultdist").filter(|s| !s.is_empty()) {
-        Some(s) => p.epsilon.max(crate::common::utils::atof(s)),
+        Some(s) => p.epsilon.max(atof(s)),
         None => total_len / (if ne > 0 { ne } else { 1 }) as f64 * (nv as f64).sqrt() + 1.0,
     };
     let kk = (mode == MODE_KK).then(|| KkState {

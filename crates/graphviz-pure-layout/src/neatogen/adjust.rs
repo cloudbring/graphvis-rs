@@ -7,8 +7,9 @@
 //! `overlap=false` selects the prism algorithm (`AM_PRISM`).
 
 use crate::common::types::{LGraph, Sub};
-use crate::common::utils::{map_bool, mapbool, parse_f64_rest};
+use crate::common::utils::{map_bool, mapbool};
 use graphviz_pure_core::math;
+use graphviz_pure_core::strtod::{sscanf, strtod_rest};
 
 pub const DFLT_MARGIN: f64 = 4.0;
 pub const SEPFACT: f64 = 0.8;
@@ -52,22 +53,23 @@ pub struct AdjustData {
     pub scaling: f64,
 }
 
-/// `sscanf(s, "%lf,%lf", &x, &y)` conversion count and values.
+/// `sscanf(s, "%lf,%lf", &x, &y)` conversion count and values, then `if (i == 1) y = x`.
+/// C tests the count for truth, so EOF (`-1`, an empty or blank string) passes with `x`
+/// and `y` uninitialized; the port reads that as no conversion.
 fn scan2(s: &str) -> (usize, f64, f64) {
-    let Some((x, rest)) = parse_f64_rest(s) else {
-        return (0, 0.0, 0.0);
-    };
-    if let Some(r) = rest.strip_prefix(',')
-        && let Some((y, _)) = parse_f64_rest(r)
-    {
-        return (2, x, y);
+    let r = sscanf(s, "%lf,%lf");
+    let [x, y, ..] = r.values;
+    match r.count {
+        2 => (2, x, y),
+        1 => (1, x, x),
+        _ => (0, 0.0, 0.0),
     }
-    (1, x, x)
 }
 
 /// `parseFactor(s, pp, sepfact, dflt)`.
 fn parse_factor(s: &str, sepfact: f64, dflt: f64) -> Option<Expand> {
-    let s = s.trim_start();
+    // while (gv_isspace(*s)) s++;
+    let s = s.trim_start_matches([' ', '\t', '\n', '\x0b', '\x0c', '\r']);
     let (do_add, s) = match s.strip_prefix('+') {
         Some(r) => (true, r),
         None => (false, s),
@@ -216,7 +218,7 @@ pub fn get_adjust_mode(g: &LGraph<'_>, s: &str) -> AdjustData {
 /// `angleSet(g, &phi)`.
 fn angle_set(g: &LGraph<'_>) -> Option<f64> {
     let a = g.gattr("normalize").filter(|s| !s.is_empty())?;
-    let mut ang = match parse_f64_rest(a) {
+    let mut ang = match strtod_rest(a) {
         Some((v, _)) => v,
         None => {
             if mapbool(Some(a)) {

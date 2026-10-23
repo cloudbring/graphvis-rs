@@ -28,64 +28,6 @@ pub fn strtol_prefix(s: &str) -> Option<i64> {
     Some(if neg { -v } else { v })
 }
 
-/// `strtod` prefix parse: `None` when nothing was consumed.
-pub fn strtod_prefix(s: &str) -> Option<f64> {
-    let t = s.trim_start();
-    let b = t.as_bytes();
-    let mut i = 0;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-    }
-    let lower = t[i..].to_ascii_lowercase();
-    if lower.starts_with("inf") || lower.starts_with("nan") {
-        let neg = t.starts_with('-');
-        let v = if lower.starts_with("nan") {
-            f64::NAN
-        } else {
-            f64::INFINITY
-        };
-        return Some(if neg { -v } else { v });
-    }
-    let mut digits = 0;
-    while i < b.len() && b[i].is_ascii_digit() {
-        i += 1;
-        digits += 1;
-    }
-    if i < b.len() && b[i] == b'.' {
-        i += 1;
-        while i < b.len() && b[i].is_ascii_digit() {
-            i += 1;
-            digits += 1;
-        }
-    }
-    if digits == 0 {
-        return None;
-    }
-    let mant_end = i;
-    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
-        let mut j = i + 1;
-        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
-            j += 1;
-        }
-        let ds = j;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        if j > ds {
-            i = j;
-        }
-    }
-    let txt = &t[..i];
-    txt.parse::<f64>()
-        .ok()
-        .or_else(|| t[..mant_end].parse::<f64>().ok())
-}
-
-/// `atof`
-pub fn atof(s: &str) -> f64 {
-    strtod_prefix(s).unwrap_or(0.0)
-}
-
 /// `atoi`
 pub fn atoi(s: &str) -> i32 {
     strtol_prefix(s).map(|v| v as i32).unwrap_or(0)
@@ -115,7 +57,7 @@ pub fn late_double(v: Option<&str>, default: f64, minimum: f64) -> f64 {
     if p.is_empty() {
         return default;
     }
-    let Some(rv) = strtod_prefix(p) else {
+    let Some((rv, _)) = graphviz_pure_core::strtod::strtod_rest(p) else {
         return default;
     };
     if rv < minimum {

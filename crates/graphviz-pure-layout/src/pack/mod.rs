@@ -89,8 +89,9 @@ pub fn get_pack_mode_info(p: Option<&str>, dflt: PackMode, pinfo: &mut PackInfo)
             }
         } else if let Some(r) = p.strip_prefix("aspect") {
             pinfo.mode = PackMode::Aspect;
-            pinfo.aspect = match crate::common::utils::parse_leading_f64(r) {
-                Some(v) if v > 0.0 => v as f32,
+            // sscanf(p + strlen("aspect"), "%f", &v) > 0 && v > 0
+            pinfo.aspect = match graphviz_pure_core::strtod::scan_f(r) {
+                Some((v, _)) if v > 0.0 => v,
                 _ => 1.0,
             };
         } else if p == "cluster" {

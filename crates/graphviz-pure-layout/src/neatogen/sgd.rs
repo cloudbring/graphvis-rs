@@ -106,10 +106,11 @@ pub fn sgd(g: &mut LGraph<'_>, sub: &Sub, model: i32, p: &NeatoParams) {
             if super::stress::has_pos(g, np) {
                 continue;
             }
-            let x = g.drand.drand48();
-            let y = g.drand.drand48();
-            g.nodes[np].pos[0] = x;
-            g.nodes[np].pos[1] = y;
+            // randompos(np, 1): x, y, then jitter3d's third and later coordinates.
+            let drand = &mut g.drand;
+            for v in g.nodes[np].pos.iter_mut() {
+                *v = drand.drand48();
+            }
         }
     }
     let mut pos = vec![0.0f64; 2 * n];

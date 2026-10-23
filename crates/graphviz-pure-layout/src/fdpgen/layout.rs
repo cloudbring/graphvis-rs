@@ -467,33 +467,23 @@ impl Fdp<'_, '_> {
         if parent.get("coords").map(String::as_str).unwrap_or("") == p.as_str() {
             return;
         }
-        let mut vals = Vec::new();
-        let mut rest = p.as_str();
-        while vals.len() < 4 {
-            let Some((v, r)) = crate::common::utils::parse_f64_rest(rest) else {
-                break;
-            };
-            vals.push(v);
-            rest = r;
-            if vals.len() < 4 {
-                match rest.strip_prefix(',') {
-                    Some(r) => rest = r,
-                    None => break,
-                }
-            }
-        }
-        if vals.len() < 4 {
+        let r = graphviz_pure_core::strtod::sscanf(p, "%lf,%lf,%lf,%lf%c");
+        if r.count < 4 {
+            let gname = self.rg.src.subgraphs[self.tree.subgraph[c]].name.as_str();
+            graphviz_pure_core::diag::agwarningf(&format!(
+                "graph {gname}, coord {p}, expected four doubles\n"
+            ));
             return;
         }
-        let c = rest.chars().next();
-        let mut bb = BoundingBox::new(vals[0], vals[1], vals[2], vals[3]);
+        let [llx, lly, urx, ury, _] = r.values;
+        let mut bb = BoundingBox::new(llx, lly, urx, ury);
         if self.inputscale > 0.0 {
             let s = self.inputscale;
             bb = BoundingBox::new(bb.ll.x / s, bb.ll.y / s, bb.ur.x / s, bb.ur.y / s);
         }
-        dn.pinned = match c {
-            Some('!') => P_PIN,
-            Some('?') => P_FIX,
+        dn.pinned = match r.c {
+            Some(b'!') => P_PIN,
+            Some(b'?') => P_FIX,
             _ => P_SET,
         };
         *bbp = bb;

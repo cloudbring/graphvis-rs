@@ -19,6 +19,7 @@
 //! [`LABEL_POS_KEY`].
 
 use graphviz_pure_core::font::{DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext};
+use graphviz_pure_core::strtod::{atof, sscanf, strtod_rest};
 use graphviz_pure_core::{
     AttrMap, BezierSegment, BoundingBox, Graph, GraphKind, GraphvizError, Point, Result, Spline,
     SubgraphId,
@@ -47,75 +48,54 @@ pub(crate) fn labels_at_origin(graph: &mut graphviz_pure_core::Graph) {
 const LABEL_PAD_X: f64 = 16.0;
 const LABEL_PAD_Y: f64 = 8.0;
 
-/// Parses a C `%lf` prefix (after optional white space) and returns the value and the rest.
-pub(crate) fn scan_double(s: &str) -> Option<(f64, &str)> {
-    let t = s.trim_start_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c']);
-    let b = t.as_bytes();
-    let mut i = 0;
-    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-        i += 1;
-    }
-    let lower = t[i..].to_ascii_lowercase();
-    for word in ["infinity", "inf", "nan"] {
-        if lower.starts_with(word) {
-            let end = i + word.len();
-            return t[..end].parse::<f64>().ok().map(|v| (v, &t[end..]));
-        }
-    }
-    let digits_start = i;
-    while i < b.len() && b[i].is_ascii_digit() {
-        i += 1;
-    }
-    let mut mantissa_digits = i - digits_start;
-    if i < b.len() && b[i] == b'.' {
-        i += 1;
-        let frac_start = i;
-        while i < b.len() && b[i].is_ascii_digit() {
-            i += 1;
-        }
-        mantissa_digits += i - frac_start;
-    }
-    if mantissa_digits == 0 {
-        return None;
-    }
-    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
-        let mut j = i + 1;
-        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
-            j += 1;
-        }
-        let exp_start = j;
-        while j < b.len() && b[j].is_ascii_digit() {
-            j += 1;
-        }
-        if j > exp_start {
-            i = j;
-        }
-    }
-    let text = &t[..i];
-    let text = text.strip_suffix('.').unwrap_or(text);
-    let v = if text.is_empty() || text == "+" || text == "-" {
-        0.0
-    } else {
-        text.parse::<f64>().ok()?
-    };
-    Some((v, &t[i..]))
-}
-
-/// `sscanf(s, "%lf,%lf", ...) == 2`.
+/// `sscanf(s, "%lf,%lf%n", ...) == 2`: the point and the rest after it.
 pub(crate) fn scan_point(s: &str) -> Option<(Point, &str)> {
-    let (x, rest) = scan_double(s)?;
-    let rest = rest.strip_prefix(',')?;
-    let (y, rest) = scan_double(rest)?;
-    Some((Point::new(x, y), rest))
+    let r = sscanf(s, "%lf,%lf");
+    (r.count == 2).then(|| (Point::new(r.values[0], r.values[1]), r.rest))
 }
 
 /// `sscanf(s, "%lf,%lf,%lf,%lf", ...) == 4`.
 fn scan_box(s: &str) -> Option<BoundingBox> {
-    let (a, rest) = scan_double(s)?;
-    let (b, rest) = scan_double(rest.strip_prefix(',')?)?;
-    let (c, rest) = scan_double(rest.strip_prefix(',')?)?;
-    let (d, _) = scan_double(rest.strip_prefix(',')?)?;
-    Some(BoundingBox::new(a, b, c, d))
+    let r = sscanf(s, "%lf,%lf,%lf,%lf");
+    let [a, b, c, d, _] = r.values;
+    (r.count == 4).then(|| BoundingBox::new(a, b, c, d))
+}
+
+/// `addZ`, which the Nop path runs after `neato_init_graph`: with `dim > 2` and a declared
+/// `z`, `user_pos` also gives each node a third coordinate (from `pos`, `z` or `drand48`),
+/// which only shows in the `z` attribute written here. `user_pos`'s messages were printed
+/// above.
+fn add_z(graph: &mut Graph) {
+    use crate::common::utils::late_int;
+    let z_declared = graph.node_defaults.contains_key("z")
+        || graph.nodes.iter().any(|n| n.attrs.contains_key("z"));
+    let outdim = late_int(&graph.graph_attrs, "dimen", 2, 2);
+    let ndim = late_int(&graph.graph_attrs, "dim", outdim, 2)
+        .min(crate::common::types::MAXDIM as i64) as usize;
+    if ndim < 3 || !z_declared {
+        return;
+    }
+    let ng = graph.nodes.len();
+    let mut drand = crate::cutil::Drand48::default();
+    for node in &mut graph.nodes {
+        let mut pvec = vec![0.0; ndim];
+        if let Some(p) = node.attrs.get("pos") {
+            graphviz_pure_core::diag::quietly(|| {
+                crate::neatogen::neatoinit::user_pos_values(
+                    p,
+                    node.attrs.get("z").map(String::as_str),
+                    false,
+                    &node.name,
+                    POINTS_PER_INCH,
+                    ng,
+                    &mut drand,
+                    &mut pvec,
+                )
+            });
+        }
+        let z = pvec.get(2).copied().unwrap_or(0.0);
+        crate::neatogen::neatoinit::set_z(node, z);
+    }
 }
 
 /// Formats a position for storage in an attribute without losing precision.
@@ -302,9 +282,10 @@ fn make_label_dimen(
 }
 
 fn attr_f64(attrs: &AttrMap, key: &str, default: f64, min: f64) -> f64 {
-    match attrs.get(key).and_then(|s| scan_double(s)) {
-        Some((v, _)) if v >= min => v,
-        Some(_) => min,
+    // late_double: `rv < low` keeps a NaN.
+    match attrs.get(key).and_then(|s| strtod_rest(s)) {
+        Some((v, _)) if v < min => min,
+        Some((v, _)) => v,
         None => default,
     }
 }
@@ -444,6 +425,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
             }
         }
     }
+    add_z(graph);
 
     // Node xlabels.
     let mut node_xl: Vec<Option<Lbl>> = Vec::with_capacity(graph.nodes.len());
@@ -787,10 +769,8 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
         "compress" => 2,
         "expand" => 3,
         "fill" => 4,
-        s => match scan_double(s) {
-            Some((v, _)) if v > 0.0 => 5,
-            _ => 0,
-        },
+        s if atof(s) > 0.0 => 5,
+        _ => 0,
     };
     let mut did_shift = false;
     if ratio_kind != 0 {
@@ -806,14 +786,9 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
                 &mut bb,
             );
         }
-        let size = graph.graph_attrs.get("size").and_then(|s| {
-            let (w, rest) = scan_double(s)?;
-            let h = rest
-                .strip_prefix(',')
-                .and_then(scan_double)
-                .map_or(w, |x| x.0);
-            Some((w * POINTS_PER_INCH, h * POINTS_PER_INCH))
-        });
+        let (size, _) =
+            crate::common::init::getdoubles2ptf(graph.graph_attrs.get("size").map(String::as_str));
+        let size = Some((size.x, size.y));
         let factors = match ratio_kind {
             4 => size.filter(|s| s.0 > 0.0).map(|(sx, sy)| {
                 let mut xf = sx / bb.ur.x;
@@ -837,7 +812,7 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
                 })
             }),
             5 => {
-                let desired = scan_double(&ratio).map_or(1.0, |x| x.0);
+                let desired = atof(&ratio);
                 let actual = bb.ur.y / bb.ur.x;
                 Some(if actual < desired {
                     (1.0, desired / actual)
@@ -1189,17 +1164,15 @@ fn route_missing_edges(graph: &Graph, keep: &[bool]) -> Vec<RoutedEdge> {
 mod tests {
     use super::*;
 
+    // Issue #220: user_spline's sscanf("%lf,%lf%n") reads hexadecimal floats and `nan(chars)`.
     #[test]
-    fn scan_double_matches_strtod_prefixes() {
-        assert_eq!(scan_double("12.5,3").map(|x| x.0), Some(12.5));
-        assert_eq!(
-            scan_double(" -3e2x").map(|x| (x.0, x.1)),
-            Some((-300.0, "x"))
-        );
-        assert_eq!(scan_double(".5").map(|x| x.0), Some(0.5));
-        assert_eq!(scan_double("5.").map(|x| x.0), Some(5.0));
-        assert!(scan_double("abc").is_none());
-        assert!(scan_double("-").is_none());
+    fn user_spline_reads_hex_and_nan_chars_like_c() {
+        let s = user_spline("0x10,0 10,10 20,20 30,30", true, true).unwrap();
+        assert_eq!(s.segments[0].points[0], Point::new(16.0, 0.0));
+        let s = user_spline("nan(1),0 10,10 20,20 0x1p-1,30", true, true).unwrap();
+        assert!(s.segments[0].points[0].x.is_nan());
+        assert_eq!(s.segments[0].points[3], Point::new(0.5, 30.0));
+        assert_eq!(scan_point("0x1.8p1,2x").map(|x| x.1), Some("x"));
     }
 
     #[test]
