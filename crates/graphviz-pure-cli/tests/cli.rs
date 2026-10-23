@@ -3883,6 +3883,69 @@ fn issue30_fdp_cluster_edge_warnings() {
     }
 }
 
+// Issue #269: at 1e300 points, `update_bb_bz`'s halves of a piece round back to the piece and
+// `ptToLine2` overflows to NaN, so C recurses until its stack overflows (SIGSEGV). The port
+// refines on an explicit stack and takes the pieces whole past C's stack depth.
+#[test]
+fn issue269_update_bb_bz_at_1e300_does_not_overflow_the_stack() {
+    for (engine, src) in [
+        ("dot", "digraph{ratio=\"1e300\"; f:n -> b}"),
+        (
+            "twopi",
+            "digraph G { a -> b; a -> c; subgraph cluster_x { } c -> d; d -> e; { } \
+             f:p -> b; ranksep=\"1e300\"; }",
+        ),
+    ] {
+        let (out, err, ok) = run(&["-K", engine, "-Tplain"], src);
+        assert!(ok, "{src}: {err}");
+        assert!(out.ends_with("stop\n"), "{src}: {out}");
+    }
+}
+
+// Issue #270: huge scales make some path boxes empty, `add_box` drops them, and
+// `adjustregularpath`'s first loop runs past the boxes kept. C touches only stale slots there,
+// so its output is the port's (Graphviz 16.1.0). Where every box is dropped, C segfaults in
+// `Pshortestpath`; the port loses the edge.
+#[test]
+fn issue270_dropped_path_boxes_lay_out_like_c() {
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph{quantum=\"1e300\"; a -> b [label=\"ab\"]}",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "graph 1 1.4142e+300 2.8284e+300
+node a 7.0711e+299 2.1213e+300 1.4142e+300 1.4142e+300 a solid ellipse black lightgrey
+node b 7.0711e+299 7.0711e+299 1.4142e+300 1.4142e+300 b solid ellipse black lightgrey
+edge a b 7 3.9088e+299 1.4889e+300 2.0258e+299 1.1123e+300 0 7.0711e+299 0 7.0711e+299 0 \
+7.0711e+299 0 7.0711e+299 1.3218e+284 7.0711e+299 ab 7.0711e+299 1.4142e+300 solid black
+stop
+"
+    );
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph{ratio=\"9223372036854775808\"; a -> b [label=\"ab\"]; b -> c; a -> c}",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "edge a b 4 0.93056 1.0946e+19 0.93056 1.0946e+19 0.375 5.5399e+18 \
+                      0.375 5.5399e+18 ab 1.0223 8.2429e+18 solid black\n"
+        ),
+        "{out}"
+    );
+    let (_, err, ok) = run(
+        &["-Tplain"],
+        "digraph{ratio=\"inf\"; a -> c; b -> c; {rank=same; f [shape=record]; a} f:p -> b}",
+    );
+    assert!(!ok);
+    assert!(
+        err.contains("Error: lost a c edge\n") && !err.contains("panicked"),
+        "{err}"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

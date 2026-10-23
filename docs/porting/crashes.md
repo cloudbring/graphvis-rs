@@ -308,7 +308,16 @@ across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
     5 s of C's work. A segment under it is refined as in C. Past it, the remaining pieces
     are taken whole, and so is every later segment of that layout. Their control points
     enclose the curve, so the bb may be a little larger than C's, on a segment that takes C
-    seconds.
+    seconds. The budget does not bound the depth: at 1e300 points a piece's half can round
+    back to the piece while `ptToLine2` overflows to NaN, and C recurses until its stack
+    overflows (#269: `ratio` or `ranksep` at 1e300). The port refines on an explicit stack in
+    C's order, and a piece deeper than C's stack holds ends the segment as the budget does.
+  - **Path boxes `add_box` drops** (#270). Huge sizes or scales (`quantum` or `ratio` at
+    1e300, cluster `fontsize` at 1e20) make some of an edge's boxes empty. `add_box` drops them,
+    but `completeregularpath` still counts them, so C's `adjustregularpath` goes past `P->nbox`.
+    Those slots are stale and nothing reads them before the next `add_box` writes them, so the
+    port stops at the last box and draws what C draws. Where every box is dropped, C segfaults
+    in `Pshortestpath`; the port's `checkpath` loses the edge.
   - **Integer conversions that C lets wrap.** Where C converts a far position to `int` and
     goes on, the port reproduces what the reference build does. fdp's `gridRepulse` (#196)
     saturates the cell index and wraps `i + 1`. neato's `initItem` for `overlap=*ortho*`
@@ -324,7 +333,7 @@ across neato, fdp, `-n` and `-n2`, with every `splines` mode, comparing `-Tdot`.
     points), and C fails `PQcheck` (#229). The ortho router's failure boundary rejects such
     distances (see above).
 
-Closed: #227, #239, #240.
+Closed: #227, #239, #240, #269, #270.
 The round-1 guards stay, because they match C and finite or NaN positions still reach them:
 #206 (the Hilbert order and shift for a bb above 2^32 points, or an infinite one), #207 (the
 wrapping grid cell index at 1e17), and #187's finiteness test in `update_bb_bz` (#173, #201).

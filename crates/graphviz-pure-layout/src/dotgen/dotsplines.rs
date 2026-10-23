@@ -2156,9 +2156,16 @@ impl Dot<'_> {
 
 /// `adjustregularpath(P, fb, lb)`: make sure the path is wide enough. `fb` and
 /// `lb` are C `size_t`s and wrap the same way.
+///
+/// `fb` and `lb` count every box `completeregularpath` was given, but `add_box` drops the
+/// empty ones, which huge sizes or scales make (#270: `quantum` or `ratio` at 1e300). C's
+/// first loop then goes past `P->nbox` into the preallocated `P->boxes`. Each pass reads and
+/// writes only `P->boxes[i]`, and the next path's `add_box` overwrites those slots before
+/// anything reads them, so they cannot change C's output. The loop stops at the last box.
 fn adjustregularpath(p: &mut Path, fb: usize, lb: usize) {
+    let end = lb.wrapping_add(1).min(p.boxes.len());
     let mut i = fb.wrapping_sub(1);
-    while i < lb.wrapping_add(1) {
+    while i < end {
         let bp1 = &mut p.boxes[i];
         if i.wrapping_sub(fb).is_multiple_of(2) {
             if bp1.ll.x >= bp1.ur.x {
@@ -2195,5 +2202,32 @@ fn adjustregularpath(p: &mut Path, fb: usize, lb: usize) {
             }
         }
         i += 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// #270: `add_box` dropped an empty box, so `fb` and `lb` reach past the boxes kept. C's
+    /// first loop reads and writes slots past `P->nbox`, which nothing reads; the kept boxes
+    /// are adjusted as C adjusts them.
+    #[test]
+    fn adjustregularpath_stops_at_the_boxes_add_box_kept() {
+        let mut p = Path {
+            boxes: vec![
+                BoxF::new(0.0, 10.0, 20.0, 20.0),
+                BoxF::new(5.0, 0.0, 5.0, 10.0),
+            ],
+            ..Path::default()
+        };
+        // Two path boxes after one tail box were expected: fb = 2, lb = 3.
+        adjustregularpath(&mut p, 2, 3);
+        assert_eq!(p.boxes.len(), 2);
+        assert_eq!(p.boxes[1], BoxF::new(-3.0, 0.0, 13.0, 10.0));
+        // Every box dropped: C's loop starts past the end.
+        let mut p = Path::default();
+        adjustregularpath(&mut p, 1, 0);
+        assert!(p.boxes.is_empty());
     }
 }

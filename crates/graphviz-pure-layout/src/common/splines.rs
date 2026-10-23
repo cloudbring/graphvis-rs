@@ -869,44 +869,62 @@ pub(crate) fn reset_bz_split_budget() {
     BZ_OUT_OF_SPLITS.with(|out| out.set(false));
 }
 
-/// Returns whether a piece needed a split the budget refused.
+/// Not in C: the deepest [`update_bb_bz`] refines one piece (#269). C recurses on both
+/// halves, left first, with no depth bound. At about 1e300 points the halves of a piece can
+/// round back to the piece itself while `ptToLine2` overflows to NaN, so
+/// `check_control_points` never accepts it and C recurses until its stack overflows (`ratio`
+/// or `ranksep` at 1e300). C's frame is 176 bytes (Homebrew 16.1.0, arm64), so its 8 MiB stack
+/// holds about 47,600 levels; this bound is above that, so every segment C finishes is refined
+/// as in C. A piece this deep ends the segment as running out of [`BZ_SPLIT_BUDGET`] does.
+const BZ_MAX_DEPTH: usize = 1 << 16;
+
+/// `update_bb_bz`'s recursion, on an explicit stack in C's order (#269): a piece's left half,
+/// then its right half. Returns whether a piece needed a split the budget refused.
 fn update_bb_bz_r(bb: &mut BoundingBox, cp: &[Point; 4], budget: &mut u64) -> bool {
-    let out = cp
-        .iter()
-        .any(|p| p.x > bb.ur.x || p.x < bb.ll.x || p.y > bb.ur.y || p.y < bb.ll.y);
-    if !out {
-        return false;
-    }
-    // C has no finiteness test. Every half `Bezier` splits off keeps the curve's midpoint,
-    // which is non-finite when any control point is, and `ptToLine2` gives inf or NaN for
-    // such a point, so `check_control_points` never accepts the segment: C either stops on a
-    // half that is not `out`, leaving `bb` as it was, or recurses until its stack overflows
-    // (#173: osage gives a repeated cluster a NaN box, and its edges inherit it; #201: neato
-    // pins a node at NaN). Leave `bb` as it was.
-    if !cp.iter().all(|p| p.x.is_finite() && p.y.is_finite()) {
-        return false;
-    }
     let mut refused = false;
-    if !check_control_points(cp) {
-        if let Some(left) = budget.checked_sub(1) {
-            *budget = left;
-            let (_, l, r) = bezier_split(cp, 0.5);
-            let refused_l = update_bb_bz_r(bb, &l, budget);
-            let refused_r = update_bb_bz_r(bb, &r, budget);
-            return refused_l || refused_r;
+    let mut stack = vec![(*cp, 0_usize)];
+    while let Some((cp, depth)) = stack.pop() {
+        let out = cp
+            .iter()
+            .any(|p| p.x > bb.ur.x || p.x < bb.ll.x || p.y > bb.ur.y || p.y < bb.ll.y);
+        if !out {
+            continue;
         }
-        refused = true;
-    }
-    for p in cp {
-        if p.x > bb.ur.x {
-            bb.ur.x = p.x;
-        } else if p.x < bb.ll.x {
-            bb.ll.x = p.x;
+        // C has no finiteness test. Every half `Bezier` splits off keeps the curve's midpoint,
+        // which is non-finite when any control point is, and `ptToLine2` gives inf or NaN for
+        // such a point, so `check_control_points` never accepts the segment: C either stops on
+        // a half that is not `out`, leaving `bb` as it was, or recurses until its stack
+        // overflows (#173: osage gives a repeated cluster a NaN box, and its edges inherit it;
+        // #201: neato pins a node at NaN). Leave `bb` as it was.
+        if !cp.iter().all(|p| p.x.is_finite() && p.y.is_finite()) {
+            continue;
         }
-        if p.y > bb.ur.y {
-            bb.ur.y = p.y;
-        } else if p.y < bb.ll.y {
-            bb.ll.y = p.y;
+        if !check_control_points(&cp) {
+            if depth >= BZ_MAX_DEPTH {
+                // Where C's stack overflows: take this piece and the rest whole.
+                *budget = 0;
+            }
+            if let Some(left) = budget.checked_sub(1) {
+                *budget = left;
+                let (_, l, r) = bezier_split(&cp, 0.5);
+                let depth = depth.saturating_add(1);
+                stack.push((r, depth));
+                stack.push((l, depth));
+                continue;
+            }
+            refused = true;
+        }
+        for p in &cp {
+            if p.x > bb.ur.x {
+                bb.ur.x = p.x;
+            } else if p.x < bb.ll.x {
+                bb.ll.x = p.x;
+            }
+            if p.y > bb.ur.y {
+                bb.ur.y = p.y;
+            } else if p.y < bb.ll.y {
+                bb.ll.y = p.y;
+            }
         }
     }
     refused
@@ -1542,5 +1560,36 @@ mod tests {
         assert_eq!(exact, 0);
         let mut short = needed - 1;
         assert!(update_bb_bz_r(&mut fresh(), &curve(100.0), &mut short));
+    }
+
+    /// #269: at 1e301 the halves of a piece can round back to the piece itself while
+    /// `ptToLine2` overflows to NaN, so C recurses on it until its stack overflows (the
+    /// segment of `digraph{ratio="1e300"; f:n -> b}`). The port stops at `BZ_MAX_DEPTH` and
+    /// takes the pieces whole; the bb still contains the curve.
+    #[test]
+    fn update_bb_bz_ends_a_piece_that_splits_into_itself() {
+        let cp = [
+            Point::new(0.0, 4.500_000_000_000_001e301),
+            Point::new(9.797_174_393_178_826e284, 6.100_000_000_000_001e301),
+            Point::new(1.205_130_684_404_372_4e143, 9.000_000_000_000_001e300),
+            Point::new(11.118_052_319_535_058, 9.000_000_000_000_001e300),
+        ];
+        reset_bz_split_budget();
+        let mut bb = BoundingBox::new(-27.0, 0.0, 27.0, 5.400_000_000_000_001e301);
+        update_bb_bz(&mut bb, &cp);
+        assert!(BZ_OUT_OF_SPLITS.with(std::cell::Cell::get));
+        // The pieces taken whole enclose the curve (up to its rounding at 1e301).
+        let slack = 1e-12 * bb.ur.y;
+        for k in 0..=64 {
+            let (p, _, _) = bezier_split(&cp, f64::from(k) / 64.0);
+            assert!(
+                bb.ll.x - slack <= p.x
+                    && p.x <= bb.ur.x + slack
+                    && bb.ll.y - slack <= p.y
+                    && p.y <= bb.ur.y + slack,
+                "{k}: {p:?} {bb:?}"
+            );
+        }
+        reset_bz_split_budget();
     }
 }
