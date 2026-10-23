@@ -192,7 +192,7 @@ impl Dot<'_> {
 
     pub fn merge_oneway(&mut self, e: E, rep: E) {
         if Some(rep) == self.edges[e].to_virt || Some(e) == self.edges[rep].to_virt {
-            // agwarningf("merge_oneway glitch\n")
+            graphviz_pure_core::diag::agwarningf("merge_oneway glitch\n");
             return;
         }
         self.edges[e].to_virt = Some(rep);
