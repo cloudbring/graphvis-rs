@@ -458,6 +458,7 @@ fn node_geometry_measured(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometr
     let obj = LabelSubstContext {
         graph_name: env.graph_name,
         pen_color: get_pen_color(attrs),
+        font_color: Some(late_nnstring(attrs, "fontcolor", "black")),
         ..obj
     };
 
@@ -588,6 +589,7 @@ fn graph_label_geometry_measured(
     let obj = LabelSubstContext {
         graph_name: name,
         pen_color: get_pen_color(attrs),
+        font_color: Some(late_nnstring(attrs, "fontcolor", "black")),
         ..LabelSubstContext::default()
     };
     let label = make_label(
@@ -660,8 +662,6 @@ pub struct EdgeLabelGeometry {
     pub label_float: bool,
 }
 
-/// `common_init_edge`: sizes the labels of an edge with effective attributes `attrs`
-/// between nodes `tail_name` and `head_name` of root graph `env.graph_name`.
 /// [`edge_label_geometry`] for the edge `id`, whose fonts are interned once per layout
 /// (`font::textfont_object`).
 pub fn edge_label_geometry_of(
@@ -678,6 +678,8 @@ pub fn edge_label_geometry_of(
     })
 }
 
+/// `common_init_edge`: sizes the labels of an edge with effective attributes `attrs`
+/// between nodes `tail_name` and `head_name` of root graph `env.graph_name`.
 pub fn edge_label_geometry(
     attrs: &AttrMap,
     tail_name: &str,
@@ -689,6 +691,8 @@ pub fn edge_label_geometry(
     let fontname = late_nnstring(attrs, "fontname", DEFAULT_FONT_NAME);
     let lfontsize = late_double(attrs, "labelfontsize", fontsize, MIN_FONT_SIZE);
     let lfontname = late_nnstring(attrs, "labelfontname", fontname);
+    let fontcolor = late_nnstring(attrs, "fontcolor", "black");
+    let lfontcolor = late_nnstring(attrs, "labelfontcolor", fontcolor);
     // Ports are bound after the labels are made, so `\E` never shows them.
     let mut obj = LabelSubstContext {
         graph_name: env.graph_name,
@@ -697,6 +701,7 @@ pub fn edge_label_geometry(
         is_edge: true,
         is_directed: directed,
         pen_color: get_pen_color(attrs),
+        font_color: Some(fontcolor),
         ..LabelSubstContext::default()
     };
     let mk = |key: &str, obj: &LabelSubstContext<'_>, name: &str, size: f64| {
@@ -713,10 +718,14 @@ pub fn edge_label_geometry(
     };
     obj.label_text = &ltext;
     obj.has_label = label.is_some();
+    let lobj = LabelSubstContext {
+        font_color: Some(lfontcolor),
+        ..obj.clone()
+    };
     EdgeLabelGeometry {
         xlabel: mk("xlabel", &obj, fontname, fontsize),
-        head_label: mk("headlabel", &obj, lfontname, lfontsize),
-        tail_label: mk("taillabel", &obj, lfontname, lfontsize),
+        head_label: mk("headlabel", &lobj, lfontname, lfontsize),
+        tail_label: mk("taillabel", &lobj, lfontname, lfontsize),
         label,
         label_float: mapbool(Some(
             attrs.get("labelfloat").map_or("false", String::as_str),

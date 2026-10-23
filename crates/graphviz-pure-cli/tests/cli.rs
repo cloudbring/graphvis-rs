@@ -4900,6 +4900,25 @@ fn nan_fontsize_takes_an_interned_fonts_size() {
             "{label}: {out}"
         );
     }
+    // dot's aux graph for flat adjacent edges measures its edge copies afresh.
+    let out = c10_plain(
+        "dot",
+        "digraph G { c -> d [label=\"first\", fontsize=30]; {rank=same; a; b}\n\
+         a:e -> b:w [label=\"WIDE LABEL HERE\", fontsize=40];\n\
+         a:e -> b:w [label=\"small\", fontsize=8]; }",
+    );
+    assert!(out.starts_with("graph 1 7.7222 3.5503\n"), "{out}");
+    assert!(out.contains(" small 4.3611 2.1452 "), "{out}");
+    // An HTML label's text takes the object's fontcolor (lp->fontcolor).
+    let (out, _, ok) = run(
+        &["-Tsvg"],
+        "digraph { a [fontcolor=blue, label=<x <B>y</B>>]; \
+         a -> b [fontcolor=gray, label=<<I>e</I>>, headlabel=<h>, labelfontcolor=red] }",
+    );
+    assert!(ok);
+    for c in ["blue", "gray", "red"] {
+        assert!(out.contains(&format!("fill=\"{c}\"")), "{c}: {out}");
+    }
     // One dictionary for the run, as C has one per GVC.
     let out = c10_plain(
         "dot",

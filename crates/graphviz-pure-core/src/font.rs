@@ -204,6 +204,23 @@ pub fn textfont_object<R>(tag: String, f: impl FnOnce() -> R) -> R {
     }
 }
 
+/// While the returned guard lives, [`textfont_object`] tags name the objects of another
+/// graph, such as dot's aux graph for flat adjacent edges, whose copies C measures (and
+/// interns) again and whose ids restart at 0. The layout's own records come back when the
+/// guard is dropped.
+pub fn textfont_other_graph() -> impl Drop {
+    struct Guard(Option<std::collections::HashMap<String, Vec<f64>>>);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            let saved = self.0.take().unwrap_or_default();
+            TEXTFONT_DT.with(|d| d.borrow_mut().objects = saved);
+        }
+    }
+    Guard(Some(
+        TEXTFONT_DT.with(|d| std::mem::take(&mut d.borrow_mut().objects)),
+    ))
+}
+
 /// Runs `f`, layout's first measurement of the labels of the object `tag` names: fonts
 /// are interned, and the sizes they get are kept for [`textfont_replaying`].
 fn textfont_recording<R>(tag: impl Into<String>, f: impl FnOnce() -> R) -> R {
@@ -328,6 +345,9 @@ pub struct LabelSubstContext<'a> {
     /// `getPenColor(obj)` (`pencolor`, else `color`), which an HTML label's outermost
     /// table without a `COLOR` takes (`make_html_label`).
     pub pen_color: Option<&'a str>,
+    /// `lp->fontcolor`, the colour an HTML label's text takes without a `COLOR` of its own
+    /// (`make_html_label`'s `env.finfo.color`); `None` is black.
+    pub font_color: Option<&'a str>,
     /// The object is a node (its name may be empty).
     pub is_node: bool,
     /// The object has a main label (`ND_label`, `ED_label`, `GD_label`), whose text is
@@ -350,6 +370,7 @@ impl<'a> LabelSubstContext<'a> {
             head_port: None,
             label_text: "",
             pen_color: None,
+            font_color: None,
             is_node: true,
             has_label: false,
         }
@@ -1092,6 +1113,7 @@ mod tests {
             head_port: None,
             label_text: "",
             pen_color: None,
+            font_color: None,
             is_node: false,
             has_label: false,
         };

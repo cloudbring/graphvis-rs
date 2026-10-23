@@ -1071,6 +1071,8 @@ impl Dot<'_> {
         aux.edges[hvye]
             .attrs
             .insert("weight".to_string(), "10000".to_string());
+        // The aux graph's objects are measured afresh, as C's dot_init_node_edge(auxg) does.
+        let _fonts = graphviz_pure_core::font::textfont_other_graph();
         graphviz_pure_geom::size_graph_nodes(&mut aux);
 
         let mut d = Dot::new(&aux);
