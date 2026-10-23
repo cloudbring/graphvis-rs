@@ -1055,41 +1055,56 @@ impl<'a> Parser<'a> {
     /// current subgraph has an edge from `t` to `h` (`ok_to_make_edge`, which looks only
     /// that way round): a new key there makes nothing.
     fn agedge(&self, t: NodeId, h: NodeId, key: Option<&(String, bool)>) -> Option<(EdgeId, bool)> {
+        let new = Some((EdgeId(self.graph.edges.len() as u32), true));
+        if key.is_none() && !self.graph.strict {
+            return new;
+        }
         let undirected = self.graph.kind == GraphKind::Undirected;
-        let between =
-            |e: &graphviz_pure_core::EdgeData, t: NodeId, h: NodeId| e.tail == t && e.head == h;
-        let probe = |edges: &[EdgeId], t: NodeId, h: NodeId| {
-            edges.iter().copied().find(|e| {
-                let ed = &self.graph.edges[e.0 as usize];
-                between(ed, t, h)
-                    && key.is_none_or(|(k, html)| {
-                        ed.key.as_deref() == Some(k.as_str()) && ed.key_html == *html
-                    })
-            })
+        let edges = &self.graph.edges;
+        // The current subgraph's edges; `None` is the root's, all of them.
+        let local = self
+            .scope_stack
+            .last()
+            .map(|s| self.graph.subgraphs[s.0 as usize].edges.as_slice());
+        // `agfindedge_by_key` in `scope` for an edge from `t` to `h`, named `key` when
+        // `keyed` (else any, `ok_to_make_edge`'s wildcard).
+        let find = |scope: Option<&[EdgeId]>, t: NodeId, h: NodeId, keyed: bool| {
+            let hit = |e: &&graphviz_pure_core::EdgeData| {
+                e.tail == t
+                    && e.head == h
+                    && (!keyed
+                        || key.is_none_or(|(k, html)| {
+                            e.key.as_deref() == Some(k.as_str()) && e.key_html == *html
+                        }))
+            };
+            match scope {
+                Some(ids) => ids.iter().map(|i| &edges[i.0 as usize]).find(hit),
+                None => edges.iter().find(hit),
+            }
+            .map(|e| e.id)
         };
-        let scope: Vec<EdgeId> = match self.scope_stack.last() {
-            Some(s) => self.graph.subgraphs[s.0 as usize].edges.clone(),
-            None => self.graph.edges.iter().map(|e| e.id).collect(),
+        // "might already exist locally", then in the root (`subedge`)
+        let scopes = if local.is_some() {
+            vec![local, None]
+        } else {
+            vec![None]
         };
-        if key.is_some() || self.graph.strict {
-            // "might already exist locally", then in the root (`subedge`)
-            let all: Vec<EdgeId> = self.graph.edges.iter().map(|e| e.id).collect();
-            for edges in [&scope, &all] {
-                let found = probe(edges, t, h)
-                    .or_else(|| if undirected { probe(edges, h, t) } else { None });
-                if let Some(e) = found {
-                    return Some((e, false));
+        for scope in scopes {
+            let found = find(scope, t, h, true).or_else(|| {
+                if undirected {
+                    find(scope, h, t, true)
+                } else {
+                    None
                 }
+            });
+            if let Some(e) = found {
+                return Some((e, false));
             }
         }
-        if self.graph.strict
-            && scope
-                .iter()
-                .any(|e| between(&self.graph.edges[e.0 as usize], t, h))
-        {
+        if self.graph.strict && find(local, t, h, false).is_some() {
             return None;
         }
-        Some((EdgeId(self.graph.edges.len() as u32), true))
+        new
     }
 
     /// grammar.y `newedge`: `agedge`, then for the edge it gives, the endpoint ports
@@ -1278,13 +1293,22 @@ impl<'a> GraphStream<'a> {
             return None;
         }
         if let Err(e) = parser.read_graph_reporting(report) {
-            self.from = None;
             // `agread` returns the graph that exhausted bison's stack, as read so far, and
-            // `dot` lays it out. C's next `agread` then starts wherever flex's buffer
-            // stopped, mid-statement; the port ends the input there instead.
+            // `dot` lays it out. The next `agread` starts after the line the scanner had
+            // read (`fgets`), whatever statement it is in the middle of.
             if parser.exhausted {
+                let at_end = parser
+                    .tokens
+                    .last()
+                    .is_some_and(|t| t.kind == TokenKind::Eof);
+                self.from = if at_end {
+                    None
+                } else {
+                    self.scan.line_end(from, parser.lexer.line())
+                };
                 return Some(Ok(parser.graph));
             }
+            self.from = None;
             return Some(Err(e));
         }
         self.from = self.scan.line_end(from, parser.rbrace_line);

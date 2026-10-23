@@ -2551,6 +2551,19 @@ fn deep_subgraph_nesting_stops_where_bisons_stack_does() {
     assert!(!ok);
     assert_eq!(err, "Error: <stdin>: memory exhausted in line 1 near 'a'\n");
     assert_eq!(out, "digraph G {\n\tnode [label=\"\\N\"];\n}\n");
+    // The next `agread` starts on the next line, in the middle of the statement, its lines
+    // counted from 1.
+    let (out, err, ok) = run(
+        &["-Tcanon"],
+        &format!("{}\n{{\n}}\ndigraph Z {{ z }}\n", nest(3332)),
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: <stdin>: memory exhausted in line 1 near 'a'\n\
+         Error: <stdin>: syntax error in line 1 near '{'\n"
+    );
+    assert_eq!(out, "digraph G {\n\tnode [label=\"\\N\"];\n}\n");
 }
 
 /// Issue #29 (was open case `tests/fuzz-open/020-parser-keyword-as-attribute-value`).
