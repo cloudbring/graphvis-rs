@@ -36,7 +36,7 @@ inputs (`gv-diff e2e`; 11 more are skipped because C's output changes from run t
 `gv-diff e2e --stock` compares with stock C on macOS instead (`tests/golden/e2e.json`, C with
 Apple's libm). It is a report and never fails: the port matches 2,471 of 2,591 inputs, and on
 every one of the other 120 it equals C with the same math, so they differ only through Apple's
-libm (114 sfdp, whose multilevel layout amplifies a last-bit difference in `pow`; 3 fdp; 1
+libm (114 sfdp, whose multilevel layout amplifies a last-bit difference in `pow`; 4 fdp; 1
 circo; 1 main).
 
 ## History: why one math library
