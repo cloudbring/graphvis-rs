@@ -61,6 +61,18 @@ pub fn c_round(f: f64) -> i32 {
     }
 }
 
+/// C's `ROUND(a * b)` as clang compiles it: the sign test reads the rounded product, and
+/// `a * b + .5` / `a * b - .5` are fused into one fma each. `POINTS(x)` is
+/// `c_round_mul(x, 72.0)`.
+#[inline]
+pub fn c_round_mul(a: f64, b: f64) -> i32 {
+    if a * b >= 0.0 {
+        a.mul_add(b, 0.5) as i32
+    } else {
+        a.mul_add(b, -0.5) as i32
+    }
+}
+
 /// C's `ROUND(f)` where clang converts through 64 bits (`fcvtzs` into an `x` register, or
 /// the vector `fcvtzs.2d`) and keeps the low 32 bits: the `i64` conversion saturates and a
 /// NaN gives 0, then the result wraps. The reference build does this where it vectorizes

@@ -38,10 +38,10 @@ pub fn round_c(f: f64) -> i32 {
     graphviz_pure_core::cnum::c_round(f)
 }
 
-/// `POINTS(a_inches)` = `ROUND(a * 72)`.
+/// `POINTS(a_inches)` = `ROUND(a * 72)`, whose `a * 72 ± .5` clang fuses.
 #[inline]
 pub fn points(inches: f64) -> i32 {
-    round_c(inches * 72.0)
+    graphviz_pure_core::cnum::c_round_mul(inches, 72.0)
 }
 
 impl Dot<'_> {

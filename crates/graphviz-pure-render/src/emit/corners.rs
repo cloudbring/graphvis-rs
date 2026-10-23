@@ -76,7 +76,8 @@ pub(crate) fn draw_special<E: Engine>(
                 af[0].y + (b[3].y - b[4].y) / 3.0,
             );
             d[2] = p(af[0].x - 2.0 * (af[0].x - b[1].x), d[1].y);
-            d[3] = p(af[0].x - 2.25 * (af[0].x - b[1].x), b[3].y);
+            // C (clang) fuses `AF[0].x - 2.25 * (AF[0].x - B[1].x)` (#96).
+            d[3] = p((af[0].x - b[1].x).mul_add(-2.25, af[0].x), b[3].y);
             d[4] = p(b[3].x, b[3].y);
             d[4..sides + 3].copy_from_slice(&af[1..sides]);
             em.polygon(&d, filled);

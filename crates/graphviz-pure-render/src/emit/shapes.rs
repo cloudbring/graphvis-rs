@@ -272,7 +272,11 @@ impl<E: Engine> Emitter<'_, E> {
         for j in 0..peripheries {
             for (i, a) in af.iter_mut().enumerate() {
                 let p = poly.vertices[i + j * sides];
-                *a = Point::new(p.x * xsize + nd.coord.x, p.y * ysize + nd.coord.y);
+                // C (clang) fuses `P.x * xsize + ND_coord(n).x` (`fmla.2d`).
+                *a = Point::new(
+                    p.x.mul_add(xsize, nd.coord.x),
+                    p.y.mul_add(ysize, nd.coord.y),
+                );
             }
             if sides <= 2 {
                 if style.wedged && j == 0 && fillcolor.contains(':') {
@@ -340,7 +344,8 @@ impl<E: Engine> Emitter<'_, E> {
             let angle1 = if i + 1 == n {
                 2.0 * std::f64::consts::PI
             } else {
-                angle0 + 2.0 * std::f64::consts::PI * s.t
+                // C (clang) fuses `angle0 + 2 * M_PI * s.t`.
+                (2.0 * std::f64::consts::PI).mul_add(s.t, angle0)
             };
             let pp = super::geom::elliptic_wedge(ctr, semi.x, semi.y, angle0, angle1);
             self.bezier(&pp, 1);

@@ -158,8 +158,9 @@ pub fn hsv2rgb(mut h: f64, s: f64, v: f64) -> (f64, f64, f64) {
         let i = h as i32;
         let f = h - f64::from(i);
         let p = v * (1.0 - s);
-        let q = v * (1.0 - s * f);
-        let t = v * (1.0 - s * (1.0 - f));
+        // C (clang) fuses `1 - s * …` into one fma.
+        let q = v * (-s).mul_add(f, 1.0);
+        let t = v * (-s).mul_add(1.0 - f, 1.0);
         match i {
             0 => (v, t, p),
             1 => (q, v, p),

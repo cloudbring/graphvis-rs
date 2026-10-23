@@ -154,7 +154,8 @@ impl Builder<'_> {
         let h = tree.r.size[1];
         let w = tree.r.size[0];
         let delta = h - w;
-        let disc = (delta * delta + 4.0 * tree.child_area).sqrt();
+        // C (clang) fuses this multiply-add.
+        let disc = delta.mul_add(delta, 4.0 * tree.child_area).sqrt();
         let m = (h + w - disc) / 2.0;
         let crec = Rectangle {
             x: [tree.r.x[0], tree.r.x[1]],

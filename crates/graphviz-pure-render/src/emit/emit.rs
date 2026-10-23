@@ -870,7 +870,8 @@ impl<'a, E: Engine> Emitter<'a, E> {
             let x = if i + 1 == n {
                 lastx
             } else {
-                pts[0].x + xdelta * s.t
+                // C (clang) fuses `pts[0].x + xdelta * s.t`.
+                xdelta.mul_add(s.t, pts[0].x)
             };
             pts[1].x = x;
             pts[2].x = x;
@@ -1390,13 +1391,20 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 let q = super::geom::computeoffset_qr(pf0, pf1, pf2, pf3, SEP);
                 off[j + 1] = q;
                 off[j + 2] = q;
-                tmp[j] = Point::new(pf0.x - numc2 * off[j].x, pf0.y - numc2 * off[j].y);
-                tmp[j + 1] = Point::new(pf1.x - numc2 * off[j + 1].x, pf1.y - numc2 * off[j + 1].y);
-                tmp[j + 2] = Point::new(pf2.x - numc2 * off[j + 2].x, pf2.y - numc2 * off[j + 2].y);
+                // C (clang) fuses each `pf.x - numc2 * offlist[j].x`.
+                let outer = |pf: Point, o: Point| {
+                    Point::new((-numc2).mul_add(o.x, pf.x), (-numc2).mul_add(o.y, pf.y))
+                };
+                tmp[j] = outer(pf0, off[j]);
+                tmp[j + 1] = outer(pf1, off[j + 1]);
+                tmp[j + 2] = outer(pf2, off[j + 2]);
                 j += 3;
             }
             off[j] = super::geom::computeoffset_p(pf2, pf3, SEP);
-            tmp[j] = Point::new(pf3.x - numc2 * off[j].x, pf3.y - numc2 * off[j].y);
+            tmp[j] = Point::new(
+                (-numc2).mul_add(off[j].x, pf3.x),
+                (-numc2).mul_add(off[j].y, pf3.y),
+            );
             offs.push(off);
             tmps.push(tmp);
         }
@@ -1631,8 +1639,12 @@ fn find_ortho_corners(pts: &[Point], radius: f64) -> Vec<Corner> {
         };
         corners.push(Corner {
             idx: i,
-            trunc_prev: Point::new(curr.x - dx1 * radius, curr.y - dy1 * radius),
-            trunc_next: Point::new(curr.x + dx2 * radius, curr.y + dy2 * radius),
+            // C (clang) fuses `curr ± d * radius`.
+            trunc_prev: Point::new(
+                (-dx1).mul_add(radius, curr.x),
+                (-dy1).mul_add(radius, curr.y),
+            ),
+            trunc_next: Point::new(dx2.mul_add(radius, curr.x), dy2.mul_add(radius, curr.y)),
             center: Point::new(cx, cy),
             angle1: a1,
             angle2: a2,

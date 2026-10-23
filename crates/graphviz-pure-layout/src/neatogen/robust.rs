@@ -8,9 +8,11 @@
 
 use std::cmp::Ordering;
 
-const EPSILON: f64 = f64::EPSILON / 2.0; // 2^-53, Shewchuk's `epsilon`
-const CCW_ERRBOUND_A: f64 = (3.0 + 16.0 * EPSILON) * EPSILON;
-const ICC_ERRBOUND_A: f64 = (10.0 + 96.0 * EPSILON) * EPSILON;
+// Shewchuk's `(3 + 16ε)ε` and `(10 + 96ε)ε` (ε = 2^-53) as GTS's generated
+// `predicates_init.h` stores them: printed with `%.16g`, so each is one ulp
+// above the exact product.
+const CCW_ERRBOUND_A: f64 = 3.330669073875472e-16;
+const ICC_ERRBOUND_A: f64 = 1.110223024625158e-15;
 
 /// Sign-magnitude big integer (little-endian 32-bit limbs).
 #[derive(Clone, Debug, Default)]
@@ -212,19 +214,26 @@ pub fn incircle(a: (f64, f64), b: (f64, f64), c: (f64, f64), d: (f64, f64)) -> f
     let (adx, ady) = (a.0 - d.0, a.1 - d.1);
     let (bdx, bdy) = (b.0 - d.0, b.1 - d.1);
     let (cdx, cdy) = (c.0 - d.0, c.1 - d.1);
+    // C (clang) fuses the lifts, `det` and `permanent` (the `fmadd`s of
+    // `_incircle` in libgts): `x*x + y*y` = fma(x, x, y*y), and
+    // `a*b + c*d + e*f` = fma(e, f, fma(a, b, c*d)).
     let bdxcdy = bdx * cdy;
     let cdxbdy = cdx * bdy;
-    let alift = adx * adx + ady * ady;
+    let alift = adx.mul_add(adx, ady * ady);
     let cdxady = cdx * ady;
     let adxcdy = adx * cdy;
-    let blift = bdx * bdx + bdy * bdy;
+    let blift = bdx.mul_add(bdx, bdy * bdy);
     let adxbdy = adx * bdy;
     let bdxady = bdx * ady;
-    let clift = cdx * cdx + cdy * cdy;
-    let det = alift * (bdxcdy - cdxbdy) + blift * (cdxady - adxcdy) + clift * (adxbdy - bdxady);
-    let permanent = (bdxcdy.abs() + cdxbdy.abs()) * alift
-        + (cdxady.abs() + adxcdy.abs()) * blift
-        + (adxbdy.abs() + bdxady.abs()) * clift;
+    let clift = cdx.mul_add(cdx, cdy * cdy);
+    let det = clift.mul_add(
+        adxbdy - bdxady,
+        alift.mul_add(bdxcdy - cdxbdy, blift * (cdxady - adxcdy)),
+    );
+    let permanent = (adxbdy.abs() + bdxady.abs()).mul_add(
+        clift,
+        (bdxcdy.abs() + cdxbdy.abs()).mul_add(alift, (cdxady.abs() + adxcdy.abs()) * blift),
+    );
     if det.abs() > ICC_ERRBOUND_A * permanent {
         return det;
     }

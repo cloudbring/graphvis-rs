@@ -581,7 +581,11 @@ pub fn bend(spl: &mut [Point; 4], centroid: Point) {
     if mag_v == 0.0 {
         return;
     }
-    let a = Point::new(midpt.x - vx / mag_v * r, midpt.y - vy / mag_v * r);
+    // C (clang) fuses `midpt - v / magV * r`.
+    let a = Point::new(
+        (-(vx / mag_v)).mul_add(r, midpt.x),
+        (-(vy / mag_v)).mul_add(r, midpt.y),
+    );
     spl[1] = a;
     spl[2] = a;
 }

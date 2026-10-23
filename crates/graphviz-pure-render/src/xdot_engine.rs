@@ -181,9 +181,10 @@ impl XdotEngine {
             let c1 = if o.gradient_angle == 0 {
                 g[0]
             } else {
+                // C (clang) fuses `G[0] + r2 / 4 * cos/sin(angle)`.
                 Point::new(
-                    g[0].x + r2 / 4.0 * math::cos(angle),
-                    g[0].y + r2 / 4.0 * math::sin(angle),
+                    (r2 / 4.0).mul_add(math::cos(angle), g[0].x),
+                    (r2 / 4.0).mul_add(math::sin(angle), g[0].y),
                 )
             };
             let r1 = r2 / 4.0;
