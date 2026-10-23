@@ -1,5 +1,7 @@
 {
   "files": {
+    "circo/fuzz_blockpath_edgeless_block": "5c9e2b2a1770af15",
+    "circo/fuzz_xlabels_hilbert_signed_key": "c5b33beab58c94b0",
     "circo/fx_ER": "9fda50ae32a05af9",
     "circo/fx_Heawood": "969d2eb365e62f8b",
     "circo/fx_NaN": "7db9ae9eaa4fb999",
@@ -280,9 +282,11 @@
     "circo/wild_wild_graphs_b278_ab7732": "61739d02471c0445",
     "circo/wild_wild_graphs_b993_80226a": "6b32441d10a4bc81",
     "circo/wild_wild_graphs_complex_edges_71191c": "d8a51786bc28dba4",
+    "fdp/fuzz_cluster_port_sincos": "cc2e610be9ed917d",
     "fdp/fuzz_noncomparable_clusters": "d262868ad7bb79f7",
     "fdp/fuzz_voronoi_record": "d2c084ad680c9ec9",
     "fdp/fuzz_voronoi_shape": "3ac752a0e5259907",
+    "fdp/fuzz_xlabels_hilbert_signed_key": "6b1b9fe8c8613065",
     "fdp/fx_ER": "f137216582c53bc4",
     "fdp/fx_Heawood": "f8588116c75b45e7",
     "fdp/fx_NaN": "c3b1f709f3de677f",
@@ -2590,12 +2594,14 @@
     "twopi/wild_gv16_undirected_ngk10_4_793340": "e088cfb2115f6ce5",
     "twopi/wild_wild_graphs_b278_ab7732": "eb1e58522b006c0a",
     "twopi/wild_wild_graphs_b993_80226a": "92e0e5dabf388832",
-    "twopi/wild_wild_graphs_complex_edges_71191c": "15c664bc0ce8d8c6",
-    "fdp/fuzz_cluster_port_sincos": "cc2e610be9ed917d"
+    "twopi/wild_wild_graphs_complex_edges_71191c": "15c664bc0ce8d8c6"
   },
   "unstable": [
     "fdp/wild_gv16_infosrc_plugins_1a797f",
     "fdp/wild_gv16_undirected_ngk10_4_793340",
+    "neato/fuzz_ipsep_cluster_other_component",
+    "neato/fuzz_ipsep_vpsc_clusters",
+    "neato/fuzz_nan_pin_edge",
     "sfdp/wild_gv16_linux_x86_neatosplines_neato1_448ced",
     "twopi/fx_arrows",
     "twopi/wild_gv16_directed_oldarrows_f70da3",
