@@ -438,7 +438,12 @@ impl<'g> GraphJobs<'g> {
             OutputFormat::Plain => {
                 emit_null(&m, DOT_FEATURES, name);
                 let zoom = emit::job::Job::new(&m, DOT_FEATURES, 0).zoom;
-                emit::output::write_plain(&m, zoom, name.eq_ignore_ascii_case("plain-ext"))
+                emit::output::write_plain(
+                    &m,
+                    zoom,
+                    name.eq_ignore_ascii_case("plain-ext"),
+                    self.set.as_ref(),
+                )
             }
             OutputFormat::Canon => unreachable!(),
         })

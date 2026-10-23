@@ -796,39 +796,27 @@ impl Tk<'_> {
         self.data_chars(p, true)
     }
 
-    /// The tokens of `prologTok` that `epilogProcessor` accepts (space, comments and PIs),
-    /// and where it rejects the others.
+    /// `prologTok`, as `epilogProcessor` sees it: space (`DataNewline`), comments and PIs,
+    /// which it accepts; `Invalid`, `Partial` and `PartialChar`; and every other token,
+    /// complete or cut off by the end of the buffer, as `Junk`.
     fn epilog_tok(&self, mut p: usize) -> T {
         if p >= self.end() {
             return T::None;
         }
         match self.bt(p) {
+            Bt::Quot | Bt::Apos => self.scan_lit(p + 1, self.bt(p)),
             Bt::Lt => {
                 p += 1;
                 if !self.has(p, 1) {
                     return T::Partial;
                 }
                 match self.bt(p) {
-                    // scanDecl: `<!-` starts a comment, a declaration is junk
-                    Bt::Excl => {
-                        p += 1;
-                        if !self.has(p, 1) {
-                            return T::Partial;
-                        }
-                        match self.bt(p) {
-                            Bt::Minus => self.scan_comment(p + 1),
-                            Bt::Lsqb => T::Junk,
-                            _ => match self.name_case(p, true) {
-                                Some(Err(t)) => t,
-                                Some(Ok(_)) => T::Junk,
-                                None => T::Invalid(p),
-                            },
-                        }
-                    }
+                    Bt::Excl => self.scan_decl(p + 1),
                     Bt::Quest => match self.scan_pi(p + 1) {
                         T::XmlDecl(_) => T::Junk,
                         t => t,
                     },
+                    // XML_TOK_INSTANCE_START
                     Bt::Nmstrt | Bt::Hex | Bt::Lead2 | Bt::Lead3 | Bt::Lead4 => T::Junk,
                     _ => T::Invalid(p),
                 }
@@ -839,12 +827,195 @@ impl Tk<'_> {
                 }
                 T::DataNewline(p)
             }
-            Bt::Amp | Bt::Semi | Bt::Equals | Bt::Gt | Bt::Excl | Bt::Sol | Bt::Other => {
-                T::Invalid(p)
+            Bt::Percnt => self.scan_percent(p + 1),
+            Bt::Comma | Bt::Lsqb | Bt::Lpar | Bt::Verbar | Bt::Gt => T::Junk,
+            Bt::Rsqb => {
+                p += 1;
+                if self.has(p, 1) && self.is(p, b']') && !self.has(p, 2) {
+                    return T::Partial;
+                }
+                T::Junk
             }
-            Bt::Nonxml | Bt::Malform | Bt::Trail => T::Invalid(p),
-            _ => T::Junk,
+            Bt::Rpar => {
+                p += 1;
+                if !self.has(p, 1) {
+                    return T::Junk;
+                }
+                match self.bt(p) {
+                    Bt::Ast | Bt::Quest | Bt::Plus => T::Junk,
+                    Bt::Cr | Bt::Lf | Bt::S | Bt::Gt | Bt::Comma | Bt::Verbar | Bt::Rpar => T::Junk,
+                    _ => T::Invalid(p),
+                }
+            }
+            Bt::Num => {
+                // scanPoundName
+                p += 1;
+                if !self.has(p, 1) {
+                    return T::Partial;
+                }
+                match self.name_case(p, true) {
+                    Some(Ok(q)) => p = q,
+                    Some(Err(t)) => return t,
+                    None => return T::Invalid(p),
+                }
+                while self.has(p, 1) {
+                    match self.name_case(p, false) {
+                        Some(Ok(q)) => p = q,
+                        Some(Err(t)) => return t,
+                        None => {
+                            return match self.bt(p) {
+                                Bt::Cr
+                                | Bt::Lf
+                                | Bt::S
+                                | Bt::Rpar
+                                | Bt::Gt
+                                | Bt::Percnt
+                                | Bt::Verbar => T::Junk,
+                                _ => T::Invalid(p),
+                            };
+                        }
+                    }
+                }
+                T::Junk
+            }
+            bt => {
+                // a name (XML_TOK_NAME) or a name token (XML_TOK_NMTOKEN)
+                let name = match Self::lead_len(bt) {
+                    Some(n) => {
+                        if !self.has(p, n) {
+                            return T::PartialChar;
+                        }
+                        let c = &self.d[p..p + n];
+                        if utf8_invalid(c) {
+                            return T::Invalid(p);
+                        }
+                        let name = if utf8_naming(&NMSTRT_PAGES, c) {
+                            true
+                        } else if utf8_naming(&NAME_PAGES, c) {
+                            false
+                        } else {
+                            return T::Invalid(p);
+                        };
+                        p += n;
+                        name
+                    }
+                    None => match bt {
+                        Bt::Nmstrt | Bt::Hex => {
+                            p += 1;
+                            true
+                        }
+                        Bt::Digit | Bt::Name | Bt::Minus => {
+                            p += 1;
+                            false
+                        }
+                        _ => return T::Invalid(p),
+                    },
+                };
+                while self.has(p, 1) {
+                    match self.name_case(p, false) {
+                        Some(Ok(q)) => p = q,
+                        Some(Err(t)) => return t,
+                        None => {
+                            return match self.bt(p) {
+                                Bt::Gt
+                                | Bt::Rpar
+                                | Bt::Comma
+                                | Bt::Verbar
+                                | Bt::Lsqb
+                                | Bt::Percnt
+                                | Bt::S
+                                | Bt::Cr
+                                | Bt::Lf => T::Junk,
+                                Bt::Plus | Bt::Ast | Bt::Quest if name => T::Junk,
+                                _ => T::Invalid(p),
+                            };
+                        }
+                    }
+                }
+                T::Junk
+            }
         }
+    }
+
+    /// `scanLit`: `p` follows the opening quote `open`.
+    fn scan_lit(&self, mut p: usize, open: Bt) -> T {
+        while self.has(p, 1) {
+            if let Some(r) = self.invalid_case(p) {
+                match r {
+                    Ok(q) => p = q,
+                    Err(t) => return t,
+                }
+                continue;
+            }
+            let t = self.bt(p);
+            p += 1;
+            if t == open {
+                if !self.has(p, 1) {
+                    return T::Junk;
+                }
+                return match self.bt(p) {
+                    Bt::S | Bt::Cr | Bt::Lf | Bt::Gt | Bt::Percnt | Bt::Lsqb => T::Junk,
+                    _ => T::Invalid(p),
+                };
+            }
+        }
+        T::Partial
+    }
+
+    /// `scanDecl`: `p` follows `<!`.
+    fn scan_decl(&self, mut p: usize) -> T {
+        if !self.has(p, 1) {
+            return T::Partial;
+        }
+        match self.bt(p) {
+            Bt::Minus => return self.scan_comment(p + 1),
+            Bt::Lsqb => return T::Junk,
+            Bt::Nmstrt | Bt::Hex => p += 1,
+            _ => return T::Invalid(p),
+        }
+        while self.has(p, 1) {
+            match self.bt(p) {
+                Bt::Percnt => {
+                    if !self.has(p, 2) {
+                        return T::Partial;
+                    }
+                    if matches!(self.bt(p + 1), Bt::S | Bt::Cr | Bt::Lf | Bt::Percnt) {
+                        return T::Invalid(p);
+                    }
+                    return T::Junk;
+                }
+                Bt::S | Bt::Cr | Bt::Lf => return T::Junk,
+                Bt::Nmstrt | Bt::Hex => p += 1,
+                _ => return T::Invalid(p),
+            }
+        }
+        T::Partial
+    }
+
+    /// `scanPercent`: `p` follows `%`.
+    fn scan_percent(&self, mut p: usize) -> T {
+        if !self.has(p, 1) {
+            return T::Partial;
+        }
+        match self.name_case(p, true) {
+            Some(Ok(q)) => p = q,
+            Some(Err(t)) => return t,
+            None => {
+                return match self.bt(p) {
+                    Bt::S | Bt::Lf | Bt::Cr | Bt::Percnt => T::Junk,
+                    _ => T::Invalid(p),
+                };
+            }
+        }
+        while self.has(p, 1) {
+            match self.name_case(p, false) {
+                Some(Ok(q)) => p = q,
+                Some(Err(t)) => return t,
+                None if self.bt(p) == Bt::Semi => return T::Junk,
+                None => return T::Invalid(p),
+            }
+        }
+        T::Partial
     }
 
     /// `XmlNameLength`.

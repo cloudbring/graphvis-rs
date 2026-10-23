@@ -268,8 +268,9 @@ struct Lexer {
     pending: Pending,
     /// `ctx->xb`: the text `characterData` gathers for `T_string`.
     xb: Vec<u8>,
-    /// `lexerror`'s messages.
-    unknown: Vec<String>,
+    /// `lexerror`'s messages, each with the index of the token whose `htmllex` call printed
+    /// it.
+    errors: Vec<(usize, String)>,
     /// `doAttrs` warnings: the index of the token whose unit printed them, the message and
     /// whether it sets `ctx->warn`.
     warnings: Vec<(usize, String, bool)>,
@@ -760,8 +761,11 @@ impl Lexer {
     /// `lexerror`.
     fn lexerror(&mut self, name: &str, line: usize) {
         self.cur = None;
-        self.unknown
-            .push(format!("Unknown HTML element <{name}> on line {line} \n"));
+        let at = self.toks.len();
+        self.errors.push((
+            at,
+            format!("Unknown HTML element <{name}> on line {line} \n"),
+        ));
     }
 
     /// The token `htmllex` returns once `XML_Parse` has produced one.
@@ -883,6 +887,8 @@ struct Lexed {
     /// `XML_GetCurrentLineNumber` after each unit's `XML_Parse`: the line of expat's buffer
     /// position, where `htmlerror` reports a syntax error found after reading the unit.
     unit_line: Vec<usize>,
+    /// [`Lexer::errors`].
+    errors: Vec<(usize, String)>,
     /// [`Lexer::warnings`].
     warnings: Vec<(usize, String, bool)>,
 }
@@ -896,7 +902,7 @@ fn lex(s: &[u8], enc: expat::Enc) -> (Lexed, Option<HtmlError>) {
         cur: None,
         pending: Pending::None,
         xb: Vec::new(),
-        unknown: Vec::new(),
+        errors: Vec::new(),
         warnings: Vec::new(),
     };
     let mut units: Vec<String> = Vec::new();
@@ -906,12 +912,16 @@ fn lex(s: &[u8], enc: expat::Enc) -> (Lexed, Option<HtmlError>) {
     let mut feed = |lx: &mut Lexer, raw: &[u8], data: &[u8]| {
         units.push(charset::decode_slice(raw));
         let u = units.len() - 1;
+        let before = lx.errors.len();
         let r = xml.parse(data, lx);
-        if !lx.unknown.is_empty() {
+        // lexerror's T_error, unless a later event of the same parse set another token: then
+        // C lexes on, with `ctx->error` set
+        if lx.errors.len() > before && lx.cur.is_none() {
             return Err((String::new(), u, None));
         }
         if let Err(e) = r {
-            // T_error replaces the parse's token
+            // T_error replaces the parse's token. After a lexerror, `ctx->error` keeps the
+            // message back, and no token comes any more: every later `XML_Parse` fails.
             return Err((e.msg.to_string(), u, Some(xml.line(e.at))));
         }
         unit_line.push(xml.line(xml.position()));
@@ -969,12 +979,12 @@ fn lex(s: &[u8], enc: expat::Enc) -> (Lexed, Option<HtmlError>) {
         }
         feed(&mut lx, b"</HTML>", b"</HTML>")
     })();
-    let unknown = std::mem::take(&mut lx.unknown);
     let lexed = Lexed {
         toks: lx.toks,
         tok_unit,
         units: units.clone(),
         unit_line,
+        errors: lx.errors,
         warnings: lx.warnings,
     };
     match res {
@@ -986,7 +996,7 @@ fn lex(s: &[u8], enc: expat::Enc) -> (Lexed, Option<HtmlError>) {
                 unit,
                 units,
                 line,
-                unknown,
+                unknown: Vec::new(),
             }),
         ),
     }
@@ -1402,8 +1412,12 @@ pub fn parse_html_report(text: &str, cs: Charset) -> Result<HtmlLabel, HtmlError
 pub type HtmlWarnings = Vec<(String, bool)>;
 
 /// [`parse_html_report`] plus the `doAttrs` warnings of the tokens C's on-demand lexer
-/// reads before it succeeds or fails.
-pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>, HtmlWarnings) {
+/// reads before it succeeds or fails, and the `lexerror` messages printed for a label that
+/// parses all the same (C makes it, and `parseHTML` returns 3).
+pub fn parse_html_warn(
+    text: &str,
+    cs: Charset,
+) -> (Result<HtmlLabel, HtmlError>, HtmlWarnings, Vec<String>) {
     let enc = match cs {
         // XML_ParserCreate("BIG-5"): expat has no such encoding and rejects the first unit.
         Charset::Big5 => {
@@ -1414,7 +1428,7 @@ pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>
                 line: Some(1),
                 unknown: Vec::new(),
             };
-            return (Err(e), Vec::new());
+            return (Err(e), Vec::new(), Vec::new());
         }
         Charset::Utf8 => expat::Enc::Utf8,
         Charset::Latin1 => expat::Enc::Latin1,
@@ -1428,6 +1442,7 @@ pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>
         tok_unit,
         units,
         unit_line,
+        errors,
         warnings,
     } = lexed;
     let ntoks = toks.len();
@@ -1452,28 +1467,38 @@ pub fn parse_html_warn(text: &str, cs: Charset) -> (Result<HtmlLabel, HtmlError>
         .filter(|&(at, ..)| at <= read)
         .map(|(_, m, set)| (m, set))
         .collect();
-    if let Some(e) = lex_err {
+    // lexerror's messages of the tokens the parser read
+    let printed: Vec<String> = errors
+        .into_iter()
+        .filter(|&(at, _)| at <= read)
+        .map(|(_, m)| m)
+        .collect();
+    if let Some(mut e) = lex_err {
         if res.is_err() && p.furthest.get() < ntoks {
             // the parser failed on a token it was given
         } else {
-            return (Err(e), warnings);
+            e.unknown = printed;
+            return (Err(e), warnings, Vec::new());
         }
     }
-    let res = res.map_err(|()| {
-        // At end of input yacc's context is the last unit read (`</HTML>`).
-        let unit = tok_unit
-            .get(p.furthest.get())
-            .copied()
-            .unwrap_or(units.len() - 1);
-        HtmlError {
-            msg: p.err_msg.unwrap_or("syntax error").to_string(),
-            unit,
-            units,
-            line: unit_line.get(unit).copied(),
-            unknown: Vec::new(),
-        }
-    });
-    (res, warnings)
+    if let Ok(l) = res {
+        // the label stands although lexerror printed (`parseHTML` returns it with rv 3)
+        return (Ok(l), warnings, printed);
+    }
+    // At end of input yacc's context is the last unit read (`</HTML>`).
+    let unit = tok_unit
+        .get(p.furthest.get())
+        .copied()
+        .unwrap_or(units.len() - 1);
+    let e = HtmlError {
+        msg: p.err_msg.unwrap_or("syntax error").to_string(),
+        unit,
+        units,
+        line: unit_line.get(unit).copied(),
+        // after a lexerror, `ctx->error` keeps htmlerror quiet
+        unknown: printed,
+    };
+    (Err(e), warnings, Vec::new())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2182,10 +2207,13 @@ pub fn make_html_label(
 ) -> HtmlLabelLayout {
     let owner = html_label_owner(obj);
     let report = graphviz_pure_core::diag::reporting();
-    let (res, warnings) = parse_html_warn(text, cs);
+    let (res, warnings, errors) = parse_html_warn(text, cs);
     if report {
         for (m, _) in &warnings {
             graphviz_pure_core::diag::agwarningf(m);
+        }
+        for m in &errors {
+            graphviz_pure_core::diag::agerrorf(m);
         }
     }
     let mut lbl = match res {
@@ -2215,7 +2243,7 @@ pub fn make_html_label(
         obj,
         savef: SaveFont::default(),
         report,
-        warn: warnings.iter().any(|&(_, set)| set),
+        warn: !errors.is_empty() || warnings.iter().any(|&(_, set)| set),
     };
     let dimen = match &mut lbl {
         HtmlLabel::Table(tbl) => {
@@ -2484,6 +2512,43 @@ mod tests {
         // a partial comment holds expat's position on its first line
         let (msg, _) = label_error("<!-- x >\n\nw");
         assert_eq!(msg, "syntax error in line 1 \n");
+    }
+
+    // After the root element, expat reads with its prolog tokenizer (`epilogProcessor`):
+    // space, comments and PIs pass, other tokens are junk, broken ones invalid, and an
+    // unfinished one waits.
+    #[test]
+    fn after_the_root_expat_reads_the_epilog() {
+        let nwf = "not well-formed (invalid token) in line 1 \n";
+        assert_eq!(label_error("x</HTML><!DOCTYPE>").0, nwf);
+        assert_eq!(label_error("x</HTML>abc!").0, nwf);
+        assert_eq!(
+            label_error("x</HTML>abc").0,
+            "junk after document element in line 1 \n"
+        );
+        // htmllex's own `</HTML>` comes after the root too
+        assert_eq!(
+            label_error("x</HTML>  <!-- c --><?p q?>"),
+            (nwf.to_string(), "... <?p q?></HTML> ...\n".to_string())
+        );
+        // an unterminated literal waits for more input
+        assert_eq!(label_text("x</HTML>\"y"), "x");
+    }
+
+    // lexerror's T_error is overwritten when a deferred parse goes on to another token: C
+    // lexes on, and makes the label if the grammar accepts it (parseHTML returns 3).
+    #[test]
+    fn a_label_stands_when_a_later_token_overwrites_lexerror() {
+        let (res, _, errors) =
+            parse_html_warn("x<!-- yyyyyyyyyyyyyy ><z--><Q/><B>t</B>", Charset::Utf8);
+        assert!(res.is_ok());
+        assert_eq!(
+            errors,
+            vec!["Unknown HTML element <Q> on line 1 \n".to_string(); 2]
+        );
+        // without the deferral, T_error reaches the parser
+        let (res, _, errors) = parse_html_warn("x<Q/><B>t</B>", Charset::Utf8);
+        assert!(res.is_err() && errors.is_empty());
     }
 
     // #349: names take XML's name characters (`nametab.h`), not every byte from 0x80.

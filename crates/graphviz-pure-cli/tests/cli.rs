@@ -716,6 +716,20 @@ fn plain_label_field_is_empty_where_c_reads_freed_memory() {
     assert!(edge(r#"digraph { c -> e [label="\H\T"] }"#).contains(" 0.66136  0.4613 "));
     // an attribute name is in the dictionary too
     assert!(edge("digraph { c -> e [label=<label>] }").contains(" label "));
+    // `-Tdot` before `-Tplain` stores the layout's values (`lp="0.5,..."`, `height=0.5`)
+    let (out, _, ok) = run(&["-Tdot", "-Tplain"], "digraph { c -> e [label=<0.5>] }");
+    assert!(ok);
+    assert!(
+        out.contains(" 0.66136 0.5 0.49653 0.86667 solid black"),
+        "{out}"
+    );
+    // fdp's cluster nodes are gone by then: an edge end at `<cluster_x>` is freed memory too
+    let (out, _, ok) = run(
+        &["-Kfdp", "-Tplain"],
+        "graph { subgraph <cluster_x> { a } cluster_x -- b [label=<cluster_x>] }",
+    );
+    assert!(ok);
+    assert!(out.contains("\nedge  b 4 "), "{out}");
     // a node named `<b>` has the plain text `b` as its default label
     let (out, _, ok) = run(&["-Tplain"], "digraph { <b> }");
     assert!(ok);
