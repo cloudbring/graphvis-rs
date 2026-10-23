@@ -49,6 +49,27 @@ pub fn mapbool(p: Option<&str>) -> bool {
     map_bool(p, false)
 }
 
+thread_local! {
+    /// `PSinputscale` as `dot -s` set it (0 when not set).
+    static PS_INPUTSCALE: std::cell::Cell<f64> = const { std::cell::Cell::new(0.0) };
+}
+
+/// Sets `PSinputscale` (`dot -s`) for the layouts that follow on this thread.
+pub fn set_ps_inputscale(scale: f64) {
+    PS_INPUTSCALE.with(|s| s.set(scale));
+}
+
+/// `get_inputscale(g)` (`lib/common/utils.c`): `dot -s` when set, else the `inputscale`
+/// attribute (low 0), 72 for 0, -1 when absent.
+pub fn get_inputscale(attrs: &AttrMap) -> f64 {
+    let ps = PS_INPUTSCALE.with(std::cell::Cell::get);
+    if ps > 0.0 {
+        return ps;
+    }
+    let d = late_double(attrs, "inputscale", -1.0, 0.0);
+    if d == 0.0 { 72.0 } else { d }
+}
+
 /// `late_double` on an attribute map (absent or empty means "use default").
 pub fn late_double(attrs: &AttrMap, key: &str, def: f64, low: f64) -> f64 {
     match attrs.get(key) {

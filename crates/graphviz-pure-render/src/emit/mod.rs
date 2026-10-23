@@ -22,9 +22,35 @@ use job::{Emitter, Engine, Job};
 use model::Model;
 
 thread_local! {
+    /// `Y_invert` (`dot -y`): the writers flip every y coordinate about the bounding box.
+    static Y_INVERT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// `job->flags`: gvRenderJobs ORs each graph's `chkOrder` into the job, which `dot`
     /// reuses for every graph it renders, so an `outputorder` stays for later graphs.
     static ORDER_FLAGS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Sets `Y_invert`, as `dot -y` does for the whole run.
+pub fn set_y_invert(on: bool) {
+    Y_INVERT.with(|c| c.set(on));
+}
+
+/// `setYInvert(g)`: the `Y` of `offsets_t`, `ymin + ymax` of the bounding box when `Y_invert`
+/// is set, else 0.
+pub(crate) fn y_offset(bb: graphviz_pure_core::BoundingBox) -> f64 {
+    if Y_INVERT.with(std::cell::Cell::get) {
+        bb.ur.y + bb.ll.y
+    } else {
+        0.0
+    }
+}
+
+/// `yDir(y, Y_off)` (`lib/common/output.c`).
+pub(crate) fn y_dir(y: f64, y_off: f64) -> f64 {
+    if Y_INVERT.with(std::cell::Cell::get) {
+        y_off - y
+    } else {
+        y
+    }
 }
 
 /// Output order flags from the graph's `outputorder` (`chkOrder`), accumulated.

@@ -154,6 +154,18 @@ pub const IGNORED_EDGE_INPUT_KEYS: [(&str, &str); 3] = [
     ("xlp", ignored_edge_key!("xlp")),
 ];
 
+/// Label position attributes a layout writes on nodes and edges to pass its result to the
+/// renderers (`ED_head_label(e)->pos` and the like), which C keeps out of the cgraph until
+/// `attach_attrs` runs.
+pub const LAYOUT_LABEL_POS_KEYS: [&str; 3] = ["xlp", "head_lp", "tail_lp"];
+/// Prefix of the node or edge attribute keeping the input value of a
+/// [`LAYOUT_LABEL_POS_KEYS`] attribute the layout overwrote (an empty key after it: none),
+/// for the writers that print the graph without the layout's attributes.
+pub const LAYOUT_INPUT_PREFIX: &str = "\u{1}input:";
+/// Prefix of the node or edge attribute marking a [`LAYOUT_LABEL_POS_KEYS`] attribute the
+/// layout set where the input had none.
+pub const LAYOUT_NO_INPUT_PREFIX: &str = "\u{1}noinput:";
+
 /// Node attribute set by a layout whose node has `ND_lw != ND_rw` (dot keeps the self-loop
 /// space in `ND_rw` when `dot_splines_` skips `resetRW`, or with `splines=curved` undoes
 /// it): `"lw,rw"` in points. Renderers split
@@ -258,6 +270,56 @@ impl Graph {
         });
         self.node_lookup.insert(name.to_string(), id);
         id
+    }
+
+    /// `agdelete(root, n)` of every node `delete` marks: the nodes go, with their edges, from
+    /// the graph and every subgraph. The objects left keep their cgraph sequence numbers
+    /// ([`SEQ_KEY`]), which object ids in the output are made of.
+    pub fn delete_nodes(&mut self, delete: &[bool]) {
+        let mut node_map = vec![None; self.nodes.len()];
+        let mut nodes = Vec::with_capacity(self.nodes.len());
+        for (i, mut n) in std::mem::take(&mut self.nodes).into_iter().enumerate() {
+            if delete.get(i).copied().unwrap_or(false) {
+                continue;
+            }
+            n.attrs
+                .entry(SEQ_KEY.to_string())
+                .or_insert_with(|| (i + 1).to_string());
+            let id = NodeId(nodes.len() as u32);
+            node_map[i] = Some(id);
+            n.id = id;
+            nodes.push(n);
+        }
+        self.nodes = nodes;
+        let mut edge_map = vec![None; self.edges.len()];
+        let mut edges = Vec::with_capacity(self.edges.len());
+        for (i, mut e) in std::mem::take(&mut self.edges).into_iter().enumerate() {
+            let (Some(t), Some(h)) = (node_map[e.tail.0 as usize], node_map[e.head.0 as usize])
+            else {
+                continue;
+            };
+            e.attrs
+                .entry(SEQ_KEY.to_string())
+                .or_insert_with(|| (i + 1).to_string());
+            let id = EdgeId(edges.len() as u32);
+            edge_map[i] = Some(id);
+            (e.id, e.tail, e.head) = (id, t, h);
+            edges.push(e);
+        }
+        self.edges = edges;
+        for sg in &mut self.subgraphs {
+            sg.nodes = sg
+                .nodes
+                .iter()
+                .filter_map(|n| node_map[n.0 as usize])
+                .collect();
+            sg.edges = sg
+                .edges
+                .iter()
+                .filter_map(|e| edge_map[e.0 as usize])
+                .collect();
+        }
+        self.node_lookup = self.nodes.iter().map(|n| (n.name.clone(), n.id)).collect();
     }
 
     pub fn add_edge(&mut self, tail: NodeId, head: NodeId, attrs: AttrMap) -> EdgeId {

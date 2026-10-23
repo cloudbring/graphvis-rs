@@ -24,8 +24,8 @@ pub const INIT_REGULAR: i32 = 1;
 pub const INIT_RANDOM: i32 = 2;
 
 /// `fdpParms_t` defaults (`lib/common/globals.c`); never changed without
-/// command-line flags.
-#[derive(Debug, Clone)]
+/// command-line flags (`-L`).
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FdpParms {
     pub use_grid: bool,
     pub use_new: bool,
@@ -52,6 +52,16 @@ impl Default for FdpParms {
             mlimit: f64::INFINITY,
         }
     }
+}
+
+thread_local! {
+    /// `fdp_parms`: the defaults, or what `-L` set.
+    static FDP_PARMS: std::cell::Cell<FdpParms> = std::cell::Cell::new(FdpParms::default());
+}
+
+/// Sets `fdp_parms` (`dot -L`) for the layouts that follow on this thread.
+pub fn set_fdp_parms(parms: FdpParms) {
+    FDP_PARMS.with(|p| p.set(parms));
 }
 
 /// `parms_t`: the parameters in use, from [`FdpParms`] and graph attributes.
@@ -129,7 +139,7 @@ pub fn set_seed(attrs: &AttrMap, dflt: i32, seed: &mut i64) -> i32 {
 
 /// `fdp_initParams(g)`: parameters from the root graph's attributes.
 pub fn fdp_init_params(attrs: &AttrMap) -> TState {
-    let mut d = FdpParms::default();
+    let mut d = FDP_PARMS.with(std::cell::Cell::get);
     let mut t = TParms {
         use_grid: d.use_grid,
         use_new: d.use_new,

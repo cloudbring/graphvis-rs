@@ -21,8 +21,7 @@
 use graphviz_pure_core::font::{DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext};
 use graphviz_pure_core::strtod::{atof, sscanf, strtod_rest};
 use graphviz_pure_core::{
-    AttrMap, BezierSegment, BoundingBox, Graph, GraphKind, GraphvizError, Point, Result, Spline,
-    SubgraphId,
+    AttrMap, BezierSegment, BoundingBox, Graph, GraphKind, Point, Result, Spline, SubgraphId,
 };
 
 const POINTS_PER_INCH: f64 = 72.0;
@@ -404,6 +403,8 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
     let _ = crate::common::types::LGraph::new(graph, 2, crate::common::types::EdgeType::Line);
     graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::node_size::size_graph_nodes(graph));
 
+    // init_nop's scan_graph, which applies `Reduce`.
+    crate::neatogen::stuff::reduce_graph(graph);
     // user_pos: positions in points, stored in inches as ND_pos.
     let mut npos: Vec<(f64, f64)> = Vec::with_capacity(graph.nodes.len());
     for node in &graph.nodes {
@@ -418,10 +419,30 @@ pub fn layout_nop(graph: &mut Graph, nop: u8) -> Result<()> {
                     node.name, graph.name
                 ));
                 graphviz_pure_core::diag::agerr_prev("as required by the -n flag\n");
-                return Err(GraphvizError::LayoutError {
-                    stage: "nop",
-                    message: format!("init_nop: node {} has no position", node.name),
-                });
+                // `neato_layout` returns there, before any position is set or any cluster
+                // registered, and `dot` renders that: every node at the origin, no edge.
+                for n in &mut graph.nodes {
+                    n.pos = Point::default();
+                }
+                for e in &mut graph.edges {
+                    e.spline = Spline::default();
+                    e.label_pos = None;
+                }
+                for sg in graph.subgraphs.iter_mut().filter(|s| s.is_cluster) {
+                    sg.graph_attrs.insert(
+                        graphviz_pure_core::UNREGISTERED_CLUSTER_KEY.to_string(),
+                        String::new(),
+                    );
+                }
+                graph.bb = BoundingBox::default();
+                // The root label was made, but never placed.
+                graph
+                    .graph_attrs
+                    .insert(LABEL_POS_KEY.to_string(), exact_point(Point::default()));
+                graph
+                    .graph_attrs
+                    .insert("\u{1}nop".to_string(), nop.to_string());
+                return Ok(());
             }
         }
     }

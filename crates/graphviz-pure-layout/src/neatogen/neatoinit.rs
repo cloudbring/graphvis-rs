@@ -522,12 +522,10 @@ fn do_edges(g: &mut LGraph<'_>, sub: &mut Sub, is_root: bool) {
 
 /// `neato_layout(g)`.
 pub fn neato_layout(graph: &mut Graph) -> Result<()> {
+    super::stuff::reduce_graph(graph);
     let attrs = &graph.graph_attrs;
     let no_translate = mapbool(attrs.get("notranslate").map(String::as_str));
-    let inputscale = {
-        let d = crate::common::utils::late_double(attrs, "inputscale", -1.0, 0.0);
-        if d == 0.0 { 72.0 } else { d }
-    };
+    let inputscale = crate::common::utils::get_inputscale(attrs);
     let outdim = late_int(attrs, "dimen", 2, 2);
     let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i64) as usize;
 

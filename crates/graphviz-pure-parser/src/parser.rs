@@ -110,23 +110,14 @@ impl<'a> Parser<'a> {
         globals: &GlobalAttrs,
     ) -> (Vec<Graph>, Option<GraphvizError>) {
         let mut graphs = Vec::new();
-        // Built once: every `agread` goes on reading the same stream.
-        let scan = ScanInput::new(input);
-        let mut from = 0;
-        loop {
-            let mut parser = Parser::new(Lexer::from_scan_input(&scan, from), globals);
-            if parser.peek().kind == TokenKind::Eof {
-                return (graphs, None);
-            }
-            if let Err(e) = parser.read_graph() {
-                return (graphs, Some(e));
-            }
-            graphs.push(parser.graph);
-            match scan.line_end(from, parser.rbrace_line) {
-                Some(end) => from = end,
-                None => return (graphs, None),
+        let mut stream = GraphStream::new(input, globals);
+        while let Some(read) = stream.next_graph(|_| {}) {
+            match read {
+                Ok(g) => graphs.push(g),
+                Err(e) => return (graphs, Some(e)),
             }
         }
+        (graphs, None)
     }
 
     fn peek(&mut self) -> &Token {
@@ -231,8 +222,19 @@ impl<'a> Parser<'a> {
     /// `startgraph` opened a graph; before that, bison discards tokens until the end of the
     /// input, so the scanner reads them all, and warns as it does.
     fn read_graph(&mut self) -> Result<()> {
+        self.read_graph_reporting(|_| {})
+    }
+
+    /// `aagparse`: reads one graph. A syntax error goes to `report` where `aagerror`
+    /// prints it; when it comes before `startgraph`, bison's `graph : error` recovery then
+    /// discards the tokens to the end of the input, so the scanner's warnings for them
+    /// follow the error.
+    fn read_graph_reporting(&mut self, report: impl FnOnce(&GraphvizError)) -> Result<()> {
         self.started = false;
         let result = self.parse_graph();
+        if let Err(e) = &result {
+            report(e);
+        }
         // (unless the input has already ended: the error token was the end, or `@`)
         if result.is_err()
             && !self.started
@@ -708,9 +710,11 @@ impl<'a> Parser<'a> {
     }
 
     /// `bindattrs`: an attribute unknown in scope is declared on the root with default "".
-    fn bind_attr(&mut self, kind: DictKind, name: &str) {
+    /// Returns whether it was unknown.
+    fn bind_attr(&mut self, kind: DictKind, name: &str) -> bool {
         let gi = self.scope_dict();
-        if !self.lookup_view(gi, kind, name) {
+        let unknown = !self.lookup_view(gi, kind, name);
+        if unknown {
             let d = self.dict_mut(0, kind);
             let id = d.len();
             d.insert(
@@ -721,12 +725,24 @@ impl<'a> Parser<'a> {
                 },
             );
         }
+        unknown
     }
 
     /// `attrstmt` + `setattr`: a default set in the current scope.
     fn attr_stmt(&mut self, kind: DictKind, name: &str, value: &str) {
-        self.bind_attr(kind, name);
+        let unknown = self.bind_attr(kind, name);
         let gi = self.scope_dict();
+        // `setattr` warns when it updates a subgraph's own `layout` symbol. A graph
+        // attribute that `bindattrs` declared from a subgraph has one already: `agattr`
+        // gave the subgraph its value through `agxset`.
+        if gi != 0
+            && name == "layout"
+            && (self.dict(gi, kind).contains_key(name) || (unknown && kind == DictKind::Graph))
+        {
+            graphviz_pure_core::diag::agwarningf(
+                "layout attribute is invalid except on the root graph\n",
+            );
+        }
         if self.dict(gi, kind).contains_key(name) {
             if kind == DictKind::Graph {
                 // unviewsubgraphsattr: direct children without a local value keep theirs.
@@ -937,6 +953,48 @@ const YY_BUF_SIZE: usize = 16384;
 /// `aagerror` (`lib/cgraph/scan.l`) for bison's "syntax error" on lookahead token `tok`:
 /// the line the scanner is on once `tok` is read, then `near '<yytext>'`, or, when yytext
 /// is empty (end of input), the start condition the scanner was left in.
+/// The graphs of one input, read one at a time as `dot` reads them (`gvNextInputGraph`,
+/// one `agread` per graph), so that each graph is laid out and rendered before the next
+/// one is read.
+pub struct GraphStream<'a> {
+    /// Built once: every `agread` goes on reading the same stream.
+    scan: ScanInput<'a>,
+    /// Where the next graph starts; `None` once the input has ended or failed.
+    from: Option<usize>,
+    globals: GlobalAttrs,
+}
+
+impl<'a> GraphStream<'a> {
+    /// The graphs of `input`, with `globals` (`-G`/`-N`/`-E`) applied before each body. The
+    /// input is read as a file named by [`crate::reading_file`] around this call, else as
+    /// a string.
+    pub fn new(input: &'a str, globals: &GlobalAttrs) -> Self {
+        GraphStream {
+            scan: ScanInput::new(input),
+            from: Some(0),
+            globals: globals.clone(),
+        }
+    }
+
+    /// The next graph, `None` at the end of the input. A syntax error is passed to
+    /// `report` as soon as it is found (before the scanner reads on, as `aagerror`
+    /// prints it), returned, and ends the input.
+    pub fn next_graph(&mut self, report: impl FnOnce(&GraphvizError)) -> Option<Result<Graph>> {
+        let from = self.from?;
+        let mut parser = Parser::new(Lexer::from_scan_input(&self.scan, from), &self.globals);
+        if parser.peek().kind == TokenKind::Eof {
+            self.from = None;
+            return None;
+        }
+        if let Err(e) = parser.read_graph_reporting(report) {
+            self.from = None;
+            return Some(Err(e));
+        }
+        self.from = self.scan.line_end(from, parser.rbrace_line);
+        Some(Ok(parser.graph))
+    }
+}
+
 fn syntax_error(tok: &Token) -> GraphvizError {
     let mut message = format!("syntax error in line {}", tok.c_line);
     if !tok.text.is_empty() {

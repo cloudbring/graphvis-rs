@@ -222,6 +222,11 @@ pub fn error_count() -> usize {
     ERRORS.with(Cell::get)
 }
 
+/// `agreseterrors`: clears the error count, which `dot` does after each graph.
+pub fn reset_error_count() {
+    ERRORS.with(|c| c.set(0));
+}
+
 /// Clears the error count and the once-only messages of this thread.
 pub fn reset_errors() {
     ERRORS.with(|c| c.set(0));

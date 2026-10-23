@@ -51,8 +51,7 @@ pub fn initial_positions(g: &mut LGraph<'_>, inputscale: f64) {
     }
 }
 
-/// `get_inputscale(g)`: `inputscale` (low 0), 72 when 0, else -1.
+/// `get_inputscale(g)`.
 pub fn get_inputscale(g: &LGraph<'_>) -> f64 {
-    let d = late_double(&g.src.graph_attrs, "inputscale", -1.0, 0.0);
-    if d == 0.0 { 72.0 } else { d }
+    crate::common::utils::get_inputscale(&g.src.graph_attrs)
 }

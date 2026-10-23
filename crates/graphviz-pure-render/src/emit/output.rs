@@ -3,6 +3,7 @@
 
 use super::model::Model;
 use super::num::fmt_g;
+use super::{y_dir, y_offset};
 use graphviz_pure_core::{Graph, Point};
 use graphviz_pure_geom::shapes::{RecordField, ShapeKind};
 use std::collections::BTreeSet;
@@ -12,23 +13,24 @@ fn g5(v: f64) -> String {
     fmt_g(v, 5)
 }
 
-fn pt(p: Point) -> String {
-    format!("{},{}", g5(p.x), g5(p.y))
+/// `"%.5g,%.5g"` of `p.x, yDir(p.y, y_off)`.
+fn pt(p: Point, y_off: f64) -> String {
+    format!("{},{}", g5(p.x), g5(y_dir(p.y, y_off)))
 }
 
-fn record_rects(f: &RecordField, c: Point, out: &mut String) {
+fn record_rects(f: &RecordField, c: Point, y_off: f64, out: &mut String) {
     if f.children.is_empty() {
         let _ = write!(
             out,
             "{},{},{},{} ",
             g5(f.bbox.ll.x + c.x),
-            g5(f.bbox.ll.y + c.y),
+            g5(y_dir(f.bbox.ll.y + c.y, y_off)),
             g5(f.bbox.ur.x + c.x),
-            g5(f.bbox.ur.y + c.y)
+            g5(y_dir(f.bbox.ur.y + c.y, y_off))
         );
     }
     for sub in &f.children {
-        record_rects(sub, c, out);
+        record_rects(sub, c, y_off, out);
     }
 }
 
@@ -45,10 +47,13 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
         e.attrs.retain(|k, _| !k.starts_with('\u{1}'));
     }
     let (mut s_arrows, mut e_arrows) = (false, false);
+    let y_off = y_offset(m.bb);
+    let pt = |p: Point| pt(p, y_off);
     for (i, n) in m.nodes.iter().enumerate() {
         let a = &mut g.nodes[i].attrs;
-        a.remove(graphviz_pure_core::NODE_LW_RW_KEY);
-        if a.remove(super::model::CLUST_NODE_KEY).is_some() {
+        let clust_node = a.contains_key(super::model::CLUST_NODE_KEY);
+        a.retain(|k, _| !k.starts_with('\u{1}'));
+        if clust_node {
             continue;
         }
         a.insert("pos".into(), pt(n.coord));
@@ -61,7 +66,7 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
             && let Some(f) = &n.geom.record
         {
             let mut s = String::new();
-            record_rects(f, n.coord, &mut s);
+            record_rects(f, n.coord, y_off, &mut s);
             s.pop();
             a.insert("rects".into(), s);
         }
@@ -123,9 +128,9 @@ pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<St
         format!(
             "{},{},{},{}",
             g5(b.ll.x),
-            g5(b.ll.y),
+            g5(y_dir(b.ll.y, y_off)),
             g5(b.ur.x),
-            g5(b.ur.y)
+            g5(y_dir(b.ur.y, y_off))
         )
     };
     g.graph_attrs.insert("bb".into(), bbs(m.bb));
@@ -217,6 +222,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
     use graphviz_pure_parser::{canon_str, canon_value};
     let g = m.g;
     let mut out = String::new();
+    let y_off = y_offset(m.bb);
     let _ = writeln!(
         out,
         "graph {} {} {}",
@@ -242,7 +248,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
             "node {} {} {} {} {} {} {} {} {} {}",
             canon_str(n.name),
             g5(n.coord.x / 72.0),
-            g5(n.coord.y / 72.0),
+            g5(y_dir(n.coord.y, y_off) / 72.0),
             g5(n.geom.width),
             g5(n.geom.height),
             lbl,
@@ -292,7 +298,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
                 let _ = write!(out, " {npts}");
                 for b in &e.bz {
                     for p in &b.list {
-                        let _ = write!(out, " {} {}", g5(p.x / 72.0), g5(p.y / 72.0));
+                        let _ = write!(out, " {} {}", g5(p.x / 72.0), g5(y_dir(p.y, y_off) / 72.0));
                     }
                 }
             }
@@ -302,7 +308,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
                     " {} {} {}",
                     canon_str(&l.text),
                     g5(l.pos.x / 72.0),
-                    g5(l.pos.y / 72.0)
+                    g5(y_dir(l.pos.y, y_off) / 72.0)
                 );
             }
             let _ = writeln!(
