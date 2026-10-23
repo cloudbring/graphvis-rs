@@ -193,7 +193,8 @@ pub fn textfont_intern(name: Option<&str>, color: Option<&str>, flags: u32, size
 /// first one in a layout interns the fonts, as C's single measurement does, and keeps the
 /// sizes they get, as C keeps each span's `font`; a later one (the port measures some
 /// objects again, and the renderer measures them all) gets the same sizes and leaves the
-/// dictionary alone.
+/// dictionary alone. The recorded sizes belong to the most recent layout on this thread
+/// ([`textfont_layout_begin`]), so a graph is rendered after its own layout.
 pub fn textfont_object<R>(tag: String, f: impl FnOnce() -> R) -> R {
     let recorded = TEXTFONT_DT.with(|d| d.borrow().objects.contains_key(&tag));
     if recorded {
