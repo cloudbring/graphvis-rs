@@ -2880,8 +2880,10 @@ fn q2_drops_later_option_errors_but_not_the_n_flag_error() {
     assert!(err.starts_with("Usage: "), "{err}");
     let (_, err, ok) = run(&["-Z", "-q2"], "graph{}");
     assert!(!ok);
+    // The program name is `graphviz-pure.exe` on Windows.
     assert!(
-        err.starts_with("Error: graphviz-pure: option -Z unrecognized\n\nUsage: "),
+        err.starts_with("Error: graphviz-pure")
+            && err.contains(": option -Z unrecognized\n\nUsage: "),
         "{err}"
     );
     let (_, err, ok) = run(&["-q2", "-n0"], "graph{}");
