@@ -1,7 +1,7 @@
 //! Port of `lib/ortho/maze.c` and `maze.h`: the maze of free cells around
 //! the node cells and its search graph.
 
-use super::fail::{At, Fail, Need, OResult, ensure};
+use super::fail::{At, Fail, Need, OResult};
 use super::partition::partition;
 use super::sgraph::SGraph;
 use super::trapezoid::dfp_cmp;
@@ -303,8 +303,10 @@ fn find_svert(sg: &mut SGraph, dict: &mut PointDict, p: Point, is_vert: bool) ->
 /// asserts it (`lib/ortho/maze.c:308-320`); a non-finite node box breaks it
 /// (#171).
 fn chk_sgraph(sg: &SGraph) -> OResult<()> {
-    for np in sg.nodes.get(..sg.nnodes).need()? {
-        ensure(np.cells[0].is_some() && np.cells[1].is_some())?;
+    for (node, np) in sg.nodes.get(..sg.nnodes).need()?.iter().enumerate() {
+        if let Some(side) = np.cells.iter().position(Option::is_none) {
+            return Err(Fail::NoCell { node, side });
+        }
     }
     Ok(())
 }
@@ -532,7 +534,10 @@ mod tests {
             (Point::new(181.0, 58.0), 54.0, 36.0),
             (Point::new(293.0, 58.0), 54.0, 36.0),
         ];
-        assert!(mk_maze(&nodes).is_err());
+        let fail = mk_maze(&nodes).unwrap_err();
+        assert_eq!(fail, Fail::NoCell { node: 1, side: 1 });
+        // What C prints before its assertion fails (#127).
+        assert_eq!(fail.c_message().as_deref(), Some("failed at node 1[1]\n"));
     }
 
     /// Issue #203: the tiny touching point nodes of a dot `splines=ortho` graph.

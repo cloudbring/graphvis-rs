@@ -2339,7 +2339,7 @@ n0->n8 n11->n10 n2->n10 n3->n2 n6->n10 n0->n9 n11->n5}
 
 // Issue #200: zero-size point nodes make partition's trapezoidation fail, so mkMaze fails
 // as in #203 and C's dot abandons the layout and exits 0 with the nodes only. The port exited 1
-// with a layout error. C also prints two trapezoid failure messages, which the port does not
+// with a layout error. C also prints two trapezoid failure messages, and so does the port
 // (#127).
 #[test]
 fn ortho_trapezoid_failure_abandons_the_dot_layout_like_c() {
@@ -2348,7 +2348,11 @@ node[shape=point width=0 height=0 fixedsize=true]
 a->b a->c a->d b->e c->e d->e b->f c->f e->g f->g a->g}
 ";
     let (out, err, ok) = run(&["-Tsvg"], src);
-    assert!(ok && !err.contains("panicked"), "{err}");
+    assert!(ok);
+    assert_eq!(
+        err,
+        "trapezoid segment construction failed\nhorizontal trapezoid construction failed\n"
+    );
     assert!(out.contains("<svg width=\"13pt\" height=\"35pt\""), "{out}");
     assert_eq!(out.matches("class=\"node\"").count(), 7, "{out}");
     assert!(!out.contains("class=\"edge\""), "{out}");
@@ -3626,6 +3630,34 @@ c [pos=\"3,2!\"]; a -- c; b -- c }";
             .0
             .contains("the bounding boxes of some nodes touch")
     );
+}
+
+/// Issue #127: when the ortho maze fails, C prints `add_segment`'s and `partition`'s bare
+/// `fprintf` messages (`lib/ortho/trapezoid.c:623`, `partition.c:694/711`), and before its
+/// `chkSgraph` assertion, the node it fails at (`maze.c:315/317`). No prefix, no error status.
+#[test]
+fn issue127_ortho_maze_failures_print_cs_messages() {
+    let src = "graph G { layout=neato; splines=ortho;
+a [shape=circle, fixedsize=shape, width=0.3, label=\"a very long label here\", pos=\"0,0!\"];
+b [pos=\"1.0,0!\"]; c [pos=\"0,1.0!\"]; a -- b; b -- c; a -- c; }";
+    let (err, ok) = warnings("neato", src);
+    assert!(ok);
+    assert_eq!(
+        err,
+        "trapezoid segment construction failed\nvertical trapezoid construction failed\n"
+    );
+    let src = "graph { splines=ortho; a [pos=\"1e300,0!\"]; b [pos=\"1.125,0!\"]; \
+               c [pos=\"0,1!\"]; a -- b; b -- c }";
+    assert_eq!(
+        warnings("neato", src).0,
+        "trapezoid segment construction failed\nhorizontal trapezoid construction failed\n"
+    );
+    // C fails its assertion after the message (exit 134); the port draws straight edges.
+    let src = "digraph{layout=osage
+splines=ortho{label=\"inner\"{o2{i1ortho
+cluster_outer{o1}subgraph cluster_inner4{j1 j2}}subgrapa}subgraph cluster_inner4{j2}}x i2 i3}
+";
+    assert_eq!(warnings("osage", src).0, "failed at node 1[1]\n");
 }
 
 /// A `fixedsize=shape` node's ortho obstacle is its polygon's box (`polyBB`,
