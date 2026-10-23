@@ -174,7 +174,10 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Optio
         false
     };
     if real.is_loop {
-        agerrorf(&format!("in routesplines, edge is a loop at {}\n", real.head));
+        agerrorf(&format!(
+            "in routesplines, edge is a loop at {}\n",
+            real.head
+        ));
         return None;
     }
     let pt = |x: f64, y: f64| Point::new(x, y);

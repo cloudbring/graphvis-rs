@@ -523,9 +523,7 @@ pub fn kk_neato(
                 p.graph_name
             ));
             agerr_prev("is undefined. Reverting to the shortest path model.\n");
-            agerr_prev(
-                "Alternatively, consider running neato using -Gpack=true or decomposing\n",
-            );
+            agerr_prev("Alternatively, consider running neato using -Gpack=true or decomposing\n");
             agerr_prev("the graph into connected components.\n");
             shortest_path(g, sub, kk, ng, p.initial_dist);
         }
