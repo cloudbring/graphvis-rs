@@ -611,11 +611,11 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
         c.cg_in_id_packed = true;
         c.cg_root_node = Some(cg.nodes.clone());
         c.dot_layout()?;
-        // dotLayout(sg) stops at the component's own `phase` with attach_phase_attrs
-        // (`phase=3` attaches as 2).
+        // dotLayout(sg) stops at the component's own `phase` (agget(sg)) with
+        // attach_phase_attrs (`phase=3` attaches as 2); a layout that failed returned first.
         let phase = super::utils::late_int(c.agget(0, "phase"), -1, 1);
-        if (1..=3).contains(&phase) {
-            d.node_phase.resize(d.nodes.len(), None);
+        d.node_phase.resize(d.nodes.len(), None);
+        if (1..=3).contains(&phase) && !c.aborted {
             for &n in &cg.nodes {
                 if let Some(p) = d.node_phase.get_mut(n) {
                     *p = Some(phase.min(2));

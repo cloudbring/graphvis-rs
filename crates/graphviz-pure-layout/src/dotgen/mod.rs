@@ -101,9 +101,9 @@ pub struct Dot<'a> {
     /// The input's own `_cc_<i>` subgraphs that cccomps took as components, which doDot
     /// deletes after packing (`agdelete(g, ccs[i])`, #335).
     pub cc_deleted: Vec<usize>,
-    /// The `phase` each node's pack component stopped at, where it is 1 to 3: that
-    /// component's dotLayout ran `attach_phase_attrs` on its nodes (a component reads
-    /// `phase` from its own subgraph, #335).
+    /// The `attach_phase_attrs` level of each node's pack component, where its own `phase`
+    /// (agget(sg), #335, #415) stopped it at 1 to 3; empty unless doDot laid out several
+    /// components.
     pub node_phase: Vec<Option<i32>>,
     /// The `tend`/`hend` ends dot's edge routers last left (#360).
     pub stale_ends: dotsplines::StaleEnds,
@@ -323,7 +323,11 @@ pub fn layout_dot(graph: &mut Graph) -> Result<()> {
         // attach_phase_attrs(g, 1 or 2), and dot_layout still post-processes what it left
         // (dotinit.c:306-329, :517). A layout that failed returned before
         // attach_phase_attrs.
-        let phase_attrs = ((1..=3).contains(&maxphase) && !aborted).then(|| maxphase.min(2));
+        // When doDot packed several components, each attached its own phase
+        // (`Dot::node_phase`) and the root's dotLayout never ran.
+        let packed = !d.node_phase.is_empty();
+        let phase_attrs =
+            ((1..=3).contains(&maxphase) && !aborted && !packed).then(|| maxphase.min(2));
         output::Output::collect(&d, phase_attrs)
     };
     result.apply(graph);
