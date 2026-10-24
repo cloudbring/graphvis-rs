@@ -201,18 +201,16 @@ fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<Str
         node_keys.extend(n.attrs.keys().cloned());
     }
     for k in node_keys.into_iter().filter(|k| !mark(k)) {
-        if !g.dicts.iter().any(|d| d.node.contains_key(&k)) {
-            g.dicts[0].node.insert(k, AttrSym::default());
-        }
+        // Every subgraph's symbols are also in the root's dictionary.
+        g.dicts[0].node.entry(k).or_default();
     }
     let mut edge_keys = std::collections::BTreeSet::new();
     for e in &g.edges {
         edge_keys.extend(e.attrs.keys().cloned());
     }
     for k in edge_keys.into_iter().filter(|k| !mark(k)) {
-        if !g.dicts.iter().any(|d| d.edge.contains_key(&k)) {
-            g.dicts[0].edge.insert(k, AttrSym::default());
-        }
+        // Every subgraph's symbols are also in the root's dictionary.
+        g.dicts[0].edge.entry(k).or_default();
     }
 }
 

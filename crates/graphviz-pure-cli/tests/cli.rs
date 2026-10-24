@@ -6819,6 +6819,79 @@ fn issue151_real_chars_of_the_raw_byte_range_keep_their_bytes() {
     );
 }
 
+// Issue #291: an attribute declared only by a subgraph's defaults is declared for the whole
+// graph (cgraph puts it in the root's dictionary), so `agfindnodeattr`/`agfindedgeattr` find
+// it: neato's `addZ` writes `z`, dot reads `labelangle`, patchwork sizes the empty `fontsize`.
+// Values are C 16.1.0's.
+#[test]
+fn issue291_attributes_declared_by_a_subgraph_are_declared_for_the_graph() {
+    let src = "graph { layout=neato; dim=3; subgraph s { node [z=1] } \
+               a [pos=\"1,2\"]; b [pos=\"3,4\"]; a -- b }";
+    let (out, _, ok) = run(&["-Tdot"], src);
+    assert!(ok);
+    assert!(
+        out.contains("z=-10.783886]") && out.contains("z=10.783886]"),
+        "{out}"
+    );
+    let (out, _, ok) = run(&["-n", "-Tdot"], src);
+    assert!(ok);
+    assert!(
+        out.contains("z=57.090927]") && out.contains("z=121.029893]"),
+        "{out}"
+    );
+    // A nested subgraph declares on the root too, and pack's components see the declaration.
+    let (out, _, ok) = run(
+        &["-Tdot"],
+        "graph { layout=neato; dim=3; subgraph s { subgraph t { node [z=1] } } \
+         a [pos=\"1,2\"]; b [pos=\"3,4\"]; a -- b }",
+    );
+    assert!(ok);
+    assert!(
+        out.contains("z=-10.783886]") && out.contains("z=10.783886]"),
+        "{out}"
+    );
+    let (out, _, ok) = run(
+        &["-Tdot"],
+        "graph { layout=neato; dim=3; pack=true; subgraph s { node [z=1] } \
+         a [pos=\"1,2\"]; b [pos=\"3,4\"]; a -- b; c -- d }",
+    );
+    assert!(ok);
+    for z in ["-19.144376", "19.144376", "33.678597", "-33.678597"] {
+        assert!(out.contains(&format!("z={z}]")), "{out}");
+    }
+
+    let (out, _, ok) = run(
+        &["-Tplain"],
+        "digraph { subgraph s { edge [labelangle=60] } \
+         a -> b [headlabel=\"H\", taillabel=\"T\"]; b -> c [headlabel=\"X\"] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        out,
+        "graph 1 0.75 2.6167\n\
+         node a 0.375 2.3667 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 0.375 1.3667 0.75 0.5 b solid ellipse black lightgrey\n\
+         node c 0.375 0.36667 0.75 0.5 c solid ellipse black lightgrey\n\
+         edge a b 4 0.375 2.1125 0.375 2.0112 0.375 1.8906 0.375 1.7769 solid black\n\
+         edge b c 4 0.375 1.1125 0.375 1.0112 0.375 0.89065 0.375 0.77688 solid black\n\
+         stop\n"
+    );
+
+    let (out, _, ok) = run(
+        &["-Tplain"],
+        "graph { layout=patchwork; subgraph s { node [fontsize=\"\"] } a [area=2]; b; c [area=3] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        out,
+        "graph 1 1.0758 1.0758\n\
+         node a 0.35861 0.26896 0.75 0.56296 a solid box black lightgrey\n\
+         node b 0.89653 0.26896 0.75 0.56296 b solid box black lightgrey\n\
+         node c 0.53792 0.80688 0.75 0.56296 c solid box black lightgrey\n\
+         stop\n"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

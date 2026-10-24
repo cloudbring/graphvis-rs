@@ -37,8 +37,7 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
     let res = patchwork_layout_tree(graph, &tree);
 
     // finishNode: an empty declared `fontsize` becomes 0.7 of the node height.
-    let fontsize_declared = graph.node_defaults.contains_key("fontsize")
-        || graph.nodes.iter().any(|n| n.attrs.contains_key("fontsize"));
+    let fontsize_declared = graph.node_attr_declared("fontsize");
     if fontsize_declared {
         for (i, n) in graph.nodes.iter_mut().enumerate() {
             let Some((_, size)) = res.nodes[i] else {

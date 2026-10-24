@@ -271,21 +271,11 @@ impl Dot<'_> {
 
     /// `G_ordering` exists when any graph sets `ordering`.
     fn g_ordering_declared(&self) -> bool {
-        self.root_input.graph_attrs.contains_key("ordering")
-            || self
-                .root_input
-                .subgraphs
-                .iter()
-                .any(|s| s.graph_attrs.contains_key("ordering"))
+        self.root_input.graph_attr_declared("ordering")
     }
 
     fn n_ordering_declared(&self) -> bool {
-        self.root_input.node_defaults.contains_key("ordering")
-            || self
-                .root_input
-                .nodes
-                .iter()
-                .any(|n| n.attrs.contains_key("ordering"))
+        self.root_input.node_attr_declared("ordering")
     }
 
     fn ordered_edges(&mut self, g: G) {

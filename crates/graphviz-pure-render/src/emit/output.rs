@@ -119,9 +119,7 @@ pub(crate) fn attach_attrs(
     let y_off = y_offset(m.bb);
     let pt = |p: Point| pt(p, y_off);
     // `N_vertices`: the input declares `vertices` for nodes.
-    let n_vertices = m.g.dicts.iter().any(|d| d.node.contains_key("vertices"))
-        || m.g.node_defaults.contains_key("vertices")
-        || m.g.nodes.iter().any(|n| n.attrs.contains_key("vertices"));
+    let n_vertices = m.g.node_attr_declared("vertices");
     // dim3 = GD_odim(g) >= 3
     let dim3 = m.g.layout.odim >= 3;
     for (i, n) in m.nodes.iter().enumerate() {

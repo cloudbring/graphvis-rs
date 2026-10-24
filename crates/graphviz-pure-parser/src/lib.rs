@@ -599,4 +599,61 @@ mod tests {
             parse_dot("digraph { a -> b [key=\"%k\"]; a -> b [key=\"%k\", color=red] }").unwrap();
         assert_eq!(g.edges.len(), 1);
     }
+
+    // Issue #291: a subgraph's defaults declare their attributes on the root's dictionary
+    // (`agfindnodeattr` finds them from any graph), not only for the subgraph.
+    #[test]
+    fn subgraph_defaults_declare_attributes_for_the_whole_graph() {
+        let g = parse_dot("graph { subgraph s { node [z=1]; edge [len=2]; foo=1 } a; b -- c }")
+            .unwrap();
+        assert!(g.node_attr_declared("z"));
+        assert!(g.edge_attr_declared("len"));
+        assert!(g.graph_attr_declared("foo"));
+        assert!(g.node_attr_declared("label"));
+        assert!(!g.node_attr_declared("len") && !g.edge_attr_declared("z"));
+        assert!(!g.graph_attr_declared("z"));
+    }
+
+    // The root's dictionary is the whole answer when there is one: a value stored on an
+    // object (a layout's write-back, a cluster's `bb`) without a declaration doesn't count,
+    // as `agattr(root, kind, key, NULL)` returns NULL in C. `a -> b:p` declares `headport`
+    // through `mkport` only.
+    #[test]
+    fn the_root_dictionary_alone_says_what_is_declared() {
+        let mut g = parse_dot("digraph { subgraph cluster_c { x } a -> b:p }").unwrap();
+        assert!(g.edge_attr_declared("headport") && !g.edge_attr_declared("tailport"));
+        g.nodes[0].attrs.insert("pos".into(), "1,2".into());
+        g.edges[0].attrs.insert("len".into(), "3".into());
+        g.subgraphs[0]
+            .graph_attrs
+            .insert("bb".into(), "0,0,1,1".into());
+        assert!(!g.node_attr_declared("pos"));
+        assert!(!g.edge_attr_declared("len"));
+        assert!(!g.graph_attr_declared("bb"));
+        // A graph built without dictionaries falls back to its defaults and objects.
+        let mut bare = graphviz_pure_core::Graph::new("g", GraphKind::Undirected, false);
+        bare.node_defaults.insert("z".into(), String::new());
+        bare.graph_attrs.insert("dim".into(), "3".into());
+        assert!(bare.node_attr_declared("z") && bare.graph_attr_declared("dim"));
+        assert!(!bare.edge_attr_declared("len"));
+    }
+
+    // Every symbol a subgraph's dictionary holds is also in the root's (`bindattrs` declares
+    // it there first), so looking only at `dicts[0]` misses nothing.
+    #[test]
+    fn subgraph_dictionaries_are_covered_by_the_root_dictionary() {
+        for src in [
+            "graph { subgraph s { node [z=1]; edge [len=2]; foo=1; subgraph t { node [z=2, w=3] } } }",
+            "digraph { node [shape=box]; subgraph cluster_a { node [color=red]; label=x; a -> b [weight=2] } }",
+            "graph { subgraph { edge [style=dashed]; a -- b } subgraph s { s2=1 } subgraph s { s3=2 } }",
+        ] {
+            let g = parse_dot(src).unwrap();
+            let root = &g.dicts[0];
+            for d in &g.dicts[1..] {
+                assert!(d.graph.keys().all(|k| root.graph.contains_key(k)), "{src}");
+                assert!(d.node.keys().all(|k| root.node.contains_key(k)), "{src}");
+                assert!(d.edge.keys().all(|k| root.edge.contains_key(k)), "{src}");
+            }
+        }
+    }
 }

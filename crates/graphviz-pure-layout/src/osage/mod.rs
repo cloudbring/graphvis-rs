@@ -268,11 +268,7 @@ pub fn osage_layout(graph: &mut Graph) -> Result<()> {
     let mut g = LGraph::new(&src, 2, EdgeType::Line);
     let tree = mk_clusters(&src);
     register_clusters(&mut g, &tree);
-    let sortv_graph = src.graph_attrs.contains_key("sortv")
-        || src
-            .subgraphs
-            .iter()
-            .any(|s| s.graph_attrs.contains_key("sortv"));
+    let sortv_graph = src.graph_attr_declared("sortv");
     let sortv_node = g.node_attr_declared("sortv");
     let n = g.nodes.len();
     let mut o = Osage {

@@ -54,8 +54,6 @@ pub struct Dot<'a> {
     /// than the component, and `packSubgraphs` recomputes the root's box
     /// (`compute_bb`), so these updates never reach the component's `GD_bb`.
     pub root_bb: BoxF,
-    /// Edge attribute names declared in `root_input` (`agattr(g, AGEDGE, k, NULL)`).
-    pub edge_decls: std::cell::OnceCell<std::collections::BTreeSet<String>>,
     /// The root graph's in-edge dictionaries by tail (`agsubrep(g, n)->in_id`), each
     /// built on the first `agfindedge` into its node. See [`Dot::agfindedge_root`].
     pub cg_in_id: std::cell::RefCell<Vec<Option<crate::cdt::Cdt<E>>>>,
@@ -111,7 +109,6 @@ impl<'a> Dot<'a> {
             comp_index: 0,
             root_bb: BoxF::default(),
             cc_kept: Vec::new(),
-            edge_decls: std::cell::OnceCell::new(),
             cg_in_id: std::cell::RefCell::new(Vec::new()),
             cg_in_id_hits: std::cell::RefCell::new(Vec::new()),
             cg_in_id_packed: false,

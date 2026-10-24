@@ -23,18 +23,9 @@ impl Dot<'_> {
         }
     }
 
-    /// Whether some edge declares attribute `k` (`agattr(g, AGEDGE, k, NULL)`).
+    /// Whether edges declare attribute `k` (`agattr(g, AGEDGE, k, NULL)`).
     pub fn edge_attr_declared(&self, k: &str) -> bool {
-        self.edge_decls
-            .get_or_init(|| {
-                let g = self.root_input;
-                g.edge_defaults
-                    .keys()
-                    .chain(g.edges.iter().flat_map(|e| e.attrs.keys()))
-                    .cloned()
-                    .collect()
-            })
-            .contains(k)
+        self.root_input.edge_attr_declared(k)
     }
 }
 

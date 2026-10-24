@@ -509,11 +509,7 @@ impl Fdp<'_, '_> {
         let uid = dg.uid;
         let src = self.rg.src;
         for key in ["overlap", "sep", "K"] {
-            let declared = src.graph_attrs.contains_key(key)
-                || src
-                    .subgraphs
-                    .iter()
-                    .any(|s| s.graph_attrs.contains_key(key));
+            let declared = src.graph_attr_declared(key);
             if declared {
                 let v = self.gattrs(g).get(key).cloned().unwrap_or_default();
                 dg.attrs.insert(key.to_string(), v);
@@ -1213,11 +1209,7 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
             v
         })
         .collect();
-    let coords_declared = src.graph_attrs.contains_key("coords")
-        || src
-            .subgraphs
-            .iter()
-            .any(|s| s.graph_attrs.contains_key("coords"));
+    let coords_declared = src.graph_attr_declared("coords");
     let n = g.nodes.len();
     let mut f = Fdp {
         rg: &mut g,

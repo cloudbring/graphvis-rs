@@ -86,15 +86,7 @@ pub fn layout_graph_with_options(
     );
     graphviz_pure_core::usershape::begin_layout(
         graph.graph_attrs.get("imagepath").map(String::as_str),
-        graph
-            .dicts
-            .first()
-            .is_some_and(|d| d.node.contains_key("shapefile"))
-            || graph.node_defaults.contains_key("shapefile")
-            || graph
-                .nodes
-                .iter()
-                .any(|n| n.attrs.contains_key("shapefile")),
+        graph.node_attr_declared("shapefile"),
     );
     // A layout of the same graph starts from no result (the sequence numbers of nodes an
     // earlier `Reduce` deleted stay: the objects are gone).

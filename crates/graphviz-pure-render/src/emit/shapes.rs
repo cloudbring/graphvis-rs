@@ -409,7 +409,7 @@ impl<E: Engine> Emitter<'_, E> {
             self.set_style(&[StyleItem::simple("filled")]);
         }
         let pw = nd.attrs.late_double("penwidth", 1.0, 0.0);
-        if nd.attrs.get("penwidth").is_some() || self.job.m.node_penwidth_declared() {
+        if nd.attrs.get("penwidth").is_some() || self.job.m.node_penwidth_declared {
             self.set_penwidth(pw);
         }
         let color = self.find_fill(n, "black");

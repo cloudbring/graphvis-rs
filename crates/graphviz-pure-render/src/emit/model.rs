@@ -176,6 +176,8 @@ pub(crate) const EDGE_XLABEL: u32 = 1 << 5;
 
 pub(crate) struct Model<'g> {
     pub g: &'g Graph,
+    /// `N_penwidth != NULL`: nodes declare `penwidth`.
+    pub node_penwidth_declared: bool,
     pub directed: bool,
     pub bb: BoundingBox,
     pub label: Option<TextLabel>,
@@ -237,15 +239,6 @@ impl<'g> Model<'g> {
             return true;
         }
         a.mapbool("landscape")
-    }
-
-    /// `N_penwidth != NULL`: some node declares `penwidth`.
-    pub fn node_penwidth_declared(&self) -> bool {
-        self.g
-            .nodes
-            .iter()
-            .any(|n| n.attrs.contains_key("penwidth"))
-            || self.g.node_defaults.contains_key("penwidth")
     }
 
     pub fn centered(&self) -> bool {
@@ -620,6 +613,7 @@ impl<'g> Model<'g> {
 
         Model {
             g,
+            node_penwidth_declared: g.node_attr_declared("penwidth"),
             directed,
             bb,
             label,
