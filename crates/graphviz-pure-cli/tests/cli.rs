@@ -7454,6 +7454,39 @@ fn deep_nesting_at_cs_limit_lays_out_in_seconds() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+/// Issue #323: fdp's cluster node is in its cluster and every ancestor (`clustNode`'s
+/// `agsubnode(cg, cn, 1)`), so a layer that draws only the cluster node still draws the
+/// outer cluster, as C does. An input node already named like the cluster node stays in
+/// each subgraph once, and the layout is not collapsed.
+#[test]
+fn fdp_cluster_node_is_in_every_ancestor_cluster_once() {
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        "digraph { layers=\"a:b\"; subgraph cluster_a { subgraph cluster_b { x [layer=a] } } \
+         y [layer=a]; y -> cluster_b }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<g id=\"b_clust1\" class=\"cluster\">"),
+        "{out}"
+    );
+    assert!(
+        out.contains("<g id=\"b_clust2\" class=\"cluster\">"),
+        "{out}"
+    );
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        "digraph { subgraph cluster_a { subgraph cluster_b { x; \"__0:cluster_b\" } } \
+         y -> cluster_b }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    assert!(
+        out.contains("<title>y&#45;&gt;__0:cluster_b</title>"),
+        "{out}"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

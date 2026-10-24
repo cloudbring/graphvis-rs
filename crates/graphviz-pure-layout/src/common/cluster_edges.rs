@@ -298,14 +298,16 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
             s
         })
         .collect();
-    // `agsubnode(cg, cn, 1)` installs the cluster node in `cg` and each of its ancestors.
+    // `agsubnode(cg, cn, 1)` installs the cluster node in `cg` and each ancestor, up to the
+    // first that already holds it (an input node of the same name).
     for &(n, c) in &clust_nodes {
         let mut s = Some(tree.subgraph[c]);
-        while let Some(si) = s {
-            if let Some(sg) = work.subgraphs.get_mut(si) {
-                sg.nodes.push(NodeId(n as u32));
+        while let Some(sg) = s.and_then(|si| work.subgraphs.get_mut(si)) {
+            if sg.nodes.contains(&NodeId(n as u32)) {
+                break;
             }
-            s = sub_parent.get(si).copied().flatten();
+            sg.nodes.push(NodeId(n as u32));
+            s = s.and_then(|si| sub_parent.get(si).copied().flatten());
         }
     }
     Some(ClusterEdges {
@@ -588,6 +590,36 @@ mod tests {
             .expect("cluster node");
         for s in &ce.work.subgraphs {
             assert!(s.nodes.contains(&cn), "{}: {:?}", s.name, s.nodes);
+        }
+    }
+
+    /// An input node named like the cluster node is that node (`agnode(root, name, 1)`):
+    /// `agsubnode` stops at the first subgraph that already holds it.
+    #[test]
+    fn cluster_node_named_in_the_input_is_in_each_subgraph_once() {
+        let mut g = Graph::new("", GraphKind::Directed, false);
+        let x = g.ensure_node("x");
+        let named = g.ensure_node("__0:cluster_b");
+        let y = g.ensure_node("y");
+        let cb = g.ensure_node("cluster_b");
+        g.add_edge(y, cb, AttrMap::new());
+        g.subgraphs.push(subgraph(
+            0,
+            "cluster_a",
+            vec![x, named],
+            vec![SubgraphId(1)],
+        ));
+        g.subgraphs
+            .push(subgraph(1, "cluster_b", vec![x, named], Vec::new()));
+        let tree = crate::fdpgen::mk_clusters(&g);
+        let ce = process_cluster_edges(&g, &tree).expect("an edge to a cluster");
+        let cn = ce
+            .work
+            .agfindnode("__0:cluster_b", false)
+            .expect("cluster node");
+        for s in &ce.work.subgraphs {
+            let n = s.nodes.iter().filter(|&&m| m == cn).count();
+            assert_eq!(n, 1, "{}: {:?}", s.name, s.nodes);
         }
     }
 }
