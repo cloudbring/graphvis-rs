@@ -92,7 +92,7 @@ layout/ortho/rawgraph.rs	0	0	6	2
 layout/ortho/sgraph.rs	0	0	9	16
 layout/ortho/trapezoid.rs	0	0	55	10
 layout/osage/mod.rs	0	0	31	4
-layout/pack/cccomps.rs	0	0	43	0
+layout/pack/cccomps.rs	0	0	36	0
 layout/pack/mod.rs	1	0	78	44
 layout/patchwork/patchwork.rs	0	0	24	2
 layout/patchwork/patchworkinit.rs	0	0	11	0

@@ -96,35 +96,21 @@ impl<'a> Tree<'a> {
             }
         }
         let top = (0..ns).filter(|&i| !is_child[i]).collect();
-        let mut t = Tree {
+        // Each subgraph's lists already hold its nested subgraphs' (`agsubnode`).
+        Tree {
             g,
             top,
-            nodes: vec![BTreeSet::new(); ns],
-            edges: vec![BTreeSet::new(); ns],
-        };
-        let mut done = vec![false; ns];
-        for i in 0..ns {
-            t.close(i, &mut done);
+            nodes: g
+                .subgraphs
+                .iter()
+                .map(|s| s.nodes.iter().map(|n| n.0 as usize).collect())
+                .collect(),
+            edges: g
+                .subgraphs
+                .iter()
+                .map(|s| s.edges.iter().map(|e| e.0 as usize).collect())
+                .collect(),
         }
-        t
-    }
-
-    fn close(&mut self, i: usize, done: &mut [bool]) {
-        if done[i] {
-            return;
-        }
-        done[i] = true;
-        let s = &self.g.subgraphs[i];
-        let mut nodes: BTreeSet<usize> = s.nodes.iter().map(|n| n.0 as usize).collect();
-        let mut edges: BTreeSet<usize> = s.edges.iter().map(|e| e.0 as usize).collect();
-        for c in s.subgraphs.clone() {
-            let c = c.0 as usize;
-            self.close(c, done);
-            nodes.extend(self.nodes[c].iter().copied());
-            edges.extend(self.edges[c].iter().copied());
-        }
-        self.nodes[i] = nodes;
-        self.edges[i] = edges;
     }
 
     /// `deriveClusters(dg, g)`: a derived node per top-level cluster, which

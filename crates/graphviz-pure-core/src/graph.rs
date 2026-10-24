@@ -525,6 +525,38 @@ impl Graph {
         self.agnameof(Obj::Subgraph(s)).name.into_owned()
     }
 
+    /// Each subgraph lists every node and edge once, and every node and edge of its
+    /// nested subgraphs too (cgraph's `agsubnode`/`installedge`), as the parser builds
+    /// them. Layouts read a subgraph's members from its own lists.
+    pub fn subgraph_lists_are_closed(&self) -> bool {
+        let mut node_in = vec![usize::MAX; self.nodes.len()];
+        let mut edge_in = vec![usize::MAX; self.edges.len()];
+        self.subgraphs.iter().enumerate().all(|(i, s)| {
+            let nodes_once = s.nodes.iter().all(|n| {
+                node_in
+                    .get_mut(n.0 as usize)
+                    .is_some_and(|m| std::mem::replace(m, i) != i)
+            });
+            let edges_once = s.edges.iter().all(|e| {
+                edge_in
+                    .get_mut(e.0 as usize)
+                    .is_some_and(|m| std::mem::replace(m, i) != i)
+            });
+            nodes_once
+                && edges_once
+                && s.subgraphs.iter().all(|c| {
+                    self.subgraphs.get(c.0 as usize).is_some_and(|c| {
+                        c.nodes
+                            .iter()
+                            .all(|n| node_in.get(n.0 as usize) == Some(&i))
+                            && c.edges
+                                .iter()
+                                .all(|e| edge_in.get(e.0 as usize) == Some(&i))
+                    })
+                })
+        })
+    }
+
     /// `agfindnode(g, name)` of a name read after parsing (an attribute value): a local name
     /// (`%…`) is looked up in cgraph's internal map, which `endgraph` cleared of them, so it
     /// finds nothing, unless the graph keeps them ([`Graph::local_node_names_kept`]).
@@ -752,5 +784,52 @@ mod agnameof_tests {
             agnameof_buffer([b("%5"), b("%7"), o("%3")]),
             ["%7", "%7", "%3"]
         );
+    }
+
+    /// `digraph { subgraph s0 { x0 subgraph s1 { x1 … subgraph s{n-1} { x{n-1} } } } }` with
+    /// an edge `x{i} -> x{i+1}` in each `s{i}`, its lists closed as the parser makes them.
+    fn nested(n: usize) -> Graph {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        let xs: Vec<NodeId> = (0..n).map(|i| g.ensure_node(&format!("x{i}"))).collect();
+        let es: Vec<EdgeId> = (1..n)
+            .map(|i| g.add_edge(xs[i - 1], xs[i], AttrMap::new()))
+            .collect();
+        for i in 0..n {
+            g.subgraphs.push(SubgraphData {
+                id: SubgraphId(i as u32),
+                name: format!("s{i}"),
+                is_cluster: false,
+                graph_attrs: AttrMap::new(),
+                node_defaults: AttrMap::new(),
+                edge_defaults: AttrMap::new(),
+                nodes: xs[i..].to_vec(),
+                edges: es[i..].to_vec(),
+                subgraphs: (i + 1 < n)
+                    .then(|| SubgraphId(i as u32 + 1))
+                    .into_iter()
+                    .collect(),
+                bb: BoundingBox::default(),
+                html_name: false,
+                empty_name: false,
+                layout: Default::default(),
+            });
+        }
+        g
+    }
+
+    /// Issue #323: layouts read a subgraph's members from its own lists, so they must hold
+    /// the nested subgraphs' members, each once.
+    #[test]
+    fn subgraph_lists_are_closed_checks_nesting_and_duplicates() {
+        let mut g = nested(4);
+        assert!(g.subgraph_lists_are_closed());
+        g.subgraphs[1].nodes.retain(|&n| n != NodeId(3));
+        assert!(!g.subgraph_lists_are_closed(), "s1 lacks s2's x3");
+        let mut g = nested(4);
+        g.subgraphs[0].edges.retain(|&e| e != EdgeId(2));
+        assert!(!g.subgraph_lists_are_closed(), "s0 lacks s1's edge");
+        let mut g = nested(4);
+        g.subgraphs[2].nodes.push(NodeId(3));
+        assert!(!g.subgraph_lists_are_closed(), "s2 lists x3 twice");
     }
 }

@@ -1162,6 +1162,7 @@ fn layout_and_route(
 mod tests {
     use super::*;
     use crate::cutil::{Drand48State, RandState, with_rand_state};
+    use graphviz_pure_core::{AttrMap, EdgeId, GraphKind, NodeId, SubgraphData, SubgraphId};
 
     /// `user_pos` in a fresh process; with the generator state it leaves.
     fn user_pos_of(p: &str, z: Option<&str>, ndim: usize) -> (Option<u8>, Vec<f64>, RandState) {
@@ -1502,5 +1503,56 @@ mod tests {
         let pts = &g.edges[0].spline.segments[0].points;
         assert!(near(pts[0], 0.27902 * 72.0, 0.4932 * 72.0), "{pts:?}");
         assert!(near(pts[3], 0.27738 * 72.0, 1.3914 * 72.0), "{pts:?}");
+    }
+
+    /// `digraph { subgraph s0 { x0 subgraph s1 { x1 … subgraph s{n-1} { x{n-1} } } } }` with
+    /// an edge `x{i} -> x{i+1}` in each `s{i}`, its lists closed as the parser makes them.
+    fn nested(n: usize) -> Graph {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        let xs: Vec<NodeId> = (0..n).map(|i| g.ensure_node(&format!("x{i}"))).collect();
+        let es: Vec<EdgeId> = (1..n)
+            .map(|i| g.add_edge(xs[i - 1], xs[i], AttrMap::new()))
+            .collect();
+        for i in 0..n {
+            g.subgraphs.push(SubgraphData {
+                id: SubgraphId(i as u32),
+                name: format!("s{i}"),
+                is_cluster: false,
+                graph_attrs: AttrMap::new(),
+                node_defaults: AttrMap::new(),
+                edge_defaults: AttrMap::new(),
+                nodes: xs[i..].to_vec(),
+                edges: es[i..].to_vec(),
+                subgraphs: (i + 1 < n)
+                    .then(|| SubgraphId(i as u32 + 1))
+                    .into_iter()
+                    .collect(),
+                bb: Default::default(),
+                html_name: false,
+                empty_name: false,
+                layout: Default::default(),
+            });
+        }
+        g
+    }
+
+    /// Issue #323: a subgraph's members are its own list, sorted; collecting every nested
+    /// subgraph's list again made each cluster's vector (and its kept capacity) grow with
+    /// the square of the depth, and fdp's memory with its cube.
+    #[test]
+    fn subgraph_members_are_the_subgraphs_own_lists() {
+        let n = 300;
+        let g = nested(n);
+        let (mut nodes, mut edges) = (0, 0);
+        for k in 0..n {
+            let v = subgraph_nodes(&g, k);
+            assert_eq!(v, (k..n).collect::<Vec<_>>());
+            nodes += v.capacity();
+            let v = subgraph_edges(&g, k);
+            assert_eq!(v, (k..n - 1).collect::<Vec<_>>());
+            edges += v.capacity();
+        }
+        assert_eq!(nodes, n * (n + 1) / 2);
+        assert_eq!(edges, n * (n - 1) / 2);
     }
 }
