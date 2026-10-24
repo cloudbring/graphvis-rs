@@ -6838,6 +6838,26 @@ fn issue291_attributes_declared_by_a_subgraph_are_declared_for_the_graph() {
         out.contains("z=57.090927]") && out.contains("z=121.029893]"),
         "{out}"
     );
+    // A nested subgraph declares on the root too, and pack's components see the declaration.
+    let (out, _, ok) = run(
+        &["-Tdot"],
+        "graph { layout=neato; dim=3; subgraph s { subgraph t { node [z=1] } } \
+         a [pos=\"1,2\"]; b [pos=\"3,4\"]; a -- b }",
+    );
+    assert!(ok);
+    assert!(
+        out.contains("z=-10.783886]") && out.contains("z=10.783886]"),
+        "{out}"
+    );
+    let (out, _, ok) = run(
+        &["-Tdot"],
+        "graph { layout=neato; dim=3; pack=true; subgraph s { node [z=1] } \
+         a [pos=\"1,2\"]; b [pos=\"3,4\"]; a -- b; c -- d }",
+    );
+    assert!(ok);
+    for z in ["-19.144376", "19.144376", "33.678597", "-33.678597"] {
+        assert!(out.contains(&format!("z={z}]")), "{out}");
+    }
 
     let (out, _, ok) = run(
         &["-Tplain"],
