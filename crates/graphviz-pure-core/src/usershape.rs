@@ -17,12 +17,12 @@ mod size;
 
 pub use size::ImageType;
 
-use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, HashSet};
+use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
-use std::io::{self, BufReader, Read};
+use std::io::{self, Read};
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering};
 
 /// `agwarningf`, except in the port's repeat sizings ([`crate::diag::quietly`]).
 fn agwarningf(msg: &str) {
@@ -35,18 +35,6 @@ fn agwarningf(msg: &str) {
 static FILEPATH: Mutex<Option<String>> = Mutex::new(None);
 /// `HTTPServerEnVar`: `$SERVER_NAME`, read by `dotneato_args_initialize`.
 static SERVER_NAME: Mutex<Option<String>> = Mutex::new(None);
-/// `safefile`'s `onetime` flag.
-static SERVER_WARNED: AtomicBool = AtomicBool::new(false);
-
-thread_local! {
-    /// `Gvimagepath` of the graph being laid out (`graph_init`).
-    static IMAGEPATH: RefCell<Option<String>> = const { RefCell::new(None) };
-    /// Whether the graph being laid out declares the node attribute `shapefile`.
-    static SHAPEFILE_DECLARED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-    /// The names in `UserShape` (`user_shape` in `shapes.c`), which `gvusershape_open` takes
-    /// for a file it cannot classify. C never clears the list.
-    static USER_SHAPES: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
-}
 
 /// Sets `Gvfilepath` (`dot --filepath=DIRS`).
 pub fn set_filepath(dirs: Option<&str>) {
@@ -69,46 +57,259 @@ fn server_name() -> Option<String> {
         .clone()
 }
 
+/// The warnings a read gave in one of the port's quiet sizings. C reads each file once, in
+/// the sizing that reports, so the port's first sizing that reports prints them.
+#[derive(Debug, Clone, Default)]
+struct Deferred(Vec<String>);
+
+impl Deferred {
+    /// The warnings of a read: printed now in a sizing that reports, else kept.
+    fn of(warnings: Vec<String>) -> Self {
+        let mut d = Deferred(warnings);
+        d.deliver();
+        d
+    }
+
+    /// Prints what is kept, in a sizing that reports.
+    fn deliver(&mut self) {
+        if crate::diag::reporting() {
+            for m in std::mem::take(&mut self.0) {
+                crate::diag::agwarningf(&m);
+            }
+        }
+    }
+}
+
+/// What C keeps for the whole process, which the port keeps for one run: a top-level call
+/// of the library, or the CLI ([`reset_run`]).
+#[derive(Default)]
+struct RunState {
+    /// The names in `UserShape` (`user_shape` in `shapes.c`), which `gvusershape_open` takes
+    /// for a file it cannot classify.
+    user_shapes: HashSet<String>,
+    /// `safefile`'s `onetime` flag.
+    server_warned: bool,
+    /// `findPath`'s static buffer: the last path it tried.
+    find_path_buf: String,
+    /// `ImageDict`: the files `gvusershape_open` loaded, by name.
+    image_dict: HashMap<String, (UserShape, Deferred)>,
+    /// `gvusershape_size`'s `static char *oldpath`, as a [`UserShapes::imagepath_id`].
+    oldpath: u64,
+    /// The last id given to a graph's `imagepath` or layout.
+    last_id: u64,
+    /// `EPSF_contents`, the most recently inserted or matched entry last (the root of C's
+    /// splay tree). Its keys are pointers: a key that is a graph's string matches no lookup
+    /// once that graph is closed, and a key that is `findPath`'s buffer has the text of the
+    /// last path built there, so a lookup through the buffer matches it whatever file it
+    /// names. Not modelled, as C reads freed memory there: a buffer that moved when it grew
+    /// (past 24 bytes, then on reallocation), and the way freed keys steer the tree search;
+    /// nor the tree's order, by which C can miss a buffer key (#380).
+    epsf_contents: Vec<(EpsfKey, EpsfShape)>,
+    /// `N_EPSF_files`.
+    n_epsf_files: i32,
+}
+
+/// The usershape context of one graph's layout (`graph_init`'s globals and what the sizings
+/// found), which the layout leaves on the graph (`GraphLayout::usershapes`) and the
+/// renderers draw from ([`rendering`]).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct UserShapes {
+    /// `Gvimagepath`: the graph's `imagepath`, else `Gvfilepath`.
+    pub imagepath: Option<String>,
+    /// `Gvimagepath` as `gvusershape_size` compares it: a new value for each graph with its
+    /// own `imagepath`, 0 for `Gvfilepath`.
+    pub imagepath_id: u64,
+    /// The graph, for the keys of `EPSF_contents`.
+    pub layout_id: u64,
+    /// Some node declares `shapefile`.
+    pub shapefile_declared: bool,
+    /// `GD_drawing(g)->dpi`.
+    pub dpi: f64,
+    /// `ImageDict` as the layout left it.
+    pub images: BTreeMap<String, UserShape>,
+    /// What `epsf_init` gave each node.
+    pub epsf: Vec<EpsfNode>,
+}
+
+/// `epsf_init` of one node.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EpsfNode {
+    pub node: String,
+    pub shapefile: Option<String>,
+    pub shape: Option<EpsfShape>,
+}
+
+/// The live [`UserShapes`] of the graph being laid out or drawn.
+#[derive(Default)]
+struct GraphState {
+    imagepath: Option<String>,
+    imagepath_id: u64,
+    layout_id: u64,
+    shapefile_declared: bool,
+    dpi: f64,
+    /// C runs `epsf_init` once per node; the port's repeat sizings (quiet passes, the
+    /// renderers' model) get the same answer.
+    epsf_nodes: HashMap<(String, Option<String>), (Option<EpsfShape>, Deferred)>,
+}
+
+thread_local! {
+    static RUN: RefCell<RunState> = RefCell::new(RunState::default());
+    static GRAPH: RefCell<GraphState> = RefCell::new(GraphState::default());
+}
+
+fn run<R>(f: impl FnOnce(&mut RunState) -> R) -> R {
+    RUN.with(|r| f(&mut r.borrow_mut()))
+}
+
+fn graph<R>(f: impl FnOnce(&mut GraphState) -> R) -> R {
+    GRAPH.with(|g| f(&mut g.borrow_mut()))
+}
+
+/// Starts a run, as a new C process starts: no file is loaded, no epsf file numbered and no
+/// user shape known.
+pub fn reset_run() {
+    run(|r| *r = RunState::default());
+    graph(|g| *g = GraphState::default());
+}
+
 /// `graph_init`: `Gvimagepath` is the root graph's `imagepath`, or `Gvfilepath` when the
 /// graph has none. `shapefile_declared`: some node declares `shapefile`. `dpi` is
-/// `GD_drawing(g)->dpi` (`dpi`, else `resolution`, else 0).
+/// `GD_drawing(g)->dpi` ([`crate::cnum::drawing_dpi`]).
 pub fn begin_layout(imagepath: Option<&str>, shapefile_declared: bool, dpi: f64) {
     // a graph's own `imagepath` is a new string, which `gvusershape_size` sees as a new
     // path (and empties `ImageDict` for); `Gvfilepath` stays the same. (C compares the
     // pointers: an allocator that gave the next graph's string the same address would keep
     // the files, which the reference build was not seen to do.)
-    let id = if imagepath.is_some() {
-        NEXT_IMAGEPATH_ID.fetch_add(1, Ordering::Relaxed)
-    } else {
-        0
+    let (imagepath_id, layout_id) = run(|r| {
+        let path = if imagepath.is_some() {
+            r.last_id += 1;
+            r.last_id
+        } else {
+            0
+        };
+        r.last_id += 1;
+        (path, r.last_id)
+    });
+    let imagepath = imagepath.map(str::to_string).or_else(filepath);
+    graph(|g| {
+        *g = GraphState {
+            imagepath,
+            imagepath_id,
+            layout_id,
+            shapefile_declared,
+            dpi,
+            epsf_nodes: HashMap::new(),
+        }
+    });
+}
+
+/// The usershape context the layout leaves on the graph.
+pub fn layout_result() -> UserShapes {
+    let images = run(|r| {
+        r.image_dict
+            .iter()
+            .map(|(k, (us, _))| (k.clone(), us.clone()))
+            .collect()
+    });
+    graph(|g| UserShapes {
+        imagepath: g.imagepath.clone(),
+        imagepath_id: g.imagepath_id,
+        layout_id: g.layout_id,
+        shapefile_declared: g.shapefile_declared,
+        dpi: g.dpi,
+        images,
+        epsf: g
+            .epsf_nodes
+            .iter()
+            .map(|((node, shapefile), (shape, _))| EpsfNode {
+                node: node.clone(),
+                shapefile: shapefile.clone(),
+                shape: *shape,
+            })
+            .collect(),
+    })
+}
+
+/// Restores the state [`rendering`] replaced.
+struct Restore {
+    graph: Option<GraphState>,
+    images: HashMap<String, (UserShape, Deferred)>,
+    oldpath: u64,
+}
+
+impl Drop for Restore {
+    fn drop(&mut self) {
+        if let Some(saved) = self.graph.take() {
+            graph(|g| *g = saved);
+        }
+        let images = std::mem::take(&mut self.images);
+        let oldpath = self.oldpath;
+        run(|r| {
+            r.image_dict = images;
+            r.oldpath = oldpath;
+        });
+    }
+}
+
+/// Runs `f`, which draws a laid-out graph, in the usershape context its layout left (`s`):
+/// the renderers find the files and the epsf shapes the layout found, whatever was laid out
+/// since or on whichever thread.
+pub fn rendering<R>(s: &UserShapes, f: impl FnOnce() -> R) -> R {
+    let live = GraphState {
+        imagepath: s.imagepath.clone(),
+        imagepath_id: s.imagepath_id,
+        layout_id: s.layout_id,
+        shapefile_declared: s.shapefile_declared,
+        dpi: s.dpi,
+        epsf_nodes: s
+            .epsf
+            .iter()
+            .map(|e| {
+                (
+                    (e.node.clone(), e.shapefile.clone()),
+                    (e.shape, Deferred::default()),
+                )
+            })
+            .collect(),
     };
-    IMAGEPATH_ID.with(|p| p.set(id));
-    LAYOUT_ID.with(|l| l.set(NEXT_IMAGEPATH_ID.fetch_add(1, Ordering::Relaxed)));
-    EPSF_NODES.with(|n| n.borrow_mut().clear());
-    let path = imagepath.map(str::to_string).or_else(filepath);
-    IMAGEPATH.with(|p| *p.borrow_mut() = path);
-    SHAPEFILE_DECLARED.with(|d| d.set(shapefile_declared));
-    GRAPH_DPI.with(|d| d.set(dpi));
+    let images: HashMap<_, _> = s
+        .images
+        .iter()
+        .map(|(k, us)| (k.clone(), (us.clone(), Deferred::default())))
+        .collect();
+    let saved = graph(|g| std::mem::replace(g, live));
+    let (images, oldpath) = run(|r| {
+        (
+            std::mem::replace(&mut r.image_dict, images),
+            std::mem::replace(&mut r.oldpath, s.imagepath_id),
+        )
+    });
+    let _restore = Restore {
+        graph: Some(saved),
+        images,
+        oldpath,
+    };
+    f()
 }
 
 /// `agget(n, "shapefile")` for a node whose own value is `value`: the declared default `""`
 /// when it has none, NULL when no node declares the attribute.
 pub fn agget_shapefile(value: Option<&str>) -> Option<&str> {
-    value.or_else(|| SHAPEFILE_DECLARED.with(std::cell::Cell::get).then_some(""))
+    value.or_else(|| graph(|g| g.shapefile_declared).then_some(""))
 }
 
 /// `user_shape` records `name` in `UserShape`.
 pub fn register_user_shape(name: &str) {
-    USER_SHAPES.with(|s| {
-        if !s.borrow().contains(name) {
-            s.borrow_mut().insert(name.to_string());
+    run(|r| {
+        if !r.user_shapes.contains(name) {
+            r.user_shapes.insert(name.to_string());
         }
     });
 }
 
 /// `find_user_shape`: `name` is in `UserShape`.
 pub fn find_user_shape(name: &str) -> bool {
-    USER_SHAPES.with(|s| s.borrow().contains(name))
+    run(|r| r.user_shapes.contains(name))
 }
 
 /// `mkDirlist`: the directories of a `:`-separated list, as `tok` splits it (a leading or a
@@ -131,7 +332,7 @@ fn mk_dirlist(list: &str) -> Vec<&str> {
 fn find_path(dirs: &[&str], name: &str) -> Option<String> {
     for d in dirs {
         let f = format!("{d}/{name}");
-        FIND_PATH_BUF.with(|b| b.borrow_mut().clone_from(&f));
+        run(|r| r.find_path_buf.clone_from(&f));
         if open(&f).is_ok() {
             return Some(f);
         }
@@ -151,7 +352,7 @@ fn safefile_from(filename: &str) -> Option<(String, bool)> {
         return None;
     }
     if let Some(server) = server_name() {
-        if crate::diag::reporting() && !SERVER_WARNED.swap(true, Ordering::Relaxed) {
+        if crate::diag::reporting() && !run(|r| std::mem::replace(&mut r.server_warned, true)) {
             agwarningf(&format!(
                 "file loading is disabled because the environment contains SERVER_NAME=\"{server}\"\n"
             ));
@@ -163,7 +364,7 @@ fn safefile_from(filename: &str) -> Option<(String, bool)> {
         let base = filename.rsplit(['/', '\\', ':']).next().unwrap_or(filename);
         return find_path(&mk_dirlist(&list), base).map(|p| (p, true));
     }
-    let list = IMAGEPATH.with(|p| p.borrow().clone()).unwrap_or_default();
+    let list = graph(|g| g.imagepath.clone()).unwrap_or_default();
     if filename.starts_with('/') || list.is_empty() {
         Some((filename.to_string(), false))
     } else {
@@ -199,9 +400,9 @@ enum Opened {
 
 impl Opened {
     /// The stream the size readers read.
-    fn into_cfile(self) -> size::CFile<BufReader<File>> {
+    fn into_cfile(self) -> size::CFile<File> {
         match self {
-            Opened::File(f) => size::CFile::new(BufReader::new(f)),
+            Opened::File(f) => size::CFile::new(f),
             Opened::Dir => size::CFile::unreadable(),
         }
     }
@@ -248,7 +449,7 @@ fn strerror(e: &io::Error) -> String {
 /// the size its header gives (`dpi` 0: the size is in pixels at the graph's resolution).
 /// A name C finds as a shape library member (`find_user_shape`) has type `(lib)` and
 /// size 0x0.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserShape {
     pub name: String,
     pub ty: ImageType,
@@ -266,47 +467,22 @@ impl UserShape {
     }
 }
 
-thread_local! {
-    /// `ImageDict`: the files `gvusershape_open` loaded, by name, with the warnings their
-    /// reading gave in one of the port's quiet sizings, which the first sizing that reports
-    /// prints (C reads each file once, in the sizing that reports).
-    static IMAGE_DICT: RefCell<HashMap<String, (UserShape, Vec<String>)>> =
-        RefCell::new(HashMap::new());
-    /// `Gvimagepath` as `gvusershape_size` compares it: a new value for each graph with an
-    /// `imagepath`, 0 for `Gvfilepath`.
-    static IMAGEPATH_ID: Cell<u64> = const { Cell::new(0) };
-    /// `gvusershape_size`'s `static char *oldpath`.
-    static OLDPATH_ID: Cell<u64> = const { Cell::new(0) };
-    /// The graph being laid out, for the keys of [`EPSF_CONTENTS`].
-    static LAYOUT_ID: Cell<u64> = const { Cell::new(0) };
-    /// `findPath`'s static buffer: the last path it tried.
-    static FIND_PATH_BUF: RefCell<String> = const { RefCell::new(String::new()) };
-    /// `GD_drawing(g)->dpi` of the graph being laid out.
-    static GRAPH_DPI: Cell<f64> = const { Cell::new(0.0) };
-}
-
-/// The ids [`IMAGEPATH_ID`] takes.
-static NEXT_IMAGEPATH_ID: AtomicU64 = AtomicU64::new(1);
-
 /// `gvusershape_open`: the file `name` loaded, from `ImageDict` or opened and read, or
 /// `None` with C's warning when it cannot be opened or is neither an image nor a shape
 /// library member.
 fn gvusershape_open(name: &str) -> Option<UserShape> {
-    let reporting = crate::diag::reporting();
-    let found = IMAGE_DICT.with(|d| {
-        let mut d = d.borrow_mut();
-        let (us, pending) = d.get_mut(name)?;
-        let pending = if reporting {
-            std::mem::take(pending)
-        } else {
-            Vec::new()
-        };
-        Some((us.clone(), pending))
+    let found = run(|r| {
+        let (us, pending) = r.image_dict.get_mut(name)?;
+        Some((us.clone(), std::mem::take(pending)))
     });
-    if let Some((us, pending)) = found {
-        for m in pending {
-            agwarningf(&m);
-        }
+    if let Some((us, mut pending)) = found {
+        pending.deliver();
+        // what a quiet sizing still could not print stays for the next one
+        run(|r| {
+            if let Some(e) = r.image_dict.get_mut(name) {
+                e.1 = pending;
+            }
+        });
         return Some(us);
     }
     // gvusershape_file_access
@@ -330,11 +506,6 @@ fn gvusershape_open(name: &str) -> Option<UserShape> {
     }
     let mut warnings = Vec::new();
     let d = size::read_size(&mut f, ty, name, &mut |m| warnings.push(m.to_string()));
-    if reporting {
-        for m in warnings.drain(..) {
-            agwarningf(&m);
-        }
-    }
     let us = UserShape {
         name: name.to_string(),
         ty,
@@ -344,16 +515,14 @@ fn gvusershape_open(name: &str) -> Option<UserShape> {
         h: d.h,
         dpi: d.dpi,
     };
-    IMAGE_DICT.with(|dict| {
-        dict.borrow_mut()
-            .insert(name.to_string(), (us.clone(), warnings))
-    });
+    let pending = Deferred::of(warnings);
+    run(|r| r.image_dict.insert(name.to_string(), (us.clone(), pending)));
     Some(us)
 }
 
 /// `gvusershape_find`: the file `name` if `gvusershape_open` loaded it.
 pub fn find(name: &str) -> Option<UserShape> {
-    IMAGE_DICT.with(|d| d.borrow().get(name).map(|e| e.0.clone()))
+    run(|r| r.image_dict.get(name).map(|e| e.0.clone()))
 }
 
 /// `gvusershape_size_dpi`: the size of `us` in points, at its own resolution or at `dpi`.
@@ -373,12 +542,15 @@ pub fn gvusershape_size(name: Option<&str>) -> (i32, i32) {
     let Some(name) = name.filter(|n| !n.is_empty()) else {
         return (-1, -1);
     };
-    let path_id = IMAGEPATH_ID.with(Cell::get);
-    if server_name().is_none() && OLDPATH_ID.with(Cell::get) != path_id {
-        OLDPATH_ID.with(|o| o.set(path_id));
-        IMAGE_DICT.with(|d| d.borrow_mut().clear());
+    let (path_id, dpi) = graph(|g| (g.imagepath_id, g.dpi));
+    if server_name().is_none() {
+        run(|r| {
+            if r.oldpath != path_id {
+                r.oldpath = path_id;
+                r.image_dict.clear();
+            }
+        });
     }
-    let dpi = GRAPH_DPI.with(Cell::get);
     let dpi = if dpi >= 1.0 { dpi } else { 96.0 };
     gvusershape_open(name).map_or((-1, -1), |us| size_dpi(&us, (dpi, dpi)))
 }
@@ -463,7 +635,7 @@ fn scan_bounding_box(line: &[u8], v: &mut [i32; 4]) -> usize {
 
 /// An epsf file `user_init` read: its `%%BoundingBox` and its `macro_id`, the number of
 /// the PostScript procedure `user_shape_N` that `epsf_gencode` calls.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EpsfShape {
     pub bb: [i32; 4],
     pub macro_id: i32,
@@ -474,77 +646,56 @@ pub struct EpsfShape {
 enum EpsfKey {
     /// `findPath`'s static buffer: its text is that of the last path it built.
     Static,
-    /// A string of the graph (laid out as [`LAYOUT_ID`]), freed with it.
+    /// A string of the graph (with its [`UserShapes::layout_id`]), freed with it.
     Graph(u64, String),
-}
-
-/// What `epsf_init` gave a node, with the warnings not yet printed.
-type EpsfInit = (Option<EpsfShape>, Vec<String>);
-
-thread_local! {
-    /// `EPSF_contents`, the most recently inserted or matched entry last (the root of C's
-    /// splay tree). C never clears it, but its keys are pointers: a key that is a graph's
-    /// string matches no lookup once that graph is closed, and a key that is `findPath`'s
-    /// buffer has the text of the last path built there, so a lookup through the buffer
-    /// matches it whatever file it names. Not modelled, as C reads freed memory there: a
-    /// buffer that moved when it grew (past 24 bytes, then on reallocation), and the way
-    /// freed keys steer the tree search.
-    static EPSF_CONTENTS: RefCell<Vec<(EpsfKey, EpsfShape)>> = const { RefCell::new(Vec::new()) };
-    /// `epsf_init` of each node of the layout, by node and shapefile: C runs it once per
-    /// node; the port's repeat sizings (quiet passes, the renderers' model) get the same
-    /// answer, and the first sizing that reports prints its warnings.
-    static EPSF_NODES: RefCell<HashMap<(String, Option<String>), EpsfInit>> =
-        RefCell::new(HashMap::new());
 }
 
 /// `dtmatch(EPSF_contents, str)`: keys compare by text (`strcmp`).
 fn epsf_lookup(path: &str) -> Option<EpsfShape> {
-    let layout = LAYOUT_ID.with(Cell::get);
-    let buf = FIND_PATH_BUF.with(|b| b.borrow().clone());
-    EPSF_CONTENTS.with(|c| {
-        let mut c = c.borrow_mut();
-        let i = c.iter().rposition(|(k, _)| match k {
+    let layout = graph(|g| g.layout_id);
+    run(|r| {
+        let buf = &r.find_path_buf;
+        let i = r.epsf_contents.iter().rposition(|(k, _)| match k {
             EpsfKey::Static => buf == path,
             EpsfKey::Graph(g, p) => *g == layout && p == path,
         })?;
-        let e = c.remove(i);
+        let e = r.epsf_contents.remove(i);
         let us = e.1;
-        c.push(e);
+        r.epsf_contents.push(e);
         Some(us)
     })
 }
-
-/// `N_EPSF_files`, process-wide in C.
-static N_EPSF_FILES: AtomicI32 = AtomicI32::new(0);
 
 /// `epsf_init`: the `%%BoundingBox` (`lx ly ux uy`) and macro number of a `shape=epsf`
 /// node's `shapefile`, or `None`, with C's warning, when there is none; the node then keeps
 /// no shape information and is not drawn.
 pub fn epsf_init(shapefile: Option<&str>, node: &str) -> Option<EpsfShape> {
     let key = (node.to_string(), shapefile.map(str::to_string));
-    let reporting = crate::diag::reporting();
-    let (us, warnings) = EPSF_NODES.with(|n| {
-        let mut n = n.borrow_mut();
-        let entry = n.entry(key).or_insert_with(|| user_init(shapefile, node));
-        let warnings = if reporting {
-            std::mem::take(&mut entry.1)
-        } else {
-            Vec::new()
-        };
-        (entry.0, warnings)
+    let found = graph(|g| {
+        g.epsf_nodes
+            .get_mut(&key)
+            .map(|(us, pending)| (*us, std::mem::take(pending)))
     });
-    if reporting && server_name().is_some() {
-        // safefile's one warning, if a quiet sizing made the first call
-        let _ = shapefile.map(safefile);
-    }
-    for m in warnings {
-        agwarningf(&m);
-    }
+    let (us, mut pending) = match found {
+        Some(found) => {
+            if crate::diag::reporting() && server_name().is_some() {
+                // safefile's one warning, if a quiet sizing made the first call
+                let _ = shapefile.map(safefile);
+            }
+            found
+        }
+        None => {
+            let (us, warnings) = user_init(shapefile, node);
+            (us, Deferred(warnings))
+        }
+    };
+    pending.deliver();
+    graph(|g| g.epsf_nodes.insert(key, (us, pending)));
     us
 }
 
 /// `epsf_init`'s `safefile` and `user_init`, with the warnings they give.
-fn user_init(shapefile: Option<&str>, node: &str) -> EpsfInit {
+fn user_init(shapefile: Option<&str>, node: &str) -> (Option<EpsfShape>, Vec<String>) {
     let Some((path, via_buffer)) = shapefile.and_then(safefile_from) else {
         let m = format!("shapefile not set or not found for epsf node {node}\n");
         return (None, vec![m]);
@@ -559,16 +710,21 @@ fn user_init(shapefile: Option<&str>, node: &str) -> EpsfInit {
         let m = format!("BoundingBox not found in epsf file {path}\n");
         return (None, vec![m]);
     };
-    let us = EpsfShape {
-        bb,
-        macro_id: N_EPSF_FILES.fetch_add(1, Ordering::Relaxed),
-    };
-    let key = if via_buffer {
-        EpsfKey::Static
-    } else {
-        EpsfKey::Graph(LAYOUT_ID.with(Cell::get), path)
-    };
-    EPSF_CONTENTS.with(|c| c.borrow_mut().push((key, us)));
+    let layout = graph(|g| g.layout_id);
+    let us = run(|r| {
+        let us = EpsfShape {
+            bb,
+            macro_id: r.n_epsf_files,
+        };
+        r.n_epsf_files += 1;
+        let key = if via_buffer {
+            EpsfKey::Static
+        } else {
+            EpsfKey::Graph(layout, path)
+        };
+        r.epsf_contents.push((key, us));
+        us
+    });
     (Some(us), Vec::new())
 }
 

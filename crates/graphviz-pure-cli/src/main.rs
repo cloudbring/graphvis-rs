@@ -577,6 +577,7 @@ fn auto_output_filename(input: Option<&OsStr>, graph_index: usize, langname: &st
 /// drawn from the SVG (graphviz-pure-raster).
 fn render_job(
     jobs: &mut GraphJobs<'_>,
+    job: usize,
     graph: &graphviz_pure::Graph,
     langname: &str,
 ) -> Result<Vec<u8>, graphviz_pure_core::GraphvizError> {
@@ -584,18 +585,12 @@ fn render_job(
     if let Some(fmt) = graphviz_pure_raster::RasterFormat::parse(typ) {
         // Graphviz draws raster formats at 96 dpi unless the graph sets `dpi` (or
         // `resolution`), which then scales the drawing.
-        let explicit_dpi = ["dpi", "resolution"].iter().any(|k| {
-            graph
-                .graph_attrs
-                .get(*k)
-                .and_then(|v| v.trim().parse::<f64>().ok())
-                .is_some_and(|d| d > 0.0)
-        });
-        let svg = jobs.render(OutputFormat::Svg, "svg")?;
+        let explicit_dpi = graphviz_pure_core::cnum::drawing_dpi(&graph.graph_attrs) > 0.0;
+        let svg = jobs.render_as(job, OutputFormat::Svg, "svg")?;
         return graphviz_pure_raster::rasterize(&svg, fmt, explicit_dpi)
             .map_err(graphviz_pure_core::GraphvizError::RenderError);
     }
-    let text = jobs.render(OutputFormat::parse(typ)?, langname)?;
+    let text = jobs.render_as(job, OutputFormat::parse(typ)?, langname)?;
     Ok(graphviz_pure_core::charset::encode(&text).into_owned())
 }
 
@@ -640,6 +635,8 @@ impl Run<'_> {
         name: &str,
     ) -> io::Result<()> {
         let mut graph_jobs = GraphJobs::new(graph);
+        // the jobs have output files: C's `fprintf(job->output_file, ...)` text goes in them
+        graph_jobs.write_output_file_text(true);
         for n in 0..self.opts.jobs.len() {
             // Every job's device writes its own output (no format of the port does pages),
             // so the device open before it is finalized.
@@ -670,7 +667,7 @@ impl Run<'_> {
                 });
             }
             self.active = Some(n);
-            let rendered = render_job(&mut graph_jobs, graph, &langname);
+            let rendered = render_job(&mut graph_jobs, n, graph, &langname);
             // what the job wrote to the standard output (`-Tjson`'s xdot job) came first
             let stdout = graph_jobs.take_stdout();
             if !stdout.is_empty() {

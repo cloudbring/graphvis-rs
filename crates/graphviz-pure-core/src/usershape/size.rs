@@ -5,16 +5,18 @@
 //! make: `fgetc` past the end returns `EOF`, `fseek` may go past the end, and an `fseek`
 //! before the start fails and leaves the position.
 
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{self, BufReader, Read, Seek, SeekFrom};
 
 /// A `FILE *` opened for reading, with the stdio calls the readers use.
 pub(super) struct CFile<R> {
-    r: Option<R>,
+    r: Option<BufReader<R>>,
 }
 
 impl<R: Read + Seek> CFile<R> {
     pub(super) fn new(r: R) -> Self {
-        CFile { r: Some(r) }
+        CFile {
+            r: Some(BufReader::new(r)),
+        }
     }
 
     /// A stream from which every read fails (`fopen` of a directory).
@@ -62,18 +64,12 @@ impl<R: Read + Seek> CFile<R> {
         }
     }
 
-    /// `fseek(f, off, SEEK_CUR) == 0`: a position before the start fails.
+    /// `fseek(f, off, SEEK_CUR) == 0`: a position before the start fails, and leaves the
+    /// position where it was.
     fn seek_cur(&mut self, off: i64) -> bool {
-        let Some(r) = self.r.as_mut() else {
-            return false;
-        };
-        let Ok(pos) = r.stream_position() else {
-            return false;
-        };
-        match pos.checked_add_signed(off) {
-            Some(p) => r.seek(SeekFrom::Start(p)).is_ok(),
-            None => false,
-        }
+        self.r
+            .as_mut()
+            .is_some_and(|r| r.seek_relative(off).is_ok())
     }
 
     /// `fgets(line, BUFSIZ, f)` (`BUFSIZ` is 1024 on the reference platform): up to 1023
@@ -97,7 +93,7 @@ impl<R: Read + Seek> CFile<R> {
 }
 
 /// `imagetype_t`, with the `stringtype` C gives each.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ImageType {
     Null,
     Png,
@@ -345,11 +341,6 @@ fn ps_size<R: Read + Seek>(d: &mut Dims, f: &mut CFile<R>) {
     }
 }
 
-/// `gv_isspace`.
-fn is_space(c: u8) -> bool {
-    matches!(c, b' ' | b'\t' | b'\n' | 0x0B | 0x0C | b'\r')
-}
-
 /// `fstr`: scans the file for `needle` (whose bytes are distinct) and stops after it.
 fn fstr<R: Read + Seek>(f: &mut CFile<R>, needle: &[u8]) -> bool {
     let mut offset = 0;
@@ -373,7 +364,7 @@ fn fstr<R: Read + Seek>(f: &mut CFile<R>, needle: &[u8]) -> bool {
 /// `skipWS`.
 fn skip_ws<R: Read + Seek>(f: &mut CFile<R>) {
     while let Some(c) = f.getc() {
-        if !is_space(c) {
+        if !crate::cnum::is_c_space(c) {
             f.ungetc();
             break;
         }
@@ -474,8 +465,8 @@ fn svg_length(value: &[u8]) -> Option<f64> {
     let (n, rest) = crate::strtod::scan_lf(&s)?;
     let unit: Vec<u8> = rest
         .bytes()
-        .skip_while(|&c| is_space(c))
-        .take_while(|&c| !is_space(c))
+        .skip_while(|&c| crate::cnum::is_c_space(c))
+        .take_while(|&c| !crate::cnum::is_c_space(c))
         .take(2)
         .collect();
     Some(if unit.is_empty() {

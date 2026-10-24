@@ -57,7 +57,9 @@ impl<E: Engine> Emitter<'_, E> {
         imagepos: &str,
     ) {
         let Some(us) = usershape::find(name) else {
-            // a shape library member: only PostScript has `library_shape`
+            // a name that never loaded: C draws it here only as a shape library member, with
+            // PostScript's `library_shape` (a member `gvusershape_open` took leaves below,
+            // at the 0x0 check)
             return;
         };
         let isz = usershape::size_dpi(&us, (self.job.dpi.x, self.job.dpi.y));
@@ -151,10 +153,13 @@ impl<E: Engine> Emitter<'_, E> {
         }
     }
 
-    /// Text C writes with `fprintf(job->output_file, ...)`, past the renderer.
+    /// Text C writes with `fprintf(job->output_file, ...)`, past the renderer; dropped
+    /// when the job has no output file.
     pub(crate) fn write_output_file(&mut self, s: &str) {
-        if !self.eng.write_output_file(s) {
-            self.output_file.push_str(s);
+        if let Some(out) = self.output_file.as_mut()
+            && !self.eng.write_output_file(s)
+        {
+            out.push_str(s);
         }
     }
 }

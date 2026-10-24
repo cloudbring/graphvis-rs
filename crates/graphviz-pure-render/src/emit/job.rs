@@ -322,7 +322,7 @@ impl<'a> Job<'a> {
         );
         let margin = scan2("margin").map_or(Point::default(), |(x, y)| Point::new(x, y));
         let dpi = {
-            let d = attrs.late_double("dpi", attrs.late_double("resolution", 0.0, 0.0), 0.0);
+            let d = graphviz_pure_core::cnum::drawing_dpi(attrs.0);
             if d > 0.0 { d } else { 72.0 }
         };
         // init_job_viewport
@@ -553,8 +553,9 @@ pub(crate) struct Emitter<'a, E: Engine> {
     /// `job->loadimage.engine`: the last loadimage plugin the job selected, which it keeps
     /// using when a later lookup fails.
     pub loadimage: Option<LoadImage>,
-    /// What [`Engine::write_output_file`] left for the output file before the engine's.
-    pub output_file: String,
+    /// What [`Engine::write_output_file`] left for the output file before the engine's;
+    /// `None` when the job has no output file to keep it for.
+    pub output_file: Option<String>,
 }
 
 impl<'a, E: Engine> Emitter<'a, E> {

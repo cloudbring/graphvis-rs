@@ -106,14 +106,23 @@ parsed input) matches C on 493 of 508 inputs (454 before).
   (72 unless `dpi` is set) when it is drawn. Files are kept by name for the run, as
   `ImageDict` keeps them, until a graph has its own `imagepath`. Where C asserts on an
   SVG size outside `0..=INT_MAX` (it aborts), the port takes 0.
+- **State.** What C keeps for its process (`ImageDict`, `EPSF_contents` and
+  `N_EPSF_files`, the `UserShape` list, `safefile`'s one warning) the port keeps for a
+  run: the CLI, or one top-level call of the library (`reset_render_state`), per
+  thread. The layout leaves what it found on the graph (`GraphLayout::usershapes`: the
+  graph's `imagepath` and `dpi`, the files it loaded, each epsf node's answer), and the
+  renderers draw from that (`usershape::rendering`), whatever was laid out since and on
+  whichever thread they run.
 - **Drawing.** The plugins are those of the reference build (`GVBINDIR` with the core
   plugins only): `-Tsvg` writes an `<image>` element for PNG, GIF, JPEG and SVG files,
   `-Txdot` (and the xdot job of `-Tjson`) an `I` operation for those and PostScript,
   and the `dot` formats draw nothing. For any other pair C warns
   `No loadimage plugin for "TYPE:RENDERER"`, and then draws with the plugin the job
-  selected last, which the port reproduces (a `-T` job keeps it from graph to graph).
+  selected last, which the port reproduces (each `-T` job keeps its own from graph to
+  graph, `GraphJobs::render_as`).
 - **`shape=epsf`.** `epsf_gencode` writes `X Y translate newpath user_shape_N` straight
-  into the output file whatever the format, and so does the port: inside the node's
+  into the output file whatever the format, and so does the CLI (the library's output is
+  the writer's document alone, `GraphJobs::write_output_file_text`): inside the node's
   group in `-Tsvg`, before the graph in the formats written at the end (`dot`, `xdot`,
   `plain`, `canon`, `json`), and for `-Tjson` once more from its xdot job, which C
   writes to the standard output (`GraphJobs::take_stdout`). It is not PostScript

@@ -85,8 +85,28 @@ pub fn c_round_low32(f: f64) -> i32 {
 }
 
 /// C's `isspace` in the C locale.
-fn is_c_space(b: u8) -> bool {
+pub fn is_c_space(b: u8) -> bool {
     matches!(b, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')
+}
+
+/// `late_double` (`lib/common/utils.c`) on a value: `default` when it is unset, empty or
+/// no number, `minimum` below it.
+pub fn late_double(p: Option<&str>, default: f64, minimum: f64) -> f64 {
+    match p
+        .filter(|s| !s.is_empty())
+        .and_then(crate::strtod::strtod_rest)
+    {
+        None => default,
+        Some((v, _)) if v < minimum => minimum,
+        Some((v, _)) => v,
+    }
+}
+
+/// `GD_drawing(g)->dpi` as `graph_init` sets it: `late_double(g, dpi,
+/// late_double(g, resolution, 0, 0), 0)`.
+pub fn drawing_dpi(graph_attrs: &crate::AttrMap) -> f64 {
+    let attr = |k: &str| graph_attrs.get(k).map(String::as_str);
+    late_double(attr("dpi"), late_double(attr("resolution"), 0.0, 0.0), 0.0)
 }
 
 /// C's `strtol(s, &end, 10)`: the value and the number of bytes read (`end - s`), or
