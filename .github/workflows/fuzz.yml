@@ -4,87 +4,28 @@ name: Fuzzing
 # (.clusterfuzzlite/): panics, hangs and running out of memory on crafted DOT. No C oracle; the
 # differential fuzzer against C Graphviz is separate (docs/porting/fuzzing.md).
 #
-# - pull_request: a short run of every target. A crash that the latest master build also has
-#   is not reported, so only crashes the change introduces fail the job. Skipped for release
-#   pull requests (this repository's release/* branches): they only bump versions in Cargo.lock, and the fixes
-#   they ship were fuzzed in their own pull requests.
-# - push to master: builds the targets and keeps the build for that comparison.
-# - schedule: a longer batch run that grows the corpus, then corpus pruning. The corpus, the
-#   crashes and the builds are kept as artifacts of this workflow.
-# A crash becomes an issue labelled `crash` with a minimised .gv reproducer.
+# - schedule, every 6 hours: a batch run that grows the corpus, then corpus pruning. The corpus,
+#   the crashes and the builds are kept as artifacts of this workflow.
+# Pull requests are not fuzzed here: the job took 25 minutes on every push of every pull request
+# and found one crash in 141 runs, while the agents fixing bugs waited for it. A failed scheduled
+# run opens an issue (scripts/ci-report-failure.sh), labelled `crash` when the run uploaded a
+# crash; the commits merged since the previous run are the suspects.
 
 on:
-  pull_request:
-    paths:
-      - "crates/**"
-      - "fuzz/**"
-      - ".clusterfuzzlite/**"
-      - "Cargo.lock"
-      - ".github/workflows/fuzz.yml"
-  push:
-    branches: [master]
-    paths:
-      - "crates/**"
-      - "fuzz/**"
-      - ".clusterfuzzlite/**"
-      - "Cargo.lock"
-      - ".github/workflows/fuzz.yml"
   schedule:
-    - cron: "41 3 * * *"
+    - cron: "41 */6 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Every run reads and writes the one corpus, so runs never overlap: a run that wrote its corpus
+# while another pruned would undo the pruning.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-corpus
+  cancel-in-progress: false
 
 jobs:
-  pr:
-    name: Fuzz the change
-    # A fork's branch name proves nothing, so only this repository's release/* branches skip.
-    if: >-
-      github.event_name == 'pull_request' &&
-      !(startsWith(github.head_ref, 'release/') &&
-        github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    permissions:
-      contents: read
-      actions: read # the latest master build, to tell new crashes from old ones
-    steps:
-      - name: Build the fuzz targets
-        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
-        with:
-          language: rust
-          github-token: ${{ github.token }}
-          sanitizer: address
-      - name: Fuzz every target (60 s each)
-        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
-        with:
-          github-token: ${{ github.token }}
-          mode: code-change
-          sanitizer: address
-          fuzz-seconds: 600
-
-  build:
-    name: Keep the master build
-    if: github.event_name == 'push' && github.repository == 'graphviz-pure/graphviz-pure'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    permissions:
-      contents: read
-      actions: read # the artifacts of earlier builds
-    steps:
-      - name: Build the fuzz targets and upload the build
-        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
-        with:
-          language: rust
-          github-token: ${{ github.token }}
-          sanitizer: address
-          upload-build: true
-
   batch:
     name: Batch fuzzing and corpus pruning
     if: >-
@@ -119,3 +60,36 @@ jobs:
           mode: prune
           sanitizer: address
           fuzz-seconds: 600
+
+  report:
+    name: Open an issue for a failed run
+    needs: batch
+    if: ${{ failure() && github.event_name == 'schedule' && github.repository == 'graphviz-pure/graphviz-pure' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read # list this run's artifacts, to tell a crash from a broken run
+      issues: write # open the issue that reports the failure
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # ClusterFuzzLite uploads each target's crashes as cifuzz-crashes-<target>; without one,
+      # the build, the action or the runner failed.
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          crashes=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" \
+            --jq '[.artifacts[].name | select(startswith("cifuzz-crashes-"))] | join(", ")')
+          if [ -n "$crashes" ]; then
+            scripts/ci-report-failure.sh "Fuzzing finds a crash on master" bug,crash \
+              "The scheduled fuzz run at $COMMIT crashed: $RUN_URL. Minimised reproducers: $crashes."
+          else
+            scripts/ci-report-failure.sh "Fuzzing workflow fails on master" bug \
+              "The scheduled fuzz run at $COMMIT failed without a crash (build, action or runner): $RUN_URL."
+          fi

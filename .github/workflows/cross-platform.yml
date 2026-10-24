@@ -20,6 +20,12 @@ name: Cross-platform
 # and the comparison are skipped when the files they read already passed this workflow
 # (scripts/ci-result-cache.sh), so a change to documentation or the site's pages renders nothing,
 # and the site job takes the cross-platform results from the run that passed those files.
+#
+# macOS x86-64 runs after the merge only (push to master, manual runs): its runner is the slowest
+# (a median 27 minutes against 10 for Windows), it has never failed where the other platforms
+# passed, and Linux and Windows test x86-64 while macOS arm64 tests macOS. Pull requests and the
+# merge queue compare the other five platforms, under the result-cache kind `cross-platform`; a
+# master push compares all six under `cross-platform-full`, and a failure there opens an issue.
 
 on:
   pull_request:
@@ -52,15 +58,42 @@ jobs:
       hit: ${{ steps.lookup.outputs.hit }}
       run_id: ${{ steps.lookup.outputs.run_id }}
       site: ${{ steps.site.outputs.build }}
+      kind: ${{ steps.platforms.outputs.kind }}
+      platforms: ${{ steps.platforms.outputs.platforms }}
+      expect: ${{ steps.platforms.outputs.expect }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The platforms this run renders: all six after the merge, all but macOS x86-64 before it.
+      - id: platforms
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          full=false
+          case "$EVENT" in push | workflow_dispatch) full=true ;; esac
+          platforms='[
+            {"id": "linux-x86_64", "label": "Linux x86-64", "runner": "ubuntu-24.04"},
+            {"id": "linux-arm64", "label": "Linux arm64", "runner": "ubuntu-24.04-arm"},
+            {"id": "windows-x86_64", "label": "Windows x86-64", "runner": "windows-2025"},
+            {"id": "macos-arm64", "label": "macOS arm64", "runner": "macos-15"},
+            {"id": "macos-x86_64", "label": "macOS x86-64", "runner": "macos-15-intel"}]'
+          kind=cross-platform
+          if [ "$full" = true ]; then
+            kind=cross-platform-full
+          else
+            platforms=$(jq -c 'map(select(.id != "macos-x86_64"))' <<< "$platforms")
+          fi
+          platforms=$(jq -c . <<< "$platforms")
+          expect=$(jq -r 'map(.id) + ["wasm32"] | join(",")' <<< "$platforms")
+          echo "Platforms: $expect"
+          { echo "kind=$kind"; echo "platforms=$platforms"; echo "expect=$expect"; } >> "$GITHUB_OUTPUT"
       - id: lookup
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
-        run: scripts/ci-result-cache.sh lookup cross-platform
+          KIND: ${{ steps.platforms.outputs.kind }}
+        run: scripts/ci-result-cache.sh lookup "$KIND"
       # Whether the site needs building: yes when a file the renders read or one of the site's
       # own sources differs from the base (the previous master, the pull request's base or the
       # merge queue's base), and always when there is no base to compare or on a manual run.
@@ -87,12 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { id: linux-x86_64, label: "Linux x86-64", runner: ubuntu-24.04 }
-          - { id: linux-arm64, label: "Linux arm64", runner: ubuntu-24.04-arm }
-          - { id: windows-x86_64, label: "Windows x86-64", runner: windows-2025 }
-          - { id: macos-arm64, label: "macOS arm64", runner: macos-15 }
-          - { id: macos-x86_64, label: "macOS x86-64", runner: macos-15-intel }
+        include: ${{ fromJSON(needs.lookup.outputs.platforms) }}
     defaults:
       run:
         shell: bash
@@ -191,10 +219,11 @@ jobs:
         env:
           COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EXPECT: ${{ needs.lookup.outputs.expect }}
         run: |
           # Every platform must have uploaded its outputs; a failed job shows up as missing.
           python3 scripts/cross-platform-compare.py xp \
-            --expect linux-x86_64,linux-arm64,windows-x86_64,macos-arm64,macos-x86_64,wasm32 \
+            --expect "$EXPECT" \
             --commit "$COMMIT" --run-url "$RUN_URL" \
             | tee -a "$GITHUB_STEP_SUMMARY"
       # The site's Cross-platform page is built from this (the site job below).
@@ -320,7 +349,7 @@ jobs:
   # Records that these inputs passed, so a later run with the same inputs skips the renders.
   record:
     name: Record the result for these inputs
-    needs: [compare, site]
+    needs: [lookup, compare, site]
     # Only after a passing comparison, and a site build that passed or had nothing to build.
     if: ${{ !cancelled() && needs.compare.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.site.result) }}
     runs-on: ubuntu-24.04
@@ -329,11 +358,37 @@ jobs:
         with:
           persist-credentials: false
       - id: marker
+        env:
+          KIND: ${{ needs.lookup.outputs.kind }}
         run: |
-          echo "name=$(scripts/ci-result-cache.sh name cross-platform)" >> "$GITHUB_OUTPUT"
+          echo "name=$(scripts/ci-result-cache.sh name "$KIND")" >> "$GITHUB_OUTPUT"
           echo "$GITHUB_RUN_ID" > "$RUNNER_TEMP/passed"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ steps.marker.outputs.name }}
           path: ${{ runner.temp }}/passed
           retention-days: 30
+
+  # Nobody waits on a master run, so a platform that fails there opens an issue (macOS x86-64 is
+  # only tested here), or comments on the one still open.
+  report:
+    name: Open an issue for a failed master run
+    needs: [native, wasm, compare]
+    if: ${{ failure() && github.event_name == 'push' && github.repository == 'graphviz-pure/graphviz-pure' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write # open the issue that reports the failure
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          scripts/ci-report-failure.sh "Cross-platform fails on master" bug \
+            "The post-merge cross-platform run at $COMMIT failed: $RUN_URL. macOS x86-64 is tested only after the merge, so check it first."

@@ -54,8 +54,8 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 
 	<p class="intro">
 		Every build of the port computes with the same math functions, written in Rust and compiled into the program, so the result does not depend
-		on the operating system, the CPU or the browser. CI checks it on every push: each platform below renders every corpus input and the gallery samples, and the
-		check fails unless all of them write the same bytes. The drawings on this page are those platforms' files, all drawn by your browser, so one
+		on the operating system, the CPU or the browser. CI checks it: each platform below renders every corpus input and the gallery samples, and the
+		check fails unless all of them write the same bytes. Pull requests are checked on every platform but macOS x86-64, which is checked after the merge, on each push to master. The drawings on this page are those platforms' files, all drawn by your browser, so one
 		renderer and one set of fonts: any difference you could see would be a difference in the files.
 	</p>
 
@@ -192,7 +192,7 @@ const sameAll = m ? m.samples.filter((s) => s.identical).length : 0;
 				<ul>
 					<li>
 						<a href={`${REPO}/blob/master/.github/workflows/cross-platform.yml`}><code>.github/workflows/cross-platform.yml</code></a> runs{' '}
-						<code>scripts/cross-platform-render.sh</code> on GitHub's Linux x86-64, Linux arm64, Windows, macOS arm64 and macOS x86-64 runners, with default builds, and{' '}
+						<code>scripts/cross-platform-render.sh</code> on GitHub's Linux x86-64, Linux arm64, Windows, macOS arm64 and (after the merge) macOS x86-64 runners, with default builds, and{' '}
 						<code>scripts/cross-platform-wasm.mjs</code> with the WASM package under Node.js.
 					</li>
 					<li>

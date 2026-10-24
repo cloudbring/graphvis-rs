@@ -51,6 +51,8 @@ ignored=(
   # Run by hand, by the release, or by a job that always runs.
   scripts/bump-version.sh
   scripts/c-oracle-linux
+  scripts/ci-stats
+  scripts/ci-report-failure.sh
   'scripts/*-probe.c'
   scripts/cargo-locked.sh
   scripts/crates-to-publish.py
