@@ -918,6 +918,19 @@ impl<'a, E: Engine> Emitter<'a, E> {
         self.job.push_obj(ObjKind::Node(n));
         self.job.obj_mut().emit_state = EmitState::NDraw;
         self.init_obj_map_data(Some(nd.label.text.clone()), ObjKind::Node(n));
+        // The node's map shape (emit.c:1666-1674) starts with `isFilled(n)`, which parses
+        // its style (and repeats parse_style's diagnostics). No renderer here draws the map
+        // shape itself.
+        let anchored = {
+            let o = self.job.obj();
+            o.url.is_some() || o.explicit_tooltip
+        };
+        if self.job.flags & (GVRENDER_DOES_MAPS | GVRENDER_DOES_TOOLTIPS) != 0
+            && anchored
+            && let Some(st) = nd.attrs.nonempty("style")
+        {
+            parse_style(st);
+        }
         let prev = self.set_scheme(nd.attrs.get("colorscheme"));
         self.eng.begin_node(&self.job);
         self.node_gencode(n);

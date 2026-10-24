@@ -7646,6 +7646,64 @@ fn issue268_a_truncated_style_draws_no_style_items() {
     );
 }
 
+/// Issue #384: for a node with a `URL` or an explicit `tooltip`, C's `emit_begin_node`
+/// computes the node's map shape, starting with `isFilled(n)` (emit.c:1666-1674), which parses
+/// its style a second time and repeats parse_style's diagnostics. A style past 63 items
+/// (#268) parses to nothing in every call. The expected SVG and stderr are C 16.1.0's.
+#[test]
+fn issue384_node_with_url_or_tooltip_parses_its_style_for_the_map_shape() {
+    let s64 = (0..64)
+        .map(|i| format!("s{i}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let src = format!(
+        "digraph {{ a [URL=\"u\" style=\"{s64}\"]; b [tooltip=\"t\" style=\"filled,(\"]; \
+         c [style=\"{s64}\"] }}"
+    );
+    // The errors make C exit 1, as the port does.
+    let (out, err, ok) = run(&["-Tsvg"], &src);
+    assert!(!ok);
+    let trunc = format!("Warning: truncating style '{s64}'\n");
+    let paren = "Error: unmatched '(' in style: filled,(\n";
+    assert_eq!(
+        err,
+        [&trunc, &trunc, &trunc, paren, paren, paren, &trunc, &trunc].concat()
+    );
+    let want = r#"<!-- Pages: 1 -->
+<svg width="206pt" height="44pt"
+ viewBox="0.00 0.00 206.00 44.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 40)">
+<polygon fill="white" stroke="none" points="-4,4 -4,-40 202,-40 202,4 -4,4"/>
+<!-- a -->
+<g id="node1" class="node">
+<title>a</title>
+<g id="a_node1"><a xlink:href="u" xlink:title="a">
+<ellipse fill="none" stroke="black" cx="27" cy="-18" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="27" y="-13.8" font-family="Times,serif" font-size="14.00">a</text>
+</a>
+</g>
+</g>
+<!-- b -->
+<g id="node2" class="node">
+<title>b</title>
+<g id="a_node2"><a xlink:title="t">
+<ellipse fill="none" stroke="black" cx="99" cy="-18" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="99" y="-13.8" font-family="Times,serif" font-size="14.00">b</text>
+</a>
+</g>
+</g>
+<!-- c -->
+<g id="node3" class="node">
+<title>c</title>
+<ellipse fill="none" stroke="black" cx="171" cy="-18" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="171" y="-13.8" font-family="Times,serif" font-size="14.00">c</text>
+</g>
+</g>
+</svg>
+"#;
+    assert_eq!(out.split_once(" -->\n").map(|(_, b)| b), Some(want));
+}
+
 /// Issue #360: where a samehead/sametail port lies in no field of a record, C's
 /// `record_path` writes no box and the route uses the uninitialised `tend`/`hend` of
 /// `make_regular_edge` (or of the flat edge router), which hold the previous call's
