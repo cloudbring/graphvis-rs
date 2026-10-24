@@ -1114,6 +1114,8 @@ fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool, hier: &Hier<'_>) {
     let root = g.root_sub();
     let mut done = false;
     if et > EdgeType::Ortho {
+        // layout.c:1057: `Nop = 0` afterwards, for the rest of the run.
+        let _nop = crate::neatogen::neatosplines::ClearNop::new();
         let mut try_failed = false;
         if et == EdgeType::CompoundEdge {
             let ok = spline_edges_by(g, &root, COMPOUND_EDGE_TYPE, &mut |lg, sub, pm, _| {
@@ -1122,7 +1124,9 @@ fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool, hier: &Hier<'_>) {
             if ok {
                 done = true;
             } else {
+                // layout.c:1046: when doing the edges again, accept those compoundEdges did.
                 try_failed = true;
+                crate::neatogen::neatosplines::set_nop(2);
             }
         }
         if try_failed || et != EdgeType::CompoundEdge {
@@ -1132,17 +1136,7 @@ fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool, hier: &Hier<'_>) {
                 );
                 et = EdgeType::Line;
             } else {
-                // With Nop = 2 after a failed compoundEdges, edges that
-                // already have splines are kept.
-                let keep = try_failed;
                 spline_edges_by(g, &root, et, &mut |lg, sub, pm, et| {
-                    if keep {
-                        for e in 0..lg.edges.len() {
-                            if lg.edges[e].spl.is_some() {
-                                lg.edges[e].count = 0;
-                            }
-                        }
-                    }
                     let et = if et == EdgeType::CompoundEdge {
                         EdgeType::Pline
                     } else {
@@ -1154,8 +1148,6 @@ fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool, hier: &Hier<'_>) {
                 done = true;
             }
         }
-        // layout.c:1057: `Nop = 0`, for the rest of the run.
-        crate::neatogen::neatosplines::set_nop(0);
     }
     if !done {
         spline_edges_main(g, &root, et);

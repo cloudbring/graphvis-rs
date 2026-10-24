@@ -8149,6 +8149,118 @@ stop
     );
 }
 
+/// Issue #332: `Nop` is set while every engine runs, as C's global, so `-n2` reaches the
+/// `Nop > 1` branches of `neato_set_aspect` and `spline_edges_` in fdp, sfdp and circo too.
+/// C's output under `-n2` is the output without it, for `ratio`, splines and pack.
+#[test]
+fn issue332_dash_n2_with_fdp_sfdp_and_circo_matches_c() {
+    let fill = r#"graph G { ratio=fill; size="3,2!"; splines=true; pack=true; a -- b; b -- c; c -- a [label=x]; d -- e; e -- e }"#;
+    let ortho = r#"graph G { ratio=2; splines=ortho; pack=10; a -- b [pos="0,0 10,10 20,20 30,30"]; b -- c; d -- e [label=y] }"#;
+    for (src, engine, want) in [
+        (
+            fill,
+            "fdp",
+            r#"graph 0.87298 3.4365 2.1243
+node a 0.375 1.713 0.75 0.5 a solid ellipse black lightgrey
+node b 1.3008 1.6932 0.75 0.5 b solid ellipse black lightgrey
+node c 0.82775 0.41642 0.75 0.5 c solid ellipse black lightgrey
+node d 1.9023 0.63484 0.75 0.5 d solid ellipse black lightgrey
+node e 2.8115 0.41134 0.75 0.5 e solid ellipse black lightgrey
+edge a b 4 0.75158 1.7049 0.80765 1.7037 0.86547 1.7025 0.9216 1.7013 solid black
+edge b c 4 1.2096 1.447 1.1259 1.2209 1.0024 0.88768 0.91869 0.66183 solid black
+edge c a 4 0.74046 0.66641 0.66029 0.896 0.54211 1.2344 0.46203 1.4638 x 0.5526 1.1818 solid black
+edge d e 4 2.2564 0.54779 2.3222 0.53161 2.391 0.51471 2.4568 0.49852 solid black
+edge e e 7 3.1649 0.50427 3.3119 0.51068 3.4365 0.4797 3.4365 0.41134 3.4365 0.34298 3.3119 0.31201 3.1649 0.31842 solid black
+stop
+"#,
+        ),
+        (
+            fill,
+            "sfdp",
+            r#"graph 0.44388 6.7586 3.9674
+node a 0.375 3.7174 0.75 0.5 a solid ellipse black lightgrey
+node b 0.61482 0.25 0.75 0.5 b solid ellipse black lightgrey
+node c 3.5088 2.1906 0.75 0.5 c solid ellipse black lightgrey
+node d 3.5 0.94444 0.75 0.5 d solid ellipse black lightgrey
+node e 6.1336 0.94444 0.75 0.5 e solid ellipse black lightgrey
+edge a b 4 0.39263 3.4624 0.43698 2.8212 0.55278 1.147 0.59716 0.50534 solid black
+edge b c 4 0.88189 0.42909 1.4332 0.79879 2.6916 1.6426 3.2424 2.012 solid black
+edge c a 4 3.2026 2.3398 2.6035 2.6317 1.2825 3.2753 0.68243 3.5676 x 1.8943 3.0702 solid black
+edge d e 4 3.8773 0.94444 4.3766 0.94444 5.2517 0.94444 5.7527 0.94444 solid black
+edge e e 7 6.487 1.0374 6.634 1.0438 6.7586 1.0128 6.7586 0.94444 6.7586 0.87609 6.634 0.84511 6.487 0.85152 solid black
+stop
+"#,
+        ),
+        (
+            fill,
+            "circo",
+            r#"graph 0.6389 4.6956 2.9637
+node a 0.375 0.30293 0.75 0.5 a solid ellipse black lightgrey
+node b 0.375 2.0566 0.75 0.5 b solid ellipse black lightgrey
+node c 1.6283 1.1798 0.75 0.5 c solid ellipse black lightgrey
+node d 2.3206 2.6608 0.75 0.5 d solid ellipse black lightgrey
+node e 4.0706 2.6608 0.75 0.5 e solid ellipse black lightgrey
+edge a b 4 0.375 0.55793 0.375 0.89041 0.375 1.4687 0.375 1.8013 solid black
+edge b c 4 0.63469 1.8749 0.84836 1.7254 1.1499 1.5145 1.3647 1.3642 solid black
+edge c a 4 1.3687 0.99809 1.155 0.8486 0.85343 0.63764 0.63867 0.4874 x 0.95546 0.85969 solid black
+edge d e 4 2.7003 2.6608 2.9938 2.6608 3.3982 2.6608 3.6916 2.6608 solid black
+edge e e 7 4.4239 2.7537 4.5709 2.7601 4.6956 2.7291 4.6956 2.6608 4.6956 2.5924 4.5709 2.5614 4.4239 2.5678 solid black
+stop
+"#,
+        ),
+        (
+            ortho,
+            "fdp",
+            r#"graph 1 3.2879 6.5758
+node a 0.375 4.6115 0.75 0.5 a solid ellipse black lightgrey
+node b 1.2228 2.9589 0.75 0.5 b solid ellipse black lightgrey
+node c 1.2364 0.67521 0.75 0.5 c solid ellipse black lightgrey
+node d 2.0037 5.9006 0.75 0.5 d solid ellipse black lightgrey
+node e 2.9129 5.5337 0.75 0.5 e solid ellipse black lightgrey
+edge a b 7 0.75428 4.6111 0.98003 4.6111 1.2228 4.6111 1.2228 4.6111 1.2228 4.6111 1.2228 3.6769 1.2228 3.2134 solid black
+edge b c 4 1.2296 2.7058 1.2296 2.2668 1.2296 1.3692 1.2296 0.92947 solid black
+edge d e 4 2.2765 5.7222 2.3979 5.7222 2.5399 5.7222 2.659 5.7222 y 2.4191 5.8389 solid black
+stop
+"#,
+        ),
+        (
+            ortho,
+            "sfdp",
+            r#"graph 1 7.1614 1.8333
+node a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey
+node b 2.8237 0.25 0.75 0.5 b solid ellipse black lightgrey
+node c 5.2535 0.25 0.75 0.5 c solid ellipse black lightgrey
+node d 4.1528 1.5833 0.75 0.5 d solid ellipse black lightgrey
+node e 6.7864 1.5833 0.75 0.5 e solid ellipse black lightgrey
+edge a b 4 0.75224 0.25 1.2111 0.25 1.9812 0.25 2.442 0.25 solid black
+edge b c 4 3.2033 0.25 3.6585 0.25 4.4168 0.25 4.8725 0.25 solid black
+edge d e 4 4.5301 1.5833 5.0293 1.5833 5.9045 1.5833 6.4055 1.5833 y 5.4192 1.7 solid black
+stop
+"#,
+        ),
+        (
+            ortho,
+            "circo",
+            r#"graph 1 5.75 11.5
+node a 0.375 1.6299 0.75 0.5 a solid ellipse black lightgrey
+node b 2.125 1.6299 0.75 0.5 b solid ellipse black lightgrey
+node c 3.875 1.6299 0.75 0.5 c solid ellipse black lightgrey
+node d 3.625 9.8701 0.75 0.5 d solid ellipse black lightgrey
+node e 5.375 9.8701 0.75 0.5 e solid ellipse black lightgrey
+edge a b 4 0.75472 1.625 1.0483 1.625 1.4527 1.625 1.746 1.625 solid black
+edge b c 4 2.5047 1.625 2.7983 1.625 3.2027 1.625 3.496 1.625 solid black
+edge d e 4 4.0047 9.875 4.2983 9.875 4.7027 9.875 4.996 9.875 y 4.4518 9.9917 solid black
+stop
+"#,
+        ),
+    ] {
+        let (out, err, ok) = run(&[&format!("-K{engine}"), "-n2", "-Tplain"], src);
+        assert!(ok, "{engine}: {err}");
+        assert_eq!(err, "", "{engine}");
+        assert_eq!(out, want, "{engine}");
+    }
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

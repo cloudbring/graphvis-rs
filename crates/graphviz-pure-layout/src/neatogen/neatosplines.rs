@@ -14,19 +14,37 @@ thread_local! {
     static NOP: std::cell::Cell<u8> = const { std::cell::Cell::new(0) };
 }
 
-/// Sets `Nop` while it lives; the previous value comes back when it is dropped, panics
-/// included.
-pub(crate) struct NopGuard(u8);
+/// `Nop` for the layout of one of a run's graphs: the run's value, `*nop`, while `f` runs,
+/// and the value the layout leaves written back to `*nop` afterwards, unwinding included, so a
+/// `Nop = 0` an engine set before a panic still holds for the run's later graphs.
+pub(crate) fn with_nop<R>(nop: &mut u8, f: impl FnOnce() -> R) -> R {
+    struct Run<'n> {
+        nop: &'n mut u8,
+        outer: u8,
+    }
+    impl Drop for Run<'_> {
+        fn drop(&mut self) {
+            *self.nop = NOP.with(|n| n.replace(self.outer));
+        }
+    }
+    let outer = NOP.with(|n| n.replace(*nop));
+    let _run = Run { nop, outer };
+    f()
+}
 
-impl NopGuard {
-    pub(crate) fn set(nop: u8) -> Self {
-        NopGuard(NOP.with(|n| n.replace(nop)))
+/// Sets `Nop = 0` when dropped, unwinding included: the engines that clear `Nop` after
+/// their work (`nop1_layout`, `nop2_layout`, `fdpSplines`).
+pub(crate) struct ClearNop(());
+
+impl ClearNop {
+    pub(crate) fn new() -> Self {
+        ClearNop(())
     }
 }
 
-impl Drop for NopGuard {
+impl Drop for ClearNop {
     fn drop(&mut self) {
-        NOP.with(|n| n.set(self.0));
+        set_nop(0);
     }
 }
 
@@ -35,7 +53,7 @@ pub(crate) fn nop() -> u8 {
     NOP.with(std::cell::Cell::get)
 }
 
-/// `Nop = nop`, for the rest of the enclosing [`NopGuard`].
+/// `Nop = nop`, for the rest of the run.
 pub(crate) fn set_nop(nop: u8) {
     NOP.with(|n| n.set(nop));
 }
@@ -668,4 +686,33 @@ fn get_cycle_centroid(g: &LGraph<'_>, sub: &Sub, edge: usize) -> Point {
         cnt += 1.0;
     }
     Point::new(sum.x / cnt, sum.y / cnt)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Issue #332: a `Nop = 0` set before a panic holds for the run's later graphs, and a
+    // nop engine called on its own leaves no `Nop` on the thread, even when it panics.
+    #[test]
+    fn nop_is_written_back_and_cleared_on_unwind() {
+        let mut run = 2;
+        let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            with_nop(&mut run, || {
+                assert_eq!(nop(), 2);
+                set_nop(0);
+                panic!("layout");
+            })
+        }));
+        assert!(caught.is_err());
+        assert_eq!((run, nop()), (0, 0));
+
+        let caught = std::panic::catch_unwind(|| {
+            let _clear = ClearNop::new();
+            set_nop(2);
+            panic!("layout");
+        });
+        assert!(caught.is_err());
+        assert_eq!(nop(), 0);
+    }
 }

@@ -906,7 +906,8 @@ fn init_nop(g: &mut LGraph<'_>, nop: u8) -> std::result::Result<bool, ()> {
 
 /// `neato_layout(g)` with `Nop`: `init_nop(g, 1)`, then `gv_postprocess(g, 0)`. A node
 /// without a position ends the layout of this graph only, which is still drawn.
-fn neato_layout_nop(graph: &mut Graph, nop: u8) {
+fn neato_layout_nop(graph: &mut Graph) {
+    let nop = super::neatosplines::nop();
     let attrs = &graph.graph_attrs;
     let outdim = late_int(attrs, "dimen", 2, 2);
     let ndim = late_int(attrs, "dim", outdim, 2).min(MAXDIM as i32) as usize;
@@ -940,10 +941,7 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
     };
     // The rest of init_nop's scan_graph: its `bad edge len` warnings.
     super::stuff::nop_check_edge_lens(graph);
-    let done = {
-        let _nop = super::neatosplines::NopGuard::set(nop);
-        init_nop(&mut g, nop)
-    };
+    let done = init_nop(&mut g, nop);
     let Ok(splines_state) = done else {
         graphviz_pure_core::diag::agerr_prev("as required by the -n flag\n");
         // `neato_layout` returns before any coordinate, spline or cluster is set, and
@@ -985,16 +983,15 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
 /// `nop1_layout` and `nop2_layout` (`plugin/neato_layout/gvlayout_neato_layout.c:48-57`):
 /// `neato_layout` with `Nop` set to `nop`, then `Nop = 0`, whatever `-n` set it to.
 pub fn nop_layout(graph: &mut Graph, nop: u8) -> Result<()> {
+    let _clear = super::neatosplines::ClearNop::new();
     super::neatosplines::set_nop(nop);
-    let result = neato_layout(graph, nop);
-    super::neatosplines::set_nop(0);
-    result
+    neato_layout(graph)
 }
 
-/// `neato_layout(g)`; `nop` is `Nop`, the `-n` level.
-pub fn neato_layout(graph: &mut Graph, nop: u8) -> Result<()> {
-    if nop > 0 {
-        neato_layout_nop(graph, nop);
+/// `neato_layout(g)`, with `Nop` (the `-n` level) as the run set it.
+pub fn neato_layout(graph: &mut Graph) -> Result<()> {
+    if super::neatosplines::nop() > 0 {
+        neato_layout_nop(graph);
         return Ok(());
     }
     let attrs = &graph.graph_attrs;
@@ -1314,7 +1311,11 @@ mod tests {
     }
 
     fn nop_layout(mut g: Graph, nop: u8) -> Graph {
-        graphviz_pure_core::diag::quietly(|| neato_layout(&mut g, nop)).unwrap();
+        let mut nop = nop;
+        graphviz_pure_core::diag::quietly(|| {
+            super::super::neatosplines::with_nop(&mut nop, || neato_layout(&mut g))
+        })
+        .unwrap();
         g
     }
 
