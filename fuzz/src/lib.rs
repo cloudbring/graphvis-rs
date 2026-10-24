@@ -43,7 +43,7 @@ pub fn render(data: &[u8], engine: &str) {
 }
 
 fn render_source(src: &str, engine: &str) {
-    let Ok(graph) = graphviz_pure::parse_dot(src) else {
+    let Ok(graph) = graphviz_pure::decoded::parse_dot(src) else {
         return;
     };
     if graph.nodes.len() > MAX_NODES
@@ -52,5 +52,5 @@ fn render_source(src: &str, engine: &str) {
     {
         return;
     }
-    let _ = graphviz_pure::render_dot(src, engine, "svg");
+    let _ = graphviz_pure::decoded::render_dot(src, engine, "svg");
 }

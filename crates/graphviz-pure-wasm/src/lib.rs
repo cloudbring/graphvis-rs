@@ -20,7 +20,7 @@ fn js_error(e: impl std::fmt::Display) -> JsValue {
 /// [`charset::to_text`].
 fn render_text(dot_source: &str, engine: &str, format: &str) -> Result<String, String> {
     let (engine, format) = (charset::from_text(engine), charset::from_text(format));
-    graphviz_pure::render_dot(&charset::from_text(dot_source), &engine, &format)
+    graphviz_pure::decoded::render_dot(&charset::from_text(dot_source), &engine, &format)
         .map(|out| charset::to_text(&out).into_owned())
         .map_err(error_text)
 }
@@ -28,7 +28,7 @@ fn render_text(dot_source: &str, engine: &str, format: &str) -> Result<String, S
 /// [`render_all`] as [`render_text`] is [`render`].
 fn render_all_text(dot_source: &str, engine: &str, format: &str) -> Result<Vec<String>, String> {
     let (engine, format) = (charset::from_text(engine), charset::from_text(format));
-    graphviz_pure::render_dot_all(
+    graphviz_pure::decoded::render_dot_all(
         &charset::from_text(dot_source),
         &engine,
         &format,
@@ -91,7 +91,7 @@ pub fn render_all_bytes(
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let src = charset::decode_slice(dot_source);
     let (engine, format) = (charset::from_text(engine), charset::from_text(format));
-    let (parts, err) = graphviz_pure::render_dot_all_partial(
+    let (parts, err) = graphviz_pure::decoded::render_dot_all_partial(
         &src,
         &engine,
         &format,
@@ -121,7 +121,8 @@ pub fn render_json(dot_source: &str, engine: &str) -> std::result::Result<String
 pub fn inspect_graph(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
     let layout_engine =
         graphviz_pure::LayoutEngine::parse(&charset::from_text(engine)).map_err(js_error)?;
-    let mut graph = graphviz_pure::parse_dot(&charset::from_text(dot_source)).map_err(js_error)?;
+    let mut graph =
+        graphviz_pure::decoded::parse_dot(&charset::from_text(dot_source)).map_err(js_error)?;
     graphviz_pure::layout_graph(&mut graph, layout_engine).map_err(js_error)?;
     let stats = GraphStats {
         name: charset::to_text(&graph.name).into_owned(),

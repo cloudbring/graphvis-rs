@@ -142,7 +142,7 @@ pub(crate) fn run_port(src: &str) -> Option<String> {
     // as `dot` reads the file.
     let out = std::panic::catch_unwind(move || {
         graphviz_pure_parser::reading_file("input", || {
-            graphviz_pure::render_dot_all_partial(
+            graphviz_pure::decoded::render_dot_all_partial(
                 &src,
                 "dot",
                 "svg",

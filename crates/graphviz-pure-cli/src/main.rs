@@ -1,7 +1,8 @@
+use graphviz_pure::decoded::{GraphJobs, GraphStream};
 use graphviz_pure::plugins;
 use graphviz_pure::{
-    DEVICE_PLUGINS, FdpParms, GlobalAttrs, GraphJobs, GraphStream, LAYOUT_PLUGINS, LayoutEngine,
-    LayoutJobs, LayoutOptions, OutputFormat,
+    DEVICE_PLUGINS, FdpParms, GlobalAttrs, LAYOUT_PLUGINS, LayoutEngine, LayoutJobs, LayoutOptions,
+    OutputFormat,
 };
 use graphviz_pure_core::charset::decode_slice;
 use graphviz_pure_core::diag::{AgErrLevel, agerrorf, agseterr, agwarningf, fprintf_stderr};

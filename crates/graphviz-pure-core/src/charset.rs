@@ -16,8 +16,9 @@
 //! raw bytes, so in a decoded string that range only ever stands for raw bytes and
 //! [`encode`] gives back the input's bytes. C sees those four bytes too: it measures
 //! each one and writes them unchanged. Every string the port reads is in this decoded
-//! form; text from elsewhere (a JS string, say) goes through [`decode_slice`] of its
-//! UTF-8 bytes first, and [`encode`] turns a result back into bytes.
+//! form; text from elsewhere (a JS string, or a `&str` given to `graphviz_pure`'s root
+//! functions) goes through [`from_text`] first, and [`to_text`] or [`encode`] turns a
+//! result back into text or bytes.
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};

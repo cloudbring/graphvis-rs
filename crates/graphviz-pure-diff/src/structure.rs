@@ -564,7 +564,7 @@ mod tests {
         r#"digraph G { a -> b [label="ab"]; subgraph cluster_x { label="X"; c; } b -> c; }"#;
 
     fn port_svg() -> String {
-        let (parts, _) = graphviz_pure::render_dot_all_partial(
+        let (parts, _) = graphviz_pure::decoded::render_dot_all_partial(
             GRAPH,
             "dot",
             "svg",

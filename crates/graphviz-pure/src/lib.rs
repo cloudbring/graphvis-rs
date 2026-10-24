@@ -1,8 +1,17 @@
 //! High-level Graphviz orchestration engine (`graphviz-pure`).
 //!
-//! DOT text taken and returned here is in the port's decoded form ([`charset`]).
+//! DOT text taken and returned by the functions here is ordinary text. The port reads every
+//! string in a decoded form ([`charset`]), where U+10FF00..=U+10FFFF stands for an input byte
+//! that is not UTF-8; these functions convert at the boundary, so a real U+10FFxx character in
+//! the source is that character, as it is to C. A parsed [`Graph`] holds its names and values
+//! in the decoded form. For text already decoded, such as a file's bytes read with
+//! [`charset::decode`], use the same entry points in [`decoded`].
 
+pub mod decoded;
 pub mod plugins;
+
+use graphviz_pure_core::AttrMap;
+use std::borrow::Cow;
 
 pub use graphviz_pure_core::{Graph, GraphvizError, Result, charset};
 pub use graphviz_pure_layout::cutil::{RandState, in_rand_run, with_rand_state};
@@ -10,30 +19,19 @@ pub use graphviz_pure_layout::fdpgen::tlayout::FdpParms;
 pub use graphviz_pure_layout::{
     LayoutEngine, LayoutOptions, layout_graph, layout_graph_in_run, layout_graph_with_options,
 };
-pub use graphviz_pure_parser::{GlobalAttrs, GraphStream, parse_dot, parse_dot_all};
-pub use graphviz_pure_render::{
-    GraphJobs, OutputFormat, loadimage_installed, render_graph, render_graph_named, set_y_invert,
-};
+pub use graphviz_pure_parser::GlobalAttrs;
+pub use graphviz_pure_render::{OutputFormat, loadimage_installed, set_y_invert};
 
 /// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
 /// first graph in `dot_source`.
-///
-/// `dot_source` and the output are in the port's decoded form ([`charset`]), as for every
-/// function in this crate that takes or returns DOT text. For ordinary text that may hold
-/// U+10FF00..=U+10FFFF, pass [`charset::from_text`]`(text)` and read the output with
-/// [`charset::to_text`].
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
-    let output_format = OutputFormat::parse(format)?;
-    // Each call is one C process: per-process counters (gradient and anchor ids) restart.
-    graphviz_pure_render::reset_render_state();
-    let graph = parse_dot(dot_source)?;
-    render_parsed(
-        graph,
-        engine,
-        output_format,
-        format,
-        &mut LayoutOptions::default(),
+    decoded::render_dot(
+        &from_text(dot_source),
+        &from_text(engine),
+        &from_text(format),
     )
+    .map(text)
+    .map_err(error_text)
 }
 
 /// Renders every graph in `dot_source`, applying `globals` (`-G`/`-N`/`-E`) before each graph body.
@@ -60,18 +58,15 @@ pub fn render_dot_all_with_options(
     globals: &GlobalAttrs,
     options: LayoutOptions,
 ) -> Result<Vec<String>> {
-    let output_format = OutputFormat::parse(format)?;
-    graphviz_pure_render::reset_render_state();
-    let graphs = parse_dot_all(dot_source, globals)?;
-    // One call is one C process: its graphs share the C library's generator states (the
-    // caller's, inside a `with_rand_state`) and `Nop`.
-    let mut options = options;
-    in_rand_run(|| {
-        graphs
-            .into_iter()
-            .map(|graph| render_parsed(graph, engine, output_format, format, &mut options))
-            .collect()
-    })
+    decoded::render_dot_all_with_options(
+        &from_text(dot_source),
+        &from_text(engine),
+        &from_text(format),
+        &globals_from_text(globals),
+        options,
+    )
+    .map(|outs| outs.into_iter().map(text).collect())
+    .map_err(error_text)
 }
 
 /// [`render_dot_all_with_options`] that renders the graphs read before a syntax error
@@ -82,27 +77,15 @@ pub fn render_dot_all_partial(
     format: &str,
     globals: &GlobalAttrs,
     options: LayoutOptions,
-) -> (Vec<String>, Option<graphviz_pure_core::GraphvizError>) {
-    let output_format = match OutputFormat::parse(format) {
-        Ok(f) => f,
-        Err(e) => return (Vec::new(), Some(e)),
-    };
-    graphviz_pure_render::reset_render_state();
-    let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
-    let mut out = Vec::with_capacity(graphs.len());
-    // One call is one C process: its graphs share the C library's generator states (the
-    // caller's, inside a `with_rand_state`) and `Nop`.
-    let mut options = options;
-    let err = in_rand_run(|| {
-        for graph in graphs {
-            match render_parsed(graph, engine, output_format, format, &mut options) {
-                Ok(s) => out.push(s),
-                Err(e) => return Some(e),
-            }
-        }
-        None
-    });
-    (out, err.or(parse_err))
+) -> (Vec<String>, Option<GraphvizError>) {
+    let (outs, err) = decoded::render_dot_all_partial(
+        &from_text(dot_source),
+        &from_text(engine),
+        &from_text(format),
+        &globals_from_text(globals),
+        options,
+    );
+    (outs.into_iter().map(text).collect(), err.map(error_text))
 }
 
 /// Lays out and renders every graph in `dot_source` as SVG, for raster output: each SVG comes
@@ -114,46 +97,110 @@ pub fn render_svg_all_partial(
     engine: &str,
     globals: &GlobalAttrs,
     options: LayoutOptions,
-) -> (
-    Vec<(String, bool)>,
-    Option<graphviz_pure_core::GraphvizError>,
-) {
-    graphviz_pure_render::reset_render_state();
-    let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
-    let mut out = Vec::with_capacity(graphs.len());
-    // One call is one C process: its graphs share the C library's generator states (the
-    // caller's, inside a `with_rand_state`) and `Nop`.
-    let mut options = options;
-    let err = in_rand_run(|| {
-        for graph in graphs {
-            let explicit_dpi = graphviz_pure_core::cnum::drawing_dpi(&graph.graph_attrs) > 0.0;
-            match render_parsed(graph, engine, OutputFormat::Svg, "svg", &mut options) {
-                Ok(s) => out.push((s, explicit_dpi)),
-                Err(e) => return Some(e),
-            }
-        }
-        None
-    });
-    (out, err.or(parse_err))
+) -> (Vec<(String, bool)>, Option<GraphvizError>) {
+    let (outs, err) = decoded::render_svg_all_partial(
+        &from_text(dot_source),
+        &from_text(engine),
+        &globals_from_text(globals),
+        options,
+    );
+    let outs = outs
+        .into_iter()
+        .map(|(svg, dpi)| (text(svg), dpi))
+        .collect();
+    (outs, err.map(error_text))
 }
 
-fn render_parsed(
-    mut graph: Graph,
-    engine: &str,
-    output_format: OutputFormat,
-    format_name: &str,
-    options: &mut LayoutOptions,
-) -> Result<String> {
-    let engine = LayoutEngine::parse(engine)?;
-    // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
-    let layout_engine = match graph.graph_attrs.get("layout") {
-        Some(name) if !name.trim().is_empty() => LayoutEngine::parse(name.trim())?,
-        _ => engine,
+/// Parses the first graph in `dot_source`. The graph holds its names and values in decoded
+/// form ([`charset`]).
+pub fn parse_dot(dot_source: &str) -> Result<Graph> {
+    decoded::parse_dot(&from_text(dot_source)).map_err(error_text)
+}
+
+/// Parses every graph in `dot_source`, applying `globals` before each graph body. The graphs
+/// hold their names and values in decoded form ([`charset`]).
+pub fn parse_dot_all(dot_source: &str, globals: &GlobalAttrs) -> Result<Vec<Graph>> {
+    decoded::parse_dot_all(&from_text(dot_source), &globals_from_text(globals)).map_err(error_text)
+}
+
+/// Renders a laid-out graph in `format`.
+pub fn render_graph(graph: &Graph, format: OutputFormat) -> Result<String> {
+    decoded::render_graph(graph, format)
+        .map(text)
+        .map_err(error_text)
+}
+
+/// [`render_graph`] for the format named `name` (an alias such as `gv` for `dot`), which the
+/// render diagnostics print.
+pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Result<String> {
+    decoded::render_graph_named(graph, format, &from_text(name))
+        .map(text)
+        .map_err(error_text)
+}
+
+/// Text from the caller in decoded form: a real U+10FF00..=U+10FFFF is not a raw byte.
+fn from_text(s: &str) -> Cow<'_, str> {
+    charset::from_text(s)
+}
+
+/// `globals` in decoded form.
+fn globals_from_text(globals: &GlobalAttrs) -> Cow<'_, GlobalAttrs> {
+    let raw = |m: &AttrMap| {
+        m.iter()
+            .any(|(k, v)| charset::has_raw(k) || charset::has_raw(v))
     };
-    // `dot` lays the graph out for every format, `canon` and the json formats without
-    // layout attributes included: they write the graph as the layout left it.
-    layout_graph_in_run(&mut graph, layout_engine, options)?;
-    render_graph_named(&graph, output_format, format_name)
+    if !(raw(&globals.graph) || raw(&globals.node) || raw(&globals.edge)) {
+        return Cow::Borrowed(globals);
+    }
+    let map = |m: &AttrMap| {
+        let mut out = AttrMap::new();
+        for (k, v) in m {
+            out.set(&from_text(k), from_text(v).into_owned(), m.is_html(k));
+        }
+        out
+    };
+    Cow::Owned(GlobalAttrs {
+        graph: map(&globals.graph),
+        node: map(&globals.node),
+        edge: map(&globals.edge),
+    })
+}
+
+/// Decoded output as text for the caller.
+fn text(s: String) -> String {
+    match charset::to_text(&s) {
+        Cow::Borrowed(_) => s,
+        Cow::Owned(t) => t,
+    }
+}
+
+/// An error whose messages are text for the caller.
+fn error_text(e: GraphvizError) -> GraphvizError {
+    use GraphvizError::*;
+    match e {
+        SyntaxError {
+            line,
+            col,
+            message,
+            file,
+        } => SyntaxError {
+            line,
+            col,
+            message: text(message),
+            file: file.map(text),
+        },
+        UnsupportedEngine(s) => UnsupportedEngine(text(s)),
+        UnsupportedFormat(s) => UnsupportedFormat(text(s)),
+        LayoutError { stage, message } => LayoutError {
+            stage,
+            message: text(message),
+        },
+        AttributeError { attr, message } => AttributeError {
+            attr: text(attr),
+            message: text(message),
+        },
+        RenderError(s) => RenderError(text(s)),
+    }
 }
 
 /// The layout plugins, as `gvplugin_list(gvc, API_layout, "")` lists them, with their
@@ -331,6 +378,7 @@ mod tests {
     }
 
     use super::*;
+    use crate::decoded::GraphJobs;
     use std::fs;
     use std::path::PathBuf;
 
@@ -459,6 +507,51 @@ mod tests {
         assert_eq!(outs.len(), 2);
         assert!(outs[0].contains("<title>a</title>") && !outs[0].contains("<ellipse"));
         assert!(outs[1].contains("<title>c</title>"));
+    }
+
+    // Issue #378: the root functions take and return text. A real U+10FF41 is the four bytes
+    // F4 8F BD 81 to C, which measures each and writes them unchanged (C 16.1.0, -Tplain). The
+    // decoded entry points read the same string as the raw byte 0x41, `A`.
+    #[test]
+    fn text_entry_points_keep_a_real_raw_byte_range_char() {
+        let src = "digraph { \"x\u{10FF41}y\" -> b [label=\"\u{10FF41}\"] }";
+        let want = "graph 1 0.84307 1.7333\n\
+             node x\u{10FF41}y 0.42153 1.4833 0.84307 0.5 x\u{10FF41}y solid ellipse black lightgrey\n\
+             node b 0.42153 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+             edge x\u{10FF41}y b 4 0.42153 1.2313 0.42153 1.0689 0.42153 0.84989 0.42153 0.66136 \
+             \u{10FF41} 0.51876 0.86667 solid black\n\
+             stop\n";
+        assert_eq!(render_dot(src, "dot", "plain").unwrap(), want);
+        // the command line's path: the file's bytes, decoded, rendered and encoded
+        let bytes = decoded::render_dot(&charset::decode_slice(src.as_bytes()), "dot", "plain");
+        assert_eq!(charset::encode(&bytes.unwrap()), want.as_bytes());
+        let raw = decoded::render_dot(src, "dot", "plain").unwrap();
+        let raw = String::from_utf8_lossy(&charset::encode(&raw)).into_owned();
+        assert!(raw.contains("\nnode xAy "), "{raw}");
+        let opts = LayoutOptions::default();
+        let all = render_dot_all_with_options(src, "dot", "plain", &GlobalAttrs::default(), opts);
+        assert_eq!(all.unwrap(), [want]);
+        let (all, err) = render_dot_all_partial(src, "dot", "plain", &GlobalAttrs::default(), opts);
+        assert!(err.is_none());
+        assert_eq!(all, [want]);
+        // globals are text too, and so is a parsed graph's source
+        let mut globals = GlobalAttrs::default();
+        globals.node.insert("label".into(), "\u{10FF41}".into());
+        let out = render_dot_all("digraph { a }", "dot", "plain", &globals).unwrap();
+        assert!(out[0].contains(" 0.5 \u{10FF41} solid "), "{}", out[0]);
+        let g = parse_dot(src).unwrap();
+        let name = g.nodes[0].name.as_str();
+        assert_eq!(charset::encode(name), "x\u{10FF41}y".as_bytes());
+        assert_eq!(
+            render_graph(&g, OutputFormat::Canon)
+                .unwrap()
+                .matches('\u{10FF41}')
+                .count(),
+            2
+        );
+        // an error message holds the text it quotes
+        let err = render_dot("digraph { a -> \u{10FF41} ; ]", "dot", "plain").unwrap_err();
+        assert!(!charset::has_raw(&err.to_string()), "{err}");
     }
 
     #[test]

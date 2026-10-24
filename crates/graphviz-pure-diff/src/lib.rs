@@ -421,7 +421,8 @@ pub fn engine_for(source: &str) -> String {
 /// Lays out `source` with the port and returns its geometry. Panics are reported as errors.
 pub fn run_port(source: &str) -> Result<Layout, String> {
     let src = source.to_string();
-    let res = std::panic::catch_unwind(move || graphviz_pure::render_dot(&src, "dot", "dot"));
+    let res =
+        std::panic::catch_unwind(move || graphviz_pure::decoded::render_dot(&src, "dot", "dot"));
     match res {
         Ok(Ok(text)) => extract(&text),
         Ok(Err(e)) => Err(format!("error: {e}")),
