@@ -8302,6 +8302,18 @@ fn issue331_arrow_warnings_come_from_the_layouts_arrow_flags() {
         assert!(ok);
         assert_eq!(err, "", "{args:?}");
     }
+    // An edge without a `pos` warns once, in arrow_clip, not in user_spline too.
+    let (_, err, ok) = run(
+        &["-Kneato", "-n2", "-Tsvg"],
+        "digraph G { a [pos=\"0,0\"]; b [pos=\"100,100\"]; a -> b [arrowhead=bogus]; \
+         b -> a [arrowhead=x2, pos=\"\"] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Arrow type \"bogus\" unknown - ignoring\n\
+         Warning: Arrow type \"x2\" unknown - ignoring\n"
+    );
     let (_, err, ok) = run(
         &["-Kneato", "-n2", "-Tdot"],
         "digraph G { a -> b [arrowhead=bogus]; c [pos=\"1,1\"] }",
