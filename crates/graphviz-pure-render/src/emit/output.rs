@@ -315,7 +315,7 @@ pub(crate) fn propagate_inherited(g: &mut Graph, orig: &Graph, explicit: &[BTree
 fn root_holds_plain(g: &Graph, s: &str) -> bool {
     let in_map = |m: &graphviz_pure_core::AttrMap| {
         m.iter()
-            .any(|(k, v)| !k.starts_with('\u{1}') && (k == s || (v == s && !attr_is_html(m, k))))
+            .any(|(k, v)| k == s || (v == s && !attr_is_html(m, k)))
     };
     (!g.empty_name && g.name == s)
         || in_map(&g.graph_attrs)

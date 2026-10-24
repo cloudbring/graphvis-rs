@@ -161,18 +161,16 @@ fn attached(
 /// (`rec_attach_bb`, xdot's `_draw_`), which become local values even when they equal the
 /// inherited ones.
 fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<String>]) {
-    use graphviz_pure_core::{AttrSym, HTML_VALUE_PREFIX, attr_is_html};
-    let mark = |k: &str| k.starts_with(HTML_VALUE_PREFIX);
+    use graphviz_pure_core::{AttrSym, attr_is_html};
     let none = std::collections::BTreeSet::new();
     let set_graph = |d: &mut std::collections::BTreeMap<String, AttrSym>,
                      now: &graphviz_pure_core::AttrMap,
                      before: &graphviz_pure_core::AttrMap,
                      set: &std::collections::BTreeSet<String>| {
         for (k, v) in now {
-            if !mark(k)
-                && (before.get(k) != Some(v)
-                    || attr_is_html(before, k) != attr_is_html(now, k)
-                    || set.contains(k))
+            if before.get(k) != Some(v)
+                || attr_is_html(before, k) != attr_is_html(now, k)
+                || set.contains(k)
             {
                 let sym = d.entry(k.clone()).or_default();
                 sym.defval = v.clone();
@@ -182,7 +180,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<Str
     };
     let (root_now, root_before) = (g.graph_attrs.clone(), &orig.graph_attrs);
     // safe_dcl declares graph attributes on the root before setting them.
-    for k in root_now.keys().filter(|k| !mark(k)) {
+    for k in root_now.keys() {
         if !root_before.contains_key(k) {
             g.dicts[0].graph.entry(k.clone()).or_default();
         }
@@ -190,7 +188,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<Str
     set_graph(&mut g.dicts[0].graph, &root_now, root_before, &none);
     for i in 0..g.subgraphs.len() {
         let now = g.subgraphs[i].graph_attrs.clone();
-        for k in now.keys().filter(|k| !mark(k)) {
+        for k in now.keys() {
             if !orig.subgraphs[i].graph_attrs.contains_key(k) {
                 g.dicts[0].graph.entry(k.clone()).or_default();
             }
@@ -206,7 +204,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<Str
     for n in &g.nodes {
         node_keys.extend(n.attrs.keys().cloned());
     }
-    for k in node_keys.into_iter().filter(|k| !mark(k)) {
+    for k in node_keys {
         // Every subgraph's symbols are also in the root's dictionary.
         g.dicts[0].node.entry(k).or_default();
     }
@@ -214,7 +212,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<Str
     for e in &g.edges {
         edge_keys.extend(e.attrs.keys().cloned());
     }
-    for k in edge_keys.into_iter().filter(|k| !mark(k)) {
+    for k in edge_keys {
         // Every subgraph's symbols are also in the root's dictionary.
         g.dicts[0].edge.entry(k).or_default();
     }

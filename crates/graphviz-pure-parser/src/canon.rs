@@ -1,8 +1,7 @@
 //! Canonical DOT writer (`dot -Tcanon`) matching Graphviz `lib/cgraph/write.c`.
 
 use graphviz_pure_core::{
-    AttrMap, EdgeData, EdgeId, Graph, GraphKind, HTML_VALUE_PREFIX, NodeData, NodeId, Port,
-    SubgraphId, attr_is_html,
+    AttrMap, EdgeData, EdgeId, Graph, GraphKind, NodeData, NodeId, Port, SubgraphId, attr_is_html,
 };
 use std::collections::BTreeSet;
 
@@ -385,7 +384,6 @@ fn write_dict(
 ) {
     let entries: Vec<(&String, &String)> = attrs
         .iter()
-        .filter(|(k, _)| !k.starts_with(HTML_VALUE_PREFIX))
         .filter(|(k, v)| match parent_attrs {
             Some(_) if forced.is_some_and(|f| f.contains(*k)) => true,
             Some(parent) => {
@@ -438,7 +436,6 @@ fn collect_non_default_node_attrs<'a>(
 ) -> Vec<(&'a String, &'a String)> {
     node.attrs
         .iter()
-        .filter(|(k, _)| !k.starts_with(HTML_VALUE_PREFIX))
         .filter(|(k, v)| match node_defaults.get(*k) {
             Some(def_val) => {
                 *v != def_val || attr_is_html(&node.attrs, k) != attr_is_html(node_defaults, k)
@@ -454,7 +451,6 @@ fn collect_non_default_edge_attrs<'a>(
 ) -> Vec<(&'a String, &'a String)> {
     edge.attrs
         .iter()
-        .filter(|(k, _)| !k.starts_with(HTML_VALUE_PREFIX))
         .filter(|(k, v)| {
             if (*k == "tailport" && edge.tail_port != Port::default())
                 || (*k == "headport" && edge.head_port != Port::default())

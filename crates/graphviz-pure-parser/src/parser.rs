@@ -6,8 +6,8 @@ use crate::lexer::{Lexer, ScanInput, ScanState, Token, TokenKind};
 type AttrMap2 = std::collections::BTreeMap<String, graphviz_pure_core::AttrSym>;
 
 use graphviz_pure_core::{
-    AttrMap, BoundingBox, EdgeId, Graph, GraphKind, GraphvizError, HTML_VALUE_PREFIX, NodeId, Port,
-    Result, SubgraphData, SubgraphId, apply_attrs, attr_is_html, set_attr,
+    AttrMap, BoundingBox, EdgeId, Graph, GraphKind, GraphvizError, NodeId, Port, Result,
+    SubgraphData, SubgraphId, apply_attrs, attr_is_html, set_attr,
 };
 
 /// bison's `YYMAXDEPTH` (grammar.c): the most states its parser stack holds.
@@ -571,9 +571,6 @@ impl<'a> Parser<'a> {
         // `-G`/`-N`/`-E` symbols are `fixed`: root attribute statements keep them.
         let mut kept = AttrMap::new();
         for (k, v) in &attrs {
-            if k.starts_with(HTML_VALUE_PREFIX) {
-                continue;
-            }
             // `bindattrs` skips an edge `key`, and `attrstmt` then skips the unbound item:
             // `edge [key=k]` sets nothing.
             if kind == DictKind::Edge && k == "key" {
@@ -784,7 +781,7 @@ impl<'a> Parser<'a> {
             .map(|k| (k.clone(), attr_is_html(attrs, "key")));
         let mut attrs = attrs.clone();
         attrs.remove("key");
-        attrs.remove(&graphviz_pure_core::html_value_key("key"));
+        attrs.unmark_html("key");
         for pair in items.windows(2) {
             // A subgraph's nodes as they are now, after the whole statement was read.
             let tails = self.item_endpoints(&pair[0]);
