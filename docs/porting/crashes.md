@@ -303,6 +303,30 @@ them and the top rank is `GD_minrank(g)` > 0. C's ranks above it were never allo
 `flat_node` on it reads a NULL `v` and segfaults (#241). The port runs the test, and makes
 the new rank, at the top rank. When the top rank is 0 this is C's code.
 
+## Adjacent flat edges the aux layout leaves without a spline
+
+Closed: #341.
+
+`make_flat_adj_edges` (`lib/dotgen/dotsplines.c`) lays out flat edges between adjacent
+nodes, where one has a port, as a separate graph with the rank direction turned, and copies
+each edge's spline back with `auxbz = ED_spl(auxe)->list` (line 1247), unchecked. The aux
+layout leaves an edge no spline where its routing fails (`Pshortestpath failed`, `illegal
+values of prev`; the aux graph's `dotneato_postprocess` then reports `lost a b edge`),
+including under `pack` on inputs C draws without it, and where concentrate merges it into
+another aux edge. C then dereferences the NULL spline and crashes, on every run.
+
+The port stops the layout there, with an error and no output
+(`make_flat_adj_edges: the layout of the adjacent flat edges left edge a -> b no spline`).
+Its stderr up to that line is C's up to the crash. Before, it skipped the edge and went on:
+it reported the edge lost a second time (from the main graph's postprocess, which C never
+reaches), or with concentrate drew the graph without that edge. Measured on 3,000 generated
+inputs with adjacent flat edges, ports, labels, `concentrate`, `pack`, `rankdir` and
+`splines`: C crashes on 214, and the stop fires on those 214 and on no other input. On the
+other 2,786 the output and stderr are unchanged, and equal to C's. On the 214, the port
+used to draw 185 concentrate inputs without the merged edge (174 with exit 0, 11 with exit 1
+after a routing error), and on the other 29 (20 plain, 9 under `pack`) to report an edge
+lost twice and exit 1.
+
 ## clip_and_install's crossed walks
 
 Closed: #359.

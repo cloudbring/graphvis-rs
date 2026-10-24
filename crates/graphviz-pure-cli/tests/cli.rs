@@ -2801,6 +2801,61 @@ fn flat_adjacent_aux_graph_repeats_label_diagnostics_like_c() {
     );
 }
 
+// Issue #341: where the aux layout of adjacent flat edges leaves an edge no spline (its routing
+// failed, concentrate merged it, or under pack), C's copy loop dereferences the NULL spline
+// (dotsplines.c:1247) and crashes. The port stops the layout there: its stderr is C's up to
+// the crash, the aux graph's one `lost a b edge` included, then the layout error, and no
+// output. It used to report the edge lost a second time, or draw without it.
+#[test]
+fn flat_adjacent_aux_edge_without_spline_fails_the_layout() {
+    let stop = |e: &str| {
+        format!(
+            "Error: <stdin>: Layout computation error in dot: make_flat_adj_edges: the layout \
+             of the adjacent flat edges left edge {e} no spline (C dereferences its NULL spline)\n"
+        )
+    };
+    let routes = "Error: in routesplines, illegal values of prev 1 and next 1, line 378\n";
+    for (args, src, c_err, edge) in [
+        (
+            &["-Tsvg"][..],
+            "graph G { {rank=same; a [label=\"a long label\", fixedsize=true, width=0.3]; b; \
+             a -- b [tailport=s, headport=sw];} }",
+            "Warning: node 'a', graph 'G' size too small for label\n\
+             lib/pathplan/shortest.c:333: triangulation failed\n\
+             lib/pathplan/shortest.c:182: source point not in any triangle\n\
+             Error: in routesplines, Pshortestpath failed\n\
+             Error: lost a b edge\n"
+                .to_string(),
+            "a -- b",
+        ),
+        (
+            &["-Tsvg"][..],
+            "digraph G { concentrate=true; {rank=same; a; b; a -> b [tailport=ne]; a -> b;} }",
+            String::new(),
+            "a -> b",
+        ),
+        (
+            &["-Gpack=true", "-Tsvg"][..],
+            "digraph G { splines=false; f0 -> g0; \
+             {rank=same; a [label=\"A\"]; b; a -> b [headport=\"e\"]; \
+             a -> b [tailport=\"ne\", label=\"a longer edge label\", samehead=\"s1\"]; \
+             a -> b [tailport=\"w\"]; b -> a [label=\"lbl\", xlabel=\"x\", minlen=\"2\"];} }",
+            [
+                routes,
+                routes,
+                routes,
+                "Error: lost b a edge\nError: lost a b edge\nError: lost a b edge\n",
+            ]
+            .concat(),
+            "b -> a",
+        ),
+    ] {
+        let (out, err, ok) = run(args, src);
+        assert!(!ok, "{src}");
+        assert_eq!((out.as_str(), err), ("", c_err + &stop(edge)), "{src}");
+    }
+}
+
 // Issue #144: htmlEntityUTF8 warns about invalid UTF-8 once per graph, and starts again when
 // called with another graph (`lastg`): the aux graph's dot_init_node_edge warns for `auxg`,
 // and the next component's for `G` again.
