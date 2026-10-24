@@ -295,11 +295,20 @@ fn use_edge(g: &mut LGraph<'_>, n: usize, e: usize) {
         return;
     };
     if spl.len() > 1 {
-        let name = |v: usize| g.src.nodes.get(v).map_or("", |n| n.name.as_str());
+        // neatosplines.c:659: both names share agnameof's static buffer when anonymous.
+        let src = g.src;
+        let name = |v: usize| {
+            src.nodes
+                .get(v)
+                .map_or(graphviz_pure_core::AgName::own(""), |_| {
+                    src.agnameof(graphviz_pure_core::Obj::Node(graphviz_pure_core::NodeId(
+                        v as u32,
+                    )))
+                })
+        };
+        let [t, h] = graphviz_pure_core::agnameof_buffer([name(n), name(head)]);
         graphviz_pure_core::diag::agwarningf(&format!(
-            "edge {} -> {} : set more than one spline. First used, other dropped.\n",
-            name(n),
-            name(head)
+            "edge {t} -> {h} : set more than one spline. First used, other dropped.\n"
         ));
     }
     let first = spl.swap_remove(0);

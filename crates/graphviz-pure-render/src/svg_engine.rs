@@ -487,7 +487,7 @@ impl Engine for SvgEngine {
     }
 
     fn begin_graph(&mut self, j: &Job) {
-        let name = &j.m.g.name;
+        let name = j.m.g.root_name();
         self.put("<!--");
         if !name.is_empty() && !name.starts_with('%') {
             self.put(" Title: ");
@@ -538,7 +538,7 @@ impl Engine for SvgEngine {
         self.put(" ");
         self.dbl(-j.translation.y);
         self.put(")\">\n");
-        let name = &j.m.g.name;
+        let name = j.m.g.root_name();
         if !name.is_empty() && !name.starts_with('%') {
             self.put("<title>");
             self.put(&xml(name));
@@ -556,7 +556,7 @@ impl Engine for SvgEngine {
         let id = o.id.clone().unwrap_or_default();
         self.print_id_class(&id, "cluster", Self::obj_class(j, o.kind));
         self.put(">\n<title>");
-        self.put(&xml(j.m.clusters[c].name));
+        self.put(&xml(&j.m.clusters[c].name));
         self.put("</title>\n");
     }
 
@@ -594,13 +594,19 @@ impl Engine for SvgEngine {
         self.put(">\n<title>");
         let m = j.m;
         let ed = &m.edges[e];
-        let mut name = m.nodes[ed.tail].name.to_string();
+        // `strdup_and_subst_obj("\\E", e)`: both names are agnameof's, which keeps anonymous
+        // ones in one static buffer, so an edge between two of them is titled head->head.
+        let [tail, head] = graphviz_pure_core::agnameof_buffer([
+            m.node_agnameof(ed.tail),
+            m.node_agnameof(ed.head),
+        ]);
+        let mut name = tail.into_owned();
         if let Some(p) = ed.tail_port.filter(|p| !p.is_empty()) {
             name.push(':');
             name.push_str(p);
         }
         name.push_str(if m.directed { "->" } else { "--" });
-        name.push_str(m.nodes[ed.head].name);
+        name.push_str(&head);
         if let Some(p) = ed.head_port.filter(|p| !p.is_empty()) {
             name.push(':');
             name.push_str(p);

@@ -959,18 +959,16 @@ impl Dot<'_> {
             .rank
             .get((r + 1).max(0) as usize)
             .map_or((0, 0), |rk| (rk.n, rk.an));
-        let name = |d: &Self, n: N| {
-            if d.nodes[n].node_type == NORMAL {
-                d.nodes[n].name.clone()
-            } else {
-                "%0".to_string()
-            }
-        };
+        let name = |d: &Self, n: N| d.node_agnameof(n).name.into_owned();
         if an <= 0 {
+            // mincross.c:1157-1158: both names share agnameof's static buffer when
+            // anonymous, so C prints the node's name twice.
+            let [graph, node] = graphviz_pure_core::agnameof_buffer([
+                self.graph_agnameof(g),
+                self.node_agnameof(n),
+            ]);
             graphviz_pure_core::diag::agerrorf(&format!(
-                "install_in_rank, line 1158: {} {} rank {r} i = {i} an = 0\n",
-                self.graph_name(g),
-                name(self, n)
+                "install_in_rank, line 1158: {graph} {node} rank {r} i = {i} an = 0\n"
             ));
             return Err(ABORT_LAYOUT.to_string());
         }

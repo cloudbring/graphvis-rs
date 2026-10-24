@@ -20,10 +20,10 @@ use graphviz_pure_core::usershape;
 use crate::shapes::{RecordField, ShapeKind, html_label_layout};
 use graphviz_pure_core::charset::Charset;
 use graphviz_pure_core::font::{
-    DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext, MIN_FONT_SIZE, TextLabelLayout,
-    make_text_label,
+    DEFAULT_FONT_NAME, DEFAULT_FONT_SIZE, LabelSubstContext, MIN_FONT_SIZE, NamesInBuffer,
+    TextLabelLayout, make_text_label,
 };
-use graphviz_pure_core::{AttrMap, BoundingBox, Graph, NodeData, Point};
+use graphviz_pure_core::{AgName, AttrMap, BoundingBox, Graph, NodeData, Point};
 use std::f64::consts::PI;
 
 /// `GAP` from `lib/common/const.h`: whitespace in points between peripheries.
@@ -210,6 +210,10 @@ pub struct NodeSizeEnv<'a> {
     pub quantum: f64,
     /// `GD_charset(g)` of the root graph.
     pub charset: Charset,
+    /// The root's name is agnameof's static buffer (an anonymous root).
+    pub graph_name_buffer: bool,
+    /// The graph keeps its nodes' `%` names as strings ([`Graph::local_node_names_kept`]).
+    pub local_node_names_kept: bool,
 }
 
 impl<'a> NodeSizeEnv<'a> {
@@ -220,6 +224,8 @@ impl<'a> NodeSizeEnv<'a> {
             realflip: false,
             quantum: 0.0,
             charset: graphviz_pure_core::charset::current(),
+            graph_name_buffer: false,
+            local_node_names_kept: false,
         }
     }
 
@@ -234,16 +240,36 @@ impl<'a> NodeSizeEnv<'a> {
     /// Reads `rankdir`, `quantum` and `charset` from the root graph attributes
     /// (`graph_init` / `init_ugraph` in `lib/common/input.c`).
     pub fn from_graph(graph: &'a Graph) -> Self {
-        Self::from_graph_attrs(&graph.name, &graph.graph_attrs)
+        Self::from_graph_attrs(graph, &graph.graph_attrs)
     }
 
-    /// Like [`Self::from_graph`] but from a name and an attribute map.
-    pub fn from_graph_attrs(graph_name: &'a str, attrs: &AttrMap) -> Self {
+    /// Like [`Self::from_graph`] with another attribute map for the graph's.
+    pub fn from_graph_attrs(graph: &'a Graph, attrs: &AttrMap) -> Self {
         Self {
-            graph_name,
+            graph_name_buffer: graph.agnameof(graphviz_pure_core::Obj::Root).buffer,
+            local_node_names_kept: graph.local_node_names_kept,
+            ..Self::from_attrs(graph.root_name(), attrs)
+        }
+    }
+
+    /// `rankdir`, `quantum` and `charset` from `attrs`, for a graph named `graph_name`.
+    fn from_attrs(graph_name: &'a str, attrs: &AttrMap) -> Self {
+        Self {
             realflip: rankdir_is_flipped(attrs.get("rankdir").map_or("", String::as_str)),
             quantum: late_double(attrs, "quantum", 0.0, 0.0),
             charset: Charset::from_attr(attrs.get("charset").map(String::as_str)),
+            ..Self::new(graph_name)
+        }
+    }
+
+    /// Which names of a node's or an edge's label context are agnameof's static buffer.
+    pub fn names_in_buffer(&self, node: &str, tail: &str, head: &str) -> NamesInBuffer {
+        let kept = self.local_node_names_kept;
+        NamesInBuffer {
+            graph: self.graph_name_buffer,
+            node: graphviz_pure_core::node_name_is_buffer(node, kept),
+            tail: graphviz_pure_core::node_name_is_buffer(tail, kept),
+            head: graphviz_pure_core::node_name_is_buffer(head, kept),
         }
     }
 }
@@ -474,6 +500,7 @@ fn node_geometry_measured(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometr
     let obj = LabelSubstContext::for_node(&node.name);
     let obj = LabelSubstContext {
         graph_name: env.graph_name,
+        in_buffer: env.names_in_buffer(&node.name, "", ""),
         pen_color: get_pen_color(attrs),
         font_color: Some(late_nnstring(attrs, "fontcolor", "black")),
         ..obj
@@ -722,6 +749,7 @@ pub fn edge_label_geometry(
         graph_name: env.graph_name,
         tail_name,
         head_name,
+        in_buffer: env.names_in_buffer("", tail_name, head_name),
         is_edge: true,
         is_directed: directed,
         pen_color: get_pen_color(attrs),
@@ -761,8 +789,12 @@ pub fn edge_label_geometry(
 /// reading `rankdir`, `quantum` and `charset` from the root graph.
 pub fn size_graph_nodes(graph: &mut Graph) {
     let env_attrs = graph.graph_attrs.clone();
-    let name = graph.name.clone();
-    let env = NodeSizeEnv::from_graph_attrs(&name, &env_attrs);
+    let name = graph.root_name().to_string();
+    let env = NodeSizeEnv {
+        graph_name_buffer: graph.agnameof(graphviz_pure_core::Obj::Root).buffer,
+        local_node_names_kept: graph.local_node_names_kept,
+        ..NodeSizeEnv::from_attrs(&name, &env_attrs)
+    };
     for node in &mut graph.nodes {
         let geom = node_geometry(node, &env);
         node.width = geom.width;
@@ -1034,15 +1066,21 @@ fn poly_init(
         if (width < label_dimen.x || height < label_dimen.y)
             && graphviz_pure_core::diag::reporting()
         {
-            // shapes.c:2115-2118; agraphof(n) is the root graph
-            let g = if env.graph_name.is_empty() {
-                "%1"
-            } else {
-                env.graph_name
-            };
+            // shapes.c:2115-2118; agraphof(n) is the root graph. Both names are agnameof's,
+            // which keeps anonymous ones in one static buffer.
+            let names = env.names_in_buffer(&node.name, "", "");
+            let [n, g] = graphviz_pure_core::agnameof_buffer([
+                AgName {
+                    name: node.name.as_str().into(),
+                    buffer: names.node,
+                },
+                AgName {
+                    name: env.graph_name.into(),
+                    buffer: names.graph,
+                },
+            ]);
             graphviz_pure_core::diag::agwarningf(&format!(
-                "node '{}', graph '{g}' size too small for label\n",
-                node.name
+                "node '{n}', graph '{g}' size too small for label\n"
             ));
         }
         bb = Point::new(width, height);

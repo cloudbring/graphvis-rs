@@ -1012,9 +1012,13 @@ fn finish_edge(g: &mut LGraph<'_>, e: usize, mut spl: Vec<Point>, flip: bool) {
 /// genroute's `agwarningf("Could not create control points ...")` and `rv = 1`
 /// (multispline.c:703, :723, :740, :759, :778).
 fn route_failed(g: &LGraph<'_>, e: usize) -> bool {
+    // Both names share agnameof's static buffer when anonymous.
+    let [t, h] = graphviz_pure_core::agnameof_buffer([
+        g.node_agnameof(g.edges[e].tail),
+        g.node_agnameof(g.edges[e].head),
+    ]);
     graphviz_pure_core::diag::agwarningf(&format!(
-        "Could not create control points for multiple spline for edge ({},{})\n",
-        g.src.nodes[g.edges[e].tail].name, g.src.nodes[g.edges[e].head].name
+        "Could not create control points for multiple spline for edge ({t},{h})\n"
     ));
     true
 }

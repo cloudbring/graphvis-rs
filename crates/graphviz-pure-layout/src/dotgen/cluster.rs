@@ -3,9 +3,10 @@
 use super::Dot;
 use super::fastgr::short;
 use super::types::*;
+use graphviz_pure_core::{AgName, Obj};
 use std::collections::VecDeque;
 
-impl Dot<'_> {
+impl<'a> Dot<'a> {
     fn map_interclust_node(&self, n: N) -> N {
         match self.nodes[n].clust {
             None => n,
@@ -290,33 +291,39 @@ impl Dot<'_> {
         Ok(())
     }
 
-    /// `agnameof(g)`: a pack component is `_cc_<i>`; an anonymous graph is
-    /// named by its cgraph id (`%<id>`; an anonymous root is `%1`).
-    pub(super) fn graph_name(&self, g: G) -> String {
+    /// `agnameof(g)`: a pack component is `_cc_<i>`; the root and the input's subgraphs are
+    /// named by [`graphviz_pure_core::Graph::agnameof`]. A projection pack.rs made of a subgraph (`projectG`'s
+    /// `agsubg(g, agnameof(subg), 1)`) keeps that name as a string of its own.
+    pub(super) fn graph_agnameof(&self, g: G) -> AgName<'a> {
         if g == 0 && self.comp {
-            return format!("_cc_{}", self.comp_index);
+            return AgName::own(format!("_cc_{}", self.comp_index));
         }
         let graph = &self.graphs[g];
-        // `subgraph "" {` is named, by "" (`agnameof`).
-        let anonymous = match (g, graph.sub_index) {
-            (0, _) => self.input.is_anonymous(),
-            (_, Some(si)) => self
-                .input
-                .subgraphs
-                .get(si)
-                .is_none_or(|s| s.is_anonymous()),
-            _ => graph.name.is_empty(),
-        };
-        if !anonymous {
-            return graph.name.clone();
+        match (g, graph.sub_index, graph.proj_of) {
+            (0, ..) => self.input.agnameof(Obj::Root),
+            (_, Some(si), _) if si < self.input.subgraphs.len() => {
+                self.input.agnameof(Obj::Subgraph(si))
+            }
+            (_, None, Some(o)) if o < self.input.subgraphs.len() => {
+                AgName::own(self.input.subgraph_name(o))
+            }
+            _ => AgName::own(graph.name.clone()),
         }
-        match (g, graph.sub_index) {
-            (0, _) => "%1".to_string(),
-            (_, Some(si)) => match self.input.anon_subgraph_ids.get(&(si as u32)) {
-                Some(id) => format!("%{id}"),
-                None => String::new(),
-            },
-            _ => String::new(),
+    }
+
+    /// `agnameof(g)` as a string.
+    pub(super) fn graph_name(&self, g: G) -> String {
+        self.graph_agnameof(g).name.into_owned()
+    }
+
+    /// `agnameof(n)`: a real node is the input's; a virtual node, a zeroed `Agobj_t` with id 0,
+    /// is `%0` in agnameof's static buffer.
+    pub(super) fn node_agnameof(&self, n: N) -> AgName<'a> {
+        if self.nodes[n].node_type == NORMAL && n < self.input.nodes.len() {
+            self.input
+                .agnameof(Obj::Node(graphviz_pure_core::NodeId(n as u32)))
+        } else {
+            AgName::buffer("%0")
         }
     }
 
@@ -331,10 +338,14 @@ impl Dot<'_> {
         for clust in self.graphs[g].clust.clone() {
             for n in self.nodes_of(clust) {
                 if self.nodes[n].ranktype != NORMAL {
+                    // cluster.c:318-320: both names share agnameof's static buffer when
+                    // anonymous.
+                    let [node, graph] = graphviz_pure_core::agnameof_buffer([
+                        self.node_agnameof(n),
+                        self.graph_agnameof(g),
+                    ]);
                     graphviz_pure_core::diag::agwarningf(&format!(
-                        "{} was already in a rankset, deleted from cluster {}\n",
-                        self.nodes[n].name,
-                        self.graph_name(g)
+                        "{node} was already in a rankset, deleted from cluster {graph}\n"
                     ));
                     self.agdelnode(clust, n);
                     continue;

@@ -17,7 +17,7 @@ layout/circogen/circularinit.rs	0	0	57	1
 layout/circogen/graph.rs	0	0	6	1
 layout/circogen/nodelist.rs	0	0	0	1
 layout/common/arrows.rs	0	0	37	31
-layout/common/cluster_edges.rs	0	5	77	8
+layout/common/cluster_edges.rs	0	5	74	8
 layout/common/init.rs	0	0	20	0
 layout/common/ns.rs	8	0	149	50
 layout/common/ports.rs	0	0	18	3
@@ -37,17 +37,17 @@ layout/dotgen/cluster.rs	12	0	153	32
 layout/dotgen/compound.rs	2	0	42	26
 layout/dotgen/conc.rs	6	0	71	24
 layout/dotgen/decomp.rs	1	0	31	2
-layout/dotgen/dotsplines.rs	32	5	476	61
+layout/dotgen/dotsplines.rs	32	5	474	61
 layout/dotgen/fastgr.rs	0	0	60	2
 layout/dotgen/flat.rs	1	0	114	30
-layout/dotgen/init.rs	2	0	72	6
-layout/dotgen/mincross.rs	32	0	390	104
+layout/dotgen/init.rs	2	0	71	6
+layout/dotgen/mincross.rs	32	0	388	104
 layout/dotgen/mod.rs	0	0	18	9
 layout/dotgen/ns.rs	0	0	33	0
 layout/dotgen/output.rs	0	0	52	0
 layout/dotgen/pack.rs	0	2	74	1
 layout/dotgen/position.rs	33	0	300	31
-layout/dotgen/postproc.rs	1	0	58	6
+layout/dotgen/postproc.rs	1	0	56	6
 layout/dotgen/rank.rs	11	0	243	14
 layout/dotgen/sameport.rs	0	0	34	0
 layout/dotgen/splinegraph.rs	0	1	51	0
@@ -56,7 +56,7 @@ layout/dotgen/utils.rs	1	0	30	3
 layout/fdpgen/clusteredges.rs	0	0	25	3
 layout/fdpgen/comp.rs	0	0	10	0
 layout/fdpgen/fdpinit.rs	0	0	6	0
-layout/fdpgen/layout.rs	1	0	175	24
+layout/fdpgen/layout.rs	1	0	171	24
 layout/fdpgen/mod.rs	0	0	5	2
 layout/fdpgen/tlayout.rs	0	0	53	10
 layout/fdpgen/xlayout.rs	0	0	26	9
@@ -72,7 +72,7 @@ layout/neatogen/graphdata.rs	10	0	26	2
 layout/neatogen/legal.rs	0	0	41	6
 layout/neatogen/linalg.rs	0	0	83	24
 layout/neatogen/matrix_ops.rs	0	1	35	4
-layout/neatogen/multispline.rs	4	0	179	81
+layout/neatogen/multispline.rs	4	0	177	81
 layout/neatogen/neatoinit.rs	0	1	26	1
 layout/neatogen/neatosplines.rs	1	0	38	3
 layout/neatogen/overlap.rs	2	2	86	46
@@ -92,7 +92,7 @@ layout/ortho/rawgraph.rs	0	0	6	2
 layout/ortho/sgraph.rs	0	0	9	16
 layout/ortho/trapezoid.rs	0	0	55	10
 layout/osage/mod.rs	0	0	31	4
-layout/pack/cccomps.rs	0	0	44	0
+layout/pack/cccomps.rs	0	0	43	0
 layout/pack/mod.rs	1	0	78	44
 layout/patchwork/patchwork.rs	0	0	24	2
 layout/patchwork/patchworkinit.rs	0	0	11	0

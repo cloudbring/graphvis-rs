@@ -12,9 +12,11 @@ use super::job::{
 };
 use super::model::{Bz, TextLabel};
 use graphviz_pure_core::diag::{agerr_prev, agerrorf, agwarningf};
-use graphviz_pure_core::font::{LabelSubstContext, convert_label_text, strdup_and_subst_obj};
+use graphviz_pure_core::font::{
+    LabelSubstContext, NamesInBuffer, convert_label_text, strdup_and_subst_obj,
+};
 use graphviz_pure_core::math;
-use graphviz_pure_core::{BoundingBox, Point};
+use graphviz_pure_core::{BoundingBox, Obj, Point};
 
 pub(crate) const DEFAULT_COLOR: &str = "black";
 pub(crate) const DEFAULT_FILL: &str = "lightgrey";
@@ -235,20 +237,25 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let m = self.job.m;
         match kind {
             ObjKind::Root => LabelSubstContext {
-                graph_name: &m.g.name,
+                graph_name: m.g.root_name(),
                 label_text: m.label.as_ref().map_or("", |l| l.text.as_str()),
                 has_label: m.label.is_some(),
                 ..Default::default()
             },
             ObjKind::Cluster(c) => LabelSubstContext {
-                graph_name: m.clusters[c].name,
+                graph_name: &m.clusters[c].name,
                 label_text: m.clusters[c].label.as_ref().map_or("", |l| l.text.as_str()),
                 has_label: m.clusters[c].label.is_some(),
                 ..Default::default()
             },
             ObjKind::Node(n) => LabelSubstContext {
-                graph_name: &m.g.name,
+                graph_name: m.g.root_name(),
                 node_name: m.nodes[n].name,
+                in_buffer: NamesInBuffer {
+                    graph: m.g.agnameof(Obj::Root).buffer,
+                    node: m.node_agnameof(n).buffer,
+                    ..Default::default()
+                },
                 is_node: true,
                 label_text: &m.nodes[n].label.text,
                 has_label: true,
@@ -257,9 +264,15 @@ impl<'a, E: Engine> Emitter<'a, E> {
             ObjKind::Edge(e) => {
                 let ed = &m.edges[e];
                 LabelSubstContext {
-                    graph_name: &m.g.name,
+                    graph_name: m.g.root_name(),
                     tail_name: m.nodes[ed.tail].name,
                     head_name: m.nodes[ed.head].name,
+                    in_buffer: NamesInBuffer {
+                        graph: m.g.agnameof(Obj::Root).buffer,
+                        tail: m.node_agnameof(ed.tail).buffer,
+                        head: m.node_agnameof(ed.head).buffer,
+                        ..Default::default()
+                    },
                     is_edge: true,
                     is_directed: m.directed,
                     tail_port: ed.tail_port,
@@ -1482,10 +1495,13 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let ed = &m.edges[e];
         let in_edge = || {
             let arrow = if m.directed { " -> " } else { " -- " };
-            agerr_prev(&format!(
-                "in edge {}{arrow}{}\n",
-                m.nodes[ed.tail].name, m.nodes[ed.head].name
-            ));
+            // emit.c:1988: one agerr of both names, which share agnameof's static buffer
+            // when anonymous.
+            let [t, h] = graphviz_pure_core::agnameof_buffer([
+                m.node_agnameof(ed.tail),
+                m.node_agnameof(ed.head),
+            ]);
+            agerr_prev(&format!("in edge {t}{arrow}{h}\n"));
         };
         let segs = match parse_segs(colors) {
             Ok((s, rv)) => {

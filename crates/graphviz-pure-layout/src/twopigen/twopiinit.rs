@@ -30,10 +30,7 @@ pub fn twopi_layout(graph: &mut Graph) -> Result<()> {
         if !s.is_empty() {
             // `agfindnode` maps the interned value, flag included, to a node.
             let html = graphviz_pure_core::attr_is_html(&src.graph_attrs, "root");
-            ctr = src
-                .nodes
-                .iter()
-                .position(|n| n.name == s && n.html_name == html);
+            ctr = src.agfindnode(s, html).map(|n| n.0 as usize);
             if ctr.is_none() {
                 graphviz_pure_core::diag::agwarningf(&format!(
                     "specified root node \"{s}\" was not found."

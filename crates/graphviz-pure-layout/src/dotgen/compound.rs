@@ -125,11 +125,11 @@ fn spline_intersectf(pts: &mut [Point; 4], bb: &BoxF) -> bool {
     tmin < 2.0
 }
 
-impl Dot<'_> {
+impl<'a> Dot<'a> {
     /// `fillMap`'s preorder of the cluster tree under `g`, with each cluster's `agnameof`.
-    fn clusters_preorder(&self, g: G, out: &mut Vec<(String, G)>) {
+    fn clusters_preorder(&self, g: G, out: &mut Vec<(graphviz_pure_core::AgName<'a>, G)>) {
         for &cl in &self.graphs[g].clust {
-            out.push((self.graph_name(cl), cl));
+            out.push((self.graph_agnameof(cl), cl));
             self.clusters_preorder(cl, out);
         }
     }
@@ -155,20 +155,20 @@ impl Dot<'_> {
         };
         let (head, tail) = (self.edges[e].head, self.edges[e].tail);
         // `agnameof(agtail(e)), agnameof(aghead(e))`, then `agget(e, ...)`.
-        let name = |n: N| self.nodes.get(n).map_or("", |d| d.name.as_str());
+        // Both names share agnameof's static buffer when anonymous (compound.c:282-382).
+        let [tname, hname] = graphviz_pure_core::agnameof_buffer([
+            self.node_agnameof(tail),
+            self.node_agnameof(head),
+        ]);
         let warn = |what: &str, key: &str| {
             graphviz_pure_core::diag::agwarningf(&format!(
-                "{} -> {}: {what} {}\n",
-                name(tail),
-                name(head),
+                "{tname} -> {hname}: {what} {}\n",
                 self.edge_attr(e, key).unwrap_or("")
             ));
         };
         if spl.len() > 1 {
             graphviz_pure_core::diag::agwarningf(&format!(
-                "{} -> {}: spline size > 1 not supported\n",
-                name(tail),
-                name(head)
+                "{tname} -> {hname}: spline size > 1 not supported\n"
             ));
             return;
         }
@@ -327,7 +327,7 @@ impl Dot<'_> {
     pub fn dot_compound_edges(&mut self) {
         let mut clusters = Vec::new();
         self.clusters_preorder(0, &mut clusters);
-        let map = mk_clust_map(clusters, !self.comp);
+        let map = mk_clust_map(clusters);
         for n in self.nodes_of(0) {
             for e in self.out_edges(0, n) {
                 self.make_compound_edge(e, &map);

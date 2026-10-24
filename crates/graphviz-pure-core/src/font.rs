@@ -339,6 +339,16 @@ pub struct TextLabelLayout {
     pub source: String,
 }
 
+/// Which names of a [`LabelSubstContext`] are agnameof's static buffer
+/// ([`crate::graph::AgName`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct NamesInBuffer {
+    pub graph: bool,
+    pub node: bool,
+    pub tail: bool,
+    pub head: bool,
+}
+
 /// Context for Graphviz object-based escape sequence substitution (`\N`, `\G`, `\T`, `\H`, `\E`, `\L`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LabelSubstContext<'a> {
@@ -362,6 +372,8 @@ pub struct LabelSubstContext<'a> {
     /// The object has a main label (`ND_label`, `ED_label`, `GD_label`), whose text is
     /// `label_text` even when empty; without one `\L` stays literal.
     pub has_label: bool,
+    /// Which of the names are agnameof's static buffer.
+    pub in_buffer: NamesInBuffer,
 }
 
 impl<'a> LabelSubstContext<'a> {
@@ -382,6 +394,12 @@ impl<'a> LabelSubstContext<'a> {
             font_color: None,
             is_node: true,
             has_label: false,
+            in_buffer: NamesInBuffer {
+                graph: false,
+                node: false,
+                tail: false,
+                head: false,
+            },
         }
     }
 }
@@ -810,17 +828,37 @@ fn strdup_and_subst_obj0(s: &str, ctx: &LabelSubstContext<'_>, esc_backslash: bo
         return s.to_string();
     }
     let kind = ctx.obj_kind();
-    let g_str = ctx.graph_name;
-    let n_str = if kind == SubstObjKind::Node {
-        ctx.node_name
-    } else {
-        "\\N"
+    // The names are `agnameof`'s, taken before any is used: those in its static buffer all
+    // show the last one taken (labels.c:297-318).
+    let agname = |name, buffer| crate::graph::AgName {
+        name: std::borrow::Cow::Borrowed(name),
+        buffer,
     };
-    let (t_str, h_str) = if kind == SubstObjKind::Edge {
-        (ctx.tail_name, ctx.head_name)
-    } else {
-        ("\\T", "\\H")
+    let b = ctx.in_buffer;
+    let (g_str, n_str, t_str, h_str) = match kind {
+        SubstObjKind::Graph => (
+            ctx.graph_name.into(),
+            "\\N".into(),
+            "\\T".into(),
+            "\\H".into(),
+        ),
+        SubstObjKind::Node => {
+            let [g, n] = crate::graph::agnameof_buffer([
+                agname(ctx.graph_name, b.graph),
+                agname(ctx.node_name, b.node),
+            ]);
+            (g, n, "\\T".into(), "\\H".into())
+        }
+        SubstObjKind::Edge => {
+            let [g, t, h] = crate::graph::agnameof_buffer([
+                agname(ctx.graph_name, b.graph),
+                agname(ctx.tail_name, b.tail),
+                agname(ctx.head_name, b.head),
+            ]);
+            (g, "\\N".into(), t, h)
+        }
     };
+    let (g_str, n_str, t_str, h_str) = (&*g_str, &*n_str, &*t_str, &*h_str);
     let l_str = if !ctx.has_label && ctx.label_text.is_empty() {
         "\\L"
     } else {
@@ -1125,6 +1163,56 @@ mod tests {
         assert!((layout.height - 3.0 * 10.0 * LINESPACING).abs() < 1e-9);
     }
 
+    // labels.c:297-318 takes every agnameof before substituting: anonymous names share
+    // its static buffer, so they all show the last one taken (issues #267, #325).
+    #[test]
+    fn substituted_anonymous_names_share_agnameofs_buffer() {
+        let node = LabelSubstContext {
+            graph_name: "%1",
+            node_name: "%3",
+            is_node: true,
+            in_buffer: NamesInBuffer {
+                graph: true,
+                node: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(strdup_and_subst_obj("\\G \\N", &node), "%3 %3");
+        let named = LabelSubstContext {
+            node_name: "b",
+            in_buffer: NamesInBuffer {
+                graph: true,
+                ..Default::default()
+            },
+            ..node.clone()
+        };
+        assert_eq!(strdup_and_subst_obj("\\G \\N", &named), "%1 b");
+        let edge = LabelSubstContext {
+            graph_name: "G",
+            tail_name: "%3",
+            head_name: "%7",
+            is_edge: true,
+            is_directed: true,
+            in_buffer: NamesInBuffer {
+                tail: true,
+                head: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(
+            strdup_and_subst_obj("\\E \\T \\H \\G", &edge),
+            "%7->%7 %7 %7 G"
+        );
+        // An edge of dot's auxg, whose `%` names are strings of its own.
+        let kept = LabelSubstContext {
+            in_buffer: NamesInBuffer::default(),
+            ..edge
+        };
+        assert_eq!(strdup_and_subst_obj("\\E", &kept), "%3->%7");
+    }
+
     #[test]
     fn test_measure_multiline_label_context_escapes() {
         let ctx = LabelSubstContext {
@@ -1141,6 +1229,7 @@ mod tests {
             font_color: None,
             is_node: false,
             has_label: false,
+            in_buffer: NamesInBuffer::default(),
         };
         let layout = measure_multiline_label_with_context(
             "\\G: \\T -> \\H (\\E)",

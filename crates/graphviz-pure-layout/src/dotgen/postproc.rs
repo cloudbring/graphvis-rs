@@ -41,10 +41,12 @@ impl Dot<'_> {
         let Some(mut s) = self.edges[e].spl.take() else {
             if !self.concentrate && self.edges[e].edge_type != IGNORED {
                 let (t, h) = (self.edges[e].tail, self.edges[e].head);
-                graphviz_pure_core::diag::agerrorf(&format!(
-                    "lost {} {} edge\n",
-                    self.nodes[t].name, self.nodes[h].name
-                ));
+                // postproc.c:104: both names share agnameof's static buffer when anonymous.
+                let [t, h] = graphviz_pure_core::agnameof_buffer([
+                    self.node_agnameof(t),
+                    self.node_agnameof(h),
+                ]);
+                graphviz_pure_core::diag::agerrorf(&format!("lost {t} {h} edge\n"));
             }
             return;
         };

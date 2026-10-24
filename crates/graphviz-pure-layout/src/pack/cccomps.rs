@@ -7,7 +7,7 @@
 //! C lays out the component subgraph `_cc_<i>`.
 
 use crate::common::utils::mapbool;
-use graphviz_pure_core::{EdgeId, Graph, NodeId, SubgraphData, SubgraphId};
+use graphviz_pure_core::{AgName, EdgeId, Graph, NodeId, Obj, SubgraphData, SubgraphId};
 use std::collections::BTreeSet;
 
 /// A subgraph projected into a component (`projectG`).
@@ -133,8 +133,8 @@ impl<'a> Tree<'a> {
         for &s in subs {
             let sg = &self.g.subgraphs[s];
             if is_a_cluster(sg) {
-                let name = self.g.subgraph_name(s);
-                let dn = dg.agnode(&name);
+                let name = self.g.agnameof(Obj::Subgraph(s));
+                let dn = dg.agnode(&name.name);
                 dg.ptr[dn] = DPtr::Clust(s);
                 for &n in &self.nodes[s] {
                     if let Some(old) = dn_of[n] {
@@ -144,9 +144,16 @@ impl<'a> Tree<'a> {
                             .find(|(_, d)| **d == old)
                             .map_or("", |(k, _)| k.as_str());
                         // fprintf(stderr, ...): not agerr, so not filtered, counted or escaped.
+                        // ccomps.c:275-277: the node's and the cluster's names share agnameof's
+                        // static buffer when anonymous. The derived node keeps the name it was
+                        // made with in `dg`'s internal map, which agnameof returns as it is.
+                        let [node, sub, old] = graphviz_pure_core::agnameof_buffer([
+                            self.g.agnameof(Obj::Node(NodeId(n as u32))),
+                            name.clone(),
+                            AgName::own(old_name),
+                        ]);
                         graphviz_pure_core::diag::fprintf_stderr(&format!(
-                            "Error: node \"{}\" belongs to two non-nested clusters \"{}\" and \"{}\"\n",
-                            self.g.nodes[n].name, name, old_name
+                            "Error: node \"{node}\" belongs to two non-nested clusters \"{sub}\" and \"{old}\"\n"
                         ));
                     }
                     dn_of[n] = Some(dn);
@@ -168,11 +175,20 @@ impl<'a> Tree<'a> {
         out: &mut Vec<ProjSub>,
     ) {
         for &s in subs {
-            // projectG
+            // projectG finds each node of `subg` in `g` by `agfindnode(g, agnameof(n))`. An
+            // anonymous node's `%<id>` is a local name, which `endgraph` removed from the
+            // internal map, so the lookup fails and the node is not projected.
             let nodes: Vec<usize> = self.nodes[s]
                 .iter()
                 .copied()
-                .filter(|n| in_g.contains(n))
+                .filter(|&n| {
+                    in_g.contains(&n)
+                        && self
+                            .g
+                            .nodes
+                            .get(n)
+                            .is_some_and(|d| self.g.agfindnode(&d.name, d.html_name).is_some())
+                })
                 .collect();
             if nodes.is_empty() && !in_cluster {
                 continue;
@@ -278,6 +294,11 @@ impl CComp {
     /// in sequence order, and the projected subgraphs (`agcopyattr`).
     pub fn to_graph(&self, root: &Graph) -> CompGraph {
         let mut graph = Graph::new(root.name.clone(), root.kind, root.strict);
+        // A component is a subgraph of the root: its nodes are the root's, named as there
+        // (`\G` is the root's agnameof), and its subgraphs are projectG's copies, which keep
+        // their names as strings.
+        graph.empty_name = root.empty_name;
+        graph.local_subgraph_names_kept = true;
         graph.graph_attrs = root.graph_attrs.clone();
         graph.node_defaults = root.node_defaults.clone();
         graph.edge_defaults = root.edge_defaults.clone();
@@ -396,5 +417,13 @@ mod tests {
         let ccs = cccomps(&g);
         let cg = ccs[1].to_graph(&g);
         assert_eq!(cg.graph.subgraph_name(0), "%5");
+        // The copy keeps the name as a string of its own (not agnameof's static buffer), and
+        // the component's nodes are the root's, named as there: an empty-named root's `\G`
+        // is "", not `%1`.
+        assert_eq!(cg.graph.agnameof(Obj::Subgraph(0)), AgName::own("%5"));
+        let mut g = g;
+        g.empty_name = true;
+        let cg = ccs[1].to_graph(&g);
+        assert_eq!(cg.graph.agnameof(Obj::Root), AgName::own(""));
     }
 }

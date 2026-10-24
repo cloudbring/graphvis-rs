@@ -1,5 +1,6 @@
 use crate::geom::{BoundingBox, Point, Spline};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -250,6 +251,69 @@ pub struct GraphLayout {
     pub odim: usize,
 }
 
+/// A cgraph object, as [`Graph::agnameof`] takes it: the root graph, a subgraph (by index)
+/// or a node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Obj {
+    Root,
+    Subgraph(usize),
+    Node(NodeId),
+}
+
+/// A name as `agnameof` (lib/cgraph/id.c) returns it: a string of the object's own, or
+/// `%<id>` formatted into its one `static char buf[32]` (id.c:162).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgName<'a> {
+    pub name: Cow<'a, str>,
+    /// The name is agnameof's static buffer.
+    pub buffer: bool,
+}
+
+impl<'a> AgName<'a> {
+    /// A name the object keeps as a string of its own.
+    pub fn own(name: impl Into<Cow<'a, str>>) -> Self {
+        Self {
+            name: name.into(),
+            buffer: false,
+        }
+    }
+
+    /// A name formatted into agnameof's static buffer.
+    pub fn buffer(name: impl Into<Cow<'a, str>>) -> Self {
+        Self {
+            name: name.into(),
+            buffer: true,
+        }
+    }
+}
+
+/// The names `N` calls of `agnameof` give as the arguments of one C call (`agerr`,
+/// `fprintf`, the substitutions of `strdup_and_subst_obj0`), in the order C evaluates them.
+///
+/// Every argument that is agnameof's static buffer points at the same bytes, so all of them
+/// show the name formatted last: `node '%3', graph '%1'` prints as `node '%1', graph '%1'`.
+/// Names of the objects' own are left as they are. C evaluates the arguments left to right
+/// (clang), which is the order of `names`.
+pub fn agnameof_buffer<'a, const N: usize>(names: [AgName<'a>; N]) -> [Cow<'a, str>; N] {
+    let last = names
+        .iter()
+        .rev()
+        .find(|n| n.buffer)
+        .map(|n| n.name.clone());
+    names.map(|n| match &last {
+        Some(buf) if n.buffer => buf.clone(),
+        _ => n.name,
+    })
+}
+
+/// Whether a node's name is agnameof's static buffer: the parser names a local (`%…`) node
+/// `%<id>`, and `endgraph` drops the local names from cgraph's internal map, so agnameof
+/// formats the name. A graph a layout makes later keeps the `%` names it is given as strings
+/// ([`Graph::local_node_names_kept`]).
+pub fn node_name_is_buffer(name: &str, local_node_names_kept: bool) -> bool {
+    name.starts_with('%') && !local_node_names_kept
+}
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
@@ -284,6 +348,15 @@ pub struct Graph {
     /// otherwise an anonymous root (`agopen(NULL)`), which cgraph calls `%1`.
     #[serde(default)]
     pub empty_name: bool,
+    /// The graph is one a layout made after parsing (dot's `auxg`): `agnode(auxg,
+    /// agnameof(orig), 1)` stores a `%` name in its internal map, so agnameof returns that
+    /// string, not its static buffer.
+    #[serde(default)]
+    pub local_node_names_kept: bool,
+    /// The subgraphs are ccomps' projections (`projectG`'s `agsubg(g, agnameof(subg), 1)`),
+    /// which keep an anonymous original's `%<id>` as a string in the internal map.
+    #[serde(default)]
+    pub local_subgraph_names_kept: bool,
     /// The layout's result beyond the bounding box.
     #[serde(default)]
     pub layout: GraphLayout,
@@ -339,6 +412,8 @@ impl Graph {
             dicts: Vec::new(),
             render_view: None,
             empty_name: false,
+            local_node_names_kept: false,
+            local_subgraph_names_kept: false,
             layout: GraphLayout::default(),
         }
     }
@@ -384,20 +459,75 @@ impl Graph {
         (self.name.is_empty() && !self.empty_name) || self.name.starts_with('%')
     }
 
-    /// `agnameof` of subgraph `s`: an anonymous subgraph is named by its cgraph id, `%<id>`.
-    pub fn subgraph_name(&self, s: usize) -> String {
-        let sg = &self.subgraphs[s];
-        if sg.is_anonymous() {
-            format!(
-                "%{}",
-                self.anon_subgraph_ids
-                    .get(&(s as u32))
-                    .copied()
-                    .unwrap_or(0)
-            )
-        } else {
-            sg.name.clone()
+    /// `agnameof` (lib/cgraph/id.c): the name of the root, a subgraph or a node as C's
+    /// messages and writers print it, and whether it is agnameof's static buffer.
+    ///
+    /// cgraph names an anonymous object (no name, or a local `%` name, which `endgraph`
+    /// forgets) by its id, `%<id>`. The root, anonymous subgraphs, local names and keyless
+    /// edges draw odd ids from one counter per root, in creation order: an anonymous root is
+    /// `%1`, an anonymous subgraph has its id in [`Graph::anon_subgraph_ids`], and the parser
+    /// already names a local node `%<id>`.
+    pub fn agnameof(&self, obj: Obj) -> AgName<'_> {
+        match obj {
+            Obj::Root => AgName {
+                name: Cow::Borrowed(self.root_name()),
+                buffer: self.is_anonymous(),
+            },
+            Obj::Subgraph(s) if self.subgraphs[s].is_anonymous() => AgName {
+                name: Cow::Owned(format!("%{}", self.anon_subgraph_id(s))),
+                buffer: !self.local_subgraph_names_kept,
+            },
+            Obj::Subgraph(s) => AgName::own(self.subgraphs[s].name.as_str()),
+            Obj::Node(n) => {
+                let name = self.nodes[n.0 as usize].name.as_str();
+                AgName {
+                    name: Cow::Borrowed(name),
+                    buffer: node_name_is_buffer(name, self.local_node_names_kept),
+                }
+            }
         }
+    }
+
+    /// The cgraph id of anonymous subgraph `s`: the parser's, or, for a subgraph made without
+    /// one, a fresh odd id above every recorded one, so that no two subgraphs share a name.
+    fn anon_subgraph_id(&self, s: usize) -> u64 {
+        if let Some(&id) = self.anon_subgraph_ids.get(&(s as u32)) {
+            return id;
+        }
+        let top = self.anon_subgraph_ids.values().copied().max().unwrap_or(1);
+        let unrecorded = (0..s)
+            .filter(|&i| {
+                self.subgraphs[i].is_anonymous()
+                    && !self.anon_subgraph_ids.contains_key(&(i as u32))
+            })
+            .count() as u64;
+        top + 2 * (unrecorded + 1)
+    }
+
+    /// `agnameof(g)` of the root graph: its name, or `%1` when it is anonymous.
+    pub fn root_name(&self) -> &str {
+        if self.is_anonymous() {
+            "%1"
+        } else {
+            &self.name
+        }
+    }
+
+    /// `agnameof` of subgraph `s`.
+    pub fn subgraph_name(&self, s: usize) -> String {
+        self.agnameof(Obj::Subgraph(s)).name.into_owned()
+    }
+
+    /// `agfindnode(g, name)` of a name read after parsing (an attribute value): a local name
+    /// (`%…`) is looked up in cgraph's internal map, which `endgraph` cleared of them, so it
+    /// finds nothing, unless the graph keeps them ([`Graph::local_node_names_kept`]).
+    pub fn agfindnode(&self, name: &str, html: bool) -> Option<NodeId> {
+        if node_name_is_buffer(name, self.local_node_names_kept) {
+            return None;
+        }
+        self.node_lookup
+            .get(Self::node_key(name, html).as_ref())
+            .copied()
     }
 
     pub fn ensure_node(&mut self, name: &str) -> NodeId {
@@ -486,7 +616,11 @@ impl Graph {
                 .filter_map(|e| edge_map[e.0 as usize])
                 .collect();
         }
-        self.node_lookup = self.nodes.iter().map(|n| (n.name.clone(), n.id)).collect();
+        self.node_lookup = self
+            .nodes
+            .iter()
+            .map(|n| (Self::node_key(&n.name, n.html_name).into_owned(), n.id))
+            .collect();
     }
 
     pub fn add_edge(&mut self, tail: NodeId, head: NodeId, attrs: AttrMap) -> EdgeId {
@@ -539,5 +673,77 @@ mod cluster_prefix_tests {
         assert!(!has_cluster_prefix("aaaaaaé"));
         assert!(!has_cluster_prefix("clusé_x"));
         assert!(!has_cluster_prefix(""));
+    }
+}
+
+#[cfg(test)]
+mod agnameof_tests {
+    use super::*;
+
+    #[test]
+    fn anonymous_objects_are_named_by_their_id() {
+        let mut g = Graph::new("", GraphKind::Directed, false);
+        assert_eq!(g.agnameof(Obj::Root), AgName::buffer("%1"));
+        g.name = "%r".to_string();
+        assert_eq!(g.root_name(), "%1");
+        g.name = String::new();
+        g.empty_name = true;
+        assert_eq!(g.agnameof(Obj::Root), AgName::own(""));
+        let a = g.ensure_node("a");
+        let l = g.ensure_node("%3");
+        assert_eq!(g.agnameof(Obj::Node(a)), AgName::own("a"));
+        assert_eq!(g.agnameof(Obj::Node(l)), AgName::buffer("%3"));
+        assert_eq!(g.agfindnode("a", false), Some(a));
+        assert_eq!(g.agfindnode("%3", false), None);
+        // A graph made after parsing keeps the `%` names it is given (dot's auxg).
+        g.local_node_names_kept = true;
+        assert_eq!(g.agnameof(Obj::Node(l)), AgName::own("%3"));
+        assert_eq!(g.agfindnode("%3", false), Some(l));
+    }
+
+    #[test]
+    fn every_anonymous_subgraph_has_its_own_id() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        for name in ["", "named", "", ""] {
+            g.subgraphs.push(SubgraphData {
+                id: SubgraphId(g.subgraphs.len() as u32),
+                name: name.to_string(),
+                is_cluster: false,
+                graph_attrs: AttrMap::new(),
+                node_defaults: AttrMap::new(),
+                edge_defaults: AttrMap::new(),
+                nodes: Vec::new(),
+                edges: Vec::new(),
+                subgraphs: Vec::new(),
+                bb: BoundingBox::default(),
+                html_name: false,
+                empty_name: false,
+                layout: Default::default(),
+            });
+        }
+        g.anon_subgraph_ids.insert(2, 7);
+        let names: Vec<String> = (0..4).map(|s| g.subgraph_name(s)).collect();
+        assert_eq!(names, ["%9", "named", "%7", "%11"]);
+        assert!(g.agnameof(Obj::Subgraph(2)).buffer);
+        // ccomps' projections keep the original's `%<id>` as a string.
+        g.local_subgraph_names_kept = true;
+        assert_eq!(g.agnameof(Obj::Subgraph(2)), AgName::own("%7"));
+    }
+
+    #[test]
+    fn buffer_names_in_one_call_show_the_last_one() {
+        let b = AgName::buffer;
+        let o = AgName::own;
+        assert_eq!(agnameof_buffer([b("%3"), b("%1")]), ["%1", "%1"]);
+        assert_eq!(agnameof_buffer([b("%3"), o("G")]), ["%3", "G"]);
+        assert_eq!(
+            agnameof_buffer([b("%1"), b("%3"), o("b")]),
+            ["%3", "%3", "b"]
+        );
+        // A `%` name a derived graph keeps (ccomps' dg, dot's auxg) is not the buffer.
+        assert_eq!(
+            agnameof_buffer([b("%5"), b("%7"), o("%3")]),
+            ["%7", "%7", "%3"]
+        );
     }
 }
