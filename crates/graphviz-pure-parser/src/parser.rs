@@ -951,15 +951,27 @@ impl<'a> Parser<'a> {
     }
 
     /// `bindattrs`: an attribute unknown in scope is declared on the root with default "".
-    /// Returns whether it was unknown.
-    fn bind_attr(&mut self, kind: DictKind, name: &str) -> bool {
+    /// For a graph attribute, `setattr` then runs `agxset_(g, rsym, "")` on the graph in
+    /// scope, which gives a subgraph its own local symbol holding `""`.
+    fn bind_attr(&mut self, kind: DictKind, name: &str) {
         let gi = self.scope_dict();
-        let unknown = !self.lookup_view(gi, kind, name);
-        if unknown {
-            let html = self.html_keys.contains(name);
-            let d = self.dict_mut(0, kind);
-            let id = d.len();
-            d.insert(
+        if self.lookup_view(gi, kind, name) {
+            return;
+        }
+        let html = self.html_keys.contains(name);
+        let d = self.dict_mut(0, kind);
+        let id = d.len();
+        d.insert(
+            name.to_string(),
+            graphviz_pure_core::AttrSym {
+                id,
+                html,
+                ..Default::default()
+            },
+        );
+        if gi != 0 && kind == DictKind::Graph {
+            // `agnewsym(g, sym->name, value, is_html, sym->id, …)`: the root symbol's id.
+            self.dict_mut(gi, kind).insert(
                 name.to_string(),
                 graphviz_pure_core::AttrSym {
                     id,
@@ -968,20 +980,16 @@ impl<'a> Parser<'a> {
                 },
             );
         }
-        unknown
     }
 
     /// `attrstmt` + `setattr`: a default set in the current scope.
     fn attr_stmt(&mut self, kind: DictKind, name: &str, value: &str, value_html: bool) {
-        let unknown = self.bind_attr(kind, name);
+        self.bind_attr(kind, name);
         let gi = self.scope_dict();
         // `setattr` warns when it updates a subgraph's own `layout` symbol. A graph
         // attribute that `bindattrs` declared from a subgraph has one already: `agattr`
         // gave the subgraph its value through `agxset`.
-        if gi != 0
-            && name == "layout"
-            && (self.dict(gi, kind).contains_key(name) || (unknown && kind == DictKind::Graph))
-        {
+        if gi != 0 && name == "layout" && self.dict(gi, kind).contains_key(name) {
             graphviz_pure_core::diag::agwarningf(
                 "layout attribute is invalid except on the root graph\n",
             );
