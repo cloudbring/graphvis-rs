@@ -684,6 +684,31 @@ The port does not model the second case. What C reads depends on the buffer's gr
 the order of every `parse_style` call in the run, which the port's renderers don't reproduce
 call for call. A truncated style gives no items in the port, C's result in the first case.
 
+## Empty colour segments
+
+Closed: #385.
+
+`parseSegs` (`lib/common/emit.c:470`) splits a colour list with `tok(clrs, ":")`
+(`lib/util/tokenize.h`), which, unlike `strtok`, yields an empty token for a leading `:` and
+for a trailing one (a run of `:` inside the list is one separator). An empty token is a
+segment with no colour; with no `;` weight it takes a share of the weight left unassigned.
+Every consumer stops at the first segment with no colour: the wedges, the stripes and the
+pieces of a multicolour edge after it are not drawn, so `red;0.3:` draws a red piece 30%
+long and `:red;0.3` draws no wedge. The port dropped empty tokens, so it drew red over the
+whole width; it now splits as `tok` does.
+
+Where the first segment of a multicolour edge (one with a `;`) is empty, C crashes:
+`multicolor` sets the arrows' colours to that segment's NULL colour (`LIST_FRONT(&segs)->color`,
+and `endcolor`, which no segment set), and `gvrender_set_pencolor` calls `strchr` on the NULL.
+C draws the same edge without arrows (`dir=none`): no piece of it, as no segment before the
+empty one has a colour. The port draws an arrow only when its colour is set, so such an edge
+draws nothing, as C draws it with `dir=none` (the arrows' space is still kept at its ends). Measured on 2,000 generated
+graphs with colour lists on nodes, clusters and edges (wedged, striped, radial and filled
+styles, arrows in every direction): C draws 1,036, and the port's SVG and stderr equal C's on
+all 1,036, against 251 (SVG) and 763 (stderr) before. C crashes on the other 964, every one on
+this route: with `dir=none` on every edge C draws all 964, and the port's output equals C's
+there. The port draws all 964, with no panic.
+
 ## Freed keys in EPSF_contents
 
 `user_init` (`lib/common/psusershape.c:49`) keys `EPSF_contents`, cdt's splay tree, by the

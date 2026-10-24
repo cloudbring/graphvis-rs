@@ -33,6 +33,28 @@ fn aeq0(x: f64) -> bool {
     x < 1e-5 && x > -1e-5
 }
 
+/// `tok(clrs, ":")` of `lib/util/tokenize.h`: the tokens between runs of `:`. Unlike
+/// `strtok`, it yields an empty token before a leading `:` and after a trailing one (and
+/// `""` gives one empty token), but none between two `:` in a row (#385).
+fn tok_colon(clrs: &str) -> impl Iterator<Item = &str> {
+    let mut rest = Some(clrs);
+    let mut first = true;
+    std::iter::from_fn(move || {
+        let mut r = rest?;
+        if !std::mem::take(&mut first) {
+            // tok_next: stop at the end of the string, else skip the separators.
+            if r.is_empty() {
+                rest = None;
+                return None;
+            }
+            r = r.trim_start_matches(':');
+        }
+        let (t, after) = r.split_at(r.find(':').unwrap_or(r.len()));
+        rest = Some(after);
+        Some(t)
+    })
+}
+
 /// `parseSegs`: `Err(1|2)` on error, `Ok((segs, rval))` with `rval` 0 or 3. Like C's
 /// `static atomic_flag warned`, only the first bad spec reports (2, 3); later ones give 1
 /// and 0. The flag is never reset, so on a thread that renders again a bad spec is drawn as
@@ -45,7 +67,7 @@ pub(crate) fn parse_segs(clrs: &str) -> Result<(Vec<ColorSeg>, i32), i32> {
     let mut segs: Vec<ColorSeg> = Vec::new();
     let mut left = 1.0f64;
     let mut rval = 0;
-    for tok in clrs.split(':').filter(|t| !t.is_empty()) {
+    for tok in tok_colon(clrs) {
         let (color, v) = match tok.find(';') {
             None => (tok, 0.0),
             Some(i) => {
@@ -1655,11 +1677,16 @@ impl<'a, E: Engine> Emitter<'a, E> {
                     right = r;
                 }
             }
-            if bz.sflag != 0 {
-                if let Some(c) = segs.first().and_then(|s| s.color.clone()) {
-                    self.set_pencolor(&c);
-                    self.set_fillcolor(&c);
-                }
+            // emit.c:2032-2041 sets the arrows' colors with `LIST_FRONT(&segs)->color` and
+            // `endcolor`, which are NULL where the first segment is empty (`":red;0.3"`), and
+            // `gvrender_set_pencolor` dereferences the NULL: C crashes (#385). The port draws
+            // no such arrow, as no part of the spline is drawn in that segment's color: the
+            // output C gives for the same edge with `dir=none`.
+            if bz.sflag != 0
+                && let Some(c) = segs.first().and_then(|s| s.color.clone())
+            {
+                self.set_pencolor(&c);
+                self.set_fillcolor(&c);
                 self.arrow_gen(
                     EmitState::TDraw,
                     bz.sp,
@@ -1669,11 +1696,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
                     bz.sflag,
                 );
             }
-            if bz.eflag != 0 {
-                if let Some(c) = &endcolor {
-                    self.set_pencolor(c);
-                    self.set_fillcolor(c);
-                }
+            if bz.eflag != 0
+                && let Some(c) = &endcolor
+            {
+                self.set_pencolor(c);
+                self.set_fillcolor(c);
                 self.arrow_gen(
                     EmitState::HDraw,
                     bz.ep,
@@ -1841,6 +1868,35 @@ fn strtok<'s>(s: &'s [u8], delims: &'s [u8]) -> impl Iterator<Item = &'s [u8]> {
 mod tests {
     use super::super::job::FILLCOLOR_CALLS;
     use graphviz_pure_core::{BezierSegment, BoundingBox, Point, Spline, arrows};
+
+    /// #385: `tok` yields an empty token at a leading or trailing `:`, none inside a run.
+    #[test]
+    fn tok_colon_yields_c_tokens() {
+        let toks = |s| super::tok_colon(s).collect::<Vec<_>>();
+        assert_eq!(toks("red:blue"), ["red", "blue"]);
+        assert_eq!(toks(":red;0.3"), ["", "red;0.3"]);
+        assert_eq!(toks("red;0.3:"), ["red;0.3", ""]);
+        assert_eq!(toks("red::blue"), ["red", "blue"]);
+        assert_eq!(toks("::red:::"), ["", "red", ""]);
+        assert_eq!(toks(":"), ["", ""]);
+        assert_eq!(toks(""), [""]);
+    }
+
+    /// #385: an empty segment is kept with no color and takes the unassigned weight, as in
+    /// C's `parseSegs`.
+    #[test]
+    fn parse_segs_keeps_empty_segments() {
+        let segs = |s| {
+            let (v, rv) = super::parse_segs(s).unwrap();
+            assert_eq!(rv, 0, "{s}");
+            v.into_iter()
+                .map(|g| (g.color, (g.t * 100.0).round()))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(segs("red;0.3:"), [(Some("red".into()), 30.0), (None, 70.0)]);
+        assert_eq!(segs(":red;0.3"), [(None, 70.0), (Some("red".into()), 30.0)]);
+        assert_eq!(segs(":red"), [(None, 50.0), (Some("red".into()), 50.0)]);
+    }
 
     /// The `set_fillcolor` calls of rendering `a -> b [attrs]` with invisible nodes.
     fn edge_fillcolor_calls(attrs: &str) -> Vec<String> {

@@ -9605,6 +9605,117 @@ fn issue283_failed_multicolor_draws_black_with_the_original_color_count() {
     );
 }
 
+// Issue #385: C's `parseSegs` splits a colour list with `tok`, which yields an empty segment for a
+// leading or trailing `:`. The segment has no colour, takes the weight left unassigned, and
+// draws nothing: the red part of the edge and the red stripe are 30% long, and the wedge list
+// is not drawn. Output is C 16.1.0's.
+#[test]
+fn issue385_empty_color_segment_takes_the_weight_left_like_c() {
+    for (src, want, want_err) in [
+        (
+            "digraph { a -> b [color=\"red;0.3:\"] }",
+            "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 108 54 108 54 0 \",\n\
+             \t\tbb=\"0,0,54,108\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"c 7 -#000000 e 27 90 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 85.8 0 6.21 1 -a \",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,90\",\n\
+             \t\twidth=0.75];\n\
+             \tb\t[_draw_=\"c 7 -#000000 e 27 18 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 7 1 -b \",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\twidth=0.75];\n\
+             \ta -> b\t[_draw_=\"c 7 -#ff0000 B 4 27 71.7 27 69.51 27 67.2 27 64.81 \",\n\
+             \t\t_hdraw_=\"S 5 -solid c 7 -#ff0000 C 7 -#ff0000 P 3 30.5 47.62 27 37.62 23.5 47.62 \",\n\
+             \t\tcolor=\"red;0.3:\",\n\
+             \t\tpos=\"e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536\"];\n\
+             }\n",
+            "",
+        ),
+        (
+            "digraph { a [shape=box style=striped fillcolor=\"red;0.3:\"] }",
+            "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 36 54 36 54 0 \",\n\
+             \t\tbb=\"0,0,54,36\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"S 17 -setlinewidth(0.5) c 7 -#000000 C 7 -#ff0000 P 4 0 0 16.2 0 16.2 36 0 36 S 15 -setlinewidth(1) c 7 -#000000 p 4 54 36 0 36 \\\n\
+             0 0 54 0 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 6.21 1 -a \",\n\
+             \t\tfillcolor=\"red;0.3:\",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\tshape=box,\n\
+             \t\tstyle=striped,\n\
+             \t\twidth=0.75];\n\
+             }\n",
+            "",
+        ),
+        (
+            "digraph { a [style=wedged color=\":red;0.3\"] }",
+            "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 36 54 36 54 0 \",\n\
+             \t\tbb=\"0,0,54,36\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"c 7 -#000000 e 27 18 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 6.21 1 -a \",\n\
+             \t\tcolor=\":red;0.3\",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\tstyle=wedged,\n\
+             \t\twidth=0.75];\n\
+             }\n",
+            "Warning:  is not a known color.\n",
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Txdot"], src);
+        assert!(ok, "{src}");
+        assert_eq!((out.as_str(), err.as_str()), (want, want_err), "{src}");
+    }
+    // An edge whose first segment is empty: C's `multicolor` sets the arrow's colour to that
+    // segment's NULL colour and crashes in `gvrender_set_pencolor`. The port draws no arrow in
+    // that colour, so its output is C's for the same edge with `dir=none`
+    // (`docs/porting/crashes.md`, "Empty colour segments").
+    let (out, err, ok) = run(&["-Tsvg"], "digraph { a -> b [color=\":red;0.3\"] }");
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    // From the `<svg>` element on: the generator comment names the program.
+    let out = &out[out.find("<svg ").unwrap()..];
+    assert_eq!(
+        out,
+        "<svg width=\"62pt\" height=\"116pt\"\n\
+         \x20viewBox=\"0.00 0.00 62.00 116.00\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n\
+         <g id=\"graph0\" class=\"graph\" transform=\"scale(1 1) rotate(0) translate(4 112)\">\n\
+         <polygon fill=\"white\" stroke=\"none\" points=\"-4,4 -4,-112 58,-112 58,4 -4,4\"/>\n\
+         <!-- a -->\n\
+         <g id=\"node1\" class=\"node\">\n\
+         <title>a</title>\n\
+         <ellipse fill=\"none\" stroke=\"black\" cx=\"27\" cy=\"-90\" rx=\"27\" ry=\"18\"/>\n\
+         <text xml:space=\"preserve\" text-anchor=\"middle\" x=\"27\" y=\"-85.8\" font-family=\"Times,serif\" font-size=\"14.00\">a</text>\n\
+         </g>\n\
+         <!-- b -->\n\
+         <g id=\"node2\" class=\"node\">\n\
+         <title>b</title>\n\
+         <ellipse fill=\"none\" stroke=\"black\" cx=\"27\" cy=\"-18\" rx=\"27\" ry=\"18\"/>\n\
+         <text xml:space=\"preserve\" text-anchor=\"middle\" x=\"27\" y=\"-13.8\" font-family=\"Times,serif\" font-size=\"14.00\">b</text>\n\
+         </g>\n\
+         <!-- a&#45;&gt;b -->\n\
+         <g id=\"edge1\" class=\"edge\">\n\
+         <title>a&#45;&gt;b</title>\n\
+         </g>\n\
+         </g>\n\
+         </svg>\n"
+    );
+}
+
 /// Issue #389: `emit_edge_graphics` tests `fillcolor != color` by pointer
 /// (`lib/common/emit.c:2418`, `:2433`). cgraph interns attribute values, so `fillcolor=red`
 /// shares `color=red`'s pointer, but not an HTML `color=<red>`'s, wherever that was set,
