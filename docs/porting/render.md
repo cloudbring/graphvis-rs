@@ -185,9 +185,11 @@ leaves bytes `>= 0x80` alone, and so does the port).
 - The charset of the graph being processed is kept per thread
   (`charset::begin_layout`/`begin_render`, called by `layout_graph_with_options`
   and `render_graph_named`); `NodeSizeEnv::new` and `-n2` labels use it.
+- The public API's root functions (`graphviz_pure::render_dot` and the others) take and
+  return text, converting with `charset::from_text`/`to_text`; `graphviz_pure::decoded`
+  takes decoded input (`charset::Decoded`), as the CLI does (#378).
 - Not reproduced: HTML lexer error messages (`Error: not well-formed ...`,
-  `unknown encoding`); input that really contains `U+10FF00..=U+10FFFF` is
-  written out as raw bytes.
+  `unknown encoding`).
 
 ## Debugging aid
 

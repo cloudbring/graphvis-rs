@@ -16,8 +16,9 @@
 //! raw bytes, so in a decoded string that range only ever stands for raw bytes and
 //! [`encode`] gives back the input's bytes. C sees those four bytes too: it measures
 //! each one and writes them unchanged. Every string the port reads is in this decoded
-//! form; text from elsewhere (a JS string, say) goes through [`decode_slice`] of its
-//! UTF-8 bytes first, and [`encode`] turns a result back into bytes.
+//! form; text from elsewhere (a JS string, or a `&str` given to `graphviz_pure`'s root
+//! functions) goes through [`from_text`] first, and [`to_text`] or [`encode`] turns a
+//! result back into text or bytes.
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
@@ -132,6 +133,43 @@ pub fn to_text(s: &str) -> Cow<'_, str> {
         Cow::Owned(String::from_utf8_lossy(&encode(s)).into_owned())
     } else {
         Cow::Borrowed(s)
+    }
+}
+
+/// A string in the decoded form, for the entry points that take it (`graphviz_pure::decoded`).
+/// It is made by decoding bytes or converting text, so text and decoded strings can't be
+/// passed for each other by mistake.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Decoded(String);
+
+impl Decoded {
+    /// [`decode`] of input bytes.
+    pub fn decode(bytes: Vec<u8>) -> Self {
+        Decoded(decode(bytes))
+    }
+
+    /// [`decode_slice`] of input bytes.
+    pub fn decode_slice(bytes: &[u8]) -> Self {
+        Decoded(decode_slice(bytes))
+    }
+
+    /// [`from_text`] of ordinary text.
+    pub fn from_text(text: &str) -> Self {
+        Decoded(from_text(text).into_owned())
+    }
+
+    /// A string that is already in decoded form: a [`decode`] result, or a value a parsed
+    /// graph holds.
+    pub fn from_decoded(s: String) -> Self {
+        Decoded(s)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn into_string(self) -> String {
+        self.0
     }
 }
 

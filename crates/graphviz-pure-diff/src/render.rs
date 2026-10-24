@@ -111,10 +111,10 @@ pub fn compare_output(reference: &str, actual: &str, svg: bool) -> RenderReport 
 
 /// Renders `laid` with the port in `-n2` mode, catching panics.
 pub fn render_port(laid: &str, format: &str) -> Result<String, String> {
-    let src = laid.to_string();
+    let src = graphviz_pure::decoded::Decoded::from_decoded(laid.to_string());
     let fmt = format.to_string();
     let res = std::panic::catch_unwind(move || {
-        graphviz_pure::render_dot_all_with_options(
+        graphviz_pure::decoded::render_dot_all_with_options(
             &src,
             "neato",
             &fmt,

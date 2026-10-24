@@ -245,7 +245,8 @@ impl PluginGraph {
     }
 }
 
-/// `gvplugin_graph`: the graph `dot -P` lays out and renders instead of its inputs.
+/// `gvplugin_graph`: the graph `dot -P` lays out and renders instead of its inputs
+/// ([`crate::decoded::plugin_graph`]), on decoded `globals`.
 ///
 /// The graph is built as DOT and read back. C declares its attributes with `agattr` and sets
 /// them with `agxset`, neither of which marks a symbol to be written (`sym->print`), as the
@@ -257,7 +258,10 @@ impl PluginGraph {
 ///
 /// `None` when a plugin or package name has no quoted DOT form (it ends with a backslash);
 /// the port's own tables have none.
-pub fn plugin_graph(plugins: &Plugins<'_>, globals: &crate::GlobalAttrs) -> Option<crate::Graph> {
+pub(crate) fn plugin_graph(
+    plugins: &Plugins<'_>,
+    globals: &crate::GlobalAttrs,
+) -> Option<crate::Graph> {
     const OWN: [&[&str]; 3] = [
         &["label", "rankdir", "rank", "ranksep"],
         &["label", "shape", "style", "width"],
@@ -642,7 +646,7 @@ mod tests {
             ),
         ] {
             let fmt = crate::OutputFormat::parse(format).expect("format");
-            let got = crate::render_graph_named(&g, fmt, format).expect("render");
+            let got = crate::decoded::render_graph_named(&g, fmt, format).expect("render");
             assert_eq!(got, want, "{format}");
         }
     }

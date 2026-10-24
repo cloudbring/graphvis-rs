@@ -496,7 +496,7 @@ pub fn main(args: Vec<String>) -> ExitCode {
     let outs = e2e::parallel(&items, |p| {
         std::fs::read(p)
             .ok()
-            .and_then(|b| e2e::run_port(&graphviz_pure_core::charset::decode(b)))
+            .and_then(|b| e2e::run_port(&graphviz_pure::decoded::Decoded::decode(b)))
             .map(|s| summarize(&s))
     });
     let _ = std::panic::take_hook();
@@ -564,8 +564,8 @@ mod tests {
         r#"digraph G { a -> b [label="ab"]; subgraph cluster_x { label="X"; c; } b -> c; }"#;
 
     fn port_svg() -> String {
-        let (parts, _) = graphviz_pure::render_dot_all_partial(
-            GRAPH,
+        let (parts, _) = graphviz_pure::decoded::render_dot_all_partial(
+            &graphviz_pure::decoded::Decoded::from_text(GRAPH),
             "dot",
             "svg",
             &graphviz_pure_parser::GlobalAttrs::default(),

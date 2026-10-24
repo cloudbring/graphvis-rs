@@ -1,7 +1,8 @@
+use graphviz_pure::decoded::{Decoded, GraphJobs, LayoutJobs, graph_stream};
 use graphviz_pure::plugins;
 use graphviz_pure::{
-    DEVICE_PLUGINS, FdpParms, GlobalAttrs, GraphJobs, GraphStream, LAYOUT_PLUGINS, LayoutEngine,
-    LayoutJobs, LayoutOptions, OutputFormat,
+    DEVICE_PLUGINS, FdpParms, GlobalAttrs, LAYOUT_PLUGINS, LayoutEngine, LayoutOptions,
+    OutputFormat,
 };
 use graphviz_pure_core::charset::decode_slice;
 use graphviz_pure_core::diag::{AgErrLevel, agerrorf, agseterr, agwarningf, fprintf_stderr};
@@ -561,7 +562,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
 /// Reads a DOT file. C reads bytes; bytes that are not part of valid UTF-8 are
 /// kept as raw-byte chars (`graphviz_pure_core::charset`), so labels are converted once,
 /// where C converts them, and the output carries C's bytes.
-fn read_input(path: Option<&OsStr>) -> io::Result<String> {
+fn read_input(path: Option<&OsStr>) -> io::Result<Decoded> {
     let bytes = match path {
         Some(p) => fs::read(p)?,
         None => {
@@ -570,7 +571,7 @@ fn read_input(path: Option<&OsStr>) -> io::Result<String> {
             buf
         }
     };
-    Ok(graphviz_pure_core::charset::decode(bytes))
+    Ok(Decoded::decode(bytes))
 }
 
 /// `agerrorf` of an input's error, as C's bytes. A syntax error names the file `aagerror`
@@ -752,7 +753,8 @@ impl Run<'_> {
     /// instead of the inputs, which are not read.
     fn plugin_graph(&mut self, globals: &GlobalAttrs) -> io::Result<bool> {
         // The port's tables are fixed and all quotable (`plugin_graph`'s test).
-        let Some(mut graph) = plugins::plugin_graph(&plugins::PORT_PLUGINS, globals) else {
+        let Some(mut graph) = graphviz_pure::decoded::plugin_graph(&plugins::PORT_PLUGINS, globals)
+        else {
             agerrorf("the plugin graph could not be made\n");
             return Ok(true);
         };
@@ -780,7 +782,7 @@ impl Run<'_> {
         // `agread` on the file: read through `fgets`, named as `agconcat`'s `filename`.
         graphviz_pure_parser::reading_file(&name, || {
             let globals = self.opts.globals.clone();
-            let mut stream = GraphStream::new(&source, &globals);
+            let mut stream = graph_stream(&source, &globals);
             let mut graph_index = 0;
             while let Some(read) = stream.next_graph(|e| report_error(&name, e)) {
                 let Ok(mut graph) = read else { break };

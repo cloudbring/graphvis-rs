@@ -59,6 +59,17 @@ pub struct GlobalAttrs {
     pub edge: AttrMap,
 }
 
+impl GlobalAttrs {
+    /// The attributes with `f` applied to every name and value ([`AttrMap::map`]).
+    pub fn map_strings(&self, f: impl Fn(&str) -> std::borrow::Cow<'_, str>) -> GlobalAttrs {
+        GlobalAttrs {
+            graph: self.graph.map(&f),
+            node: self.node.map(&f),
+            edge: self.edge.map(&f),
+        }
+    }
+}
+
 pub struct Parser<'a> {
     /// Read a token at a time, as bison calls `yylex`, so the scanner's warnings come when
     /// C's do: never past the token where a syntax error stops the graph.
