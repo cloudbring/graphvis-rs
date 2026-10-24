@@ -318,7 +318,7 @@ impl<'g> Model<'g> {
             // so take its type from the first opposing edge.
             let has_s = e.spline.segments.iter().any(|s| s.start_arrow.is_some());
             let has_e = e.spline.segments.iter().any(|s| s.end_arrow.is_some());
-            if (has_s && stype == 0) || (has_e && etype == 0) {
+            if e.layout.arrow_flags.is_none() && ((has_s && stype == 0) || (has_e && etype == 0)) {
                 let opp = g
                     .edges
                     .iter()
