@@ -649,3 +649,22 @@ thread, so the CLI runs on a 64 MB thread (`DOT_STACK`). Measured on the referen
 subgraphs take C 0.05 s and 34 MB, and the port 0.03 s and 14 MB, in every engine.
 2498 nested clusters, each with a node, take C 0.3 to 13 s and up to 400 MB; the port
 takes up to 35 s, and fdp needs 11.5 GB. That cost is the engines' (#323), not the parser's.
+
+## Truncated styles: parse_style's static array
+
+`parse_style` (`lib/common/emit.c`) keeps its result in a static array, `parse`, and its
+strings in a static buffer, `ps_xb`. At the 64th item (`FUNLIMIT - 1`) it warns `truncating
+style` and returns `parse` without filling it in (#268), so the result is what the previous
+call left there:
+
+- **No earlier call, or the previous one failed** (`nesting not allowed`, `unmatched`
+  parenthesis, which set `parse[0] = NULL`): no items. The port gives the same.
+- **The previous call returned items.** `parse` still holds its pointers, at that call's
+  offsets in `ps_xb`. That call ended in `agxbuse`, which resets the buffer, so this call
+  writes its own tokens from the start; once the buffer grows past its inline storage, or a
+  heap `realloc` moves it, the old pointers point at freed memory. C then draws whatever is
+  at those offsets, often printing `unsupported style <garbage>`.
+
+The port does not model the second case. What C reads depends on the buffer's growth and on
+the order of every `parse_style` call in the run, which the port's renderers don't reproduce
+call for call. A truncated style gives no items in the port, C's result in the first case.

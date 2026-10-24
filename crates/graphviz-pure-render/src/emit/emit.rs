@@ -436,16 +436,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
             self.job.num_layers = 1;
             return;
         };
-        let mut delims = a.get("layersep").unwrap_or(":\t ").to_string();
-        let mut list_delims = a.get("layerlistsep").unwrap_or(",").to_string();
-        // strpbrk(layerDelims, layerListDelims)
-        // On C's bytes: a raw (non-UTF-8) byte is one char of the raw-byte range here.
-        let list_bytes = graphviz_pure_core::charset::encode(&list_delims);
-        if let Some(tok) = graphviz_pure_core::charset::encode(&delims)
-            .iter()
-            .copied()
-            .find(|b| list_bytes.contains(b))
-        {
+        let encode = |s: &str| graphviz_pure_core::charset::encode(s).into_owned();
+        let delims = encode(a.get("layersep").unwrap_or(":\t "));
+        let mut list_delims = encode(a.get("layerlistsep").unwrap_or(","));
+        // strpbrk(layerDelims, layerListDelims), on C's bytes.
+        if let Some(&tok) = delims.iter().find(|b| list_delims.contains(b)) {
             // `'%c'` of `*tok`: one byte, which need not be a whole character.
             let tok = match tok {
                 b if b.is_ascii() => b as char,
@@ -454,20 +449,17 @@ impl<'a, E: Engine> Emitter<'a, E> {
             agwarningf(&format!(
                 "The character '{tok}' appears in both the layersep and layerlistsep attributes - layerlistsep ignored.\n"
             ));
-            list_delims = String::new();
+            list_delims.clear();
         }
-        if delims.is_empty() {
-            delims = String::new();
-        }
-        let mut ids = vec![String::new()];
-        ids.extend(
-            layers
-                .split(|c| delims.contains(c))
-                .filter(|t| !t.is_empty())
-                .map(str::to_string),
-        );
-        self.job.num_layers = (ids.len() - 1) as i32;
-        self.job.layer_ids = ids;
+        let id_bytes: Vec<Vec<u8>> = std::iter::once(Vec::new())
+            .chain(strtok(&encode(layers), &delims).map(<[u8]>::to_vec))
+            .collect();
+        self.job.num_layers = (id_bytes.len() - 1) as i32;
+        self.job.layer_ids = id_bytes
+            .iter()
+            .map(|b| graphviz_pure_core::charset::decode_slice(b))
+            .collect();
+        self.job.layer_id_bytes = id_bytes;
         self.job.layer_delims = delims;
         self.job.layer_list_delims = list_delims;
         if let Some(sel) = a.nonempty("layerselect") {
@@ -485,14 +477,14 @@ impl<'a, E: Engine> Emitter<'a, E> {
         }
     }
 
-    fn layer_index(&self, s: &str, all: i32) -> i32 {
-        if s == "all" {
+    fn layer_index(&self, s: &[u8], all: i32) -> i32 {
+        if s == b"all" {
             return all;
         }
-        if s.bytes().all(|c| c.is_ascii_digit()) {
-            return super::attrs::atoi(s) as i32;
+        if s.iter().all(u8::is_ascii_digit) {
+            return super::attrs::atoi(std::str::from_utf8(s).unwrap_or_default()) as i32;
         }
-        for (i, id) in self.job.layer_ids.iter().enumerate().skip(1) {
+        for (i, id) in self.job.layer_id_bytes.iter().enumerate().skip(1) {
             if id == s {
                 return i as i32;
             }
@@ -502,13 +494,10 @@ impl<'a, E: Engine> Emitter<'a, E> {
 
     /// `selectedLayer`.
     fn selected_layer(&self, layer: i32, num: i32, spec: &str) -> bool {
-        let ld = self.job.layer_list_delims.clone();
-        let d = self.job.layer_delims.clone();
-        for part in spec.split(|c| ld.contains(c)).filter(|t| !t.is_empty()) {
-            let mut ws = part.split(|c| d.contains(c)).filter(|t| !t.is_empty());
-            let w0 = ws.next();
-            let w1 = ws.next();
-            let r = match (w0, w1) {
+        let spec = graphviz_pure_core::charset::encode(spec);
+        for part in strtok(&spec, &self.job.layer_list_delims) {
+            let mut ws = strtok(part, &self.job.layer_delims);
+            let r = match (ws.next(), ws.next()) {
                 (Some(a), Some(b)) => {
                     let (mut n0, mut n1) = (self.layer_index(a, 0), self.layer_index(b, num));
                     if n0 >= 0 || n1 >= 0 {
@@ -1315,7 +1304,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 );
             }
         } else if numc > 0 {
-            self.parallel_colors(e, color, arrowsize, penwidth);
+            self.parallel_colors(e, color, numc, arrowsize, penwidth);
         } else {
             if !color.is_empty() {
                 self.set_pencolor(color);
@@ -1376,11 +1365,19 @@ impl<'a, E: Engine> Emitter<'a, E> {
     }
 
     /// The multi-color (`a:b:c`) branch of `emit_edge_graphics`: parallel offset Béziers.
-    fn parallel_colors(&mut self, e: usize, color: &str, arrowsize: f64, penwidth: f64) {
+    /// `numc` is the `:` count of the edge's `color`, which is no longer `color` when a
+    /// `multicolor` failure has replaced it with `black`.
+    fn parallel_colors(
+        &mut self,
+        e: usize,
+        color: &str,
+        numc: usize,
+        arrowsize: f64,
+        penwidth: f64,
+    ) {
         const SEP: f64 = 2.0;
         let m = self.job.m;
         let ed = &m.edges[e];
-        let numc = color.matches(':').count();
         let numc2 = (2.0 + numc as f64) / 2.0;
         let mut offs: Vec<Vec<Point>> = Vec::new();
         let mut tmps: Vec<Vec<Point>> = Vec::new();
@@ -1421,25 +1418,18 @@ impl<'a, E: Engine> Emitter<'a, E> {
             offs.push(off);
             tmps.push(tmp);
         }
-        let mut lastcolor = color.to_string();
-        let mut headcolor = lastcolor.clone();
-        let mut tailcolor = lastcolor.clone();
-        let mut cur = lastcolor.clone();
-        for (cnum, c) in color.split(':').filter(|c| !c.is_empty()).enumerate() {
-            let c = if c.is_empty() { DEFAULT_COLOR } else { c };
-            cur = c.to_string();
-            if cur != lastcolor {
-                self.set_pencolor(c);
-                self.set_fillcolor(c);
-                lastcolor = cur.clone();
-            }
-            if cnum == 0 {
-                headcolor = cur.clone();
-                tailcolor = cur.clone();
-            }
-            if cnum == 1 {
-                tailcolor = cur.clone();
-            }
+        // C compares these colours by pointer. Each `strtok` token of the `gv_strdup` copy
+        // is a new pointer, so every token sets the pen and fill (even a repeated name, or
+        // the `black` of a failed `multicolor`). After the loop `color` is the NULL that
+        // ended `strtok`, so the tail arrow always sets its colour, and the head arrow does
+        // unless the tail arrow just set the same pointer: one token or none. With no token
+        // `headcolor` and `tailcolor` are still the whole string.
+        let toks: Vec<&str> = color.split(':').filter(|c| !c.is_empty()).collect();
+        let head = toks.first().copied().unwrap_or(color);
+        let tail = toks.get(1).or(toks.first()).copied().unwrap_or(color);
+        for c in &toks {
+            self.set_pencolor(c);
+            self.set_fillcolor(c);
             for (i, tmp) in tmps.iter_mut().enumerate() {
                 for (t, o) in tmp.iter_mut().zip(&offs[i]) {
                     t.x += o.x;
@@ -1451,11 +1441,8 @@ impl<'a, E: Engine> Emitter<'a, E> {
         }
         let bz = ed.bz.last().unwrap();
         if bz.sflag != 0 {
-            if cur != tailcolor {
-                cur = tailcolor.clone();
-                self.set_pencolor(&cur);
-                self.set_fillcolor(&cur);
-            }
+            self.set_pencolor(tail);
+            self.set_fillcolor(tail);
             self.arrow_gen(
                 EmitState::TDraw,
                 bz.sp,
@@ -1466,10 +1453,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
             );
         }
         if bz.eflag != 0 {
-            if cur != headcolor {
-                cur = headcolor.clone();
-                self.set_pencolor(&cur);
-                self.set_fillcolor(&cur);
+            if !(bz.sflag != 0 && toks.len() < 2) {
+                self.set_pencolor(head);
+                self.set_fillcolor(head);
             }
             self.arrow_gen(
                 EmitState::HDraw,
@@ -1723,4 +1709,10 @@ impl<E: Engine> Emitter<'_, E> {
             }
         }
     }
+}
+
+/// The tokens `strtok` gives for `s` and `delims`, both C's bytes: a multibyte character
+/// of `delims` is several delimiters, and a token can end inside a character.
+fn strtok<'s>(s: &'s [u8], delims: &'s [u8]) -> impl Iterator<Item = &'s [u8]> {
+    s.split(|b| delims.contains(b)).filter(|t| !t.is_empty())
 }
