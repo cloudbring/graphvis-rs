@@ -460,12 +460,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             delims = String::new();
         }
         let mut ids = vec![String::new()];
-        ids.extend(
-            layers
-                .split(|c| delims.contains(c))
-                .filter(|t| !t.is_empty())
-                .map(str::to_string),
-        );
+        ids.extend(strtok(layers, &delims));
         self.job.num_layers = (ids.len() - 1) as i32;
         self.job.layer_ids = ids;
         self.job.layer_delims = delims;
@@ -504,10 +499,10 @@ impl<'a, E: Engine> Emitter<'a, E> {
     fn selected_layer(&self, layer: i32, num: i32, spec: &str) -> bool {
         let ld = self.job.layer_list_delims.clone();
         let d = self.job.layer_delims.clone();
-        for part in spec.split(|c| ld.contains(c)).filter(|t| !t.is_empty()) {
-            let mut ws = part.split(|c| d.contains(c)).filter(|t| !t.is_empty());
-            let w0 = ws.next();
-            let w1 = ws.next();
+        for part in strtok(spec, &ld) {
+            let ws = strtok(&part, &d);
+            let w0 = ws.first().map(String::as_str);
+            let w1 = ws.get(1).map(String::as_str);
             let r = match (w0, w1) {
                 (Some(a), Some(b)) => {
                     let (mut n0, mut n1) = (self.layer_index(a, 0), self.layer_index(b, num));
@@ -1315,7 +1310,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 );
             }
         } else if numc > 0 {
-            self.parallel_colors(e, color, arrowsize, penwidth);
+            self.parallel_colors(e, color, numc, arrowsize, penwidth);
         } else {
             if !color.is_empty() {
                 self.set_pencolor(color);
@@ -1376,11 +1371,19 @@ impl<'a, E: Engine> Emitter<'a, E> {
     }
 
     /// The multi-color (`a:b:c`) branch of `emit_edge_graphics`: parallel offset Béziers.
-    fn parallel_colors(&mut self, e: usize, color: &str, arrowsize: f64, penwidth: f64) {
+    /// `numc` is the `:` count of the edge's `color`, which is no longer `color` when a
+    /// `multicolor` failure has replaced it with `black`.
+    fn parallel_colors(
+        &mut self,
+        e: usize,
+        color: &str,
+        numc: usize,
+        arrowsize: f64,
+        penwidth: f64,
+    ) {
         const SEP: f64 = 2.0;
         let m = self.job.m;
         let ed = &m.edges[e];
-        let numc = color.matches(':').count();
         let numc2 = (2.0 + numc as f64) / 2.0;
         let mut offs: Vec<Vec<Point>> = Vec::new();
         let mut tmps: Vec<Vec<Point>> = Vec::new();
@@ -1421,24 +1424,33 @@ impl<'a, E: Engine> Emitter<'a, E> {
             offs.push(off);
             tmps.push(tmp);
         }
-        let mut lastcolor = color.to_string();
-        let mut headcolor = lastcolor.clone();
-        let mut tailcolor = lastcolor.clone();
-        let mut cur = lastcolor.clone();
-        for (cnum, c) in color.split(':').filter(|c| !c.is_empty()).enumerate() {
-            let c = if c.is_empty() { DEFAULT_COLOR } else { c };
-            cur = c.to_string();
-            if cur != lastcolor {
-                self.set_pencolor(c);
-                self.set_fillcolor(c);
-                lastcolor = cur.clone();
-            }
+        // C compares these colours by pointer. `lastcolor`, `headcolor` and `tailcolor`
+        // start as `color` itself, and each `strtok` token of the `gv_strdup` copy is a
+        // new pointer, so every token sets the pen and fill (even a repeated name, or the
+        // `black` of a failed `multicolor`). After the loop `color` is the NULL that ended
+        // `strtok`. `Col` stands for those pointers.
+        #[derive(Clone, Copy, PartialEq)]
+        enum Col {
+            Orig,
+            Tok(usize),
+            Null,
+        }
+        let toks: Vec<&str> = color.split(':').filter(|c| !c.is_empty()).collect();
+        let name = |c: Col| match c {
+            Col::Orig | Col::Null => color,
+            Col::Tok(i) => toks[i],
+        };
+        let mut headcolor = Col::Orig;
+        let mut tailcolor = Col::Orig;
+        for (cnum, c) in toks.iter().enumerate() {
+            self.set_pencolor(c);
+            self.set_fillcolor(c);
             if cnum == 0 {
-                headcolor = cur.clone();
-                tailcolor = cur.clone();
+                headcolor = Col::Tok(cnum);
+                tailcolor = Col::Tok(cnum);
             }
             if cnum == 1 {
-                tailcolor = cur.clone();
+                tailcolor = Col::Tok(cnum);
             }
             for (i, tmp) in tmps.iter_mut().enumerate() {
                 for (t, o) in tmp.iter_mut().zip(&offs[i]) {
@@ -1449,12 +1461,13 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 self.bezier(&pts, 0);
             }
         }
+        let mut cur = Col::Null;
         let bz = ed.bz.last().unwrap();
         if bz.sflag != 0 {
             if cur != tailcolor {
-                cur = tailcolor.clone();
-                self.set_pencolor(&cur);
-                self.set_fillcolor(&cur);
+                cur = tailcolor;
+                self.set_pencolor(name(cur));
+                self.set_fillcolor(name(cur));
             }
             self.arrow_gen(
                 EmitState::TDraw,
@@ -1467,9 +1480,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
         }
         if bz.eflag != 0 {
             if cur != headcolor {
-                cur = headcolor.clone();
-                self.set_pencolor(&cur);
-                self.set_fillcolor(&cur);
+                cur = headcolor;
+                self.set_pencolor(name(cur));
+                self.set_fillcolor(name(cur));
             }
             self.arrow_gen(
                 EmitState::HDraw,
@@ -1723,4 +1736,15 @@ impl<E: Engine> Emitter<'_, E> {
             }
         }
     }
+}
+
+/// The tokens `strtok` gives for `s` and `delims`: C splits on bytes, so a multibyte
+/// character of `delims` is several delimiters and a token can end inside a character.
+fn strtok(s: &str, delims: &str) -> Vec<String> {
+    let delims = graphviz_pure_core::charset::encode(delims);
+    graphviz_pure_core::charset::encode(s)
+        .split(|b| delims.contains(b))
+        .filter(|t| !t.is_empty())
+        .map(graphviz_pure_core::charset::decode_slice)
+        .collect()
 }

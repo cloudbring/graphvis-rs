@@ -7462,6 +7462,117 @@ fn fdp_cluster_node_is_in_every_ancestor_cluster_once() {
     );
 }
 
+// Issue #283: when `multicolor` fails, C draws the edge in `black` but keeps the original
+// string's `:` count, and sets the pen for every `strtok` token because it compares the
+// colours by pointer. With no token at all (`color=":"`), the arrows get the whole string,
+// which `gvrender_set_pencolor` cuts at its `:`. Output is C 16.1.0's.
+#[test]
+fn issue283_failed_multicolor_draws_black_with_the_original_color_count() {
+    let (out, err, ok) = run(&["-Txdot"], "digraph { a -> b [color=\"red;;0.5:blue\"] }");
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: Illegal value in \"red;;0.5:blue\" color attribute; float expected after ';'\n\
+         in edge a -> b\n"
+    );
+    assert_eq!(
+        out,
+        "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 108 54 108 54 0 \",\n\
+             \t\tbb=\"0,0,54,108\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"c 7 -#000000 e 27 90 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 85.8 0 6.21 1 -a \",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,90\",\n\
+             \t\twidth=0.75];\n\
+             \tb\t[_draw_=\"c 7 -#000000 e 27 18 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 7 1 -b \",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\twidth=0.75];\n\
+             \ta -> b\t[_draw_=\"c 7 -#000000 B 4 26 71.7 26 64.41 26 55.73 26 47.54 \",\n\
+             \t\t_hdraw_=\"S 5 -solid c 7 -#000000 C 7 -#000000 P 3 30.5 47.62 27 37.62 23.5 47.62 \",\n\
+             \t\tcolor=\"red;;0.5:blue\",\n\
+             \t\tpos=\"e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536\"];\n\
+             }\n"
+    );
+    let (out, err, ok) = run(
+        &["-Txdot"],
+        "digraph { a -> b [color=\":\" dir=both arrowtail=dot] }",
+    );
+    assert!(ok);
+    assert_eq!(err, "Warning:  is not a known color.\n");
+    assert_eq!(
+        out,
+        "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 108 54 108 54 0 \",\n\
+             \t\tbb=\"0,0,54,108\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"c 7 -#000000 e 27 90 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 85.8 0 6.21 1 -a \",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,90\",\n\
+             \t\twidth=0.75];\n\
+             \tb\t[_draw_=\"c 7 -#000000 e 27 18 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 7 1 -b \",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\twidth=0.75];\n\
+             \ta -> b\t[_hdraw_=\"S 5 -solid c 7 -#000000 C 7 -#000000 P 3 30.5 47.62 27 37.62 23.5 47.62 \",\n\
+             \t\t_tdraw_=\"S 5 -solid c 7 -#000000 C 7 -#000000 E 27 67.2 4 4 \",\n\
+             \t\tarrowtail=dot,\n\
+             \t\tcolor=\":\",\n\
+             \t\tdir=both,\n\
+             \t\tpos=\"s,27,71.697 e,27,36.104 27,62.797 27,57.776 27,52.497 27,47.411\"];\n\
+             }\n"
+    );
+}
+
+// Issue #283: `parse_layers` and `selectedLayer` split with `strtok`, on bytes: `layersep="é"`
+// is the two delimiters 0xC3 and 0xA9, so `aèb` (0xC3 0xA8) splits too. The second layer's id
+// starts with the lone byte 0xA8. Output is C 16.1.0's.
+#[test]
+fn issue283_layers_split_on_the_bytes_of_layersep() {
+    let (out, err, ok) = run(
+        &["-Tsvg"],
+        "digraph { layers=\"a\u{e8}b:c\"; layersep=\"\u{e9}\"; \
+         a [layer=\"a\u{e8}b\"]; b [layer=\"c\"] }",
+    );
+    assert!(ok);
+    assert_eq!(err, "");
+    let (_, body) = out.split_once("-->\n").unwrap();
+    assert_eq!(
+        body,
+        "\
+             <!-- Pages: 1 -->\n\
+             <svg width=\"134pt\" height=\"44pt\"\n\
+              \x20viewBox=\"0.00 0.00 134.00 44.00\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n\
+             <g id=\"a\" class=\"layer\">\n\
+             <g id=\"graph0\" class=\"graph\" transform=\"scale(1 1) rotate(0) translate(4 40)\">\n\
+             <polygon fill=\"white\" stroke=\"none\" points=\"-4,4 -4,-40 130,-40 130,4 -4,4\"/>\n\
+             <!-- a -->\n\
+             <g id=\"node1\" class=\"node\">\n\
+             <title>a</title>\n\
+             <ellipse fill=\"none\" stroke=\"black\" cx=\"27\" cy=\"-18\" rx=\"27\" ry=\"18\"/>\n\
+             <text xml:space=\"preserve\" text-anchor=\"middle\" x=\"27\" y=\"-13.8\" font-family=\"Times,serif\" font-size=\"14.00\">a</text>\n\
+             </g>\n\
+             </g>\n\
+             </g>\n\
+             <g id=\"\u{fffd}b:c\" class=\"layer\">\n\
+             <g id=\"\u{fffd}b:c_graph0\" class=\"graph\" transform=\"scale(1 1) rotate(0) translate(4 40)\">\n\
+             <polygon fill=\"white\" stroke=\"none\" points=\"-4,4 -4,-40 130,-40 130,4 -4,4\"/>\n\
+             </g>\n\
+             </g>\n\
+             </svg>\n\
+         "
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
