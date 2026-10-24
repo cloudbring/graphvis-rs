@@ -4161,6 +4161,155 @@ fn packed_dot_draws_the_root_cluster_list_of_copy_cluster_info() {
     );
 }
 
+/// Issue #128: with `phase=3`, `dotLayout` stops after `dot_position` with
+/// `attach_phase_attrs(g, 2)` (`lib/dotgen/dotinit.c:326`), and `dot_layout` still runs
+/// `dotneato_postprocess` (`:517`): real positions, the bounding box, and the sizes
+/// `dot_position` left (a self-loop's widened node). Output is C 16.1.0's.
+#[test]
+fn issue128_dot_phase3_writes_the_positions_dot_position_left() {
+    let (out, err, ok) = run(
+        &["-Tdot"],
+        "digraph G { phase=3; n7 [style=diagonals]; n7 -> n7; a -> b; }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        r#"digraph G {
+	graph [bb="0,0,144,108",
+		phase=3
+	];
+	node [label="\N"];
+	n7	[height=0.5,
+		order=0,
+		pos="27,90",
+		rank=0,
+		style=diagonals,
+		width=1];
+	n7 -> n7;
+	a	[height=0.5,
+		order=1,
+		pos="117,90",
+		rank=0,
+		width=0.75];
+	b	[height=0.5,
+		order=0,
+		pos="117,18",
+		rank=1,
+		width=0.75];
+	a -> b;
+}
+"#
+    );
+}
+
+/// Issue #128: `doDot`'s pack branch has no phase check (`lib/dotgen/dotinit.c:479-486`): each
+/// component stops at its `phase`, and the components are still packed, their positions
+/// reset and their clusters copied, then post-processed. Output is C 16.1.0's.
+#[test]
+fn issue128_dot_phases_pack_their_components() {
+    for (phase, want) in [
+        (
+            3,
+            r#"digraph G {
+	graph [bb="0,0,144,108",
+		pack=true,
+		phase=3
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		order=0,
+		pos="27,90",
+		rank=0,
+		width=0.75];
+	b	[height=0.5,
+		order=0,
+		pos="27,18",
+		rank=1,
+		width=0.75];
+	a -> b;
+	c	[height=0.5,
+		order=0,
+		pos="117,90",
+		rank=0,
+		width=0.75];
+	d	[height=0.5,
+		order=0,
+		pos="117,18",
+		rank=1,
+		width=0.75];
+	c -> d;
+}
+"#,
+        ),
+        (
+            1,
+            r#"digraph G {
+	graph [bb="0,0,126,96",
+		pack=true,
+		phase=1
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		pos="27,18",
+		rank=0,
+		width=0.75];
+	b	[height=0.5,
+		pos="27,18",
+		rank=1,
+		width=0.75];
+	a -> b;
+	c	[height=0.5,
+		pos="99,78",
+		rank=0,
+		width=0.75];
+	d	[height=0.5,
+		pos="99,78",
+		rank=1,
+		width=0.75];
+	c -> d;
+}
+"#,
+        ),
+    ] {
+        let src = format!("digraph G {{ phase={phase}; pack=true; a -> b; c -> d; }}");
+        let (out, err, ok) = run(&["-Tdot"], &src);
+        assert!(ok, "{err}");
+        assert_eq!(err, "");
+        assert_eq!(out, want, "{src}");
+    }
+}
+
+/// Issue #128: a layout that fails before `phase` is reached returns before
+/// `attach_phase_attrs` (`lib/dotgen/dotinit.c:312-314`): no node gets its `rank` or
+/// `order`. stderr is C 16.1.0's (issue #232's input A, whose drawing C leaves half made).
+#[test]
+fn issue128_dot_phase3_failed_layout_attaches_no_phase_attributes() {
+    let src = "digraph G { phase=3; rank=sink; subgraph cluster0 { a; b; c; d } \
+               subgraph cluster_1 { e; f } { d } subgraph cluster9 { g; i } { e } { i } \
+               f -> e; g -> h; i -> g; d -> c; i -> h [label=x]; { rank=source; a; h } }";
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Warning: a was already in a rankset, deleted from cluster G\n\
+         Warning: c was already in a rankset, deleted from cluster G\n\
+         Warning: d was already in a rankset, deleted from cluster G\n\
+         Warning: e was already in a rankset, deleted from cluster G\n\
+         Warning: i was already in a rankset, deleted from cluster G\n\
+         Error: trouble in init_rank\n\
+         \tc 2\n\
+         \t%0 1\n\
+         \tf 1\n\
+         \t%0 1\n\
+         \tg 2\n\
+         \t%0 1\n\
+         Error: install_in_rank, line 1190: GD_rank(g)[2].v + ND_order(%0) [0] > GD_rank(g)[2].av + GD_rank(Root)[2].an [2]\n"
+    );
+    assert!(!out.contains("order="), "{out}");
+    assert!(!out.contains("\t\trank=0"), "{out}");
+}
+
 // Issue #193 (C16): the json writer's `label_subgs` (gvrender_core_json.c:617) warns once
 // for each later cluster with a taken name; `cluster=true` makes a cluster too. Two top-level
 // `subgraph cluster_a` are one subgraph. With `compound=true`, `mkClustMap` warns first.

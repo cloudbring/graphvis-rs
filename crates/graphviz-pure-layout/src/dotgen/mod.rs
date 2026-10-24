@@ -292,29 +292,30 @@ impl<'a> Dot<'a> {
 pub fn layout_dot(graph: &mut Graph) -> Result<()> {
     // dot_init_node's common_init_node reports the node diagnostics, in C's place.
     graphviz_pure_core::diag::quietly(|| graphviz_pure_geom::size_graph_nodes(graph));
-    let mut aborted = false;
+    let aborted;
     let result = {
         let mut d = Dot::new(graph);
         d.graph_init();
         let maxphase = utils::late_int(d.agget(0, "phase"), -1, 1);
         // dot_layout: doDot only when there are nodes; dotneato_postprocess always.
         if !graph.nodes.is_empty() {
-            pack::do_dot(&mut d, graph, maxphase).map_err(|message| {
+            pack::do_dot(&mut d, graph).map_err(|message| {
                 graphviz_pure_core::GraphvizError::LayoutError {
                     stage: "dot",
                     message,
                 }
             })?;
         }
-        if (1..=3).contains(&maxphase) {
-            output::Output::phase(&d, maxphase)
-        } else {
-            if !d.aborted {
-                d.dotneato_postprocess();
-            }
-            aborted = d.aborted;
-            output::Output::collect(&d)
+        if !d.aborted {
+            d.dotneato_postprocess();
         }
+        aborted = d.aborted;
+        // dotLayout stops after dot_rank, dot_mincross or dot_position with
+        // attach_phase_attrs(g, 1 or 2), and dot_layout still post-processes what it left
+        // (dotinit.c:306-329, :517). A layout that failed returned before
+        // attach_phase_attrs.
+        let phase_attrs = ((1..=3).contains(&maxphase) && !aborted).then(|| maxphase.min(2));
+        output::Output::collect(&d, phase_attrs)
     };
     result.apply(graph);
     if aborted {
