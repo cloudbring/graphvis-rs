@@ -215,6 +215,12 @@ fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<Str
     }
 }
 
+/// Whether a loadimage plugin is installed for images of `stringtype` in renderer
+/// `render_type` (`gvloadimage_select`'s `"TYPE:RENDER"`): the table `-v` and `-P` list.
+pub fn loadimage_installed(stringtype: &str, render_type: &str) -> bool {
+    emit::job::LoadImage::select(stringtype, render_type).is_some()
+}
+
 /// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
 /// The output is the writer's alone: there is no output file for the text C writes past
 /// the renderer ([`GraphJobs::write_output_file_text`]).

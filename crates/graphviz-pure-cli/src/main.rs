@@ -1,3 +1,4 @@
+use graphviz_pure::plugins;
 use graphviz_pure::{
     DEVICE_PLUGINS, FdpParms, GlobalAttrs, GraphJobs, GraphStream, LAYOUT_PLUGINS, LayoutEngine,
     LayoutJobs, LayoutOptions, OutputFormat,
@@ -11,11 +12,19 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::process::ExitCode;
 
-const VERSION: &str = concat!(
-    "graphviz-pure - graphviz-pure version ",
-    env!("CARGO_PKG_VERSION"),
-    " (Rust port of Graphviz 16.1.0)"
-);
+/// `gvc->common.info`: `"<name> version <version> (<build>)"`.
+macro_rules! version_info {
+    () => {
+        concat!(
+            "graphviz-pure version ",
+            env!("CARGO_PKG_VERSION"),
+            " (Rust port of Graphviz 16.1.0)"
+        )
+    };
+}
+const VERSION: &str = concat!("graphviz-pure - ", version_info!());
+/// What `-v` writes after the command name.
+const VERSION_INFO: &str = version_info!();
 
 // `lib/common/input.c`: `dotneato_usage`'s texts.
 const USAGE_FMT: &str = " [-Vv?] [-(GNEA)name=val] [-(KTlso)<val>] <dot files>\n";
@@ -98,6 +107,9 @@ struct Options {
     layout: LayoutOptions,
     y_invert: bool,
     inputs: Vec<OsString>,
+    /// `-P`: lay out and render the plugin graph instead of the inputs (`P_graph`), built on
+    /// the `-G`/`-N`/`-E`/`-A` attributes given before it.
+    plugin_graph: Option<GlobalAttrs>,
 }
 
 enum Parsed {
@@ -329,8 +341,12 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
     for os_arg in os_args {
         let bytes = arg_bytes(&os_arg);
         match (bytes.first(), bytes.get(1)) {
-            // Verbose mode is accepted; the port has no verbose messages.
-            (Some(b'-'), Some(b'v')) => {}
+            // `-v` is level 1, `-vN` level N when a digit follows.
+            (Some(b'-'), Some(b'v')) => plugins::set_verbose(match bytes.get(2) {
+                // `atoi`'s `int`: the value's low 32 bits, as C keeps of a longer one.
+                Some(d) if d.is_ascii_digit() => atoi(&decode_slice(&bytes[2..])) as i32,
+                _ => 1,
+            }),
             (Some(b'-'), Some(b'O')) => auto_output = true,
             (Some(b'-'), Some(b'c')) => config = true,
             _ => kept.push(os_arg.clone()),
@@ -350,6 +366,9 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         return Parsed::Exit(ExitCode::FAILURE);
     }
     // `dot -c` writes the plugin configuration and exits; the port's plugins are built in.
+    if plugins::verbose() != 0 {
+        fprintf_stderr(&format!("{cmdname} - {VERSION_INFO}\n"));
+    }
     if config {
         return Parsed::Exit(ExitCode::SUCCESS);
     }
@@ -363,6 +382,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         layout,
         y_invert: false,
         inputs: Vec::new(),
+        plugin_graph: None,
     };
     let (mut n_lang, mut n_file) = (0, 0);
     let mut kflag = false;
@@ -415,7 +435,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                     };
                     job_at(&mut opts.jobs, n_lang).langname = Some(v.clone());
                     n_lang += 1;
-                    if graphviz_pure::plugin_load(&DEVICE_PLUGINS, &v).is_none() {
+                    if plugins::load_device(&v).is_none() {
                         // `dotneato_args_initialize` writes these with `fprintf`.
                         fprintf_stderr(&format!(
                             "Format: \"{v}\" not recognized. Use one of:{}\n",
@@ -440,9 +460,8 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                     }
                     kflag = true;
                 }
-                // `-P` renders the graph of the plugins instead of the inputs; the port
-                // has no plugin graph.
-                'P' => {}
+                // `-P` renders the graph of the plugins instead of the inputs.
+                'P' => opts.plugin_graph = Some(opts.globals.clone()),
                 'l' => {
                     if flag_value(os_args, &mut i).is_none() {
                         return missing('l');
@@ -511,20 +530,30 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         i += 1;
     }
 
-    // Without `-K`, the layout is the command's name (`dot` for any other name).
+    // Without `-K`, the layout is the command's name, `dot` for any other name (as C's
+    // `dot_static` and `dot_builtins` are), selected as `gvlayout_select` does.
     if !kflag {
-        opts.engine = graphviz_pure::layout_select(&opts.cmdname).unwrap_or(LayoutEngine::Dot);
+        let layout = match graphviz_pure::plugin_load(&LAYOUT_PLUGINS, &opts.cmdname) {
+            Some(_) => opts.cmdname.as_str(),
+            None => "dot",
+        };
+        opts.engine = graphviz_pure::layout_select(layout).unwrap_or(LayoutEngine::Dot);
     }
     // Without `-T`, the first job writes `dot`; a job with no `-T` repeats the one before
     // it (`gvjobs_next`).
     let first = job_at(&mut opts.jobs, 0);
     if first.langname.is_none() {
         first.langname = Some("dot".to_string());
+        plugins::load_device("dot");
     }
     for n in 1..opts.jobs.len() {
         if opts.jobs[n].langname.is_none() {
             opts.jobs[n].langname = opts.jobs[n - 1].langname.clone();
         }
+    }
+    // `gvParseArgs`: the plugins, once the arguments are read.
+    if graphviz_pure_core::diag::verbose_byte() != 0 {
+        plugins::write_status(&plugins::PORT_PLUGINS);
     }
     Parsed::Run(Box::new(opts))
 }
@@ -638,6 +667,18 @@ impl Run<'_> {
         // the jobs have output files: C's `fprintf(job->output_file, ...)` text goes in them
         graph_jobs.write_output_file_text(true);
         for n in 0..self.opts.jobs.len() {
+            // `gvrender_select`: the job's device, and the renderer it depends on, are
+            // looked up for each graph (the `-T` value was checked already).
+            let langname = self.opts.jobs[n].langname.as_deref().unwrap_or_default();
+            plugins::load_device(langname);
+            if plugins::verbose() != 0 && plugins::load_device_quietly(langname) == Some("json") {
+                // `json_begin_graph` renders the graph as xdot first (`gvRender`), which
+                // looks the device up three times: `gvjobs_output_langname`, its own
+                // `gvrender_select` and `gvRenderJobs`'s.
+                for _ in 0..3 {
+                    plugins::load_device("xdot");
+                }
+            }
             // Every job's device writes its own output (no format of the port does pages),
             // so the device open before it is finalized.
             if let Some(active) = self.active.take() {
@@ -686,6 +727,39 @@ impl Run<'_> {
         Ok(())
     }
 
+    /// `gvLayoutJobs` and `gvRenderJobs` for one graph. `Ok(false)` when the layout failed
+    /// where C exits or crashes, which ends the run; `Err` is a write error.
+    fn graph(
+        &mut self,
+        graph: &mut graphviz_pure::Graph,
+        input: Option<&OsStr>,
+        graph_index: usize,
+        name: &str,
+    ) -> io::Result<bool> {
+        match self.layout.layout(graph) {
+            Ok(true) => self.render_jobs(graph, input, graph_index, name)?,
+            Ok(false) => agerrorf("Layout was not done.  Missing layout plugins? \n"),
+            // A layout the port stops where C exits (`graphviz_exit`) or crashes.
+            Err(e) => {
+                report_error(name, &e);
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
+    /// `-P`: the plugin graph (`gvPluginsGraph`), named `<internal>`, laid out and rendered
+    /// instead of the inputs, which are not read.
+    fn plugin_graph(&mut self, globals: &GlobalAttrs) -> io::Result<bool> {
+        // The port's tables are fixed and all quotable (`plugin_graph`'s test).
+        let Some(mut graph) = plugins::plugin_graph(&plugins::PORT_PLUGINS, globals) else {
+            agerrorf("the plugin graph could not be made\n");
+            return Ok(true);
+        };
+        let name = "<internal>";
+        self.graph(&mut graph, Some(OsStr::new(name)), 0, name)
+    }
+
     /// One input (`gvNextInputGraph` over a file): each graph is read, laid out and
     /// rendered before the next is read. `Ok(false)` when a layout failed where C exits or
     /// crashes, which ends the run; `Err` is a write error.
@@ -710,14 +784,8 @@ impl Run<'_> {
             let mut graph_index = 0;
             while let Some(read) = stream.next_graph(|e| report_error(&name, e)) {
                 let Ok(mut graph) = read else { break };
-                match self.layout.layout(&mut graph) {
-                    Ok(true) => self.render_jobs(&graph, input, graph_index, &name)?,
-                    Ok(false) => agerrorf("Layout was not done.  Missing layout plugins? \n"),
-                    // A layout the port stops where C exits (`graphviz_exit`) or crashes.
-                    Err(e) => {
-                        report_error(&name, &e);
-                        return Ok(false);
-                    }
+                if !self.graph(&mut graph, input, graph_index, &name)? {
+                    return Ok(false);
                 }
                 graph_index += 1;
                 // `agreseterrors`: the graph's errors set the status.
@@ -761,7 +829,10 @@ fn dot_main() -> ExitCode {
         Parsed::Exit(code) => return code,
     };
     graphviz_pure::set_y_invert(opts.y_invert);
-    let inputs: Vec<Option<OsString>> = if opts.inputs.is_empty() {
+    // `-P` reads no input.
+    let inputs: Vec<Option<OsString>> = if opts.plugin_graph.is_some() {
+        Vec::new()
+    } else if opts.inputs.is_empty() {
         vec![None]
     } else {
         opts.inputs.iter().cloned().map(Some).collect()
@@ -776,6 +847,13 @@ fn dot_main() -> ExitCode {
     };
     let mut written = Ok(());
     let mut stopped = false;
+    if let Some(globals) = run.opts.plugin_graph.clone() {
+        match run.plugin_graph(&globals) {
+            Ok(true) => {}
+            Ok(false) => stopped = true,
+            Err(e) => written = Err(e),
+        }
+    }
     for input in &inputs {
         match run.input(input.as_deref()) {
             Ok(true) => {}

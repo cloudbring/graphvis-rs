@@ -142,7 +142,16 @@ impl<E: Engine> Emitter<'_, E> {
     fn gvloadimage(&mut self, us: &usershape::UserShape, b: BoundingBox) {
         let render_type = self.eng.render_type().to_string();
         match LoadImage::select(us.stringtype(), &render_type) {
-            Some(li) => self.loadimage = Some(li),
+            Some(li) => {
+                // `gvplugin_load(gvc, API_loadimage, "TYPE:RENDER")`, after its renderer.
+                if graphviz_pure_core::diag::verbose() >= 1 {
+                    graphviz_pure_core::diag::fprintf_stderr(&format!(
+                        "Using render: {render_type}:core\nUsing loadimage: {}:{render_type}:core\n",
+                        us.stringtype()
+                    ));
+                }
+                self.loadimage = Some(li);
+            }
             None => graphviz_pure_core::diag::agwarningf(&format!(
                 "No loadimage plugin for \"{}:{render_type}\"\n",
                 us.stringtype()
