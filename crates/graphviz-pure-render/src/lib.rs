@@ -46,7 +46,6 @@ pub fn render_svg(graph: &Graph) -> String {
 }
 
 use graphviz_pure_core::{Graph, GraphvizError, Result};
-use graphviz_pure_parser::write_canon;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -375,7 +374,7 @@ impl<'g> GraphJobs<'g> {
                     sync_dicts(&mut g, graph, &self.forced);
                     return Ok(agwrite::agwrite(&g));
                 }
-                return Ok(write_canon(&g));
+                return Ok(graphviz_pure_parser::write_canon_forced(&g, &self.forced));
             }
             return Ok(json::write_json(
                 &g,
@@ -428,8 +427,8 @@ impl<'g> GraphJobs<'g> {
                     sync_dicts(&mut g, graph, &self.forced);
                     agwrite::agwrite(&g)
                 } else {
-                    emit::output::propagate_inherited(&mut g, graph, &forced);
-                    graphviz_pure_parser::write_canon_forced(&g, &forced)
+                    emit::output::propagate_inherited(&mut g, graph, &self.forced);
+                    graphviz_pure_parser::write_canon_forced(&g, &self.forced)
                 }
             }
             OutputFormat::Plain => {

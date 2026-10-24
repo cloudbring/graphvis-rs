@@ -186,6 +186,21 @@ mod tests {
         assert!(g.nodes[a.0 as usize].layout.lw_rw.is_none());
     }
 
+    // A layout of a graph starts from no result: fdp's render view and the splines of an
+    // earlier layout do not survive a dot layout that routes no edge.
+    #[test]
+    fn relayout_drops_the_previous_view_and_splines() {
+        let mut g = make_chain_graph();
+        g.edges[0].attrs.insert("label".into(), "l".into());
+        layout_graph(&mut g, LayoutEngine::Fdp).unwrap();
+        assert!(g.edges.iter().all(|e| !e.spline.segments.is_empty()));
+        g.render_view = Some(Box::new(g.clone()));
+        g.graph_attrs.insert("splines".into(), "none".into());
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert!(g.render_view.is_none());
+        assert!(g.edges.iter().all(|e| e.spline.segments.is_empty()));
+    }
+
     /// An edge as (tail, head, attributes).
     type TestEdge<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)]);
 
