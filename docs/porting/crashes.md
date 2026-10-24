@@ -715,6 +715,54 @@ The port does not model the second case. What C reads depends on the buffer's gr
 the order of every `parse_style` call in the run, which the port's renderers don't reproduce
 call for call. A truncated style gives no items in the port, C's result in the first case.
 
+## Empty colour segments
+
+Closed: #385.
+
+`parseSegs` (`lib/common/emit.c:470`) splits a colour list with `tok(clrs, ":")`
+(`lib/util/tokenize.h`), which, unlike `strtok`, yields an empty token for a leading `:` and
+for a trailing one (a run of `:` inside the list is one separator). An empty token is a
+segment with no colour; with no `;` weight it takes a share of the weight left unassigned.
+The port dropped empty tokens; it now splits as `tok` does. That changes every consumer of
+`parseSegs`:
+
+- The wedges, the stripes and the pieces of a multicolour edge stop at the first segment with
+  no colour, so `red;0.3:` draws a red piece or stripe 30% long, and `:red;0.3` draws no
+  wedge. The port drew red over the whole width.
+- A gradient (`findStopColor`) takes an empty second segment as no second colour, and its
+  callers end the gradient in black: `bgcolor="red:"` and `fillcolor="red;0.3:"` on the graph,
+  a node or an HTML cell draw C's red-to-black gradient. The port drew plain red. An empty
+  first segment is no gradient, in C and the port.
+
+Where the first segment of a multicolour edge (one with a `;`) is empty, C crashes:
+`multicolor` sets the tail arrow's colour to that segment's NULL colour
+(`LIST_FRONT(&segs)->color`), and the head arrow's to `endcolor`, which only a coloured
+segment with a weight above 0 sets (`emit.c:2036-2045`); `gvrender_set_pencolor` then calls
+`strchr` on the NULL. The head arrow alone crashes the same way where every coloured segment
+before the first empty one has a weight that rounds to 0 (`red;0.000001:`).
+
+The port draws an arrow only when its colour is set. Two fallbacks were possible:
+
+- C's nearest input that it handles is the same edge with `dir=none`. C draws the coloured
+  pieces of the spline before the first empty segment, none where it is the first, and no
+  arrow: the edge is invisible, with no warning. The port draws exactly those drawing
+  operations (the SVG and xdot `_draw_` of the edge are C's for `dir=none`); its layout is
+  still the arrowed edge's, so `-Tdot`'s `pos` keeps the `e,…` end and the spline clipped
+  for the arrow.
+- `multicolor`'s failure path (#283), which draws the edge in black. C takes it only when
+  `parseSegs` reports an error, which it does not here: the list is valid, and C's
+  `multicolor` has already drawn the pieces before it reaches the arrows.
+
+The port takes the first: it is what C draws for the edge in every respect but the arrow C
+crashes on, and the colours the user gave are honoured. The second would draw a black edge
+that no C input with this list draws.
+
+Measured on 2,000 generated graphs with colour lists on nodes, clusters and edges (wedged,
+striped, radial and filled styles, arrows in every direction): C draws 1,036, and the port's
+SVG and stderr equal C's on all 1,036, against 251 (SVG) and 763 (stderr) before. C crashes
+on the other 964, every one on this route: with `dir=none` on every edge, C draws all 964,
+and the port's output on those copies equals C's. The port draws all 964, with no panic.
+
 ## Freed keys in EPSF_contents
 
 `user_init` (`lib/common/psusershape.c:49`) keys `EPSF_contents`, cdt's splay tree, by the
