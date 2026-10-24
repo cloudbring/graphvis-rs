@@ -371,7 +371,8 @@ impl<'g> GraphJobs<'g> {
     /// renderer, as SVG for the caller to rasterize: [`Self::render_as`] with the features
     /// and name of C's cairo job, so the emit runs only what C's runs for that format. It
     /// converts no tooltips and builds no maps (`GVRENDER_DOES_TOOLTIPS`, `_MAPS`; #355),
-    /// draws one layer, and resolves every colour name.
+    /// has no layers (the whole graph, or the first layer `layerselect` names), and resolves
+    /// every colour name.
     pub fn render_raster_svg_as(&mut self, job: usize, name: &str) -> Result<String> {
         let graph = self.graph;
         graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {

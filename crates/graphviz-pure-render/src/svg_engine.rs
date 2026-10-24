@@ -257,6 +257,13 @@ pub(crate) struct SvgEngine {
 }
 
 impl SvgEngine {
+    /// Whether the edge label follows its spline (`obj->labeledgealigned`): a `textPath`
+    /// along the spline's `<path id=…_p>`. C's cairo renderer has no such text and draws the
+    /// span at its point (`cairogen_textspan`), so the raster job does too (#355).
+    fn aligned(&self, j: &Job) -> bool {
+        j.obj().labeledgealigned && self.raster.is_none()
+    }
+
     fn put(&mut self, s: &str) {
         self.out.push_str(s);
     }
@@ -683,6 +690,7 @@ impl Engine for SvgEngine {
 
     fn textspan(&mut self, j: &Job, mut p: Point, span: &TextSpan) {
         let o = j.obj();
+        let aligned = self.aligned(j);
         self.put("<text xml:space=\"preserve\"");
         match span.just {
             'l' => self.put(" text-anchor=\"start\""),
@@ -690,7 +698,7 @@ impl Engine for SvgEngine {
             _ => self.put(" text-anchor=\"middle\""),
         }
         p.y += span.yoffset_centerline;
-        if !o.labeledgealigned {
+        if !aligned {
             self.put(" x=\"");
             self.dbl(p.x);
             self.put("\" y=\"");
@@ -792,7 +800,7 @@ impl Engine for SvgEngine {
             }
         }
         self.put(">");
-        if o.labeledgealigned {
+        if aligned {
             self.put("<textPath xlink:href=\"#");
             self.put(&xml(o.id.as_deref().unwrap_or("")));
             self.put("_p\" startOffset=\"50%\"><tspan x=\"0\" dy=\"");
@@ -807,7 +815,7 @@ impl Engine for SvgEngine {
                 nbsp: true,
             },
         ));
-        if o.labeledgealigned {
+        if aligned {
             self.put("</tspan></textPath>");
         }
         self.put("</text>\n");
@@ -831,7 +839,7 @@ impl Engine for SvgEngine {
     fn bezier(&mut self, j: &Job, a: &[Point], filled: i32) {
         let gid = self.grad(j, filled, a);
         self.put("<path");
-        if j.obj().labeledgealigned {
+        if self.aligned(j) {
             self.put(" id=\"");
             self.put(&xml(j.obj().id.as_deref().unwrap_or("")));
             self.put("_p\" ");

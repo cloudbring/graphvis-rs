@@ -539,6 +539,25 @@ mod tests {
         fs::write(path, png).unwrap();
     }
 
+    /// #355: the raster job has C's cairo features. With no maps there is no object id, and
+    /// cairo draws an aligned edge label as plain text at its point: no `textPath` along a
+    /// `<path id="_p">`, which every edge would share. The SVG job keeps C's SVG.
+    #[test]
+    fn raster_svg_draws_aligned_labels_as_cairo_does() {
+        let src =
+            "digraph { a -> b [label=x labelaligned=true]; c -> d [label=y labelaligned=true] }";
+        let mut g = parse_dot(src).unwrap();
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        let svg = GraphJobs::new(&g).render(OutputFormat::Svg, "svg").unwrap();
+        assert!(svg.contains("<textPath xlink:href=\"#edge1_p\""), "{svg}");
+        let raster = GraphJobs::new(&g).render_raster_svg_as(0, "png").unwrap();
+        assert!(
+            !raster.contains("textPath") && !raster.contains("_p\""),
+            "{raster}"
+        );
+        assert!(!raster.contains("<a "), "{raster}");
+    }
+
     /// `-Tdot` of the epsf graph `src` as the CLI writes it, with C's PostScript call, in a
     /// run of its own.
     fn epsf_run(src: &str) -> String {
