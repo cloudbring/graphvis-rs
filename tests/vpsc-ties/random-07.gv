@@ -1,0 +1,1 @@
+digraph { layout=neato; mode=ipsep; overlap=vpsc; v0; v1; v2; v3; v4; v5; v6; v7; v8; v9; v10; v11; subgraph cluster_0 { v5 v3 v2 } v4 -> v6; v0 -> v1; v8 -> v1; v1 -> v6; v7 -> v10; v7 -> v4; v9 -> v3; v7 -> v11; v0 -> v1; v3 -> v8; v4 -> v0; v7 -> v8; v7 -> v10; v5 -> v2; v10 -> v1; v4 -> v1; v11 -> v9; v11 -> v0; v1 -> v4; v5 -> v6; v6 -> v4; v8 -> v2; v11 -> v4; v8 -> v5; }

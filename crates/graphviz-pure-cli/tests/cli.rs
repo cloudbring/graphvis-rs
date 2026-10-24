@@ -4914,6 +4914,109 @@ fn ipsep_vpsc_cycle_error_ends_the_layout() {
     assert_eq!(positions.len(), 6, "{plain}");
 }
 
+/// Issue #225: under `mode=ipsep overlap=vpsc`, a cluster member can also be one of the
+/// boundary variables `initCMajVPSC` takes from the last nodes (`quad_prog_vpsc.c:204-205`,
+/// `:414-415`), and VPSC breaks the ties that makes by pointer (`CmpNodePos`,
+/// `generate-constraints.cpp:76-84`), so C's output follows its allocator. The port breaks
+/// them in creation order (`docs/porting/neato.md`, VPSC, "Ties by address"). Both expected
+/// outputs are C's, with the port's math: what C gives with a bump allocator (addresses in
+/// creation order), and also, with macOS's allocator, on 26 of 30 runs of the first input and
+/// 5 of 20 of the second (#225's). The reverse order gives another layout of the first.
+#[test]
+fn issue225_vpsc_ties_follow_creation_order() {
+    for (src, want) in [
+        (
+            r#"digraph { layout=neato; mode=ipsep; overlap=vpsc; v0; v1; v2; v3; v4; subgraph cluster_0 { v2 v1 } subgraph cluster_1 { v4 } v1 -> v0; v4 -> v2; v0 -> v2; v1 -> v0; v2 -> v1; v4 -> v2; v2 -> v4; }"#,
+            r#"graph 1 2 2.3333
+node v0 0.375 0.25 0.75 0.5 v0 solid ellipse black lightgrey
+node v1 0.375 0.86111 0.75 0.5 v1 solid ellipse black lightgrey
+node v2 0.375 1.4722 0.75 0.5 v2 solid ellipse black lightgrey
+node v3 1.625 0.66667 0.75 0.5 v3 solid ellipse black lightgrey
+node v4 0.375 2.0833 0.75 0.5 v4 solid ellipse black lightgrey
+edge v0 v2 4 0.375 0.50325 0.375 0.66385 0.375 0.87536 0.375 1.0598 solid black
+edge v1 v0 4 0.46729 0.61255 0.46735 0.61135 0.46741 0.61015 0.46747 0.60895 solid black
+edge v1 v0 4 0.28271 0.61255 0.28265 0.61135 0.28259 0.61015 0.28253 0.60895 solid black
+edge v2 v1 4 0.375 1.2166 0.375 1.2146 0.375 1.2125 0.375 1.2105 solid black
+edge v2 v4 4 0.19355 1.6963 0.1933 1.698 0.19306 1.6996 0.19282 1.7013 solid black
+edge v4 v2 4 0.55645 1.8592 0.5567 1.8576 0.55694 1.8559 0.55718 1.8543 solid black
+edge v4 v2 4 0.375 1.8277 0.375 1.8257 0.375 1.8236 0.375 1.8216 solid black
+stop
+"#,
+        ),
+        (
+            r#"digraph { layout=neato; mode=ipsep; overlap=vpsc; n0; n1; n2; n3; n4; n5; n6; n7; n8; n9; n10; n11; n12; n13; n14; n15; n16; n17; n18; n19; subgraph cluster_0 { n19 } n0 -> n1; n1 -> n2; n2 -> n3; n3 -> n4; n4 -> n5; n5 -> n6; n6 -> n7; n7 -> n8; n8 -> n9; n9 -> n10; n10 -> n11; n11 -> n12; n12 -> n13; n13 -> n14; n14 -> n15; n15 -> n16; n16 -> n17; n17 -> n18; n18 -> n19; }"#,
+            r#"graph 1 9.1638 14.222
+node n0 0.375 0.25 0.75 0.5 n0 solid ellipse black lightgrey
+node n1 1.2981 0.65883 0.75 0.5 n1 solid ellipse black lightgrey
+node n2 2.2256 1.0754 0.75 0.5 n2 solid ellipse black lightgrey
+node n3 2.9833 1.75 0.75 0.5 n3 solid ellipse black lightgrey
+node n4 3.7887 2.3611 0.75 0.5 n4 solid ellipse black lightgrey
+node n5 4.6499 2.9311 0.75 0.5 n5 solid ellipse black lightgrey
+node n6 5.398 3.6157 0.75 0.5 n6 solid ellipse black lightgrey
+node n7 6.0708 4.3853 0.75 0.5 n7 solid ellipse black lightgrey
+node n8 6.6498 5.2272 0.75 0.5 n8 solid ellipse black lightgrey
+node n9 7.1926 6.0929 0.75 0.5 n9 solid ellipse black lightgrey
+node n10 7.631 7.0156 0.75 0.5 n10 solid ellipse black lightgrey
+node n11 7.9984 7.9679 0.75 0.5 n11 solid ellipse black lightgrey
+node n12 8.3555 8.9244 0.75 0.5 n12 solid ellipse black lightgrey
+node n13 8.603 9.9159 0.75 0.5 n13 solid ellipse black lightgrey
+node n14 8.7573 10.926 0.75 0.5 n14 solid ellipse black lightgrey
+node n15 8.7888 11.947 0.75 0.5 n15 solid ellipse black lightgrey
+node n16 8.6945 12.962 0.75 0.5 n16 solid ellipse black lightgrey
+node n17 8.5828 13.972 0.75 0.5 n17 solid ellipse black lightgrey
+node n18 6.4266 7.892 0.75 0.5 n18 solid ellipse black lightgrey
+node n19 6.4266 8.5031 0.75 0.5 n19 solid ellipse black lightgrey
+edge n0 n1 4 0.69268 0.39069 0.73962 0.41148 0.78876 0.43325 0.83789 0.455 solid black
+edge n1 n2 4 1.6121 0.79986 1.662 0.82225 1.7144 0.84581 1.7668 0.86933 solid black
+edge n2 n3 4 2.4529 1.2778 2.5114 1.3298 2.5756 1.387 2.6385 1.443 solid black
+edge n3 n4 4 3.2337 1.94 3.2893 1.9821 3.3493 2.0277 3.4087 2.0728 solid black
+edge n4 n5 4 4.0565 2.5383 4.1175 2.5787 4.1836 2.6224 4.2487 2.6656 solid black
+edge n5 n6 4 4.8744 3.1365 4.9321 3.1893 4.9954 3.2473 5.0576 3.3042 solid black
+edge n6 n7 4 5.589 3.8342 5.6477 3.9014 5.7138 3.9769 5.7777 4.0501 solid black
+edge n7 n8 4 6.229 4.6153 6.2826 4.6933 6.3438 4.7823 6.4027 4.8679 solid black
+edge n8 n9 4 6.7981 5.4638 6.8484 5.5439 6.9058 5.6355 6.9609 5.7235 solid black
+edge n9 n10 4 7.3078 6.3353 7.3502 6.4247 7.3995 6.5283 7.4465 6.6273 solid black
+edge n10 n11 4 7.7256 7.2608 7.7622 7.3556 7.805 7.4665 7.8457 7.572 solid black
+edge n11 n12 4 8.0903 8.2142 8.1259 8.3094 8.1675 8.4208 8.207 8.5268 solid black
+edge n12 n13 4 8.4179 9.1746 8.4436 9.2775 8.4741 9.3994 8.5027 9.5142 solid black
+edge n13 n14 4 8.642 10.171 8.6579 10.275 8.6766 10.398 8.6944 10.514 solid black
+edge n14 n15 4 8.7651 11.179 8.7684 11.286 8.7723 11.414 8.776 11.534 solid black
+edge n15 n16 4 8.765 12.203 8.7553 12.308 8.7438 12.431 8.7329 12.548 solid black
+edge n16 n17 4 8.6663 13.217 8.6548 13.321 8.6412 13.444 8.6284 13.56 solid black
+edge n17 n18 4 8.4943 13.722 8.1605 12.781 6.9766 9.4429 6.5672 8.2883 solid black
+edge n18 n19 4 6.4266 8.1476 6.4266 8.1497 6.4266 8.1517 6.4266 8.1538 solid black
+stop
+"#,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(ok, "{err}");
+        assert_eq!(err, "", "{src}");
+        assert_eq!(out, want, "{src}");
+    }
+}
+
+/// Issue #225: on the inputs of `tests/vpsc-ties/` where C fails (`Cycle Error!`, a
+/// segfault, `bitarray_set`'s assertion; `outcomes.tsv`, `scripts/vpsc-ties-measure.py`),
+/// the port lays out without panicking.
+#[test]
+fn issue225_vpsc_tie_inputs_c_fails_on_do_not_panic() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let outcomes = std::fs::read_to_string(root.join("tests/vpsc-ties/outcomes.tsv")).unwrap();
+    let mut n = 0;
+    for line in outcomes.lines().skip(1) {
+        let mut cols = line.split('\t');
+        let (Some(file), Some("fails")) = (cols.next(), cols.next()) else {
+            continue;
+        };
+        let src = std::fs::read_to_string(root.join(file)).unwrap();
+        let (_, err, _) = run(&["-Tplain"], &src);
+        assert!(!err.contains("panicked"), "{file}: {err}");
+        n += 1;
+    }
+    assert!(n >= 20, "{n}");
+}
+
 /// Issue #152: C's `main` takes its arguments as bytes; a file name that is not valid UTF-8
 /// (here Latin-1 `né.gv`) is opened, and named in errors with its own bytes.
 #[cfg(unix)]

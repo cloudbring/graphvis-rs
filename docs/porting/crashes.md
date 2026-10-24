@@ -53,7 +53,9 @@ fixed in that cause's shared mechanism, not with a new local guard.
 | **`unwrap` and indexing on data C trusts** | The mechanism under all of the above. | The [panic-site ratchet](#the-panic-site-ratchet) maps the remaining sites and stops the count from growing; new code returns an error instead. |
 
 The fix for each cause records here the issues it closed and the behaviour it chose. Narrower
-causes, each confined to one function, have their own sections after these.
+causes, each confined to one function, have their own sections after these. Output that
+depends on C's heap addresses without crashing is not covered here: VPSC's ties (#225) are in
+`neato.md` ("Ties by address").
 
 ## dot after a failed ranking
 
