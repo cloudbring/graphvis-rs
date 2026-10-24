@@ -1,8 +1,14 @@
 //! WebAssembly bindings (`wasm-bindgen`) for running `graphviz-pure` directly in the browser,
 //! Node.js, Deno, Bun, and Cloudflare Workers.
 
+use graphviz_pure_core::charset;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
+
+/// An error for JS, as text ([`charset::to_text`]).
+fn js_error(e: impl std::fmt::Display) -> JsValue {
+    JsValue::from_str(&charset::to_text(&e.to_string()))
+}
 
 #[derive(Serialize)]
 struct GraphStats {
@@ -24,8 +30,9 @@ pub fn render(
     engine: &str,
     format: &str,
 ) -> std::result::Result<String, JsValue> {
-    graphviz_pure::render_dot(dot_source, engine, format)
-        .map_err(|e| JsValue::from_str(&e.to_string()))
+    graphviz_pure::render_dot(&charset::from_text(dot_source), engine, format)
+        .map(|out| charset::to_text(&out).into_owned())
+        .map_err(js_error)
 }
 
 /// Renders every graph in a DOT string (a file may hold several), one output string per graph,
@@ -37,12 +44,17 @@ pub fn render_all(
     format: &str,
 ) -> std::result::Result<Vec<String>, JsValue> {
     graphviz_pure::render_dot_all(
-        dot_source,
+        &charset::from_text(dot_source),
         engine,
         format,
         &graphviz_pure::GlobalAttrs::default(),
     )
-    .map_err(|e| JsValue::from_str(&e.to_string()))
+    .map(|outs| {
+        outs.iter()
+            .map(|out| charset::to_text(out).into_owned())
+            .collect()
+    })
+    .map_err(js_error)
 }
 
 /// [`render_all`] for a file's raw bytes, as the `dot` command line reads them: bytes that are
@@ -58,7 +70,7 @@ pub fn render_all_bytes(
     engine: &str,
     format: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let src = graphviz_pure_core::charset::decode_slice(dot_source);
+    let src = charset::decode_slice(dot_source);
     let (parts, err) = graphviz_pure::render_dot_all_partial(
         &src,
         engine,
@@ -67,36 +79,35 @@ pub fn render_all_bytes(
         graphviz_pure::LayoutOptions::default(),
     );
     match err {
-        Some(e) if parts.is_empty() => Err(JsValue::from_str(&e.to_string())),
-        _ => Ok(graphviz_pure_core::charset::encode(&parts.concat()).into_owned()),
+        Some(e) if parts.is_empty() => Err(js_error(e)),
+        _ => Ok(charset::encode(&parts.concat()).into_owned()),
     }
 }
 
 /// Convenience helper to render a DOT graph directly to an SVG string using the specified layout engine.
 #[wasm_bindgen(js_name = renderSvg)]
 pub fn render_svg(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    graphviz_pure::render_dot(dot_source, engine, "svg")
-        .map_err(|e| JsValue::from_str(&e.to_string()))
+    graphviz_pure::render_dot(&charset::from_text(dot_source), engine, "svg")
+        .map(|out| charset::to_text(&out).into_owned())
+        .map_err(js_error)
 }
 
 /// Convenience helper to render a DOT graph to Graphviz `json` format.
 #[wasm_bindgen(js_name = renderJson)]
 pub fn render_json(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    graphviz_pure::render_dot(dot_source, engine, "json")
-        .map_err(|e| JsValue::from_str(&e.to_string()))
+    graphviz_pure::render_dot(&charset::from_text(dot_source), engine, "json")
+        .map(|out| charset::to_text(&out).into_owned())
+        .map_err(js_error)
 }
 
 /// Parses and lays out a DOT graph and returns JSON statistics (`nodes`, `edges`, `subgraphs`, `width_pt`, `height_pt`).
 #[wasm_bindgen(js_name = inspectGraph)]
 pub fn inspect_graph(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    let layout_engine = graphviz_pure::LayoutEngine::parse(engine)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-    let mut graph =
-        graphviz_pure::parse_dot(dot_source).map_err(|e| JsValue::from_str(&e.to_string()))?;
-    graphviz_pure::layout_graph(&mut graph, layout_engine)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let layout_engine = graphviz_pure::LayoutEngine::parse(engine).map_err(js_error)?;
+    let mut graph = graphviz_pure::parse_dot(&charset::from_text(dot_source)).map_err(js_error)?;
+    graphviz_pure::layout_graph(&mut graph, layout_engine).map_err(js_error)?;
     let stats = GraphStats {
-        name: graph.name,
+        name: charset::to_text(&graph.name).into_owned(),
         directed: graph.kind == graphviz_pure_core::GraphKind::Directed,
         strict: graph.strict,
         nodes: graph.nodes.len(),
@@ -105,7 +116,7 @@ pub fn inspect_graph(dot_source: &str, engine: &str) -> std::result::Result<Stri
         width_pt: graph.bb.width(),
         height_pt: graph.bb.height(),
     };
-    serde_json::to_string(&stats).map_err(|e| JsValue::from_str(&e.to_string()))
+    serde_json::to_string(&stats).map_err(js_error)
 }
 
 /// Returns the list of supported layout engines as a JSON array.

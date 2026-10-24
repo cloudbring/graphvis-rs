@@ -12,6 +12,11 @@ pub use graphviz_pure_render::{
 
 /// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
 /// first graph in `dot_source`.
+///
+/// `dot_source` and the output are in the port's decoded form
+/// ([`graphviz_pure_core::charset`]), as for every function here: for ordinary text that may
+/// hold U+10FF00..=U+10FFFF, pass `charset::from_text(text)` and read the output with
+/// `charset::to_text`.
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
     let output_format = OutputFormat::parse(format)?;
     // Each call is one C process: per-process counters (gradient and anchor ids) restart.

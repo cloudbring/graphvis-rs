@@ -512,7 +512,9 @@ pub fn canon_str_with(arg: &str, max_line: usize) -> String {
     if arg.is_empty() {
         return "\"\"".to_string();
     }
-    let b = arg.as_bytes();
+    // `_agstrcanon` works on C's bytes (`graphviz_pure_core::charset`).
+    let bytes = graphviz_pure_core::charset::encode(arg);
+    let b = &*bytes;
     let is_id_char = |c: u8| c.is_ascii_alphanumeric() || c == b'.' || c == b'-' || !c.is_ascii();
     let is_escape =
         |i: usize| b[i] == b'\\' && b.get(i + 1).is_some_and(|&c| is_graphviz_escape_char(c));
@@ -581,7 +583,7 @@ pub fn canon_str_with(arg: &str, max_line: usize) -> String {
         }
     }
     out.push(b'"');
-    let quoted = String::from_utf8(out).unwrap_or_default();
+    let quoted = graphviz_pure_core::charset::decode(out);
     if needs_quotes || (cnt == 1 && (b[0] == b'.' || b[0] == b'-')) {
         return quoted;
     }
@@ -599,4 +601,26 @@ fn is_graphviz_escape_char(b: u8) -> bool {
         b,
         b'E' | b'G' | b'H' | b'L' | b'N' | b'T' | b'l' | b'n' | b'r' | b'\\' | b'"'
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use graphviz_pure_core::charset;
+
+    // Issue #151: `_agstrcanon` counts C's bytes when it breaks a long string: a Latin-1
+    // byte is one byte (C 16.1.0 breaks this label after 43 of its 60 groups).
+    #[test]
+    fn long_strings_break_after_128_bytes_of_c() {
+        let s = charset::decode(b" \xe9y".repeat(60));
+        let expected = [
+            &b"\""[..],
+            &b" \xe9y".repeat(43),
+            b" \\\n\xe9y",
+            &b" \xe9y".repeat(16),
+            b"\"",
+        ]
+        .concat();
+        assert_eq!(&*charset::encode(&canon_str(&s)), &expected[..]);
+    }
 }

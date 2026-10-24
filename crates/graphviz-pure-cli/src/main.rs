@@ -128,21 +128,7 @@ fn arg_text(arg: &OsStr) -> String {
 
 /// [`arg_text`] of some of an argument's bytes.
 fn bytes_text(bytes: &[u8]) -> String {
-    use graphviz_pure_core::charset::raw_char;
-    // As `charset::decode`, but a char of the raw-byte range itself is kept as raw bytes
-    // too, so `charset::encode` gives back exactly the argument's bytes.
-    let mut text = String::new();
-    for chunk in bytes.utf8_chunks() {
-        for c in chunk.valid().chars() {
-            if c >= raw_char(0) {
-                text.extend(c.encode_utf8(&mut [0; 4]).bytes().map(raw_char));
-            } else {
-                text.push(c);
-            }
-        }
-        text.extend(chunk.invalid().iter().map(|&b| raw_char(b)));
-    }
-    text
+    graphviz_pure_core::charset::decode_slice(bytes)
 }
 
 /// `strerror(errno)` for an I/O error: its text without Rust's ` (os error N)`.
@@ -173,8 +159,7 @@ fn strtod(s: &str) -> Option<f64> {
 }
 
 /// The bytes of an argument, as C's `argv` holds them (UTF-8 where the OS has UTF-16).
-/// Flags are split on these, not on [`arg_text`], which does not round-trip a char of the
-/// raw-byte range.
+/// Flags are split on these, not on [`arg_text`], whose chars can stand for several bytes.
 fn arg_bytes(arg: &OsStr) -> Cow<'_, [u8]> {
     #[cfg(unix)]
     {
