@@ -148,8 +148,8 @@ fn attached(
             let html = name == "xdotversion"
                 && fixed_xdot.is_none()
                 && root.get(name) == Some(&value)
-                && graphviz_pure_core::attr_is_html(root, name);
-            graphviz_pure_core::set_attr(attrs, name, value, html);
+                && root.is_html(name);
+            attrs.set(name, value, html);
         }
     }
     (g, forced, output_file)
@@ -161,20 +161,17 @@ fn attached(
 /// (`rec_attach_bb`, xdot's `_draw_`), which become local values even when they equal the
 /// inherited ones.
 fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<String>]) {
-    use graphviz_pure_core::{AttrSym, attr_is_html};
+    use graphviz_pure_core::AttrSym;
     let none = std::collections::BTreeSet::new();
     let set_graph = |d: &mut std::collections::BTreeMap<String, AttrSym>,
                      now: &graphviz_pure_core::AttrMap,
                      before: &graphviz_pure_core::AttrMap,
                      set: &std::collections::BTreeSet<String>| {
         for (k, v) in now {
-            if before.get(k) != Some(v)
-                || attr_is_html(before, k) != attr_is_html(now, k)
-                || set.contains(k)
-            {
+            if before.get(k) != Some(v) || before.is_html(k) != now.is_html(k) || set.contains(k) {
                 let sym = d.entry(k.clone()).or_default();
                 sym.defval = v.clone();
-                sym.html_defval = attr_is_html(now, k);
+                sym.html_defval = now.is_html(k);
             }
         }
     };
@@ -700,7 +697,7 @@ mod tests {
     #[test]
     fn an_earlier_jobs_draw_wins_over_the_declared_input_value() {
         let mut g = sample_laid_out_graph();
-        graphviz_pure_core::set_attr(&mut g.graph_attrs, "_draw_", String::new(), false);
+        g.graph_attrs.set("_draw_", String::new(), false);
         let root_draw = |out: &str| {
             let at = out.find("graph [_draw_=\"").expect(out) + "graph [_draw_=\"".len();
             out[at..at + out[at..].find('"').unwrap()].to_string()

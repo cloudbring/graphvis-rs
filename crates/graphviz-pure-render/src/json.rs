@@ -658,11 +658,11 @@ fn edge_attrs_with_ports(g: &Graph) -> Vec<AttrMap> {
                     (None, None) => None,
                 }
             };
-            if let Some(t) = port(&e.tail_port) {
-                a.entry("tailport".into()).or_insert(t);
+            if let Some(t) = port(&e.tail_port).filter(|_| !a.contains_key("tailport")) {
+                a.insert("tailport".into(), t);
             }
-            if let Some(h) = port(&e.head_port) {
-                a.entry("headport".into()).or_insert(h);
+            if let Some(h) = port(&e.head_port).filter(|_| !a.contains_key("headport")) {
+                a.insert("headport".into(), h);
             }
             a
         })
