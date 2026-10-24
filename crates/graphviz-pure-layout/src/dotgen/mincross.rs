@@ -186,8 +186,7 @@ impl Dot<'_> {
                 nc = self.mincross(g, 2)?;
             }
         }
-        self.cleanup2(g, nc, true);
-        Ok(())
+        self.cleanup2(g, nc, true)
     }
 
     fn init_mccomp(&mut self, g: G, c: usize) {
@@ -322,7 +321,7 @@ impl Dot<'_> {
         self.expand_cluster(g)?;
         self.ordered_edges(g);
         self.flat_breakcycles(g);
-        self.flat_reorder(g);
+        self.flat_reorder(g)?;
         let mut nc = self.mincross(g, 2)?;
         for c in self.graphs[g].clust.clone() {
             nc += self.mincross_clust(c)?;
@@ -480,7 +479,7 @@ impl Dot<'_> {
                 if pass == 0 {
                     self.flat_breakcycles(g);
                 }
-                self.flat_reorder(g);
+                self.flat_reorder(g)?;
                 cur_cross = self.ncross();
                 if cur_cross <= best_cross {
                     self.save_best(g);
@@ -607,10 +606,10 @@ impl Dot<'_> {
         }
     }
 
-    fn cleanup2(&mut self, g: G, _nc: i64, has_vlists: bool) {
+    fn cleanup2(&mut self, g: G, _nc: i64, has_vlists: bool) -> Result<(), String> {
         if has_vlists {
             for c in self.graphs[g].clust.clone() {
-                self.rec_reset_vlists(c);
+                self.rec_reset_vlists(c)?;
             }
         }
         for r in self.graphs[g].minrank..=self.graphs[g].maxrank {
@@ -630,16 +629,31 @@ impl Dot<'_> {
             // free_matrix leaves a dangling (non-NULL) pointer in C; flat_edges()
             // only tests it for NULL, so the matrix is kept.
         }
+        Ok(())
     }
 
-    fn neighbor(&self, v: N, dir: i32) -> Option<N> {
-        let r = self.nodes[v].rank;
-        let o = self.nodes[v].order;
-        if dir < 0 {
+    /// `neighbor(v, dir)`, with C's `assert(rv == 0 || (ND_order(rv) - ND_order(v)) * dir > 0)`
+    /// as a layout error. It fails on a rank leader that `remove_rankleaders` freed, whose
+    /// stale order no longer matches the rank it is read from (#358): without it the walk in
+    /// `furthestnode` can come back to a node and never end.
+    fn neighbor(&self, v: N, dir: i32) -> Result<Option<N>, String> {
+        let nd = &self.nodes[v];
+        let (r, o) = (nd.rank, nd.order);
+        let rv = if dir < 0 {
             if o > 0 { self.rv(0, r, o - 1) } else { None }
         } else {
             self.rv(0, r, o + 1)
+        };
+        if let Some(un) = rv.and_then(|u| self.nodes.get(u)) {
+            let uo = un.order;
+            if (dir < 0 && uo >= o) || (dir > 0 && uo <= o) {
+                return Err(format!(
+                    "neighbor: on rank {r}, the node next to order {o} has order {uo} \
+                     (C asserts or crashes here)"
+                ));
+            }
         }
+        Ok(rv)
     }
 
     fn is_a_normal_node_of(&self, g: G, v: N) -> bool {
@@ -668,16 +682,16 @@ impl Dot<'_> {
         self.is_a_normal_node_of(g, v) || self.is_a_vnode_of_an_edge_of(g, v)
     }
 
-    fn furthestnode(&self, g: G, v: N, dir: i32) -> N {
+    fn furthestnode(&self, g: G, v: N, dir: i32) -> Result<N, String> {
         let mut rv = v;
         let mut u = v;
-        while let Some(x) = self.neighbor(u, dir) {
+        while let Some(x) = self.neighbor(u, dir)? {
             u = x;
             if self.is_a_normal_node_of(g, u) || self.is_a_vnode_of_an_edge_of(g, u) {
                 rv = u;
             }
         }
-        rv
+        Ok(rv)
     }
 
     pub fn save_vlist(&mut self, g: G) {
@@ -696,17 +710,17 @@ impl Dot<'_> {
         }
     }
 
-    pub fn rec_reset_vlists(&mut self, g: G) {
+    pub fn rec_reset_vlists(&mut self, g: G) -> Result<(), String> {
         for c in self.graphs[g].clust.clone() {
-            self.rec_reset_vlists(c);
+            self.rec_reset_vlists(c)?;
         }
         if !self.graphs[g].rankleader.is_empty() {
             for r in self.graphs[g].minrank..=self.graphs[g].maxrank {
                 let Some(v) = self.graphs[g].rankleader[r as usize] else {
                     continue;
                 };
-                let u = self.furthestnode(g, v, -1);
-                let w = self.furthestnode(g, v, 1);
+                let u = self.furthestnode(g, v, -1)?;
+                let w = self.furthestnode(g, v, 1)?;
                 self.graphs[g].rankleader[r as usize] = Some(u);
                 let (rb, ro) = (self.rk(0, r).vbuf, self.rk(0, r).voff);
                 let (ou, ow) = (self.nodes[u].order, self.nodes[w].order);
@@ -716,6 +730,7 @@ impl Dot<'_> {
                 rk.n = ow - ou + 1;
             }
         }
+        Ok(())
     }
 
     fn real_fill_ranks(&mut self, g: G, ranks: &mut Vec<bool>, mut sg: Option<G>) -> Option<G> {
@@ -771,6 +786,24 @@ impl Dot<'_> {
     }
 
     fn init_mincross(&mut self, g: G) -> Result<(), String> {
+        // Network simplex normalises each component's ranks to start at 0, but returns
+        // before that when `nslimit1` allows no iteration (`maxiter <= 0`, ns.c:984), and
+        // newrank's `readout_levels` only shifts a single component's ranks down from above
+        // 0. The root's ranks can then start below 0. C indexes its arrays with them from
+        // here on: `fill_ranks`' bitarray asserts on the bound, `make_chain` takes rank -1 for
+        // the label rank of an edge with no label and `label_vnode` reads its NULL label,
+        // `allocate_ranks` writes before its arrays, and `build_skeleton` reads before a
+        // cluster's rank leaders. C crashes there, or exits 1 where what it reads out of
+        // bounds trips one of its own checks (#357). Ranks that start above 0 are kept: C
+        // draws most of those.
+        let minrank = self.graphs[g].minrank;
+        if minrank < 0 {
+            return Err(format!(
+                "dot_mincross: the ranking of {} stopped before normalising its ranks, \
+                 which start at {minrank}, below 0",
+                self.graph_name(g)
+            ));
+        }
         self.remincross = false;
         self.mincross_options(g);
         if self.graphs[g].flags & NEW_RANK != 0 {
@@ -1088,11 +1121,14 @@ impl Dot<'_> {
         true
     }
 
-    fn postorder(&mut self, g: G, v: N, list: &mut Vec<N>) {
+    /// `postorder(g, v, list, r)`, with C's `assert(ND_rank(v) == r)` as a layout error.
+    fn postorder(&mut self, g: G, v: N, list: &mut Vec<N>, r: i32) -> Result<(), String> {
         self.nodes[v].mark = 1;
         let mut stack: Vec<(N, usize)> = vec![(v, 0)];
         while let Some(&(cur, i)) = stack.last() {
-            if i < self.nodes[cur].flat_out.len() {
+            let nd = &self.nodes[cur];
+            let (nout, cr) = (nd.flat_out.len(), nd.rank);
+            if i < nout {
                 stack.last_mut().unwrap().1 += 1;
                 let e = self.nodes[cur].flat_out[i];
                 if !self.constraining_flat_edge(g, e) {
@@ -1104,15 +1140,29 @@ impl Dot<'_> {
                     stack.push((h, 0));
                 }
             } else {
+                if cr != r {
+                    return Err(format!(
+                        "flat_reorder: a flat edge on rank {r} leads to rank {cr} \
+                         (C's assertion fails)"
+                    ));
+                }
                 list.push(cur);
                 stack.pop();
             }
         }
+        Ok(())
     }
 
-    pub fn flat_reorder(&mut self, g: G) {
+    /// `flat_reorder(g)`, with C's assertions as layout errors: `LIST_GET`'s bound when the
+    /// topological sort holds fewer nodes than the rank, `postorder`'s rank, and that an edge
+    /// it reverses is not constraining. After a cluster lost nodes to a rank set (#358), a
+    /// cycle of constraining flat edges can be left on a rank: no node of it is without a
+    /// flat in-edge, so the sort never reaches it. Without the bound, the rank was left half
+    /// rewritten and `transpose` never ended. The last assertion fails on other routes too
+    /// (newrank with `ordering=in`).
+    pub fn flat_reorder(&mut self, g: G) -> Result<(), String> {
         if !self.graphs[g].has_flat_edges {
-            return;
+            return Ok(());
         }
         let flip = self.graphs[g].flip();
         for r in self.graphs[g].minrank..=self.graphs[g].maxrank {
@@ -1147,7 +1197,7 @@ impl Dot<'_> {
                 if local_in_cnt == 0 && local_out_cnt == 0 {
                     temprank.push(v);
                 } else if self.nodes[v].mark == 0 && local_in_cnt == 0 {
-                    self.postorder(g, v, &mut temprank);
+                    self.postorder(g, v, &mut temprank, r)?;
                 }
             }
             if !temprank.is_empty() {
@@ -1156,7 +1206,12 @@ impl Dot<'_> {
                 }
                 for i in 0..n {
                     let Some(&v) = temprank.get(i as usize) else {
-                        break;
+                        return Err(format!(
+                            "flat_reorder: rank {r} of {} has {n} nodes, but its flat-edge \
+                             order holds {} (C's assertion fails)",
+                            self.graph_name(g),
+                            temprank.len()
+                        ));
                     };
                     self.set_rv(g, r, i, Some(v));
                     self.nodes[v].order = i + base_order;
@@ -1171,6 +1226,12 @@ impl Dot<'_> {
                             self.nodes[self.edges[e].tail].order,
                         );
                         if (!flip && ho < to) || (flip && ho > to) {
+                            if self.constraining_flat_edge(g, e) {
+                                return Err(format!(
+                                    "flat_reorder: a constraining flat edge on rank {r} \
+                                     points against the order (C's assertion fails)"
+                                ));
+                            }
                             self.delete_flat_edge(e);
                             self.flat_rev(g, e);
                         } else {
@@ -1181,6 +1242,7 @@ impl Dot<'_> {
             }
             self.rk_mut(0, r).valid = false;
         }
+        Ok(())
     }
 
     fn reorder(&mut self, g: G, r: i32, reverse: bool, hasfixed: bool) {

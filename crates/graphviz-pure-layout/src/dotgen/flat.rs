@@ -245,7 +245,7 @@ impl Dot<'_> {
     }
 
     /// `flat_edges`: returns true if label nodes were added (y coords must be reset).
-    pub fn flat_edges(&mut self, g: G) -> bool {
+    pub fn flat_edges(&mut self, g: G) -> Result<bool, String> {
         let mut reset = false;
         let nl = {
             let mut v = Vec::new();
@@ -348,8 +348,8 @@ impl Dot<'_> {
         }
         if reset {
             self.check_label_order(g);
-            self.rec_reset_vlists(g);
+            self.rec_reset_vlists(g)?;
         }
-        reset
+        Ok(reset)
     }
 }

@@ -45,8 +45,8 @@ fixed in that cause's shared mechanism, not with a new local guard.
 
 | Cause | How it fails | Fix in the port |
 |---|---|---|
-| **dot keeps going after a failed ranking** | Network simplex prints `trouble in init_rank` and returns unnormalised ranks; C carries on and crashes later in mincross, position or splines (#114, #232, #233). | Stop the layout where a cluster's ranking fails, and where C's `install_in_rank` finds that the ranks do not fit the rank arrays: an error and exit status 1. A failed ranking of the root alone is not stopped; see [below](#dot-after-a-failed-ranking). |
-| **dot's cluster membership** | A rank set or an earlier cluster takes a node from a cluster after the cluster was ranked (`x was already in a rankset, deleted from cluster G`). The cluster keeps its rank range, so it can have ranks with no node, or no nodes at all; C crashes later in `build_ranks`, `furthestnode`, `rank_box` (#114, #231). | Stop the layout where C dereferences an emptied cluster's NULL node list. Ranks with no node, which C often draws through, are kept; see [below](#dot-cluster-membership). |
+| **dot keeps going after a failed ranking** | Network simplex prints `trouble in init_rank` and returns unnormalised ranks; C carries on and crashes later in mincross, position or splines (#114, #232, #233). | Stop the layout where a cluster's ranking fails, where the root's ranks start below 0 (#357), and where C's `install_in_rank` finds that the ranks do not fit the rank arrays: an error and exit status 1. A failed ranking of the root alone is not stopped; see [below](#dot-after-a-failed-ranking). |
+| **dot's cluster membership** | A rank set or an earlier cluster takes a node from a cluster after the cluster was ranked (`x was already in a rankset, deleted from cluster G`). The cluster keeps its rank range, so it can have ranks with no node, or no nodes at all; C crashes later in `build_ranks`, `furthestnode`, `rank_box` (#114, #231). | Stop the layout where C dereferences an emptied cluster's NULL node list or a root rank's NULL first node, and where C's own assertions in `neighbor` and `flat_reorder` fail. Ranks with no node, which C often draws through, are kept; see [below](#dot-cluster-membership). |
 | **Extreme coordinates** | NaN, infinity or huge pinned positions flow into every engine and overflow at the first integer cast or recursion (#191, #196, #201, #227, #228, #229, #239, #240). | Keep C's positions, which C lays out wherever it finishes; bound the algorithms whose limits depend on magnitude (see [below](#extreme-coordinates)). |
 | **The ortho router** | Many internal invariants that C asserts or dereferences without checking (#186, #199, #202, #203). C falls back to straight edges when routing fails. | Ortho returns `Result` throughout; the entry point falls back to straight edges, as C does. |
 | **C's own overflow checks dropped** | C checks an integer sum for overflow and exits with an error (`virtual_weight`, `x_cutval`); the port multiplied unchecked or wrapped, so it drew a layout from wrapped weights, or panicked in a build with overflow checks (#252). Unchecked `int` sums on huge `weight`, `minlen`, `ranksep`, `nodesep` or `margin` panicked the same way (#271). | Each check is ported with C's message as a layout error. Where C has no check the port wraps, and where the wrapped weights crash C (`update` with no entering edge) the port fails the layout; see [below](#cs-own-overflow-checks). |
@@ -57,7 +57,7 @@ causes, each confined to one function, have their own sections after these.
 
 ## dot after a failed ranking
 
-Closed: #232, #233 (and #114 earlier, by #208).
+Closed: #232, #233, #357 (and #114 earlier, by #208).
 
 `trouble in init_rank` means the rank constraints contain a cycle, usually rank sets that
 contradict each other (`rank=min` and `rank=max` on one node) or a node that is both in a
@@ -82,6 +82,26 @@ ranking leaves state that C cannot use:
   store can land one slot past the array unreported; the port grows the buffer there and
   goes on, as C does.
 
+- **The root's ranks start below 0** (#357). Network simplex normalises each
+  component's ranks to start at 0 in `scan_and_normalize`, but returns before it when
+  `nslimit1` allows no iteration (`maxiter = nslimit1 × nodes` below 1, `ns.c:984`), and it
+  prints nothing then. newrank's `readout_levels` shifts a single component's ranks only
+  when they start above 0. From `init_mincross` on, C indexes its rank arrays with these
+  ranks: `fill_ranks` and `allocate_ranks` write before the arrays, `make_chain` takes rank
+  -1 for the label rank of an edge with no label (its "no label" value) and `label_vnode`
+  reads the NULL label, and `build_skeleton` reads before a cluster's rank leaders. The port
+  fails the layout at the start of `init_mincross` (`dot_mincross: the ranking of G stopped
+  before normalising its ranks, which start at -1, below 0`). Ranks that start above 0
+  are kept: C draws most of them. Measured on seeds 1–25000 of `fuzz-gen-ranks.py`, where
+  ranking stopped early on 2,460 inputs: the root's ranks started below 0 on 51, and C
+  crashed on all 51. They started above 0 on 126: C drew 27 and stopped cleanly on 9, the
+  port's output is C's on all 36, and nothing changed there. On seeds 1–50000 the check
+  changes 101 inputs, and C crashes or aborts on 97 of them. On the other 4, C exits 1
+  (`gv_calloc` refusing a size computed from a negative rank, or `install_in_rank`'s own
+  checks reading rank -1), and on the same input C can also crash: four runs of one of them
+  gave SIGBUS, SIGSEGV twice, and line 1190's error with a drawing. What C does there
+  depends on the memory before its arrays. The port exits 1 there, with no output.
+
 Most of C's crashes after `trouble in init_rank` come from a related cause that is not in
 the ranking itself: a cluster keeps the rank range of nodes that `mark_clusters` later
 removes from it (`x was already in a rankset, deleted from cluster G`), so some of its
@@ -96,8 +116,8 @@ no nodes), #234 (`conc_slope` on a one-sided merge node).
 
 ## dot cluster membership
 
-Closed: #231 (with its `clust_ht` and draw-instead-of-crash variants). #114's remaining
-routes are this cause too.
+Closed: #231 (with its `clust_ht` and draw-instead-of-crash variants), #358. #114's
+remaining routes are this cause too.
 
 dot ranks each cluster before the rest of the graph. A node can be taken from a cluster
 after that: `mark_clusters` (at the parent's `class1`) deletes a cluster node that a later
@@ -119,6 +139,30 @@ anything but a NULL pointer:
   Dropping the cluster earlier would change the 60 inputs in the generated corpus where C
   stops cleanly at line 1158.
 
+- **A root rank with no node** (#358). A rank that the stale range keeps in the root, with
+  no node and no edge through it, has a NULL `v[0]`. `set_ycoords` reads `v[0]` of the
+  bottom rank, and of each rank below a rank with nodes, without checking (`position.c:777`,
+  `:783`, and `:802` and `:816` when the ranks are equally spaced), and C crashes. The port
+  read 0 there and went on, so it drew a layout C never draws or panicked later (a self-loop
+  reading the rank above, `dotsplines.rs`). It now fails the layout where C reads the NULL
+  (`set_ycoords: rank R of G has no node`). The same state comes from `nslimit1` (#357)
+  with ranks that start at 0 but have gaps. C crashed on all 30 inputs #358's probe
+  found (seeds 1–25000), and on all 70 whose output the check changes in seeds 1–50000.
+- **`neighbor`'s assertion.** C asserts that the node next to `v` in the root's rank has an
+  order on the side the walk is going (`mincross.c:880`). It fails on a freed saved leader
+  (below) whose stale order no longer matches the slot it was read from. Without the check,
+  the port's `furthestnode` came back to a node it had visited and never ended (#358). The
+  port fails the layout where the assertion fails. C asserts there, or, reading the freed
+  node, crashes first.
+- **`flat_reorder`'s assertions.** A cycle of constraining flat edges can be left on a rank:
+  every node of it has a flat in-edge, so the topological sort in `temprank` never reaches
+  it and holds fewer nodes than the rank. C's `LIST_GET` asserts (`mincross.c:1376`). The
+  port used to stop copying there and leave the rank half rewritten, with some nodes in two
+  slots, and `transpose` never ended (#358). It now fails the layout there, and at the
+  function's two other assertions: `postorder`'s rank, and that an edge it reverses is not
+  constraining (`mincross.c:1387`). That last one is reached without any membership change
+  too, with newrank and `ordering=in` (C aborts there on every run).
+
 Two later points look like better places to stop but are not, because C gets past them
 on some inputs with output that is the same on every run:
 
@@ -127,7 +171,8 @@ on some inputs with output that is the same on every run:
   `rec_reset_vlists` reads it in `furthestnode`. That is a use after free. C segfaults on
   most such inputs (#114's repro), but on some it finishes with the same output on every
   run: the freed node's fields are still intact, or its memory has been reused by a live
-  node. The port keeps the freed leader's fields, as macOS's allocator does, and goes on;
+  node. The port keeps the freed leader's fields, as macOS's allocator does, and goes on
+  unless they break `neighbor`'s assertion (above);
   it matches C where those fields are what C reads, and still differs where the memory
   was reused (two generated inputs, where C draws and the port stops with
   `trouble in init_rank`, as before this change).
@@ -255,6 +300,26 @@ normalised the ranks (`abomination` asserts it). After a failed ranking of the r
 them and the top rank is `GD_minrank(g)` > 0. C's ranks above it were never allocated, so
 `flat_node` on it reads a NULL `v` and segfaults (#241). The port runs the test, and makes
 the new rank, at the top rank. When the top rank is 0 this is C's code.
+
+## clip_and_install's crossed walks
+
+Closed: #359.
+
+`clip_and_install` (`splines.c`) walks the spline's segments from the tail while their
+points test inside the tail node, and from the head while they test inside the head node.
+When every point tests inside (zero-size `shape=plain` nodes with `fixedsize=true` or an
+empty label, ends at the same place after a failed ranking), the tail-side walks pass the
+head-side ones. One segment apart (`start == end + 3`), C installs a one-point bezier,
+which `bezier_bb` accepts, and draws it; the port does the same. Further apart, C's `size_t`
+`end - start + 4` wraps, and C fails `bezier_bb`'s assertion (`emit.c:4082`), crashes where
+the bezier is read (`map_edge`, `polylineMidpoint`), or, through `makeCompoundEdge`'s
+`size - 1`, has `gv_calloc` refuse the size. The port installed an empty bezier and panicked
+in emit, xlabels, the edge midpoint and compound, or drew an edge `pos` with no points. It
+now keeps the one segment where the walks meet (`start = end`), the last state in which C
+installs a whole segment, in every engine that uses `clip_and_install`. Over 40,000 `fuzz-gen-endpoints.py`
+and 50,000 `fuzz-gen-ranks.py` inputs, plus hand-written ones in neato, fdp, circo and
+osage, every input this changes is one C crashes on, except one: there `makeCompoundEdge`
+gives `gv_calloc` the wrapped size and C exits 1 with no output, and the port draws.
 
 ## Concentrated cluster edges
 
@@ -503,7 +568,6 @@ meet a different font. The render-time `_ldraw_` fonts of `emit.c` are not inter
 starts in the prism smoother's first iteration and only at that magnitude, C's residual
 there is 8.5e14, and the path has no conversion that differs from Rust, but its
 `SparseMatrix_multiply_vector` and `vector_product` are FMA-contracted: C11.
-||||||| parent of 88662090 (Parse by grammar.y's productions, with bison's stack and agedge's keys (C6: #80, #92, #111, #115, #116, #118, #295, #297, #303))
 
 ## Subgraph nesting: bison's stack
 
