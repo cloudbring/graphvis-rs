@@ -1166,6 +1166,20 @@ fn raster_output_runs_only_what_cairo_runs_like_c() {
         err.contains("Using render: cairo:cairo\nUsing loadimage: png:cairo:cairo\n"),
         "{err}"
     );
+    // Without maps or tooltips, `emit_begin_node` computes no map shape for a node with a
+    // URL or tooltip, so `isFilled` does not parse its style again (#384): a style C
+    // truncates warns twice with `-Tpng`, where the SVG job warns three times.
+    let style: Vec<String> = (0..64).map(|i| format!("s{i}")).collect();
+    let style = style.join(",");
+    let truncating = format!("Warning: truncating style '{style}'\n");
+    for attr in ["URL=\"u\"", "tooltip=\"t\""] {
+        let (_, err, code) = run_in(
+            &dir,
+            &["-Tpng", "-o", "s.png"],
+            &format!("digraph {{ a [{attr} style=\"{style}\"] }}"),
+        );
+        assert_eq!((err, code), (truncating.repeat(2), 0), "{attr}");
+    }
     // Cairo's gradients have no ids: a png job before an svg job leaves C's SVG ids.
     let (_, err, code) = run_in(
         &dir,
