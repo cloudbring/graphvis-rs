@@ -433,24 +433,25 @@ struct W<'g> {
 impl W<'_> {
     fn write_attrs(&mut self, attrs: &AttrMap, dict_kind: u8) {
         let dict = match dict_kind {
-            0 => self.graph_dict.clone(),
-            1 => self.node_dict.clone(),
-            _ => self.edge_dict.clone(),
+            0 => &self.graph_dict,
+            1 => &self.node_dict,
+            _ => &self.edge_dict,
         };
-        for name in &dict {
+        let out = &mut self.out;
+        for name in dict {
             let v = attrs.get(name).map(String::as_str).unwrap_or("");
             if v.is_empty() && name != "label" {
                 continue;
             }
-            self.out.push_str(",\n");
-            indent(&mut self.out, self.level);
-            stoj(name, &mut self.out);
-            self.out.push_str(": ");
+            out.push_str(",\n");
+            indent(out, self.level);
+            stoj(name, out);
+            out.push_str(": ");
             if self.do_xdot && is_xdot(name) {
                 let mut level = self.level;
-                write_xdots(&mut self.out, v, &mut level);
+                write_xdots(out, v, &mut level);
             } else {
-                stoj(v, &mut self.out);
+                stoj(v, out);
             }
         }
     }
@@ -678,29 +679,36 @@ pub(crate) fn write_json(
     clust_nodes: &[bool],
 ) -> String {
     let edge_attrs = edge_attrs_with_ports(g);
-    let mut gd: BTreeSet<String> = g.graph_attrs.keys().cloned().collect();
-    for s in &g.subgraphs {
-        gd.extend(s.graph_attrs.keys().cloned());
-    }
-    let mut nd: BTreeSet<String> = g.node_defaults.keys().cloned().collect();
-    for n in &g.nodes {
-        nd.extend(n.attrs.keys().cloned());
-    }
-    let mut ed: BTreeSet<String> = g.edge_defaults.keys().cloned().collect();
-    for a in &edge_attrs {
-        ed.extend(a.keys().cloned());
-    }
     // `write_attrs` walks the root's dictionaries (`agnxtattr(agroot(obj), …)`), so a
     // symbol is written even when no object has a value for it: `label` as `""`. A
-    // statement that makes no object can still declare one (`{} -> c [label=x]`). Only the
-    // edge dictionary adds a name in practice: every declared graph symbol is in the root's
-    // values, and nodes always have `label`. The names from the values stay because the
-    // layout's attributes are not in `dicts[0]` on every path.
-    if let Some(d) = g.dicts.first() {
-        gd.extend(d.graph.keys().cloned());
-        nd.extend(d.node.keys().cloned());
-        ed.extend(d.edge.keys().cloned());
-    }
+    // statement that makes no object can still declare one (`{} -> c [label=x]`). The
+    // caller has recorded the layout's and renderers' attributes there (`sync_dicts`). A
+    // graph built without dictionaries falls back to its defaults and its objects' values.
+    let (mut gd, mut nd, mut ed): (BTreeSet<String>, BTreeSet<String>, BTreeSet<String>) =
+        match g.dicts.first() {
+            Some(d) if g.dicts.len() == g.subgraphs.len() + 1 => (
+                d.graph.keys().cloned().collect(),
+                d.node.keys().cloned().collect(),
+                d.edge.keys().cloned().collect(),
+            ),
+            _ => (
+                g.graph_attrs
+                    .keys()
+                    .chain(g.subgraphs.iter().flat_map(|s| s.graph_attrs.keys()))
+                    .cloned()
+                    .collect(),
+                g.node_defaults
+                    .keys()
+                    .chain(g.nodes.iter().flat_map(|n| n.attrs.keys()))
+                    .cloned()
+                    .collect(),
+                g.edge_defaults
+                    .keys()
+                    .chain(edge_attrs.iter().flat_map(|a| a.keys()))
+                    .cloned()
+                    .collect(),
+            ),
+        };
     // (an HTML value's mark is not an attribute)
     for d in [&mut gd, &mut nd, &mut ed] {
         d.retain(|k| !k.starts_with(graphviz_pure_core::HTML_VALUE_PREFIX));

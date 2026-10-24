@@ -397,6 +397,10 @@ impl<'g> GraphJobs<'g> {
                 }
                 return Ok(pre + &graphviz_pure_parser::write_canon_forced(&g, &self.forced));
             }
+            // `write_attrs` reads the root's dictionaries, as `agwrite` does.
+            if g.dicts.len() == g.subgraphs.len() + 1 {
+                sync_dicts(&mut g, graph, &self.forced);
+            }
             return Ok(pre
                 + &json::write_json(
                     &g,
@@ -425,10 +429,13 @@ impl<'g> GraphJobs<'g> {
                 // which writes to the standard output), json0 attaches the layout
                 // attributes; then `emit_graph` runs for the json job itself.
                 let nested = emit::RunJob { job: None, ..opts };
-                let (g, forced, stdout) =
+                let (mut g, forced, stdout) =
                     attached(&m, cgraph, format == OutputFormat::Json, None, nested);
                 self.stdout.push_str(&stdout);
                 self.keep(&g, &forced);
+                if g.dicts.len() == g.subgraphs.len() + 1 {
+                    sync_dicts(&mut g, graph, &self.forced);
+                }
                 pre = emit_null(&m, JSON_FEATURES, "json", name, opts);
                 json::write_json(
                     &g,
@@ -508,6 +515,36 @@ mod tests {
             .map(|s| &s[..s.find("</title>").unwrap()])
             .collect();
         assert_eq!(titles, ["cluster_a", "cluster_c", "cluster_b"]);
+    }
+
+    // Issue #324: the JSON writer names the attributes from the root's dictionaries; a graph
+    // built through the API has none, and falls back to its defaults and objects' values.
+    #[test]
+    fn json_of_a_graph_without_dictionaries_names_its_values() {
+        let mut g = Graph::new("G", graphviz_pure_core::GraphKind::Directed, false);
+        let a = g.ensure_node("a");
+        let b = g.ensure_node("b");
+        let mut attrs = graphviz_pure_core::AttrMap::new();
+        attrs.insert("label".into(), "ab".into());
+        attrs.insert("color".into(), "red".into());
+        g.add_edge(a, b, attrs);
+        g.nodes[0].pos = Point::new(27.0, 90.0);
+        g.nodes[1].pos = Point::new(27.0, 18.0);
+        g.bb = BoundingBox::new(0.0, 0.0, 54.0, 108.0);
+        assert!(g.dicts.is_empty());
+        let json = render_graph(&g, OutputFormat::Json0).expect("render");
+        for key in [
+            "\"color\": \"red\"",
+            "\"label\": \"ab\"",
+            "\"pos\": \"27,90\"",
+        ] {
+            assert!(json.contains(key), "{key} in {json}");
+        }
+
+        // With dictionaries, a declared edge `label` no edge sets is written empty.
+        let g = parse_dot("digraph { a -> b; {} -> c [label=x] }").expect("parse");
+        let json = render_graph(&g, OutputFormat::Json0).expect("render");
+        assert!(json.contains("\"label\": \"\""), "{json}");
     }
 
     fn sample_laid_out_graph() -> Graph {
