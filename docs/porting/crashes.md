@@ -668,3 +668,41 @@ call left there:
 The port does not model the second case. What C reads depends on the buffer's growth and on
 the order of every `parse_style` call in the run, which the port's renderers don't reproduce
 call for call. A truncated style gives no items in the port, C's result in the first case.
+
+## VPSC ties by heap address
+
+Closed: #225.
+
+VPSC's constraint generation keeps its scanline in a `std::set<Node*, CmpNodePos>`, which
+orders nodes by position and breaks ties by pointer (`lib/vpsc/generate-constraints.cpp:76-84`).
+Its `Blocks` is a `std::set<Block*>`, ordered by pointer alone. Where positions tie, C's
+result therefore depends on where `malloc` put each `Node` and `Block`. Under
+`mode=ipsep overlap=vpsc` with clusters, ties are common: `initCMajVPSC` takes the last
+`2 * nclusters` nodes as the clusters' boundary variables (`lib/neatogen/quad_prog_vpsc.c:204-205`).
+When one of them is also a cluster member, `generateNonoverlapConstraints` puts its
+`Variable` into the cluster's list twice (`quad_prog_vpsc.c:414-415`), with the member's box
+and with the container's. The port does the same.
+
+C's addresses are not a fresh heap's. Each `generateXConstraints`/`generateYConstraints`
+call allocates its nodes with `make_shared` and frees them when its event vector is
+destroyed, so the next call reuses those chunks in an order the allocator decides, mixed
+with fresh memory. The result differs from run to run on many of these inputs, and between
+builds. Modelling it would mean modelling one platform's allocator. The port instead gives
+each object the address order of a fresh heap, its creation order (`NodeKey` and
+`Solver::bs` in `vpsc.rs`): the same on every platform and run.
+
+Measured with C (with the port's math) run 10 times on each of 46 inputs: 41 generated
+chains and random graphs with clusters at the start, middle and end, and the 5 corpus files
+with `ipsep`/`vpsc` and clusters.
+
+- **C fails** on 27: `Cycle Error!`, a segfault, or `bitarray_set`'s assertion (#185, #168).
+  The port lays all of them out without panicking.
+- **C gives one output** on 11. The port matches 10, including the 3 corpus files C lays
+  out (`hw3_*`; C fails on the 2 `fuzz_*` ones). The other is a chain whose last two nodes
+  are each a one-node cluster.
+- **C's output varies** on 8. The port gives one of C's outputs on 5.
+
+The reverse order, every later object at a lower address as when freed chunks are reused,
+was measured as well. It matches 9 of the 11 stable inputs. Where C varies it is C's most
+frequent output on 4 of the 8, against 1 for creation order, and it is among C's outputs on
+5. Neither order is C's, so the port keeps creation order.
