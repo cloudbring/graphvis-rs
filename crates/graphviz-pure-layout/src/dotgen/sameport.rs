@@ -60,6 +60,8 @@ impl Dot<'_> {
             x += x1 / r;
             y += y1 / r;
         }
+        // sameport.c:122: 0/0 where the ends cancel out, so the port is NaN, as in C
+        // (`docs/porting/crashes.md`, "sameport's 0/0 direction").
         let r = math::hypot(x, y);
         x /= r;
         y /= r;

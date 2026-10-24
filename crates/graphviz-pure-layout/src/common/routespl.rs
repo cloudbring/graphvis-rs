@@ -328,8 +328,8 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Optio
     let boxes = &mut pp.boxes;
     let mut unbounded = true;
     {
-        let is_horizontal = !ps.is_empty() && ps.iter().all(|p| (ps[0].y - p.y).abs() <= 0.0001);
-        let is_vertical = !ps.is_empty() && ps.iter().all(|p| (ps[0].x - p.x).abs() <= 0.0001);
+        let is_horizontal = is_straight(&ps, |p| p.y);
+        let is_vertical = is_straight(&ps, |p| p.x);
         if is_horizontal || is_vertical {
             for b in boxes.iter_mut() {
                 b.ll.x = ps[0].x;
@@ -373,6 +373,15 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Optio
         graphviz_pure_core::diag::dump(&s);
     }
     Some(ps)
+}
+
+/// `is_horizontal`/`is_vertical` of `routesplines_` (routespl.c:516-534): true unless some
+/// point's coordinate is more than FUDGE from the first's. `fabs(...) > FUDGE` is false for
+/// NaN, so a spline whose coordinate is NaN counts as straight, its boxes are bounded at once
+/// and C prints no warning (#396). `sameport`'s 0/0 direction gives such splines; see
+/// `docs/porting/crashes.md`, "sameport's 0/0 direction".
+fn is_straight(ps: &[Point], coord: impl Fn(&Point) -> f64) -> bool {
+    !ps.is_empty() && !ps.iter().any(|p| (coord(&ps[0]) - coord(p)).abs() > 0.0001)
 }
 
 /// `routesplines(pp, &npoints)`.
@@ -661,6 +670,32 @@ pub fn make_straight_edges<S: super::splines::SplineGraph + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// #396: C's straightness test is true for a NaN coordinate, on each axis alone.
+    #[test]
+    fn nan_coordinate_counts_as_straight_like_c() {
+        let nan = f64::NAN;
+        let x_nan = [
+            Point::new(nan, 0.0),
+            Point::new(nan, 10.0),
+            Point::new(nan, 20.0),
+        ];
+        assert!(is_straight(&x_nan, |p| p.x));
+        assert!(!is_straight(&x_nan, |p| p.y));
+        let y_nan = [
+            Point::new(0.0, nan),
+            Point::new(10.0, nan),
+            Point::new(20.0, nan),
+        ];
+        assert!(is_straight(&y_nan, |p| p.y));
+        assert!(!is_straight(&y_nan, |p| p.x));
+        let first_nan = [Point::new(nan, nan), Point::new(5.0, 19.0)];
+        assert!(is_straight(&first_nan, |p| p.x) && is_straight(&first_nan, |p| p.y));
+        let within = [Point::new(1.0, 2.0), Point::new(1.00005, 7.0)];
+        assert!(is_straight(&within, |p| p.x));
+        assert!(!is_straight(&within, |p| p.y));
+        assert!(!is_straight(&[], |p| p.x));
+    }
 
     #[test]
     fn overlap_intervals() {
