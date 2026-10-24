@@ -125,10 +125,10 @@ const INIT_DELTA: f64 = 10.0;
 const LOOP_TRIES: i32 = 15;
 
 /// `realedge`, the path's real edge (found through `ED_to_orig`), for the messages.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct RealEdge<'a> {
-    pub tail: &'a str,
-    pub head: &'a str,
+    pub tail: graphviz_pure_core::AgName<'a>,
+    pub head: graphviz_pure_core::AgName<'a>,
     /// The edge is a self loop, which C refuses.
     pub is_loop: bool,
 }
@@ -176,7 +176,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Optio
     if real.is_loop {
         agerrorf(&format!(
             "in routesplines, edge is a loop at {}\n",
-            real.head
+            real.head.name
         ));
         return None;
     }
@@ -723,8 +723,8 @@ mod tests {
             data: 0,
         };
         let real = RealEdge {
-            tail: "a",
-            head: "b",
+            tail: graphviz_pure_core::AgName::own("a"),
+            head: graphviz_pure_core::AgName::own("b"),
             is_loop: false,
         };
         let ps = routesplines(&mut p, real).unwrap();

@@ -947,8 +947,8 @@ impl Dot<'_> {
                 // dotsplines.c:1147: both names share agnameof's static buffer when
                 // anonymous.
                 let [t, h] = graphviz_pure_core::agnameof_buffer([
-                    &*self.nodes[tn].name,
-                    &*self.nodes[hn].name,
+                    self.node_agnameof(tn),
+                    self.node_agnameof(hn),
                 ]);
                 graphviz_pure_core::diag::agerr_prev(&format!("  Edge {t} {op} {h}\n"));
             }
@@ -990,6 +990,8 @@ impl Dot<'_> {
         let input = self.input;
         // cloneGraph: node/edge attribute declarations, rankdir turned.
         let mut aux = graphviz_pure_core::Graph::new("auxg", input.kind, false);
+        // `agnode(auxg, agnameof(orign), 1)` keeps a `%` name as a string of auxg's own.
+        aux.local_node_names_kept = true;
         // agopen copies the ProtoGraph's graph attributes (`-G`) to auxg, as to the root.
         if let Some(main) = input.dicts.first() {
             for (k, sym) in main.graph.iter().filter(|(_, s)| s.proto) {
@@ -1322,8 +1324,8 @@ impl Dot<'_> {
         let real = orig_edge(self, p.data);
         let (t, h) = (self.edges[real].tail, self.edges[real].head);
         let real = RealEdge {
-            tail: self.nodes.get(t).map_or("", |n| n.name.as_str()),
-            head: self.nodes.get(h).map_or("", |n| n.name.as_str()),
+            tail: self.node_agnameof(t),
+            head: self.node_agnameof(h),
             is_loop: t == h,
         };
         if spline {

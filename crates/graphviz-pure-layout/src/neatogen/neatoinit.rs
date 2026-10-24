@@ -700,11 +700,13 @@ fn user_spline(g: &mut LGraph<'_>, e: usize) -> bool {
         Err(SplineError::Empty) => return false,
         Err(err) => {
             if !WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
-                let name = |v: usize| g.src.nodes.get(v).map_or("", |n| n.name.as_str());
-                let (t, h) = g
-                    .edges
-                    .get(e)
-                    .map_or(("", ""), |ed| (name(ed.tail), name(ed.head)));
+                let (t, h) = g.edges.get(e).map_or(
+                    (
+                        graphviz_pure_core::AgName::own(""),
+                        graphviz_pure_core::AgName::own(""),
+                    ),
+                    |ed| (g.node_agnameof(ed.tail), g.node_agnameof(ed.head)),
+                );
                 // neatoinit.c:298, :307: both names share agnameof's static buffer when
                 // anonymous.
                 let [t, h] = graphviz_pure_core::agnameof_buffer([t, h]);
@@ -866,10 +868,15 @@ fn init_nop(g: &mut LGraph<'_>, nop: u8) -> std::result::Result<bool, ()> {
     let translate = !mapbool(g.gattr("notranslate"));
     // scan_graph (Reduce, edge lengths) ran in neato_layout_nop.
     let src = g.src;
-    for (node, sn) in g.nodes.iter_mut().zip(&src.nodes) {
+    for (i, (node, sn)) in g.nodes.iter_mut().zip(&src.nodes).enumerate() {
         if node.pinned == 0 && !sn.name.starts_with("cluster") {
             // neatoinit.c:529-530: both names share agnameof's static buffer when anonymous.
-            let [n, gname] = graphviz_pure_core::agnameof_buffer([&*sn.name, src.root_name()]);
+            let [n, gname] = graphviz_pure_core::agnameof_buffer([
+                src.agnameof(graphviz_pure_core::Obj::Node(graphviz_pure_core::NodeId(
+                    i as u32,
+                ))),
+                src.agnameof(graphviz_pure_core::Obj::Root),
+            ]);
             graphviz_pure_core::diag::agerrorf(&format!(
                 "node {n} in graph {gname} has no position\n"
             ));

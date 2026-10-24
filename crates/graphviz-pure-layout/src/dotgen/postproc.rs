@@ -43,8 +43,8 @@ impl Dot<'_> {
                 let (t, h) = (self.edges[e].tail, self.edges[e].head);
                 // postproc.c:104: both names share agnameof's static buffer when anonymous.
                 let [t, h] = graphviz_pure_core::agnameof_buffer([
-                    &*self.nodes[t].name,
-                    &*self.nodes[h].name,
+                    self.node_agnameof(t),
+                    self.node_agnameof(h),
                 ]);
                 graphviz_pure_core::diag::agerrorf(&format!("lost {t} {h} edge\n"));
             }

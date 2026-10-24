@@ -28,14 +28,9 @@ pub fn twopi_layout(graph: &mut Graph) -> Result<()> {
     let mut set_root = false;
     if let Some(s) = g.gattr("root") {
         if !s.is_empty() {
-            // `agfindnode` maps the interned value, flag included, to a node. A local name
-            // (`%…`) is looked up in cgraph's internal map, which `endgraph` cleared of
-            // them, so it finds nothing.
+            // `agfindnode` maps the interned value, flag included, to a node.
             let html = graphviz_pure_core::attr_is_html(&src.graph_attrs, "root");
-            ctr = src
-                .nodes
-                .iter()
-                .position(|n| !s.starts_with('%') && n.name == s && n.html_name == html);
+            ctr = src.agfindnode(s, html).map(|n| n.0 as usize);
             if ctr.is_none() {
                 graphviz_pure_core::diag::agwarningf(&format!(
                     "specified root node \"{s}\" was not found."

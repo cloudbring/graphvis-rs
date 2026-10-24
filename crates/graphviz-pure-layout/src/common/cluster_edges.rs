@@ -10,7 +10,7 @@
 //! [`Graph`] (`work`) and maps the layout back with [`undo_cluster_edges`].
 
 use crate::fdpgen::ClusterTree;
-use graphviz_pure_core::{AttrMap, EdgeId, Graph, NodeId, NodeLayout};
+use graphviz_pure_core::{AgName, AttrMap, EdgeId, Graph, NodeId, NodeLayout, Obj};
 use std::collections::HashMap;
 
 /// The graph with cluster edges replaced, and how it maps to the input.
@@ -36,15 +36,20 @@ impl ClusterEdges {
 
 /// `processClusterEdges(g)`; `None` when the graph has no cluster edges.
 pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<ClusterEdges> {
-    fn preorder(tree: &ClusterTree, cs: &[usize], graph: &Graph, out: &mut Vec<(String, usize)>) {
+    fn preorder<'g>(
+        tree: &ClusterTree,
+        cs: &[usize],
+        graph: &'g Graph,
+        out: &mut Vec<(AgName<'g>, usize)>,
+    ) {
         for &c in cs {
-            out.push((graph.subgraph_name(tree.subgraph[c]), c));
+            out.push((graph.agnameof(Obj::Subgraph(tree.subgraph[c])), c));
             preorder(tree, &tree.children[c], graph, out);
         }
     }
     let mut clusters = Vec::new();
     preorder(tree, &tree.root, graph, &mut clusters);
-    let cmap = crate::common::utils::mk_clust_map(clusters, true);
+    let cmap = crate::common::utils::mk_clust_map(clusters);
     let mapc = |n: usize| -> Option<usize> {
         let name = graph.nodes[n].name.as_str();
         if name.starts_with("cluster") {
@@ -116,11 +121,11 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
             if tg.is_none() && hg.is_none() {
                 continue;
             }
-            let nname = |n: usize| graph.nodes[n].name.clone();
-            let cname = |c: usize| graph.subgraph_name(tree.subgraph[c]);
+            let nname = |n: usize| graph.agnameof(Obj::Node(NodeId(n as u32)));
+            let cname = |c: usize| graph.agnameof(Obj::Subgraph(tree.subgraph[c]));
             // Each warning prints two agnameof names, which share its static buffer when
             // anonymous (utils.c:860-900).
-            let warn = |fmt: fn(&str, &str) -> String, a: String, b: String| {
+            let warn = |fmt: fn(&str, &str) -> String, a: AgName<'_>, b: AgName<'_>| {
                 let [a, b] = graphviz_pure_core::agnameof_buffer([a, b]);
                 graphviz_pure_core::diag::agwarningf(&fmt(&a, &b));
             };
@@ -225,7 +230,8 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
     let mut clust_nodes = Vec::new();
     let mut cnode_of: HashMap<usize, usize> = HashMap::new();
     for &c in &clust_order {
-        let name = format!("__0:{}", graph.subgraphs[tree.subgraph[c]].name);
+        // clustNode: `agxbprint(xb, "__%d:%s", idx, agnameof(cg))`.
+        let name = format!("__0:{}", graph.subgraph_name(tree.subgraph[c]));
         let id = work.ensure_node(&name);
         let a = &mut work.nodes[id.0 as usize].attrs;
         a.insert("label".into(), String::new());

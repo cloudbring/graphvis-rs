@@ -234,6 +234,16 @@ pub struct LGraph<'a> {
 }
 
 impl<'a> LGraph<'a> {
+    /// `agnameof(n)` of node `v` of the source graph.
+    pub fn node_agnameof(&self, v: usize) -> graphviz_pure_core::AgName<'a> {
+        if v < self.src.nodes.len() {
+            let id = graphviz_pure_core::NodeId(v as u32);
+            self.src.agnameof(graphviz_pure_core::Obj::Node(id))
+        } else {
+            graphviz_pure_core::AgName::own("")
+        }
+    }
+
     /// The root as a subgraph view.
     pub fn root_sub(&self) -> Sub {
         let mut s = Sub::new(self.nodes.len(), (0..self.nodes.len()).collect());

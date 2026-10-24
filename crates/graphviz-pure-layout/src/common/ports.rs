@@ -548,10 +548,7 @@ impl PortGraph for LGraph<'_> {
         &self.src.nodes[n]
     }
     fn port_env(&self) -> graphviz_pure_geom::NodeSizeEnv<'_> {
-        graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(
-            self.src.root_name(),
-            &self.src.graph_attrs,
-        )
+        graphviz_pure_geom::NodeSizeEnv::from_graph(self.src)
     }
 }
 

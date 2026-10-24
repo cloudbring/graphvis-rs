@@ -596,9 +596,11 @@ impl Engine for SvgEngine {
         let ed = &m.edges[e];
         // `strdup_and_subst_obj("\\E", e)`: both names are agnameof's, which keeps anonymous
         // ones in one static buffer, so an edge between two of them is titled head->head.
-        let [tail, head] =
-            graphviz_pure_core::agnameof_buffer([m.nodes[ed.tail].name, m.nodes[ed.head].name]);
-        let mut name = tail;
+        let [tail, head] = graphviz_pure_core::agnameof_buffer([
+            m.node_agnameof(ed.tail),
+            m.node_agnameof(ed.head),
+        ]);
+        let mut name = tail.into_owned();
         if let Some(p) = ed.tail_port.filter(|p| !p.is_empty()) {
             name.push(':');
             name.push_str(p);

@@ -2191,9 +2191,19 @@ fn html_label_owner(obj: &LabelSubstContext<'_>) -> String {
         let op = if obj.is_directed { "->" } else { "--" };
         // labels.c:157-158: one agerr of both names, which share agnameof's static buffer
         // when anonymous.
-        let [t, h] = graphviz_pure_core::agnameof_buffer([obj.tail_name, obj.head_name]);
+        let [t, h] = graphviz_pure_core::agnameof_buffer([
+            graphviz_pure_core::AgName {
+                name: obj.tail_name.into(),
+                buffer: obj.in_buffer.tail,
+            },
+            graphviz_pure_core::AgName {
+                name: obj.head_name.into(),
+                buffer: obj.in_buffer.head,
+            },
+        ]);
         format!("edge {t} {op} {h}")
-    } else if !obj.node_name.is_empty() {
+    } else if obj.is_node {
+        // make_label switches on agobjkind: a node named "" is still a node.
         format!("node {}", obj.node_name)
     } else {
         format!("graph {}", obj.graph_name)

@@ -29,7 +29,7 @@ use crate::neatogen::neatosplines::{
 use crate::osage::register_clusters;
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, put_graphs};
 use graphviz_pure_core::math;
-use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, Point, Result};
+use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, NodeId, Obj, Point, Result};
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
@@ -554,14 +554,15 @@ impl Fdp<'_, '_> {
                 continue;
             }
             if self.parent[n].is_some() && self.parent[n] != self.gparent(g) {
+                let src = self.rg.src;
                 let gname = |g: Option<usize>| match g {
-                    None => self.rg.src.root_name().to_string(),
-                    Some(c) => self.rg.src.subgraph_name(self.tree.subgraph[c]),
+                    None => src.agnameof(Obj::Root),
+                    Some(c) => src.agnameof(Obj::Subgraph(self.tree.subgraph[c])),
                 };
                 // layout.c:432: the three names share agnameof's static buffer when
                 // anonymous, so they all show the last anonymous one.
                 let [node, g, parent] = graphviz_pure_core::agnameof_buffer([
-                    self.rg.src.nodes[n].name.clone(),
+                    src.agnameof(Obj::Node(NodeId(n as u32))),
                     gname(g),
                     gname(self.parent[n].unwrap()),
                 ]);

@@ -160,19 +160,21 @@ impl<T: Copy> ClustMap<T> {
 }
 
 /// `mkClustMap` / `fillMap`, from the clusters' `agnameof` names in `fillMap`'s preorder. The
-/// first cluster of a name wins; each later one warns. `buffered`: a `%` name is `agnameof`'s
-/// static buffer. It is not in a pack component, whose clusters are `projectG`'s copies,
-/// `agsubg(g, agnameof(subg), 1)`: cgraph's internal map keeps each copy's own `%<id>` name.
-pub fn mk_clust_map<T>(
-    clusters: impl IntoIterator<Item = (String, T)>,
-    buffered: bool,
+/// first cluster of a name wins; each later one warns. A name in agnameof's static buffer is
+/// the one key every anonymous cluster shares. In a pack component the clusters are
+/// `projectG`'s copies, whose `%<id>` names are strings of their own
+/// ([`graphviz_pure_core::Graph::local_subgraph_names_kept`]).
+pub fn mk_clust_map<'a, T>(
+    clusters: impl IntoIterator<Item = (graphviz_pure_core::AgName<'a>, T)>,
 ) -> ClustMap<T> {
     let mut map = ClustMap {
         named: HashMap::new(),
         anon: None,
     };
-    for (name, cl) in clusters {
-        let taken = if buffered && name.starts_with('%') {
+    for (agname, cl) in clusters {
+        let buffered = agname.buffer;
+        let name = agname.name.into_owned();
+        let taken = if buffered {
             match &mut map.anon {
                 Some((last, _)) => {
                     last.clone_from(&name);

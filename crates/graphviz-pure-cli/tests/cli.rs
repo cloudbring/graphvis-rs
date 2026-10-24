@@ -6812,6 +6812,9 @@ fn anonymous_graphs_are_named_by_their_id() {
     );
     assert!(ok, "{err}");
     assert!(out.starts_with("graph 1 2.25 1.6111\n"), "{out}");
+    // make_label names a bad HTML label's owner by its kind: a node named "" is a node.
+    let (_, err, _) = run(&["-Tsvg"], r#"digraph { "" [label=<<b>x</c>>] }"#);
+    assert!(err.ends_with("in label of node \n"), "{err}");
     // A name read from an attribute after parsing is not found when it is a local `%` name:
     // twopi's `root` and the `viewport` focus node.
     let (out, err, ok) = run(

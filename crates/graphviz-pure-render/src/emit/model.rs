@@ -190,7 +190,15 @@ pub(crate) struct Model<'g> {
     pub has_labels: u32,
 }
 
-impl Model<'_> {
+impl<'g> Model<'g> {
+    /// `agnameof(n)` of node `n`.
+    pub fn node_agnameof(&self, n: usize) -> graphviz_pure_core::AgName<'g> {
+        self.g
+            .agnameof(graphviz_pure_core::Obj::Node(graphviz_pure_core::NodeId(
+                n as u32,
+            )))
+    }
+
     /// `AGSEQ(n)`.
     pub fn node_seq(&self, n: usize) -> usize {
         self.g.nodes[n].layout.seq.unwrap_or(n + 1)
@@ -471,17 +479,11 @@ impl<'g> Model<'g> {
             };
             if is_a_cluster(&s.name, &s.graph_attrs) && drawn {
                 let a = Attrs(&s.graph_attrs);
+                let name = g.subgraph_name(sid);
                 let label = if s.layout.no_label {
                     None
                 } else {
-                    graph_label_geometry_in(
-                        &g.subgraph_name(sid),
-                        s.html_name,
-                        &s.graph_attrs,
-                        false,
-                        flip,
-                        env,
-                    )
+                    graph_label_geometry_in(&name, s.html_name, &s.graph_attrs, false, flip, env)
                 };
                 let label = label.map(|gl| {
                     *has_labels |= GRAPH_LABEL;
@@ -512,7 +514,7 @@ impl<'g> Model<'g> {
                 });
                 let idx = clusters.len();
                 clusters.push(RCluster {
-                    name: g.subgraph_name(sid),
+                    name,
                     attrs: a,
                     sub: sid,
                     bb: s.bb,
