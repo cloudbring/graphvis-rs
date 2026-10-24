@@ -93,6 +93,13 @@ impl<'a> Dot<'a> {
             ),
             None => graph.graph_attrs.clone(),
         };
+        // The dot graph of each input subgraph, for the input's own `_cc_<i>`.
+        let graph_of_sub: std::collections::HashMap<usize, G> = self
+            .graphs
+            .iter()
+            .enumerate()
+            .filter_map(|(g, gi)| gi.sub_index.map(|si| (si, g)))
+            .collect();
         let mut out = Vec::with_capacity(ccs.len());
         for (i, cc) in ccs.iter().enumerate() {
             let set: std::collections::BTreeSet<N> = cc.nodes.iter().copied().collect();
@@ -106,14 +113,7 @@ impl<'a> Dot<'a> {
                 .collect();
             // `agsubg(g, "_cc_<i>", 1)` returns the input's own subgraph of that name
             // (#335), which gains the component's nodes and edges and keeps its values.
-            let user = cc.user.and_then(|u| {
-                self.graphs
-                    .iter()
-                    .enumerate()
-                    .skip(1)
-                    .find(|(_, gi)| gi.sub_index == Some(u))
-                    .map(|(k, _)| k)
-            });
+            let user = cc.user.and_then(|u| graph_of_sub.get(&u).copied());
             let g = match user {
                 Some(g) => {
                     if let Some(gi) = self.graphs.get_mut(g) {
@@ -573,6 +573,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
         if d.aborted {
             d.cc_kept = ccsubs;
         } else {
+            // the input's own `_cc_<i>` goes with the others (agdelete)
             d.cc_deleted = ccs.iter().filter_map(|c| c.user).collect();
             let ccsubs: std::collections::BTreeSet<G> = ccsubs.into_iter().collect();
             d.graphs[0].subgs.retain(|s| !ccsubs.contains(s));
@@ -638,7 +639,8 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
         any_splines |= c.splines_done;
         comps.push(comp);
     }
-    // agdelete(g, ccs[i]) once the components are laid out and packed.
+    // Every component laid out: doDot ends with agdelete(g, ccs[i]) (dotinit.c:503),
+    // whether the layouts stopped at a `phase` or went on to be packed.
     d.cc_deleted = ccs.iter().filter_map(|c| c.user).collect();
     // attachPos
     let pos: Vec<Point> = d
