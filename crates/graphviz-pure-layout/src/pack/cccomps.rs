@@ -179,7 +179,14 @@ impl<'a> Tree<'a> {
             let nodes: Vec<usize> = self.nodes[s]
                 .iter()
                 .copied()
-                .filter(|&n| in_g.contains(&n) && !self.g.nodes[n].name.starts_with('%'))
+                .filter(|&n| {
+                    in_g.contains(&n)
+                        && self
+                            .g
+                            .nodes
+                            .get(n)
+                            .is_some_and(|d| !d.name.starts_with('%'))
+                })
                 .collect();
             if nodes.is_empty() && !in_cluster {
                 continue;
