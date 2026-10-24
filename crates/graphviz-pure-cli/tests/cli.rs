@@ -6820,7 +6820,8 @@ fn emit_pagedir_sfdp_slow_and_routespl_messages_like_c() {
 }
 
 // Issue #396: where samehead or sametail edges come from opposite sides, `sameport`'s
-// direction is 0/0 and the edges' path ends are NaN, in C too. `routesplines_` counts a NaN
+// direction is 0/0 and the edges' path ends are NaN, in C too, which `-Tplain` writes as `nan`
+// (`docs/porting/crashes.md`, "sameport's 0/0 direction"). `routesplines_` counts a NaN
 // spline as horizontal (its `fabs(...) > FUDGE` is false), so it bounds the boxes at once and
 // does not warn. The port negated that test, so it warned, and on the second input its
 // fallback left boxes unbounded and moved every node to x = 2.5e306. Both outputs are C's.
