@@ -7704,6 +7704,95 @@ fn issue384_node_with_url_or_tooltip_parses_its_style_for_the_map_shape() {
     assert_eq!(out.split_once(" -->\n").map(|(_, b)| b), Some(want));
 }
 
+/// Issue #384, other routes: the xdot engine does maps and tooltips too, and `href` anchors
+/// a node as `URL` does; a raster format is drawn with cairo or gd, which do neither, so
+/// its stderr has no extra diagnostics. The expected output and stderr are C 16.1.0's
+/// (`-Tpng` as with cairo and gd).
+#[test]
+fn issue384_xdot_href_and_raster_parse_the_style_as_c_does() {
+    let s64 = (0..64)
+        .map(|i| format!("s{i}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let src = format!(
+        "digraph {{ a [URL=\"u\" style=\"{s64}\"]; b [tooltip=\"t\" style=\"filled,(\"]; \
+         c [style=\"{s64}\"] }}"
+    );
+    let trunc = format!("Warning: truncating style '{s64}'\n");
+    let paren = "Error: unmatched '(' in style: filled,(\n";
+    let (out, err, ok) = run(&["-Txdot"], &src);
+    assert!(!ok);
+    assert_eq!(
+        err,
+        [&trunc, &trunc, &trunc, paren, paren, paren, &trunc, &trunc].concat()
+    );
+    let want = r#"digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 36 198 36 198 0 ",
+		bb="0,0,198,36",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	a	[URL=u,
+		_draw_="c 7 -#000000 e 27 18 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 6.21 1 -a ",
+		height=0.5,
+		pos="27,18",
+		style="s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23,s24,s25,s26,s27,s28,s29,s30,s31,s32,s33,s34,\
+s35,s36,s37,s38,s39,s40,s41,s42,s43,s44,s45,s46,s47,s48,s49,s50,s51,s52,s53,s54,s55,s56,s57,s58,s59,s60,s61,s62,s63",
+		width=0.75];
+	b	[_draw_="c 7 -#000000 e 99 18 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 99 13.8 0 7 1 -b ",
+		height=0.5,
+		pos="99,18",
+		style="filled,(",
+		tooltip=t,
+		width=0.75];
+	c	[_draw_="c 7 -#000000 e 171 18 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 171 13.8 0 6.21 1 -c ",
+		height=0.5,
+		pos="171,18",
+		style="s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23,s24,s25,s26,s27,s28,s29,s30,s31,s32,s33,s34,\
+s35,s36,s37,s38,s39,s40,s41,s42,s43,s44,s45,s46,s47,s48,s49,s50,s51,s52,s53,s54,s55,s56,s57,s58,s59,s60,s61,s62,s63",
+		width=0.75];
+}
+"#;
+    assert_eq!(out, want);
+    let (_, err, ok) = run(&["-Tpng"], &src);
+    assert!(!ok);
+    assert_eq!(err, [&trunc, &trunc, paren, paren, &trunc, &trunc].concat());
+
+    let (out, err, ok) = run(
+        &["-Tsvg"],
+        "digraph { a [href=\"h\" style=\"filled,(\"]; b [style=\"filled,(\"] }",
+    );
+    assert!(!ok);
+    assert_eq!(err, paren.repeat(5));
+    let want = r#"<!-- Pages: 1 -->
+<svg width="134pt" height="44pt"
+ viewBox="0.00 0.00 134.00 44.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 40)">
+<polygon fill="white" stroke="none" points="-4,4 -4,-40 130,-40 130,4 -4,4"/>
+<!-- a -->
+<g id="node1" class="node">
+<title>a</title>
+<g id="a_node1"><a xlink:href="h" xlink:title="a">
+<ellipse fill="none" stroke="black" cx="27" cy="-18" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="27" y="-13.8" font-family="Times,serif" font-size="14.00">a</text>
+</a>
+</g>
+</g>
+<!-- b -->
+<g id="node2" class="node">
+<title>b</title>
+<ellipse fill="none" stroke="black" cx="99" cy="-18" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="99" y="-13.8" font-family="Times,serif" font-size="14.00">b</text>
+</g>
+</g>
+</svg>
+"#;
+    assert_eq!(out.split_once(" -->\n").map(|(_, b)| b), Some(want));
+}
+
 /// Issue #360: where a samehead/sametail port lies in no field of a record, C's
 /// `record_path` writes no box and the route uses the uninitialised `tend`/`hend` of
 /// `make_regular_edge` (or of the flat edge router), which hold the previous call's

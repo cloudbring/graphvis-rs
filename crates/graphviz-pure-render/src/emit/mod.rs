@@ -81,6 +81,9 @@ pub(crate) struct RunJob {
     /// Whether the text C writes straight into the output file is kept
     /// ([`Engine::write_output_file`]): only when there is one, in the CLI.
     pub output_file: bool,
+    /// The SVG is drawn for a raster format: the job has cairo's render features, without
+    /// `GVRENDER_DOES_MAPS` and `GVRENDER_DOES_TOOLTIPS`.
+    pub raster: bool,
 }
 
 /// Runs `emit_graph` over `m` with `eng` as job 0 without output file, returning the engine.
@@ -88,6 +91,7 @@ pub(crate) fn run<E: Engine>(m: &Model<'_>, eng: E) -> E {
     let opts = RunJob {
         job: Some(0),
         output_file: false,
+        raster: false,
     };
     run_job(m, eng, opts).0
 }
@@ -98,7 +102,10 @@ pub(crate) fn run_job<E: Engine>(m: &Model<'_>, eng: E, opts: RunJob) -> (E, Str
     let features = eng.features();
     let flags = order_flags(m);
     job::check_pagedir(m.root_attrs().nonempty("pagedir").unwrap_or("BL"));
-    let job = Job::new(m, features, flags);
+    let mut job = Job::new(m, features, flags);
+    if opts.raster {
+        job.flags &= !(job::GVRENDER_DOES_MAPS | job::GVRENDER_DOES_TOOLTIPS);
+    }
     let loadimage = opts
         .job
         .and_then(|k| LOADIMAGE.with(|l| l.borrow().get(&k).copied()));

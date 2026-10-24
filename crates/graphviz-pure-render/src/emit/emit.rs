@@ -929,7 +929,8 @@ impl<'a, E: Engine> Emitter<'a, E> {
             && anchored
             && let Some(st) = nd.attrs.nonempty("style")
         {
-            parse_style(st);
+            // `bool filled = isFilled(n)` (emit.c:1673), which only the map shape reads.
+            let _filled = parse_style(st).iter().any(|i| i.name == "filled");
         }
         let prev = self.set_scheme(nd.attrs.get("colorscheme"));
         self.eng.begin_node(&self.job);
