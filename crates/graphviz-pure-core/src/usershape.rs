@@ -84,6 +84,7 @@ pub fn begin_layout(imagepath: Option<&str>, shapefile_declared: bool, dpi: f64)
     };
     IMAGEPATH_ID.with(|p| p.set(id));
     LAYOUT_ID.with(|l| l.set(NEXT_IMAGEPATH_ID.fetch_add(1, Ordering::Relaxed)));
+    EPSF_NODES.with(|n| n.borrow_mut().clear());
     let path = imagepath.map(str::to_string).or_else(filepath);
     IMAGEPATH.with(|p| *p.borrow_mut() = path);
     SHAPEFILE_DECLARED.with(|d| d.set(shapefile_declared));
@@ -489,10 +490,11 @@ thread_local! {
     /// buffer that moved when it grew (past 24 bytes, then on reallocation), and the way
     /// freed keys steer the tree search.
     static EPSF_CONTENTS: RefCell<Vec<(EpsfKey, EpsfShape)>> = const { RefCell::new(Vec::new()) };
-    /// `epsf_init` of each node of the layout: C runs it once per node; the port's repeat
-    /// sizings (quiet passes, the renderers' model) get the same answer, and the first
-    /// sizing that reports prints its warnings.
-    static EPSF_NODES: RefCell<HashMap<(u64, String), EpsfInit>> = RefCell::new(HashMap::new());
+    /// `epsf_init` of each node of the layout, by node and shapefile: C runs it once per
+    /// node; the port's repeat sizings (quiet passes, the renderers' model) get the same
+    /// answer, and the first sizing that reports prints its warnings.
+    static EPSF_NODES: RefCell<HashMap<(String, Option<String>), EpsfInit>> =
+        RefCell::new(HashMap::new());
 }
 
 /// `dtmatch(EPSF_contents, str)`: keys compare by text (`strcmp`).
@@ -519,7 +521,7 @@ static N_EPSF_FILES: AtomicI32 = AtomicI32::new(0);
 /// node's `shapefile`, or `None`, with C's warning, when there is none; the node then keeps
 /// no shape information and is not drawn.
 pub fn epsf_init(shapefile: Option<&str>, node: &str) -> Option<EpsfShape> {
-    let key = (LAYOUT_ID.with(Cell::get), node.to_string());
+    let key = (node.to_string(), shapefile.map(str::to_string));
     let reporting = crate::diag::reporting();
     let (us, warnings) = EPSF_NODES.with(|n| {
         let mut n = n.borrow_mut();
@@ -684,13 +686,31 @@ mod tests {
         assert_eq!(epsf_init(Some(&ps), "b"), Some(a));
         let c = epsf_init(Some(&other), "c").unwrap();
         assert_ne!(c.macro_id, a.macro_id);
-        // a repeat sizing of a node gets the first answer, without reading anything
-        std::fs::write(&other, b"no box any more\n").unwrap();
-        assert_eq!(epsf_init(Some(&other), "c"), Some(c));
         // a later graph's lookup by its own string does not find the earlier graph's
         begin_layout(None, false, 0.0);
         let a2 = epsf_init(Some(&ps), "a").unwrap();
         assert_ne!(a2.macro_id, a.macro_id);
+    }
+
+    #[test]
+    fn epsf_nodes_are_looked_up_once_per_layout() {
+        let ps = scratch_file("g.ps", b"%%BoundingBox: 10 20 110 70\n");
+        let nobb = scratch_file("nobb.ps", b"%!PS\n");
+        let dir = std::path::Path::new(&ps)
+            .parent()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        // through imagepath every key is findPath's buffer, whose text the last lookup set
+        begin_layout(Some(&dir), false, 0.0);
+        assert_eq!(epsf_init(Some("nobb.ps"), "a"), None);
+        let b = epsf_init(Some("g.ps"), "b").unwrap();
+        // a's repeat sizing gets its first answer, not b's file under the buffer's key
+        assert_eq!(epsf_init(Some("nobb.ps"), "a"), None);
+        std::fs::write(&ps, b"no box any more\n").unwrap();
+        assert_eq!(epsf_init(Some("g.ps"), "b"), Some(b));
+        let _ = nobb;
+        begin_layout(None, false, 0.0);
     }
 
     #[test]

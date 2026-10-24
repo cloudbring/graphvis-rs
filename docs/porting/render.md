@@ -123,7 +123,9 @@ parsed input) matches C on 493 of 508 inputs (454 before).
   again under a new number, and with `imagepath` (or `--filepath`) a lookup finds the
   file last read under its path's text. Where C compares with freed memory (a path
   buffer that moved as it grew, keys of closed graphs steering the tree search) the
-  port does not follow it. Each node's file is looked up once per layout, as in C.
+  port does not follow it. Each node's file is looked up once per layout, as in C. The
+  port finds a buffer key whatever text the buffer then holds, where C's splay tree,
+  ordered by the text it held at insertion, can miss it (#380).
 - **Raster output.** The reference build has no `-Tpng`. The port rasterizes its SVG
   with resvg, which resolves no `<image>` (neither a file nor a `data:` URL), so a
   PNG shows no images; the warnings are the SVG job's.
