@@ -8060,6 +8060,31 @@ fn issue304_a_new_graph_attribute_gives_child_subgraphs_their_empty_value() {
 }
 "#,
         ),
+        (
+            // A subgraph opened again by name: its children are the first opening's.
+            "graph { subgraph cluster_a { subgraph cluster_b { x } } subgraph cluster_a { label=L } }",
+            r#"graph {
+	graph [bb="0,0,102,108.8"];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="8,8,94,100.8",
+			label=L,
+			lheight=0.23,
+			lp="51,88.4",
+			lwidth=0.12
+		];
+		subgraph cluster_b {
+			graph [bb="16,16,86,68",
+				label=""
+			];
+			x	[height=0.5,
+				pos="51,42",
+				width=0.75];
+		}
+	}
+}
+"#,
+        ),
     ] {
         let (out, err, ok) = run(&["-Tdot"], src);
         assert!(ok);

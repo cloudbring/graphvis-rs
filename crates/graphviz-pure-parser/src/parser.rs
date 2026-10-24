@@ -970,9 +970,11 @@ impl<'a> Parser<'a> {
             },
         );
         if gi != 0 && kind == DictKind::Graph {
+            // `agnewsym(g, sym->name, value, is_html, sym->id, …)`: the root symbol's id.
             self.dict_mut(gi, kind).insert(
                 name.to_string(),
                 graphviz_pure_core::AttrSym {
+                    id,
                     html,
                     ..Default::default()
                 },
