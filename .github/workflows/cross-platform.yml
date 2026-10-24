@@ -370,21 +370,25 @@ jobs:
           retention-days: 30
 
   # Nobody waits on a master run, so a platform that fails there opens an issue (macOS x86-64 is
-  # only tested here).
+  # only tested here), or comments on the one still open.
   report:
     name: Open an issue for a failed master run
     needs: [native, wasm, compare]
     if: ${{ failure() && github.event_name == 'push' && github.repository == 'graphviz-pure/graphviz-pure' }}
     runs-on: ubuntu-24.04
     permissions:
+      contents: read
       issues: write # open the issue that reports the failure
     steps:
-      - name: Open the issue
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Open or update the issue
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           COMMIT: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          gh issue create --label bug --title "Cross-platform failed on master at ${COMMIT:0:8}" \
-            --body "The post-merge cross-platform run failed: $RUN_URL. macOS x86-64 is tested only after the merge, so check it first."
+          scripts/ci-report-failure.sh "Cross-platform fails on master" bug \
+            "The post-merge cross-platform run at $COMMIT failed: $RUN_URL. macOS x86-64 is tested only after the merge, so check it first."

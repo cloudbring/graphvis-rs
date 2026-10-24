@@ -230,6 +230,8 @@ def trend_svg(fb):
 
 def jobs_svg(jobs):
     rows = [j for j in jobs if j["p50"] >= 0.5]
+    if not rows:
+        return '<p class="sub">No job runs in this window.</p>'
     W, rh, L = 900, 24, 300
     top = max(j["p50"] for j in rows) * 1.05
     g = []
@@ -249,6 +251,8 @@ def jobs_svg(jobs):
 
 def lead_svg(lt):
     rows = sorted(lt, key=lambda x: -x["total"])[:40]
+    if not rows:
+        return '<p class="sub">No pull request merged in this window.</p>'
     W, rh, L = 900, 14, 60
     top = max(x["total"] for x in rows)
     parts = [("ci", "var(--s1)", "CI running"), ("other", "var(--s2)", "no CI running (agent working, review)"),

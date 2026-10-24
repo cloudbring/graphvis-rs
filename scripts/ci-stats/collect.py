@@ -67,10 +67,11 @@ def fetch_jobs(run):
 def collect_runs(out, since):
     path = out / "runs.jsonl"
     cache = load(path)
-    # The API returns at most 1000 runs per query, so ask one day at a time.
+    # The API returns at most 1000 runs per query, so ask one day at a time. GitHub's
+    # created= days are UTC days.
     runs = []
     day = since
-    today = dt.date.today()
+    today = dt.datetime.now(dt.timezone.utc).date()
     while day <= today:
         runs += paged(f"repos/{REPO}/actions/runs?created={day.isoformat()}&per_page=100",
                       "workflow_runs")
@@ -88,10 +89,23 @@ def collect_runs(out, since):
           file=sys.stderr)
     with cf.ThreadPoolExecutor(8) as pool:
         keep += pool.map(fetch_jobs, todo)
-    keep.sort(key=lambda r: r["created_at"])
-    save(path, keep)
+    # Runs from before --since stay in the cache: a shorter window must not delete them.
+    for r in keep:
+        cache[r["id"]] = r
+    save(path, sorted(cache.values(), key=lambda r: r["created_at"]))
 
 
+ITEM_TYPES = """PULL_REQUEST_COMMIT, PULL_REQUEST_REVIEW, ADDED_TO_MERGE_QUEUE_EVENT,
+    REMOVED_FROM_MERGE_QUEUE_EVENT, MERGED_EVENT, READY_FOR_REVIEW_EVENT,
+    HEAD_REF_FORCE_PUSHED_EVENT"""
+ITEM_FIELDS = """
+    ... on PullRequestCommit { commit { oid committedDate pushedDate } }
+    ... on PullRequestReview { state submittedAt author { login } }
+    ... on AddedToMergeQueueEvent { createdAt }
+    ... on RemovedFromMergeQueueEvent { createdAt reason }
+    ... on MergedEvent { createdAt }
+    ... on ReadyForReviewEvent { createdAt }
+    ... on HeadRefForcePushedEvent { createdAt afterCommit { oid } }"""
 PR_QUERY = """
 query($q: String!, $after: String) {
   search(query: $q, type: ISSUE, first: 50, after: $after) {
@@ -100,23 +114,37 @@ query($q: String!, $after: String) {
       number title createdAt mergedAt headRefName author { login }
       additions deletions changedFiles
       closingIssuesReferences(first: 5) { nodes { number createdAt } }
-      timelineItems(first: 200, itemTypes: [PULL_REQUEST_COMMIT, PULL_REQUEST_REVIEW,
-          ADDED_TO_MERGE_QUEUE_EVENT, REMOVED_FROM_MERGE_QUEUE_EVENT, MERGED_EVENT,
-          READY_FOR_REVIEW_EVENT, HEAD_REF_FORCE_PUSHED_EVENT]) {
-        nodes {
-          __typename
-          ... on PullRequestCommit { commit { oid committedDate pushedDate } }
-          ... on PullRequestReview { state submittedAt author { login } }
-          ... on AddedToMergeQueueEvent { createdAt }
-          ... on RemovedFromMergeQueueEvent { createdAt reason }
-          ... on MergedEvent { createdAt }
-          ... on ReadyForReviewEvent { createdAt }
-          ... on HeadRefForcePushedEvent { createdAt afterCommit { oid } }
-        }
+      timelineItems(first: 100, itemTypes: [""" + ITEM_TYPES + """]) {
+        pageInfo { hasNextPage endCursor }
+        nodes { __typename """ + ITEM_FIELDS + """ }
       }
     } }
   }
 }"""
+
+
+TIMELINE_QUERY = """
+query($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) { pullRequest(number: $number) {
+    timelineItems(first: 100, after: $after, itemTypes: [""" + ITEM_TYPES + """]) {
+      pageInfo { hasNextPage endCursor }
+      nodes { __typename """ + ITEM_FIELDS + """ }
+    }
+  } }
+}"""
+
+
+def timeline_rest(owner, name, number, after):
+    """The timeline items after the first page of a long pull request."""
+    items = []
+    while after:
+        page = json.loads(gh("api", "graphql", "-f", f"query={TIMELINE_QUERY}",
+                             "-f", f"owner={owner}", "-f", f"name={name}",
+                             "-F", f"number={number}", "-f", f"after={after}"))
+        page = page["data"]["repository"]["pullRequest"]["timelineItems"]
+        items += page["nodes"]
+        after = page["pageInfo"]["endCursor"] if page["pageInfo"]["hasNextPage"] else None
+    return items
 
 
 def collect_prs(out, since):
@@ -132,7 +160,11 @@ def collect_prs(out, since):
         data = json.loads(gh(*args))["data"]["search"]
         for n in data["nodes"]:
             n["id"] = n["number"]
-            n["timeline"] = n.pop("timelineItems")["nodes"]
+            items = n.pop("timelineItems")
+            n["timeline"] = items["nodes"]
+            if items["pageInfo"]["hasNextPage"]:
+                n["timeline"] += timeline_rest(owner, name, n["number"],
+                                               items["pageInfo"]["endCursor"])
             n["issues"] = n.pop("closingIssuesReferences")["nodes"]
             prs.append(n)
         if not data["pageInfo"]["hasNextPage"]:

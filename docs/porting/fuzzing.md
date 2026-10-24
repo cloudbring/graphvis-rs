@@ -155,14 +155,14 @@ In CI, `.github/workflows/fuzz.yml` runs the targets with
 [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/), using
 `.clusterfuzzlite/build.sh` to build them in the OSS-Fuzz Rust image:
 
-* Each push to master that touches `crates/`, `fuzz/` or `Cargo.lock` builds the targets
-  and fuzzes each for 60 s. A crash opens an issue labelled `crash`; the commits since the
-  previous master run are the suspects. Pull requests are not fuzzed in CI, so the agents and
-  contributors fixing bugs don't wait 25 minutes per push for a job that rarely fails; fuzz
-  locally (above) when a change touches parsing or arithmetic.
-* A daily batch run fuzzes every target for 6 minutes, starting from the corpus of the
-  previous runs, and then prunes the corpus. The corpus, the crashes (minimised) and the
-  builds are kept as artifacts of the workflow.
+* Every 6 hours a batch run fuzzes every target for 6 minutes, starting from the corpus of
+  the previous runs, and then prunes the corpus. The corpus, the crashes (minimised) and the
+  builds are kept as artifacts of the workflow. A failed run opens an issue, labelled `crash`
+  when it found one, or comments on the one still open; the commits merged since the previous
+  run are the suspects.
+* Pull requests are not fuzzed in CI, so the agents and contributors fixing bugs don't wait 25
+  minutes per push for a job that rarely fails. Fuzz locally (above) when a change touches
+  parsing or arithmetic.
 
 A crash becomes an issue labelled `crash`, plus the engine label, with the minimised
 input as a `.gv` reproducer. The fix adds that reproducer to the corpus, as for a

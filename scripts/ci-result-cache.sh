@@ -52,6 +52,7 @@ ignored=(
   scripts/bump-version.sh
   scripts/c-oracle-linux
   scripts/ci-stats
+  scripts/ci-report-failure.sh
   'scripts/*-probe.c'
   scripts/cargo-locked.sh
   scripts/crates-to-publish.py
