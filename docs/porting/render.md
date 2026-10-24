@@ -118,7 +118,12 @@ parsed input) matches C on 493 of 508 inputs (454 before).
   `plain`, `canon`, `json`), and for `-Tjson` once more from its xdot job, which C
   writes to the standard output (`GraphJobs::take_stdout`). It is not PostScript
   anywhere but C's `-Tps`, which the port does not have; the line is kept so that
-  every output matches C byte for byte.
+  every output matches C byte for byte. The files are numbered as `user_init` keys
+  `EPSF_contents`, by the pointer `safefile` returned: a later graph reads a file
+  again under a new number, and with `imagepath` (or `--filepath`) a lookup finds the
+  file last read under its path's text. Where C compares with freed memory (a path
+  buffer that moved as it grew, keys of closed graphs steering the tree search) the
+  port does not follow it. Each node's file is looked up once per layout, as in C.
 - **Raster output.** The reference build has no `-Tpng`. The port rasterizes its SVG
   with resvg, which resolves no `<image>` (neither a file nor a `data:` URL), so a
   PNG shows no images; the warnings are the SVG job's.

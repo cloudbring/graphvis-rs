@@ -7242,6 +7242,42 @@ fn epsf_files_are_found_again_as_c_finds_them() {
         "{dot}"
     );
     assert!(dot.contains("graph [bb=\"0,0,218,50\""), "{dot}");
+    let shape_calls = |dot: &str| -> Vec<String> {
+        dot.lines()
+            .filter(|l| l.contains("newpath user_shape_"))
+            .map(str::to_string)
+            .collect()
+    };
+    // C reads each node's file once: a file without a box is reported, and stored nowhere
+    // (the port's repeat sizings must not find it later)
+    let src = "digraph { imagepath=\".\"; a [shape=epsf shapefile=\"notes.txt\"]; \
+               c [shape=epsf shapefile=\"small.eps\"] }";
+    let (dot, err, _) = run_in(&dir, &["-Tdot"], src);
+    assert_eq!(
+        err,
+        "Warning: BoundingBox not found in epsf file ./notes.txt\n"
+    );
+    assert_eq!(shape_calls(&dot), ["72 3 translate newpath user_shape_0"]);
+    // keys compare by text: an absolute name finds the file the buffer read, and the
+    // buffer's lookup finds the file last read under its text
+    let d = dir.display();
+    let src = format!(
+        "digraph {{ imagepath=\"{d}\"; a [shape=epsf shapefile=\"box.eps\"]; \
+         b [shape=epsf shapefile=\"{d}/box.eps\"]; c [shape=epsf shapefile=\"{d}/small.eps\"]; \
+         e [shape=epsf shapefile=\"small.eps\"] }}"
+    );
+    let (dot, _, _) = run_in(&dir, &["-Tsvg", "-Tdot"], &src);
+    let calls = shape_calls(&dot);
+    assert_eq!(
+        calls[4..],
+        [
+            "-10 -20 translate newpath user_shape_0",
+            "108 -20 translate newpath user_shape_0",
+            "236 10 translate newpath user_shape_1",
+            "274 10 translate newpath user_shape_1"
+        ],
+        "{dot}"
+    );
 }
 
 // Issue #347: the size readers read headers only. Odd headers give what C reads, and a

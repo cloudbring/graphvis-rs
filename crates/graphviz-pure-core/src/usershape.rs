@@ -471,33 +471,44 @@ pub struct EpsfShape {
 /// The key `user_init` stores a file under: the pointer `safefile` returned.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum EpsfKey {
-    /// `findPath`'s static buffer, whose text is always that of the lookup made through it.
+    /// `findPath`'s static buffer: its text is that of the last path it built.
     Static,
     /// A string of the graph (laid out as [`LAYOUT_ID`]), freed with it.
     Graph(u64, String),
 }
 
+/// What `epsf_init` gave a node, with the warnings not yet printed.
+type EpsfInit = (Option<EpsfShape>, Vec<String>);
+
 thread_local! {
-    /// `EPSF_contents`, in insertion order. C never clears it, but its keys are pointers:
-    /// a key that is a graph's string matches no lookup once that graph is closed (C then
-    /// compares with freed memory), and every key that is `findPath`'s buffer matches every
-    /// lookup made through it (C compares the buffer with itself), so the first file read
-    /// that way answers for all of them.
+    /// `EPSF_contents`, the most recently inserted or matched entry last (the root of C's
+    /// splay tree). C never clears it, but its keys are pointers: a key that is a graph's
+    /// string matches no lookup once that graph is closed, and a key that is `findPath`'s
+    /// buffer has the text of the last path built there, so a lookup through the buffer
+    /// matches it whatever file it names. Not modelled, as C reads freed memory there: a
+    /// buffer that moved when it grew (past 24 bytes, then on reallocation), and the way
+    /// freed keys steer the tree search.
     static EPSF_CONTENTS: RefCell<Vec<(EpsfKey, EpsfShape)>> = const { RefCell::new(Vec::new()) };
+    /// `epsf_init` of each node of the layout: C runs it once per node; the port's repeat
+    /// sizings (quiet passes, the renderers' model) get the same answer, and the first
+    /// sizing that reports prints its warnings.
+    static EPSF_NODES: RefCell<HashMap<(u64, String), EpsfInit>> = RefCell::new(HashMap::new());
 }
 
-/// `dtmatch(EPSF_contents, str)`.
-fn epsf_lookup(path: &str, via_buffer: bool) -> Option<EpsfShape> {
+/// `dtmatch(EPSF_contents, str)`: keys compare by text (`strcmp`).
+fn epsf_lookup(path: &str) -> Option<EpsfShape> {
     let layout = LAYOUT_ID.with(Cell::get);
     let buf = FIND_PATH_BUF.with(|b| b.borrow().clone());
     EPSF_CONTENTS.with(|c| {
-        c.borrow()
-            .iter()
-            .find(|(k, _)| match k {
-                EpsfKey::Static => via_buffer || buf == path,
-                EpsfKey::Graph(g, p) => !via_buffer && *g == layout && p == path,
-            })
-            .map(|(_, us)| *us)
+        let mut c = c.borrow_mut();
+        let i = c.iter().rposition(|(k, _)| match k {
+            EpsfKey::Static => buf == path,
+            EpsfKey::Graph(g, p) => *g == layout && p == path,
+        })?;
+        let e = c.remove(i);
+        let us = e.1;
+        c.push(e);
+        Some(us)
     })
 }
 
@@ -508,23 +519,43 @@ static N_EPSF_FILES: AtomicI32 = AtomicI32::new(0);
 /// node's `shapefile`, or `None`, with C's warning, when there is none; the node then keeps
 /// no shape information and is not drawn.
 pub fn epsf_init(shapefile: Option<&str>, node: &str) -> Option<EpsfShape> {
+    let key = (LAYOUT_ID.with(Cell::get), node.to_string());
+    let reporting = crate::diag::reporting();
+    let (us, warnings) = EPSF_NODES.with(|n| {
+        let mut n = n.borrow_mut();
+        let entry = n.entry(key).or_insert_with(|| user_init(shapefile, node));
+        let warnings = if reporting {
+            std::mem::take(&mut entry.1)
+        } else {
+            Vec::new()
+        };
+        (entry.0, warnings)
+    });
+    if reporting && server_name().is_some() {
+        // safefile's one warning, if a quiet sizing made the first call
+        let _ = shapefile.map(safefile);
+    }
+    for m in warnings {
+        agwarningf(&m);
+    }
+    us
+}
+
+/// `epsf_init`'s `safefile` and `user_init`, with the warnings they give.
+fn user_init(shapefile: Option<&str>, node: &str) -> EpsfInit {
     let Some((path, via_buffer)) = shapefile.and_then(safefile_from) else {
-        agwarningf(&format!(
-            "shapefile not set or not found for epsf node {node}\n"
-        ));
-        return None;
+        let m = format!("shapefile not set or not found for epsf node {node}\n");
+        return (None, vec![m]);
     };
-    // user_init
-    if let Some(us) = epsf_lookup(&path, via_buffer) {
-        return Some(us);
+    if let Some(us) = epsf_lookup(&path) {
+        return (Some(us), Vec::new());
     }
     let Ok(mut f) = open(&path) else {
-        agwarningf(&format!("couldn't open epsf file {path}\n"));
-        return None;
+        return (None, vec![format!("couldn't open epsf file {path}\n")]);
     };
     let Some(bb) = bounding_box(&f.all()) else {
-        agwarningf(&format!("BoundingBox not found in epsf file {path}\n"));
-        return None;
+        let m = format!("BoundingBox not found in epsf file {path}\n");
+        return (None, vec![m]);
     };
     let us = EpsfShape {
         bb,
@@ -536,7 +567,7 @@ pub fn epsf_init(shapefile: Option<&str>, node: &str) -> Option<EpsfShape> {
         EpsfKey::Graph(LAYOUT_ID.with(Cell::get), path)
     };
     EPSF_CONTENTS.with(|c| c.borrow_mut().push((key, us)));
-    Some(us)
+    (Some(us), Vec::new())
 }
 
 #[cfg(test)]
@@ -653,6 +684,13 @@ mod tests {
         assert_eq!(epsf_init(Some(&ps), "b"), Some(a));
         let c = epsf_init(Some(&other), "c").unwrap();
         assert_ne!(c.macro_id, a.macro_id);
+        // a repeat sizing of a node gets the first answer, without reading anything
+        std::fs::write(&other, b"no box any more\n").unwrap();
+        assert_eq!(epsf_init(Some(&other), "c"), Some(c));
+        // a later graph's lookup by its own string does not find the earlier graph's
+        begin_layout(None, false, 0.0);
+        let a2 = epsf_init(Some(&ps), "a").unwrap();
+        assert_ne!(a2.macro_id, a.macro_id);
     }
 
     #[test]
