@@ -249,6 +249,9 @@ pub struct GraphLayout {
     pub no_edge_init: bool,
     /// Root only: `GD_odim(g)`, the output dimension neato and sfdp set from `dimen`.
     pub odim: usize,
+    /// Root only: the image files and epsf shapes the layout found, which the renderers draw.
+    #[serde(default)]
+    pub usershapes: crate::usershape::UserShapes,
 }
 
 /// A cgraph object, as [`Graph::agnameof`] takes it: the root graph, a subgraph (by index)

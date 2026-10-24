@@ -12,7 +12,7 @@ use graphviz_pure_core::font::strdup_and_subst_obj;
 use graphviz_pure_core::{BoundingBox, Point};
 use graphviz_pure_geom::html_label::{
     BORDER_BOTTOM, BORDER_LEFT, BORDER_MASK, BORDER_RIGHT, BORDER_TOP, HtmlCellData, HtmlContent,
-    HtmlData, HtmlLabel, HtmlTbl, HtmlText,
+    HtmlData, HtmlImage, HtmlLabel, HtmlTbl, HtmlText,
 };
 
 struct Env {
@@ -21,6 +21,8 @@ struct Env {
     color: String,
     size: f64,
     objid: Option<String>,
+    /// `env.imgscale`: the object's `imagescale`, `false` when unset or empty.
+    imgscale: String,
 }
 
 struct Saved {
@@ -91,6 +93,11 @@ impl<E: Engine> Emitter<'_, E> {
             color: tp.fontcolor.clone(),
             size: tp.fontsize,
             objid: parent.id.clone(),
+            imgscale: self
+                .obj_attrs(kind)
+                .nonempty("imagescale")
+                .unwrap_or("false")
+                .to_string(),
         };
         match lp {
             HtmlLabel::Table(tbl) => {
@@ -106,6 +113,23 @@ impl<E: Engine> Emitter<'_, E> {
             HtmlLabel::Text(t) => self.emit_html_txt(t, &env),
         }
         self.job.pop_obj();
+    }
+
+    /// `emit_html_img`: the image fills its box, scaled by its `SCALE` or the object's
+    /// `imagescale`.
+    fn emit_html_img(&mut self, cp: &HtmlImage, env: &Env) {
+        let bb = offset(cp.bx, env.pos);
+        let a = [
+            bb.ur,
+            Point::new(bb.ll.x, bb.ur.y),
+            bb.ll,
+            Point::new(bb.ur.x, bb.ll.y),
+        ];
+        let scale = cp.scale.as_deref().unwrap_or(&env.imgscale);
+        // the parser gives every IMG a non-empty SRC
+        if let Some(src) = cp.src.as_deref().filter(|s| !s.is_empty()) {
+            self.usershape(src, &a, true, scale, "mc");
+        }
     }
 
     fn emit_html_txt(&mut self, tp: &HtmlText, env: &Env) {
@@ -478,7 +502,7 @@ impl<E: Engine> Emitter<'_, E> {
             }
             match &cp.child {
                 HtmlContent::Table(t) => self.emit_html_tbl(t, env),
-                HtmlContent::Image(_) => {}
+                HtmlContent::Image(img) => self.emit_html_img(img, env),
                 HtmlContent::Text(t) => self.emit_html_txt(t, env),
             }
         }

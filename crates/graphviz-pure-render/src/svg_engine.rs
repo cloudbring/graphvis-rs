@@ -3,12 +3,13 @@
 use crate::emit::job::{
     Engine, Features, GRADIENT, GVDEVICE_DOES_TRUECOLOR, GVRENDER_DOES_LABELS, GVRENDER_DOES_MAPS,
     GVRENDER_DOES_TARGETS, GVRENDER_DOES_TOOLTIPS, GVRENDER_DOES_TRANSFORM, GVRENDER_Y_GOES_DOWN,
-    GvColor, Job, ObjKind, PENWIDTH_NORMAL, Pen, RGRADIENT,
+    GvColor, Job, LoadImage, ObjKind, PENWIDTH_NORMAL, Pen, RGRADIENT,
 };
 use crate::emit::model::TextSpan;
 use crate::emit::num::{fmt_f6, fmt_g, gvdouble};
-use graphviz_pure_core::Point;
 use graphviz_pure_core::math;
+use graphviz_pure_core::usershape::UserShape;
+use graphviz_pure_core::{BoundingBox, Point};
 use graphviz_pure_geom::html_label::{
     HTML_BF, HTML_IF, HTML_OL, HTML_S, HTML_SUB, HTML_SUP, HTML_UL,
 };
@@ -869,5 +870,55 @@ impl Engine for SvgEngine {
         self.put("<!-- ");
         self.put(&xml(s));
         self.put(" -->\n");
+    }
+
+    fn render_type(&self) -> &str {
+        "svg"
+    }
+
+    /// `core_loadimage_svg` (`plugin/core/gvloadimage_core.c`): an `<image>` element for
+    /// the file, its name as it is.
+    fn loadimage(&mut self, j: &Job, li: LoadImage, us: &UserShape, b: BoundingBox) {
+        if li != LoadImage::Svg {
+            return;
+        }
+        let width = b.ur.x - b.ll.x;
+        let height = b.ur.y - b.ll.y;
+        let originx = (b.ur.x + b.ll.x - width) / 2.0;
+        let originy = (b.ur.y + b.ll.y + height) / 2.0;
+        let g = |v: f64| fmt_g(v, 6);
+        self.put("<image xlink:href=\"");
+        self.put(&us.name);
+        if j.rotation != 0 {
+            // C's own FIXME: the size is exchanged and the position is not rotated
+            self.put(&format!(
+                "\" width=\"{}px\" height=\"{}px\" preserveAspectRatio=\"xMidYMid meet\" x=\"{}\" y=\"{}\"",
+                g(height),
+                g(width),
+                g(originx),
+                g(-originy)
+            ));
+            self.put(&format!(
+                " transform=\"rotate({} {} {})\"",
+                j.rotation,
+                g(originx),
+                g(-originy)
+            ));
+        } else {
+            self.put(&format!(
+                "\" width=\"{}px\" height=\"{}px\" preserveAspectRatio=\"xMinYMin meet\" x=\"{}\" y=\"{}\"",
+                g(width),
+                g(height),
+                g(originx),
+                g(-originy)
+            ));
+        }
+        self.put("/>\n");
+    }
+
+    /// The output file gets the text where the SVG has got to.
+    fn write_output_file(&mut self, s: &str) -> bool {
+        self.put(s);
+        true
     }
 }

@@ -87,11 +87,60 @@ parsed input) matches C on 493 of 508 inputs (454 before).
 - HTML cell `STYLE="dashed"` borders: C's `xdot_style` walks past the end of a
   one-element style list and prints adjacent string literals (undefined
   behaviour); not reproduced (`tests/fuzz-open/034-html-cell-dashed-style-overread`).
-- Images (`image=`, `shapefile=`, `<IMG>`) are never loaded; C draws them only
-  when the file exists.
+- `-Tpng` and `-Tjpg` draw no images (see [Images](#images)).
 - The SVG generator comment names graphviz-pure.
 - Gradient and HTML anchor ids are numbered per `render_dot_all` call, like C's
   process-wide statics for a single invocation.
+
+## Images
+
+`image=`, `shapefile=` (`shape=custom`), HTML `<IMG>` and `shape=epsf` follow
+`lib/gvc/gvusershape.c`, `lib/gvc/gvrender.c` and `plugin/core/gvloadimage_core.c`
+(`graphviz_pure_core::usershape`, `emit/usershape.rs`):
+
+- **Sizes.** `imagetype` classifies the file by its first 20 bytes and the `*_size`
+  readers read the size from the header only (no image is decoded): PNG, GIF, JPEG,
+  BMP, ICO, WEBP, SVG (`width`/`height` with units, else the `viewBox`), PostScript
+  (`%%BoundingBox`, at 72 dpi) and PDF (`/MediaBox`). A size in pixels is converted
+  at the graph's `dpi` (96 below 1) when the node or cell is sized, and at the job's
+  (72 unless `dpi` is set) when it is drawn. Files are kept by name for the run, as
+  `ImageDict` keeps them, until a graph has its own `imagepath`. Where C asserts on an
+  SVG size outside `0..=INT_MAX` (it aborts), the port takes 0.
+- **State.** What C keeps for its process (`ImageDict`, `EPSF_contents` and
+  `N_EPSF_files`, the `UserShape` list, `safefile`'s one warning) the port keeps for a
+  run: the CLI, or one top-level call of the library (`reset_render_state`), per
+  thread. The layout leaves what it found on the graph (`GraphLayout::usershapes`: the
+  graph's `imagepath` and `dpi`, the files it loaded, each epsf node's answer), and the
+  renderers draw from that (`usershape::rendering`), whatever was laid out since and on
+  whichever thread they run.
+- **Drawing.** The plugins are those of the reference build (`GVBINDIR` with the core
+  plugins only): `-Tsvg` writes an `<image>` element for PNG, GIF, JPEG and SVG files,
+  `-Txdot` (and the xdot job of `-Tjson`) an `I` operation for those and PostScript,
+  and the `dot` formats draw nothing. For any other pair C warns
+  `No loadimage plugin for "TYPE:RENDERER"`, and then draws with the plugin the job
+  selected last, which the port reproduces (each `-T` job keeps its own from graph to
+  graph, `GraphJobs::render_as`).
+- **`shape=epsf`.** `epsf_gencode` writes `X Y translate newpath user_shape_N` straight
+  into the output file whatever the format, and so does the CLI (the library's output is
+  the writer's document alone, `GraphJobs::write_output_file_text`): inside the node's
+  group in `-Tsvg`, before the graph in the formats written at the end (`dot`, `xdot`,
+  `plain`, `canon`, `json`), and for `-Tjson` once more from its xdot job, which C
+  writes to the standard output (`GraphJobs::take_stdout`). It is not PostScript
+  anywhere but C's `-Tps`, which the port does not have; the line is kept so that
+  every output matches C byte for byte. The files are numbered as `user_init` keys
+  `EPSF_contents`, by the pointer `safefile` returned: a later graph reads a file
+  again under a new number, and with `imagepath` (or `--filepath`) a lookup finds the
+  file last read under its path's text. Where C compares with freed memory (a path
+  buffer that moved as it grew, keys of closed graphs steering the tree search) the
+  port does not follow it. Each node's file is looked up once per layout, as in C. The
+  port finds a buffer key whatever text the buffer then holds, where C's splay tree,
+  ordered by the text it held at insertion, can miss it (#380).
+- **Raster output.** The reference build has no `-Tpng`. The port rasterizes its SVG
+  with resvg, which resolves no `<image>` (neither a file nor a `data:` URL), so a
+  PNG shows no images; the warnings are the SVG job's.
+- **WASM** has no filesystem: every file is missing, and is reported as C reports a
+  file that does not exist (`No such file or directory while opening NAME`), so no
+  node takes an image's size and no image is drawn.
 
 ## Charset
 

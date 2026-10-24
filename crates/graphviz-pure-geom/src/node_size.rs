@@ -341,8 +341,10 @@ pub struct NodeGeometry {
     /// `ND_shape_info` for records: field tree positioned around `(0, 0)`.
     pub record: Option<RecordField>,
     /// `ND_shape_info` for `epsf`: set only when the `shapefile` loaded (`epsf_t.offset`,
-    /// in points). Without it, `epsf_gencode` draws nothing.
-    pub epsf: Option<Point>,
+    /// in points, and `macro_id`). Without it, `epsf_gencode` draws nothing.
+    pub epsf: Option<(Point, i32)>,
+    /// `ND_shape(n)->usershape`: the shape is `custom` (a `shapefile`, or the name).
+    pub usershape: bool,
 }
 
 impl NodeGeometry {
@@ -553,6 +555,7 @@ fn node_geometry_measured(node: &NodeData, env: &NodeSizeEnv<'_>) -> NodeGeometr
         polygon: None,
         record: None,
         epsf: None,
+        usershape,
     };
     match init {
         ShapeInit::Poly => {
@@ -915,18 +918,19 @@ fn pad_dimen(attrs: &AttrMap, mut dimen: Point, clamp: bool) -> Point {
 /// information.
 fn epsf_init(node: &NodeData, geom: &mut NodeGeometry) {
     let sfile = node.attrs.get("shapefile").map(String::as_str);
-    let Some([lx, ly, ux, uy]) = usershape::epsf_bounding_box(sfile, &node.name) else {
+    let Some(us) = usershape::epsf_init(sfile, &node.name) else {
         return;
     };
+    let [lx, ly, ux, uy] = us.bb;
     let dx = f64::from(ux) - f64::from(lx);
     let dy = f64::from(uy) - f64::from(ly);
     geom.width = ps2inch(dx);
     geom.height = ps2inch(dy);
     geom.outline_width = geom.width;
     geom.outline_height = geom.height;
-    geom.epsf = Some(Point::new(
-        -f64::from(lx) - dx / 2.0,
-        -f64::from(ly) - dy / 2.0,
+    geom.epsf = Some((
+        Point::new(-f64::from(lx) - dx / 2.0, -f64::from(ly) - dy / 2.0),
+        us.macro_id,
     ));
 }
 
@@ -990,28 +994,38 @@ fn poly_init(
         dimen.y = quant(dimen.y, q);
     }
 
-    // The port reads no image sizes: an image that loads keeps imagesize (0, 0). A file C
-    // cannot load is reported as C does.
-    let imagesize = Point::new(0.0, 0.0);
-    if usershape {
-        // custom requires a shapefile
-        let sfile = usershape::agget_shapefile(attrs.get("shapefile").map(String::as_str));
-        if !usershape::usershape_loads(sfile) && graphviz_pure_core::diag::reporting() {
-            graphviz_pure_core::diag::agwarningf(&format!(
-                "No or improper shapefile=\"{}\" for node \"{}\"\n",
-                sfile.unwrap_or("<nil>"),
-                node.name
-            ));
+    // `gvusershape_size`, plus some fixed padding; a file C cannot load is reported, and
+    // keeps imagesize (0, 0)
+    let image = |sfile: Option<&str>, attr: &str| {
+        let sz = usershape::gvusershape_size(sfile);
+        if sz == (-1, -1) {
+            if graphviz_pure_core::diag::reporting() {
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "No or improper {attr}=\"{}\" for node \"{}\"\n",
+                    sfile.unwrap_or("<nil>"),
+                    node.name
+                ));
+            }
+            Point::new(0.0, 0.0)
+        } else {
+            // `imagesize` is a `point`: the padding is an int sum
+            Point::new(
+                f64::from(sz.0.wrapping_add(2)),
+                f64::from(sz.1.wrapping_add(2)),
+            )
         }
-    } else if let Some(sfile) = attrs.get("image").filter(|f| !f.is_empty())
-        && !usershape::usershape_loads(Some(sfile))
-        && graphviz_pure_core::diag::reporting()
-    {
-        graphviz_pure_core::diag::agwarningf(&format!(
-            "No or improper image=\"{sfile}\" for node \"{}\"\n",
-            node.name
-        ));
-    }
+    };
+    let imagesize = if usershape {
+        // custom requires a shapefile
+        image(
+            usershape::agget_shapefile(attrs.get("shapefile").map(String::as_str)),
+            "shapefile",
+        )
+    } else if let Some(sfile) = attrs.get("image").filter(|f| !f.is_empty()) {
+        image(Some(sfile), "image")
+    } else {
+        Point::new(0.0, 0.0)
+    };
     let mut bb = Point::new(dimen.x.max(imagesize.x), dimen.y.max(imagesize.y));
 
     if sides <= 2 && (!is_exactly_zero(distortion) || !is_exactly_zero(skew)) {

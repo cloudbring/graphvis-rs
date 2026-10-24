@@ -13,6 +13,10 @@
 //! the port's text measurement falls back to Times. No system font is read, so a PNG is the same
 //! on every machine.
 //!
+//! Images (`image`, `shapefile`, `<IMG>`) are not drawn: the SVG's `<image>` elements are
+//! left out, and no file is read. The C reference build has no raster output to draw them
+//! with, and a C build with cairo loads them with plugins the port does not have.
+//!
 //! Pixel size follows Graphviz: without a `dpi` (or `resolution`) attribute, raster output is
 //! at 96 dpi (1pt = 4/3 px); with one, the SVG is already scaled to that resolution and is
 //! rasterized at one pixel per point.
@@ -119,6 +123,11 @@ pub fn rasterize(svg: &str, format: RasterFormat, explicit_dpi: bool) -> Result<
     let opt = usvg::Options {
         fontdb: fontdb(),
         font_family: "Tinos".to_string(),
+        // no `<image>` is resolved: neither a file nor a `data:` URL
+        image_href_resolver: usvg::ImageHrefResolver {
+            resolve_data: Box::new(|_, _, _| None),
+            resolve_string: Box::new(|_, _| None),
+        },
         ..usvg::Options::default()
     };
     let tree = usvg::Tree::from_str(svg, &opt).map_err(|e| format!("rasterizing the SVG: {e}"))?;
@@ -199,6 +208,36 @@ mod tests {
             };
             assert!(db.query(&q).is_some(), "{name}");
         }
+    }
+
+    // #347: an `<image>` the SVG writer wrote for `image=` is not drawn, nor its file read
+    // (resvg draws SVG images; it is built without raster-image decoding)
+    #[test]
+    fn images_are_not_drawn() {
+        const RED: &str = r#"<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>"#;
+        const RED64: &str = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSJyZWQiLz48L3N2Zz4=";
+        let with = |href: &str| {
+            SVG.replace(
+                "<ellipse",
+                &format!(
+                    "<image xlink:href=\"{href}\" width=\"54px\" height=\"36px\" preserveAspectRatio=\"none\" x=\"0\" y=\"-108\"/>\n<ellipse"
+                ),
+            )
+            .replace(
+                "xmlns=",
+                "xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=",
+            )
+        };
+        let plain = rasterize(SVG, RasterFormat::Png, false).unwrap();
+        let data = with(&format!("data:image/svg+xml;base64,{RED64}"));
+        assert_eq!(rasterize(&data, RasterFormat::Png, false).unwrap(), plain);
+        let dir = std::env::temp_dir().join(format!("gvp-raster-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("red.svg");
+        std::fs::write(&file, RED).unwrap();
+        let svg = with(&file.to_string_lossy());
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(rasterize(&svg, RasterFormat::Png, false).unwrap(), plain);
     }
 
     #[test]

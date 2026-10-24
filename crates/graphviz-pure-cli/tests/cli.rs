@@ -4525,7 +4525,8 @@ fn epsf_without_a_loadable_shapefile_draws_nothing() {
         let group = format!("<g id=\"{node}\" class=\"node\">\n<title>{title}</title>\n</g>\n");
         assert!(svg.contains(&group), "{svg}");
     }
-    // C also writes `134 -20 translate newpath user_shape_0` here; the port does not.
+    // (C also writes `134 -20 translate newpath user_shape_0` here, and so does the port:
+    // `epsf_writes_its_postscript_call_into_every_output_like_c`.)
     assert!(svg.contains(
         "<text xml:space=\"preserve\" text-anchor=\"middle\" x=\"194\" y=\"-20.8\" \
          font-family=\"Times,serif\" font-size=\"14.00\">c</text>"
@@ -7090,6 +7091,233 @@ fn issue290_later_graphs_continue_the_runs_random_state() {
         ["5.000000", "57.090927", "5.000000", "121.029893"],
         "{out}"
     );
+}
+
+// Issue #347: a file C can load is sized from its header (`gvusershape_size` and the
+// `*_size` readers in `lib/gvc/gvusershape.c`), and drawn by the loadimage plugin of the
+// output's renderer (`gvrender_usershape`, `gvloadimage`); C warns where there is none and
+// draws with the plugin it selected last. Expected output is C 16.1.0's.
+
+/// A scratch directory with a 40x20 PNG header, an EPS file whose `%%BoundingBox` is
+/// 100x50 and an SVG 2in wide whose `viewBox` gives its height, and a graph at 150 dpi
+/// that uses them through `image`, `<IMG>` and `shape=epsf`.
+fn image_files(name: &str) -> (PathBuf, &'static str) {
+    let dir = usershape_dir(name);
+    let mut png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR".to_vec();
+    png.extend(40u32.to_be_bytes());
+    png.extend(20u32.to_be_bytes());
+    png.extend([8, 2, 0, 0, 0, 0, 0, 0, 0]);
+    std::fs::write(dir.join("a.png"), png).unwrap();
+    std::fs::write(
+        dir.join("a.svg"),
+        "<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"2in\" \
+         viewBox=\"0 0 10 30\"/>\n",
+    )
+    .unwrap();
+    let src = "digraph { dpi=150; a [image=\"a.png\"]; b [image=\"box.eps\" imagescale=true]; \
+               c [label=<<TABLE><TR><TD><IMG SRC=\"a.svg\"/></TD></TR></TABLE>>]; \
+               d [shape=epsf shapefile=\"box.eps\"]; a -> b -> c -> d }";
+    (dir, src)
+}
+
+#[test]
+fn loadable_images_are_sized_and_drawn_like_c() {
+    let (dir, src) = image_files("i347-svg");
+    // svg has no loadimage plugin for PostScript: C warns and draws it with the png's
+    let (svg, err, code) = run_in(&dir, &["-Tsvg"], src);
+    assert_eq!(code, 0);
+    assert_eq!(err, "Warning: No loadimage plugin for \"ps:svg\"\n");
+    for image in [
+        "<image xlink:href=\"a.png\" width=\"19px\" height=\"9px\" \
+         preserveAspectRatio=\"xMinYMin meet\" x=\"62.6249\" y=\"-302.122\"/>\n",
+        "<image xlink:href=\"box.eps\" width=\"144.25px\" height=\"72.1249px\" \
+         preserveAspectRatio=\"xMinYMin meet\" x=\"0\" y=\"-242.915\"/>\n",
+        "<polygon fill=\"none\" stroke=\"black\" points=\"34.62,-100.04 34.62,-120.04 \
+         109.62,-120.04 109.62,-100.04 34.62,-100.04\"/>\n<image xlink:href=\"a.svg\" \
+         width=\"69px\" height=\"14px\" preserveAspectRatio=\"xMinYMin meet\" x=\"37.6249\" \
+         y=\"-117.042\"/>\n</g>\n",
+    ] {
+        assert!(svg.contains(image), "{image}\n{svg}");
+    }
+    // the sizes, at 150 dpi (PostScript is at 72), plus 2
+    let (xdot, err, _) = run_in(&dir, &["-Txdot"], src);
+    assert_eq!(err, "");
+    for op in [
+        "a\t[_draw_=\"c 7 -#000000 e 72.12 297.62 27 18 I 62.62 293.12 19 9 5 -a.png \",",
+        "e 72.12 206.85 72.12 36.77 I 0 170.79 144.25 72.12 7 -box.eps \",",
+        "109.62 120.04 109.62 100.04 I 37.62 103.04 69 14 5 -a.svg \",",
+        "height=1.0214,",
+        "height=0.66782,",
+        "width=1.9053];",
+    ] {
+        assert!(xdot.contains(op), "{op}\n{xdot}");
+    }
+    // json's own job has no loadimage plugin at all; its xdot job draws the images, and
+    // the json writer prints an image operation as an empty object
+    let (json, err, _) = run_in(&dir, &["-Tjson"], src);
+    assert_eq!(
+        err,
+        "Warning: No loadimage plugin for \"png:json\"\n\
+         Warning: No loadimage plugin for \"ps:json\"\n\
+         Warning: No loadimage plugin for \"svg:json\"\n"
+    );
+    assert!(
+        json.contains(
+            "\"rect\": [72.120,297.620,27.000,18.000]\n        },\n        {\n                  }\n"
+        ),
+        "{json}"
+    );
+}
+
+// Issue #347: `epsf_gencode` writes its PostScript call straight into the output file
+// (`fprintf(job->output_file, ...)`), whatever the format: inside the node's group in
+// -Tsvg, before the graph in the formats written at the end, and for -Tjson also from
+// the xdot job `json_begin_graph` runs, whose output is the standard output.
+#[test]
+fn epsf_writes_its_postscript_call_into_every_output_like_c() {
+    let (dir, src) = image_files("i347-epsf");
+    let line = "12.125 -20 translate newpath user_shape_0\n";
+    let (svg, _, _) = run_in(&dir, &["-Tsvg"], src);
+    assert!(
+        svg.contains(&format!("<title>d</title>\n{line}<text ")),
+        "{svg}"
+    );
+    for fmt in ["-Tdot", "-Txdot", "-Tplain", "-Tcanon", "-Tjson0"] {
+        let (out, _, _) = run_in(&dir, &[fmt], src);
+        assert!(
+            out.starts_with(line) && !out[1..].contains(line),
+            "{fmt}\n{out}"
+        );
+    }
+    let (json, _, _) = run_in(&dir, &["-Tjson"], src);
+    assert!(json.starts_with(&format!("{line}{line}{{\n")), "{json}");
+    let _ = std::fs::remove_file(dir.join("o.json"));
+    let (stdout, _, code) = run_in(&dir, &["-Tjson", "-oo.json"], src);
+    assert_eq!(code, 0);
+    assert_eq!(stdout, line);
+    let file = std::fs::read_to_string(dir.join("o.json")).unwrap();
+    assert!(file.starts_with(&format!("{line}{{\n")), "{file}");
+    // the macro number counts the files read, not the nodes
+    let src = "digraph { a [shape=epsf shapefile=\"box.eps\"]; b [shape=epsf shapefile=\"box.eps\"]; \
+               c [shape=epsf shapefile=\"./box.eps\"] }";
+    let (dot, _, _) = run_in(&dir, &["-Tdot"], src);
+    let calls: Vec<&str> = dot.lines().take(3).collect();
+    assert_eq!(
+        calls,
+        [
+            "-10 -20 translate newpath user_shape_0",
+            "108 -20 translate newpath user_shape_0",
+            "226 -20 translate newpath user_shape_1"
+        ],
+        "{dot}"
+    );
+}
+
+// Issue #347: `user_init` keys `EPSF_contents` by the pointer `safefile` returned. A
+// graph's own string no longer matches once the graph is closed, so a later graph reads
+// the file again under a new number; `findPath`'s static buffer matches every lookup made
+// through it, so with `imagepath` the first file read answers for every other.
+#[test]
+fn epsf_files_are_found_again_as_c_finds_them() {
+    let dir = usershape_dir("i347-epsf-keys");
+    std::fs::write(dir.join("small.eps"), "%%BoundingBox: 0 0 20 30\n").unwrap();
+    let src = "digraph A { a [shape=epsf shapefile=\"box.eps\"] }\n\
+               digraph B { b [shape=epsf shapefile=\"box.eps\"] }\n\
+               digraph C { imagepath=\".\"; c [shape=epsf shapefile=\"box.eps\"]; \
+               d [shape=epsf shapefile=\"small.eps\"] }\n";
+    let (dot, err, code) = run_in(&dir, &["-Tdot"], src);
+    assert_eq!((err.as_str(), code), ("", 0));
+    let calls: Vec<&str> = dot
+        .lines()
+        .filter(|l| l.ends_with(char::is_numeric) && l.contains("user_shape_"))
+        .collect();
+    assert_eq!(
+        calls,
+        [
+            "-10 -20 translate newpath user_shape_0",
+            "-10 -20 translate newpath user_shape_1",
+            "-10 -20 translate newpath user_shape_2",
+            "108 -20 translate newpath user_shape_2"
+        ],
+        "{dot}"
+    );
+    assert!(dot.contains("graph [bb=\"0,0,218,50\""), "{dot}");
+    let shape_calls = |dot: &str| -> Vec<String> {
+        dot.lines()
+            .filter(|l| l.contains("newpath user_shape_"))
+            .map(str::to_string)
+            .collect()
+    };
+    // C reads each node's file once: a file without a box is reported, and stored nowhere
+    // (the port's repeat sizings must not find it later)
+    let src = "digraph { imagepath=\".\"; a [shape=epsf shapefile=\"notes.txt\"]; \
+               c [shape=epsf shapefile=\"small.eps\"] }";
+    let (dot, err, _) = run_in(&dir, &["-Tdot"], src);
+    assert_eq!(
+        err,
+        "Warning: BoundingBox not found in epsf file ./notes.txt\n"
+    );
+    assert_eq!(shape_calls(&dot), ["72 3 translate newpath user_shape_0"]);
+    // keys compare by text: an absolute name finds the file the buffer read, and the
+    // buffer's lookup finds the file last read under its text (paths follow C's Unix rules,
+    // so the scratch directory is an absolute name only on Unix)
+    if !cfg!(unix) {
+        return;
+    }
+    let d = dir.display();
+    let src = format!(
+        "digraph {{ imagepath=\"{d}\"; a [shape=epsf shapefile=\"box.eps\"]; \
+         b [shape=epsf shapefile=\"{d}/box.eps\"]; c [shape=epsf shapefile=\"{d}/small.eps\"]; \
+         e [shape=epsf shapefile=\"small.eps\"] }}"
+    );
+    let (dot, _, _) = run_in(&dir, &["-Tsvg", "-Tdot"], &src);
+    let calls = shape_calls(&dot);
+    assert_eq!(
+        calls[4..],
+        [
+            "-10 -20 translate newpath user_shape_0",
+            "108 -20 translate newpath user_shape_0",
+            "236 10 translate newpath user_shape_1",
+            "274 10 translate newpath user_shape_1"
+        ],
+        "{dot}"
+    );
+}
+
+// Issue #347: the size readers read headers only. Odd headers give what C reads, and a
+// JPEG that ends before its frame header is warned about once, at its first sizing.
+#[test]
+fn image_headers_are_read_like_c() {
+    let dir = scratch("i347-headers");
+    let jpeg = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff";
+    std::fs::write(dir.join("t.jpg"), jpeg).unwrap();
+    let mut gif = b"GIF89a".to_vec();
+    gif.extend([30, 0, 15, 0]);
+    gif.extend([0; 10]);
+    std::fs::write(dir.join("a.gif"), gif).unwrap();
+    std::fs::write(
+        dir.join("m.pdf"),
+        "%PDF-1.4\n1 0 obj << /Type /Page /MediaBox [0 0 200.5 100] >> endobj\n",
+    )
+    .unwrap();
+    let src = "digraph { node [shape=box label=\"\" margin=0 width=0 height=0]; \
+               a [image=\"t.jpg\"]; b [image=\"t.jpg\"]; c [image=\"a.gif\"]; d [image=\"m.pdf\"] }";
+    let (dot, err, code) = run_in(&dir, &["-Tdot"], src);
+    assert_eq!(code, 0);
+    assert_eq!(
+        err,
+        "Warning: Parsing of \"t.jpg\" failed\n\
+         Warning: No loadimage plugin for \"pdf:dot\"\n"
+    );
+    for size in [
+        "height=0.027778,\n\t\timage=\"t.jpg\",",
+        "height=0.18056,\n\t\timage=\"a.gif\",",
+        "\t\twidth=0.33333];",
+        "height=1.0694,\n\t\timage=\"m.pdf\",",
+        "\t\twidth=2.1111];",
+    ] {
+        assert!(dot.contains(size), "{size}\n{dot}");
+    }
 }
 
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling

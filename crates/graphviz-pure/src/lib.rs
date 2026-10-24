@@ -121,18 +121,7 @@ pub fn render_svg_all_partial(
     // caller's, inside a `with_rand_state`).
     let err = in_rand_run(|| {
         for graph in graphs {
-            // GD_drawing(g)->dpi = late_double(dpi, late_double(resolution, 0, 0), 0) > 0.
-            let late_double = |k: &str, dflt: f64| match graph
-                .graph_attrs
-                .get(k)
-                .filter(|v| !v.is_empty())
-                .and_then(|v| graphviz_pure_core::strtod::strtod_rest(v))
-            {
-                Some((v, _)) if v < 0.0 => 0.0,
-                Some((v, _)) => v,
-                None => dflt,
-            };
-            let explicit_dpi = late_double("dpi", late_double("resolution", 0.0)) > 0.0;
+            let explicit_dpi = graphviz_pure_core::cnum::drawing_dpi(&graph.graph_attrs) > 0.0;
             match render_parsed(graph, engine, OutputFormat::Svg, "svg", options) {
                 Ok(s) => out.push((s, explicit_dpi)),
                 Err(e) => return Some(e),
@@ -478,5 +467,116 @@ mod tests {
                 .unwrap_or_else(|e| panic!("Failed rendering json0 for {}: {e}", path.display()));
             assert!(j0.contains("\"bb\":"), "Missing bb in {}", path.display());
         }
+    }
+
+    /// A scratch directory with a 40x20 PNG header and an EPS file whose `%%BoundingBox` is
+    /// 100x50, and the paths of the two.
+    fn image_dir(name: &str) -> (PathBuf, PathBuf) {
+        let dir = std::env::temp_dir().join(format!("gvp-{name}-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        write_png(&dir.join("a.png"), 40, 20);
+        fs::write(dir.join("box.eps"), "%%BoundingBox: 10 20 110 70\n").unwrap();
+        (dir.join("a.png"), dir.join("box.eps"))
+    }
+
+    fn write_png(path: &std::path::Path, w: u32, h: u32) {
+        let mut png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR".to_vec();
+        png.extend(w.to_be_bytes());
+        png.extend(h.to_be_bytes());
+        png.extend([8, 2, 0, 0, 0, 0, 0, 0, 0]);
+        fs::write(path, png).unwrap();
+    }
+
+    /// `-Tdot` of the epsf graph `src` as the CLI writes it, with C's PostScript call, in a
+    /// run of its own.
+    fn epsf_run(src: &str) -> String {
+        graphviz_pure_render::reset_render_state();
+        let mut g = parse_dot(src).unwrap();
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        let mut jobs = GraphJobs::new(&g);
+        jobs.write_output_file_text(true);
+        jobs.render(OutputFormat::Dot, "dot").unwrap()
+    }
+
+    // #347 review: a call is one C process. The files it read and the epsf files it
+    // numbered are its own, and another thread has its own runs.
+    #[test]
+    fn usershape_state_is_per_run() {
+        let (png, eps) = image_dir("lib-runs");
+        let src = format!("digraph {{ a [image=\"{}\" label=\"\"] }}", png.display());
+        let first = render_dot(&src, "dot", "dot").unwrap();
+        assert!(first.contains("height=0.5,"), "{first}");
+        write_png(&png, 400, 200);
+        let second = render_dot(&src, "dot", "dot").unwrap();
+        assert!(second.contains("height=2.9856,"), "{second}");
+        let src = format!(
+            "digraph {{ e [shape=epsf shapefile=\"{}\"] }}",
+            eps.display()
+        );
+        for _ in 0..2 {
+            render_dot(&src, "dot", "dot").unwrap();
+        }
+        let call = "-10 -20 translate newpath user_shape_0\n";
+        assert!(epsf_run(&src).starts_with(call));
+        let other = std::thread::spawn(move || epsf_run(&src)).join().unwrap();
+        assert!(other.starts_with(call), "{other}");
+    }
+
+    // #347 review: the renderer draws the images the layout found, from the graph, whatever
+    // was laid out since and on whichever thread it draws.
+    #[test]
+    fn images_are_drawn_from_the_layout_result() {
+        let (png, _) = image_dir("lib-render");
+        let src = format!("digraph {{ a [image=\"{}\"] }}", png.display());
+        let mut a = parse_dot(&src).unwrap();
+        layout_graph(&mut a, LayoutEngine::Dot).unwrap();
+        let mut b = parse_dot("digraph { imagepath=\"nowhere\"; x [image=\"none.png\"] }").unwrap();
+        layout_graph(&mut b, LayoutEngine::Dot).unwrap();
+        let image = format!("<image xlink:href=\"{}\" width=\"40px\"", png.display());
+        let svg = render_graph(&a, OutputFormat::Svg).unwrap();
+        assert!(svg.contains(&image), "{svg}");
+        let svg = std::thread::spawn(move || render_graph(&a, OutputFormat::Svg).unwrap())
+            .join()
+            .unwrap();
+        assert!(svg.contains(&image), "{svg}");
+    }
+
+    // #347 review: each job keeps its own loadimage plugin. The PostScript image comes first,
+    // so neither svg job has a plugin for it yet, and neither draws it.
+    #[test]
+    fn jobs_keep_their_own_loadimage_plugin() {
+        let (png, eps) = image_dir("lib-jobs");
+        let src = format!(
+            "digraph {{ a [image=\"{}\"]; b [image=\"{}\"] }}",
+            eps.display(),
+            png.display()
+        );
+        graphviz_pure_render::reset_render_state();
+        let mut g = parse_dot(&src).unwrap();
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        let mut jobs = GraphJobs::new(&g);
+        let first = jobs.render_as(0, OutputFormat::Svg, "svg").unwrap();
+        let second = jobs.render_as(1, OutputFormat::Svg, "svg").unwrap();
+        assert_eq!(first, second);
+        assert_eq!(first.matches("<image ").count(), 1, "{first}");
+    }
+
+    // #347 review: the library's output is the writer's document: no PostScript call from
+    // `epsf_gencode`, which C writes into its output file.
+    #[test]
+    fn epsf_output_is_a_document() {
+        let (_, eps) = image_dir("lib-doc");
+        let src = format!(
+            "digraph {{ e [shape=epsf shapefile=\"{}\"] }}",
+            eps.display()
+        );
+        let json = render_dot(&src, "dot", "json").unwrap();
+        serde_json::from_str::<serde_json::Value>(&json).unwrap();
+        assert!(
+            render_dot(&src, "dot", "dot")
+                .unwrap()
+                .starts_with("digraph {")
+        );
+        assert!(!render_dot(&src, "dot", "svg").unwrap().contains("newpath"));
     }
 }

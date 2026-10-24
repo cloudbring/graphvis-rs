@@ -17,8 +17,9 @@ pub(crate) mod model;
 pub(crate) mod num;
 pub(crate) mod output;
 pub(crate) mod shapes;
+pub(crate) mod usershape;
 
-use job::{Emitter, Engine, Job};
+use job::{Emitter, Engine, Job, LoadImage};
 use model::Model;
 
 thread_local! {
@@ -27,6 +28,10 @@ thread_local! {
     /// `job->flags`: gvRenderJobs ORs each graph's `chkOrder` into the job, which `dot`
     /// reuses for every graph it renders, so an `outputorder` stays for later graphs.
     static ORDER_FLAGS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    /// `job->loadimage.engine` of each `-T` job, by its place in the run's job list: `dot`
+    /// keeps its jobs, and what they selected, from graph to graph.
+    static LOADIMAGE: std::cell::RefCell<std::collections::HashMap<usize, LoadImage>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
 }
 
 /// Sets `Y_invert`, as `dot -y` does for the whole run.
@@ -66,21 +71,59 @@ fn order_flags(m: &Model<'_>) -> u32 {
     })
 }
 
-/// Runs `emit_graph` over `m` with `eng`, returning the engine.
+/// How a job runs `emit_graph`.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct RunJob {
+    /// The job's place in the run's job list, whose loadimage plugin it keeps from graph to
+    /// graph; `None` for a job of its own each time (the one `json_begin_graph` renders the
+    /// graph as xdot with), which starts with none.
+    pub job: Option<usize>,
+    /// Whether the text C writes straight into the output file is kept
+    /// ([`Engine::write_output_file`]): only when there is one, in the CLI.
+    pub output_file: bool,
+}
+
+/// Runs `emit_graph` over `m` with `eng` as job 0 without output file, returning the engine.
 pub(crate) fn run<E: Engine>(m: &Model<'_>, eng: E) -> E {
+    let opts = RunJob {
+        job: Some(0),
+        output_file: false,
+    };
+    run_job(m, eng, opts).0
+}
+
+/// Runs `emit_graph` over `m` with `eng`, returning the engine and the text written
+/// straight into the output file before the engine's output ([`Engine::write_output_file`]).
+pub(crate) fn run_job<E: Engine>(m: &Model<'_>, eng: E, opts: RunJob) -> (E, String) {
     let features = eng.features();
     let flags = order_flags(m);
     job::check_pagedir(m.root_attrs().nonempty("pagedir").unwrap_or("BL"));
     let job = Job::new(m, features, flags);
-    let mut em = Emitter { job, eng };
+    let loadimage = opts
+        .job
+        .and_then(|k| LOADIMAGE.with(|l| l.borrow().get(&k).copied()));
+    let mut em = Emitter {
+        job,
+        eng,
+        loadimage,
+        output_file: opts.output_file.then(String::new),
+    };
     em.emit_graph();
-    em.eng
+    if let Some(k) = opts.job
+        && let Some(li) = em.loadimage
+    {
+        LOADIMAGE.with(|l| l.borrow_mut().insert(k, li));
+    }
+    (em.eng, em.output_file.unwrap_or_default())
 }
 
-/// Resets process-wide counters (gradient and anchor ids) before a new run.
+/// Resets process-wide counters and caches (gradient and anchor ids, the loadimage plugins,
+/// the files and epsf numbers of [`graphviz_pure_core::usershape`]) before a new run.
 pub fn reset_render_state() {
+    graphviz_pure_core::usershape::reset_run();
     crate::svg_engine::reset_gradient_ids();
     html::reset_anchor_ids();
     ORDER_FLAGS.with(|c| c.set(0));
+    LOADIMAGE.with(|l| l.borrow_mut().clear());
     graphviz_pure_core::font::textfont_dict_reset();
 }

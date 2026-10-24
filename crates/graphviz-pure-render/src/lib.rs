@@ -41,8 +41,10 @@ pub use emit::{reset_render_state, set_y_invert};
 
 /// Renders `graph` as SVG (`-Tsvg`).
 pub fn render_svg(graph: &Graph) -> String {
-    let m = emit::model::Model::build(graph);
-    emit::run(&m, svg_engine::SvgEngine::default()).out
+    graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
+        let m = emit::model::Model::build(graph);
+        emit::run(&m, svg_engine::SvgEngine::default()).out
+    })
 }
 
 use graphviz_pure_core::{Graph, GraphvizError, Result};
@@ -111,14 +113,17 @@ fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
 }
 
 /// `cgraph` with layout attributes and, for xdot, draw operations attached. `cgraph` is the
-/// model's graph with what earlier jobs set on it.
+/// model's graph with what earlier jobs set on it. The third value is what the xdot job,
+/// run with `opts`, wrote straight into its output file.
 fn attached(
     m: &emit::model::Model<'_>,
     cgraph: &Graph,
     xdot: bool,
     fixed_xdot: Option<&str>,
-) -> (Graph, Vec<std::collections::BTreeSet<String>>) {
+    opts: emit::RunJob,
+) -> (Graph, Vec<std::collections::BTreeSet<String>>, String) {
     let (mut g, _, _, mut forced) = emit::output::attach_attrs(m, cgraph);
+    let mut output_file = String::new();
     if xdot {
         // `agget(g, "xdotversion")` reads what an earlier xdot job set (#362).
         let eng = xdot_engine::XdotEngine::new(
@@ -126,7 +131,8 @@ fn attached(
             fixed_xdot,
             emit::y_offset(m.bb),
         );
-        let eng = emit::run(m, eng);
+        let (eng, text) = emit::run_job(m, eng, opts);
+        output_file = text;
         for (kind, name, value) in eng.sets {
             let attrs = match kind {
                 emit::job::ObjKind::Root => &mut g.graph_attrs,
@@ -146,7 +152,7 @@ fn attached(
             graphviz_pure_core::set_attr(attrs, name, value, html);
         }
     }
-    (g, forced)
+    (g, forced, output_file)
 }
 
 /// Records the attributes the layout and renderers set in cgraph's dictionaries:
@@ -215,6 +221,8 @@ fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<Str
 }
 
 /// Renders `graph`; `name` is the requested format name (distinguishes `plain-ext`).
+/// The output is the writer's alone: there is no output file for the text C writes past
+/// the renderer ([`GraphJobs::write_output_file_text`]).
 pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Result<String> {
     GraphJobs::new(graph).render(format, name)
 }
@@ -225,6 +233,7 @@ pub fn render_graph_named(graph: &Graph, format: OutputFormat, name: &str) -> Re
 struct NullEngine<'a> {
     features: emit::job::Features,
     langname: &'a str,
+    render_type: &'static str,
 }
 
 impl emit::job::Engine for NullEngine<'_> {
@@ -233,6 +242,9 @@ impl emit::job::Engine for NullEngine<'_> {
     }
     fn output_langname(&self) -> &str {
         self.langname
+    }
+    fn render_type(&self) -> &str {
+        self.render_type
     }
 }
 
@@ -255,9 +267,22 @@ const JSON_FEATURES: emit::job::Features = emit::job::Features {
     rgba: false,
 };
 
-/// Runs `emit_graph` for a render plugin that draws nothing.
-fn emit_null(m: &emit::model::Model<'_>, features: emit::job::Features, langname: &str) {
-    emit::run(m, NullEngine { features, langname });
+/// Runs `emit_graph` for a render plugin that draws nothing, of `render_type` (`dot` with
+/// [`DOT_FEATURES`], `json` with [`JSON_FEATURES`]); returns what it wrote straight into
+/// the output file.
+fn emit_null(
+    m: &emit::model::Model<'_>,
+    features: emit::job::Features,
+    render_type: &'static str,
+    langname: &str,
+    opts: emit::RunJob,
+) -> String {
+    let eng = NullEngine {
+        features,
+        langname,
+        render_type,
+    };
+    emit::run_job(m, eng, opts).1
 }
 
 /// The graph as cgraph holds it for the writers that do not attach layout attributes
@@ -281,6 +306,12 @@ pub struct GraphJobs<'g> {
     /// Per subgraph, the graph attributes earlier jobs set with `agxset` (see
     /// [`sync_dicts`]): they stay local values of the subgraph for every later writer.
     forced: Vec<std::collections::BTreeSet<String>>,
+    /// What jobs wrote to the standard output rather than to their own output: the xdot
+    /// job of `-Tjson` (`json_begin_graph`'s `gvRender` to no file).
+    stdout: String,
+    /// Whether the jobs keep the text C writes past the renderer, straight into the output
+    /// file (`epsf_gencode`'s PostScript call).
+    output_file: bool,
 }
 
 impl<'g> GraphJobs<'g> {
@@ -289,7 +320,23 @@ impl<'g> GraphJobs<'g> {
             graph,
             cgraph: None,
             forced: Vec::new(),
+            stdout: String::new(),
+            output_file: false,
         }
+    }
+
+    /// Keeps (`true`) the text C writes with `fprintf(job->output_file, ...)`, past the
+    /// renderer, as the CLI does: inside the SVG, before the other writers' output, and
+    /// for `-Tjson` on the standard output too ([`Self::take_stdout`]). Off by default, so
+    /// that the output of the library is the writer's document alone.
+    pub fn write_output_file_text(&mut self, on: bool) {
+        self.output_file = on;
+    }
+
+    /// Takes what the jobs run so far wrote to the standard output ([`Self::render`]
+    /// returns only the job's own output).
+    pub fn take_stdout(&mut self) -> String {
+        std::mem::take(&mut self.stdout)
     }
 
     /// Keeps what a job set on the cgraph for the jobs after it.
@@ -303,9 +350,27 @@ impl<'g> GraphJobs<'g> {
         }
     }
 
-    /// Runs the job for `format`; `name` is the `-T` name (`job->output_langname`), which
-    /// distinguishes `plain-ext`, `dot_json` and the xdot versions.
+    /// Runs the job for `format` as the run's first job ([`Self::render_as`]).
     pub fn render(&mut self, format: OutputFormat, name: &str) -> Result<String> {
+        self.render_as(0, format, name)
+    }
+
+    /// Runs the job for `format`; `name` is the `-T` name (`job->output_langname`), which
+    /// distinguishes `plain-ext`, `dot_json` and the xdot versions, and `job` the job's
+    /// place in the run's job list, whose state it keeps from graph to graph. The images
+    /// and epsf shapes are those the layout found (`GraphLayout::usershapes`).
+    pub fn render_as(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
+        let graph = self.graph;
+        graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
+            self.render_job(job, format, name)
+        })
+    }
+
+    fn render_job(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
+        let opts = emit::RunJob {
+            job: Some(job),
+            output_file: self.output_file,
+        };
         let graph = self.graph;
         let cgraph = self.cgraph.as_ref().unwrap_or(graph);
         graphviz_pure_core::charset::begin_render(
@@ -319,26 +384,26 @@ impl<'g> GraphJobs<'g> {
             format == OutputFormat::Canon || lname == "dot_json" || lname == "xdot_json";
         if unattached {
             let m = emit::model::Model::build(graph);
-            let features = if format == OutputFormat::Canon {
-                DOT_FEATURES
+            let pre = if format == OutputFormat::Canon {
+                emit_null(&m, DOT_FEATURES, "dot", name, opts)
             } else {
-                JSON_FEATURES
+                emit_null(&m, JSON_FEATURES, "json", name, opts)
             };
-            emit_null(&m, features, name);
             let mut g = cgraph_view(cgraph);
             if format == OutputFormat::Canon {
                 if g.dicts.len() == g.subgraphs.len() + 1 {
                     sync_dicts(&mut g, graph, &self.forced);
-                    return Ok(agwrite::agwrite(&g));
+                    return Ok(pre + &agwrite::agwrite(&g));
                 }
-                return Ok(graphviz_pure_parser::write_canon_forced(&g, &self.forced));
+                return Ok(pre + &graphviz_pure_parser::write_canon_forced(&g, &self.forced));
             }
-            return Ok(json::write_json(
-                &g,
-                lname == "xdot_json",
-                &input_edge_order(graph),
-                &clust_nodes(graph),
-            ));
+            return Ok(pre
+                + &json::write_json(
+                    &g,
+                    lname == "xdot_json",
+                    &input_edge_order(graph),
+                    &clust_nodes(graph),
+                ));
         }
         // Renderers other than dot, xdot, json and canon run before undoClusterEdges.
         let drawn = match (format, graph.render_view.as_deref()) {
@@ -346,14 +411,25 @@ impl<'g> GraphJobs<'g> {
             _ => graph,
         };
         let m = emit::model::Model::build(drawn);
-        Ok(match format {
-            OutputFormat::Svg => emit::run(&m, svg_engine::SvgEngine::default()).out,
+        // what `emit_graph` wrote straight into the output file comes before the writer's
+        // output, which the writers below write at the end
+        let mut pre = String::new();
+        let text = match format {
+            OutputFormat::Svg => {
+                emit::run_job(&m, svg_engine::SvgEngine::default(), opts)
+                    .0
+                    .out
+            }
             OutputFormat::Json | OutputFormat::Json0 => {
-                // `json_begin_graph`: json renders the graph as xdot first, json0 attaches
-                // the layout attributes; then `emit_graph` runs for the json job itself.
-                let (g, forced) = attached(&m, cgraph, format == OutputFormat::Json, None);
+                // `json_begin_graph`: json renders the graph as xdot first (a job of its own,
+                // which writes to the standard output), json0 attaches the layout
+                // attributes; then `emit_graph` runs for the json job itself.
+                let nested = emit::RunJob { job: None, ..opts };
+                let (g, forced, stdout) =
+                    attached(&m, cgraph, format == OutputFormat::Json, None, nested);
+                self.stdout.push_str(&stdout);
                 self.keep(&g, &forced);
-                emit_null(&m, JSON_FEATURES, name);
+                pre = emit_null(&m, JSON_FEATURES, "json", name, opts);
                 json::write_json(
                     &g,
                     format == OutputFormat::Json,
@@ -363,7 +439,7 @@ impl<'g> GraphJobs<'g> {
             }
             OutputFormat::Dot | OutputFormat::Xdot => {
                 let xdot = format == OutputFormat::Xdot;
-                let (mut g, forced) = attached(
+                let (mut g, forced, text) = attached(
                     &m,
                     cgraph,
                     xdot,
@@ -372,9 +448,11 @@ impl<'g> GraphJobs<'g> {
                         "xdot1.4" => Some("1.4"),
                         _ => None,
                     },
+                    opts,
                 );
+                pre = text;
                 if !xdot {
-                    emit_null(&m, DOT_FEATURES, name);
+                    pre = emit_null(&m, DOT_FEATURES, "dot", name, opts);
                 }
                 self.keep(&g, &forced);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
@@ -386,7 +464,7 @@ impl<'g> GraphJobs<'g> {
                 }
             }
             OutputFormat::Plain => {
-                emit_null(&m, DOT_FEATURES, name);
+                pre = emit_null(&m, DOT_FEATURES, "dot", name, opts);
                 let zoom = emit::job::Job::new(&m, DOT_FEATURES, 0).zoom;
                 emit::output::write_plain(
                     &m,
@@ -396,7 +474,8 @@ impl<'g> GraphJobs<'g> {
                 )
             }
             OutputFormat::Canon => unreachable!(),
-        })
+        };
+        Ok(pre + &text)
     }
 }
 

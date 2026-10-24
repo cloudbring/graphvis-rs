@@ -93,6 +93,7 @@ fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions
     graphviz_pure_core::usershape::begin_layout(
         graph.graph_attrs.get("imagepath").map(String::as_str),
         graph.node_attr_declared("shapefile"),
+        graphviz_pure_core::cnum::drawing_dpi(&graph.graph_attrs),
     );
     // A layout of the same graph starts from no result (the sequence numbers of nodes an
     // earlier `Reduce` deleted stay: the objects are gone).
@@ -116,7 +117,7 @@ fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions
     } else {
         engine
     };
-    match effective_engine {
+    let result = match effective_engine {
         LayoutEngine::Dot => dotgen::layout_dot(graph),
         LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph, options.nop),
         // nop1_layout and nop2_layout: neato_layout with Nop set.
@@ -128,7 +129,10 @@ fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions
         LayoutEngine::Circo => circogen::circularinit::circo_layout(graph),
         LayoutEngine::Osage => osage::osage_layout(graph),
         LayoutEngine::Patchwork => patchwork::patchwork_layout(graph),
-    }
+    };
+    // what the renderers draw the images and epsf shapes from
+    graph.layout.usershapes = graphviz_pure_core::usershape::layout_result();
+    result
 }
 
 /// Resets every layout result of `graph` but the sequence numbers.

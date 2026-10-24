@@ -1703,25 +1703,26 @@ fn size_html_txt(ftxt: &mut HtmlText, env: &Env<'_>) {
     ftxt.bx = BoundingBox::new(0.0, 0.0, xsize, if nspans == 1 { mxysize } else { ysize });
 }
 
-/// `size_html_img`: an image C cannot load is an error, and the label's `rv` is 1. The
-/// port reads no image sizes, so an image that loads is 0x0 too.
+/// `size_html_img`: the image's size in points (`gvusershape_size`); an image C cannot
+/// load is an error, 0x0, and the label's `rv` is 1.
 fn size_html_img(img: &mut HtmlImage, env: &mut Env<'_>) {
-    img.bx = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
-    let loads = if env.report {
-        graphviz_pure_core::usershape::usershape_loads(img.src.as_deref())
+    let src = img.src.as_deref();
+    let (w, h) = if env.report {
+        graphviz_pure_core::usershape::gvusershape_size(src)
     } else {
-        graphviz_pure_core::diag::quietly(|| {
-            graphviz_pure_core::usershape::usershape_loads(img.src.as_deref())
-        })
+        graphviz_pure_core::diag::quietly(|| graphviz_pure_core::usershape::gvusershape_size(src))
     };
-    if !loads {
+    if (w, h) == (-1, -1) {
+        img.bx = BoundingBox::new(0.0, 0.0, 0.0, 0.0);
         if env.report {
             graphviz_pure_core::diag::agerrorf(&format!(
                 "No or improper image file=\"{}\"\n",
-                img.src.as_deref().unwrap_or("(null)")
+                src.unwrap_or("(null)")
             ));
         }
         env.warn = true;
+    } else {
+        img.bx = BoundingBox::new(0.0, 0.0, f64::from(w), f64::from(h));
     }
 }
 
@@ -1750,7 +1751,7 @@ fn size_html_cell(cp: &mut HtmlCellData, parent: &HtmlTbl, env: &mut Env<'_>) {
         }
         HtmlContent::Image(img) => {
             size_html_img(img, env);
-            Point::new(0.0, 0.0)
+            img.bx.ur
         }
         HtmlContent::Text(t) => {
             size_html_txt(t, env);
