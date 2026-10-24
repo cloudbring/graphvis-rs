@@ -228,16 +228,20 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
         node_map[i] = Some(id);
     }
     let mut clust_nodes = Vec::new();
+    let mut input_named_nodes = Vec::new();
     let mut cnode_of: HashMap<usize, usize> = HashMap::new();
     for &c in &clust_order {
         // clustNode: `agxbprint(xb, "__%d:%s", idx, agnameof(cg))`.
         let name = format!("__0:{}", graph.subgraph_name(tree.subgraph[c]));
+        // An input node of that name is the cluster node, and may be in subgraphs already.
+        let input_named = work.agfindnode(&name, false).is_some();
         let id = work.ensure_node(&name);
         let a = &mut work.nodes[id.0 as usize].attrs;
         a.insert("label".into(), String::new());
         a.insert("style".into(), "invis".into());
         a.insert("shape".into(), "box".into());
         clust_nodes.push((id.0 as usize, c));
+        input_named_nodes.push(input_named);
         cnode_of.insert(c, id.0 as usize);
     }
     let end_id = |x: End| -> usize {
@@ -298,10 +302,17 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
             s
         })
         .collect();
-    for &(n, c) in &clust_nodes {
-        work.subgraphs[tree.subgraph[c]]
-            .nodes
-            .push(NodeId(n as u32));
+    // `agsubnode(cg, cn, 1)` installs the cluster node in `cg` and each ancestor, up to the
+    // first that already holds it: only an input node of the same name can be there.
+    for (&(n, c), &input_named) in clust_nodes.iter().zip(&input_named_nodes) {
+        let mut s = Some(tree.subgraph[c]);
+        while let Some(sg) = s.and_then(|si| work.subgraphs.get_mut(si)) {
+            if input_named && sg.nodes.contains(&NodeId(n as u32)) {
+                break;
+            }
+            sg.nodes.push(NodeId(n as u32));
+            s = s.and_then(|si| sub_parent.get(si).copied().flatten());
+        }
     }
     Some(ClusterEdges {
         work,
@@ -530,5 +541,89 @@ fn renumber_undone(ce: &ClusterEdges, work: &Graph, graph: &mut Graph, new_id: &
             .collect();
         v.sort();
         sg.edges = v;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use graphviz_pure_core::{GraphKind, SubgraphData, SubgraphId};
+
+    fn subgraph(
+        id: u32,
+        name: &str,
+        nodes: Vec<NodeId>,
+        subgraphs: Vec<SubgraphId>,
+    ) -> SubgraphData {
+        SubgraphData {
+            id: SubgraphId(id),
+            name: name.to_string(),
+            is_cluster: true,
+            graph_attrs: AttrMap::new(),
+            node_defaults: AttrMap::new(),
+            edge_defaults: AttrMap::new(),
+            nodes,
+            edges: Vec::new(),
+            subgraphs,
+            bb: Default::default(),
+            html_name: false,
+            empty_name: false,
+            layout: Default::default(),
+        }
+    }
+
+    /// Issue #323: `clustNode`'s `agsubnode(cg, cn, 1)` installs the cluster node in `cg`
+    /// and each of its ancestors, whose node lists hold their descendants' nodes.
+    /// `digraph { subgraph cluster_a { subgraph cluster_b { x } } y -> cluster_b }`.
+    #[test]
+    fn cluster_node_is_in_every_ancestor_of_its_cluster() {
+        let mut g = Graph::new("", GraphKind::Directed, false);
+        let x = g.ensure_node("x");
+        let y = g.ensure_node("y");
+        let cb = g.ensure_node("cluster_b");
+        g.add_edge(y, cb, AttrMap::new());
+        g.subgraphs
+            .push(subgraph(0, "cluster_a", vec![x], vec![SubgraphId(1)]));
+        g.subgraphs
+            .push(subgraph(1, "cluster_b", vec![x], Vec::new()));
+        let tree = crate::fdpgen::mk_clusters(&g);
+        let ce = process_cluster_edges(&g, &tree).expect("an edge to a cluster");
+        let cn = ce
+            .work
+            .agfindnode("__0:cluster_b", false)
+            .expect("cluster node");
+        for s in &ce.work.subgraphs {
+            assert!(s.nodes.contains(&cn), "{}: {:?}", s.name, s.nodes);
+        }
+    }
+
+    /// An input node named like the cluster node is that node (`agnode(root, name, 1)`):
+    /// `agsubnode` stops at the first subgraph that already holds it.
+    #[test]
+    fn cluster_node_named_in_the_input_is_in_each_subgraph_once() {
+        let mut g = Graph::new("", GraphKind::Directed, false);
+        let x = g.ensure_node("x");
+        let named = g.ensure_node("__0:cluster_b");
+        let y = g.ensure_node("y");
+        let cb = g.ensure_node("cluster_b");
+        g.add_edge(y, cb, AttrMap::new());
+        g.subgraphs.push(subgraph(
+            0,
+            "cluster_a",
+            vec![x, named],
+            vec![SubgraphId(1)],
+        ));
+        g.subgraphs
+            .push(subgraph(1, "cluster_b", vec![x, named], Vec::new()));
+        let tree = crate::fdpgen::mk_clusters(&g);
+        let ce = process_cluster_edges(&g, &tree).expect("an edge to a cluster");
+        let cn = ce
+            .work
+            .agfindnode("__0:cluster_b", false)
+            .expect("cluster node");
+        for s in &ce.work.subgraphs {
+            let n = s.nodes.iter().filter(|&&m| m == cn).count();
+            assert_eq!(n, 1, "{}: {:?}", s.name, s.nodes);
+        }
     }
 }

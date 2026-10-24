@@ -81,6 +81,10 @@ pub fn layout_graph_with_options(
 }
 
 fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions) -> Result<()> {
+    debug_assert!(
+        graph.subgraph_lists_are_closed(),
+        "a subgraph lists a member twice or lacks one of its nested subgraphs'"
+    );
     common::splines::reset_bz_split_budget();
     graphviz_pure_core::font::textfont_layout_begin();
     common::utils::set_ps_inputscale(options.inputscale);

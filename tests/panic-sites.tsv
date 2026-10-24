@@ -17,7 +17,7 @@ layout/circogen/circularinit.rs	0	0	57	1
 layout/circogen/graph.rs	0	0	6	1
 layout/circogen/nodelist.rs	0	0	0	1
 layout/common/arrows.rs	0	0	37	31
-layout/common/cluster_edges.rs	0	5	74	8
+layout/common/cluster_edges.rs	0	5	73	8
 layout/common/init.rs	0	0	20	0
 layout/common/ns.rs	8	0	149	50
 layout/common/ports.rs	0	0	18	3
@@ -40,7 +40,7 @@ layout/dotgen/decomp.rs	1	0	31	2
 layout/dotgen/dotsplines.rs	32	5	474	61
 layout/dotgen/fastgr.rs	0	0	60	2
 layout/dotgen/flat.rs	1	0	114	30
-layout/dotgen/init.rs	2	0	71	6
+layout/dotgen/init.rs	2	0	65	6
 layout/dotgen/mincross.rs	32	0	388	104
 layout/dotgen/mod.rs	0	0	18	9
 layout/dotgen/ns.rs	0	0	33	0
@@ -92,7 +92,7 @@ layout/ortho/rawgraph.rs	0	0	6	2
 layout/ortho/sgraph.rs	0	0	9	16
 layout/ortho/trapezoid.rs	0	0	55	10
 layout/osage/mod.rs	0	0	31	4
-layout/pack/cccomps.rs	0	0	43	0
+layout/pack/cccomps.rs	0	0	36	0
 layout/pack/mod.rs	1	0	78	44
 layout/patchwork/patchwork.rs	0	0	24	2
 layout/patchwork/patchworkinit.rs	0	0	11	0

@@ -106,20 +106,7 @@ impl<'a> Dot<'a> {
                 d.graphs[0].subgs.push(base + i);
             }
         }
-        // Subgraph membership implies membership in every ancestor.
-        for g in base..d.graphs.len() {
-            let nodes: Vec<N> = d.graphs[g].nodes.iter().copied().collect();
-            let edges: Vec<E> = d.graphs[g].edges.iter().copied().collect();
-            let mut p = d.graphs[g].cg_parent;
-            while let Some(pg) = p {
-                if pg == 0 {
-                    break;
-                }
-                d.graphs[pg].nodes.extend(nodes.iter().copied());
-                d.graphs[pg].edges.extend(edges.iter().copied());
-                p = d.graphs[pg].cg_parent;
-            }
-        }
+        // Each subgraph's lists already hold its nested subgraphs' nodes and edges.
         d
     }
 

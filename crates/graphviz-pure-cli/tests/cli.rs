@@ -7403,6 +7403,65 @@ n4 -> n2 [sametail=t0];
     );
 }
 
+/// Issue #323: deep nesting lays out in every engine that reads cluster members, with
+/// the members each subgraph's lists hold (see `subgraph_members_are_the_subgraphs_own_lists`
+/// for the size of what they collect). Clusters and plain subgraphs, 400 levels.
+#[test]
+fn deep_subgraph_nesting_lays_out_in_every_engine() {
+    let nest = |prefix: &str| {
+        let n = 400;
+        let mut src = String::from("digraph G {\n");
+        for i in 0..n {
+            src.push_str(&format!("subgraph {prefix}{i} {{ x{i}\n"));
+        }
+        src.push_str(&"}\n".repeat(n));
+        src.push('}');
+        src
+    };
+    for prefix in ["cluster", "s"] {
+        let src = nest(prefix);
+        for engine in ["dot", "fdp", "osage", "patchwork"] {
+            let (out, err, ok) = run(&[&format!("-K{engine}"), "-Tsvg"], &src);
+            assert!(ok, "{engine} {prefix}: {err}");
+            assert_eq!(err, "", "{engine} {prefix}");
+            assert!(out.contains("<title>x399</title>"), "{engine} {prefix}");
+        }
+    }
+}
+
+/// Issue #323: fdp's cluster node is in its cluster and every ancestor (`clustNode`'s
+/// `agsubnode(cg, cn, 1)`), so a layer that draws only the cluster node still draws the
+/// outer cluster, as C does. An input node already named like the cluster node stays in
+/// each subgraph once, and the layout is not collapsed.
+#[test]
+fn fdp_cluster_node_is_in_every_ancestor_cluster_once() {
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        "digraph { layers=\"a:b\"; subgraph cluster_a { subgraph cluster_b { x [layer=a] } } \
+         y [layer=a]; y -> cluster_b }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<g id=\"b_clust1\" class=\"cluster\">"),
+        "{out}"
+    );
+    assert!(
+        out.contains("<g id=\"b_clust2\" class=\"cluster\">"),
+        "{out}"
+    );
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        "digraph { subgraph cluster_a { subgraph cluster_b { x; \"__0:cluster_b\" } } \
+         y -> cluster_b }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    assert!(
+        out.contains("<title>y&#45;&gt;__0:cluster_b</title>"),
+        "{out}"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
