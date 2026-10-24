@@ -93,6 +93,13 @@ fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions
     graphviz_pure_core::usershape::begin_layout(
         graph.graph_attrs.get("imagepath").map(String::as_str),
         graph.node_attr_declared("shapefile"),
+        // GD_drawing(g)->dpi (graph_init)
+        common::utils::late_double(
+            &graph.graph_attrs,
+            "dpi",
+            common::utils::late_double(&graph.graph_attrs, "resolution", 0.0, 0.0),
+            0.0,
+        ),
     );
     // A layout of the same graph starts from no result (the sequence numbers of nodes an
     // earlier `Reduce` deleted stay: the objects are gone).

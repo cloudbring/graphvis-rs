@@ -4,12 +4,13 @@
 
 use crate::emit::job::{
     EmitState, Engine, Features, GRADIENT, GVRENDER_DOES_MAPS, GVRENDER_DOES_TARGETS,
-    GVRENDER_DOES_TOOLTIPS, GVRENDER_DOES_TRANSFORM, Job, ObjKind, RGRADIENT,
+    GVRENDER_DOES_TOOLTIPS, GVRENDER_DOES_TRANSFORM, Job, LoadImage, ObjKind, RGRADIENT,
 };
 use crate::emit::model::TextSpan;
 use crate::emit::num::{trim_zeros, xdot_num};
-use graphviz_pure_core::Point;
 use graphviz_pure_core::math;
+use graphviz_pure_core::usershape::UserShape;
+use graphviz_pure_core::{BoundingBox, Point};
 use std::fmt::Write;
 
 /// Index of the buffer an emit state writes to (`xbufs[]`).
@@ -240,6 +241,26 @@ impl XdotEngine {
 }
 
 impl Engine for XdotEngine {
+    fn render_type(&self) -> &str {
+        "xdot"
+    }
+
+    /// `core_loadimage_xdot` (`plugin/core/gvrender_core_dot.c`): an `I` operation.
+    fn loadimage(&mut self, j: &Job, li: LoadImage, us: &UserShape, b: BoundingBox) {
+        if li != LoadImage::Xdot {
+            return;
+        }
+        let y_off = self.y_off;
+        let buf = self.buf(j);
+        buf.push_str("I ");
+        Self::point(buf, b.ll, y_off);
+        for v in [b.ur.x - b.ll.x, b.ur.y - b.ll.y] {
+            buf.push_str(&xdot_num(v));
+            buf.push(' ');
+        }
+        self.str_(j, "", &us.name);
+    }
+
     fn output_langname(&self) -> &str {
         match self.fixed {
             Some(v) => v,

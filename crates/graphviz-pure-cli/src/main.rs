@@ -670,7 +670,15 @@ impl Run<'_> {
                 });
             }
             self.active = Some(n);
-            match render_job(&mut graph_jobs, graph, &langname) {
+            let rendered = render_job(&mut graph_jobs, graph, &langname);
+            // what the job wrote to the standard output (`-Tjson`'s xdot job) came first
+            let stdout = graph_jobs.take_stdout();
+            if !stdout.is_empty() {
+                let mut out = io::stdout();
+                out.write_all(&graphviz_pure_core::charset::encode(&stdout))?;
+                out.flush()?;
+            }
+            match rendered {
                 Ok(bytes) => {
                     let sink = self.opts.jobs[n].file.as_mut().expect("opened above");
                     sink.write_all(&bytes)?;

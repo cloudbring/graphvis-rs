@@ -17,8 +17,9 @@ pub(crate) mod model;
 pub(crate) mod num;
 pub(crate) mod output;
 pub(crate) mod shapes;
+pub(crate) mod usershape;
 
-use job::{Emitter, Engine, Job};
+use job::{Emitter, Engine, Job, LoadImage};
 use model::Model;
 
 thread_local! {
@@ -27,6 +28,10 @@ thread_local! {
     /// `job->flags`: gvRenderJobs ORs each graph's `chkOrder` into the job, which `dot`
     /// reuses for every graph it renders, so an `outputorder` stays for later graphs.
     static ORDER_FLAGS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    /// `job->loadimage.engine` of each `-T` job, by format: `dot` keeps its jobs, and what
+    /// they selected, from graph to graph.
+    static LOADIMAGE: std::cell::RefCell<std::collections::HashMap<String, LoadImage>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
 }
 
 /// Sets `Y_invert`, as `dot -y` does for the whole run.
@@ -68,13 +73,35 @@ fn order_flags(m: &Model<'_>) -> u32 {
 
 /// Runs `emit_graph` over `m` with `eng`, returning the engine.
 pub(crate) fn run<E: Engine>(m: &Model<'_>, eng: E) -> E {
+    run_job(m, eng, true).0
+}
+
+/// Runs `emit_graph` over `m` with `eng`, returning the engine and the text written
+/// straight into the output file before the engine's output
+/// ([`Engine::write_output_file`]). A job that is not `persistent` (the one
+/// `json_begin_graph` renders the graph as xdot with) starts with no loadimage plugin.
+pub(crate) fn run_job<E: Engine>(m: &Model<'_>, eng: E, persistent: bool) -> (E, String) {
     let features = eng.features();
     let flags = order_flags(m);
     job::check_pagedir(m.root_attrs().nonempty("pagedir").unwrap_or("BL"));
     let job = Job::new(m, features, flags);
-    let mut em = Emitter { job, eng };
+    let key = eng.output_langname().to_string();
+    let loadimage = if persistent {
+        LOADIMAGE.with(|l| l.borrow().get(&key).copied())
+    } else {
+        None
+    };
+    let mut em = Emitter {
+        job,
+        eng,
+        loadimage,
+        output_file: String::new(),
+    };
     em.emit_graph();
-    em.eng
+    if persistent && let Some(li) = em.loadimage {
+        LOADIMAGE.with(|l| l.borrow_mut().insert(key, li));
+    }
+    (em.eng, em.output_file)
 }
 
 /// Resets process-wide counters (gradient and anchor ids) before a new run.
@@ -82,5 +109,6 @@ pub fn reset_render_state() {
     crate::svg_engine::reset_gradient_ids();
     html::reset_anchor_ids();
     ORDER_FLAGS.with(|c| c.set(0));
+    LOADIMAGE.with(|l| l.borrow_mut().clear());
     graphviz_pure_core::font::textfont_dict_reset();
 }

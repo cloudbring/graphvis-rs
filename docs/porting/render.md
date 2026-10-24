@@ -87,11 +87,44 @@ parsed input) matches C on 493 of 508 inputs (454 before).
 - HTML cell `STYLE="dashed"` borders: C's `xdot_style` walks past the end of a
   one-element style list and prints adjacent string literals (undefined
   behaviour); not reproduced (`tests/fuzz-open/034-html-cell-dashed-style-overread`).
-- Images (`image=`, `shapefile=`, `<IMG>`) are never loaded; C draws them only
-  when the file exists.
+- `-Tpng` and `-Tjpg` draw no images (see [Images](#images)).
 - The SVG generator comment names graphviz-pure.
 - Gradient and HTML anchor ids are numbered per `render_dot_all` call, like C's
   process-wide statics for a single invocation.
+
+## Images
+
+`image=`, `shapefile=` (`shape=custom`), HTML `<IMG>` and `shape=epsf` follow
+`lib/gvc/gvusershape.c`, `lib/gvc/gvrender.c` and `plugin/core/gvloadimage_core.c`
+(`graphviz_pure_core::usershape`, `emit/usershape.rs`):
+
+- **Sizes.** `imagetype` classifies the file by its first 20 bytes and the `*_size`
+  readers read the size from the header only (no image is decoded): PNG, GIF, JPEG,
+  BMP, ICO, WEBP, SVG (`width`/`height` with units, else the `viewBox`), PostScript
+  (`%%BoundingBox`, at 72 dpi) and PDF (`/MediaBox`). A size in pixels is converted
+  at the graph's `dpi` (96 below 1) when the node or cell is sized, and at the job's
+  (72 unless `dpi` is set) when it is drawn. Files are kept by name for the run, as
+  `ImageDict` keeps them, until a graph has its own `imagepath`. Where C asserts on an
+  SVG size outside `0..=INT_MAX` (it aborts), the port takes 0.
+- **Drawing.** The plugins are those of the reference build (`GVBINDIR` with the core
+  plugins only): `-Tsvg` writes an `<image>` element for PNG, GIF, JPEG and SVG files,
+  `-Txdot` (and the xdot job of `-Tjson`) an `I` operation for those and PostScript,
+  and the `dot` formats draw nothing. For any other pair C warns
+  `No loadimage plugin for "TYPE:RENDERER"`, and then draws with the plugin the job
+  selected last, which the port reproduces (a `-T` job keeps it from graph to graph).
+- **`shape=epsf`.** `epsf_gencode` writes `X Y translate newpath user_shape_N` straight
+  into the output file whatever the format, and so does the port: inside the node's
+  group in `-Tsvg`, before the graph in the formats written at the end (`dot`, `xdot`,
+  `plain`, `canon`, `json`), and for `-Tjson` once more from its xdot job, which C
+  writes to the standard output (`GraphJobs::take_stdout`). It is not PostScript
+  anywhere but C's `-Tps`, which the port does not have; the line is kept so that
+  every output matches C byte for byte.
+- **Raster output.** The reference build has no `-Tpng`. The port rasterizes its SVG
+  with resvg, which resolves no `<image>` (neither a file nor a `data:` URL), so a
+  PNG shows no images; the warnings are the SVG job's.
+- **WASM** has no filesystem: every file is missing, and is reported as C reports a
+  file that does not exist (`No such file or directory while opening NAME`), so no
+  node takes an image's size and no image is drawn.
 
 ## Charset
 

@@ -6,6 +6,7 @@ use super::attrs::{StyleItem, parse_style};
 use super::emit::{DEFAULT_COLOR, DEFAULT_FILL, find_stop_color};
 use super::job::{EMIT_CLUSTERS_LAST, EmitState, Emitter, Engine, FILL, GRADIENT, RGRADIENT};
 use super::model::TextLabel;
+use super::num::fmt_g;
 use graphviz_pure_core::Point;
 use graphviz_pure_core::cnum::is_exactly_zero;
 use graphviz_pure_core::math;
@@ -238,16 +239,23 @@ impl<E: Engine> Emitter<'_, E> {
 
     /// `epsf_gencode`: nothing for a node whose `shapefile` did not load. C writes the
     /// PostScript call `X Y translate newpath user_shape_N` straight into the output file,
-    /// whatever the format; the port leaves it out and draws the label.
+    /// whatever the format (`fprintf(job->output_file, ...)`), and so does the port.
     fn epsf_gencode(&mut self, n: usize) {
         let nd = &self.job.m.nodes[n];
-        if nd.geom.epsf.is_none() {
+        let Some((offset, macro_id)) = nd.geom.epsf else {
             return;
-        }
+        };
         let do_map = self.anchored();
         if do_map && !(self.job.flags & EMIT_CLUSTERS_LAST != 0) {
             self.begin_obj_anchor();
         }
+        let line = format!(
+            "{} {} translate newpath user_shape_{macro_id}\n",
+            fmt_g(nd.coord.x + offset.x, 5),
+            fmt_g(nd.coord.y + offset.y, 5)
+        );
+        self.write_output_file(&line);
+        let nd = &self.job.m.nodes[n];
         let mut label = nd.label.clone();
         label.pos = nd.coord;
         self.emit_label(EmitState::NLabel, &label);
@@ -337,6 +345,26 @@ impl<E: Engine> Emitter<'_, E> {
                 self.polygon(&af, filled);
             }
             filled = 0;
+        }
+        // a `custom` shape draws its `shapefile`, any other its `image`
+        let name = if nd.geom.usershape {
+            graphviz_pure_core::usershape::agget_shapefile(nd.attrs.get("shapefile"))
+                .filter(|f| !f.is_empty())
+        } else {
+            nd.attrs.nonempty("image")
+        };
+        if let Some(name) = name {
+            // the innermost periphery
+            for (i, a) in af.iter_mut().enumerate() {
+                let p = poly.vertices[i];
+                *a = Point::new(
+                    p.x.mul_add(xsize, nd.coord.x),
+                    p.y.mul_add(ysize, nd.coord.y),
+                );
+            }
+            let imagescale = nd.attrs.late_string("imagescale", "false");
+            let imagepos = nd.attrs.late_string("imagepos", "mc");
+            self.usershape(name, &af, filled != 0, imagescale, imagepos);
         }
         let mut label = nd.label.clone();
         label.pos = nd.coord;

@@ -6,6 +6,7 @@
 use super::attrs::StyleItem;
 use super::model::{Model, TextSpan};
 use graphviz_pure_core::strtod::{atof, sscanf};
+use graphviz_pure_core::usershape::UserShape;
 use graphviz_pure_core::{BoundingBox, Point};
 
 pub(crate) const EMIT_SORTED: u32 = 1 << 0;
@@ -220,6 +221,46 @@ pub(crate) trait Engine {
     fn bezier(&mut self, j: &Job, a: &[Point], filled: i32) {}
     fn polyline(&mut self, j: &Job, a: &[Point]) {}
     fn comment(&mut self, j: &Job, s: &str) {}
+    /// `job->render.type`, the second half of the loadimage plugin names the job looks up
+    /// (`png:svg`): the renderer the `-T` device depends on.
+    fn render_type(&self) -> &str {
+        "dot"
+    }
+    /// The loadimage plugin's `loadimage`, for the plugins of this engine's render type.
+    fn loadimage(&mut self, j: &Job, li: LoadImage, us: &UserShape, b: BoundingBox) {}
+    /// `fprintf(job->output_file, ...)`: text written past the renderer, straight into the
+    /// output file. An engine that writes its output as it goes takes it there (`true`);
+    /// for the others it ends up before their output, which they write at the end.
+    fn write_output_file(&mut self, s: &str) -> bool {
+        false
+    }
+}
+
+/// The loadimage plugins of the reference build (`gvloadimage_core_types` in
+/// `plugin/core/gvloadimage_core.c`) for the render types the port has.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LoadImage {
+    /// `core_loadimage_svg`.
+    Svg,
+    /// `core_loadimage_xdot`.
+    Xdot,
+    /// `core_loadimage_null`, which only keeps the warning away.
+    Null,
+}
+
+impl LoadImage {
+    /// `gvloadimage_select(job, "TYPE:RENDER")`: the plugin installed for the pair.
+    pub(crate) fn select(stringtype: &str, render_type: &str) -> Option<Self> {
+        const IMAGES: [&str; 5] = ["png", "gif", "jpeg", "jpe", "jpg"];
+        let image = IMAGES.contains(&stringtype);
+        let vector = matches!(stringtype, "ps" | "eps" | "svg");
+        match render_type {
+            "svg" if image || stringtype == "svg" => Some(LoadImage::Svg),
+            "xdot" if image || vector => Some(LoadImage::Xdot),
+            "dot" if image || vector => Some(LoadImage::Null),
+            _ => None,
+        }
+    }
 }
 
 /// `GVJ_t`: render state shared with the engine callbacks.
@@ -238,6 +279,8 @@ pub(crate) struct Job<'a> {
     pub clip: BoundingBox,
     pub translation: Point,
     pub scale: Point,
+    /// `job->dpi`.
+    pub dpi: Point,
     pub pages: (i32, i32),
     /// The active `colorscheme` (`setColorScheme`).
     pub color_scheme: Option<String>,
@@ -437,6 +480,7 @@ impl<'a> Job<'a> {
             clip,
             translation,
             scale,
+            dpi: Point::new(dpi, dpi),
             pages: (1, 1),
             color_scheme: None,
             layer_num: 0,
@@ -506,6 +550,11 @@ fn cmp_ignore_case(a: &str, b: &str) -> std::cmp::Ordering {
 pub(crate) struct Emitter<'a, E: Engine> {
     pub job: Job<'a>,
     pub eng: E,
+    /// `job->loadimage.engine`: the last loadimage plugin the job selected, which it keeps
+    /// using when a later lookup fails.
+    pub loadimage: Option<LoadImage>,
+    /// What [`Engine::write_output_file`] left for the output file before the engine's.
+    pub output_file: String,
 }
 
 impl<'a, E: Engine> Emitter<'a, E> {
