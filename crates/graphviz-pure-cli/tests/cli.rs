@@ -7365,7 +7365,9 @@ fn issue268_a_truncated_style_draws_no_style_items() {
 /// Issue #360: where a samehead/sametail port lies in no field of a record, C's
 /// `record_path` writes no box and the route uses the uninitialised `tend`/`hend` of
 /// `make_regular_edge` (or of the flat edge router), which hold the previous call's
-/// ends. Values are C 16.1.0's.
+/// ends. That is undefined behaviour in C: these coordinates are what C 16.1.0 draws on
+/// every run and on two builds, the behaviour `docs/porting/crashes.md` ("Record ports
+/// in no field") chooses to follow.
 #[test]
 fn issue360_record_port_in_no_field_reuses_the_previous_ends() {
     let regular = "digraph G {

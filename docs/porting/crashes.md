@@ -331,20 +331,37 @@ box, so `beginpath` and `endpath` keep whatever `endp->boxes` and `endp->boxn` h
 `make_regular_edge`, `make_flat_edge`, `make_flat_labeled_edge` and
 `make_flat_bottom_edges` (`dotsplines.c:1713`, `:1515`, `:1326`, `:1432`) that is
 `pathend_t tend, hend`, declared without an initialiser. In practice it holds what the
-previous call of the same function left there, on every run, and on both C builds measured
-(the Homebrew build and one built from source). The port keeps each function's last
-`tend`/`hend` (`StaleEnds` in `dotsplines.rs`) and reuses them there (`apply_pboxfn` in
-`common/splines.rs`). The four functions are called at the same stack depth, so their
-frames overlap, but one slot per function is what matches C: on 18 of the 164 inputs below
-where the port now matches C, another router ran between the call whose ends are reused and
-the miss. The slots start empty for each layout the port runs separately: each graph of the
-input, each `pack` component, and the graph `make_flat_adj_edges` lays out.
+previous call of the same function left there, on every run and on both C 16.1.0 builds
+measured (a packaged build and one built from source). The port keeps each function's last
+`tend`/`hend` (`StaleEnds` in `dotsplines.rs`) and hands their boxes to `beginpath` and
+`endpath` as `kept`. The shared code only installs boxes it is given; the reuse lives in
+dot's routers.
 
-Where there is no previous call, C reads unrelated stack memory. Its output then differs
-between the two builds, and C often crashes or gives different results from run to run. The
-port uses the node box there, as `beginpath` does when the shape has no port boxes. It does
-the same when the ends already hold 20 boxes, where C's next `boxes[boxn++]` can write past
-the array.
+How far that model reaches was measured, not assumed:
+
+- **Other routers in between.** `make_regular_edge` and `make_flat_edge` are called from
+  `dot_splines_`, `make_flat_labeled_edge` and `make_flat_bottom_edges` from inside
+  `make_flat_edge`, one frame deeper, so their frames can overlap. `edgecmp` sorts self loops
+  and flat edges before regular ones, so after the first `make_regular_edge` call no other
+  router runs: none did on 52,000 generated inputs. Between flat calls, another flat
+  router, and once the graph `make_flat_adj_edges` lays out, did run; where C drew, the
+  port's one slot per function matched it every time.
+- **Earlier graphs and pack components.** C does not reuse them. On 291 files of two
+  graphs, where the second graph's first router call misses, carrying the first graph's
+  ends matched C on no file where fresh slots did not; fresh slots matched on 8 where
+  carrying did not. With `pack=true` and a simple first component, carrying matched no
+  more drawings than fresh slots (21 each, of 42). Each layout the port runs separately
+  (each graph, each `pack` component, the graph `make_flat_adj_edges` lays out) starts with
+  no ends.
+
+Where a function has no previous call, C reads unrelated stack memory. Its output then
+differs between the two builds, and C often crashes or gives different results from run
+to run. The port uses the node box there, as `beginpath` does when the shape has no port
+boxes. Each miss in a row adds a box to the kept ones (at most 4 seen). C's array holds
+20, and C writes past it only when the box after the miss is not empty. The port keeps
+the 20 boxes when that box is empty, and fails the layout before the write otherwise
+(`dot_splines: an edge end already holds the 20 boxes C has room for`). No input reached
+that.
 
 Measured on 40,000 `fuzz-gen-endpoints.py` inputs (seeds 1–40000), where the port reaches
 this case on 213. On 5 of them C's output varies between runs. Of the other 208:
