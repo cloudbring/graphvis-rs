@@ -7608,6 +7608,151 @@ fn json_draw_numbers_print_nan_like_printf() {
     assert!(!out.contains("NaN"), "{out}");
 }
 
+// Issue #377: C's JSON `write_xdots` warns `Could not parse xdot` for a value with no op that
+// parses, and writes nothing after the key (invalid JSON). Output is C 16.1.0's.
+#[test]
+fn issue377_xdot_json_warns_and_writes_no_value_for_an_unparsable_xdot() {
+    let (out, err, ok) = run(&["-Txdot_json"], "digraph { a -> b [_hdraw_=\"zz\"] }");
+    assert!(ok);
+    assert_eq!(err, "Warning: Could not parse xdot \"zz\"\n");
+    assert_eq!(
+        out,
+        r#"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "label": "\\N"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "_hdraw_": 
+    }
+  ]
+}
+"#
+    );
+}
+
+// #377 review: the warning fires where C's `parseOp` fails: `parseXDotColor`'s first byte
+// (`!`), `gv_isspace` (`\v` is white space), `parseUInt`'s stop count (`-1` fails); and the
+// fontchar is the `unsigned` it read, printed with `%d` (#402). Output is C 16.1.0's.
+#[test]
+fn issue377_xdot_json_parses_ops_as_c_does() {
+    for (src, err_want, expected) in [
+        (
+            "digraph { a [_ldraw_=\"c 1 -!\"] }",
+            "Warning: Could not parse xdot \"c 1 -!\"\n",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": ,
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            "digraph { a [_ldraw_=\"\u{b}E 1 2 3 4\"] }",
+            "",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": 
+      [
+        {
+          "op": "E",
+          "rect": [1.000,2.000,3.000,4.000]
+        }
+      ],
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            "digraph { a [_ldraw_=\"c 13 -[0 0 1 1 -1 \"] }",
+            "Warning: Could not parse xdot \"c 13 -[0 0 1 1 -1 \"\n",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": ,
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            "digraph { a [_ldraw_=\"t -1 t 5000000000\"] }",
+            "",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": 
+      [
+        {
+          "op": "t",
+          "fontchar": -1
+        },
+        {
+          "op": "t",
+          "fontchar": 705032704
+        }
+      ],
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Txdot_json"], src);
+        assert!(ok);
+        assert_eq!(err, err_want, "{src}");
+        assert_eq!(out, expected, "{src}");
+    }
+}
+
 /// #194: `job->width` is `ROUND` converted through 64 bits, keeping the low 32 bits, so an
 /// infinite page width is -1.
 #[test]
@@ -10306,6 +10451,352 @@ fn issue331_user_pos_errors_follow_each_nodes_init() {
         err,
         format!("{pos}Error: node a in graph G has no position\nas required by the -n flag\n")
     );
+
+    // `-Tjson`: the xdot job replaces node b's `_draw_` but not node a's `_tldraw_`. Each job
+    // warns again.
+    let src = "digraph { a [_tldraw_=\"zz\"]; b [_draw_=\"zz\"] }";
+    let warning = "Warning: Could not parse xdot \"zz\"\n";
+    for (args, warnings, expected) in [
+        (
+            &["-Tjson"][..],
+            1,
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,36.000],[126.000,36.000],[126.000,0.000]]
+    }
+  ],
+  "bb": "0,0,126,36",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [27.000,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [27.000,13.800],
+          "align": "c",
+          "width": 6.210,
+          "text": "a"
+        }
+      ],
+      "_tldraw_": ,
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [99.000,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [99.000,13.800],
+          "align": "c",
+          "width": 7.000,
+          "text": "b"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,18",
+      "width": "0.75"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            &["-Tjson", "-Txdot_json"][..],
+            2,
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,36.000],[126.000,36.000],[126.000,0.000]]
+    }
+  ],
+  "bb": "0,0,126,36",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [27.000,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [27.000,13.800],
+          "align": "c",
+          "width": 6.210,
+          "text": "a"
+        }
+      ],
+      "_tldraw_": ,
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [99.000,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [99.000,13.800],
+          "align": "c",
+          "width": 7.000,
+          "text": "b"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,18",
+      "width": "0.75"
+    }
+  ]
+}
+{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,36.000],[126.000,36.000],[126.000,0.000]]
+    }
+  ],
+  "bb": "0,0,126,36",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [27.000,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [27.000,13.800],
+          "align": "c",
+          "width": 6.210,
+          "text": "a"
+        }
+      ],
+      "_tldraw_": ,
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [99.000,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [99.000,13.800],
+          "align": "c",
+          "width": 7.000,
+          "text": "b"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,18",
+      "width": "0.75"
+    }
+  ]
+}
+"##,
+        ),
+    ] {
+        let (out, err, ok) = run(args, src);
+        assert!(ok);
+        assert_eq!(err, warning.repeat(warnings), "{args:?}");
+        assert_eq!(out, expected, "{args:?}");
+    }
 }
 
 /// Issue #331: C warns about an unknown arrow type each time `arrow_flags` runs, and only

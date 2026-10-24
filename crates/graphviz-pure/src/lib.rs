@@ -550,6 +550,26 @@ mod tests {
         jobs.render(OutputFormat::Dot, "dot").unwrap()
     }
 
+    // #377: where C writes an xdot key with no value (invalid JSON), the library keeps one
+    // JSON document: the value is `""`. Only the CLI writes C's bytes.
+    #[test]
+    fn json_with_an_unparsable_xdot_value_parses() {
+        let src = "digraph { a [_tldraw_=\"zz\"]; a -> b [_hdraw_=\"zz\"] }";
+        for format in ["json", "xdot_json", "json0", "dot_json"] {
+            let out = render_dot(src, "dot", format).unwrap();
+            let doc: serde_json::Value =
+                serde_json::from_str(&out).unwrap_or_else(|e| panic!("{format}: {e}\n{out}"));
+            let nodes = doc["objects"].as_array().unwrap();
+            let a = nodes.iter().find(|o| o["name"] == "a").unwrap();
+            let want = if format.contains("json0") || format == "dot_json" {
+                "zz"
+            } else {
+                ""
+            };
+            assert_eq!(a["_tldraw_"], want, "{format}");
+        }
+    }
+
     // #347 review: a call is one C process. The files it read and the epsf files it
     // numbered are its own, and another thread has its own runs.
     #[test]

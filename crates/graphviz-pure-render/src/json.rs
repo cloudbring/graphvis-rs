@@ -191,7 +191,8 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
         Op::FontChar(v) => {
             out.push_str("\"op\": \"t\",\n");
             indent(out, l);
-            let _ = writeln!(out, "\"fontchar\": {v}");
+            // `%d` of the `unsigned` `parseUInt` read.
+            let _ = writeln!(out, "\"fontchar\": {}", *v as u32 as i32);
         }
     }
     *level -= 1;
@@ -199,11 +200,16 @@ fn write_op(out: &mut String, op: &Op, level: &mut i32) {
     out.push('}');
 }
 
-fn write_xdots(out: &mut String, val: &str, level: &mut i32) {
+/// `write_xdots`: the value's ops as a JSON list. When no op parses C warns and writes
+/// nothing after the key, which leaves the JSON invalid. That is what the CLI writes
+/// (`c_output`); for a library caller, which gets one JSON document, the value is `""`.
+fn write_xdots(out: &mut String, val: &str, level: &mut i32, c_output: bool) {
     let ops = parse_xdot(val);
     if ops.is_empty() {
-        out.push('"');
-        out.push('"');
+        graphviz_pure_core::diag::agwarningf(&format!("Could not parse xdot \"{val}\"\n"));
+        if !c_output {
+            out.push_str("\"\"");
+        }
         return;
     }
     out.push('\n');
@@ -229,6 +235,8 @@ fn write_xdots(out: &mut String, val: &str, level: &mut i32) {
 struct W<'g> {
     g: &'g Graph,
     do_xdot: bool,
+    /// Write C's bytes where they are not a valid JSON document ([`write_xdots`]).
+    c_output: bool,
     latin1: bool,
     level: i32,
     out: String,
@@ -263,7 +271,7 @@ impl W<'_> {
             out.push_str(": ");
             if self.do_xdot && is_xdot(name) {
                 let mut level = self.level;
-                write_xdots(out, v, &mut level);
+                write_xdots(out, v, &mut level, self.c_output);
             } else {
                 stoj(v, out);
             }
@@ -486,9 +494,11 @@ fn edge_attrs_with_ports(g: &Graph) -> Vec<AttrMap> {
 /// Writes `g` (with its layout attributes already attached) as JSON. `edge_order` gives the
 /// `agfstnode`/`agfstout` iteration order used to number edges.
 /// `clust_nodes`: the nodes that are `IS_CLUST_NODE` (fdp's cluster-edge endpoints).
+/// `c_output`: the caller keeps C's output-file bytes (the CLI), see [`write_xdots`].
 pub(crate) fn write_json(
     g: &Graph,
     do_xdot: bool,
+    c_output: bool,
     edge_order: &[usize],
     clust_nodes: &[bool],
 ) -> String {
@@ -591,6 +601,7 @@ pub(crate) fn write_json(
     let mut w = W {
         g,
         do_xdot,
+        c_output,
         latin1: graphviz_pure_core::font::charset_is_latin1(
             g.graph_attrs.get("charset").map(String::as_str),
         ),

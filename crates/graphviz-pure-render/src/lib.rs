@@ -406,6 +406,7 @@ impl<'g> GraphJobs<'g> {
                 + &json::write_json(
                     &g,
                     lname == "xdot_json",
+                    self.output_file,
                     &input_edge_order(graph),
                     &clust_nodes(graph),
                 ));
@@ -441,6 +442,7 @@ impl<'g> GraphJobs<'g> {
                 json::write_json(
                     &g,
                     format == OutputFormat::Json,
+                    self.output_file,
                     &edge_order(&m),
                     &clust_nodes(graph),
                 )
