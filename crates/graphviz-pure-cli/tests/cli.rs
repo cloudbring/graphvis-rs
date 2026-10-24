@@ -7661,6 +7661,347 @@ fn issue283_layers_split_on_the_bytes_of_layersep() {
     assert_eq!(out[start..], expected[..]);
 }
 
+// Issue #324: C's JSON `write_attrs` walks the root's attribute dictionaries, and writes
+// `label` even when it is empty. `{} -> c [label=x]` makes no edge but declares the edge
+// `label`, so `a -> b` gets `"label": ""`. Output is C 16.1.0's.
+#[test]
+fn issue324_json_writes_a_declared_edge_label_with_no_value() {
+    let (out, err, ok) = run(&["-Tjson0"], "digraph { a -> b; {} -> c [label=x] }");
+    assert!(ok);
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        r#"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,126,108",
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "%5",
+      "_gvid": 0
+    },
+    {
+      "_gvid": 1,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,90",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,90",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 2,
+      "label": "",
+      "pos": "e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"
+    }
+  ]
+}
+"#
+    );
+    // A subgraph's `edge [label=x]` declares `label` on the root too; the unattached
+    // `-Tdot_json` writer.
+    let (out, err, ok) = run(
+        &["-Tdot_json"],
+        "digraph { a -> b; subgraph s { edge [label=x] } }",
+    );
+    assert!(ok);
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        r#"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "s",
+      "_gvid": 0
+    },
+    {
+      "_gvid": 1,
+      "name": "a",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 2,
+      "name": "b",
+      "label": "\\N"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 2,
+      "label": ""
+    }
+  ]
+}
+"#
+    );
+
+    // The attached writers: `-Tjson` (through the xdot job) and `-Txdot_json`, here for a
+    // strict graph's keyed edge statement that makes no edge.
+    for (format, src, expected) in [
+        (
+            "-Tjson",
+            "digraph { a -> b; {} -> c [label=x] }",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,108.000],[126.000,108.000],[126.000,0.000]]
+    }
+  ],
+  "bb": "0,0,126,108",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "%5",
+      "_gvid": 0
+    },
+    {
+      "_gvid": 1,
+      "name": "a",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [27.000,90.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [27.000,85.800],
+          "align": "c",
+          "width": 6.210,
+          "text": "a"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,90",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "b",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [27.000,18.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [27.000,13.800],
+          "align": "c",
+          "width": 7.000,
+          "text": "b"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "c",
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "e",
+          "rect": [99.000,90.000,27.000,18.000]
+        }
+      ],
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [99.000,85.800],
+          "align": "c",
+          "width": 6.210,
+          "text": "c"
+        }
+      ],
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,90",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 2,
+      "_draw_": 
+      [
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "b",
+          "points": [[27.000,71.700],[27.000,64.410],[27.000,55.730],[27.000,47.540]]
+        }
+      ],
+      "_hdraw_": 
+      [
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[30.500,47.620],[27.000,37.620],[23.500,47.620]]
+        }
+      ],
+      "label": "",
+      "pos": "e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            "-Txdot_json",
+            "strict digraph { a -> b; a -> b [key=k, label=L] }",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": true,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 1,
+      "name": "b",
+      "label": "\\N"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 0,
+      "head": 1,
+      "label": ""
+    }
+  ]
+}
+"##,
+        ),
+    ] {
+        let (out, err, ok) = run(&[format], src);
+        assert!(ok);
+        assert_eq!(err, "");
+        assert_eq!(out, expected, "{format} {src}");
+    }
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
