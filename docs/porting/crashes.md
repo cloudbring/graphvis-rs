@@ -334,13 +334,17 @@ box, so `beginpath` and `endpath` keep whatever `endp->boxes` and `endp->boxn` h
 previous call of the same function left there, on every run, and on both C builds measured
 (the Homebrew build and one built from source). The port keeps each function's last
 `tend`/`hend` (`StaleEnds` in `dotsplines.rs`) and reuses them there (`apply_pboxfn` in
-`common/splines.rs`).
+`common/splines.rs`). The four functions are called at the same stack depth, so their
+frames overlap, but one slot per function is what matches C: on 18 of the 164 inputs below
+where the port now matches C, another router ran between the call whose ends are reused and
+the miss. The slots start empty for each layout the port runs separately: each graph of the
+input, each `pack` component, and the graph `make_flat_adj_edges` lays out.
 
 Where there is no previous call, C reads unrelated stack memory. Its output then differs
 between the two builds, and C often crashes or gives different results from run to run. The
 port uses the node box there, as `beginpath` does when the shape has no port boxes. It does
-the same when the ends already hold 20 boxes, where C's next `boxes[boxn++]` writes past the
-array.
+the same when the ends already hold 20 boxes, where C's next `boxes[boxn++]` can write past
+the array.
 
 Measured on 40,000 `fuzz-gen-endpoints.py` inputs (seeds 1–40000), where the port reaches
 this case on 213. On 5 of them C's output varies between runs. Of the other 208:

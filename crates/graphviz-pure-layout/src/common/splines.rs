@@ -501,7 +501,7 @@ fn clear_orig_clip<S: SplineGraph + ?Sized>(g: &mut S, e: usize, n: usize, at_ta
 }
 
 /// The size of `pathend_t.boxes` in C.
-pub const PATHEND_MAX_BOXES: usize = 20;
+const PATHEND_MAX_BOXES: usize = 20;
 
 /// `if (pboxfn && (mask = pboxfn(n, port, side, &endp->boxes[0], &endp->boxn)))
 /// endp->sidemask = mask;` in `beginpath` and `endpath`: whether the shape's
@@ -516,7 +516,7 @@ pub const PATHEND_MAX_BOXES: usize = 20;
 /// previous call C reads unrelated stack memory (its output differs between
 /// builds, and it often crashes): the port uses the node box. The node box is
 /// used too when the ends already fill C's 20 boxes, where the caller's next
-/// `boxes[boxn++]` would write past the array.
+/// `boxes[boxn++]` may write past the array.
 fn apply_pboxfn(endp: &mut PathEnd, r: Option<(u8, Vec<BoundingBox>)>) -> bool {
     let Some((mask, boxes)) = r.filter(|(m, _)| *m != 0) else {
         return false;

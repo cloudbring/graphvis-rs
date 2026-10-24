@@ -97,7 +97,11 @@ pub fn swap_spline(s: &mut [Bezier]) {
 /// left them. C declares them as uninitialised locals, and where `record_path`
 /// writes no box (#360) the route uses what they hold: in practice, the same
 /// function's previous ends, on every run and on two builds measured (the
-/// Homebrew build and one from source). See `apply_pboxfn` in `common::splines`.
+/// Homebrew build and one from source). The four functions run at the same stack
+/// depth, so their frames overlap; one slot per function is what matched C, also
+/// where another router ran in between. A new `Dot` (a pack component, the
+/// adjacent flat edges' graph) starts with none. See `apply_pboxfn` in
+/// `common::splines`.
 #[derive(Debug, Default)]
 pub struct StaleEnds {
     regular: (PathEnd, PathEnd),
