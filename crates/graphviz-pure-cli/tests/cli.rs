@@ -8438,6 +8438,35 @@ fn issue393_a_repeated_graph_attribute_is_set_once_per_occurrence() {
 }
 "#
     );
+    // The last item wins with its own HTML flag, at the root and in a subgraph; a repeated
+    // `-G`-fixed key leaves the root's value; a repeated edge `key` sets nothing.
+    for (args, src, want) in [
+        (
+            &["-Tcanon"][..],
+            "digraph { graph [label=<b>, label=\"t\"]; subgraph s { graph [label=\"u\", label=<v>] x } }",
+            "digraph {\n\tgraph [label=t];\n\tnode [label=\"\\N\"];\n\tsubgraph s {\n\t\tgraph [label=<v>];\n\t\tx;\n\t}\n}\n",
+        ),
+        (
+            &["-Tcanon", "-Gfoo=1"],
+            "digraph { graph [foo=2, foo=3]; a }",
+            "digraph {\n\tgraph [foo=1];\n\tnode [label=\"\\N\"];\n\ta;\n}\n",
+        ),
+        (
+            &["-Tcanon"],
+            "digraph { edge [key=a, key=b, color=red]; a -> b }",
+            "digraph {\n\tnode [label=\"\\N\"];\n\tedge [color=red];\n\ta -> b;\n}\n",
+        ),
+        (
+            &["-Tcanon"],
+            "digraph { node [shape=box, shape=<circle>]; a }",
+            "digraph {\n\tnode [label=\"\\N\",\n\t\tshape=<circle>\n\t];\n\ta;\n}\n",
+        ),
+    ] {
+        let (out, err, ok) = run(args, src);
+        assert!(ok, "{err}");
+        assert_eq!(err, "", "{src}");
+        assert_eq!(out, want, "{src}");
+    }
 }
 
 /// Issue #332: `Nop` is a global of the C process. `nop1_layout`/`nop2_layout`
