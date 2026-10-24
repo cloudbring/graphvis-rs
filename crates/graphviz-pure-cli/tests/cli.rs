@@ -7806,7 +7806,11 @@ fn epsf_files_are_found_again_as_c_finds_them() {
 /// other keys can miss it: C reads `x.eps` where the port found `box.eps` under the buffer.
 /// In the second file, the first graph's key for `y.eps` is freed memory (read as `""`)
 /// that steers the second graph's search away from the buffer key. The expected output
-/// is C 16.1.0's.
+/// is C 16.1.0's. Paths follow C's Unix rules on every platform (`usershape`): the scratch
+/// directory is an absolute name, and one `imagepath` entry, only under Unix paths, as in
+/// `epsf_files_are_found_again_as_c_finds_them`; `epsf_tree_splays_like_cdt` tests the tree
+/// everywhere.
+#[cfg(unix)]
 #[test]
 fn issue380_epsf_lookup_follows_the_splay_tree() {
     let scratch_dir = scratch("i380-epsf-tree");
