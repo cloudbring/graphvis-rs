@@ -4677,6 +4677,28 @@ fn issue364_epsf_clip_uses_the_flipped_node_size() {
 }
 "#,
         ),
+        (
+            // with splines=curved, dot keeps a self-loop's space in ND_rw when it clips, so
+            // lw and rw differ: swapping them, or taking width / 2 for both, fails here
+            "digraph { rankdir=LR; splines=curved; a [shape=epsf]; a -> a; a -> b }",
+            r#"digraph {
+	graph [bb="0,0,144,54",
+		rankdir=LR,
+		splines=curved
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		pos="27,18",
+		shape=epsf,
+		width=0.75];
+	a -> a	[pos="e,27,18 27,18 27,18 27,18 27,18"];
+	b	[height=0.5,
+		pos="117,18",
+		width=0.75];
+	a -> b	[pos="e,93.537,8.9608 62.824,5.4525 69.783,4.0712 75.745,4.1923 82.879,5.8157"];
+}
+"#,
+        ),
     ] {
         let (out, err, ok) = run(&["-Tdot"], src);
         assert!(ok, "{err}");
@@ -7566,6 +7588,114 @@ fn epsf_files_are_found_again_as_c_finds_them() {
         ],
         "{dot}"
     );
+}
+
+/// Issue #380: `user_init` (psusershape.c:49) looks a `shape=epsf` file up in
+/// `EPSF_contents`, cdt's splay tree (`lib/cdt/dttree.c`), keyed by the pointer `safefile`
+/// returned. Through `imagepath` that is `findPath`'s buffer, which sits where the text it
+/// held at insertion placed it and compares by its current text, so a search steered by
+/// other keys can miss it: C reads `x.eps` where the port found `box.eps` under the buffer.
+/// In the second file, the first graph's key for `y.eps` is freed memory (read as `""`)
+/// that steers the second graph's search away from the buffer key. The expected output
+/// is C 16.1.0's.
+#[test]
+fn issue380_epsf_lookup_follows_the_splay_tree() {
+    let scratch_dir = scratch("i380-epsf-tree");
+    for (name, bb) in [
+        ("box.eps", "10 20 110 70"),
+        ("c.eps", "0 0 20 30"),
+        ("x.eps", "0 0 3 4"),
+        ("y.eps", "1 2 30 40"),
+    ] {
+        std::fs::write(
+            scratch_dir.join(name),
+            format!("%!PS\n%%BoundingBox: {bb}\n"),
+        )
+        .unwrap();
+    }
+    let dir = scratch_dir.to_string_lossy();
+    let cases = [
+        (
+            format!(
+                "digraph {{ imagepath=\"{dir}\"; a [shape=epsf shapefile=\"box.eps\"]; \
+                 b [shape=epsf shapefile=\"{dir}/c.eps\"]; e [shape=epsf shapefile=\"x.eps\"] }}"
+            ),
+            format!(
+                r#"-10 -20 translate newpath user_shape_0
+118 10 translate newpath user_shape_1
+156.5 23 translate newpath user_shape_2
+digraph {{
+	graph [bb="0,0,159.5,50",
+		imagepath="{dir}"
+	];
+	node [label="\N"];
+	a	[height=0.69444,
+		pos="50,25",
+		shape=epsf,
+		shapefile="box.eps",
+		width=1.3889];
+	b	[height=0.41667,
+		pos="128,25",
+		shape=epsf,
+		shapefile="{dir}/c.eps",
+		width=0.27778];
+	e	[height=0.055556,
+		pos="158,25",
+		shape=epsf,
+		shapefile="x.eps",
+		width=0.041667];
+}}
+"#
+            ),
+        ),
+        (
+            format!(
+                "digraph {{ imagepath=\"{dir}\"; a [shape=epsf shapefile=\"x.eps\"]; \
+                 b [shape=epsf shapefile=\"{dir}/y.eps\"] }}\n\
+                 digraph {{ imagepath=\"{dir}\"; b [shape=epsf shapefile=\"x.eps\"] }}"
+            ),
+            format!(
+                r#"0 17 translate newpath user_shape_0
+20 -2 translate newpath user_shape_1
+digraph {{
+	graph [bb="0,0,50,38",
+		imagepath="{dir}"
+	];
+	node [label="\N"];
+	a	[height=0.055556,
+		pos="1.5,19",
+		shape=epsf,
+		shapefile="x.eps",
+		width=0.041667];
+	b	[height=0.52778,
+		pos="35.5,19",
+		shape=epsf,
+		shapefile="{dir}/y.eps",
+		width=0.40278];
+}}
+0 0 translate newpath user_shape_2
+digraph {{
+	graph [bb="0,0,3,4",
+		imagepath="{dir}"
+	];
+	node [label="\N"];
+	b	[height=0.055556,
+		pos="1.5,2",
+		shape=epsf,
+		shapefile="x.eps",
+		width=0.041667];
+}}
+"#
+            ),
+        ),
+    ];
+    for (src, want) in cases {
+        let (out, err, ok) = run(&["-Tdot"], &src);
+        assert!(ok, "{err}");
+        assert_eq!(err, "");
+        assert_eq!(out, want, "{src}");
+    }
+    let _ = std::fs::remove_dir_all(&scratch_dir);
 }
 
 // Issue #347: the size readers read headers only. Odd headers give what C reads, and a

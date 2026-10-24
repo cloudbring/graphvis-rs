@@ -670,3 +670,30 @@ call left there:
 The port does not model the second case. What C reads depends on the buffer's growth and on
 the order of every `parse_style` call in the run, which the port's renderers don't reproduce
 call for call. A truncated style gives no items in the port, C's result in the first case.
+
+## Freed keys in EPSF_contents
+
+`user_init` (`lib/common/psusershape.c:49`) keys `EPSF_contents`, cdt's splay tree, by the
+pointer `safefile` returned (#380). For a name `safefile` returns as it was given (an
+absolute path, or any name without `imagepath`), that is the node's `shapefile` string,
+which `agclose` frees with its graph; the tree keeps the pointer, and the next
+graph's lookups compare with that freed memory. That is undefined behaviour: C's result
+depends on the platform's allocator, and on whether a later allocation reused the block.
+
+The port models the reference build's allocator (macOS arm64), which clears freed small
+blocks: a closed graph's key compares as the empty string, so it matches nothing and every
+search passes it on the right. The choice is deterministic and the same on every platform; on
+other platforms, or where the memory was reused, C reads other bytes. Measured on 147
+generated files of two or three graphs with `shape=epsf` nodes and `imagepath`, against C on
+the reference build:
+
+| A closed graph's key | Files equal to C |
+|---|---|
+| reads as `""` (chosen) | 137 |
+| keeps its text, never equal, ties below | 125 |
+| keeps its text, never equal, ties above | 124 |
+| greater than any key | 120 |
+| keeps its text, and matches | 96 |
+
+The other 10 depend on where the next graph's strings land in memory (C's output on some of
+them changes from run to run), which the port does not model.

@@ -198,20 +198,22 @@ pub trait SplineGraph {
     }
 }
 
-/// The `inside_t` context for node `n` (`.s.n = n, .s.bp = bp`), including
-/// `poly_inside`'s scale from `ND_lw + ND_rw` and `ND_ht`.
+/// The `inside_t` context for node `n` (`.s.n = n, .s.bp = bp`): the node's `ND_lw`,
+/// `ND_rw` and `ND_ht` as the layout has them, and `poly_inside`'s scale from them.
 pub fn inside_ctx<S: SplineGraph + ?Sized>(g: &S, n: usize, bp: Option<BoundingBox>) -> InsideCtx {
+    let (lw, rw, ht) = (g.lw(n), g.rw(n), g.ht(n));
     let mut ctx = InsideCtx {
+        last: 0,
         bp,
         rankdir: g.rankdir(),
-        ..InsideCtx::default()
+        scale: None,
+        extent: (lw, rw, ht),
     };
     if let Some(shape) = g.shape(n) {
-        ctx.extent = Some((g.lw(n), g.rw(n), g.ht(n)));
         let (xsize, ysize) = if g.flip() {
-            (g.ht(n), g.lw(n) + g.rw(n))
+            (ht, lw + rw)
         } else {
-            (g.lw(n) + g.rw(n), g.ht(n))
+            (lw + rw, ht)
         };
         let sx = if is_exactly_zero(xsize) {
             shape.width

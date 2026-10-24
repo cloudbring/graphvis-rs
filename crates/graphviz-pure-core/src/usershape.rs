@@ -19,6 +19,7 @@ pub use size::ImageType;
 
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, Read};
@@ -97,16 +98,30 @@ struct RunState {
     oldpath: u64,
     /// The last id given to a graph's `imagepath` or layout.
     last_id: u64,
-    /// `EPSF_contents`, the most recently inserted or matched entry last (the root of C's
-    /// splay tree). Its keys are pointers: a key that is a graph's string matches no lookup
-    /// once that graph is closed, and a key that is `findPath`'s buffer has the text of the
-    /// last path built there, so a lookup through the buffer matches it whatever file it
-    /// names. Not modelled, as C reads freed memory there: a buffer that moved when it grew
-    /// (past 24 bytes, then on reallocation), and the way freed keys steer the tree search;
-    /// nor the tree's order, by which C can miss a buffer key (#380).
-    epsf_contents: Vec<(EpsfKey, EpsfShape)>,
+    /// `EPSF_contents`, cdt's `Dtoset` splay tree. Its keys are pointers: a key that is a
+    /// graph's string matches no lookup once that graph is closed, and a key that is
+    /// `findPath`'s buffer has the text of the last path built there, so a lookup through the
+    /// buffer matches it whatever file it names, if the search reaches it (#380). Not
+    /// modelled, as C reads freed memory there: a buffer that moved when it grew (past its
+    /// 30 characters of inline storage, then on reallocation), and a closed graph's key
+    /// whose memory was reused ([`EpsfTree::cmp`]).
+    epsf_contents: EpsfTree,
     /// `N_EPSF_files`.
     n_epsf_files: i32,
+}
+
+impl RunState {
+    /// `dtmatch` (`ins` is `None`) or `dtinsert` of `EPSF_contents`, with `findPath`'s buffer
+    /// as it is now.
+    fn epsf_dttree(
+        &mut self,
+        key: &str,
+        ins: Option<(EpsfKey, EpsfShape)>,
+        layout: u64,
+    ) -> Option<EpsfShape> {
+        self.epsf_contents
+            .dttree(key, ins, &self.find_path_buf, layout)
+    }
 }
 
 /// The usershape context of one graph's layout (`graph_init`'s globals and what the sizings
@@ -650,20 +665,187 @@ enum EpsfKey {
     Graph(u64, String),
 }
 
-/// `dtmatch(EPSF_contents, str)`: keys compare by text (`strcmp`).
+/// A node of `EPSF_contents`.
+#[derive(Debug)]
+struct EpsfEntry {
+    key: EpsfKey,
+    us: EpsfShape,
+    left: Option<usize>,
+    right: Option<usize>,
+}
+
+/// `EPSF_contents`: cdt's ordered set (`lib/cdt/dttree.c`), a top-down splay tree whose keys
+/// compare by `strcmp` at the time of each comparison. A key that is `findPath`'s buffer
+/// compares by the buffer's current text, so it sits where the text it held at insertion
+/// placed it, and a later search, steered by other keys, can miss it (#380).
+#[derive(Debug, Default)]
+struct EpsfTree {
+    nodes: Vec<EpsfEntry>,
+    root: Option<usize>,
+}
+
+impl EpsfTree {
+    /// `strcmp(key, k)` for the search key `key` and the entry `k`. A key of a closed graph
+    /// points at freed memory in C (undefined behaviour): what C reads there depends on the
+    /// platform's allocator. The port models the reference build's (macOS arm64), which
+    /// clears freed small blocks, so the key reads as `""`: it matches nothing and every
+    /// search passes it on the right. The choice is the port's, the same on every platform;
+    /// where a later allocation reused the memory, C reads other bytes
+    /// (docs/porting/crashes.md, "Freed keys in EPSF_contents").
+    fn cmp(&self, key: &str, k: usize, buf: &str, layout: u64) -> Ordering {
+        match &self.nodes[k].key {
+            EpsfKey::Static => key.cmp(buf),
+            EpsfKey::Graph(g, p) if *g == layout => key.cmp(p.as_str()),
+            EpsfKey::Graph(..) => key.cmp(""),
+        }
+    }
+
+    /// `dttree(dt, obj, DT_MATCH)` (`ins` is `None`) or `DT_INSERT` (`ins` given, whose key's
+    /// text is `key`): the matching entry, splayed to the root, or for an insert that matches
+    /// none, `ins` as the new root. `None` when a match finds nothing. A `Dtoset` insert that
+    /// matches returns the entry it found and drops `ins`.
+    fn dttree(
+        &mut self,
+        key: &str,
+        ins: Option<(EpsfKey, EpsfShape)>,
+        buf: &str,
+        layout: u64,
+    ) -> Option<EpsfShape> {
+        // C's `link`: the LEFT tree (`link.right`) and the RIGHT tree (`link.left`), and `l`
+        // and `r`, the entries last linked into each (`None` while it is `&link`).
+        let mut left = Link::default();
+        let mut right = Link::default();
+        let mut root = self.root;
+        while let Some(rt) = root {
+            let cmp = self.cmp(key, rt, buf, layout);
+            if cmp == Ordering::Equal {
+                break;
+            }
+            if cmp == Ordering::Less {
+                let Some(t) = self.nodes[rt].left else {
+                    right.rlink(&mut self.nodes, rt);
+                    root = None;
+                    break;
+                };
+                match self.cmp(key, t, buf, layout) {
+                    Ordering::Less => {
+                        // rrotate(root, t); rlink(r, t)
+                        self.nodes[rt].left = self.nodes[t].right;
+                        self.nodes[t].right = Some(rt);
+                        right.rlink(&mut self.nodes, t);
+                        root = self.nodes[t].left;
+                    }
+                    Ordering::Equal => {
+                        right.rlink(&mut self.nodes, rt);
+                        root = Some(t);
+                        break;
+                    }
+                    Ordering::Greater => {
+                        left.llink(&mut self.nodes, t);
+                        right.rlink(&mut self.nodes, rt);
+                        root = self.nodes[t].right;
+                    }
+                }
+            } else {
+                let Some(t) = self.nodes[rt].right else {
+                    left.llink(&mut self.nodes, rt);
+                    root = None;
+                    break;
+                };
+                match self.cmp(key, t, buf, layout) {
+                    Ordering::Greater => {
+                        // lrotate(root, t); llink(l, t)
+                        self.nodes[rt].right = self.nodes[t].left;
+                        self.nodes[t].left = Some(rt);
+                        left.llink(&mut self.nodes, t);
+                        root = self.nodes[t].right;
+                    }
+                    Ordering::Equal => {
+                        left.llink(&mut self.nodes, rt);
+                        root = Some(t);
+                        break;
+                    }
+                    Ordering::Less => {
+                        right.rlink(&mut self.nodes, t);
+                        left.llink(&mut self.nodes, rt);
+                        root = self.nodes[t].left;
+                    }
+                }
+            }
+        }
+        let root = match (root, ins) {
+            (Some(rt), _) => {
+                // found it, now isolate it
+                let (rl, rr) = (self.nodes[rt].left, self.nodes[rt].right);
+                left.set_end(&mut self.nodes, rl, false);
+                right.set_end(&mut self.nodes, rr, true);
+                rt
+            }
+            (None, Some((key, us))) => {
+                // not found: finish up the LEFT and RIGHT trees, then dt_insert
+                left.set_end(&mut self.nodes, None, false);
+                right.set_end(&mut self.nodes, None, true);
+                self.nodes.push(EpsfEntry {
+                    key,
+                    us,
+                    left: None,
+                    right: None,
+                });
+                self.nodes.len() - 1
+            }
+            (None, None) => {
+                // no_root: the LEFT tree hangs under the RIGHT tree's smallest entry, which
+                // is `r` (its left was just cleared), or is the RIGHT tree when that is empty
+                left.set_end(&mut self.nodes, None, false);
+                let lt = left.head;
+                right.set_end(&mut self.nodes, lt, true);
+                self.root = right.head;
+                return None;
+            }
+        };
+        // has_root
+        self.nodes[root].left = left.head;
+        self.nodes[root].right = right.head;
+        self.root = Some(root);
+        Some(self.nodes[root].us)
+    }
+}
+
+/// One side of `dttree`'s `link`: the tree's head, and the entry last linked into it.
+#[derive(Default)]
+struct Link {
+    head: Option<usize>,
+    last: Option<usize>,
+}
+
+impl Link {
+    /// `llink(l, x)`: `x` hangs at the right of the LEFT tree.
+    fn llink(&mut self, nodes: &mut [EpsfEntry], x: usize) {
+        self.set_end(nodes, Some(x), false);
+        self.last = Some(x);
+    }
+
+    /// `rlink(r, x)`: `x` hangs at the left of the RIGHT tree.
+    fn rlink(&mut self, nodes: &mut [EpsfEntry], x: usize) {
+        self.set_end(nodes, Some(x), true);
+        self.last = Some(x);
+    }
+
+    /// `l->right = x` (`left` false) or `r->left = x` (`left` true), where `l`/`r` may be
+    /// `&link` itself, whose field is the tree's head.
+    fn set_end(&mut self, nodes: &mut [EpsfEntry], x: Option<usize>, left: bool) {
+        match (self.last, left) {
+            (Some(i), false) => nodes[i].right = x,
+            (Some(i), true) => nodes[i].left = x,
+            (None, _) => self.head = x,
+        }
+    }
+}
+
+/// `dtmatch(EPSF_contents, str)`.
 fn epsf_lookup(path: &str) -> Option<EpsfShape> {
     let layout = graph(|g| g.layout_id);
-    run(|r| {
-        let buf = &r.find_path_buf;
-        let i = r.epsf_contents.iter().rposition(|(k, _)| match k {
-            EpsfKey::Static => buf == path,
-            EpsfKey::Graph(g, p) => *g == layout && p == path,
-        })?;
-        let e = r.epsf_contents.remove(i);
-        let us = e.1;
-        r.epsf_contents.push(e);
-        Some(us)
-    })
+    run(|r| r.epsf_dttree(path, None, layout))
 }
 
 /// `epsf_init`: the `%%BoundingBox` (`lx ly ux uy`) and macro number of a `shape=epsf`
@@ -720,9 +902,10 @@ fn user_init(shapefile: Option<&str>, node: &str) -> (Option<EpsfShape>, Vec<Str
         let key = if via_buffer {
             EpsfKey::Static
         } else {
-            EpsfKey::Graph(layout, path)
+            EpsfKey::Graph(layout, path.clone())
         };
-        r.epsf_contents.push((key, us));
+        // a `Dtoset` insert that finds an equal key keeps that entry; C still returns `us`
+        r.epsf_dttree(&path, Some((key, us)), layout);
         us
     });
     (Some(us), Vec::new())
@@ -830,6 +1013,75 @@ mod tests {
         assert_eq!(gvusershape_size(Some(&ps)), (100, 50));
         assert!(find(&png).is_none());
         begin_layout(None, false, 0.0);
+    }
+
+    /// The tree's shape, in order: `(left key right)`, `.` for an empty subtree.
+    fn shape(t: &EpsfTree, n: Option<usize>, out: &mut String) {
+        let Some(n) = n else {
+            out.push('.');
+            return;
+        };
+        let EpsfKey::Graph(_, k) = &t.nodes[n].key else {
+            unreachable!()
+        };
+        out.push('(');
+        shape(t, t.nodes[n].left, out);
+        out.push_str(&format!(" {k} "));
+        shape(t, t.nodes[n].right, out);
+        out.push(')');
+    }
+
+    // #380: EpsfTree is cdt's Dtoset. The expected shapes come from a C harness linking
+    // Graphviz 16.1.0's libcdt: a Dtoset with string keys (`.size = -1`), the same
+    // operations, and the tree printed from `dt->data.here` after each one. The sequence
+    // reaches every branch of dttree: both zig-zigs and zig-zags, a match at the child on
+    // either side, misses past both ends (`r` and `l` still `&link`) and in the middle,
+    // and inserts of a new and of an existing key.
+    #[test]
+    fn epsf_tree_splays_like_cdt() {
+        let mut t = EpsfTree::default();
+        let ops = "+m +d +t +b +f +r +w +a +c +e +g ?a ?w ?e ?q ?z ?0 ?m ?c ?t ?f +m +q ?r ?b";
+        let want = [
+            "+m -> m : (. m .)",
+            "+d -> d : (. d (. m .))",
+            "+t -> t : (((. d .) m .) t .)",
+            "+b -> b : (. b ((. d .) m (. t .)))",
+            "+f -> f : ((. b (. d .)) f (. m (. t .)))",
+            "+r -> r : ((((. b (. d .)) f .) m .) r (. t .))",
+            "+w -> w : ((((((. b (. d .)) f .) m .) r .) t .) w .)",
+            "+a -> a : (. a (((. b ((. d .) f .)) m (. r .)) t (. w .)))",
+            "+c -> c : ((. a (. b .)) c (((. d (. f .)) m (. r .)) t (. w .)))",
+            "+e -> e : (((. a (. b .)) c (. d .)) e (((. f .) m (. r .)) t (. w .)))",
+            "+g -> g : ((((. a (. b .)) c (. d .)) e (. f .)) g ((. m (. r .)) t (. w .)))",
+            "?a -> a : (. a (((. b .) c (. d .)) e ((. f .) g ((. m (. r .)) t (. w .)))))",
+            "?w -> w : (((. a ((. b .) c (. d .))) e (((. f .) g (. m (. r .))) t .)) w .)",
+            "?e -> e : ((. a ((. b .) c (. d .))) e ((((. f .) g (. m (. r .))) t .) w .))",
+            "?q -> - : (((((. a ((. b .) c (. d .))) e ((. f .) g (. m .))) r .) t .) w .)",
+            "?z -> - : (((((. a ((. b .) c (. d .))) e ((. f .) g (. m .))) r .) t .) w .)",
+            "?0 -> - : (((. a ((. b .) c (. d .))) e (((. f .) g (. m .)) r .)) t (. w .))",
+            "?m -> m : (((. a ((. b .) c (. d .))) e ((. f .) g .)) m ((. r .) t (. w .)))",
+            "?c -> c : ((. a (. b .)) c ((. d .) e (((. f .) g .) m ((. r .) t (. w .)))))",
+            "?t -> t : ((((. a (. b .)) c (. d .)) e (((. f .) g .) m (. r .))) t (. w .))",
+            "?f -> f : ((((. a (. b .)) c (. d .)) e .) f ((. g (. m (. r .))) t (. w .)))",
+            "+m -> m : (((((. a (. b .)) c (. d .)) e .) f (. g .)) m ((. r .) t (. w .)))",
+            "+q -> q : ((((((. a (. b .)) c (. d .)) e .) f (. g .)) m .) q ((. r .) t (. w .)))",
+            "?r -> r : (((((((. a (. b .)) c (. d .)) e .) f (. g .)) m .) q .) r (. t (. w .)))",
+            "?b -> b : ((. a .) b (((. c ((. d .) e .)) f ((. g .) m .)) q (. r (. t (. w .)))))",
+        ];
+        for (op, want) in ops.split(' ').zip(want) {
+            let (kind, k) = op.split_at(1);
+            let ins = (kind == "+").then(|| {
+                let us = EpsfShape {
+                    bb: [0; 4],
+                    macro_id: 0,
+                };
+                (EpsfKey::Graph(1, k.to_string()), us)
+            });
+            let found = t.dttree(k, ins, "", 1).is_some();
+            let mut got = format!("{op} -> {} : ", if found { k } else { "-" });
+            shape(&t, t.root, &mut got);
+            assert_eq!(got, want);
+        }
     }
 
     #[test]
