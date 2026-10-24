@@ -470,7 +470,7 @@ impl Fdp<'_, '_> {
         }
         let r = graphviz_pure_core::strtod::sscanf(p, "%lf,%lf,%lf,%lf%c");
         if r.count < 4 {
-            let gname = self.rg.src.subgraphs[self.tree.subgraph[c]].name.as_str();
+            let gname = self.rg.src.subgraph_name(self.tree.subgraph[c]);
             graphviz_pure_core::diag::agwarningf(&format!(
                 "graph {gname}, coord {p}, expected four doubles\n"
             ));

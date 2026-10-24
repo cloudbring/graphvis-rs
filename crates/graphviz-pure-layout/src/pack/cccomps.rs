@@ -173,11 +173,13 @@ impl<'a> Tree<'a> {
         out: &mut Vec<ProjSub>,
     ) {
         for &s in subs {
-            // projectG
+            // projectG finds each node of `subg` in `g` by `agfindnode(g, agnameof(n))`. An
+            // anonymous node's `%<id>` is a local name, which `endgraph` removed from the
+            // internal map, so the lookup fails and the node is not projected.
             let nodes: Vec<usize> = self.nodes[s]
                 .iter()
                 .copied()
-                .filter(|n| in_g.contains(n))
+                .filter(|&n| in_g.contains(&n) && !self.g.nodes[n].name.starts_with('%'))
                 .collect();
             if nodes.is_empty() && !in_cluster {
                 continue;

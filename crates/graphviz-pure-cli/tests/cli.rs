@@ -6780,6 +6780,37 @@ fn anonymous_graphs_are_named_by_their_id() {
         err,
         "Error: node \"a\" is contained in two non-comparable clusters \"%3\" and \"cluster_x\"\n"
     );
+    // fdp's coords warning names the cluster.
+    let (_, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        r#"graph { subgraph { cluster=true; coords="1,2"; a } }"#,
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: graph %3, coord 1,2, expected four doubles\n");
+    // fdp's cluster-edge graph keeps the names: an empty-named root, an anonymous cluster.
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        r#"graph "" { label="\G."; subgraph cluster_x { b } a -- cluster_x }"#,
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains(">.</text>"), "{out}");
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        r#"graph { subgraph cluster_x { b } subgraph { cluster=true; label="\G"; c } a -- cluster_x }"#,
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<title>%3</title>") && out.contains(">%3</text>"),
+        "{out}"
+    );
+    // ccomps' projectG finds a component's nodes by `agfindnode(g, agnameof(n))`, which
+    // misses an anonymous node: the cluster is not projected into the component.
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        r#"graph { pack=true; a; subgraph { cluster=true; "%x" -- y } }"#,
+    );
+    assert!(ok, "{err}");
+    assert!(out.starts_with("graph 1 2.25 1.6111\n"), "{out}");
 }
 
 // Issues #325, #344, #354. `agnameof` formats an anonymous object's name into one static
@@ -6813,6 +6844,15 @@ fn anonymous_names_in_one_call_share_agnameofs_buffer() {
         err.ends_with(
             "Error: node \"a\" is contained in two non-comparable clusters \"%3\" and \"%3\"\n"
         ),
+        "{err}"
+    );
+    // dot's flat edge between records (dotsplines.c:1147).
+    let (_, err, _) = run(
+        &["-Tsvg"],
+        r#"digraph { node [shape=record]; {rank=same; "%a" -> "%b"} }"#,
+    );
+    assert!(
+        err.contains("\n  Edge %7 -> %7\nError: lost %7 %7 edge\n"),
         "{err}"
     );
     // #354: install_in_rank names the graph and a virtual node (`%0`).

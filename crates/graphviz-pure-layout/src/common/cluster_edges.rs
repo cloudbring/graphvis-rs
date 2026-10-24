@@ -202,6 +202,10 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
 
     // Build the work graph.
     let mut work = Graph::new(graph.name.clone(), graph.kind, graph.strict);
+    // The work graph is the same cgraph: it keeps its objects' agnameof (the root's empty
+    // name, and the anonymous ids of the subgraphs, which are copied one to one below).
+    work.empty_name = graph.empty_name;
+    work.anon_subgraph_ids = graph.anon_subgraph_ids.clone();
     work.graph_attrs = graph.graph_attrs.clone();
     work.node_defaults = graph.node_defaults.clone();
     work.edge_defaults = graph.edge_defaults.clone();

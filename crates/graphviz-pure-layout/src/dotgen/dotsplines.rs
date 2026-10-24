@@ -944,10 +944,13 @@ impl Dot<'_> {
                 } else {
                     "--"
                 };
-                graphviz_pure_core::diag::agerr_prev(&format!(
-                    "  Edge {} {op} {}\n",
-                    self.nodes[tn].name, self.nodes[hn].name
-                ));
+                // dotsplines.c:1147: both names share agnameof's static buffer when
+                // anonymous.
+                let [t, h] = graphviz_pure_core::agnameof_buffer([
+                    &*self.nodes[tn].name,
+                    &*self.nodes[hn].name,
+                ]);
+                graphviz_pure_core::diag::agerr_prev(&format!("  Edge {t} {op} {h}\n"));
             }
             return Ok(());
         }
