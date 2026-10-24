@@ -309,14 +309,14 @@ Closed: #341.
 
 `make_flat_adj_edges` (`lib/dotgen/dotsplines.c`) lays out flat edges between adjacent
 nodes, where one has a port, as a separate graph with the rank direction turned, and copies
-each edge's spline back with `auxbz = ED_spl(auxe)->list` (line 1247), unchecked. The aux
-layout leaves an edge no spline where its routing fails (`Pshortestpath failed`, `illegal
-values of prev`; the aux graph's `dotneato_postprocess` then reports `lost a b edge`),
-including under `pack` on inputs C draws without it, and where concentrate merges it into
-another aux edge. C then dereferences the NULL spline and crashes, on every run.
+each edge's spline back with `auxbz = ED_spl(auxe)->list` (line 1260), unchecked. The aux
+layout leaves an edge no spline in two ways: its routing fails (`Pshortestpath failed`,
+`illegal values of prev`; the aux graph's `dotneato_postprocess` then reports `lost a b
+edge`), which `pack` makes happen on some inputs C draws without it, or concentrate merges
+it into another aux edge. C then dereferences the NULL spline and crashes, on every run.
 
 The port stops the layout there, with an error and no output
-(`make_flat_adj_edges: the layout of the adjacent flat edges left edge a -> b no spline`).
+(`make_flat_adj_edges: the layout of the adjacent flat edges gave edge a -> b no spline`).
 Its stderr up to that line is C's up to the crash. Before, it skipped the edge and went on:
 it reported the edge lost a second time (from the main graph's postprocess, which C never
 reaches), or with concentrate drew the graph without that edge. Measured on 3,000 generated
@@ -326,6 +326,13 @@ other 2,786 the output and stderr are unchanged, and equal to C's. On the 214, t
 used to draw 185 concentrate inputs without the merged edge (174 with exit 0, 11 with exit 1
 after a routing error), and on the other 29 (20 plain, 9 under `pack`) to report an edge
 lost twice and exit 1.
+
+So 174 concentrate inputs that drew with exit 0 now fail with exit 1. That is the trade-off.
+The drawing they had is not one C makes on a nearby input: with the two edges of
+`a -> b [tailport=ne]; a -> b` in the other order, C draws both, where the port dropped one.
+Nor would giving the lost edge the spline of the aux edge it was merged into be C's: nothing
+in C's copy loop copies one edge's spline to another. The port stops at C's dereference, as it does where C
+dereferences the NULL nodes of an empty cluster or rank (#357, #358).
 
 ## clip_and_install's crossed walks
 

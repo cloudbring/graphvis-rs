@@ -2802,8 +2802,8 @@ fn flat_adjacent_aux_graph_repeats_label_diagnostics_like_c() {
 }
 
 // Issue #341: where the aux layout of adjacent flat edges leaves an edge no spline (its routing
-// failed, concentrate merged it, or under pack), C's copy loop dereferences the NULL spline
-// (dotsplines.c:1247) and crashes. The port stops the layout there: its stderr is C's up to
+// failed, here once as such and once because of pack, or concentrate merged it), C's copy loop
+// dereferences the NULL spline (dotsplines.c:1260) and crashes. The port stops the layout there: its stderr is C's up to
 // the crash, the aux graph's one `lost a b edge` included, then the layout error, and no
 // output. It used to report the edge lost a second time, or draw without it.
 #[test]
@@ -2811,7 +2811,7 @@ fn flat_adjacent_aux_edge_without_spline_fails_the_layout() {
     let stop = |e: &str| {
         format!(
             "Error: <stdin>: Layout computation error in dot: make_flat_adj_edges: the layout \
-             of the adjacent flat edges left edge {e} no spline (C dereferences its NULL spline)\n"
+             of the adjacent flat edges gave edge {e} no spline (C dereferences its NULL spline)\n"
         )
     };
     let routes = "Error: in routesplines, illegal values of prev 1 and next 1, line 378\n";
