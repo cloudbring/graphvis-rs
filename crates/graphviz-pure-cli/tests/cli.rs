@@ -7661,6 +7661,66 @@ fn issue283_layers_split_on_the_bytes_of_layersep() {
     assert_eq!(out[start..], expected[..]);
 }
 
+// Issue #324: C's JSON `write_attrs` walks the root's attribute dictionaries, and writes
+// `label` even when it is empty. `{} -> c [label=x]` makes no edge but declares the edge
+// `label`, so `a -> b` gets `"label": ""`. Output is C 16.1.0's.
+#[test]
+fn issue324_json_writes_a_declared_edge_label_with_no_value() {
+    let (out, err, ok) = run(&["-Tjson0"], "digraph { a -> b; {} -> c [label=x] }");
+    assert!(ok);
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        r#"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "bb": "0,0,126,108",
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "%5",
+      "_gvid": 0
+    },
+    {
+      "_gvid": 1,
+      "name": "a",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,90",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 2,
+      "name": "b",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "27,18",
+      "width": "0.75"
+    },
+    {
+      "_gvid": 3,
+      "name": "c",
+      "height": "0.5",
+      "label": "\\N",
+      "pos": "99,90",
+      "width": "0.75"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 2,
+      "label": "",
+      "pos": "e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"
+    }
+  ]
+}
+"#
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

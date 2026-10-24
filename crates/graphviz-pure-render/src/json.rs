@@ -690,6 +690,14 @@ pub(crate) fn write_json(
     for a in &edge_attrs {
         ed.extend(a.keys().cloned());
     }
+    // `write_attrs` walks the root's dictionaries (`agnxtattr(agroot(obj), …)`), so a
+    // symbol is written even when no object has a value for it: `label` as `""`. A
+    // statement that makes no object can still declare one (`{} -> c [label=x]`).
+    if let Some(d) = g.dicts.first() {
+        gd.extend(d.graph.keys().cloned());
+        nd.extend(d.node.keys().cloned());
+        ed.extend(d.edge.keys().cloned());
+    }
     // (an HTML value's mark is not an attribute)
     for d in [&mut gd, &mut nd, &mut ed] {
         d.retain(|k| !k.starts_with(graphviz_pure_core::HTML_VALUE_PREFIX));
