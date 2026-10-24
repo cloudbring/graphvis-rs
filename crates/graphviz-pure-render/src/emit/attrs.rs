@@ -104,8 +104,14 @@ pub(crate) fn parse_style(s: &str) -> Vec<StyleItem> {
                     }
                 } else {
                     if out.len() == 63 {
+                        // C returns its static `parse` array here before the loop that fills
+                        // it in, so it holds the previous call's pointers: all NULL on the
+                        // first call, no items. After an earlier call they point into `ps_xb`
+                        // storage this call has overwritten or reallocated, and C reads
+                        // garbage (undefined behaviour). The port returns no items, what C
+                        // does when this is its first style.
                         graphviz_pure_core::diag::agwarningf(&format!("truncating style '{s}'\n"));
-                        return out;
+                        return Vec::new();
                     }
                     out.push(StyleItem {
                         name: tok,
@@ -160,5 +166,12 @@ mod tests {
         assert_eq!(s[1].name, "setlinewidth");
         assert_eq!(s[1].args, vec!["2".to_string()]);
         assert!(parse_style("a(b(c))").is_empty());
+    }
+
+    #[test]
+    fn parse_style_past_63_items_returns_none() {
+        let items = |n: usize| (0..n).map(|i| format!("s{i}(1)")).collect::<Vec<_>>();
+        assert_eq!(parse_style(&items(63).join(",")).len(), 63);
+        assert!(parse_style(&items(64).join(",")).is_empty());
     }
 }

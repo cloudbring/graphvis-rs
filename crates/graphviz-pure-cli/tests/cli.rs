@@ -7320,6 +7320,48 @@ fn image_headers_are_read_like_c() {
     }
 }
 
+// Issue #268: a style with more than 63 items. C's `parse_style` warns `truncating style` and
+// returns its static array unfilled (no items on a first call), so the node is drawn with no
+// style at all and no `unsupported style` warnings. Output is C 16.1.0's.
+#[test]
+fn issue268_a_truncated_style_draws_no_style_items() {
+    let style: Vec<String> = ["filled", "bold"]
+        .into_iter()
+        .map(String::from)
+        .chain((0..62).map(|i| format!("s{i}")))
+        .collect();
+    let style = style.join(",");
+    let (out, err, ok) = run(
+        &["-Txdot"],
+        &format!("digraph {{ a [style=\"{style}\" fillcolor=red] }}"),
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        format!("Warning: truncating style '{style}'\n").repeat(2)
+    );
+    let (head, tail) = style.split_at(style.find(",s32").unwrap() + 1);
+    assert_eq!(
+        out,
+        format!(
+            "digraph {{\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 36 54 36 54 0 \",\n\
+             \t\tbb=\"0,0,54,36\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"c 7 -#000000 e 27 18 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 6.21 1 -a \",\n\
+             \t\tfillcolor=red,\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\tstyle=\"{head}\\\n{tail}\",\n\
+             \t\twidth=0.75];\n\
+             }}\n"
+        )
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
