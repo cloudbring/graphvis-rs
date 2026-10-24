@@ -692,7 +692,10 @@ pub(crate) fn write_json(
     }
     // `write_attrs` walks the root's dictionaries (`agnxtattr(agroot(obj), …)`), so a
     // symbol is written even when no object has a value for it: `label` as `""`. A
-    // statement that makes no object can still declare one (`{} -> c [label=x]`).
+    // statement that makes no object can still declare one (`{} -> c [label=x]`). Only the
+    // edge dictionary adds a name in practice: every declared graph symbol is in the root's
+    // values, and nodes always have `label`. The names from the values stay because the
+    // layout's attributes are not in `dicts[0]` on every path.
     if let Some(d) = g.dicts.first() {
         gd.extend(d.graph.keys().cloned());
         nd.extend(d.node.keys().cloned());

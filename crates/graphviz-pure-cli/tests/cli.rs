@@ -7719,6 +7719,48 @@ fn issue324_json_writes_a_declared_edge_label_with_no_value() {
 }
 "#
     );
+    // A subgraph's `edge [label=x]` declares `label` on the root too; the unattached
+    // `-Tdot_json` writer.
+    let (out, err, ok) = run(
+        &["-Tdot_json"],
+        "digraph { a -> b; subgraph s { edge [label=x] } }",
+    );
+    assert!(ok);
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        r#"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 1,
+  "objects": [
+    {
+      "name": "s",
+      "_gvid": 0
+    },
+    {
+      "_gvid": 1,
+      "name": "a",
+      "label": "\\N"
+    },
+    {
+      "_gvid": 2,
+      "name": "b",
+      "label": "\\N"
+    }
+  ],
+  "edges": [
+    {
+      "_gvid": 0,
+      "tail": 1,
+      "head": 2,
+      "label": ""
+    }
+  ]
+}
+"#
+    );
 }
 
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
