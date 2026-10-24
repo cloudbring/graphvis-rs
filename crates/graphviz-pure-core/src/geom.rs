@@ -87,7 +87,8 @@ pub struct BezierSegment {
     /// `bz.sflag` and `bz.eflag`: the arrowhead types (`crate::arrows`) the layout clipped
     /// the spline for, as `arrow_clip` (splines.c) leaves them: after `swap_ends`, `ARR_NONE`
     /// at a concentrator merge point, with an opposing edge's types merged under
-    /// `concentrate`. Renderers draw these.
+    /// `concentrate`. Renderers draw an arrowhead only where its flag is not zero, as
+    /// `emit_edge_graphics` does, whatever `start_arrow`/`end_arrow` hold.
     pub sflag: u32,
     pub eflag: u32,
 }

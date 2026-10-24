@@ -8424,10 +8424,11 @@ fn issue285_swapped_end_draws_the_layouts_arrow_type() {
 }
 
 /// Issue #285, every engine: the shared `write_back` passes `bz.sflag`/`bz.eflag` too, so
-/// neato's arrowheads are the ones its `arrow_clip` clipped for. Under `concentrate`, neato
-/// routes one edge of `b -> a`'s pair; the other, with an unknown `invfoo`, is never clipped,
-/// so C prints no warning for it: the warnings come from the layout's `arrow_flags`, not the
-/// renderer's. The expected SVG is C 16.1.0's, after the generator comment.
+/// neato's arrowheads are the ones its `arrow_clip` clipped for (the SVG, C 16.1.0's after
+/// the generator comment, was already right: neato swaps no ends). What fails without the
+/// change is the warning: under `concentrate`, neato routes one edge of `b -> a`'s pair; the
+/// other, with an unknown `invfoo`, is never clipped, so C prints nothing for it. The
+/// warnings come from the layout's `arrow_flags`, not the renderer's.
 #[test]
 fn issue285_neato_concentrate_draws_and_warns_from_the_layouts_arrow_flags() {
     let src = "digraph G { layout=neato; concentrate=true; { rank=same; a b } b -> a [dir=none,minlen=2]; b -> b [arrowhead=inv,tailport=s]; b -> a [arrowhead=invfoo,dir=forward,minlen=2]; a -> a; }";
@@ -8494,7 +8495,8 @@ fn issue285_arrow_type_warnings_print_once_per_layout() {
         );
     }
     // `neato -n2`: `user_spline` returns before `arrow_flags` for an edge without `pos`
-    // (neatoinit.c:272), which is then routed and clipped: one warning.
+    // (neatoinit.c:272), which is then routed and clipped: one warning. This guards that
+    // early return, which the layout's parser needs now that it warns.
     let (_, err, ok) = run(
         &["-Kneato", "-n2", "-Tsvg"],
         "digraph { a [pos=\"0,0\"]; b [pos=\"100,0\"]; a -> b [arrowhead=foo]; }",
