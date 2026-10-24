@@ -18,6 +18,7 @@ use super::fdpinit::{get_inputscale, init_edges, initial_positions};
 use super::tlayout::{TState, fdp_init_params, fdp_t_layout};
 use super::xlayout::{XParams, fdp_x_layout};
 use super::{ClusterTree, mk_clusters, subgraph_member_nodes};
+use crate::common::init::do_graph_label;
 use crate::common::postproc::gv_postprocess;
 use crate::common::shapes::NodeShape;
 use crate::common::types::*;
@@ -26,7 +27,7 @@ use crate::cutil::qsort_by;
 use crate::neatogen::neatosplines::{
     neato_set_aspect, spline_edges_by, spline_edges_main, spline_edges_route,
 };
-use crate::osage::{cluster_label, register_clusters};
+use crate::osage::register_clusters;
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, put_graphs};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, NodeId, Obj, Point, Result};
@@ -518,9 +519,7 @@ impl Fdp<'_, '_> {
             // own clusters, which their layout reaches later. The order interns the labels'
             // fonts (a NaN fontsize matches whichever entry it is compared with first) and
             // prints their diagnostics.
-            let (label, label_pos, border) = cluster_label(self.rg, self.tree.subgraph[c]);
-            let cl = &mut self.rg.clusters[c];
-            (cl.label, cl.label_pos, cl.border) = (label, label_pos, border);
+            do_graph_label(self.rg, c);
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));
@@ -1177,7 +1176,7 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
     let ndim = late_int(attrs, "dim", 2, 2).min(MAXDIM as i32) as usize;
     let mut g = LGraph::new(&src, ndim, EdgeType::Line);
     let tree = mk_clusters(&src);
-    register_clusters(&mut g, &tree, false);
+    register_clusters(&mut g, &tree);
     let st = fdp_init_params(attrs);
     init_edges(&mut g, st.d.k);
     let inputscale = get_inputscale(&g);
