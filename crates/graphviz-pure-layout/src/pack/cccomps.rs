@@ -30,6 +30,12 @@ pub struct CComp {
     pub nodes: Vec<usize>,
     /// Projected subgraphs in creation order (preorder, parents first).
     pub subgraphs: Vec<ProjSub>,
+    /// The root's own subgraph named `_cc_<i>`, which `agsubg(g, "_cc_<i>", 1)` returns
+    /// instead of making one (#335): the component is that subgraph, with its graph
+    /// attributes and its subgraphs, and `doDot` deletes it after packing.
+    pub user: Option<usize>,
+    /// How many of [`CComp::subgraphs`], from the start, are the user's subgraph's own.
+    pub user_subgraphs: usize,
 }
 
 /// A component turned into a standalone graph, with the maps back to the root.
@@ -84,6 +90,10 @@ struct Tree<'a> {
     nodes: Vec<BTreeSet<usize>>,
     /// All edges of each subgraph, nested ones included.
     edges: Vec<BTreeSet<usize>>,
+    /// The top-level subgraphs named `_cc_<i>` (a plain string, `i` as `%d` prints it),
+    /// which `agsubg(root, "_cc_<i>", 1)` finds: by `i`, and `i` by subgraph.
+    cc_by_index: std::collections::HashMap<usize, usize>,
+    cc_index_of: std::collections::HashMap<usize, usize>,
 }
 
 impl<'a> Tree<'a> {
@@ -95,7 +105,23 @@ impl<'a> Tree<'a> {
                 is_child[c.0 as usize] = true;
             }
         }
-        let top = (0..ns).filter(|&i| !is_child[i]).collect();
+        let top: Vec<usize> = (0..ns).filter(|&i| !is_child[i]).collect();
+        let mut cc_by_index = std::collections::HashMap::new();
+        let mut cc_index_of = std::collections::HashMap::new();
+        for &s in &top {
+            let Some(sg) = g.subgraphs.get(s) else {
+                continue;
+            };
+            let i = sg
+                .name
+                .strip_prefix("_cc_")
+                .and_then(|d| d.parse::<usize>().ok())
+                .filter(|i| sg.name == format!("_cc_{i}"));
+            if let Some(i) = i.filter(|_| !sg.html_name && !sg.is_anonymous()) {
+                cc_by_index.entry(i).or_insert(s);
+                cc_index_of.entry(s).or_insert(i);
+            }
+        }
         // Each subgraph's lists already hold its nested subgraphs' (`agsubnode`).
         Tree {
             g,
@@ -110,7 +136,15 @@ impl<'a> Tree<'a> {
                 .iter()
                 .map(|s| s.edges.iter().map(|e| e.0 as usize).collect())
                 .collect(),
+            cc_by_index,
+            cc_index_of,
         }
+    }
+
+    /// The subgraph of the root that `agsubg(root, "_cc_<i>", 1)` finds: a top-level
+    /// subgraph with that name as a plain string (an HTML name is another string).
+    fn cc_subgraph(&self, i: usize) -> Option<usize> {
+        self.cc_by_index.get(&i).copied()
     }
 
     /// `deriveClusters(dg, g)`: a derived node per top-level cluster, which
@@ -264,11 +298,31 @@ pub fn cccomps(g: &Graph) -> Vec<CComp> {
                 }
             }
         }
+        // `out = agsubg(g, "_cc_<i>", 1)` finds a subgraph of the root by that name. Its
+        // own subgraphs come first (they are older than subGInduce's projections), and
+        // subgInduce skips every `_cc_<j>` cccomps has made or taken so far (GD_cc_subg).
+        // A node of the user's subgraph outside the component is in two components, which
+        // share C's node record; the port, as for #101, lays the component out without it.
+        let ci = out.len();
+        let user = tree.cc_subgraph(ci);
         let mut subgraphs = Vec::new();
-        tree.subg_induce(&tree.top, None, &set, false, &mut subgraphs);
+        if let Some(u) = user.and_then(|u| g.subgraphs.get(u)) {
+            let kids: Vec<usize> = u.subgraphs.iter().map(|c| c.0 as usize).collect();
+            tree.subg_induce(&kids, None, &set, false, &mut subgraphs);
+        }
+        let user_subgraphs = subgraphs.len();
+        let top: Vec<usize> = tree
+            .top
+            .iter()
+            .copied()
+            .filter(|s| tree.cc_index_of.get(s).is_none_or(|&j| j > ci))
+            .collect();
+        tree.subg_induce(&top, None, &set, false, &mut subgraphs);
         out.push(CComp {
             nodes: set.into_iter().collect(),
             subgraphs,
+            user,
+            user_subgraphs,
         });
     }
     out
@@ -286,6 +340,18 @@ impl CComp {
         graph.empty_name = root.empty_name;
         graph.local_subgraph_names_kept = true;
         graph.graph_attrs = root.graph_attrs.clone();
+        // The user's `_cc_<i>` is the component: dot reads its values (`splines`, `phase`,
+        // `rank`, `ordering`, ... with agget(sg)); initSubg copies the rest from the root.
+        // Its values are those it had when made: an attribute the root declared later is
+        // `""` there (agattr gives existing subgraphs the default), whatever the root set.
+        if let Some(u) = self.user.and_then(|u| root.subgraphs.get(u)) {
+            graph.graph_attrs = u.graph_attrs.clone();
+            for k in root.graph_attrs.keys() {
+                if !u.graph_attrs.contains_key(k) {
+                    graph.graph_attrs.insert(k.clone(), String::new());
+                }
+            }
+        }
         graph.node_defaults = root.node_defaults.clone();
         graph.edge_defaults = root.edge_defaults.clone();
         // A component is a subgraph of the root (`agsubg`), so it shares the root's

@@ -312,7 +312,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
         match kind {
             ObjKind::Root => s.push_str("graph0"),
             ObjKind::Cluster(c) => {
-                s.push_str(&format!("clust{}", self.job.m.clusters[c].sub + 1));
+                s.push_str(&format!("clust{}", self.job.m.clusters[c].seq));
             }
             ObjKind::Node(n) => s.push_str(&format!("node{}", self.job.m.node_seq(n))),
             ObjKind::Edge(e) => s.push_str(&format!("edge{}", self.job.m.edge_seq(e))),

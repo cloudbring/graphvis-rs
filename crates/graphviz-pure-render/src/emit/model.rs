@@ -158,6 +158,8 @@ pub(crate) struct RCluster<'g> {
     pub name: String,
     pub attrs: Attrs<'g>,
     pub sub: usize,
+    /// `AGSEQ` of the cluster's subgraph.
+    pub seq: usize,
     pub bb: BoundingBox,
     pub label: Option<TextLabel>,
     pub children: Vec<usize>,
@@ -474,6 +476,7 @@ impl<'g> Model<'g> {
                     name,
                     attrs: a,
                     sub: sid,
+                    seq: s.layout.seq.unwrap_or(sid + 1),
                     bb: s.bb,
                     label,
                     children: Vec::new(),
