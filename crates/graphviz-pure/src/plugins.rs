@@ -267,8 +267,7 @@ pub fn plugin_graph(plugins: &Plugins<'_>, globals: &crate::GlobalAttrs) -> Opti
     let maps = [&mut globals.graph, &mut globals.node, &mut globals.edge];
     for (map, own) in maps.into_iter().zip(OWN) {
         for name in own {
-            map.remove(*name);
-            map.remove(&graphviz_pure_core::html_value_key(name));
+            map.remove(name);
         }
     }
     let mut graph = graphviz_pure_parser::parse_dot_all(&plugin_graph_dot(plugins)?, &globals)
