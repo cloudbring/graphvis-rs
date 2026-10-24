@@ -8261,6 +8261,70 @@ stop
     }
 }
 
+/// Issue #331: `neato_init_node_edge` (`lib/neatogen/neatoinit.c:131-141`) runs each node's
+/// `common_init_node` then its `user_pos`, so a node's `pos` error comes before the next
+/// node's shape warning; with `-n`, every edge is initialised after that.
+#[test]
+fn issue331_user_pos_errors_follow_each_nodes_init() {
+    let src = "graph G { a [pos=\" 3 , 4 \"]; b [shape=foo, pos=\"10,10\"]; a -- b; }";
+    let pos = "Error: node a, position  3 , 4 , expected two doubles\n\
+               Warning: using box for unknown shape foo\n";
+    let (_, err, ok) = run(&["-Kneato", "-Tdot"], src);
+    assert!(!ok);
+    assert_eq!(err, pos);
+    let (_, err, ok) = run(&["-Kneato", "-n", "-Tdot"], src);
+    assert!(!ok);
+    assert_eq!(
+        err,
+        format!("{pos}Error: node a in graph G has no position\nas required by the -n flag\n")
+    );
+}
+
+/// Issue #331: C warns about an unknown arrow type each time `arrow_flags` runs, and only
+/// the layout runs it: `arrow_clip` as each edge is clipped (dot routes the self loop
+/// first), `user_spline` for an edge with a `pos` (after the empty `pos` test), and the
+/// opposing edge of a concentrated one. Without routed edges (`splines=none`, patchwork)
+/// or before `-n` stops at a node with no position, there is no warning.
+#[test]
+fn issue331_arrow_warnings_come_from_the_layouts_arrow_flags() {
+    let src = "digraph { a -> b [arrowhead=bogus]; b -> c [arrowtail=foo, dir=both]; \
+               c -> c [arrowhead=zzz] }";
+    let routed = "Warning: Arrow type \"zzz\" unknown - ignoring\n\
+                  Warning: Arrow type \"bogus\" unknown - ignoring\n\
+                  Warning: Arrow type \"foo\" unknown - ignoring\n";
+    for args in [&["-Tsvg"][..], &["-Gconcentrate=true", "-Tsvg"]] {
+        let (_, err, ok) = run(args, src);
+        assert!(ok);
+        assert_eq!(err, routed, "{args:?}");
+    }
+    for args in [&["-Gsplines=none", "-Tsvg"][..], &["-Kpatchwork", "-Tsvg"]] {
+        let (_, err, ok) = run(args, src);
+        assert!(ok);
+        assert_eq!(err, "", "{args:?}");
+    }
+    // An edge without a `pos` warns once, in arrow_clip, not in user_spline too.
+    let (_, err, ok) = run(
+        &["-Kneato", "-n2", "-Tsvg"],
+        "digraph G { a [pos=\"0,0\"]; b [pos=\"100,100\"]; a -> b [arrowhead=bogus]; \
+         b -> a [arrowhead=x2, pos=\"\"] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Arrow type \"bogus\" unknown - ignoring\n\
+         Warning: Arrow type \"x2\" unknown - ignoring\n"
+    );
+    let (_, err, ok) = run(
+        &["-Kneato", "-n2", "-Tdot"],
+        "digraph G { a -> b [arrowhead=bogus]; c [pos=\"1,1\"] }",
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: node a in graph G has no position\nas required by the -n flag\n"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

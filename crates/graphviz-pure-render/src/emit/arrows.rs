@@ -100,10 +100,8 @@ fn match_name(name: &str) -> u32 {
         let next = rest;
         let (mut f, r) = match_shape(next);
         rest = r;
+        // C's emit reads the flags the layout's arrow_flags set, which warned.
         if f == ARR_TYPE_NONE {
-            graphviz_pure_core::diag::agwarningf(&format!(
-                "Arrow type \"{next}\" unknown - ignoring\n"
-            ));
             return flag;
         }
         if f == ARR_TYPE_GAP && i == NUMB_OF_ARROW_HEADS - 1 {

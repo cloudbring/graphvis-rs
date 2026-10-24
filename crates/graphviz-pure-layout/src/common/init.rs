@@ -7,7 +7,7 @@ use super::types::*;
 use super::utils::{late_double, map_bool, mapbool};
 use graphviz_pure_core::font::{LabelSubstContext, measure_multiline_label_with_context};
 use graphviz_pure_core::strtod::{atof, sscanf};
-use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
+use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, NodeData, Point};
 
 pub const DEFAULT_FONTSIZE: f64 = 14.0;
 pub const MIN_FONTSIZE: f64 = 1.0;
@@ -119,7 +119,19 @@ impl<'a> LGraph<'a> {
     /// `graph_init` + `common_init_node` + `common_init_edge` for `graph`,
     /// with `ndim` layout dimensions and `default_edge_type` for `setEdgeType`.
     pub fn new(graph: &'a Graph, ndim: usize, default_edge_type: EdgeType) -> Self {
-        let mut lg = Self::new_unported(graph, ndim, default_edge_type);
+        Self::new_with(graph, ndim, default_edge_type, |_, _| {})
+    }
+
+    /// [`Self::new`] that runs `node_init` on each node right after its `common_init_node`,
+    /// before the next node's and before any edge's, as an engine's own node init does
+    /// (`neato_init_node_edge`'s `user_pos`).
+    pub fn new_with(
+        graph: &'a Graph,
+        ndim: usize,
+        default_edge_type: EdgeType,
+        node_init: impl FnMut(&NodeData, &mut LNode),
+    ) -> Self {
+        let mut lg = Self::new_unported_with(graph, ndim, default_edge_type, node_init);
         lg.common_init_edges();
         lg
     }
@@ -168,6 +180,15 @@ impl<'a> LGraph<'a> {
     /// ports, and no label or port diagnostics are printed (`patchwork_init_edge` only binds
     /// the edge record).
     pub fn new_unported(graph: &'a Graph, ndim: usize, default_edge_type: EdgeType) -> Self {
+        Self::new_unported_with(graph, ndim, default_edge_type, |_, _| {})
+    }
+
+    fn new_unported_with(
+        graph: &'a Graph,
+        ndim: usize,
+        default_edge_type: EdgeType,
+        mut node_init: impl FnMut(&NodeData, &mut LNode),
+    ) -> Self {
         let gattrs = &graph.graph_attrs;
         // `GD_nodesep = POINTS(…)`, an `int`: 1e300 inches saturates at INT_MAX points.
         let nodesep = i64::from(graphviz_pure_core::cnum::c_round_mul(
@@ -246,6 +267,9 @@ impl<'a> LGraph<'a> {
                 clust: None,
                 lim: -1,
             });
+            if let Some(node) = nodes.last_mut() {
+                node_init(nd, node);
+            }
         }
 
         let mut out = vec![Vec::new(); graph.nodes.len()];
