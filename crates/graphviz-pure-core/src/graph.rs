@@ -429,6 +429,10 @@ pub enum ClusterReg {
 pub struct GraphLayout {
     /// The cluster's place in `GD_clust` (always [`ClusterReg::Unknown`] on the root).
     pub reg: ClusterReg,
+    /// `AGSEQ(g)` of a subgraph, where it is not its index + 1 (after
+    /// [`Graph::agdelete_subgraphs`]). Renderers print it in cluster ids.
+    #[serde(default)]
+    pub seq: Option<usize>,
     /// `GD_label(g)` stays NULL: the layout registered the cluster without making its label
     /// (patchwork's `mkClusters`), so renderers neither draw nor size it.
     pub no_label: bool,
@@ -882,6 +886,12 @@ impl Graph {
         let old = std::mem::take(&mut self.subgraphs);
         for (s, mut sg) in old.into_iter().enumerate() {
             let Some(id) = map(s) else { continue };
+            // agdelete leaves the others' sequence numbers as they were
+            sg.layout.seq = sg
+                .layout
+                .seq
+                .or(Some(s + 1))
+                .filter(|&q| q != id as usize + 1);
             sg.id = SubgraphId(id);
             sg.subgraphs = sg
                 .subgraphs
@@ -1236,5 +1246,8 @@ mod agdelete_tests {
         assert_eq!(g.anon_subgraph_ids.get(&2), Some(&5));
         assert_eq!(g.dicts.len(), 4);
         assert!(g.dicts[2].graph.contains_key("color"));
+        // AGSEQ stays: only the renumbered ones record it
+        let seqs: Vec<_> = g.subgraphs.iter().map(|s| s.layout.seq).collect();
+        assert_eq!(seqs, [None, Some(4), Some(5)]);
     }
 }

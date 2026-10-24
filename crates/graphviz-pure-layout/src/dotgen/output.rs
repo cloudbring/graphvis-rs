@@ -53,6 +53,9 @@ struct CcSub {
     edges: Vec<usize>,
     /// Index into [`Output::cc_subgraphs`]; `None` for the root.
     parent: Option<usize>,
+    /// The input subgraph it hangs under instead: the input's own `_cc_<i>`, which cccomps
+    /// took as a component (#335).
+    input_parent: Option<usize>,
 }
 
 /// The members of each input subgraph in `d`'s cgraph. Under a pack layout with several
@@ -84,7 +87,13 @@ fn membership(d: &Dot<'_>) -> Vec<(usize, Vec<usize>, Vec<usize>)> {
 
 /// The subgraph trees under `kept` (preorder).
 fn cc_subgraphs(d: &Dot<'_>, kept: &[G]) -> Vec<CcSub> {
-    fn rec(d: &Dot<'_>, g: G, parent: Option<usize>, out: &mut Vec<CcSub>) {
+    fn rec(
+        d: &Dot<'_>,
+        g: G,
+        parent: Option<usize>,
+        input_parent: Option<usize>,
+        out: &mut Vec<CcSub>,
+    ) {
         let Some(s) = d.graphs.get(g) else { return };
         let me = out.len();
         out.push(CcSub {
@@ -104,14 +113,26 @@ fn cc_subgraphs(d: &Dot<'_>, kept: &[G]) -> Vec<CcSub> {
                 .filter(|&e| e < d.input.edges.len())
                 .collect(),
             parent,
+            input_parent,
         });
         for &k in &s.subgs {
-            rec(d, k, Some(me), out);
+            rec(d, k, Some(me), None, out);
         }
     }
     let mut out = Vec::new();
     for &g in kept {
-        rec(d, g, None, &mut out);
+        match d.graphs.get(g).and_then(|s| s.sub_index.map(|si| (s, si))) {
+            // The input's own `_cc_<i>` stays where it is; the projections cccomps added
+            // go under it (its own subgraphs are input subgraphs already).
+            Some((s, si)) => {
+                for &k in &s.subgs {
+                    if d.graphs.get(k).is_some_and(|c| c.sub_index.is_none()) {
+                        rec(d, k, None, Some(si), &mut out);
+                    }
+                }
+            }
+            None => rec(d, g, None, None, &mut out),
+        }
     }
     out
 }
@@ -288,9 +309,13 @@ impl Output {
             let (r, o) = self.node_rank[i];
             graph.nodes[i].rank = r;
             graph.nodes[i].order = o.max(0) as usize;
+            // a pack component's own phase, else the root's
             if let Some(ph) = self
-                .phase_attrs
-                .or_else(|| self.node_phase.get(i).copied().flatten())
+                .node_phase
+                .get(i)
+                .copied()
+                .flatten()
+                .or(self.phase_attrs.map(|p| p.min(2)))
             {
                 let a = &mut graph.nodes[i].attrs;
                 a.set("rank", r.to_string(), false);
@@ -365,7 +390,11 @@ impl Output {
         let mut ids: Vec<usize> = Vec::with_capacity(self.cc_subgraphs.len());
         for (id, mut c) in (base..).zip(self.cc_subgraphs) {
             let sid = graphviz_pure_core::SubgraphId(id as u32);
-            if let Some(p) = c.parent.and_then(|p| ids.get(p)).copied()
+            if let Some(p) = c
+                .parent
+                .and_then(|p| ids.get(p))
+                .copied()
+                .or(c.input_parent)
                 && let Some(p) = graph.subgraphs.get_mut(p)
             {
                 p.subgraphs.push(sid);

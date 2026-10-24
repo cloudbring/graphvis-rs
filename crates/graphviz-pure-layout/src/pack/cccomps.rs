@@ -326,8 +326,15 @@ impl CComp {
         graph.graph_attrs = root.graph_attrs.clone();
         // The user's `_cc_<i>` is the component: dot reads its values (`splines`, `phase`,
         // `rank`, `ordering`, ... with agget(sg)); initSubg copies the rest from the root.
+        // Its values are those it had when made: an attribute the root declared later is
+        // `""` there (agattr gives existing subgraphs the default), whatever the root set.
         if let Some(u) = self.user.and_then(|u| root.subgraphs.get(u)) {
-            graphviz_pure_core::apply_attrs(&mut graph.graph_attrs, &u.graph_attrs);
+            graph.graph_attrs = u.graph_attrs.clone();
+            for k in root.graph_attrs.keys() {
+                if !u.graph_attrs.contains_key(k) {
+                    graph.graph_attrs.insert(k.clone(), String::new());
+                }
+            }
         }
         graph.node_defaults = root.node_defaults.clone();
         graph.edge_defaults = root.edge_defaults.clone();

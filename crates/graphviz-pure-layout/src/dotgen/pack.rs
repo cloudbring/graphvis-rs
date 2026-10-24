@@ -571,21 +571,7 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
         let ccsubs = d.attach_cc_subgraphs(graph, &ccs, &[]);
         d.dot_layout()?;
         if d.aborted {
-            // The input's own `_cc_<i>` stays an input subgraph; only the ones cccomps
-            // made are added to the output.
-            let user: Vec<G> = ccs
-                .iter()
-                .filter_map(|c| c.user)
-                .filter_map(|u| {
-                    d.graphs
-                        .iter()
-                        .enumerate()
-                        .skip(1)
-                        .find(|(_, gi)| gi.sub_index == Some(u))
-                        .map(|(k, _)| k)
-                })
-                .collect();
-            d.cc_kept = ccsubs.into_iter().filter(|g| !user.contains(g)).collect();
+            d.cc_kept = ccsubs;
         } else {
             d.cc_deleted = ccs.iter().filter_map(|c| c.user).collect();
             let ccsubs: std::collections::BTreeSet<G> = ccsubs.into_iter().collect();
