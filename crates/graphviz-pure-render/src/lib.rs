@@ -600,6 +600,8 @@ mod tests {
                     ],
                     start_arrow: None,
                     end_arrow: Some(Point::new(114.0, 110.0)),
+                    sflag: 0,
+                    eflag: graphviz_pure_core::arrows::ARR_TYPE_NORM,
                 }],
             };
             e0.label_pos = Some(Point::new(105.0, 122.0));
@@ -616,6 +618,8 @@ mod tests {
                     ],
                     start_arrow: None,
                     end_arrow: Some(Point::new(150.0, 58.0)),
+                    sflag: 0,
+                    eflag: graphviz_pure_core::arrows::ARR_TYPE_NORM,
                 }],
             };
         }

@@ -1,5 +1,6 @@
 //! Core data structures, error types, geometry primitives, and tables for `graphviz-pure`.
 
+pub mod arrows;
 pub mod cdt;
 pub mod charset;
 pub mod cnum;

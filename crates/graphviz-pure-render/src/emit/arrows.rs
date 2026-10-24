@@ -1,55 +1,14 @@
-//! Arrowheads: port of `lib/common/arrows.c` (`arrow_flags`, `arrow_gen` and the arrow type
-//! generators).
+//! Arrowheads: port of `lib/common/arrows.c` (`arrow_gen` and the arrow type generators). The
+//! flags they draw come from the layout (`graphviz_pure_core::arrows`).
 
-use super::attrs::{Attrs, default_line_style};
+use super::attrs::default_line_style;
 use super::job::{EmitState, Emitter, Engine};
 use graphviz_pure_core::Point;
+use graphviz_pure_core::arrows::*;
 use graphviz_pure_core::math;
 
 const EPSILON: f64 = 0.0001;
 const ARROW_LENGTH: f64 = 10.0;
-const NUMB_OF_ARROW_HEADS: u32 = 4;
-const BITS_PER_ARROW: u32 = 8;
-const BITS_PER_ARROW_TYPE: u32 = 4;
-
-const ARR_TYPE_NONE: u32 = 0;
-const ARR_TYPE_NORM: u32 = 1;
-const ARR_TYPE_CROW: u32 = 2;
-const ARR_TYPE_TEE: u32 = 3;
-const ARR_TYPE_BOX: u32 = 4;
-const ARR_TYPE_DIAMOND: u32 = 5;
-const ARR_TYPE_DOT: u32 = 6;
-const ARR_TYPE_CURVE: u32 = 7;
-const ARR_TYPE_GAP: u32 = 8;
-
-const ARR_MOD_OPEN: u32 = 1 << BITS_PER_ARROW_TYPE;
-const ARR_MOD_INV: u32 = 1 << (BITS_PER_ARROW_TYPE + 1);
-const ARR_MOD_LEFT: u32 = 1 << (BITS_PER_ARROW_TYPE + 2);
-const ARR_MOD_RIGHT: u32 = 1 << (BITS_PER_ARROW_TYPE + 3);
-
-const SYNONYMS: &[(&str, u32)] = &[("invempty", ARR_TYPE_NORM | ARR_MOD_INV | ARR_MOD_OPEN)];
-const MODS: &[(&str, u32)] = &[
-    ("o", ARR_MOD_OPEN),
-    ("r", ARR_MOD_RIGHT),
-    ("l", ARR_MOD_LEFT),
-    ("e", ARR_MOD_OPEN),
-    ("half", ARR_MOD_LEFT),
-];
-const NAMES: &[(&str, u32)] = &[
-    ("normal", ARR_TYPE_NORM),
-    ("crow", ARR_TYPE_CROW),
-    ("tee", ARR_TYPE_TEE),
-    ("box", ARR_TYPE_BOX),
-    ("diamond", ARR_TYPE_DIAMOND),
-    ("dot", ARR_TYPE_DOT),
-    ("none", ARR_TYPE_GAP),
-    ("inv", ARR_TYPE_NORM | ARR_MOD_INV),
-    ("vee", ARR_TYPE_CROW | ARR_MOD_INV),
-    ("pen", ARR_TYPE_CROW | ARR_MOD_INV),
-    ("mpty", ARR_TYPE_NORM),
-    ("curve", ARR_TYPE_CURVE),
-    ("icurve", ARR_TYPE_CURVE | ARR_MOD_INV),
-];
 
 /// `(type, lenfact)` in `Arrowtypes[]` order.
 const TYPES: &[(u32, f64)] = &[
@@ -62,91 +21,6 @@ const TYPES: &[(u32, f64)] = &[
     (ARR_TYPE_CURVE, 1.0),
     (ARR_TYPE_GAP, 0.5),
 ];
-
-fn match_frag<'s>(name: &'s str, table: &[(&str, u32)], flag: &mut u32) -> &'s str {
-    for (n, t) in table {
-        if let Some(rest) = name.strip_prefix(n) {
-            *flag |= t;
-            return rest;
-        }
-    }
-    name
-}
-
-fn match_shape(name: &str) -> (u32, &str) {
-    let mut f = ARR_TYPE_NONE;
-    let mut rest = match_frag(name, SYNONYMS, &mut f);
-    if rest.len() == name.len() {
-        loop {
-            let next = rest;
-            rest = match_frag(next, MODS, &mut f);
-            if rest.len() == next.len() {
-                break;
-            }
-        }
-        rest = match_frag(rest, NAMES, &mut f);
-    }
-    if f != 0 && f & ((1 << BITS_PER_ARROW_TYPE) - 1) == 0 {
-        f |= ARR_TYPE_NORM;
-    }
-    (f, rest)
-}
-
-fn match_name(name: &str) -> u32 {
-    let mut flag = 0u32;
-    let mut rest = name;
-    let mut i = 0;
-    while !rest.is_empty() && i < NUMB_OF_ARROW_HEADS {
-        let next = rest;
-        let (mut f, r) = match_shape(next);
-        rest = r;
-        // C's emit reads the flags the layout's arrow_flags set, which warned.
-        if f == ARR_TYPE_NONE {
-            return flag;
-        }
-        if f == ARR_TYPE_GAP && i == NUMB_OF_ARROW_HEADS - 1 {
-            f = ARR_TYPE_NONE;
-        }
-        if f == ARR_TYPE_GAP && i == 0 && rest.is_empty() {
-            f = ARR_TYPE_NONE;
-        }
-        if f != ARR_TYPE_NONE {
-            flag |= f << (i * BITS_PER_ARROW);
-            i += 1;
-        }
-    }
-    flag
-}
-
-/// `arrow_flags`: `(sflag, eflag)`.
-pub(crate) fn arrow_flags(a: Attrs<'_>, directed: bool) -> (u32, u32) {
-    let mut s = ARR_TYPE_NONE;
-    let mut e = if directed {
-        ARR_TYPE_NORM
-    } else {
-        ARR_TYPE_NONE
-    };
-    if let Some(dir) = a.nonempty("dir") {
-        match dir {
-            "forward" => (s, e) = (ARR_TYPE_NONE, ARR_TYPE_NORM),
-            "back" => (s, e) = (ARR_TYPE_NORM, ARR_TYPE_NONE),
-            "both" => (s, e) = (ARR_TYPE_NORM, ARR_TYPE_NORM),
-            "none" => (s, e) = (ARR_TYPE_NONE, ARR_TYPE_NONE),
-            _ => {}
-        }
-    }
-    if e == ARR_TYPE_NORM
-        && let Some(h) = a.nonempty("arrowhead")
-    {
-        e = match_name(h);
-    }
-    if s == ARR_TYPE_NORM
-        && let Some(t) = a.nonempty("arrowtail")
-    {
-        s = match_name(t);
-    }
-    (s, e)
-}
 
 fn p(x: f64, y: f64) -> Point {
     Point::new(x, y)
@@ -653,26 +527,5 @@ impl<E: Engine> Emitter<'_, E> {
             pp = self.arrow_gen_type(pp, u, arrowsize, penwidth, f);
         }
         self.job.obj_mut().emit_state = old;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use graphviz_pure_core::AttrMap;
-
-    #[test]
-    fn arrow_names() {
-        assert_eq!(match_name("normal"), ARR_TYPE_NORM);
-        assert_eq!(match_name("onormal"), ARR_TYPE_NORM | ARR_MOD_OPEN);
-        assert_eq!(match_name("inv"), ARR_TYPE_NORM | ARR_MOD_INV);
-        assert_eq!(match_name("none"), ARR_TYPE_NONE);
-        assert_eq!(
-            match_name("invdot"),
-            (ARR_TYPE_NORM | ARR_MOD_INV) | (ARR_TYPE_DOT << 8)
-        );
-        let mut m = AttrMap::new();
-        m.insert("dir".into(), "both".into());
-        assert_eq!(arrow_flags(Attrs(&m), false), (1, 1));
     }
 }

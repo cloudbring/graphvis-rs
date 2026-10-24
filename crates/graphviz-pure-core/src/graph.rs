@@ -205,12 +205,6 @@ pub struct EdgeLayout {
     /// The final tail and head port names (`ED_tail_port(e).name`, `ED_head_port(e).name`),
     /// which `\E` substitutes; empty where the layout dropped the name (dot's `sameport`).
     pub port_names: Option<(String, String)>,
-    /// dot's arrow flags (`bz.sflag`, `bz.eflag`) of each spline of a routed edge, as
-    /// `arrow_clip` (splines.c) leaves them: after `swap_ends`, which gives a backwards-routed
-    /// end the other end's type, and with an opposing edge's arrowheads merged in
-    /// (`ED_conc_opp_flag` under `concentrate`, where cgraph's dictionaries decide which
-    /// opposing edge). Renderers draw these (`emit_edge_graphics`) rather than rebuild them.
-    pub arrow_flags: Option<Vec<(u32, u32)>>,
     /// The edge was not given layout attributes although it may have a spline:
     /// `attach_attrs_and_arrows` skips an `IGNORED` edge (dot's `orthoEdges` under
     /// `concentrate` routes the first edge of each node pair whatever its type), and every

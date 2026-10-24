@@ -170,6 +170,7 @@ version = "0.1.2"
 dependencies = [
  "libm",
  "serde",
+ "serde_json",
  "thiserror",
 ]
 

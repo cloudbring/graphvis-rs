@@ -16,7 +16,7 @@ layout/circogen/circular.rs	0	1	8	1
 layout/circogen/circularinit.rs	0	0	57	1
 layout/circogen/graph.rs	0	0	6	1
 layout/circogen/nodelist.rs	0	0	0	1
-layout/common/arrows.rs	0	0	37	31
+layout/common/arrows.rs	0	0	37	29
 layout/common/cluster_edges.rs	0	5	73	8
 layout/common/init.rs	0	0	20	0
 layout/common/ns.rs	8	0	149	50

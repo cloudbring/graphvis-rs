@@ -74,16 +74,75 @@ impl BoundingBox {
     }
 }
 
-/// Cubic Bezier spline chain representing a routed edge.
+/// Cubic Bezier spline chain representing a routed edge (C's `bezier`).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(from = "BezierSegmentData")]
 pub struct BezierSegment {
     /// Control points: `3n + 1` points for `n` cubic Bezier segments.
     pub points: Vec<Point>,
+    /// `bz.sp` and `bz.ep`: the tips of the start and end arrowheads, set where `sflag` and
+    /// `eflag` are not zero.
     pub start_arrow: Option<Point>,
     pub end_arrow: Option<Point>,
+    /// `bz.sflag` and `bz.eflag`: the arrowhead types (`crate::arrows`) the layout clipped
+    /// the spline for, as `arrow_clip` (splines.c) leaves them: after `swap_ends`, `ARR_NONE`
+    /// at a concentrator merge point, with an opposing edge's types merged under
+    /// `concentrate`. Renderers draw these.
+    pub sflag: u32,
+    pub eflag: u32,
+}
+
+/// [`BezierSegment`] as serialized, also by releases before 0.2.0, which wrote no arrow types:
+/// an arrowhead of such data is read as `normal`.
+#[derive(Deserialize)]
+struct BezierSegmentData {
+    points: Vec<Point>,
+    start_arrow: Option<Point>,
+    end_arrow: Option<Point>,
+    #[serde(default)]
+    sflag: Option<u32>,
+    #[serde(default)]
+    eflag: Option<u32>,
+}
+
+impl From<BezierSegmentData> for BezierSegment {
+    fn from(d: BezierSegmentData) -> Self {
+        let legacy = |arrow: Option<Point>| match arrow {
+            Some(_) => crate::arrows::ARR_TYPE_NORM,
+            None => crate::arrows::ARR_TYPE_NONE,
+        };
+        BezierSegment {
+            sflag: d.sflag.unwrap_or_else(|| legacy(d.start_arrow)),
+            eflag: d.eflag.unwrap_or_else(|| legacy(d.end_arrow)),
+            points: d.points,
+            start_arrow: d.start_arrow,
+            end_arrow: d.end_arrow,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Spline {
     pub segments: Vec<BezierSegment>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn segment_without_arrow_types_reads_as_normal_arrowheads() {
+        // As serialized before 0.2.0: no `sflag`/`eflag`.
+        let old = r#"{"points":[],"start_arrow":null,"end_arrow":{"x":1.0,"y":2.0}}"#;
+        let s: BezierSegment = serde_json::from_str(old).unwrap();
+        assert_eq!((s.sflag, s.eflag), (0, crate::arrows::ARR_TYPE_NORM));
+        let new = BezierSegment {
+            end_arrow: Some(Point::new(1.0, 2.0)),
+            eflag: crate::arrows::ARR_TYPE_DOT,
+            ..Default::default()
+        };
+        let back: BezierSegment =
+            serde_json::from_str(&serde_json::to_string(&new).unwrap()).unwrap();
+        assert_eq!(back, new);
+    }
 }

@@ -1,145 +1,15 @@
-//! Arrowhead flags and lengths for edge clipping, ported from
-//! `lib/common/arrows.c` (`arrow_flags`, `arrow_length`, `arrowStartClip`,
-//! `arrowEndClip` and the penwidth-aware length helpers).
+//! Arrowhead lengths for edge clipping, ported from `lib/common/arrows.c` (`arrow_length`,
+//! `arrowStartClip`, `arrowEndClip` and the penwidth-aware length helpers). `arrow_flags` is
+//! `graphviz_pure_core::arrows`'.
 
 use super::splines::bezier_clip;
 use super::utils::late_double;
+pub use graphviz_pure_core::arrows::arrow_flags;
+use graphviz_pure_core::arrows::*;
 use graphviz_pure_core::math;
 use graphviz_pure_core::{AttrMap, Point};
 
 const ARROW_LENGTH: f64 = 10.0;
-const NUMB_OF_ARROW_HEADS: usize = 4;
-const BITS_PER_ARROW: u32 = 8;
-const BITS_PER_ARROW_TYPE: u32 = 4;
-
-pub const ARR_TYPE_NONE: u32 = 0;
-pub const ARR_TYPE_NORM: u32 = 1;
-const ARR_TYPE_CROW: u32 = 2;
-const ARR_TYPE_TEE: u32 = 3;
-const ARR_TYPE_BOX: u32 = 4;
-const ARR_TYPE_DIAMOND: u32 = 5;
-const ARR_TYPE_DOT: u32 = 6;
-const ARR_TYPE_CURVE: u32 = 7;
-const ARR_TYPE_GAP: u32 = 8;
-const ARR_MOD_OPEN: u32 = 1 << BITS_PER_ARROW_TYPE;
-const ARR_MOD_INV: u32 = 1 << (BITS_PER_ARROW_TYPE + 1);
-const ARR_MOD_LEFT: u32 = 1 << (BITS_PER_ARROW_TYPE + 2);
-const ARR_MOD_RIGHT: u32 = 1 << (BITS_PER_ARROW_TYPE + 3);
-
-const SYNONYMS: &[(&str, u32)] = &[("invempty", ARR_TYPE_NORM | ARR_MOD_INV | ARR_MOD_OPEN)];
-const MODS: &[(&str, u32)] = &[
-    ("o", ARR_MOD_OPEN),
-    ("r", ARR_MOD_RIGHT),
-    ("l", ARR_MOD_LEFT),
-    ("e", ARR_MOD_OPEN),
-    ("half", ARR_MOD_LEFT),
-];
-const NAMES: &[(&str, u32)] = &[
-    ("normal", ARR_TYPE_NORM),
-    ("crow", ARR_TYPE_CROW),
-    ("tee", ARR_TYPE_TEE),
-    ("box", ARR_TYPE_BOX),
-    ("diamond", ARR_TYPE_DIAMOND),
-    ("dot", ARR_TYPE_DOT),
-    ("none", ARR_TYPE_GAP),
-    ("inv", ARR_TYPE_NORM | ARR_MOD_INV),
-    ("vee", ARR_TYPE_CROW | ARR_MOD_INV),
-    ("pen", ARR_TYPE_CROW | ARR_MOD_INV),
-    ("mpty", ARR_TYPE_NORM),
-    ("curve", ARR_TYPE_CURVE),
-    ("icurve", ARR_TYPE_CURVE | ARR_MOD_INV),
-];
-
-fn match_frag<'s>(name: &'s str, table: &[(&str, u32)], flag: &mut u32) -> &'s str {
-    for (n, t) in table {
-        if let Some(rest) = name.strip_prefix(n) {
-            *flag |= t;
-            return rest;
-        }
-    }
-    name
-}
-
-fn match_shape(name: &str) -> (u32, &str) {
-    let mut f = ARR_TYPE_NONE;
-    let mut rest = match_frag(name, SYNONYMS, &mut f);
-    if rest.len() == name.len() {
-        loop {
-            let next = rest;
-            rest = match_frag(next, MODS, &mut f);
-            if rest.len() == next.len() {
-                break;
-            }
-        }
-        rest = match_frag(rest, NAMES, &mut f);
-    }
-    if f != 0 && f & ((1 << BITS_PER_ARROW_TYPE) - 1) == 0 {
-        f |= ARR_TYPE_NORM;
-    }
-    (f, rest)
-}
-
-fn match_name(name: &str) -> u32 {
-    let mut flag = 0;
-    let mut rest = name;
-    let mut i = 0;
-    while !rest.is_empty() && i < NUMB_OF_ARROW_HEADS {
-        let next = rest;
-        let (mut f, r) = match_shape(next);
-        rest = r;
-        if f == ARR_TYPE_NONE {
-            // C warns on every arrow_flags call, all of them in the layout: arrow_clip,
-            // user_spline and the opposing edge of a concentrated one.
-            if graphviz_pure_core::diag::reporting_ports() {
-                graphviz_pure_core::diag::agwarningf(&format!(
-                    "Arrow type \"{next}\" unknown - ignoring\n"
-                ));
-            }
-            return flag;
-        }
-        if f == ARR_TYPE_GAP && i == NUMB_OF_ARROW_HEADS - 1 {
-            f = ARR_TYPE_NONE;
-        }
-        if f == ARR_TYPE_GAP && i == 0 && rest.is_empty() {
-            f = ARR_TYPE_NONE;
-        }
-        if f != ARR_TYPE_NONE {
-            flag |= f << (i as u32 * BITS_PER_ARROW);
-            i += 1;
-        }
-    }
-    flag
-}
-
-/// `arrow_flags`: start and end arrow flags of an edge.
-pub fn arrow_flags(attrs: &AttrMap, directed: bool) -> (u32, u32) {
-    let mut sflag = ARR_TYPE_NONE;
-    let mut eflag = if directed {
-        ARR_TYPE_NORM
-    } else {
-        ARR_TYPE_NONE
-    };
-    if let Some(d) = attrs.get("dir").filter(|s| !s.is_empty()) {
-        match d.as_str() {
-            "forward" => (sflag, eflag) = (ARR_TYPE_NONE, ARR_TYPE_NORM),
-            "back" => (sflag, eflag) = (ARR_TYPE_NORM, ARR_TYPE_NONE),
-            "both" => (sflag, eflag) = (ARR_TYPE_NORM, ARR_TYPE_NORM),
-            "none" => (sflag, eflag) = (ARR_TYPE_NONE, ARR_TYPE_NONE),
-            _ => {}
-        }
-    }
-    if eflag == ARR_TYPE_NORM
-        && let Some(a) = attrs.get("arrowhead").filter(|s| !s.is_empty())
-    {
-        eflag = match_name(a);
-    }
-    if sflag == ARR_TYPE_NORM
-        && let Some(a) = attrs.get("arrowtail").filter(|s| !s.is_empty())
-    {
-        sflag = match_name(a);
-    }
-    (sflag, eflag)
-}
 
 struct Tri {
     p: [Point; 3],
@@ -528,7 +398,7 @@ pub fn arrow_length(attrs: &AttrMap, flag: u32) -> f64 {
         return 0.0;
     }
     let mut length = 0.0;
-    for i in 0..NUMB_OF_ARROW_HEADS as u32 {
+    for i in 0..NUMB_OF_ARROW_HEADS {
         let f = (flag >> (i * BITS_PER_ARROW)) & ((1 << BITS_PER_ARROW_TYPE) - 1);
         if let Some(lf) = lenfact(f) {
             let af = (flag >> (i * BITS_PER_ARROW)) & ((1 << BITS_PER_ARROW) - 1);

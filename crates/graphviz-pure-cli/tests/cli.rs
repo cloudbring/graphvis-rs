@@ -8336,6 +8336,18 @@ fn issue285_swapped_end_draws_the_layouts_arrow_type() {
                label=C1; } f -> g [minlen=0]; g -> f; f -> g [headport=n,arrowhead=dot]; e -> f; }";
     let (out, err, ok) = run(&["-Tsvg"], src);
     assert!(ok, "{err}");
+    // `f -> g:n`'s start arrowhead, at `g`, is C's dot (an ellipse), not a polygon.
+    let edge3 = out
+        .split("<g id=\"edge3\"")
+        .nth(1)
+        .and_then(|e| e.split("</g>").next());
+    assert!(
+        edge3.is_some_and(|e| e.contains(
+            "<ellipse fill=\"black\" stroke=\"black\" \
+            cx=\"135.74\" cy=\"-241.89\" rx=\"4\" ry=\"4\"/>"
+        ) && !e.contains("<polygon")),
+        "{out}"
+    );
     let want = r#"<!-- Title: G Pages: 1 -->
 <svg width="192pt" height="254pt"
  viewBox="0.00 0.00 192.00 254.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -8409,6 +8421,86 @@ fn issue285_swapped_end_draws_the_layouts_arrow_type() {
 </svg>
 "#;
     assert_eq!(out.split_once(" -->\n").map(|(_, b)| b), Some(want));
+}
+
+/// Issue #285, every engine: the shared `write_back` passes `bz.sflag`/`bz.eflag` too, so
+/// neato's arrowheads are the ones its `arrow_clip` clipped for. Under `concentrate`, neato
+/// routes one edge of `b -> a`'s pair; the other, with an unknown `invfoo`, is never clipped,
+/// so C prints no warning for it: the warnings come from the layout's `arrow_flags`, not the
+/// renderer's. The expected SVG is C 16.1.0's, after the generator comment.
+#[test]
+fn issue285_neato_concentrate_draws_and_warns_from_the_layouts_arrow_flags() {
+    let src = "digraph G { layout=neato; concentrate=true; { rank=same; a b } b -> a [dir=none,minlen=2]; b -> b [arrowhead=inv,tailport=s]; b -> a [arrowhead=invfoo,dir=forward,minlen=2]; a -> a; }";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    let want = r#"<!-- Title: G Pages: 1 -->
+<svg width="151pt" height="64pt"
+ viewBox="0.00 0.00 151.00 64.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 59.96)">
+<title>G</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-59.96 147.21,-59.96 147.21,4 -4,4"/>
+<!-- a -->
+<g id="node1" class="node">
+<title>a</title>
+<ellipse fill="none" stroke="black" cx="27" cy="-37.96" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="27" y="-33.76" font-family="Times,serif" font-size="14.00">a</text>
+</g>
+<!-- a&#45;&gt;a -->
+<g id="edge4" class="edge">
+<title>a&#45;&gt;a</title>
+<path fill="none" stroke="black" d="M52.44,-44.65C63.03,-45.11 72,-42.88 72,-37.96 72,-34.96 68.67,-32.96 63.67,-31.96"/>
+<polygon fill="black" stroke="black" points="64.15,-28.48 53.95,-31.36 63.72,-35.47 64.15,-28.48"/>
+</g>
+<!-- b -->
+<g id="node2" class="node">
+<title>b</title>
+<ellipse fill="none" stroke="black" cx="98.21" cy="-27.32" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="98.21" y="-23.12" font-family="Times,serif" font-size="14.00">b</text>
+</g>
+<!-- b&#45;&gt;a -->
+<g id="edge1" class="edge">
+<title>b&#45;&gt;a</title>
+<path fill="none" stroke="black" d="M71.69,-31.28C65.84,-32.16 59.64,-33.08 53.78,-33.96"/>
+</g>
+<!-- b&#45;&gt;b -->
+<g id="edge2" class="edge">
+<title>b:s&#45;&gt;b</title>
+<path fill="none" stroke="black" d="M98.21,-9C113.21,0 143.21,0 143.21,-18.16 143.21,-24.43 139.63,-28.54 134.33,-30.85"/>
+<polygon fill="black" stroke="black" points="123.83,-29.61 134.35,-30.85 125.35,-36.44 123.83,-29.61"/>
+</g>
+</g>
+</svg>
+"#;
+    assert_eq!(out.split_once(" -->\n").map(|(_, b)| b), Some(want));
+}
+
+/// Issue #285: an unknown arrow name warns where the layout reads the edge's arrow flags
+/// (`arrow_clip`, `user_spline`), once per layout whatever the number of output formats, as
+/// in C 16.1.0.
+#[test]
+fn issue285_arrow_type_warnings_print_once_per_layout() {
+    let src = "digraph G { a -> b [arrowhead=bogus]; b -> c [arrowtail=nope,dir=both]; \
+               c -> a [arrowhead=xx]; }";
+    for k in ["-Kdot", "-Kneato", "-Kfdp", "-Kcirco", "-Ktwopi", "-Kosage"] {
+        let (_, err, ok) = run(&[k, "-Tsvg", "-Tdot"], src);
+        assert!(ok, "{err}");
+        assert_eq!(
+            err,
+            "Warning: Arrow type \"bogus\" unknown - ignoring\n\
+             Warning: Arrow type \"nope\" unknown - ignoring\n\
+             Warning: Arrow type \"xx\" unknown - ignoring\n",
+            "{k}"
+        );
+    }
+    // `neato -n2`: `user_spline` returns before `arrow_flags` for an edge without `pos`
+    // (neatoinit.c:272), which is then routed and clipped: one warning.
+    let (_, err, ok) = run(
+        &["-Kneato", "-n2", "-Tsvg"],
+        "digraph { a [pos=\"0,0\"]; b [pos=\"100,0\"]; a -> b [arrowhead=foo]; }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: Arrow type \"foo\" unknown - ignoring\n");
 }
 
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
