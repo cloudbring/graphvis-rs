@@ -1289,7 +1289,7 @@ impl Parser {
             }
             T::StartTag(next) | T::EmptyElement(next) => {
                 let name_end = s + 1 + tk.name_length(s + 1);
-                let name = String::from_utf8_lossy(&tk.utf8(s + 1, name_end)).into_owned();
+                let name = graphviz_pure_core::charset::decode(tk.utf8(s + 1, name_end));
                 let atts = store_atts(tk, name_end, next, s)?;
                 let line = self.line_with(tk, s);
                 h.start_element(&name, &atts, line);
@@ -1317,7 +1317,7 @@ impl Parser {
                     return Err(Self::err(TAG_MISMATCH, raw));
                 }
                 self.tags.pop();
-                let name = String::from_utf8_lossy(&tk.utf8(a, b)).into_owned();
+                let name = graphviz_pure_core::charset::decode(tk.utf8(a, b));
                 let line = self.line_with(tk, s);
                 h.end_element(&name, line);
                 if self.tags.is_empty() {
@@ -1473,8 +1473,8 @@ fn store_atts(
         let value = attribute_value(tk, vs, p, tag)?;
         p += 1;
         atts.push((
-            String::from_utf8_lossy(&tk.utf8(name, name + name_bytes.len())).into_owned(),
-            String::from_utf8_lossy(&value).into_owned(),
+            graphviz_pure_core::charset::decode(tk.utf8(name, name + name_bytes.len())),
+            graphviz_pure_core::charset::decode(value),
         ));
     }
 }

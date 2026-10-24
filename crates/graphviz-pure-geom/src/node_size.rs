@@ -1387,7 +1387,7 @@ impl RecParser<'_> {
             .iter()
             .position(|&c| c == 0)
             .unwrap_or(self.buf.len());
-        String::from_utf8_lossy(&self.buf[..end]).into_owned()
+        graphviz_pure_core::charset::decode_slice(&self.buf[..end])
     }
 
     fn parse(&mut self, lr: bool, flag: bool) -> Option<Field> {
@@ -1658,10 +1658,11 @@ fn to_record_field(f: &Field) -> RecordField {
 
 /// `parse_reclbl` on `label` for `record_init`, falling back to `\N` on a syntax error.
 fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
-    let src = label;
+    // C parses the label's bytes (`graphviz_pure_core::charset`).
+    let src = graphviz_pure_core::charset::encode(label);
     let len = src.len().max(1).max(2);
     let mut p = RecParser {
-        src: src.as_bytes(),
+        src: &src,
         pos: 0,
         html,
         buf: vec![0; len + 1],
@@ -1670,7 +1671,7 @@ fn parse_record_label(label: &str, html: bool, lr: bool) -> Field {
         return f;
     }
     if graphviz_pure_core::diag::reporting() {
-        graphviz_pure_core::diag::agerrorf(&format!("bad label format {src}\n"));
+        graphviz_pure_core::diag::agerrorf(&format!("bad label format {label}\n"));
     }
     let mut p = RecParser {
         src: b"\\N",

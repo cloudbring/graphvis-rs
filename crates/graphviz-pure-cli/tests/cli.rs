@@ -6736,6 +6736,89 @@ fn clip_and_install_crossed_walks_keep_one_segment() {
     }
 }
 
+// Issue #151: a real U+10FF00..=U+10FFFF char in UTF-8 input is not one of the port's raw
+// bytes. C keeps its four bytes: it writes them, measures each one (warning about byte 244)
+// and parses records and HTML labels on them. stdout and stderr are C 16.1.0's.
+#[test]
+fn issue151_real_chars_of_the_raw_byte_range_keep_their_bytes() {
+    let (out, err, ok) = run(&["-Tplain"], "digraph G { \"x\u{10ff41}y\":qq -> b }");
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Warning: no value for width of non-ASCII character 244. Falling back to \
+         width of space character\nWarning: node x\u{10ff41}y, port qq unrecognized\n"
+    );
+    assert_eq!(
+        out,
+        "graph 1 0.84307 1.5\n\
+         node x\u{10ff41}y 0.42153 1.25 0.84307 0.5 x\u{10ff41}y solid ellipse black lightgrey\n\
+         node b 0.42153 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         edge x\u{10ff41}y b 4 0.42153 0.99579 0.42153 0.89454 0.42153 0.77398 0.42153 0.66022 \
+         solid black\nstop\n"
+    );
+
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph { a [shape=record, label=\"<p\u{10ff41}>f\u{10ff41}|g\"]; b; a:\"p\u{10ff41}\" -> b }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Warning: no value for width of non-ASCII character 143. Falling back to \
+         width of space character\nWarning: node a, port p\u{10ff41} unrecognized\n"
+    );
+    assert_eq!(
+        out,
+        "graph 1 0.75 1.5139\n\
+         node a 0.375 1.2569 0.75 0.51389 \"<p\u{10ff41}>f\u{10ff41}|g\" solid record black \
+         lightgrey\n\
+         node b 0.375 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         edge a b 4 0.375 1.0012 0.375 0.89773 0.375 0.77584 0.375 0.66129 solid black\n\
+         stop\n"
+    );
+
+    // HTML text: expat's character data is measured on its bytes too.
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph { b [label=<<table><tr><td>\u{10ffff}</td></tr></table>>] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Warning: no value for width of non-ASCII character 244. Falling back to \
+         width of space character\n"
+    );
+    assert_eq!(
+        out,
+        "graph 1 0.82496 0.72282\n\
+         node b 0.41248 0.36141 0.82496 0.72282 <<table><tr><td>\u{10ffff}</td></tr></table>> \
+         solid ellipse black lightgrey\n\
+         stop\n"
+    );
+
+    // expat gives the char back as its bytes: `sides` warns about each one.
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph { a [label=<<table sides=\"l\u{10ff41}\"><tr><td title=\"\u{10ff41}\">x</td></tr></table>>] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Unrecognized character '\u{fffd}' (-12) in sides attribute\n\
+         Warning: Unrecognized character '\u{fffd}' (-113) in sides attribute\n\
+         Warning: Unrecognized character '\u{fffd}' (-67) in sides attribute\n\
+         Warning: Unrecognized character '\u{fffd}' (-127) in sides attribute\n"
+    );
+    assert_eq!(
+        out,
+        "graph 1 0.75 0.72282\n\
+         node a 0.375 0.36141 0.75 0.72282 \
+         <<table sides=\"l\u{10ff41}\"><tr><td title=\"\u{10ff41}\">x</td></tr></table>> \
+         solid ellipse black lightgrey\n\
+         stop\n"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

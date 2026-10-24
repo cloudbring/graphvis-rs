@@ -5,14 +5,19 @@
 //! is converted to UTF-8 (`latin1ToUTF8` for `charset=latin1`, `htmlEntityUTF8`
 //! otherwise, whose invalid-UTF-8 recovery treats the offending byte as Latin-1).
 //!
-//! The port keeps strings as `String`. Input that is not valid UTF-8 is decoded
-//! with [`decode`]: valid UTF-8 sequences stay as they are and every other byte
-//! `b` becomes the private-use code point `U+10FF00 + b` (a "raw byte"). [`encode`]
-//! maps them back, so the CLI writes C's exact bytes, and the C conversions run on
-//! [`encode`]d bytes, so `charset=latin1` text is converted exactly once, where C
-//! converts it. Text measurement (which C does byte by byte) also uses the encoded
-//! bytes. Input that genuinely contains `U+10FF00..=U+10FFFF` is not distinguished
-//! from raw bytes (no real-world encoding assigns these code points).
+//! The port keeps strings as `String`. Input is decoded with [`decode`]: valid UTF-8
+//! sequences stay as they are and every other byte `b` becomes the private-use code
+//! point `U+10FF00 + b` (a "raw byte"). [`encode`] maps them back, so the CLI writes
+//! C's exact bytes, and the C conversions run on [`encode`]d bytes, so `charset=latin1`
+//! text is converted exactly once, where C converts it. Text measurement (which C does
+//! byte by byte) also uses the encoded bytes.
+//!
+//! A real `U+10FF00..=U+10FFFF` character in valid UTF-8 input is decoded as its four
+//! raw bytes, so in a decoded string that range only ever stands for raw bytes and
+//! [`encode`] gives back the input's bytes. C sees those four bytes too: it measures
+//! each one and writes them unchanged. Every string the port reads is in this decoded
+//! form; text from elsewhere (a JS string, say) goes through [`decode_slice`] of its
+//! UTF-8 bytes first, and [`encode`] turns a result back into bytes.
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
@@ -20,27 +25,64 @@ use std::cell::{Cell, RefCell};
 /// First code point of the raw-byte range (`U+10FF00 + byte`).
 const RAW_BASE: u32 = 0x10_FF00;
 
-/// Decodes input bytes: valid UTF-8 is kept, every other byte becomes a raw-byte char.
+/// Decodes input bytes: valid UTF-8 is kept, every other byte becomes a raw-byte char,
+/// and so does each byte of a real char of the raw-byte range.
 pub fn decode(bytes: Vec<u8>) -> String {
     match String::from_utf8(bytes) {
-        Ok(s) => s,
-        Err(e) => decode_slice(e.as_bytes()),
+        Ok(s) if !has_raw(&s) => s,
+        Ok(s) => escaped(&s, &[]),
+        Err(e) => {
+            let bytes = e.as_bytes();
+            let valid = e.utf8_error().valid_up_to();
+            escaped(
+                std::str::from_utf8(&bytes[..valid]).unwrap_or_default(),
+                &bytes[valid..],
+            )
+        }
     }
 }
 
 /// [`decode`] for a borrowed slice.
 pub fn decode_slice(bytes: &[u8]) -> String {
-    if let Ok(s) = std::str::from_utf8(bytes) {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(bytes.len() + 8);
-    for chunk in bytes.utf8_chunks() {
-        out.push_str(chunk.valid());
-        for &b in chunk.invalid() {
-            out.push(raw_char(b));
+    match std::str::from_utf8(bytes) {
+        Ok(s) if !has_raw(s) => s.to_string(),
+        Ok(s) => escaped(s, &[]),
+        Err(e) => {
+            let valid = e.valid_up_to();
+            escaped(
+                std::str::from_utf8(&bytes[..valid]).unwrap_or_default(),
+                &bytes[valid..],
+            )
         }
     }
+}
+
+/// The decoded form of `valid` (already-checked UTF-8) followed by `rest`, which starts with
+/// a byte that isn't part of valid UTF-8 (or is empty).
+fn escaped(valid: &str, rest: &[u8]) -> String {
+    let mut out = String::with_capacity(valid.len() + rest.len() + 8);
+    push_escaped(&mut out, valid);
+    for chunk in rest.utf8_chunks() {
+        push_escaped(&mut out, chunk.valid());
+        out.extend(chunk.invalid().iter().map(|&b| raw_char(b)));
+    }
     out
+}
+
+/// Appends valid text, each char of the raw-byte range as its four raw bytes.
+fn push_escaped(out: &mut String, s: &str) {
+    if !has_raw(s) {
+        out.push_str(s);
+        return;
+    }
+    let mut buf = [0u8; 4];
+    for c in s.chars() {
+        if u32::from(c) >= RAW_BASE {
+            out.extend(c.encode_utf8(&mut buf).bytes().map(raw_char));
+        } else {
+            out.push(c);
+        }
+    }
 }
 
 /// The char that stands for the raw (non-UTF-8) byte `b`; [`encode`] turns it back.
@@ -70,6 +112,27 @@ pub fn encode(s: &str) -> Cow<'_, [u8]> {
         }
     }
     Cow::Owned(out)
+}
+
+/// Text from outside the port (a JS string, say) in the decoded form the port reads:
+/// [`decode_slice`] of its UTF-8 bytes, so a real char of the raw-byte range is not taken
+/// for a raw byte.
+pub fn from_text(text: &str) -> Cow<'_, str> {
+    if has_raw(text) {
+        Cow::Owned(decode_slice(text.as_bytes()))
+    } else {
+        Cow::Borrowed(text)
+    }
+}
+
+/// A decoded string as text for outside the port: its [`encode`]d bytes, with any that are
+/// not UTF-8 replaced by U+FFFD. Undoes [`from_text`].
+pub fn to_text(s: &str) -> Cow<'_, str> {
+    if has_raw(s) {
+        Cow::Owned(String::from_utf8_lossy(&encode(s)).into_owned())
+    } else {
+        Cow::Borrowed(s)
+    }
 }
 
 /// `GD_charset(g)`: the input character set of a graph (`CHAR_UTF8`, `CHAR_LATIN1`,
@@ -217,6 +280,30 @@ mod tests {
         assert_eq!(&*encode(&s), &bytes[..]);
         assert_eq!(decode(b"plain".to_vec()), "plain");
         assert!(matches!(encode("plain \u{10ffff}x"), Cow::Owned(_)));
+    }
+
+    // Issue #151: a real char of the raw-byte range is decoded as its four raw bytes, so
+    // `encode` gives them back and measurement sees C's bytes, not one ASCII byte.
+    #[test]
+    fn real_raw_range_char_keeps_its_bytes() {
+        for bytes in [
+            &b"x\xf4\x8f\xbd\x81y"[..],
+            b"\xf4\x8f\xbc\x80\xf4\x8f\xbf\xbf",
+            b"caf\xe9 \xf4\x8f\xbd\x81",
+        ] {
+            let s = decode(bytes.to_vec());
+            assert_eq!(&*encode(&s), bytes);
+            assert_eq!(decode_slice(bytes), s);
+        }
+        let s = decode(b"x\xf4\x8f\xbd\x81y".to_vec());
+        let raw: String = [0xf4, 0x8f, 0xbd, 0x81].map(raw_char).iter().collect();
+        assert_eq!(s, format!("x{raw}y"));
+        // The char just below the range is ordinary text.
+        assert_eq!(decode("\u{10feff}".into()), "\u{10feff}");
+        let text = "x\u{10ff41}y";
+        assert_eq!(from_text(text), s);
+        assert_eq!(to_text(&from_text(text)), text);
+        assert_eq!(to_text(&decode(b"caf\xe9".to_vec())), "caf\u{fffd}");
     }
 
     #[test]

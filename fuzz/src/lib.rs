@@ -11,11 +11,12 @@ pub const MAX_NODES: usize = 50;
 pub const MAX_EDGES: usize = 100;
 pub const MAX_SUBGRAPHS: usize = 25;
 
-/// DOT is read as bytes and decoded as UTF-8 with replacement. The targets parse it as the
-/// CLI reads a file ([`graphviz_pure_parser::reading_file`]: `fgets`, where a NUL hides the
-/// rest of its line), not as a library string, which ends at its first NUL.
+/// DOT is read as bytes and decoded as the CLI decodes a file ([`graphviz_pure::charset::decode_slice`]:
+/// bytes that are not UTF-8 stay raw bytes). The targets parse it as the CLI reads a file
+/// ([`graphviz_pure_parser::reading_file`]: `fgets`, where a NUL hides the rest of its line),
+/// not as a library string, which ends at its first NUL.
 fn source(data: &[u8]) -> Option<String> {
-    (data.len() <= MAX_INPUT).then(|| String::from_utf8_lossy(data).into_owned())
+    (data.len() <= MAX_INPUT).then(|| graphviz_pure::charset::decode_slice(data))
 }
 
 /// The DOT parser and the canonical writer on every graph read before an error.

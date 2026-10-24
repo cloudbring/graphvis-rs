@@ -777,14 +777,12 @@ impl Lexer {
     fn push_token(&mut self) {
         if let Some(t) = self.cur.take() {
             let t = match t {
-                Tok::String(_) => {
-                    Tok::String(String::from_utf8_lossy(&std::mem::take(&mut self.xb)).into_owned())
-                }
+                Tok::String(_) => Tok::String(charset::decode(std::mem::take(&mut self.xb))),
                 t => {
                     if let Some(Tok::String(prev)) = self.toks.last_mut()
                         && !self.xb.is_empty()
                     {
-                        prev.push_str(&String::from_utf8_lossy(&std::mem::take(&mut self.xb)));
+                        prev.push_str(&charset::decode(std::mem::take(&mut self.xb)));
                     }
                     t
                 }
