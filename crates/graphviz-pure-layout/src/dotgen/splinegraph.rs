@@ -160,13 +160,13 @@ impl SplineGraph for Dot<'_> {
         crate::common::ports::resolve_port(self, n, other, old)
     }
     /// `record_path(n, prt, side, rv, &k)`; polygons (`poly_path`) have none.
-    fn pboxfn(&self, n: usize, prt: &Port, side: u8) -> Option<(u8, Vec<BoxF>)> {
+    fn pboxfn(&self, n: usize, prt: &Port, side: u8) -> Option<(u8, Option<Vec<BoxF>>)> {
         let nd = &self.nodes[n];
         if !nd.is_record || nd.rec_fields.is_empty() {
             return None;
         }
         if !prt.defined {
-            return Some((0, Vec::new()));
+            return Some((0, None));
         }
         let p = prt.p;
         let flip = self.graphs[0].flip();
@@ -184,12 +184,11 @@ impl SplineGraph for Dot<'_> {
                     BoxF::new(c.x + ls, c.y - nd.ht / 2.0, c.x + rs, 0.0)
                 };
                 b.ur.y = c.y + nd.ht / 2.0;
-                return Some((side, vec![b]));
+                return Some((side, Some(vec![b])));
             }
         }
-        // No field contains the port: C returns `side` with the end's previous
-        // boxes; fall back to the node box.
-        None
+        // No field contains the port: C returns `side` and writes no box (#360).
+        Some((side, None))
     }
 }
 

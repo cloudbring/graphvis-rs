@@ -7362,6 +7362,47 @@ fn issue268_a_truncated_style_draws_no_style_items() {
     );
 }
 
+/// Issue #360: where a samehead/sametail port lies in no field of a record, C's
+/// `record_path` writes no box and the route uses the uninitialised `tend`/`hend` of
+/// `make_regular_edge` (or of the flat edge router), which hold the previous call's
+/// ends. That is undefined behaviour in C: these coordinates are what C 16.1.0 draws on
+/// every run and on two builds, the behaviour `docs/porting/crashes.md` ("Record ports
+/// in no field") chooses to follow.
+#[test]
+fn issue360_record_port_in_no_field_reuses_the_previous_ends() {
+    let regular = "digraph G {
+n2 [shape=Mrecord, label=\"\"];
+n3:c -> n2 [tailclip=true, samehead=h0, headport=se];
+n2 -> n1:p0 [label=\"l\", penwidth=5];
+n1:p1:nw -> n2 [samehead=h0, arrowhead=normal];
+}";
+    let (out, _, ok) = run(&["-Tplain"], regular);
+    assert!(ok);
+    for e in [
+        "edge n3 n2 4 0.75 2.2563 0.75 1.8413 0.75 1.0028 0.75 0.65578 solid black",
+        "edge n1 n2 4 0.45089 0.49801 0.52622 0.73043 0.63935 1.0795 0.7027 1.2749 solid black",
+    ] {
+        assert!(out.contains(e), "{out}");
+    }
+
+    let flat = "digraph G {
+concentrate=true;
+n4 [shape=Mrecord, label=\"<p0>  |<p1> xy|<p2> \"];
+{ rank=same; n4; n0; n8; n9; n2; n6; }
+n8:ne -> n2 [headclip=false, label=\"l\", arrowhead=normal];
+n7:sw -> n6:e [tailclip=true, samehead=h0, constraint=false];
+n6:p1:nw -> n0:_ [label=\"a label\"];
+n4:s -> n9:n [headclip=false, sametail=t0, label=\"l\"];
+n4 -> n2 [sametail=t0];
+}";
+    let (out, _, ok) = run(&["-Tplain"], flat);
+    assert!(ok);
+    assert!(
+        out.contains("edge n4 n2 4 5.4549 0.29426 5.4549 0.29426 4.999 0.29426 4.6116 0.29426"),
+        "{out}"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

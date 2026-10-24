@@ -184,9 +184,16 @@ pub trait SplineGraph {
     fn resolve_port(&self, _n: usize, _other: usize, old: &PortInfo) -> PortInfo {
         old.clone()
     }
-    /// `ND_shape(n)->fns->pboxfn(n, port, side, rv, &k)`: the boxes from a
-    /// port to the node border and the side mask, if the shape has one.
-    fn pboxfn(&self, _n: usize, _port: &PortInfo, _side: u8) -> Option<(u8, Vec<BoundingBox>)> {
+    /// `ND_shape(n)->fns->pboxfn(n, port, side, rv, &k)`: the side mask and the
+    /// boxes from a port to the node border, if the shape has a `pboxfn`. The boxes
+    /// are `None` where C returns a mask without writing `rv` or `k` (`record_path`
+    /// finding no field for the port, #360).
+    fn pboxfn(
+        &self,
+        _n: usize,
+        _port: &PortInfo,
+        _side: u8,
+    ) -> Option<(u8, Option<Vec<BoundingBox>>)> {
         None
     }
 }
@@ -498,7 +505,27 @@ fn clear_orig_clip<S: SplineGraph + ?Sized>(g: &mut S, e: usize, n: usize, at_ta
     }
 }
 
-/// `beginpath(P, e, et, endp, merge)`: set up the boxes near the tail node.
+/// `if (pboxfn && (mask = pboxfn(n, port, side, &endp->boxes[0], &endp->boxn)))
+/// endp->sidemask = mask;` in `beginpath` and `endpath`: the side mask and the
+/// boxes `endp` ends up with, or `None` where the caller uses the node box.
+///
+/// Where `pboxfn` returns a mask but writes no box (`record_path` finding no
+/// field for the port, #360), C's `endp` keeps the boxes it held. The caller
+/// says what those are in `kept`; with `None` the node box is used.
+fn port_boxes(
+    r: Option<(u8, Option<Vec<BoundingBox>>)>,
+    kept: Option<Vec<BoundingBox>>,
+) -> Option<(u8, Vec<BoundingBox>)> {
+    match r {
+        Some((mask, Some(boxes))) if mask != 0 => Some((mask, boxes)),
+        Some((mask, None)) if mask != 0 => kept.map(|b| (mask, b)),
+        _ => None,
+    }
+}
+
+/// `beginpath(P, e, et, endp, merge)`: set up the boxes near the tail node. `kept` is
+/// what C's `endp->boxes` hold on entry, used where `pboxfn` writes none (see
+/// `port_boxes`); `None` uses the node box there.
 pub fn beginpath<S: SplineGraph + ?Sized>(
     g: &mut S,
     p: &mut Path,
@@ -506,6 +533,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
     et: i32,
     endp: &mut PathEnd,
     merge: bool,
+    kept: Option<Vec<BoundingBox>>,
 ) {
     let n = g.tail(e);
     if g.tail_port(e).dyna {
@@ -636,7 +664,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
     } else {
         endp.sidemask
     };
-    if let Some((mask, boxes)) = g.pboxfn(n, &tport, side).filter(|(m, _)| *m != 0) {
+    if let Some((mask, boxes)) = port_boxes(g.pboxfn(n, &tport, side), kept) {
         endp.boxes = boxes;
         endp.sidemask = mask;
     } else {
@@ -660,7 +688,9 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
     }
 }
 
-/// `endpath(P, e, et, endp, merge)`: set up the boxes near the head node.
+/// `endpath(P, e, et, endp, merge)`: set up the boxes near the head node. `kept` is
+/// what C's `endp->boxes` hold on entry, used where `pboxfn` writes none (see
+/// `port_boxes`); `None` uses the node box there.
 pub fn endpath<S: SplineGraph + ?Sized>(
     g: &mut S,
     p: &mut Path,
@@ -668,6 +698,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
     et: i32,
     endp: &mut PathEnd,
     merge: bool,
+    kept: Option<Vec<BoundingBox>>,
 ) {
     let n = g.head(e);
     if g.head_port(e).dyna {
@@ -797,7 +828,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
     } else {
         endp.sidemask
     };
-    if let Some((mask, boxes)) = g.pboxfn(n, &hport, side).filter(|(m, _)| *m != 0) {
+    if let Some((mask, boxes)) = port_boxes(g.pboxfn(n, &hport, side), kept) {
         endp.boxes = boxes;
         endp.sidemask = mask;
     } else {
@@ -1504,6 +1535,25 @@ pub fn edge_midpoint(et: EdgeType, spl: &[Bezier]) -> Point {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// #360: where `pboxfn` writes no box, the boxes are the caller's `kept` ones, and
+    /// the node box where it has none.
+    #[test]
+    fn a_pboxfn_that_writes_no_box_keeps_the_callers_boxes() {
+        let b = |x: f64| BoundingBox::new(x, 0.0, x + 1.0, 1.0);
+        let kept = Some(vec![b(1.0), b(2.0)]);
+        assert_eq!(
+            port_boxes(Some((TOP, None)), kept.clone()),
+            Some((TOP, vec![b(1.0), b(2.0)]))
+        );
+        assert_eq!(port_boxes(Some((TOP, None)), None), None);
+        assert_eq!(
+            port_boxes(Some((BOTTOM, Some(vec![b(3.0)]))), kept.clone()),
+            Some((BOTTOM, vec![b(3.0)]))
+        );
+        assert_eq!(port_boxes(Some((0, None)), kept.clone()), None, "no mask");
+        assert_eq!(port_boxes(None, kept), None, "no pboxfn");
+    }
 
     /// #173: C splits a segment with a non-finite control point until it stops on a half
     /// inside `bb` (leaving `bb` as it was) or overflows its stack; the port returns.

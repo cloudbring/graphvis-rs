@@ -321,6 +321,63 @@ and 50,000 `fuzz-gen-ranks.py` inputs, plus hand-written ones in neato, fdp, cir
 osage, every input this changes is one C crashes on, except one: there `makeCompoundEdge`
 gives `gv_calloc` the wrapped size and C exits 1 with no output, and the port draws.
 
+## Record ports in no field: dot's uninitialised path ends
+
+Closed: #360.
+
+At the record end of a `samehead`/`sametail` edge, the port point can lie in no field of
+the record. `record_path` (`shapes.c:3793`) then returns the side mask without writing a
+box, so `beginpath` and `endpath` keep whatever `endp->boxes` and `endp->boxn` held. In
+`make_regular_edge`, `make_flat_edge`, `make_flat_labeled_edge` and
+`make_flat_bottom_edges` (`dotsplines.c:1713`, `:1515`, `:1326`, `:1432`) that is
+`pathend_t tend, hend`, declared without an initialiser. In practice it holds what the
+previous call of the same function left there, on every run and on both C 16.1.0 builds
+measured (a packaged build and one built from source). The port keeps each function's last
+`tend`/`hend` (`StaleEnds` in `dotsplines.rs`) and hands their boxes to `beginpath` and
+`endpath` as `kept`. The shared code only installs boxes it is given; the reuse lives in
+dot's routers.
+
+How far that model reaches was measured, not assumed:
+
+- **Other routers in between.** `make_regular_edge` and `make_flat_edge` are called from
+  `dot_splines_`, `make_flat_labeled_edge` and `make_flat_bottom_edges` from inside
+  `make_flat_edge`, one frame deeper, so their frames can overlap. `edgecmp` sorts self loops
+  and flat edges before regular ones, so after the first `make_regular_edge` call no other
+  router runs: none did on 52,000 generated inputs. Between flat calls, another flat
+  router, and once the graph `make_flat_adj_edges` lays out, did run; where C drew, the
+  port's one slot per function matched it every time.
+- **Earlier graphs and pack components.** C does not reuse them. On 291 files of two
+  graphs, where the second graph's first router call misses, carrying the first graph's
+  ends matched C on no file where fresh slots did not; fresh slots matched on 8 where
+  carrying did not. With `pack=true` and a simple first component, carrying matched no
+  more drawings than fresh slots (21 each, of 42). Each layout the port runs separately
+  (each graph, each `pack` component, the graph `make_flat_adj_edges` lays out) starts with
+  no ends.
+
+Where a function has no previous call, C reads unrelated stack memory. Its output then
+differs between the two builds, and C often crashes or gives different results from run
+to run. The port uses the node box there, as `beginpath` does when the shape has no port
+boxes. Each miss in a row adds a box to the kept ones (at most 4 seen). C's array holds
+20, and C writes past it only when the box after the miss is not empty. The port keeps
+the 20 boxes when that box is empty, and fails the layout before the write otherwise
+(`dot_splines: an edge end already holds the 20 boxes C has room for`). No input reached
+that.
+
+Measured on 40,000 `fuzz-gen-endpoints.py` inputs (seeds 1–40000), where the port reaches
+this case on 213. On 5 of them C's output varies between runs. Of the other 208:
+
+| C | Inputs | Port's output equals C's before | after |
+|---|--:|--:|--:|
+| draws | 74 | 5 | 70 |
+| exits 1 | 98 | 13 | 94 |
+| crashes | 36 | n/a | n/a |
+
+The 4 drawings that still differ all reach the case in a function's first call. On 4,000
+generated samehead/sametail × record × `rankdir` inputs, C draws 2,816 the same way on two
+runs. The port matched C on 2,771 of them before and matches on 2,806 now. The 10 that
+still differ also reach the case in the first call. No input that matched C before differs
+now. The port draws or exits 1 on every input where C crashes, as before.
+
 ## Concentrated cluster edges
 
 Closed: #234.

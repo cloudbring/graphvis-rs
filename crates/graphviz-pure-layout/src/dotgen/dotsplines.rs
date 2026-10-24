@@ -92,6 +92,54 @@ pub fn swap_spline(s: &mut [Bezier]) {
     }
 }
 
+/// `pathend_t tend, hend` of `make_regular_edge`, `make_flat_edge`,
+/// `make_flat_labeled_edge` and `make_flat_bottom_edges`, as the last call of each
+/// left them (#360). C declares them without an initialiser, and where `record_path`
+/// writes no box, `beginpath`/`endpath` leave in them what they held: in practice,
+/// what the previous call of the same function left there, on every run and on two
+/// C builds measured. One slot per function is what matches C. The first two
+/// functions are called from `dot_splines_`, and the other two from `make_flat_edge`,
+/// one frame deeper. `edgecmp` sorts self loops and flat edges before regular ones,
+/// so nothing else runs between two `make_regular_edge` calls. Between flat calls,
+/// another flat router or the adjacent edges' graph can run, and the slots still
+/// matched C there. A new `Dot` starts with none: C does not reuse an earlier graph's
+/// or `pack` component's ends. See `docs/porting/crashes.md`.
+#[derive(Debug, Default)]
+pub struct StaleEnds {
+    regular: (PathEnd, PathEnd),
+    flat: (PathEnd, PathEnd),
+    flat_labeled: (PathEnd, PathEnd),
+    flat_bottom: (PathEnd, PathEnd),
+}
+
+/// The size of `pathend_t.boxes` in C.
+const PATHEND_MAX_BOXES: usize = 20;
+
+/// The boxes C's `endp` holds on entry to `beginpath`/`endpath`, for where
+/// `record_path` writes none (#360): the previous call's, or `None` on a function's
+/// first call, where C reads unrelated stack memory (its output then differs
+/// between builds, and it often crashes) and the port uses the node box.
+fn stale_boxes(endp: &PathEnd) -> Option<Vec<BoxF>> {
+    (!endp.boxes.is_empty()).then(|| endp.boxes.clone())
+}
+
+/// `if (b.LL.x < b.UR.x && b.LL.y < b.UR.y) endp->boxes[endp->boxn++] = b;`. With
+/// boxes kept from earlier calls (#360) the 20 boxes of `pathend_t` can be full,
+/// and C then writes past them; the port fails the layout before that write.
+fn push_end_box(endp: &mut PathEnd, b: BoxF) -> Result<(), String> {
+    if !box_ok(&b) {
+        return Ok(());
+    }
+    if endp.boxes.len() >= PATHEND_MAX_BOXES {
+        return Err(format!(
+            "dot_splines: an edge end already holds the {PATHEND_MAX_BOXES} boxes C has room \
+             for, kept from earlier edges"
+        ));
+    }
+    endp.boxes.push(b);
+    Ok(())
+}
+
 /// `makeregularend(b, side, y)`.
 fn makeregularend(b: BoxF, side: u8, y: f64) -> BoxF {
     if side == BOTTOM {
@@ -1264,6 +1312,19 @@ impl Dot<'_> {
         Point::new(sum.x / cnt, sum.y / cnt)
     }
 
+    /// Runs one of the routers with its `tend`/`hend` slot of [`StaleEnds`], which
+    /// keeps what the router leaves in them, whichever way it returns.
+    fn with_ends<R>(
+        &mut self,
+        slot: fn(&mut StaleEnds) -> &mut (PathEnd, PathEnd),
+        f: impl FnOnce(&mut Self, (&mut PathEnd, &mut PathEnd)) -> R,
+    ) -> R {
+        let mut ends = std::mem::take(slot(&mut self.stale_ends));
+        let r = f(self, (&mut ends.0, &mut ends.1));
+        *slot(&mut self.stale_ends) = ends;
+        r
+    }
+
     /// `makeFlatEnd(g, sp, P, n, e, endp, isBegin)`.
     fn make_flat_end(
         &mut self,
@@ -1273,23 +1334,23 @@ impl Dot<'_> {
         e: E,
         endp: &mut PathEnd,
         is_begin: bool,
-    ) {
+    ) -> Result<(), String> {
         let mut b = self.maximal_bbox(sp, n, None, Some(e));
         endp.nb = b;
         endp.sidemask = TOP;
         if is_begin {
-            beginpath(self, p, e, FLATEDGE, endp, false);
+            let kept = stale_boxes(endp);
+            beginpath(self, p, e, FLATEDGE, endp, false, kept);
         } else {
-            endpath(self, p, e, FLATEDGE, endp, false);
+            let kept = stale_boxes(endp);
+            endpath(self, p, e, FLATEDGE, endp, false, kept);
         }
         let last = *endp.boxes.last().unwrap();
         b.ur.y = last.ur.y;
         b.ll.y = last.ll.y;
         let r = self.nodes[n].rank;
         let b = makeregularend(b, TOP, self.nodes[n].coord.y + self.rk(0, r).ht2);
-        if box_ok(&b) {
-            endp.boxes.push(b);
-        }
+        push_end_box(endp, b)
     }
 
     /// `makeBottomFlatEnd(g, sp, P, n, e, endp, isBegin)`.
@@ -1301,23 +1362,23 @@ impl Dot<'_> {
         e: E,
         endp: &mut PathEnd,
         is_begin: bool,
-    ) {
+    ) -> Result<(), String> {
         let mut b = self.maximal_bbox(sp, n, None, Some(e));
         endp.nb = b;
         endp.sidemask = BOTTOM;
         if is_begin {
-            beginpath(self, p, e, FLATEDGE, endp, false);
+            let kept = stale_boxes(endp);
+            beginpath(self, p, e, FLATEDGE, endp, false, kept);
         } else {
-            endpath(self, p, e, FLATEDGE, endp, false);
+            let kept = stale_boxes(endp);
+            endpath(self, p, e, FLATEDGE, endp, false, kept);
         }
         let last = *endp.boxes.last().unwrap();
         b.ur.y = last.ur.y;
         b.ll.y = last.ll.y;
         let r = self.nodes[n].rank;
         let b = makeregularend(b, BOTTOM, self.nodes[n].coord.y - self.rk(0, r).ht2);
-        if box_ok(&b) {
-            endp.boxes.push(b);
-        }
+        push_end_box(endp, b)
     }
 
     fn route(&self, p: &mut Path, spline: bool) -> Option<Vec<Point>> {
@@ -1336,7 +1397,25 @@ impl Dot<'_> {
     }
 
     /// `make_flat_labeled_edge(g, sp, P, e, et)`.
-    fn make_flat_labeled_edge(&mut self, sp: &SplineInfoT, e: E, et: EdgeType) {
+    fn make_flat_labeled_edge(
+        &mut self,
+        sp: &SplineInfoT,
+        e: E,
+        et: EdgeType,
+    ) -> Result<(), String> {
+        self.with_ends(
+            |s| &mut s.flat_labeled,
+            |d, ends| d.make_flat_labeled_edge_with(sp, e, et, ends),
+        )
+    }
+
+    fn make_flat_labeled_edge_with(
+        &mut self,
+        sp: &SplineInfoT,
+        e: E,
+        et: EdgeType,
+        (tend, hend): (&mut PathEnd, &mut PathEnd),
+    ) -> Result<(), String> {
         let (tn, hn) = (self.edges[e].tail, self.edges[e].head);
         let mut f = self.edges[e]
             .to_virt
@@ -1367,10 +1446,8 @@ impl Dot<'_> {
             ydelta /= 6.0;
             lb.ll.y = lb.ur.y - c_max(5.0, ydelta);
             let mut p = Path::default();
-            let mut tend = PathEnd::default();
-            let mut hend = PathEnd::default();
-            self.make_flat_end(sp, &mut p, tn, e, &mut tend, true);
-            self.make_flat_end(sp, &mut p, hn, e, &mut hend, false);
+            self.make_flat_end(sp, &mut p, tn, e, tend, true)?;
+            self.make_flat_end(sp, &mut p, hn, e, hend, false)?;
             let tl = *tend.boxes.last().unwrap();
             let hl = *hend.boxes.last().unwrap();
             let boxes = [
@@ -1389,15 +1466,36 @@ impl Dot<'_> {
             }
             match self.route(&mut p, et == EdgeType::Spline) {
                 Some(v) if !v.is_empty() => ps = v,
-                _ => return,
+                _ => return Ok(()),
             }
         }
         let h = self.edges[e].head;
         clip_and_install(self, e, h, &ps);
+        Ok(())
     }
 
     /// `make_flat_bottom_edges(g, sp, P, edges, ind, cnt, e, use_splines)`.
-    fn make_flat_bottom_edges(&mut self, sp: &SplineInfoT, edges: &[E], e: E, use_splines: bool) {
+    fn make_flat_bottom_edges(
+        &mut self,
+        sp: &SplineInfoT,
+        edges: &[E],
+        e: E,
+        use_splines: bool,
+    ) -> Result<(), String> {
+        self.with_ends(
+            |s| &mut s.flat_bottom,
+            |d, ends| d.make_flat_bottom_edges_with(sp, edges, e, use_splines, ends),
+        )
+    }
+
+    fn make_flat_bottom_edges_with(
+        &mut self,
+        sp: &SplineInfoT,
+        edges: &[E],
+        e: E,
+        use_splines: bool,
+        (tend, hend): (&mut PathEnd, &mut PathEnd),
+    ) -> Result<(), String> {
         let cnt = edges.len();
         let (tn, hn) = (self.edges[e].tail, self.edges[e].head);
         let r = self.nodes[tn].rank;
@@ -1412,10 +1510,8 @@ impl Dot<'_> {
         let stepx = sp.multisep / (cnt + 1) as f64;
         let stepy = vspace / (cnt + 1) as f64;
         let mut p = Path::default();
-        let mut tend = PathEnd::default();
-        let mut hend = PathEnd::default();
-        self.make_bottom_flat_end(sp, &mut p, tn, e, &mut tend, true);
-        self.make_bottom_flat_end(sp, &mut p, hn, e, &mut hend, false);
+        self.make_bottom_flat_end(sp, &mut p, tn, e, tend, true)?;
+        self.make_bottom_flat_end(sp, &mut p, hn, e, hend, false)?;
         for (i, &e) in edges.iter().enumerate() {
             let fi = (i + 1) as f64;
             let b = *tend.boxes.last().unwrap();
@@ -1441,12 +1537,13 @@ impl Dot<'_> {
                 add_box(&mut p, *bx);
             }
             let Some(ps) = self.route(&mut p, use_splines).filter(|v| !v.is_empty()) else {
-                return;
+                return Ok(());
             };
             let h = self.edges[e].head;
             clip_and_install(self, e, h, &ps);
             p.boxes.clear();
         }
+        Ok(())
     }
 
     /// `make_flat_edge(g, sp, P, edges, ind, cnt, et)`.
@@ -1455,6 +1552,19 @@ impl Dot<'_> {
         sp: &SplineInfoT,
         edges: &[E],
         et: EdgeType,
+    ) -> Result<(), String> {
+        self.with_ends(
+            |s| &mut s.flat,
+            |d, ends| d.make_flat_edge_with(sp, edges, et, ends),
+        )
+    }
+
+    fn make_flat_edge_with(
+        &mut self,
+        sp: &SplineInfoT,
+        edges: &[E],
+        et: EdgeType,
+        (tend, hend): (&mut PathEnd, &mut PathEnd),
     ) -> Result<(), String> {
         let cnt = edges.len();
         let mut e = edges[0];
@@ -1472,8 +1582,7 @@ impl Dot<'_> {
             return self.make_flat_adj_edges(edges, e, et);
         }
         if self.edges[e].label.is_some() {
-            self.make_flat_labeled_edge(sp, e, et);
-            return Ok(());
+            return self.make_flat_labeled_edge(sp, e, et);
         }
         if et == EdgeType::Line {
             let (t, h) = (self.edges[e].tail, self.edges[e].head);
@@ -1483,8 +1592,7 @@ impl Dot<'_> {
         let tside = self.edges[e].tail_port.side;
         let hside = self.edges[e].head_port.side;
         if (tside == BOTTOM && hside != TOP) || (hside == BOTTOM && tside != TOP) {
-            self.make_flat_bottom_edges(sp, edges, e, et == EdgeType::Spline);
-            return Ok(());
+            return self.make_flat_bottom_edges(sp, edges, e, et == EdgeType::Spline);
         }
         let (tn, hn) = (self.edges[e].tail, self.edges[e].head);
         let r = self.nodes[tn].rank;
@@ -1505,10 +1613,8 @@ impl Dot<'_> {
         let stepx = sp.multisep / (cnt + 1) as f64;
         let stepy = vspace / (cnt + 1) as f64;
         let mut p = Path::default();
-        let mut tend = PathEnd::default();
-        let mut hend = PathEnd::default();
-        self.make_flat_end(sp, &mut p, tn, e, &mut tend, true);
-        self.make_flat_end(sp, &mut p, hn, e, &mut hend, false);
+        self.make_flat_end(sp, &mut p, tn, e, tend, true)?;
+        self.make_flat_end(sp, &mut p, hn, e, hend, false)?;
         for (i, &e) in edges.iter().enumerate() {
             let fi = (i + 1) as f64;
             let b = *tend.boxes.last().unwrap();
@@ -1610,6 +1716,19 @@ impl Dot<'_> {
         edges: &[E],
         et: EdgeType,
     ) -> Result<(), String> {
+        self.with_ends(
+            |s| &mut s.regular,
+            |d, ends| d.make_regular_edge_with(sp, edges, et, ends),
+        )
+    }
+
+    fn make_regular_edge_with(
+        &mut self,
+        sp: &mut SplineInfoT,
+        edges: &[E],
+        et: EdgeType,
+        (tend, hend): (&mut PathEnd, &mut PathEnd),
+    ) -> Result<(), String> {
         let cnt = edges.len();
         let mut e = edges[0];
         let mut hackflag = false;
@@ -1667,12 +1786,11 @@ impl Dot<'_> {
             let mut segfirst = e;
             let mut tn = self.edges[e].tail;
             hn = self.edges[e].head;
-            let mut tend = PathEnd::default();
-            let mut hend = PathEnd::default();
             let mut b = self.maximal_bbox(sp, tn, None, Some(e));
             tend.nb = b;
             let m = self.spline_merge_p(tn);
-            beginpath(self, &mut p, e, REGULAREDGE, &mut tend, m);
+            let kept = stale_boxes(tend);
+            beginpath(self, &mut p, e, REGULAREDGE, tend, m, kept);
             let last = *tend.boxes.last().unwrap();
             b.ur.y = last.ur.y;
             b.ll.y = last.ll.y;
@@ -1681,9 +1799,7 @@ impl Dot<'_> {
                 BOTTOM,
                 self.nodes[tn].coord.y - self.rk(0, self.nodes[tn].rank).ht1,
             );
-            if box_ok(&b) {
-                tend.boxes.push(b);
-            }
+            push_end_box(tend, b)?;
             let mut smode = false;
             let mut si = false;
             let mut sl = 0;
@@ -1708,18 +1824,17 @@ impl Dot<'_> {
                 }
                 hend.nb = self.maximal_bbox(sp, hn, Some(e), Some(out0));
                 let m = self.spline_merge_p(self.edges[e].head);
-                endpath(self, &mut p, e, REGULAREDGE, &mut hend, m);
+                let kept = stale_boxes(hend);
+                endpath(self, &mut p, e, REGULAREDGE, hend, m, kept);
                 let b = makeregularend(
                     *hend.boxes.last().unwrap(),
                     TOP,
                     self.nodes[hn].coord.y + self.rk(0, self.nodes[hn].rank).ht2,
                 );
-                if box_ok(&b) {
-                    hend.boxes.push(b);
-                }
+                push_end_box(hend, b)?;
                 p.end.theta = PI / 2.0;
                 p.end.constrained = true;
-                self.completeregularpath(&mut p, segfirst, e, &tend, &hend, &boxes);
+                self.completeregularpath(&mut p, segfirst, e, tend, hend, &boxes);
                 let ps = if is_spline {
                     self.route(&mut p, true)
                 } else {
@@ -1748,15 +1863,14 @@ impl Dot<'_> {
                 let in0 = self.nodes[tn].in_[0];
                 tend.nb = self.maximal_bbox(sp, tn, Some(in0), Some(e));
                 let m = self.spline_merge_p(tn);
-                beginpath(self, &mut p, e, REGULAREDGE, &mut tend, m);
+                let kept = stale_boxes(tend);
+                beginpath(self, &mut p, e, REGULAREDGE, tend, m, kept);
                 let b = makeregularend(
                     *tend.boxes.last().unwrap(),
                     BOTTOM,
                     self.nodes[tn].coord.y - self.rk(0, self.nodes[tn].rank).ht1,
                 );
-                if box_ok(&b) {
-                    tend.boxes.push(b);
-                }
+                push_end_box(tend, b)?;
                 p.start.theta = -PI / 2.0;
                 p.start.constrained = true;
                 smode = false;
@@ -1781,7 +1895,8 @@ impl Dot<'_> {
                     m = false;
                 }
             }
-            endpath(self, &mut p, ee, REGULAREDGE, &mut hend, m);
+            let kept = stale_boxes(hend);
+            endpath(self, &mut p, ee, REGULAREDGE, hend, m, kept);
             let last = *hend.boxes.last().unwrap();
             b.ur.y = last.ur.y;
             b.ll.y = last.ll.y;
@@ -1790,10 +1905,8 @@ impl Dot<'_> {
                 TOP,
                 self.nodes[hn].coord.y + self.rk(0, self.nodes[hn].rank).ht2,
             );
-            if box_ok(&b) {
-                hend.boxes.push(b);
-            }
-            self.completeregularpath(&mut p, segfirst, e, &tend, &hend, &boxes);
+            push_end_box(hend, b)?;
+            self.completeregularpath(&mut p, segfirst, e, tend, hend, &boxes);
             let ps = self.route(&mut p, is_spline).map(|mut ps| {
                 if et == EdgeType::Line && ps.len() > 4 {
                     let last = ps[ps.len() - 1];
@@ -2282,6 +2395,23 @@ fn adjustregularpath(p: &mut Path, fb: usize, lb: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// #360: ends kept from earlier edges may fill C's 20 boxes. An empty box is not
+    /// stored, as in C; a box C would store past the array fails the layout.
+    #[test]
+    fn a_full_path_end_takes_no_more_boxes() {
+        let b = BoxF::new(0.0, 0.0, 1.0, 1.0);
+        let mut endp = PathEnd {
+            boxes: vec![b; PATHEND_MAX_BOXES - 1],
+            ..PathEnd::default()
+        };
+        assert!(push_end_box(&mut endp, b).is_ok());
+        assert_eq!(endp.boxes.len(), PATHEND_MAX_BOXES);
+        assert!(push_end_box(&mut endp, BoxF::new(0.0, 0.0, 0.0, 1.0)).is_ok());
+        assert_eq!(endp.boxes.len(), PATHEND_MAX_BOXES);
+        assert!(push_end_box(&mut endp, b).is_err());
+        assert_eq!(endp.boxes.len(), PATHEND_MAX_BOXES);
+    }
 
     fn dict(names: &[&str]) -> std::collections::BTreeMap<String, graphviz_pure_core::AttrSym> {
         names
