@@ -23,9 +23,15 @@ impl Dot<'_> {
         }
     }
 
-    /// Whether edges declare attribute `k` (`agattr(g, AGEDGE, k, NULL)`).
+    /// Whether edges declare attribute `k` (`agattr(g, AGEDGE, k, NULL)`), as the global
+    /// symbol dot reads it: not one setState NULLed on an aux graph.
     pub fn edge_attr_declared(&self, k: &str) -> bool {
-        self.root_input.edge_attr_declared(k)
+        !self.null_syms.1.contains(&k) && self.root_input.edge_attr_declared(k)
+    }
+
+    /// [`Dot::edge_attr_declared`] for nodes (`agattr(g, AGNODE, k, NULL)`).
+    pub fn node_attr_declared(&self, k: &str) -> bool {
+        !self.null_syms.0.contains(&k) && self.root_input.node_attr_declared(k)
     }
 }
 
