@@ -7213,6 +7213,37 @@ fn epsf_writes_its_postscript_call_into_every_output_like_c() {
     );
 }
 
+// Issue #347: `user_init` keys `EPSF_contents` by the pointer `safefile` returned. A
+// graph's own string no longer matches once the graph is closed, so a later graph reads
+// the file again under a new number; `findPath`'s static buffer matches every lookup made
+// through it, so with `imagepath` the first file read answers for every other.
+#[test]
+fn epsf_files_are_found_again_as_c_finds_them() {
+    let dir = usershape_dir("i347-epsf-keys");
+    std::fs::write(dir.join("small.eps"), "%%BoundingBox: 0 0 20 30\n").unwrap();
+    let src = "digraph A { a [shape=epsf shapefile=\"box.eps\"] }\n\
+               digraph B { b [shape=epsf shapefile=\"box.eps\"] }\n\
+               digraph C { imagepath=\".\"; c [shape=epsf shapefile=\"box.eps\"]; \
+               d [shape=epsf shapefile=\"small.eps\"] }\n";
+    let (dot, err, code) = run_in(&dir, &["-Tdot"], src);
+    assert_eq!((err.as_str(), code), ("", 0));
+    let calls: Vec<&str> = dot
+        .lines()
+        .filter(|l| l.ends_with(char::is_numeric) && l.contains("user_shape_"))
+        .collect();
+    assert_eq!(
+        calls,
+        [
+            "-10 -20 translate newpath user_shape_0",
+            "-10 -20 translate newpath user_shape_1",
+            "-10 -20 translate newpath user_shape_2",
+            "108 -20 translate newpath user_shape_2"
+        ],
+        "{dot}"
+    );
+    assert!(dot.contains("graph [bb=\"0,0,218,50\""), "{dot}");
+}
+
 // Issue #347: the size readers read headers only. Odd headers give what C reads, and a
 // JPEG that ends before its frame header is warned about once, at its first sizing.
 #[test]

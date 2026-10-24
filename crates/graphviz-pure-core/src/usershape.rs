@@ -74,13 +74,16 @@ fn server_name() -> Option<String> {
 /// `GD_drawing(g)->dpi` (`dpi`, else `resolution`, else 0).
 pub fn begin_layout(imagepath: Option<&str>, shapefile_declared: bool, dpi: f64) {
     // a graph's own `imagepath` is a new string, which `gvusershape_size` sees as a new
-    // path (and empties `ImageDict` for); `Gvfilepath` stays the same
+    // path (and empties `ImageDict` for); `Gvfilepath` stays the same. (C compares the
+    // pointers: an allocator that gave the next graph's string the same address would keep
+    // the files, which the reference build was not seen to do.)
     let id = if imagepath.is_some() {
         NEXT_IMAGEPATH_ID.fetch_add(1, Ordering::Relaxed)
     } else {
         0
     };
     IMAGEPATH_ID.with(|p| p.set(id));
+    LAYOUT_ID.with(|l| l.set(NEXT_IMAGEPATH_ID.fetch_add(1, Ordering::Relaxed)));
     let path = imagepath.map(str::to_string).or_else(filepath);
     IMAGEPATH.with(|p| *p.borrow_mut() = path);
     SHAPEFILE_DECLARED.with(|d| d.set(shapefile_declared));
@@ -122,15 +125,27 @@ fn mk_dirlist(list: &str) -> Vec<&str> {
     dirs
 }
 
-/// `findPath`: the first `dir/name` that can be read.
+/// `findPath`: the first `dir/name` that can be read. C builds each name in one static
+/// buffer (`safefilename`), which keeps the last one tried.
 fn find_path(dirs: &[&str], name: &str) -> Option<String> {
-    dirs.iter()
-        .map(|d| format!("{d}/{name}"))
-        .find(|f| open(f).is_ok())
+    for d in dirs {
+        let f = format!("{d}/{name}");
+        FIND_PATH_BUF.with(|b| b.borrow_mut().clone_from(&f));
+        if open(&f).is_ok() {
+            return Some(f);
+        }
+    }
+    None
 }
 
 /// `safefile`: the path C opens for `filename`, or `None` when it may not be read.
 pub fn safefile(filename: &str) -> Option<String> {
+    safefile_from(filename).map(|(path, _)| path)
+}
+
+/// [`safefile`], and whether C returns `findPath`'s static buffer (`true`) or the name it
+/// was given, a string of the graph.
+fn safefile_from(filename: &str) -> Option<(String, bool)> {
     if filename.is_empty() {
         return None;
     }
@@ -145,13 +160,13 @@ pub fn safefile(filename: &str) -> Option<String> {
     if let Some(list) = filepath() {
         // only the last component of the name, looked up in `--filepath`
         let base = filename.rsplit(['/', '\\', ':']).next().unwrap_or(filename);
-        return find_path(&mk_dirlist(&list), base);
+        return find_path(&mk_dirlist(&list), base).map(|p| (p, true));
     }
     let list = IMAGEPATH.with(|p| p.borrow().clone()).unwrap_or_default();
     if filename.starts_with('/') || list.is_empty() {
-        Some(filename.to_string())
+        Some((filename.to_string(), false))
     } else {
-        find_path(&mk_dirlist(&list), filename)
+        find_path(&mk_dirlist(&list), filename).map(|p| (p, true))
     }
 }
 
@@ -261,6 +276,10 @@ thread_local! {
     static IMAGEPATH_ID: Cell<u64> = const { Cell::new(0) };
     /// `gvusershape_size`'s `static char *oldpath`.
     static OLDPATH_ID: Cell<u64> = const { Cell::new(0) };
+    /// The graph being laid out, for the keys of [`EPSF_CONTENTS`].
+    static LAYOUT_ID: Cell<u64> = const { Cell::new(0) };
+    /// `findPath`'s static buffer: the last path it tried.
+    static FIND_PATH_BUF: RefCell<String> = const { RefCell::new(String::new()) };
     /// `GD_drawing(g)->dpi` of the graph being laid out.
     static GRAPH_DPI: Cell<f64> = const { Cell::new(0.0) };
 }
@@ -449,9 +468,37 @@ pub struct EpsfShape {
     pub macro_id: i32,
 }
 
+/// The key `user_init` stores a file under: the pointer `safefile` returned.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum EpsfKey {
+    /// `findPath`'s static buffer, whose text is always that of the lookup made through it.
+    Static,
+    /// A string of the graph (laid out as [`LAYOUT_ID`]), freed with it.
+    Graph(u64, String),
+}
+
 thread_local! {
-    /// `EPSF_contents`: the files `user_init` read, by path. C never clears it.
-    static EPSF_CONTENTS: RefCell<HashMap<String, EpsfShape>> = RefCell::new(HashMap::new());
+    /// `EPSF_contents`, in insertion order. C never clears it, but its keys are pointers:
+    /// a key that is a graph's string matches no lookup once that graph is closed (C then
+    /// compares with freed memory), and every key that is `findPath`'s buffer matches every
+    /// lookup made through it (C compares the buffer with itself), so the first file read
+    /// that way answers for all of them.
+    static EPSF_CONTENTS: RefCell<Vec<(EpsfKey, EpsfShape)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// `dtmatch(EPSF_contents, str)`.
+fn epsf_lookup(path: &str, via_buffer: bool) -> Option<EpsfShape> {
+    let layout = LAYOUT_ID.with(Cell::get);
+    let buf = FIND_PATH_BUF.with(|b| b.borrow().clone());
+    EPSF_CONTENTS.with(|c| {
+        c.borrow()
+            .iter()
+            .find(|(k, _)| match k {
+                EpsfKey::Static => via_buffer || buf == path,
+                EpsfKey::Graph(g, p) => !via_buffer && *g == layout && p == path,
+            })
+            .map(|(_, us)| *us)
+    })
 }
 
 /// `N_EPSF_files`, process-wide in C.
@@ -461,14 +508,14 @@ static N_EPSF_FILES: AtomicI32 = AtomicI32::new(0);
 /// node's `shapefile`, or `None`, with C's warning, when there is none; the node then keeps
 /// no shape information and is not drawn.
 pub fn epsf_init(shapefile: Option<&str>, node: &str) -> Option<EpsfShape> {
-    let Some(path) = shapefile.and_then(safefile) else {
+    let Some((path, via_buffer)) = shapefile.and_then(safefile_from) else {
         agwarningf(&format!(
             "shapefile not set or not found for epsf node {node}\n"
         ));
         return None;
     };
     // user_init
-    if let Some(us) = EPSF_CONTENTS.with(|c| c.borrow().get(&path).copied()) {
+    if let Some(us) = epsf_lookup(&path, via_buffer) {
         return Some(us);
     }
     let Ok(mut f) = open(&path) else {
@@ -483,7 +530,12 @@ pub fn epsf_init(shapefile: Option<&str>, node: &str) -> Option<EpsfShape> {
         bb,
         macro_id: N_EPSF_FILES.fetch_add(1, Ordering::Relaxed),
     };
-    EPSF_CONTENTS.with(|c| c.borrow_mut().insert(path, us));
+    let key = if via_buffer {
+        EpsfKey::Static
+    } else {
+        EpsfKey::Graph(LAYOUT_ID.with(Cell::get), path)
+    };
+    EPSF_CONTENTS.with(|c| c.borrow_mut().push((key, us)));
     Some(us)
 }
 

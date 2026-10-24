@@ -247,6 +247,14 @@ def graphs():
         '  c [shape=epsf shapefile="img/far.ps" URL="x" tooltip="t"]; d [shape=epsf shapefile="img/nobb.ps"];\n'
         '  e [shape=epsf]; a -> b -> c -> d -> e;\n'
         "}\n")
+    # EPSF_contents is keyed by the pointer safefile returned: a graph's string (gone with
+    # the graph) or findPath's static buffer (which matches every lookup through it)
+    out["epsf_graphs"] = (
+        'digraph A { a [shape=epsf shapefile="img/a.ps"]; b [shape=epsf shapefile="img/inv.ps"] }\n'
+        'digraph B { c [shape=epsf shapefile="img/inv.ps"]; d [shape=epsf shapefile="img/a.ps"] }\n'
+        'digraph C { imagepath="img"; e [shape=epsf shapefile="inv.ps"]; f [shape=epsf shapefile="a.ps"] }\n'
+        'digraph D { imagepath="."; g [shape=epsf shapefile="img/a.ps"]; h [shape=epsf shapefile="/nonexistent.ps"] }\n'
+        'digraph E { i [shape=epsf shapefile="img/a.ps"] }\n')
     out["odd_names"] = (
         "digraph {\n"
         '  a [image="img"]; b [shape=custom]; c [shape=custom shapefile=""];\n'
