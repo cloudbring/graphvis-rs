@@ -692,6 +692,8 @@ mod tests {
         assert_ne!(a2.macro_id, a.macro_id);
     }
 
+    // the scratch directory is an `imagepath` entry only under Unix paths (`:` separates)
+    #[cfg(unix)]
     #[test]
     fn epsf_nodes_are_looked_up_once_per_layout() {
         let ps = scratch_file("g.ps", b"%%BoundingBox: 10 20 110 70\n");
