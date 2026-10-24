@@ -346,41 +346,37 @@ impl Graph {
     /// Whether nodes declare `key`: `agattr(g, AGNODE, key, NULL) != NULL`
     /// (`agfindnodeattr`). cgraph declares an attribute on the root's dictionary wherever it is
     /// first set, so one set only by a subgraph's `node [...]` is declared for the whole graph.
-    /// The parser records that dictionary in `dicts[0]`; a value a layout wrote before the
-    /// writers declare it, or a graph built without dictionaries, is found on the defaults
-    /// and the nodes.
+    /// The parser records that dictionary in `dicts[0]`, and it is the whole answer: a value a
+    /// layout stored on a node without declaring it does not count, as in C. Only a graph built
+    /// without dictionaries falls back to its root defaults and its nodes' values.
     pub fn node_attr_declared(&self, key: &str) -> bool {
-        self.dicts.first().is_some_and(|d| d.node.contains_key(key))
-            || self.node_defaults.contains_key(key)
-            || self
-                .subgraphs
-                .iter()
-                .any(|s| s.node_defaults.contains_key(key))
-            || self.nodes.iter().any(|n| n.attrs.contains_key(key))
+        match self.dicts.first() {
+            Some(d) => d.node.contains_key(key),
+            None => {
+                self.node_defaults.contains_key(key)
+                    || self.nodes.iter().any(|n| n.attrs.contains_key(key))
+            }
+        }
     }
 
     /// [`Graph::node_attr_declared`] for edges (`agfindedgeattr`).
     pub fn edge_attr_declared(&self, key: &str) -> bool {
-        self.dicts.first().is_some_and(|d| d.edge.contains_key(key))
-            || self.edge_defaults.contains_key(key)
-            || self
-                .subgraphs
-                .iter()
-                .any(|s| s.edge_defaults.contains_key(key))
-            || self.edges.iter().any(|e| e.attrs.contains_key(key))
+        match self.dicts.first() {
+            Some(d) => d.edge.contains_key(key),
+            None => {
+                self.edge_defaults.contains_key(key)
+                    || self.edges.iter().any(|e| e.attrs.contains_key(key))
+            }
+        }
     }
 
     /// [`Graph::node_attr_declared`] for graphs (`agfindgraphattr`): a subgraph's `key=value`
     /// declares `key` on the root too.
     pub fn graph_attr_declared(&self, key: &str) -> bool {
-        self.dicts
-            .first()
-            .is_some_and(|d| d.graph.contains_key(key))
-            || self.graph_attrs.contains_key(key)
-            || self
-                .subgraphs
-                .iter()
-                .any(|s| s.graph_attrs.contains_key(key))
+        match self.dicts.first() {
+            Some(d) => d.graph.contains_key(key),
+            None => self.graph_attrs.contains_key(key),
+        }
     }
 
     /// The root has no name of its own (see [`Graph::empty_name`]).

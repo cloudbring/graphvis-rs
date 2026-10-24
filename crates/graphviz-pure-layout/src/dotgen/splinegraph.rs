@@ -23,15 +23,9 @@ impl Dot<'_> {
         }
     }
 
-    /// Whether edges declare attribute `k` (`agattr(g, AGEDGE, k, NULL)`): the input's
-    /// [`graphviz_pure_core::Graph::edge_attr_declared`], remembered per key.
+    /// Whether edges declare attribute `k` (`agattr(g, AGEDGE, k, NULL)`).
     pub fn edge_attr_declared(&self, k: &str) -> bool {
-        if let Some(&d) = self.edge_decls.borrow().get(k) {
-            return d;
-        }
-        let d = self.root_input.edge_attr_declared(k);
-        self.edge_decls.borrow_mut().insert(k.to_string(), d);
-        d
+        self.root_input.edge_attr_declared(k)
     }
 }
 

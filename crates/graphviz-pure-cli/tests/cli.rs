@@ -6815,6 +6815,7 @@ fn issue151_real_chars_of_the_raw_byte_range_keep_their_bytes() {
          node a 0.375 0.36141 0.75 0.72282 \
          <<table sides=\"l\u{10ff41}\"><tr><td title=\"\u{10ff41}\">x</td></tr></table>> \
          solid ellipse black lightgrey\n\
+         stop\n"
     );
 }
 
