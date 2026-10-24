@@ -1,0 +1,388 @@
+digraph G {
+	graph [label=Plugins,
+		rankdir=LR,
+		ranksep=2.5
+	];
+	node [label="\N"];
+	subgraph cluster_neato_layout {
+		graph [label=neato_layout];
+		subgraph neato_layout_render {
+			graph [rank=same];
+			neato_layout_render_invis	[label="",
+				style=invis];
+		}
+		subgraph neato_layout_layout {
+			graph [rank=same];
+			layout_circo	[label=circo,
+				shape=hexagon];
+			layout_fdp	[label=fdp,
+				shape=hexagon];
+			layout_neato	[label=neato,
+				shape=hexagon];
+			layout_nop	[label=nop,
+				shape=hexagon];
+			layout_nop1	[label=nop1,
+				shape=hexagon];
+			layout_nop2	[label=nop2,
+				shape=hexagon];
+			layout_osage	[label=osage,
+				shape=hexagon];
+			layout_patchwork	[label=patchwork,
+				shape=hexagon];
+			layout_sfdp	[label=sfdp,
+				shape=hexagon];
+			layout_twopi	[label=twopi,
+				shape=hexagon];
+		}
+		subgraph neato_layout_textlayout {
+			graph [rank=same];
+		}
+		subgraph neato_layout_device {
+			graph [rank=same];
+			neato_layout_device_invis	[label="",
+				style=invis,
+				width=1.0];
+		}
+		subgraph neato_layout_loadimage {
+			graph [rank=same];
+			neato_layout_loadimage_invis	[label="",
+				style=invis,
+				width=1.0];
+		}
+		neato_layout_render_invis -> neato_layout_device_invis	[style=invis];
+		neato_layout_loadimage_invis -> neato_layout_render_invis	[style=invis];
+		neato_layout_loadimage_invis -> layout_twopi	[style=invis];
+	}
+	subgraph cluster_dot_layout {
+		graph [label=dot_layout];
+		subgraph dot_layout_render {
+			graph [rank=same];
+			dot_layout_render_invis	[label="",
+				style=invis];
+		}
+		subgraph dot_layout_layout {
+			graph [rank=same];
+			layout_dot	[label=dot,
+				shape=hexagon];
+		}
+		subgraph dot_layout_textlayout {
+			graph [rank=same];
+		}
+		subgraph dot_layout_device {
+			graph [rank=same];
+			dot_layout_device_invis	[label="",
+				style=invis,
+				width=1.0];
+		}
+		subgraph dot_layout_loadimage {
+			graph [rank=same];
+			dot_layout_loadimage_invis	[label="",
+				style=invis,
+				width=1.0];
+		}
+		dot_layout_render_invis -> dot_layout_device_invis	[style=invis];
+		dot_layout_loadimage_invis -> dot_layout_render_invis	[style=invis];
+		dot_layout_loadimage_invis -> layout_dot	[style=invis];
+	}
+	subgraph cluster_core {
+		graph [label=core];
+		subgraph core_render {
+			graph [rank=same];
+			render_dot	[label=dot];
+			render_dot_json	[label=dot_json];
+			render_fig	[label=fig];
+			render_json	[label=json];
+			render_json0	[label=json0];
+			render_map	[label=map];
+			render_pic	[label=pic];
+			render_pov	[label=pov];
+			render_ps	[label=ps];
+			render_svg	[label=svg];
+			render_svg_inline	[label=svg_inline];
+			render_tk	[label=tk];
+			render_xdot	[label=xdot];
+			render_xdot_json	[label=xdot_json];
+		}
+		subgraph core_layout {
+			graph [rank=same];
+		}
+		subgraph core_textlayout {
+			graph [rank=same];
+		}
+		subgraph core_device {
+			graph [rank=same];
+			core_device_canon	[label=canon,
+				shape=box,
+				width=1.0];
+			core_device_cmap	[label=cmap,
+				shape=box,
+				width=1.0];
+			core_device_cmapx	[label=cmapx,
+				shape=box,
+				width=1.0];
+			core_device_cmapx_np	[label=cmapx_np,
+				shape=box,
+				width=1.0];
+			core_device_gv	[label="gv\ndot",
+				shape=box,
+				width=1.0];
+			core_device_dot_json	[label=dot_json,
+				shape=box,
+				width=1.0];
+			core_device_eps	[label=eps,
+				shape=box,
+				width=1.0];
+			core_device_fig	[label=fig,
+				shape=box,
+				width=1.0];
+			core_device_imap	[label=imap,
+				shape=box,
+				width=1.0];
+			core_device_imap_np	[label=imap_np,
+				shape=box,
+				width=1.0];
+			core_device_ismap	[label=ismap,
+				shape=box,
+				width=1.0];
+			core_device_json	[label=json,
+				shape=box,
+				width=1.0];
+			core_device_json0	[label=json0,
+				shape=box,
+				width=1.0];
+			core_device_pic	[label=pic,
+				shape=box,
+				width=1.0];
+			core_device_plain	[label=plain,
+				shape=box,
+				width=1.0];
+			"core_device_plain-ext"	[label="plain-ext",
+				shape=box,
+				width=1.0];
+			core_device_pov	[label=pov,
+				shape=box,
+				width=1.0];
+			core_device_ps	[label=ps,
+				shape=box,
+				width=1.0];
+			core_device_ps2	[label=ps2,
+				shape=box,
+				width=1.0];
+			core_device_svg	[label=svg,
+				shape=box,
+				width=1.0];
+			core_device_svg_inline	[label=svg_inline,
+				shape=box,
+				width=1.0];
+			core_device_svgz	[label=svgz,
+				shape=box,
+				width=1.0];
+			core_device_tk	[label=tk,
+				shape=box,
+				width=1.0];
+			core_device_xdot	[label=xdot,
+				shape=box,
+				width=1.0];
+			"core_device_xdot1.2"	[label="xdot1.2",
+				shape=box,
+				width=1.0];
+			"core_device_xdot1.4"	[label="xdot1.4",
+				shape=box,
+				width=1.0];
+			core_device_xdot_json	[label=xdot_json,
+				shape=box,
+				width=1.0];
+		}
+		subgraph core_loadimage {
+			graph [rank=same];
+			"core_loadimage_(lib)"	[label="(lib)",
+				shape=box,
+				width=1.0];
+			core_loadimage_eps	[label=eps,
+				shape=box,
+				width=1.0];
+			core_loadimage_gif	[label=gif,
+				shape=box,
+				width=1.0];
+			core_loadimage_jpg	[label="jpeg\njpe\njpg",
+				shape=box,
+				width=1.0];
+			core_loadimage_png	[label=png,
+				shape=box,
+				width=1.0];
+			core_loadimage_ps	[label=ps,
+				shape=box,
+				width=1.0];
+			core_loadimage_svg	[label=svg,
+				shape=box,
+				width=1.0];
+		}
+		render_dot -> core_device_canon;
+		render_dot -> core_device_gv;
+		render_dot -> core_device_plain;
+		render_dot -> "core_device_plain-ext";
+		render_fig -> core_device_fig;
+		render_json -> core_device_dot_json;
+		render_json -> core_device_json;
+		render_json -> core_device_json0;
+		render_json -> core_device_xdot_json;
+		render_map -> core_device_cmap;
+		render_map -> core_device_cmapx;
+		render_map -> core_device_cmapx_np;
+		render_map -> core_device_imap;
+		render_map -> core_device_imap_np;
+		render_map -> core_device_ismap;
+		render_pic -> core_device_pic;
+		render_pov -> core_device_pov;
+		render_ps -> core_device_eps;
+		render_ps -> core_device_ps;
+		render_ps -> core_device_ps2;
+		render_svg -> core_device_svg;
+		render_svg -> core_device_svg_inline;
+		render_svg -> core_device_svgz;
+		render_tk -> core_device_tk;
+		render_xdot -> core_device_xdot;
+		render_xdot -> "core_device_xdot1.2";
+		render_xdot -> "core_device_xdot1.4";
+		"core_loadimage_(lib)" -> render_ps;
+		core_loadimage_eps -> render_dot;
+		core_loadimage_eps -> render_map;
+		core_loadimage_eps -> render_ps;
+		core_loadimage_eps -> render_xdot;
+		core_loadimage_gif -> render_dot;
+		core_loadimage_gif -> render_fig;
+		core_loadimage_gif -> render_map;
+		core_loadimage_gif -> render_svg;
+		core_loadimage_gif -> render_tk;
+		core_loadimage_gif -> render_xdot;
+		core_loadimage_jpg -> render_dot;
+		core_loadimage_jpg -> render_fig;
+		core_loadimage_jpg -> render_map;
+		core_loadimage_jpg -> render_svg;
+		core_loadimage_jpg -> render_xdot;
+		core_loadimage_png -> render_dot;
+		core_loadimage_png -> render_fig;
+		core_loadimage_png -> render_map;
+		core_loadimage_png -> render_svg;
+		core_loadimage_png -> render_xdot;
+		core_loadimage_ps -> render_dot;
+		core_loadimage_ps -> render_map;
+		core_loadimage_ps -> render_ps;
+		core_loadimage_ps -> render_xdot;
+		core_loadimage_svg -> render_dot;
+		core_loadimage_svg -> render_map;
+		core_loadimage_svg -> render_svg;
+		core_loadimage_svg -> render_xdot;
+	}
+	subgraph output_formats {
+		graph [rank=same];
+		output_canon	[label=canon,
+			shape=note];
+		output_cmap	[label=cmap,
+			shape=note];
+		output_cmapx	[label=cmapx,
+			shape=note];
+		output_cmapx_np	[label=cmapx_np,
+			shape=note];
+		output_gv	[label="gv\ndot",
+			shape=note];
+		output_dot_json	[label=dot_json,
+			shape=note];
+		output_eps	[label=eps,
+			shape=note];
+		output_fig	[label=fig,
+			shape=note];
+		output_imap	[label=imap,
+			shape=note];
+		output_imap_np	[label=imap_np,
+			shape=note];
+		output_ismap	[label=ismap,
+			shape=note];
+		output_json	[label=json,
+			shape=note];
+		output_json0	[label=json0,
+			shape=note];
+		output_pic	[label=pic,
+			shape=note];
+		output_plain	[label=plain,
+			shape=note];
+		"output_plain-ext"	[label="plain-ext",
+			shape=note];
+		output_pov	[label=pov,
+			shape=note];
+		output_ps	[label=ps,
+			shape=note];
+		output_ps2	[label=ps2,
+			shape=note];
+		output_svg	[label=svg,
+			shape=note];
+		output_svg_inline	[label=svg_inline,
+			shape=note];
+		output_svgz	[label=svgz,
+			shape=note];
+		output_tk	[label=tk,
+			shape=note];
+		output_xdot	[label=xdot,
+			shape=note];
+		"output_xdot1.2"	[label="xdot1.2",
+			shape=note];
+		"output_xdot1.4"	[label="xdot1.4",
+			shape=note];
+		output_xdot_json	[label=xdot_json,
+			shape=note];
+	}
+	neato_layout_loadimage_invis_src	[label="",
+		style=invis];
+	neato_layout_loadimage_invis_src -> neato_layout_loadimage_invis	[style=invis];
+	dot_layout_loadimage_invis_src	[label="",
+		style=invis];
+	dot_layout_loadimage_invis_src -> dot_layout_loadimage_invis	[style=invis];
+	core_device_canon -> output_canon;
+	core_device_cmap -> output_cmap;
+	core_device_cmapx -> output_cmapx;
+	core_device_cmapx_np -> output_cmapx_np;
+	core_device_gv -> output_gv;
+	core_device_dot_json -> output_dot_json;
+	core_device_eps -> output_eps;
+	core_device_fig -> output_fig;
+	core_device_imap -> output_imap;
+	core_device_imap_np -> output_imap_np;
+	core_device_ismap -> output_ismap;
+	core_device_json -> output_json;
+	core_device_json0 -> output_json0;
+	core_device_pic -> output_pic;
+	core_device_plain -> output_plain;
+	"core_device_plain-ext" -> "output_plain-ext";
+	core_device_pov -> output_pov;
+	core_device_ps -> output_ps;
+	core_device_ps2 -> output_ps2;
+	core_device_svg -> output_svg;
+	core_device_svg_inline -> output_svg_inline;
+	core_device_svgz -> output_svgz;
+	core_device_tk -> output_tk;
+	core_device_xdot -> output_xdot;
+	"core_device_xdot1.2" -> "output_xdot1.2";
+	"core_device_xdot1.4" -> "output_xdot1.4";
+	core_device_xdot_json -> output_xdot_json;
+	"input_(lib)"	[label="(lib)",
+		shape=note];
+	"input_(lib)" -> "core_loadimage_(lib)";
+	input_eps	[label=eps,
+		shape=note];
+	input_eps -> core_loadimage_eps;
+	input_gif	[label=gif,
+		shape=note];
+	input_gif -> core_loadimage_gif;
+	input_jpg	[label="jpeg\njpe\njpg",
+		shape=note];
+	input_jpg -> core_loadimage_jpg;
+	input_png	[label=png,
+		shape=note];
+	input_png -> core_loadimage_png;
+	input_ps	[label=ps,
+		shape=note];
+	input_ps -> core_loadimage_ps;
+	input_svg	[label=svg,
+		shape=note];
+	input_svg -> core_loadimage_svg;
+}

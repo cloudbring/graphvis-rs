@@ -298,6 +298,105 @@ fn fdp_flags_and_extra_argument_passes() {
     assert!(out.starts_with("graph 1 "), "{out}");
 }
 
+/// Issue #298: `-v` writes the version (`dotneato_args_initialize`), each plugin lookup
+/// (`gvplugin_load`: a device after its renderer, a layout; `-Tjson` renders xdot first, three
+/// lookups) and the plugin list (`gvplugin_write_status`, `type:package` from `-v2`). The
+/// `Using` lines are C 16.1.0's for these arguments; the list is the port's plugins. A build
+/// with its plugins built in has no plugin library and no configuration file to report.
+#[test]
+fn issue298_verbose_reports_the_plugins_it_uses() {
+    let using = |pairs: &[(&str, &str)]| -> String {
+        pairs
+            .iter()
+            .map(|(api, p)| format!("Using {api}: {p}\n"))
+            .collect()
+    };
+    let svg = using(&[("render", "svg:core"), ("device", "svg:svg:core")]);
+    let json = using(&[("render", "json:core"), ("device", "json:json:core")]);
+    let xdot = using(&[("render", "xdot:core"), ("device", "xdot:xdot:core")]).repeat(3);
+    let status = "    render\t:  cairo dot dot_json json json0 svg xdot xdot_json\n    \
+                  layout\t:  circo dot fdp neato nop nop1 nop2 osage patchwork sfdp twopi\n    \
+                  textlayout\t: \n    \
+                  device\t:  canon dot dot_json gv jpe jpeg jpg json json0 plain plain-ext png \
+                  svg xdot xdot1.2 xdot1.4 xdot_json\n    \
+                  loadimage\t:  eps gif jpe jpeg jpg png ps svg\n";
+    let version = format!(
+        "graphviz-pure - graphviz-pure version {} (Rust port of Graphviz 16.1.0)\n",
+        env!("CARGO_PKG_VERSION")
+    );
+    let (_, err, ok) = run(
+        &["-v", "-Tsvg", "-Tjson"],
+        "digraph { a }\ndigraph { layout=neato; b }",
+    );
+    assert!(ok, "{err}");
+    let want = [
+        version.as_str(),
+        &svg,
+        &json,
+        &using(&[("layout", "dot:dot_layout")]),
+        status,
+        &svg,
+        &json,
+        &xdot,
+        &using(&[("layout", "neato:neato_layout")]),
+        &svg,
+        &json,
+        &xdot,
+    ]
+    .concat();
+    assert_eq!(err, want);
+    // `-v2` lists `type:package`; `-v0` is not verbose.
+    let (_, err, _) = run(&["-v2", "-Tdot"], "digraph { a }");
+    assert!(
+        err.contains(
+            "\n    render\t:  cairo:cairo dot:core dot_json:core json:core json0:core svg:core \
+             xdot:core xdot_json:core\n"
+        ),
+        "{err}"
+    );
+    assert!(err.contains(" png:cairo:cairo "), "{err}");
+    let (_, err, ok) = run(&["-v0", "-Tdot"], "digraph { a }");
+    assert!(ok && err.is_empty(), "{err}");
+}
+
+/// Issue #298: `-P` lays out and renders the plugin graph (`gvplugin_graph`) instead of the
+/// inputs, which are not read, under the name `<internal>`. Its packages are the port's, in
+/// the order a C build with them records them; `graphviz-pure`'s
+/// `plugin_graph_of_the_reference_build_is_cs` checks the graph against C's own `-P`.
+#[test]
+fn issue298_plugin_graph_replaces_the_inputs() {
+    let dir = scratch("issue298_plugins");
+    let (out, err, code) = run_in(&dir, &["-P", "-Tcanon", "nosuch.gv"], "");
+    assert_eq!((err.as_str(), code), ("", 0));
+    let mut g = graphviz_pure::plugins::plugin_graph(&graphviz_pure::plugins::PORT_PLUGINS);
+    graphviz_pure::layout_graph(&mut g, graphviz_pure::LayoutEngine::Dot).unwrap();
+    let want = graphviz_pure::render_graph_named(&g, graphviz_pure::OutputFormat::Canon, "canon");
+    assert_eq!(out, want.unwrap());
+    let clusters: Vec<&str> = out
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("subgraph cluster_"))
+        .collect();
+    assert_eq!(
+        clusters,
+        ["cairo {", "neato_layout {", "dot_layout {", "core {"]
+    );
+    assert!(
+        out.contains("\t\trender_svg -> core_device_svg;\n"),
+        "{out}"
+    );
+    assert!(
+        out.contains("\t\trender_cairo -> cairo_device_png;\n"),
+        "{out}"
+    );
+    // `-O` names the output after `<internal>` (a name Windows does not allow).
+    #[cfg(unix)]
+    {
+        let (_, err, code) = run_in(&dir, &["-P", "-Tcanon", "-O"], "");
+        assert_eq!((err.as_str(), code), ("", 0));
+        assert!(dir.join("<internal>.canon").exists());
+    }
+}
+
 // Issue #282: `-x` (`Reduce`) deletes singletons and trees from the root graph, which keeps
 // the cgraph sequence numbers of the rest.
 #[test]

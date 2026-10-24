@@ -2,6 +2,8 @@
 //!
 //! DOT text taken and returned here is in the port's decoded form ([`charset`]).
 
+pub mod plugins;
+
 pub use graphviz_pure_core::{Graph, GraphvizError, Result, charset};
 pub use graphviz_pure_layout::cutil::{RandState, in_rand_run, with_rand_state};
 pub use graphviz_pure_layout::fdpgen::tlayout::FdpParms;
@@ -238,7 +240,7 @@ pub fn plugin_list(plugins: &[(&str, &str)], req: &str) -> String {
 
 /// `gvlayout_select`: the engine a layout name (`-K`, the `layout` attribute) selects.
 pub fn layout_select(name: &str) -> Option<LayoutEngine> {
-    let i = plugin_load(&LAYOUT_PLUGINS, name)?;
+    let i = plugins::load_layout(name)?;
     LayoutEngine::parse(LAYOUT_PLUGINS[i].0).ok()
 }
 
