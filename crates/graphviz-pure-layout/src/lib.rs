@@ -77,10 +77,26 @@ pub fn layout_graph_with_options(
     engine: LayoutEngine,
     options: LayoutOptions,
 ) -> Result<()> {
+    let mut options = options;
+    layout_graph_in_run(graph, engine, &mut options)
+}
+
+/// [`layout_graph_with_options`] as one of a run's layouts: `options.nop` is the run's `Nop`,
+/// C's global, and comes back as the layout left it. The `nop` engines and fdp's splines
+/// set it to 0, so `-n` no longer applies to the graphs after them.
+pub fn layout_graph_in_run(
+    graph: &mut Graph,
+    engine: LayoutEngine,
+    options: &mut LayoutOptions,
+) -> Result<()> {
     cutil::in_rand_run(|| layout_in_run(graph, engine, options))
 }
 
-fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions) -> Result<()> {
+fn layout_in_run(
+    graph: &mut Graph,
+    engine: LayoutEngine,
+    options: &mut LayoutOptions,
+) -> Result<()> {
     debug_assert!(
         graph.subgraph_lists_are_closed(),
         "a subgraph lists a member twice or lacks one of its nested subgraphs'"
@@ -121,12 +137,14 @@ fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions
     } else {
         engine
     };
+    let _nop = neatogen::neatosplines::NopGuard::set(options.nop);
     let result = match effective_engine {
         LayoutEngine::Dot => dotgen::layout_dot(graph),
-        LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph, options.nop),
-        // nop1_layout and nop2_layout: neato_layout with Nop set.
-        LayoutEngine::Nop1 => neatogen::neatoinit::neato_layout(graph, 1),
-        LayoutEngine::Nop2 => neatogen::neatoinit::neato_layout(graph, 2),
+        LayoutEngine::Neato => {
+            neatogen::neatoinit::neato_layout(graph, neatogen::neatosplines::nop())
+        }
+        LayoutEngine::Nop1 => neatogen::neatoinit::nop_layout(graph, 1),
+        LayoutEngine::Nop2 => neatogen::neatoinit::nop_layout(graph, 2),
         LayoutEngine::Fdp => fdpgen::layout::fdp_layout(graph),
         LayoutEngine::Sfdp => sfdpgen::sfdpinit::sfdp_layout(graph),
         LayoutEngine::Twopi => twopigen::twopiinit::twopi_layout(graph),
@@ -136,6 +154,7 @@ fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions
     };
     // what the renderers draw the images and epsf shapes from
     graph.layout.usershapes = graphviz_pure_core::usershape::layout_result();
+    options.nop = neatogen::neatosplines::nop();
     result
 }
 

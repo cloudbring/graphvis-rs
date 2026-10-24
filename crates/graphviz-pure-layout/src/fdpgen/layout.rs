@@ -1154,6 +1154,8 @@ fn fdp_splines(g: &mut LGraph<'_>, has_clust_edge: bool, hier: &Hier<'_>) {
                 done = true;
             }
         }
+        // layout.c:1057: `Nop = 0`, for the rest of the run.
+        crate::neatogen::neatosplines::set_nop(0);
     }
     if !done {
         spline_edges_main(g, &root, et);

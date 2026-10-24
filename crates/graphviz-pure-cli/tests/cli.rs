@@ -8093,6 +8093,62 @@ fn issue304_a_new_graph_attribute_gives_child_subgraphs_their_empty_value() {
     }
 }
 
+/// Issue #332: `Nop` is a global of the C process. `nop1_layout`/`nop2_layout`
+/// (`gvlayout_neato_layout.c:48-57`) and `fdpSplines` with splines (`fdpgen/layout.c:1057`)
+/// set it to 0 after their layout, so `-n2` no longer applies to the graphs after them;
+/// fdp with line edges leaves it.
+#[test]
+fn issue332_nop_engines_and_fdp_splines_clear_dash_n() {
+    let laid_out = "graph 1 1.739 0.64777
+node b 0.375 0.39777 0.75 0.5 b solid ellipse black lightgrey
+node c 1.364 0.25 0.75 0.5 c solid ellipse black lightgrey
+edge b c 4 0.74328 0.34274 0.82456 0.3306 0.91072 0.31773 0.99214 0.30556 solid black
+stop
+";
+    let b = "graph B { layout=neato; b; c; b -- c }\n";
+    let fdp = "graph 1 1.6592 0.63584
+node a 0.375 0.38584 0.75 0.5 a solid ellipse black lightgrey
+node x 1.2842 0.25 0.75 0.5 x solid ellipse black lightgrey
+edge a x 4 0.7448 0.33059 0.79986 0.32236 0.85664 0.31388 0.91176 0.30564 solid black
+stop
+";
+    let nop = "graph 1 0.75 0.5
+node a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey
+stop
+";
+    for engine in ["nop", "nop1", "nop2"] {
+        let src = format!("graph A {{ layout={engine}; a [pos=\"0,0\"] }}\n{b}");
+        let (out, err, ok) = run(&["-n2", "-Tplain"], &src);
+        assert!(ok, "{err}");
+        assert_eq!(out, format!("{nop}{laid_out}"));
+        assert_eq!(err, "");
+    }
+    let src = format!("graph A {{ layout=fdp; splines=true; a -- x }}\n{b}");
+    let (out, err, ok) = run(&["-n2", "-Tplain"], &src);
+    assert!(ok, "{err}");
+    assert_eq!(out, format!("{fdp}{laid_out}"));
+    assert_eq!(err, "");
+
+    let src = format!("graph A {{ layout=fdp; a -- x }}\n{b}");
+    let (out, err, ok) = run(&["-n2", "-Tplain"], &src);
+    assert!(!ok);
+    assert_eq!(
+        out,
+        format!(
+            "{fdp}graph 1 0 0
+node b 0 0 0.75 0.5 b solid ellipse black lightgrey
+node c 0 0 0.75 0.5 c solid ellipse black lightgrey
+ solid black
+stop
+"
+        )
+    );
+    assert_eq!(
+        err,
+        "Error: node b in graph B has no position\nas required by the -n flag\n"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

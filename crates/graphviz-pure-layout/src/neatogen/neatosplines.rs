@@ -35,6 +35,11 @@ pub(crate) fn nop() -> u8 {
     NOP.with(std::cell::Cell::get)
 }
 
+/// `Nop = nop`, for the rest of the enclosing [`NopGuard`].
+pub(crate) fn set_nop(nop: u8) {
+    NOP.with(|n| n.set(nop));
+}
+
 /// `makeSelfArcs(e, stepx)`.
 pub fn make_self_arcs(g: &mut LGraph<'_>, e: usize, stepx: f64) {
     let cnt = g.edges[e].count.max(0) as usize;

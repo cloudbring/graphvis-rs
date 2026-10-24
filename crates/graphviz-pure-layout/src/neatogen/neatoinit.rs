@@ -982,6 +982,15 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
     }
 }
 
+/// `nop1_layout` and `nop2_layout` (`plugin/neato_layout/gvlayout_neato_layout.c:48-57`):
+/// `neato_layout` with `Nop` set to `nop`, then `Nop = 0`, whatever `-n` set it to.
+pub fn nop_layout(graph: &mut Graph, nop: u8) -> Result<()> {
+    super::neatosplines::set_nop(nop);
+    let result = neato_layout(graph, nop);
+    super::neatosplines::set_nop(0);
+    result
+}
+
 /// `neato_layout(g)`; `nop` is `Nop`, the `-n` level.
 pub fn neato_layout(graph: &mut Graph, nop: u8) -> Result<()> {
     if nop > 0 {
