@@ -652,13 +652,19 @@ takes up to 35 s, and fdp needs 11.5 GB. That cost is the engines' (#323), not t
 
 ## Truncated styles: parse_style's static array
 
-`parse_style` (`lib/common/emit.c`) keeps its result in a static array and a static buffer.
-At the 64th item (`FUNLIMIT - 1`) it warns `truncating style` and returns the array before
-filling it in (#268). On the run's first style that array is all NULL, so C draws no style
-item. After an earlier style, the array still holds that call's pointers into the buffer,
-which this call has overwritten from the start, or moved when it grew past its inline
-storage: C draws whatever is left at those offsets, often printing
-`unsupported style <garbage>`, or reads freed memory. The port does not model this. What C
-reads depends on the buffer's growth and on the order of every `parse_style` call in the run,
-which the port's renderers don't reproduce call for call. So a truncated style always gives no
-items, which is what C does when it is the first style parsed.
+`parse_style` (`lib/common/emit.c`) keeps its result in a static array, `parse`, and its
+strings in a static buffer, `ps_xb`. At the 64th item (`FUNLIMIT - 1`) it warns `truncating
+style` and returns `parse` without filling it in (#268), so the result is what the previous
+call left there:
+
+- **No earlier call, or the previous one failed** (`nesting not allowed`, `unmatched`
+  parenthesis, which set `parse[0] = NULL`): no items. The port gives the same.
+- **The previous call returned items.** `parse` still holds its pointers, at that call's
+  offsets in `ps_xb`. That call ended in `agxbuse`, which resets the buffer, so this call
+  writes its own tokens from the start; once the buffer grows past its inline storage, or a
+  heap `realloc` moves it, the old pointers point at freed memory. C then draws whatever is
+  at those offsets, often printing `unsupported style <garbage>`.
+
+The port does not model the second case. What C reads depends on the buffer's growth and on
+the order of every `parse_style` call in the run, which the port's renderers don't reproduce
+call for call. A truncated style gives no items in the port, C's result in the first case.

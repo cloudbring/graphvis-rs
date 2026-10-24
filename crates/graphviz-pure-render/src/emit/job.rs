@@ -289,8 +289,11 @@ pub(crate) struct Job<'a> {
     pub num_layers: i32,
     /// `gvc->layerIDs` (index 0 unused).
     pub layer_ids: Vec<String>,
-    pub layer_delims: String,
-    pub layer_list_delims: String,
+    /// [`Job::layer_ids`] as C's bytes, which `layer_index` compares.
+    pub layer_id_bytes: Vec<Vec<u8>>,
+    /// `gvc->layerDelims` and `gvc->layerListDelims` as C's bytes, which `strtok` splits on.
+    pub layer_delims: Vec<u8>,
+    pub layer_list_delims: Vec<u8>,
     /// `gvc->layerlist`: the selected layers.
     pub layer_list: Option<Vec<i32>>,
 }
@@ -486,8 +489,9 @@ impl<'a> Job<'a> {
             layer_num: 0,
             num_layers: 1,
             layer_ids: Vec::new(),
-            layer_delims: ":\t ".to_string(),
-            layer_list_delims: ",".to_string(),
+            layer_id_bytes: Vec::new(),
+            layer_delims: b":\t ".to_vec(),
+            layer_list_delims: b",".to_vec(),
             layer_list: None,
         }
     }

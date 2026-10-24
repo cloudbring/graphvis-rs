@@ -436,16 +436,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
             self.job.num_layers = 1;
             return;
         };
-        let mut delims = a.get("layersep").unwrap_or(":\t ").to_string();
-        let mut list_delims = a.get("layerlistsep").unwrap_or(",").to_string();
-        // strpbrk(layerDelims, layerListDelims)
-        // On C's bytes: a raw (non-UTF-8) byte is one char of the raw-byte range here.
-        let list_bytes = graphviz_pure_core::charset::encode(&list_delims);
-        if let Some(tok) = graphviz_pure_core::charset::encode(&delims)
-            .iter()
-            .copied()
-            .find(|b| list_bytes.contains(b))
-        {
+        let encode = |s: &str| graphviz_pure_core::charset::encode(s).into_owned();
+        let delims = encode(a.get("layersep").unwrap_or(":\t "));
+        let mut list_delims = encode(a.get("layerlistsep").unwrap_or(","));
+        // strpbrk(layerDelims, layerListDelims), on C's bytes.
+        if let Some(&tok) = delims.iter().find(|b| list_delims.contains(b)) {
             // `'%c'` of `*tok`: one byte, which need not be a whole character.
             let tok = match tok {
                 b if b.is_ascii() => b as char,
@@ -454,15 +449,17 @@ impl<'a, E: Engine> Emitter<'a, E> {
             agwarningf(&format!(
                 "The character '{tok}' appears in both the layersep and layerlistsep attributes - layerlistsep ignored.\n"
             ));
-            list_delims = String::new();
+            list_delims.clear();
         }
-        if delims.is_empty() {
-            delims = String::new();
-        }
-        let mut ids = vec![String::new()];
-        ids.extend(strtok(layers, &delims));
-        self.job.num_layers = (ids.len() - 1) as i32;
-        self.job.layer_ids = ids;
+        let id_bytes: Vec<Vec<u8>> = std::iter::once(Vec::new())
+            .chain(strtok(&encode(layers), &delims).map(<[u8]>::to_vec))
+            .collect();
+        self.job.num_layers = (id_bytes.len() - 1) as i32;
+        self.job.layer_ids = id_bytes
+            .iter()
+            .map(|b| graphviz_pure_core::charset::decode_slice(b))
+            .collect();
+        self.job.layer_id_bytes = id_bytes;
         self.job.layer_delims = delims;
         self.job.layer_list_delims = list_delims;
         if let Some(sel) = a.nonempty("layerselect") {
@@ -480,14 +477,14 @@ impl<'a, E: Engine> Emitter<'a, E> {
         }
     }
 
-    fn layer_index(&self, s: &str, all: i32) -> i32 {
-        if s == "all" {
+    fn layer_index(&self, s: &[u8], all: i32) -> i32 {
+        if s == b"all" {
             return all;
         }
-        if s.bytes().all(|c| c.is_ascii_digit()) {
-            return super::attrs::atoi(s) as i32;
+        if s.iter().all(u8::is_ascii_digit) {
+            return super::attrs::atoi(std::str::from_utf8(s).unwrap_or_default()) as i32;
         }
-        for (i, id) in self.job.layer_ids.iter().enumerate().skip(1) {
+        for (i, id) in self.job.layer_id_bytes.iter().enumerate().skip(1) {
             if id == s {
                 return i as i32;
             }
@@ -497,13 +494,10 @@ impl<'a, E: Engine> Emitter<'a, E> {
 
     /// `selectedLayer`.
     fn selected_layer(&self, layer: i32, num: i32, spec: &str) -> bool {
-        let ld = self.job.layer_list_delims.clone();
-        let d = self.job.layer_delims.clone();
-        for part in strtok(spec, &ld) {
-            let ws = strtok(&part, &d);
-            let w0 = ws.first().map(String::as_str);
-            let w1 = ws.get(1).map(String::as_str);
-            let r = match (w0, w1) {
+        let spec = graphviz_pure_core::charset::encode(spec);
+        for part in strtok(&spec, &self.job.layer_list_delims) {
+            let mut ws = strtok(part, &self.job.layer_delims);
+            let r = match (ws.next(), ws.next()) {
                 (Some(a), Some(b)) => {
                     let (mut n0, mut n1) = (self.layer_index(a, 0), self.layer_index(b, num));
                     if n0 >= 0 || n1 >= 0 {
@@ -1424,35 +1418,18 @@ impl<'a, E: Engine> Emitter<'a, E> {
             offs.push(off);
             tmps.push(tmp);
         }
-        // C compares these colours by pointer. `lastcolor`, `headcolor` and `tailcolor`
-        // start as `color` itself, and each `strtok` token of the `gv_strdup` copy is a
-        // new pointer, so every token sets the pen and fill (even a repeated name, or the
-        // `black` of a failed `multicolor`). After the loop `color` is the NULL that ended
-        // `strtok`. `Col` stands for those pointers.
-        #[derive(Clone, Copy, PartialEq)]
-        enum Col {
-            Orig,
-            Tok(usize),
-            Null,
-        }
+        // C compares these colours by pointer. Each `strtok` token of the `gv_strdup` copy
+        // is a new pointer, so every token sets the pen and fill (even a repeated name, or
+        // the `black` of a failed `multicolor`). After the loop `color` is the NULL that
+        // ended `strtok`, so the tail arrow always sets its colour, and the head arrow does
+        // unless the tail arrow just set the same pointer: one token or none. With no token
+        // `headcolor` and `tailcolor` are still the whole string.
         let toks: Vec<&str> = color.split(':').filter(|c| !c.is_empty()).collect();
-        // (`Null` is never named: `cur` is set to a colour before each use.)
-        let name = |c: Col| match c {
-            Col::Orig | Col::Null => color,
-            Col::Tok(i) => toks[i],
-        };
-        let mut headcolor = Col::Orig;
-        let mut tailcolor = Col::Orig;
-        for (cnum, c) in toks.iter().enumerate() {
+        let head = toks.first().copied().unwrap_or(color);
+        let tail = toks.get(1).or(toks.first()).copied().unwrap_or(color);
+        for c in &toks {
             self.set_pencolor(c);
             self.set_fillcolor(c);
-            if cnum == 0 {
-                headcolor = Col::Tok(cnum);
-                tailcolor = Col::Tok(cnum);
-            }
-            if cnum == 1 {
-                tailcolor = Col::Tok(cnum);
-            }
             for (i, tmp) in tmps.iter_mut().enumerate() {
                 for (t, o) in tmp.iter_mut().zip(&offs[i]) {
                     t.x += o.x;
@@ -1462,14 +1439,10 @@ impl<'a, E: Engine> Emitter<'a, E> {
                 self.bezier(&pts, 0);
             }
         }
-        let mut cur = Col::Null;
         let bz = ed.bz.last().unwrap();
         if bz.sflag != 0 {
-            if cur != tailcolor {
-                cur = tailcolor;
-                self.set_pencolor(name(cur));
-                self.set_fillcolor(name(cur));
-            }
+            self.set_pencolor(tail);
+            self.set_fillcolor(tail);
             self.arrow_gen(
                 EmitState::TDraw,
                 bz.sp,
@@ -1480,10 +1453,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
             );
         }
         if bz.eflag != 0 {
-            if cur != headcolor {
-                cur = headcolor;
-                self.set_pencolor(name(cur));
-                self.set_fillcolor(name(cur));
+            if !(bz.sflag != 0 && toks.len() < 2) {
+                self.set_pencolor(head);
+                self.set_fillcolor(head);
             }
             self.arrow_gen(
                 EmitState::HDraw,
@@ -1739,13 +1711,8 @@ impl<E: Engine> Emitter<'_, E> {
     }
 }
 
-/// The tokens `strtok` gives for `s` and `delims`: C splits on bytes, so a multibyte
-/// character of `delims` is several delimiters and a token can end inside a character.
-fn strtok(s: &str, delims: &str) -> Vec<String> {
-    let delims = graphviz_pure_core::charset::encode(delims);
-    graphviz_pure_core::charset::encode(s)
-        .split(|b| delims.contains(b))
-        .filter(|t| !t.is_empty())
-        .map(graphviz_pure_core::charset::decode_slice)
-        .collect()
+/// The tokens `strtok` gives for `s` and `delims`, both C's bytes: a multibyte character
+/// of `delims` is several delimiters, and a token can end inside a character.
+fn strtok<'s>(s: &'s [u8], delims: &'s [u8]) -> impl Iterator<Item = &'s [u8]> {
+    s.split(|b| delims.contains(b)).filter(|t| !t.is_empty())
 }
