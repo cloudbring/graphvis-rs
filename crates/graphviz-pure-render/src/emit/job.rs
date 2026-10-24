@@ -315,14 +315,16 @@ impl<'a> Job<'a> {
                 nums[..n].copy_from_slice(&r.values[..n]);
             };
             let node = |name: Option<&str>| {
-                // (a name read by sscanf is plain: `agfindnode` does not find `<a>`)
-                name.and_then(|name| {
-                    m.nodes
-                        .iter()
-                        .zip(&m.g.nodes)
-                        .find(|(n, nd)| n.name == name && !nd.html_name)
-                })
-                .map(|(n, _)| n.coord)
+                // (a name read by sscanf is plain: `agfindnode` does not find `<a>`; nor a
+                // local name `%…`, which `endgraph` cleared from cgraph's internal map)
+                name.filter(|name| !name.starts_with('%'))
+                    .and_then(|name| {
+                        m.nodes
+                            .iter()
+                            .zip(&m.g.nodes)
+                            .find(|(n, nd)| n.name == name && !nd.html_name)
+                    })
+                    .map(|(n, _)| n.coord)
             };
             let r = sscanf(vp, "%lf,%lf,%lf,'%[^']'");
             assign(&mut nums, &r, 3);

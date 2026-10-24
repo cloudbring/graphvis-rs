@@ -6811,6 +6811,24 @@ fn anonymous_graphs_are_named_by_their_id() {
     );
     assert!(ok, "{err}");
     assert!(out.starts_with("graph 1 2.25 1.6111\n"), "{out}");
+    // A name read from an attribute after parsing is not found when it is a local `%` name:
+    // twopi's `root` and the `viewport` focus node.
+    let (out, err, ok) = run(
+        &["-Ktwopi", "-Tplain"],
+        r#"graph { root="%3"; "%x" -- b; b -- c; c -- d }"#,
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        err,
+        "Warning: specified root node \"%3\" was not found.Using default calculation for root node\n"
+    );
+    assert!(out.starts_with("graph 1 0.75 3.5\n"), "{out}");
+    let (out, err, ok) = run(
+        &["-Tsvg"],
+        r#"graph { viewport="100,100,1,%3"; "%x" -- b; b -- c }"#,
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("translate(23 140)"), "{out}");
 }
 
 // Issues #325, #344, #354. `agnameof` formats an anonymous object's name into one static
