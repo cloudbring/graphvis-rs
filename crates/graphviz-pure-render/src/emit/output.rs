@@ -107,11 +107,14 @@ fn vertices(n: &super::model::RNode<'_>, y_off: f64) -> Option<String> {
     Some(s)
 }
 
-/// `attach_attrs_and_arrows`: returns a copy of the graph with `pos`, `width`, `height`,
-/// `rects`, `vertices`, `bb`, `lp`, `lwidth`, `lheight`, `xlp`, `head_lp`, `tail_lp` set,
-/// and whether any edge has start or end arrows.
-pub(crate) fn attach_attrs(m: &Model<'_>) -> (Graph, bool, bool, Vec<BTreeSet<String>>) {
-    let mut g = m.g.clone();
+/// `attach_attrs_and_arrows`: returns a copy of `cgraph` (the model's graph with what earlier
+/// jobs set on it) with `pos`, `width`, `height`, `rects`, `vertices`, `bb`, `lp`, `lwidth`,
+/// `lheight`, `xlp`, `head_lp`, `tail_lp` set, and whether any edge has start or end arrows.
+pub(crate) fn attach_attrs(
+    m: &Model<'_>,
+    cgraph: &Graph,
+) -> (Graph, bool, bool, Vec<BTreeSet<String>>) {
+    let mut g = cgraph.clone();
     let (mut s_arrows, mut e_arrows) = (false, false);
     let y_off = y_offset(m.bb);
     let pt = |p: Point| pt(p, y_off);

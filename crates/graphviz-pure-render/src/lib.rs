@@ -110,16 +110,19 @@ fn edge_order(m: &emit::model::Model<'_>) -> Vec<usize> {
     m.out_edges.iter().flatten().copied().collect()
 }
 
-/// The graph with layout attributes and, for xdot, draw operations attached.
+/// `cgraph` with layout attributes and, for xdot, draw operations attached. `cgraph` is the
+/// model's graph with what earlier jobs set on it.
 fn attached(
     m: &emit::model::Model<'_>,
+    cgraph: &Graph,
     xdot: bool,
     fixed_xdot: Option<&str>,
 ) -> (Graph, Vec<std::collections::BTreeSet<String>>) {
-    let (mut g, _, _, mut forced) = emit::output::attach_attrs(m);
+    let (mut g, _, _, mut forced) = emit::output::attach_attrs(m, cgraph);
     if xdot {
+        // `agget(g, "xdotversion")` reads what an earlier xdot job set (#362).
         let eng = xdot_engine::XdotEngine::new(
-            m.root_attrs().get("xdotversion"),
+            cgraph.graph_attrs.get("xdotversion").map(String::as_str),
             fixed_xdot,
             emit::y_offset(m.bb),
         );
@@ -135,7 +138,7 @@ fn attached(
                 forced[m.clusters[c].sub].insert(name.to_string());
             }
             // `xd->version_s = agget(g, "xdotversion")` is set back as it is, flag included.
-            let root = &m.g.graph_attrs;
+            let root = &cgraph.graph_attrs;
             let html = name == "xdotversion"
                 && fixed_xdot.is_none()
                 && root.get(name) == Some(&value)
@@ -259,55 +262,6 @@ fn emit_null(m: &emit::model::Model<'_>, features: emit::job::Features, langname
     emit::run(m, NullEngine { features, langname });
 }
 
-/// The attributes a job's `begin_graph` set in the graph (`attach_attrs`, xdot's `_draw_`):
-/// in C they stay in the cgraph, so every later job on the graph writes them too.
-fn keep_set(acc: &mut Option<Graph>, g: &Graph) {
-    match acc {
-        None => *acc = Some(g.clone()),
-        Some(prev) => {
-            merge_attrs(&mut prev.graph_attrs, &g.graph_attrs);
-            for (p, n) in prev.subgraphs.iter_mut().zip(&g.subgraphs) {
-                merge_attrs(&mut p.graph_attrs, &n.graph_attrs);
-            }
-            for (p, n) in prev.nodes.iter_mut().zip(&g.nodes) {
-                merge_attrs(&mut p.attrs, &n.attrs);
-            }
-            for (p, n) in prev.edges.iter_mut().zip(&g.edges) {
-                merge_attrs(&mut p.attrs, &n.attrs);
-            }
-        }
-    }
-}
-
-fn merge_attrs(into: &mut graphviz_pure_core::AttrMap, from: &graphviz_pure_core::AttrMap) {
-    for (k, v) in from {
-        into.insert(k.clone(), v.clone());
-    }
-}
-
-/// Gives `g` the attributes earlier jobs set (see [`keep_set`]): over the graph's own values
-/// (`over`) for a writer that attaches nothing, else under the values the job attached.
-fn with_earlier(g: &mut Graph, earlier: Option<&Graph>, over: bool) {
-    let Some(prev) = earlier else { return };
-    let under = |into: &mut graphviz_pure_core::AttrMap, from: &graphviz_pure_core::AttrMap| {
-        for (k, v) in from {
-            if over || !into.contains_key(k) {
-                into.insert(k.clone(), v.clone());
-            }
-        }
-    };
-    under(&mut g.graph_attrs, &prev.graph_attrs);
-    for (n, p) in g.subgraphs.iter_mut().zip(&prev.subgraphs) {
-        under(&mut n.graph_attrs, &p.graph_attrs);
-    }
-    for (n, p) in g.nodes.iter_mut().zip(&prev.nodes) {
-        under(&mut n.attrs, &p.attrs);
-    }
-    for (n, p) in g.edges.iter_mut().zip(&prev.edges) {
-        under(&mut n.attrs, &p.attrs);
-    }
-}
-
 /// The graph as cgraph holds it for the writers that do not attach layout attributes
 /// (`canon`, `dot_json`, `xdot_json`): fdp's render view is not part of it.
 fn cgraph_view(graph: &Graph) -> Graph {
@@ -318,10 +272,14 @@ fn cgraph_view(graph: &Graph) -> Graph {
 
 /// One laid-out graph as `gvRenderJobs` renders it: one job per output format, each running
 /// `emit_graph` (which reports render-time diagnostics for every format, drawing or not)
-/// and then its writer. What a job attaches to the graph stays there for the jobs after it.
+/// and then its writer. C's jobs share one cgraph: what a job sets on it with `agxset`
+/// (`attach_attrs`, xdot's `_draw_` and `xdotversion`) is what every later job reads and
+/// writes, over the input's values.
 pub struct GraphJobs<'g> {
+    /// The layout's graph: the jobs' models are built from it.
     graph: &'g Graph,
-    set: Option<Graph>,
+    /// The cgraph's attributes after the jobs so far; `None` while no job has set any.
+    cgraph: Option<Graph>,
     /// Per subgraph, the graph attributes earlier jobs set with `agxset` (see
     /// [`sync_dicts`]): they stay local values of the subgraph for every later writer.
     forced: Vec<std::collections::BTreeSet<String>>,
@@ -331,13 +289,14 @@ impl<'g> GraphJobs<'g> {
     pub fn new(graph: &'g Graph) -> Self {
         GraphJobs {
             graph,
-            set: None,
+            cgraph: None,
             forced: Vec::new(),
         }
     }
 
-    /// Adds what a job's `attach_attrs` set to what earlier jobs set.
-    fn keep_forced(&mut self, forced: &[std::collections::BTreeSet<String>]) {
+    /// Keeps what a job set on the cgraph for the jobs after it.
+    fn keep(&mut self, g: &Graph, forced: &[std::collections::BTreeSet<String>]) {
+        self.cgraph = Some(g.clone());
         if self.forced.len() < forced.len() {
             self.forced.resize(forced.len(), Default::default());
         }
@@ -350,6 +309,7 @@ impl<'g> GraphJobs<'g> {
     /// distinguishes `plain-ext`, `dot_json` and the xdot versions.
     pub fn render(&mut self, format: OutputFormat, name: &str) -> Result<String> {
         let graph = self.graph;
+        let cgraph = self.cgraph.as_ref().unwrap_or(graph);
         graphviz_pure_core::charset::begin_render(
             &graph.name,
             graph.graph_attrs.get("charset").map(String::as_str),
@@ -367,8 +327,7 @@ impl<'g> GraphJobs<'g> {
                 JSON_FEATURES
             };
             emit_null(&m, features, name);
-            let mut g = cgraph_view(graph);
-            with_earlier(&mut g, self.set.as_ref(), true);
+            let mut g = cgraph_view(cgraph);
             if format == OutputFormat::Canon {
                 if g.dicts.len() == g.subgraphs.len() + 1 {
                     sync_dicts(&mut g, graph, &self.forced);
@@ -394,11 +353,9 @@ impl<'g> GraphJobs<'g> {
             OutputFormat::Json | OutputFormat::Json0 => {
                 // `json_begin_graph`: json renders the graph as xdot first, json0 attaches
                 // the layout attributes; then `emit_graph` runs for the json job itself.
-                let (mut g, forced) = attached(&m, format == OutputFormat::Json, None);
-                keep_set(&mut self.set, &g);
-                self.keep_forced(&forced);
+                let (g, forced) = attached(&m, cgraph, format == OutputFormat::Json, None);
+                self.keep(&g, &forced);
                 emit_null(&m, JSON_FEATURES, name);
-                with_earlier(&mut g, self.set.as_ref(), false);
                 json::write_json(
                     &g,
                     format == OutputFormat::Json,
@@ -410,6 +367,7 @@ impl<'g> GraphJobs<'g> {
                 let xdot = format == OutputFormat::Xdot;
                 let (mut g, forced) = attached(
                     &m,
+                    cgraph,
                     xdot,
                     match lname.as_str() {
                         "xdot1.2" => Some("1.2"),
@@ -420,9 +378,7 @@ impl<'g> GraphJobs<'g> {
                 if !xdot {
                     emit_null(&m, DOT_FEATURES, name);
                 }
-                with_earlier(&mut g, self.set.as_ref(), false);
-                keep_set(&mut self.set, &g);
-                self.keep_forced(&forced);
+                self.keep(&g, &forced);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
                     sync_dicts(&mut g, graph, &self.forced);
                     agwrite::agwrite(&g)
@@ -438,7 +394,7 @@ impl<'g> GraphJobs<'g> {
                     &m,
                     zoom,
                     name.eq_ignore_ascii_case("plain-ext"),
-                    self.set.as_ref(),
+                    self.cgraph.as_ref(),
                 )
             }
             OutputFormat::Canon => unreachable!(),
@@ -604,6 +560,56 @@ mod tests {
         assert!(v["objects"][1]["_draw_"].is_array());
         assert!(v["edges"][0]["_draw_"].is_array());
         assert!(v["edges"][0]["_hdraw_"].is_array());
+    }
+
+    // Issue #362: `xdot_begin_graph` reads the `xdotversion` an earlier xdot job set.
+    #[test]
+    fn a_later_xdot_job_keeps_the_version_an_earlier_one_set() {
+        let g = sample_laid_out_graph();
+        let mut jobs = GraphJobs::new(&g);
+        let first = jobs.render(OutputFormat::Xdot, "xdot1.2").unwrap();
+        let second = jobs.render(OutputFormat::Xdot, "xdot").unwrap();
+        assert!(first.contains("xdotversion=1.2"), "{first}");
+        assert!(second.contains("xdotversion=1.2"), "{second}");
+        let json = jobs.render(OutputFormat::Json, "json").unwrap();
+        assert!(json.contains("\"xdotversion\": \"1.2\""), "{json}");
+        let alone = GraphJobs::new(&g)
+            .render(OutputFormat::Xdot, "xdot")
+            .unwrap();
+        assert!(alone.contains("xdotversion=1.7"), "{alone}");
+    }
+
+    // Issue #367: what an earlier job set with `agxset` replaces the input's value of the
+    // attribute for every later job, also where the input declares it.
+    #[test]
+    fn an_earlier_jobs_draw_wins_over_the_declared_input_value() {
+        let mut g = sample_laid_out_graph();
+        graphviz_pure_core::set_attr(&mut g.graph_attrs, "_draw_", String::new(), false);
+        let root_draw = |out: &str| {
+            let at = out.find("graph [_draw_=\"").expect(out) + "graph [_draw_=\"".len();
+            out[at..at + out[at..].find('"').unwrap()].to_string()
+        };
+        for (first, first_name) in [(OutputFormat::Xdot, "xdot"), (OutputFormat::Json, "json")] {
+            let mut jobs = GraphJobs::new(&g);
+            jobs.render(first, first_name).unwrap();
+            let xdot = GraphJobs::new(&g)
+                .render(OutputFormat::Xdot, "xdot")
+                .unwrap();
+            for (fmt, name) in [(OutputFormat::Dot, "dot"), (OutputFormat::Canon, "canon")] {
+                let out = jobs.render(fmt, name).unwrap();
+                assert!(!root_draw(&xdot).is_empty());
+                assert_eq!(
+                    root_draw(&out),
+                    root_draw(&xdot),
+                    "{name} after {first_name}: {out}"
+                );
+                // the cluster's `_draw_`, which the input does not declare on it
+                assert_eq!(
+                    out.matches("_draw_=").count(),
+                    xdot.matches("_draw_=").count()
+                );
+            }
+        }
     }
 
     #[test]
