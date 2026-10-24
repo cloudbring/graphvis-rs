@@ -6354,6 +6354,161 @@ fn sfdp_rotation_in_3d_is_skipped_with_a_warning() {
     }
 }
 
+/// Runs dot on `src` and returns (stdout, stderr, success), failing if it takes more than
+/// 60 s: the inputs of #358 used to hang.
+fn run_dot_with_deadline(name: &str, args: &[&str], src: &str) -> (String, String, bool) {
+    let path = tmp(name);
+    std::fs::write(&path, src).unwrap();
+    let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+        .args(args)
+        .arg(&path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let start = std::time::Instant::now();
+    while child.try_wait().unwrap().is_none() {
+        if start.elapsed() > std::time::Duration::from_secs(60) {
+            child.kill().unwrap();
+            panic!("dot did not finish in 60 s on {src}");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    let out = child.wait_with_output().unwrap();
+    (
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+        String::from_utf8_lossy(&out.stderr).into_owned(),
+        out.status.success(),
+    )
+}
+
+/// #357: `nslimit1` too small for one iteration stops network simplex before it normalises
+/// the ranks. Where the root's ranks then start below 0, C writes before its rank arrays
+/// (`allocate_ranks`), reads a NULL label (`label_vnode`) or reads before a cluster's rank
+/// leaders (`build_skeleton`), and crashes. The port fails the layout before mincross.
+#[test]
+fn nslimit1_ranks_below_zero_fail_the_layout() {
+    for src in [
+        "digraph { nslimit1=0; {rank=sink; a} a -> d [minlen=3]; b -> c }\n",
+        "digraph { nslimit1=0; subgraph r4 { rank=sink; n10; } \
+         n1 -> n4 [label=\"L\", headlabel=\"l\"]; n10 -> n9 [minlen=3]; }\n",
+        "digraph G { newrank=true; nslimit1=0.01; subgraph cluster_0 { n5 -> n0; } \
+         n3 -> n0 [minlen=0, weight=0, lhead=cluster_1]; n3 -> n1 [ltail=cluster_1]; }\n",
+    ] {
+        let (_, err, ok) = run(&["-Tsvg"], src);
+        assert!(!ok, "{src}");
+        assert!(!err.contains("panicked"), "{err}");
+        assert!(
+            err.contains("stopped before normalising its ranks"),
+            "{err}"
+        );
+    }
+    // Ranks that start above 0 are kept, as C keeps them: C draws this one (fuzz-gen-ranks
+    // seed 6807), and the port draws it the same way.
+    let (out, err, ok) = run(
+        &["-Tsvg"],
+        "digraph G { compound=true; pack=true; nslimit1=0.01; \
+         subgraph cluster_0 { n1; n0; subgraph cluster_1 { label=\"label\"; n1; n0; } } \
+         subgraph { rank=source; n0; n1; } \
+         n0 -> n1 [label=\"\", minlen=0, constraint=false]; \
+         n0 -> n1 [label=\"l\", lhead=cluster_0]; \
+         n1 -> n0 [label=\"a long edge label\", lhead=cluster_0]; n0 -> n1; \
+         n0 -> n1 [label=\"l\", constraint=false, dir=none]; }\n",
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("</svg>"), "{out}");
+}
+
+/// #358 (and #357's fourth input): a root rank with no node reaches `set_ycoords`, where C
+/// dereferences its NULL first node. The port fails the layout there.
+#[test]
+fn empty_root_rank_in_set_ycoords_fails_the_layout() {
+    for src in [
+        "digraph G { subgraph cluster_0 { subgraph { rank=sink; n4; } n1 -> n3 [minlen=2]; } \
+         subgraph r17 { rank=source; n0; n1; } n4 -> n4; }\n",
+        "digraph G { nslimit1=0; subgraph cluster_0 { n1 -> n3 [label=\"L\", minlen=3]; } \
+         subgraph { rank=same; n1; n2; n3; } n1 -> n2; n3 -> n2; z2a -> z2b; }\n",
+    ] {
+        let (_, err, ok) = run(&["-Tsvg"], src);
+        assert!(!ok, "{src}");
+        assert!(!err.contains("panicked"), "{err}");
+        assert!(err.contains("set_ycoords: rank"), "{err}");
+    }
+}
+
+/// #358: a freed rank leader's stale order made `furthestnode` walk in a cycle. C's
+/// `neighbor` asserts that the order moves the way the walk goes; the port fails there.
+#[test]
+fn furthestnode_on_a_freed_leader_does_not_hang() {
+    let src = "digraph G {\nsubgraph cluster_0 { n6; n9; n3 -> n9; }\n\
+               subgraph cluster_1 { subgraph cluster_2 { n5; n1; } }\nsubgraph cluster_3 { }\n\
+               subgraph r32 { rank=sink; n5; n0; }\nsubgraph r38 { rank=min; n9; }\n\
+               subgraph { rank=same; n3; }\nn3 -> n0 [label=\"\"];\nn5 -> n0;\n\
+               n1 -> n5 [label=\"\"];\n}\n";
+    let (_, err, ok) = run_dot_with_deadline("issue358-furthestnode.gv", &["-Tsvg"], src);
+    assert!(!ok);
+    assert!(err.contains("neighbor: on rank"), "{err}");
+}
+
+/// #358: a cycle of constraining flat edges left on a rank leaves `flat_reorder`'s
+/// topological order short. C's `LIST_GET` asserts; the port used to stop copying, leave the
+/// rank half rewritten, and hang in `transpose`.
+#[test]
+fn flat_reorder_with_a_short_order_does_not_hang() {
+    let src = "strict digraph G {\nordering=in;\nsubgraph cluster_0 {\n  n6; n0;\n\
+               subgraph r7 { rank=sink; n5; n2; n4; }\n  subgraph cluster_1 { }\n\
+               subgraph cluster_2 { n0; }\n}\nsubgraph { rank=min; n4; n1; n2; n0; }\n\
+               n0 -> n2 [label=\"x\\ny\"];\nn2 -> n1 [label=\"L\", lhead=cluster_0];\n\
+               n1 -> n2 [label=\"L\", constraint=false, headlabel=\"label\"];\n\
+               n2 -> n0 [label=\"l\"];\nn6 -> n0 [weight=0, samehead=h0];\nn6 -> n3;\n\
+               n1 -> n0 [dir=back, ltail=cluster_0];\nn1 -> n6 [label=\"\"];\n}\n";
+    let (_, err, ok) = run_dot_with_deadline("issue358-flat-reorder.gv", &["-Tsvg"], src);
+    assert!(!ok);
+    assert!(err.contains("flat_reorder: rank"), "{err}");
+}
+
+/// #359: when every point tests inside the end nodes, `clip_and_install`'s walks cross.
+/// C's `size_t` size wraps and it asserts in `bezier_bb`; the port keeps the one segment
+/// where the walks would meet, so every reader gets a bezier with points.
+#[test]
+fn clip_and_install_crossed_walks_keep_one_segment() {
+    let (out, err, ok) = run(
+        &["-Tdot"],
+        "digraph { splines=ortho; a [shape=plain, fixedsize=true]; a -> a }\n",
+    );
+    assert!(ok, "{err}");
+    let pos = out
+        .lines()
+        .find_map(|l| l.split("pos=\"e,").nth(1))
+        .unwrap_or_else(|| panic!("{out}"));
+    // The arrow's end point, then four control points.
+    assert_eq!(
+        pos.trim_end_matches(['"', ']', ';']).split(' ').count(),
+        5,
+        "{out}"
+    );
+    for (args, src) in [
+        (
+            ["-Tsvg"],
+            "digraph { splines=ortho; a [shape=plain, fixedsize=true]; a -> a [label=x] }\n",
+        ),
+        (
+            ["-Tsvg"],
+            "graph G { splines=polyline; nodesep=0.02; n4 [shape=plain, label=\"\"]; \
+             subgraph { rank=same; n3; n4; } n4 -- n3:_ [headlabel=\"h\"]; }\n",
+        ),
+        (
+            ["-Tsvg"],
+            "graph { layout=neato; splines=ortho; a [shape=plain, fixedsize=true, width=0, \
+             height=0, label=\"\"]; b [shape=plain, label=\"\"]; a -- a; a -- b [label=x]; \
+             b -- b [headlabel=h]; }\n",
+        ),
+    ] {
+        let (_, err, ok) = run(&args, src);
+        assert!(ok && !err.contains("panicked"), "{src}: {err}");
+    }
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

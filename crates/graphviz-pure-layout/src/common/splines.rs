@@ -388,10 +388,18 @@ pub fn clip_and_install_info<S: SplineGraph + ?Sized>(
         }
         end -= 3;
     }
+    // When every point tests inside the end nodes (zero-size shapes, coincident ends), the
+    // tail-side walks pass the head-side ones. One segment apart (`start == end + 3`), C
+    // installs a one-point bezier and draws it. Further apart, C's `size_t`
+    // `end - start + 4` wraps, and C asserts in `bezier_bb` (`size % 3 == 1`) or crashes
+    // wherever the bezier is read (#359). The port keeps the one segment where the walks
+    // would meet, as C does on the nearest input it handles.
+    if start.saturating_sub(end) > 3 {
+        start = end;
+    }
     let mut newspl = Bezier::default();
     arrow_clip(g, fe, hn, &mut ps, &mut start, &mut end, &mut newspl, info);
-    // C computes `end - start + 4` in int; end can precede start after arrow clipping.
-    let mut list = Vec::with_capacity((end as isize - start as isize + 4).max(0) as usize);
+    let mut list = Vec::with_capacity((end + 4).saturating_sub(start));
     let mut i = start;
     let bb = g.bb_mut();
     while i < end + 4 {

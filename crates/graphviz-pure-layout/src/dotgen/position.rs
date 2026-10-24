@@ -93,7 +93,7 @@ impl Dot<'_> {
             return Ok(());
         }
         self.mark_lowclusters(g);
-        self.set_ycoords(g);
+        self.set_ycoords(g)?;
         if self.concentrate {
             // dot_position returns the failure: doDot gives up on the layout and
             // dot_layout skips dotneato_postprocess, leaving the drawing half made.
@@ -105,8 +105,8 @@ impl Dot<'_> {
             }
         }
         self.expand_leaves(g);
-        if self.flat_edges(g) {
-            self.set_ycoords(g);
+        if self.flat_edges(g)? {
+            self.set_ycoords(g)?;
         }
         self.create_aux_edges(g);
         if std::env::var_os("GVDUMP").is_some() {
@@ -512,8 +512,20 @@ impl Dot<'_> {
         }
     }
 
-    fn rank0_y(&self, r: i32) -> f64 {
-        self.rv(0, r, 0).map_or(0.0, |v| self.nodes[v].coord.y)
+    /// `ND_coord(rank[r].v[0]).y`. A root rank with no node has a NULL `v[0]`, which C
+    /// dereferences and crashes on (#358): the layout fails there.
+    fn rank0_y(&self, r: i32) -> Result<f64, String> {
+        self.rank0(r).map(|v| self.nodes[v].coord.y)
+    }
+
+    /// `rank[r].v[0]` of the root, where C dereferences it without checking.
+    fn rank0(&self, r: i32) -> Result<N, String> {
+        self.rv(0, r, 0).ok_or_else(|| {
+            format!(
+                "set_ycoords: rank {r} of {} has no node (C dereferences its NULL first node)",
+                self.graph_name(0)
+            )
+        })
     }
 
     fn adjust_simple(&mut self, g: G, delta: f64, margin_total: i32) {
@@ -553,12 +565,12 @@ impl Dot<'_> {
         self.graphs[g].ht1 += bottom;
     }
 
-    fn adjust_ranks(&mut self, g: G, margin_total: i32) {
+    fn adjust_ranks(&mut self, g: G, margin_total: i32) -> Result<(), String> {
         let margin = if g == 0 { 0 } else { self.margin_of(g) };
         let mut ht1 = self.graphs[g].ht1;
         let mut ht2 = self.graphs[g].ht2;
         for subg in self.graphs[g].clust.clone() {
-            self.adjust_ranks(subg, margin + margin_total);
+            self.adjust_ranks(subg, margin + margin_total)?;
             if self.graphs[subg].maxrank == self.graphs[g].maxrank {
                 ht1 = ht1.max(self.graphs[subg].ht1 + margin as f64);
             }
@@ -575,7 +587,7 @@ impl Dot<'_> {
             );
             let maxr = self.graphs[g].maxrank;
             let minr = self.graphs[g].minrank;
-            let rht = self.rank0_y(minr) - self.rank0_y(maxr);
+            let rht = self.rank0_y(minr)? - self.rank0_y(maxr)?;
             let delta = lht - (rht + ht1 + ht2);
             if delta > 0.0 {
                 self.adjust_simple(g, delta, margin_total);
@@ -589,6 +601,7 @@ impl Dot<'_> {
             let rk = self.rk_mut(0, maxr);
             rk.ht1 = rk.ht1.max(h1);
         }
+        Ok(())
     }
 
     fn clust_ht(&mut self, g: G) -> bool {
@@ -624,7 +637,11 @@ impl Dot<'_> {
         have_label
     }
 
-    pub fn set_ycoords(&mut self, g: G) {
+    /// `set_ycoords(g)`. Fails where C dereferences the NULL first node of a root rank
+    /// with no node (#358): a rank set or an earlier cluster took a cluster's nodes after
+    /// it was ranked, or the ranking stopped before normalising the ranks (`nslimit1`,
+    /// #357). C reads it on every such input that gets here and crashes.
+    pub fn set_ycoords(&mut self, g: G) -> Result<(), String> {
         for r in self.graphs[g].minrank..=self.graphs[g].maxrank {
             for i in 0..self.rank_n(g, r) {
                 let n = self.rv(g, r, i).unwrap();
@@ -660,33 +677,31 @@ impl Dot<'_> {
         let lbl = self.clust_ht(g);
         let mut maxht: f64 = 0.0;
         let mut r = self.graphs[g].maxrank;
-        if let Some(v) = self.rv(g, r, 0) {
-            self.nodes[v].coord.y = self.rk(g, r).ht1;
-        }
+        let v = self.rank0(r)?;
+        self.nodes[v].coord.y = self.rk(g, r).ht1;
         let ranksep = self.graphs[g].ranksep as f64;
         r -= 1;
         while r >= self.graphs[g].minrank {
             let d0 = self.rk(g, r + 1).pht2 + self.rk(g, r).pht1 + ranksep;
             let d1 = self.rk(g, r + 1).ht2 + self.rk(g, r).ht1 + CL_OFFSET as f64;
             let delta = d0.max(d1);
-            if self.rank_n(g, r) > 0
-                && let Some(v) = self.rv(g, r, 0)
-            {
-                let y = self.rv(g, r + 1, 0).map_or(0.0, |u| self.nodes[u].coord.y);
+            if self.rank_n(g, r) > 0 {
+                let v = self.rank0(r)?;
+                let y = self.rank0_y(r + 1)?;
                 self.nodes[v].coord.y = y + delta;
             }
             maxht = maxht.max(delta);
             r -= 1;
         }
         if lbl && self.graphs[g].flip() {
-            self.adjust_ranks(g, 0);
+            self.adjust_ranks(g, 0)?;
             if self.graphs[g].exact_ranksep {
                 maxht = 0.0;
                 let mut r = self.graphs[g].maxrank;
-                let mut d0 = self.rank0_y(r);
+                let mut d0 = self.rank0_y(r)?;
                 r -= 1;
                 while r >= self.graphs[g].minrank {
-                    let d1 = self.rank0_y(r);
+                    let d1 = self.rank0_y(r)?;
                     maxht = maxht.max(d1 - d0);
                     d0 = d1;
                     r -= 1;
@@ -696,10 +711,9 @@ impl Dot<'_> {
         if self.graphs[g].exact_ranksep {
             let mut r = self.graphs[g].maxrank - 1;
             while r >= self.graphs[g].minrank {
-                if self.rank_n(g, r) > 0
-                    && let Some(v) = self.rv(g, r, 0)
-                {
-                    let y = self.rv(g, r + 1, 0).map_or(0.0, |u| self.nodes[u].coord.y);
+                if self.rank_n(g, r) > 0 {
+                    let v = self.rank0(r)?;
+                    let y = self.rank0_y(r + 1)?;
                     self.nodes[v].coord.y = y + maxht;
                 }
                 r -= 1;
@@ -707,9 +721,10 @@ impl Dot<'_> {
         }
         for n in self.nlist_nodes(g) {
             let r = self.nodes[n].rank;
-            let y = self.rank0_y(r);
+            let y = self.rank0_y(r)?;
             self.nodes[n].coord.y = y;
         }
+        Ok(())
     }
 
     fn dot_compute_bb(&mut self, g: G, root: G) {
