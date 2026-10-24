@@ -8377,6 +8377,69 @@ fn issue304_a_new_graph_attribute_gives_child_subgraphs_their_empty_value() {
     }
 }
 
+/// Issue #393: `attrstmt` (`lib/cgraph/grammar.y:377`) runs `agattr` once per item of the
+/// list, a repeated name included, so `setattr` warns about a subgraph's `layout` for each
+/// occurrence, and a repeat reaches its update branch. Output is C 16.1.0's.
+#[test]
+fn issue393_a_repeated_graph_attribute_is_set_once_per_occurrence() {
+    let warn = "Warning: layout attribute is invalid except on the root graph\n";
+    let tail = "Error: Layout type: \"\" not recognized. Use one of: circo dot fdp neato nop nop1 \
+                nop2 osage patchwork sfdp twopi\n\
+                Error: Layout was not done.  Missing layout plugins? \n";
+    for (src, warnings) in [
+        (
+            "graph { subgraph s { graph [layout=dot, layout=dot] x } }",
+            2,
+        ),
+        (
+            "graph { subgraph s { graph [layout=neato] [layout=dot] x } }",
+            2,
+        ),
+        (
+            "graph { subgraph s { layout=dot; graph [layout=a, foo=1, layout=b] x } }",
+            3,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tdot"], src);
+        assert!(!ok, "{src}");
+        assert_eq!(out, "", "{src}");
+        assert_eq!(err, format!("{}{tail}", warn.repeat(warnings)), "{src}");
+    }
+    // The second `label` updates the local symbol the first made, so `unviewsubgraphsattr`
+    // gives the child `c` the root's `r`, which it prints.
+    let (out, err, ok) = run(
+        &["-Tdot"],
+        "graph { label=r; subgraph s { subgraph c {} graph [label=a, label=b]; \
+         subgraph c { subgraph d {x} } } }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        r#"graph {
+	graph [bb="0,0,54,60.8",
+		label=r,
+		lheight=0.23,
+		lp="27,12.4",
+		lwidth=0.06
+	];
+	node [label="\N"];
+	subgraph s {
+		graph [label=b];
+		subgraph c {
+			graph [label=r];
+			subgraph d {
+				x	[height=0.5,
+					pos="27,42.8",
+					width=0.75];
+			}
+		}
+	}
+}
+"#
+    );
+}
+
 /// Issue #332: `Nop` is a global of the C process. `nop1_layout`/`nop2_layout`
 /// (`gvlayout_neato_layout.c:48-57`) and `fdpSplines` with splines (`fdpgen/layout.c:1057`)
 /// set it to 0 after their layout, so `-n2` no longer applies to the graphs after them;
