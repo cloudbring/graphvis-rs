@@ -6,7 +6,7 @@ pub use graphviz_pure_core::{Graph, GraphvizError, Result, charset};
 pub use graphviz_pure_layout::cutil::{RandState, in_rand_run, with_rand_state};
 pub use graphviz_pure_layout::fdpgen::tlayout::FdpParms;
 pub use graphviz_pure_layout::{
-    LayoutEngine, LayoutOptions, layout_graph, layout_graph_with_options,
+    LayoutEngine, LayoutOptions, layout_graph, layout_graph_in_run, layout_graph_with_options,
 };
 pub use graphviz_pure_parser::{GlobalAttrs, GraphStream, parse_dot, parse_dot_all};
 pub use graphviz_pure_render::{
@@ -30,7 +30,7 @@ pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String
         engine,
         output_format,
         format,
-        LayoutOptions::default(),
+        &mut LayoutOptions::default(),
     )
 }
 
@@ -62,11 +62,12 @@ pub fn render_dot_all_with_options(
     graphviz_pure_render::reset_render_state();
     let graphs = parse_dot_all(dot_source, globals)?;
     // One call is one C process: its graphs share the C library's generator states (the
-    // caller's, inside a `with_rand_state`).
+    // caller's, inside a `with_rand_state`) and `Nop`.
+    let mut options = options;
     in_rand_run(|| {
         graphs
             .into_iter()
-            .map(|graph| render_parsed(graph, engine, output_format, format, options))
+            .map(|graph| render_parsed(graph, engine, output_format, format, &mut options))
             .collect()
     })
 }
@@ -88,10 +89,11 @@ pub fn render_dot_all_partial(
     let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
     let mut out = Vec::with_capacity(graphs.len());
     // One call is one C process: its graphs share the C library's generator states (the
-    // caller's, inside a `with_rand_state`).
+    // caller's, inside a `with_rand_state`) and `Nop`.
+    let mut options = options;
     let err = in_rand_run(|| {
         for graph in graphs {
-            match render_parsed(graph, engine, output_format, format, options) {
+            match render_parsed(graph, engine, output_format, format, &mut options) {
                 Ok(s) => out.push(s),
                 Err(e) => return Some(e),
             }
@@ -118,11 +120,12 @@ pub fn render_svg_all_partial(
     let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
     let mut out = Vec::with_capacity(graphs.len());
     // One call is one C process: its graphs share the C library's generator states (the
-    // caller's, inside a `with_rand_state`).
+    // caller's, inside a `with_rand_state`) and `Nop`.
+    let mut options = options;
     let err = in_rand_run(|| {
         for graph in graphs {
             let explicit_dpi = graphviz_pure_core::cnum::drawing_dpi(&graph.graph_attrs) > 0.0;
-            match render_parsed(graph, engine, OutputFormat::Svg, "svg", options) {
+            match render_parsed(graph, engine, OutputFormat::Svg, "svg", &mut options) {
                 Ok(s) => out.push((s, explicit_dpi)),
                 Err(e) => return Some(e),
             }
@@ -137,7 +140,7 @@ fn render_parsed(
     engine: &str,
     output_format: OutputFormat,
     format_name: &str,
-    options: LayoutOptions,
+    options: &mut LayoutOptions,
 ) -> Result<String> {
     let engine = LayoutEngine::parse(engine)?;
     // As in C (`gvLayoutJobs`), a graph's `layout` attribute overrides the requested engine.
@@ -147,7 +150,7 @@ fn render_parsed(
     };
     // `dot` lays the graph out for every format, `canon` and the json formats without
     // layout attributes included: they write the graph as the layout left it.
-    layout_graph_with_options(&mut graph, layout_engine, options)?;
+    layout_graph_in_run(&mut graph, layout_engine, options)?;
     render_graph_named(&graph, output_format, format_name)
 }
 
@@ -302,9 +305,10 @@ impl LayoutJobs {
         let Some(engine) = self.engine else {
             return Ok(false);
         };
-        let options = self.options;
+        // `Nop` is the run's, as C's global: a `nop` engine or fdp's splines clear it.
+        let options = &mut self.options;
         with_rand_state(&mut self.rand, || {
-            layout_graph_with_options(graph, engine, options)
+            layout_graph_in_run(graph, engine, options)
         })?;
         Ok(true)
     }
@@ -385,6 +389,52 @@ mod tests {
         let mut alone = parse_dot(g).unwrap();
         layout_graph_with_options(&mut alone, LayoutEngine::Neato, opts).unwrap();
         assert_eq!(z(&alone), "57.090927");
+    }
+
+    // Issue #332: `Nop` belongs to the run, as C's global: after a `nop` engine
+    // (`gvlayout_neato_layout.c:48-57`) or fdp with splines (`fdpgen/layout.c:1057`), `-n2`
+    // no longer applies to the call's later graphs, nor to a `LayoutJobs`' later layouts.
+    #[test]
+    fn nop_engines_clear_the_runs_nop() {
+        let opts = LayoutOptions {
+            nop: 2,
+            ..LayoutOptions::default()
+        };
+        let b = "graph B { layout=neato; b; c; b -- c }\n";
+        let laid_out = "node b 0.375 0.39777 0.75 0.5 b solid ellipse black lightgrey\n";
+        for a in [
+            "graph A { layout=nop2; a [pos=\"0,0\"] }\n",
+            "graph A { layout=fdp; splines=true; a -- x }\n",
+        ] {
+            let src = format!("{a}{b}");
+            let all =
+                render_dot_all_with_options(&src, "neato", "plain", &GlobalAttrs::default(), opts)
+                    .unwrap();
+            assert!(all[1].contains(laid_out), "{}", all[1]);
+            let (all, _) =
+                render_dot_all_partial(&src, "neato", "plain", &GlobalAttrs::default(), opts);
+            assert!(all[1].contains(laid_out), "{}", all[1]);
+            let (svgs, _) = render_svg_all_partial(&src, "neato", &GlobalAttrs::default(), opts);
+            let (alone, _) = render_svg_all_partial(
+                b,
+                "neato",
+                &GlobalAttrs::default(),
+                LayoutOptions::default(),
+            );
+            assert_eq!(svgs[1], alone[0]);
+
+            let mut jobs = LayoutJobs::new(LayoutEngine::Neato, opts);
+            jobs.layout(&mut parse_dot(a).unwrap()).unwrap();
+            let mut graph = parse_dot(b).unwrap();
+            jobs.layout(&mut graph).unwrap();
+            assert!(graph.nodes[0].pos != graph.nodes[1].pos);
+        }
+        // fdp with line edges leaves `Nop`.
+        let src = format!("graph A {{ layout=fdp; a -- x }}\n{b}");
+        let (all, _) = graphviz_pure_core::diag::quietly(|| {
+            render_dot_all_partial(&src, "neato", "plain", &GlobalAttrs::default(), opts)
+        });
+        assert!(all[1].contains("node b 0 0 "), "{}", all[1]);
     }
 
     #[test]
