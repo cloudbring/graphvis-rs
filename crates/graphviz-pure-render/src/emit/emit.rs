@@ -1677,11 +1677,12 @@ impl<'a, E: Engine> Emitter<'a, E> {
                     right = r;
                 }
             }
-            // emit.c:2032-2041 sets the arrows' colors with `LIST_FRONT(&segs)->color` and
-            // `endcolor`, which are NULL where the first segment is empty (`":red;0.3"`), and
-            // `gvrender_set_pencolor` dereferences the NULL: C crashes (#385). The port draws
-            // no such arrow, as no part of the spline is drawn in that segment's color: the
-            // output C gives for the same edge with `dir=none`.
+            // emit.c:2036-2045 sets the arrows' colors with `LIST_FRONT(&segs)->color`, NULL
+            // where the first segment is empty (`":red;0.3"`), and `endcolor`, NULL too where
+            // no colored segment with a weight above 0 comes before the first empty one
+            // (`"red;0.000001:"`); `gvrender_set_pencolor` dereferences the NULL and C crashes
+            // (#385). The port draws no arrow without a color, as no part of the spline is
+            // drawn in it: C's output for the same edge with `dir=none`.
             if bz.sflag != 0
                 && let Some(c) = segs.first().and_then(|s| s.color.clone())
             {

@@ -698,16 +698,21 @@ long and `:red;0.3` draws no wedge. The port dropped empty tokens, so it drew re
 whole width; it now splits as `tok` does.
 
 Where the first segment of a multicolour edge (one with a `;`) is empty, C crashes:
-`multicolor` sets the arrows' colours to that segment's NULL colour (`LIST_FRONT(&segs)->color`,
-and `endcolor`, which no segment set), and `gvrender_set_pencolor` calls `strchr` on the NULL.
-C draws the same edge without arrows (`dir=none`): no piece of it, as no segment before the
-empty one has a colour. The port draws an arrow only when its colour is set, so such an edge
-draws nothing, as C draws it with `dir=none` (the arrows' space is still kept at its ends). Measured on 2,000 generated
-graphs with colour lists on nodes, clusters and edges (wedged, striped, radial and filled
-styles, arrows in every direction): C draws 1,036, and the port's SVG and stderr equal C's on
-all 1,036, against 251 (SVG) and 763 (stderr) before. C crashes on the other 964, every one on
-this route: with `dir=none` on every edge C draws all 964, and the port's output equals C's
-there. The port draws all 964, with no panic.
+`multicolor` sets the tail arrow's colour to that segment's NULL colour
+(`LIST_FRONT(&segs)->color`), and the head arrow's to `endcolor`, which only a coloured
+segment with a weight above 0 sets (`emit.c:2036-2045`); `gvrender_set_pencolor` then calls
+`strchr` on the NULL. The head arrow alone crashes the same way where every coloured segment
+before the first empty one has a weight that rounds to 0 (`red;0.000001:`). C draws such an
+edge without arrows (`dir=none`) as its coloured pieces: none, where the first segment is
+empty. The port draws an arrow only when its colour is set, so the edge draws what C draws
+with `dir=none`, and the tail arrow where it has a colour (the arrows' space is still kept at
+the ends of the spline).
+
+Measured on 2,000 generated graphs with colour lists on nodes, clusters and edges (wedged,
+striped, radial and filled styles, arrows in every direction): C draws 1,036, and the port's
+SVG and stderr equal C's on all 1,036, against 251 (SVG) and 763 (stderr) before. C crashes
+on the other 964, every one on this route: with `dir=none` on every edge, C draws all 964,
+and the port's output on those copies equals C's. The port draws all 964, with no panic.
 
 ## Freed keys in EPSF_contents
 
