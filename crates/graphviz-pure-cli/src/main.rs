@@ -107,8 +107,9 @@ struct Options {
     layout: LayoutOptions,
     y_invert: bool,
     inputs: Vec<OsString>,
-    /// `-P`: lay out and render the plugin graph instead of the inputs (`P_graph`).
-    plugin_graph: bool,
+    /// `-P`: lay out and render the plugin graph instead of the inputs (`P_graph`), built on
+    /// the `-G`/`-N`/`-E`/`-A` attributes given before it.
+    plugin_graph: Option<GlobalAttrs>,
 }
 
 enum Parsed {
@@ -380,7 +381,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         layout,
         y_invert: false,
         inputs: Vec::new(),
-        plugin_graph: false,
+        plugin_graph: None,
     };
     let (mut n_lang, mut n_file) = (0, 0);
     let mut kflag = false;
@@ -459,7 +460,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                     kflag = true;
                 }
                 // `-P` renders the graph of the plugins instead of the inputs.
-                'P' => opts.plugin_graph = true,
+                'P' => opts.plugin_graph = Some(opts.globals.clone()),
                 'l' => {
                     if flag_value(os_args, &mut i).is_none() {
                         return missing('l');
@@ -542,6 +543,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
     let first = job_at(&mut opts.jobs, 0);
     if first.langname.is_none() {
         first.langname = Some("dot".to_string());
+        plugins::load_device("dot");
     }
     for n in 1..opts.jobs.len() {
         if opts.jobs[n].langname.is_none() {
@@ -549,7 +551,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         }
     }
     // `gvParseArgs`: the plugins, once the arguments are read.
-    if plugins::verbose() != 0 {
+    if graphviz_pure_core::diag::verbose_byte() != 0 {
         plugins::write_status(&plugins::PORT_PLUGINS);
     }
     Parsed::Run(Box::new(opts))
@@ -747,8 +749,8 @@ impl Run<'_> {
 
     /// `-P`: the plugin graph (`gvPluginsGraph`), named `<internal>`, laid out and rendered
     /// instead of the inputs, which are not read.
-    fn plugin_graph(&mut self) -> io::Result<bool> {
-        let mut graph = plugins::plugin_graph(&plugins::PORT_PLUGINS);
+    fn plugin_graph(&mut self, globals: &GlobalAttrs) -> io::Result<bool> {
+        let mut graph = plugins::plugin_graph(&plugins::PORT_PLUGINS, globals);
         let name = "<internal>";
         self.graph(&mut graph, Some(OsStr::new(name)), 0, name)
     }
@@ -823,7 +825,7 @@ fn dot_main() -> ExitCode {
     };
     graphviz_pure::set_y_invert(opts.y_invert);
     // `-P` reads no input.
-    let inputs: Vec<Option<OsString>> = if opts.plugin_graph {
+    let inputs: Vec<Option<OsString>> = if opts.plugin_graph.is_some() {
         Vec::new()
     } else if opts.inputs.is_empty() {
         vec![None]
@@ -840,8 +842,8 @@ fn dot_main() -> ExitCode {
     };
     let mut written = Ok(());
     let mut stopped = false;
-    if run.opts.plugin_graph {
-        match run.plugin_graph() {
+    if let Some(globals) = run.opts.plugin_graph.clone() {
+        match run.plugin_graph(&globals) {
             Ok(true) => {}
             Ok(false) => stopped = true,
             Err(e) => written = Err(e),

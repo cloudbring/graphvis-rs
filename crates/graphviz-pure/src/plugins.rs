@@ -2,15 +2,17 @@
 //! about them: `gvplugin_load`'s verbose lines, `gvplugin_write_status` and `gvplugin_graph`
 //! (`lib/gvc/gvplugin.c`).
 //!
-//! The port's renderers, devices, layouts and image loaders are built in, as in a C build that
-//! links its plugins statically: each is listed under the package that provides it in C, and
-//! none is loaded on demand, so there is no plugin library to activate and no configuration
-//! file to report.
+//! The port's renderers, devices, layouts and image loaders are built in. They are reported as
+//! a statically linked C build (`dot_static`, `cmd/dot/dot_builtins.cpp`) reports its own: no
+//! plugin library is activated, demand loading is disabled, and the packages are recorded in
+//! its built-in order. The packages are those the port's tables name: `core`, `dot_layout`,
+//! `neato_layout`, and `cairo` for the raster devices (`-T png:cairo`, as the port has always
+//! named them; in C only `png` comes from that package, `jpeg` from `gd` or `gdk`).
 
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicI32, Ordering};
 
 use graphviz_pure_core::diag::fprintf_stderr;
+pub use graphviz_pure_core::diag::{set_verbose, verbose};
 
 use crate::{DEVICE_PLUGINS, LAYOUT_PLUGINS, plugin_list, plugin_load};
 
@@ -37,7 +39,7 @@ pub const RENDER_PLUGINS: [(&str, &str); 8] = [
 
 /// The loadimage plugins (`gvloadimage_core_types` for the port's renderers): `type:render`
 /// and package, in `gvc->apis[API_loadimage]` order: by type, the plugin installed last first.
-pub const LOADIMAGE_PLUGINS: [(&str, &str); 21] = [
+pub const LOADIMAGE_PLUGINS: [(&str, &str); 22] = [
     ("eps:xdot", "core"),
     ("eps:dot", "core"),
     ("gif:xdot", "core"),
@@ -59,6 +61,7 @@ pub const LOADIMAGE_PLUGINS: [(&str, &str); 21] = [
     ("ps:dot", "core"),
     ("svg:svg", "core"),
     ("svg:xdot", "core"),
+    ("svg:dot", "core"),
 ];
 
 /// The plugins of a run.
@@ -71,11 +74,11 @@ pub struct Plugins<'a> {
     pub apis: [&'a [(&'a str, &'a str)]; 5],
 }
 
-/// The port's plugins. The packages are in the order a C build with them records them: from
-/// the configuration file, sorted by library name (`core`, `dot_layout`, `neato_layout`, then
-/// `pango`, whose package is `cairo`), each new one put first.
+/// The port's plugins. The packages are in the order a static C build records them:
+/// `lt_preloaded_symbols` lists `dot_layout`, `neato_layout`, `pango` (package `cairo`) and
+/// `core`, and `gvplugin_package_record` puts each new one first.
 pub const PORT_PLUGINS: Plugins<'static> = Plugins {
-    packages: &["cairo", "neato_layout", "dot_layout", "core"],
+    packages: &["core", "cairo", "neato_layout", "dot_layout"],
     apis: [
         &RENDER_PLUGINS,
         &LAYOUT_PLUGINS,
@@ -84,19 +87,6 @@ pub const PORT_PLUGINS: Plugins<'static> = Plugins {
         &LOADIMAGE_PLUGINS,
     ],
 };
-
-/// `gvc->common.verbose` (`-v[n]`), which the plugin lookups read.
-static VERBOSE: AtomicI32 = AtomicI32::new(0);
-
-/// Sets the run's verbose level (`-v`: 1, `-vN`: N).
-pub fn set_verbose(level: i32) {
-    VERBOSE.store(level, Ordering::Relaxed);
-}
-
-/// The run's verbose level.
-pub fn verbose() -> i32 {
-    VERBOSE.load(Ordering::Relaxed)
-}
 
 /// `gvplugin_load(gvc, api, req)`'s verbose line for the plugin found at `i` of `plugins`.
 fn using(api: usize, plugins: &[(&str, &str)], i: usize) {
@@ -135,8 +125,9 @@ pub fn load_device_quietly(req: &str) -> Option<&'static str> {
 }
 
 /// `gvplugin_write_status`: each API's plugins, as types, or at level 2 and up as
-/// `type:package`. A build without demand loading prints nothing about a configuration file.
+/// `type:package`, after the line a build without demand loading writes for it.
 pub fn write_status(plugins: &Plugins<'_>) {
+    fprintf_stderr("Demand loading of plugins is disabled.\n");
     let req = if verbose() >= 2 { ":" } else { "?" };
     for (api, list) in plugins.apis.iter().enumerate() {
         fprintf_stderr(&format!(
@@ -239,16 +230,38 @@ impl PluginGraph {
 /// The graph is built as DOT and read back. C declares its attributes with `agattr` and sets
 /// them with `agxset`, neither of which marks a symbol to be written (`sym->print`), as the
 /// root's attribute statements of the DOT text do: the marks are cleared again.
-pub fn plugin_graph(plugins: &Plugins<'_>) -> crate::Graph {
-    let mut graph = crate::parse_dot(&plugin_graph_dot(plugins)).expect("the plugin graph parses");
+///
+/// `globals` are the `-G`, `-N`, `-E` and `-A` attributes given before `-P`, on which
+/// `agopen` builds the graph (`ProtoGraph`). Those `gvplugin_graph` declares itself are
+/// replaced: its `agattr_text` gives them its own defaults.
+pub fn plugin_graph(plugins: &Plugins<'_>, globals: &crate::GlobalAttrs) -> crate::Graph {
+    const OWN: [&[&str]; 3] = [
+        &["label", "rankdir", "rank", "ranksep"],
+        &["label", "shape", "style", "width"],
+        &["style"],
+    ];
+    let mut globals = globals.clone();
+    let maps = [&mut globals.graph, &mut globals.node, &mut globals.edge];
+    for (map, own) in maps.into_iter().zip(OWN) {
+        for name in own {
+            map.remove(*name);
+            map.remove(&graphviz_pure_core::html_value_key(name));
+        }
+    }
+    let mut graph = graphviz_pure_parser::parse_dot_all(&plugin_graph_dot(plugins), &globals)
+        .ok()
+        .and_then(|gs| gs.into_iter().next())
+        .expect("the plugin graph parses");
     if let Some(d) = graph.dicts.first_mut() {
-        for sym in d
-            .graph
-            .values_mut()
-            .chain(d.node.values_mut())
-            .chain(d.edge.values_mut())
+        for (dict, own) in [&mut d.graph, &mut d.node, &mut d.edge]
+            .into_iter()
+            .zip(OWN)
         {
-            sym.print = false;
+            for name in own {
+                if let Some(sym) = dict.get_mut(*name) {
+                    sym.print = false;
+                }
+            }
         }
     }
     graph
@@ -562,7 +575,7 @@ mod tests {
     // layout (`-Tcanon`) and laid out (`-Tdot`), under the port's math.
     #[test]
     fn plugin_graph_of_the_reference_build_is_cs() {
-        let mut g = plugin_graph(&REFERENCE);
+        let mut g = plugin_graph(&REFERENCE, &crate::GlobalAttrs::default());
         crate::layout_graph(&mut g, crate::LayoutEngine::Dot).expect("layout");
         for (format, want) in [
             (

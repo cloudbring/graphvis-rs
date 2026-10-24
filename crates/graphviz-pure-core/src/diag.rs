@@ -40,6 +40,7 @@ thread_local! {
     static EMITTED: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
     static QUIET: Cell<u32> = const { Cell::new(0) };
     static SILENT: Cell<u32> = const { Cell::new(0) };
+    static VERBOSE: Cell<i32> = const { Cell::new(0) };
 }
 
 /// Increments `depth` for the life of the returned guard.
@@ -140,6 +141,27 @@ pub fn agwarningf(msg: &str) {
 /// `agerr(AGPREV, msg)`: continues the previous message.
 pub fn agerr_prev(msg: &str) {
     agerr(AgErrLevel::Prev, msg);
+}
+
+/// Sets `gvc->common.verbose`, the level `-v[n]` gives (`-v`: 1, `-vN`: N).
+pub fn set_verbose(level: i32) {
+    VERBOSE.with(|v| v.set(level));
+}
+
+/// `gvc->common.verbose`: the run's verbose level.
+pub fn verbose() -> i32 {
+    VERBOSE.with(Cell::get)
+}
+
+/// `Verbose`, the byte `gvParseArgs` keeps of the level (`lib/common/input.c:254`): above
+/// `UCHAR_MAX` it is `UCHAR_MAX`, below it its low byte.
+pub fn verbose_byte() -> u8 {
+    let v = verbose();
+    if v > i32::from(u8::MAX) {
+        u8::MAX
+    } else {
+        v as u8
+    }
 }
 
 /// `fprintf(stderr, msg)`: a message C writes without `agerr`, so with no level, no count and
