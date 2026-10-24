@@ -137,7 +137,7 @@ mode (C returns failure too).
 - The `makeMultiSpline` router's triangulation numbers faces in creation order,
   not GTS's pointer-hash order (see below).
 - VPSC's `std::set<Block*>` and scanline `NodeSet` pointer order are modelled
-  as allocation order (see below).
+  as creation order ("Ties by address" below).
 - When `IncVPSC::satisfy` fails during `mode=ipsep` ("Cycle Error!",
   "Unsatisfied constraint"), C aborts on the uncaught exception. The port, whose
   block order can fail where C's heap order does not, reads the positions back
@@ -249,6 +249,47 @@ into `bs`) is reproduced. `removeoverlaps`/`vpscAdjust` run on `float`
 coordinates as in C. 11 `hw3_vpsc_*` cases; one `mode=ipsep` case whose C
 output changes run to run (pointer order) is excluded from the corpus.
 
+#### Ties by address (#225)
+
+C's output under `mode=ipsep overlap=vpsc` with clusters depends on its allocator. VPSC's
+constraint generation keeps its scanline in a `std::set<Node*, CmpNodePos>`, ordered by
+position with ties broken by pointer (`lib/vpsc/generate-constraints.cpp:76-84`), and
+`Blocks` is a `std::set<Block*>`. Ties are common here: `initCMajVPSC` takes the last
+`2 * nclusters` nodes as the clusters' boundary variables (`lib/neatogen/quad_prog_vpsc.c:204-205`),
+and a member among them goes into the cluster's list twice, with the member's box and with
+the container's (`:414-415`). The port does the same.
+
+The port's order is monotone creation order. A scanline node's address is its index in the
+`generateX/YConstraints` call that makes it (`NodeKey`). A block's address is a counter that
+only grows over the solver's life (`Solver::next_addr`), whereas C's `~Blocks` frees each
+`IncVPSC`'s blocks. C's addresses come from macOS's allocator instead: each call frees its
+`make_shared` nodes with its event vector, the next call reuses those chunks, and the
+per-CPU magazines it draws from make the result change from run to run. With
+`MallocNanoZone=0 MallocMaxMagazines=1`, C is stable on each input but gives yet another
+layout on some.
+
+Measured on `tests/vpsc-ties/` (`scripts/gen-vpsc-ties.py`: chains with one-node or
+two-node clusters at the start, middle and end, random graphs with clusters, and #225's
+input) and the corpus's 5 `ipsep`/`vpsc` cluster files, 46 inputs, with
+`scripts/vpsc-ties-measure.py` (`tests/vpsc-ties/outcomes.tsv`). C ran with the port's math,
+10 times each:
+
+| C | Inputs | The port's output |
+|---|--:|---|
+| fails (`Cycle Error!`, segfault, `bitarray_set`'s assertion; #185, #168) | 28 | no panic (`issue225_vpsc_tie_inputs_c_fails_on_do_not_panic`) |
+| one output | 9 | equals it on 8 |
+| varies | 9 | is one of C's outputs on 7 |
+| any of the 18 it lays out, with `scripts/c-bump-malloc.c` (addresses in creation order) and address randomisation off | 18 | equals it on 18 |
+
+The last row is the decision's basis: apart from addresses, the port computes what C
+computes, and with addresses in creation order C's output is the port's. The one input
+where C is stable over 10 runs and the port differs, `chain-n8-k2-last.gv`, is no exception:
+with the bump allocator C gives the port's output, and with macOS's allocator C varies on
+it too (2 of 30 runs gave another output). Ordering later objects at lower addresses, as
+reusing freed chunks would, was also measured: it matches C's most frequent output on some
+inputs and loses on others. The port keeps creation order, the same on every platform
+(`issue225_vpsc_ties_follow_creation_order`, `node_key_breaks_position_ties_in_creation_order`).
+
 ### `mode=hier` (DiG-CoLa) and `mode=ipsep` — `neatogen::digcola`, `neatogen::cola`
 
 `stress_majorization_with_hierarchy`: `compute_y_coords` (CG on uniform
@@ -322,8 +363,9 @@ exact and `hw3_ports_b15(_splines)` check the same ports through neato.
   picks C's path, so the tie-break itself matches. See also #35 (face order).
   Tracked by the ignored test `neato_polyline_compass_port_routes_like_c`.
 - `splines=ortho` in neato is left to the dot-phase3 branch.
-- VPSC/IncVPSC pointer-ordered containers are approximated by allocation
-  order; C itself is not reproducible on some `mode=ipsep` inputs.
+- VPSC/IncVPSC pointer-ordered containers follow creation order; C's output
+  follows its allocator and is not reproducible on some `mode=ipsep` inputs
+  ("Ties by address" above).
 
 Ratchets at the end of this branch: main 504/508 exact (score 506.08),
 neato 438/438, sfdp 296/297, circo 279/280, twopi 280/282, fdp 383, osage 178,

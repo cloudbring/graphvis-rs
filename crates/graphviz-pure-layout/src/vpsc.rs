@@ -707,7 +707,9 @@ struct SNode {
     right: BTreeSet<NodeKey>,
 }
 
-/// `CmpNodePos` key: position, then the node's address (creation order).
+/// `CmpNodePos` key: position, then the node's address, here its creation order in the
+/// `generateX/YConstraints` call (`docs/porting/neato.md`, VPSC, "Ties by address"). The
+/// position is finite: [`rectangles`] refuses every box C's `Rectangle` asserts on.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct NodeKey(f64, usize);
 
@@ -995,6 +997,23 @@ pub fn gen_y_constraints(s: &mut Solver, bb: &[BoxF], vs: &[usize]) -> Option<Ve
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // #225: C breaks a position tie by the `Node` pointer; the port by creation order, the
+    // order a fresh heap's addresses would have.
+    #[test]
+    fn node_key_breaks_position_ties_in_creation_order() {
+        let mut set = BTreeSet::new();
+        for k in [
+            NodeKey(1.0, 3),
+            NodeKey(0.5, 7),
+            NodeKey(1.0, 1),
+            NodeKey(1.0, 2),
+        ] {
+            set.insert(k);
+        }
+        let order: Vec<usize> = set.iter().map(|k| k.1).collect();
+        assert_eq!(order, [7, 1, 2, 3]);
+    }
 
     /// #197: `a + 1 <= b` and `b + 1 <= a` cannot both hold, so `satisfy`
     /// fails with a cycle error after 10001 splits. The ipsep stress loop

@@ -4824,11 +4824,12 @@ fn ipsep_vpsc_cycle_error_ends_the_layout() {
 
 /// Issue #225: under `mode=ipsep overlap=vpsc`, a cluster member can also be one of the
 /// boundary variables `initCMajVPSC` takes from the last nodes (`quad_prog_vpsc.c:204-205`,
-/// `:414-415`), and VPSC breaks the ties that makes by heap address (`CmpNodePos`,
-/// `generate-constraints.cpp:76-84`). The port breaks them in creation order, a fresh
-/// heap's (`docs/porting/crashes.md`, "VPSC ties by heap address"). The first input C lays
-/// out the same way on every run; on the second (the issue's) C's output varies, and this is
-/// the one it gave in 5 of 20 runs. Output is C 16.1.0's.
+/// `:414-415`), and VPSC breaks the ties that makes by pointer (`CmpNodePos`,
+/// `generate-constraints.cpp:76-84`), so C's output follows its allocator. The port breaks
+/// them in creation order (`docs/porting/neato.md`, VPSC, "Ties by address"). Both expected
+/// outputs are C's, with the port's math: what C gives with a bump allocator (addresses in
+/// creation order), and also, with macOS's allocator, on 26 of 30 runs of the first input and
+/// 5 of 20 of the second (#225's). The reverse order gives another layout of the first.
 #[test]
 fn issue225_vpsc_ties_follow_creation_order() {
     for (src, want) in [
@@ -4901,6 +4902,27 @@ stop
         assert_eq!(err, "", "{src}");
         assert_eq!(out, want, "{src}");
     }
+}
+
+/// Issue #225: on the inputs of `tests/vpsc-ties/` where C fails (`Cycle Error!`, a
+/// segfault, `bitarray_set`'s assertion; `outcomes.tsv`, `scripts/vpsc-ties-measure.py`),
+/// the port lays out without panicking.
+#[test]
+fn issue225_vpsc_tie_inputs_c_fails_on_do_not_panic() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let outcomes = std::fs::read_to_string(root.join("tests/vpsc-ties/outcomes.tsv")).unwrap();
+    let mut n = 0;
+    for line in outcomes.lines().skip(1) {
+        let mut cols = line.split('\t');
+        let (Some(file), Some("fails")) = (cols.next(), cols.next()) else {
+            continue;
+        };
+        let src = std::fs::read_to_string(root.join(file)).unwrap();
+        let (_, err, _) = run(&["-Tplain"], &src);
+        assert!(!err.contains("panicked"), "{file}: {err}");
+        n += 1;
+    }
+    assert!(n >= 20, "{n}");
 }
 
 /// Issue #152: C's `main` takes its arguments as bytes; a file name that is not valid UTF-8
