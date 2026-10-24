@@ -401,7 +401,8 @@ fn issue298_plugin_graph_replaces_the_inputs() {
     let mut g = graphviz_pure::plugins::plugin_graph(
         &graphviz_pure::plugins::PORT_PLUGINS,
         &graphviz_pure::GlobalAttrs::default(),
-    );
+    )
+    .unwrap();
     graphviz_pure::layout_graph(&mut g, graphviz_pure::LayoutEngine::Dot).unwrap();
     let want = graphviz_pure::render_graph_named(&g, graphviz_pure::OutputFormat::Canon, "canon");
     assert_eq!(out, want.unwrap());

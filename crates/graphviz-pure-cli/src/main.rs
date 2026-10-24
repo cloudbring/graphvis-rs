@@ -343,6 +343,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
         match (bytes.first(), bytes.get(1)) {
             // `-v` is level 1, `-vN` level N when a digit follows.
             (Some(b'-'), Some(b'v')) => plugins::set_verbose(match bytes.get(2) {
+                // `atoi`'s `int`: the value's low 32 bits, as C keeps of a longer one.
                 Some(d) if d.is_ascii_digit() => atoi(&decode_slice(&bytes[2..])) as i32,
                 _ => 1,
             }),
@@ -750,7 +751,11 @@ impl Run<'_> {
     /// `-P`: the plugin graph (`gvPluginsGraph`), named `<internal>`, laid out and rendered
     /// instead of the inputs, which are not read.
     fn plugin_graph(&mut self, globals: &GlobalAttrs) -> io::Result<bool> {
-        let mut graph = plugins::plugin_graph(&plugins::PORT_PLUGINS, globals);
+        // The port's tables are fixed and all quotable (`plugin_graph`'s test).
+        let Some(mut graph) = plugins::plugin_graph(&plugins::PORT_PLUGINS, globals) else {
+            agerrorf("the plugin graph could not be made\n");
+            return Ok(true);
+        };
         let name = "<internal>";
         self.graph(&mut graph, Some(OsStr::new(name)), 0, name)
     }

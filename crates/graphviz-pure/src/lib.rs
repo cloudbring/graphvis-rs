@@ -12,7 +12,7 @@ pub use graphviz_pure_layout::{
 };
 pub use graphviz_pure_parser::{GlobalAttrs, GraphStream, parse_dot, parse_dot_all};
 pub use graphviz_pure_render::{
-    GraphJobs, OutputFormat, render_graph, render_graph_named, set_y_invert,
+    GraphJobs, OutputFormat, loadimage_installed, render_graph, render_graph_named, set_y_invert,
 };
 
 /// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the

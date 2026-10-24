@@ -158,20 +158,36 @@ fn alias(q: &str) -> (&str, &str) {
 #[derive(Default)]
 struct PluginGraph {
     out: String,
+    /// A name or value had no quoted DOT form.
+    unquotable: bool,
     /// The nodes of each subgraph (`""` for the root), for `agfindnode`.
     members: HashMap<String, HashSet<String>>,
     /// The edges, for `agfindedge`.
     edges: HashSet<(String, String)>,
 }
 
-fn quote(s: &str) -> String {
-    format!("\"{}\"", s.replace('"', "\\\""))
+/// `s` as a quoted DOT string. The scanner turns `\"` into `"` and drops a backslash before
+/// a newline, and keeps every other backslash; a string that ends with a backslash, or has
+/// one before a newline, has no quoted form.
+fn quote(s: &str) -> Option<String> {
+    if s.ends_with('\\') || s.contains("\\\n") {
+        return None;
+    }
+    Some(format!("\"{}\"", s.replace('"', "\\\"")))
 }
 
 impl PluginGraph {
+    fn quote(&mut self, s: &str) -> String {
+        quote(s).unwrap_or_else(|| {
+            self.unquotable = true;
+            String::new()
+        })
+    }
+
     fn stmt(&mut self, path: &[&str], stmt: &str) {
         for sg in path {
-            self.out.push_str(&format!("subgraph {} {{ ", quote(sg)));
+            let sg = self.quote(sg);
+            self.out.push_str(&format!("subgraph {sg} {{ "));
         }
         self.out.push_str(stmt);
         for _ in path {
@@ -196,18 +212,21 @@ impl PluginGraph {
 
     /// `agsubg` of the last of `path` and `agxset(sg, key, value)`.
     fn subgraph_attr(&mut self, path: &[&str], key: &str, value: &str) {
-        self.stmt(path, &format!("{key}={};", quote(value)));
+        let value = self.quote(value);
+        self.stmt(path, &format!("{key}={value};"));
     }
 
     /// `agnode(sg, name, 1)` for the last of `path` (the root when empty).
     fn node(&mut self, path: &[&str], name: &str) {
         self.add_member(path, name);
-        self.stmt(path, &format!("{};", quote(name)));
+        let name = self.quote(name);
+        self.stmt(path, &format!("{name};"));
     }
 
     /// `agxset(n, key, value)`: set from the root, which every node is in already.
     fn node_attr(&mut self, name: &str, key: &str, value: &str) {
-        self.stmt(&[], &format!("{} [{key}={}];", quote(name), quote(value)));
+        let (name, value) = (self.quote(name), self.quote(value));
+        self.stmt(&[], &format!("{name} [{key}={value}];"));
     }
 
     /// `agedge(sg, t, h, NULL, 1)`, a new edge, with its `style` when given.
@@ -215,8 +234,9 @@ impl PluginGraph {
         self.add_member(path, t);
         self.add_member(path, h);
         self.edges.insert((t.to_string(), h.to_string()));
-        let attrs = style.map_or_else(String::new, |s| format!(" [style={}]", quote(s)));
-        self.stmt(path, &format!("{} -> {}{attrs};", quote(t), quote(h)));
+        let attrs = style.map_or_else(String::new, |s| format!(" [style={}]", self.quote(s)));
+        let (t, h) = (self.quote(t), self.quote(h));
+        self.stmt(path, &format!("{t} -> {h}{attrs};"));
     }
 
     /// `agfindedge(g, t, h)`.
@@ -234,7 +254,10 @@ impl PluginGraph {
 /// `globals` are the `-G`, `-N`, `-E` and `-A` attributes given before `-P`, on which
 /// `agopen` builds the graph (`ProtoGraph`). Those `gvplugin_graph` declares itself are
 /// replaced: its `agattr_text` gives them its own defaults.
-pub fn plugin_graph(plugins: &Plugins<'_>, globals: &crate::GlobalAttrs) -> crate::Graph {
+///
+/// `None` when a plugin or package name has no quoted DOT form (it ends with a backslash);
+/// the port's own tables have none.
+pub fn plugin_graph(plugins: &Plugins<'_>, globals: &crate::GlobalAttrs) -> Option<crate::Graph> {
     const OWN: [&[&str]; 3] = [
         &["label", "rankdir", "rank", "ranksep"],
         &["label", "shape", "style", "width"],
@@ -248,10 +271,10 @@ pub fn plugin_graph(plugins: &Plugins<'_>, globals: &crate::GlobalAttrs) -> crat
             map.remove(&graphviz_pure_core::html_value_key(name));
         }
     }
-    let mut graph = graphviz_pure_parser::parse_dot_all(&plugin_graph_dot(plugins), &globals)
-        .ok()
-        .and_then(|gs| gs.into_iter().next())
-        .expect("the plugin graph parses");
+    let mut graph = graphviz_pure_parser::parse_dot_all(&plugin_graph_dot(plugins)?, &globals)
+        .ok()?
+        .into_iter()
+        .next()?;
     if let Some(d) = graph.dicts.first_mut() {
         for (dict, own) in [&mut d.graph, &mut d.node, &mut d.edge]
             .into_iter()
@@ -264,11 +287,11 @@ pub fn plugin_graph(plugins: &Plugins<'_>, globals: &crate::GlobalAttrs) -> crat
             }
         }
     }
-    graph
+    Some(graph)
 }
 
-/// The cgraph calls of `gvplugin_graph`, as DOT.
-fn plugin_graph_dot(plugins: &Plugins<'_>) -> String {
+/// The cgraph calls of `gvplugin_graph`, as DOT; `None` when a name has no quoted form.
+fn plugin_graph_dot(plugins: &Plugins<'_>) -> Option<String> {
     let mut g = PluginGraph::default();
     g.out.push_str("digraph \"G\" {\n");
     g.out
@@ -422,10 +445,10 @@ fn plugin_graph_dot(plugins: &Plugins<'_>) -> String {
                             g.edge(&[], &n, &output, None);
                         }
                         if let Some(p) = p.filter(|p| !p.is_empty()) {
+                            // C looks the renderer up in `output_formats`, where no renderer
+                            // is, and makes it in the root: `agnode` finds an existing one.
                             let render = format!("render_{p}");
-                            if !g.has(ssg, &render) {
-                                g.node(&[], &render);
-                            }
+                            g.node(&[], &render);
                             if !g.has_edge(&render, &n) {
                                 g.edge(&[], &render, &n, None);
                             }
@@ -444,9 +467,7 @@ fn plugin_graph_dot(plugins: &Plugins<'_>) -> String {
                             g.edge(&[], &input, &n, None);
                         }
                         let render = format!("render_{}", p.unwrap_or("(null)"));
-                        if !g.has("", &render) {
-                            g.node(&[], &render);
-                        }
+                        g.node(&[], &render);
                         if !g.has_edge(&n, &render) {
                             g.edge(&[], &n, &render, None);
                         }
@@ -457,7 +478,7 @@ fn plugin_graph_dot(plugins: &Plugins<'_>) -> String {
         }
     }
     g.out.push_str("}\n");
-    g.out
+    (!g.unquotable).then_some(g.out)
 }
 
 #[cfg(test)]
@@ -571,11 +592,45 @@ mod tests {
         apis: [&RENDER, &LAYOUT, &[], &DEVICE, &LOADIMAGE],
     };
 
+    // A name with no quoted DOT form gives no graph rather than a panic.
+    #[test]
+    fn plugin_graph_with_an_unquotable_name_is_none() {
+        let odd = Plugins {
+            packages: &["core\\"],
+            apis: [&[("dot", "core\\")], &[], &[], &[], &[]],
+        };
+        assert!(plugin_graph(&odd, &crate::GlobalAttrs::default()).is_none());
+        assert!(plugin_graph(&PORT_PLUGINS, &crate::GlobalAttrs::default()).is_some());
+    }
+
+    // The loadimage list is the renderer's own table: each `TYPE:RENDER` pair is listed
+    // exactly when `gvloadimage_select` finds a plugin for it.
+    #[test]
+    fn loadimage_list_is_the_renderers_table() {
+        let types = [
+            "(lib)", "bmp", "eps", "gif", "jpe", "jpeg", "jpg", "pdf", "png", "ps", "svg",
+        ];
+        let renders = RENDER_PLUGINS
+            .iter()
+            .map(|&(r, _)| r)
+            .chain(["fig", "map", "ps"]);
+        for render in renders {
+            for t in types {
+                let listed = LOADIMAGE_PLUGINS.contains(&(&format!("{t}:{render}"), "core"));
+                assert_eq!(
+                    listed,
+                    crate::loadimage_installed(t, render),
+                    "{t}:{render}"
+                );
+            }
+        }
+    }
+
     // `gvplugin_graph` of the reference build's plugins is C's `dot -P` graph: before
     // layout (`-Tcanon`) and laid out (`-Tdot`), under the port's math.
     #[test]
     fn plugin_graph_of_the_reference_build_is_cs() {
-        let mut g = plugin_graph(&REFERENCE, &crate::GlobalAttrs::default());
+        let mut g = plugin_graph(&REFERENCE, &crate::GlobalAttrs::default()).expect("quotable");
         crate::layout_graph(&mut g, crate::LayoutEngine::Dot).expect("layout");
         for (format, want) in [
             (
