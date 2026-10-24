@@ -9606,9 +9606,11 @@ fn issue283_failed_multicolor_draws_black_with_the_original_color_count() {
 }
 
 // Issue #385: C's `parseSegs` splits a colour list with `tok`, which yields an empty segment for a
-// leading or trailing `:`. The segment has no colour, takes the weight left unassigned, and
-// draws nothing: the red part of the edge and the red stripe are 30% long, and the wedge list
-// is not drawn. Output is C 16.1.0's.
+// leading or trailing `:`. The segment has no colour and takes the weight left unassigned. The
+// edge, stripe and wedge loops stop there: the red part of the edge and the red stripe are 30%
+// long, and the wedge list is not drawn. A gradient (`findStopColor`) takes an empty second
+// segment as no second colour and ends in black, for the graph, a node and an HTML cell.
+// Output is C 16.1.0's.
 #[test]
 fn issue385_empty_color_segment_takes_the_weight_left_like_c() {
     for (src, want, want_err) in [
@@ -9675,6 +9677,60 @@ fn issue385_empty_color_segment_takes_the_weight_left_like_c() {
              }\n",
             "Warning:  is not a known color.\n",
         ),
+        (
+            "digraph { bgcolor=\"red:\"; a }",
+            "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 40 -[0 18 54 18 2 0 7 -#ff0000 1 7 -#000000] P 4 0 0 0 36 54 36 54 0 \",\n\
+             \t\tbb=\"0,0,54,36\",\n\
+             \t\tbgcolor=\"red:\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"c 7 -#000000 e 27 18 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 6.21 1 -a \",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\twidth=0.75];\n\
+             }\n",
+            "",
+        ),
+        (
+            "digraph { a [style=filled fillcolor=\"red;0.3:\"] }",
+            "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 36 54 36 54 0 \",\n\
+             \t\tbb=\"0,0,54,36\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_draw_=\"c 7 -#000000 C 44 -[0 18 54 18 2 0.3 7 -#ff0000 0.3 7 -#000000] E 27 18 27 18 \",\n\
+             \t\t_ldraw_=\"F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 6.21 1 -a \",\n\
+             \t\tfillcolor=\"red;0.3:\",\n\
+             \t\theight=0.5,\n\
+             \t\tpos=\"27,18\",\n\
+             \t\tstyle=filled,\n\
+             \t\twidth=0.75];\n\
+             }\n",
+            "",
+        ),
+        (
+            "digraph { a [shape=plain label=<<TABLE><TR><TD BGCOLOR=\"red:\">x</TD></TR></TABLE>>] }",
+            "digraph {\n\
+             \tgraph [_draw_=\"c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 28.8 19 28.8 19 0 \",\n\
+             \t\tbb=\"0,0,19,28.8\",\n\
+             \t\txdotversion=1.7\n\
+             \t];\n\
+             \tnode [label=\"\\N\"];\n\
+             \ta\t[_ldraw_=\"S 5 -solid c 7 -#000000 p 4 0 0 0 28.8 19 28.8 19 0 S 5 -solid c 9 -#fffffe00 C 44 -[3 14.4 16 14.4 2 0 7 -#ff0000 1 7 -#000000] \\\n\
+             P 4 3 3 3 25.8 16 25.8 16 3 S 5 -solid c 7 -#000000 p 4 3 3 3 25.8 16 25.8 16 3 F 14 11 -Times-Roman c 7 -#000000 T 6 8.8 -1 7 1 \\\n\
+             -x \",\n\
+             \t\theight=0.4,\n\
+             \t\tlabel=<<TABLE><TR><TD BGCOLOR=\"red:\">x</TD></TR></TABLE>>,\n\
+             \t\tpos=\"9.5,14.4\",\n\
+             \t\tshape=plain,\n\
+             \t\twidth=0.26389];\n\
+             }\n",
+            "",
+        ),
     ] {
         let (out, err, ok) = run(&["-Txdot"], src);
         assert!(ok, "{src}");
@@ -9682,8 +9738,9 @@ fn issue385_empty_color_segment_takes_the_weight_left_like_c() {
     }
     // An edge whose first segment is empty: C's `multicolor` sets the arrow's colour to that
     // segment's NULL colour and crashes in `gvrender_set_pencolor`. The port draws no arrow in
-    // that colour, so its output is C's for the same edge with `dir=none`
-    // (`docs/porting/crashes.md`, "Empty colour segments").
+    // that colour, so its SVG drawing is C's for the same edge with `dir=none`; the layout
+    // (`-Tdot`'s `pos`) is still the arrowed edge's (`docs/porting/crashes.md`, "Empty colour
+    // segments").
     let (out, err, ok) = run(&["-Tsvg"], "digraph { a -> b [color=\":red;0.3\"] }");
     assert!(ok, "{err}");
     assert_eq!(err, "");

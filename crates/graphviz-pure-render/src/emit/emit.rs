@@ -35,24 +35,14 @@ fn aeq0(x: f64) -> bool {
 
 /// `tok(clrs, ":")` of `lib/util/tokenize.h`: the tokens between runs of `:`. Unlike
 /// `strtok`, it yields an empty token before a leading `:` and after a trailing one (and
-/// `""` gives one empty token), but none between two `:` in a row (#385).
+/// `""` gives one empty token), but none between two `:` in a row (#385). That is
+/// `split(':')` with its empty pieces dropped, except the first and the last.
 fn tok_colon(clrs: &str) -> impl Iterator<Item = &str> {
-    let mut rest = Some(clrs);
-    let mut first = true;
-    std::iter::from_fn(move || {
-        let mut r = rest?;
-        if !std::mem::take(&mut first) {
-            // tok_next: stop at the end of the string, else skip the separators.
-            if r.is_empty() {
-                rest = None;
-                return None;
-            }
-            r = r.trim_start_matches(':');
-        }
-        let (t, after) = r.split_at(r.find(':').unwrap_or(r.len()));
-        rest = Some(after);
-        Some(t)
-    })
+    let n = clrs.split(':').count();
+    clrs.split(':')
+        .enumerate()
+        .filter(move |&(i, t)| i == 0 || i + 1 == n || !t.is_empty())
+        .map(|(_, t)| t)
 }
 
 /// `parseSegs`: `Err(1|2)` on error, `Ok((segs, rval))` with `rval` 0 or 3. Like C's
@@ -1681,8 +1671,9 @@ impl<'a, E: Engine> Emitter<'a, E> {
             // where the first segment is empty (`":red;0.3"`), and `endcolor`, NULL too where
             // no colored segment with a weight above 0 comes before the first empty one
             // (`"red;0.000001:"`); `gvrender_set_pencolor` dereferences the NULL and C crashes
-            // (#385). The port draws no arrow without a color, as no part of the spline is
-            // drawn in it: C's output for the same edge with `dir=none`.
+            // (#385). The port draws no arrow without a color: C's drawing of the same edge
+            // with `dir=none`, the input C handles nearest (crashes.md, "Empty colour
+            // segments", says why not #283's black fallback).
             if bz.sflag != 0
                 && let Some(c) = segs.first().and_then(|s| s.color.clone())
             {
@@ -1897,6 +1888,21 @@ mod tests {
         assert_eq!(segs("red;0.3:"), [(Some("red".into()), 30.0), (None, 70.0)]);
         assert_eq!(segs(":red;0.3"), [(None, 70.0), (Some("red".into()), 30.0)]);
         assert_eq!(segs(":red"), [(None, 50.0), (Some("red".into()), 50.0)]);
+        assert_eq!(segs(""), [(None, 100.0)]);
+    }
+
+    /// #385: a gradient's empty second segment is no second color, as in C's `findStopColor`.
+    #[test]
+    fn find_stop_color_with_an_empty_second_segment() {
+        assert_eq!(
+            super::find_stop_color("red:"),
+            Some(("red".to_string(), None, 0.0))
+        );
+        assert_eq!(
+            super::find_stop_color("red;0.3:"),
+            Some(("red".to_string(), None, 0.3))
+        );
+        assert_eq!(super::find_stop_color(":red"), None);
     }
 
     /// The `set_fillcolor` calls of rendering `a -> b [attrs]` with invisible nodes.
