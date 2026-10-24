@@ -380,6 +380,59 @@ fn nop_without_positions_still_renders() {
     );
 }
 
+// Issue #362: C's jobs share one cgraph, so the second xdot job reads the `xdotversion` the
+// first one set.
+#[test]
+fn xdot_after_xdot1_2_writes_version_1_2() {
+    let (out, _, ok) = run(&["-Txdot1.2", "-Txdot"], "digraph { a }");
+    assert!(ok);
+    assert_eq!(out.matches("xdotversion=1.2").count(), 2, "{out}");
+}
+
+// Issue #367: a later job writes the `_draw_` an earlier xdot or json job set, on the root and
+// on every cluster, also when the input declares `_draw_`.
+#[test]
+fn a_later_job_writes_the_draw_an_earlier_job_set() {
+    let src = "digraph G { graph [bb=\"\", lp=\"\", _draw_=\"\", label=\"\"]; \
+               subgraph cluster_a { label=A; a -> b; subgraph cluster_n { label=N; n } } \
+               subgraph s { e } subgraph cluster_c { c } b -> c; d }";
+    let (xdot, _, _) = run(&["-Txdot"], src);
+    for first in ["-Txdot", "-Tjson"] {
+        for later in ["-Tdot", "-Tcanon"] {
+            let (out, _, ok) = run(&[first, later], src);
+            assert!(ok);
+            let start = out.rfind("digraph G {").unwrap();
+            let last = &out[start..];
+            assert!(!last.contains("_draw_=\"\""), "{first} {later}: {last}");
+            assert_eq!(
+                last.matches("_draw_=").count(),
+                xdot.matches("_draw_=").count(),
+                "{first} {later}: {last}"
+            );
+        }
+    }
+}
+
+// Issue #108: `-Tcanon` lays out, so it reports what the layout reports and fails when the
+// layout does.
+#[test]
+fn canon_reports_layout_warnings_and_failures() {
+    let (_, err, ok) = run(
+        &["-Tcanon"],
+        "digraph G { pack=true; newrank=true; subgraph cluster_a { a -> b; } b -> c; }",
+    );
+    assert!(ok);
+    assert_eq!(err, "Warning: removing empty cluster\n");
+    let (out, err, ok) = run(
+        &["-Tcanon"],
+        "digraph { subgraph cluster_0 { a b } subgraph cluster_1 { b c } a -> c; \
+         {rank=min; b} {rank=max; a} }",
+    );
+    assert!(!ok);
+    assert!(err.contains("Error: trouble in init_rank\n"), "{err}");
+    assert!(out.contains("\tsubgraph cluster_0 {\n\t}\n"), "{out}");
+}
+
 #[test]
 fn undirected_graph_has_no_arrowhead() {
     let (out, _, ok) = run(&["-Tsvg"], "graph{a--b}");
