@@ -4641,6 +4641,28 @@ fn issue364_epsf_clip_uses_the_flipped_node_size() {
 }
 "#,
         ),
+        (
+            // with splines=curved, dot keeps a self-loop's space in ND_rw when it clips, so
+            // lw and rw differ: swapping them, or taking width / 2 for both, fails here
+            "digraph { rankdir=LR; splines=curved; a [shape=epsf]; a -> a; a -> b }",
+            r#"digraph {
+	graph [bb="0,0,144,54",
+		rankdir=LR,
+		splines=curved
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		pos="27,18",
+		shape=epsf,
+		width=0.75];
+	a -> a	[pos="e,27,18 27,18 27,18 27,18 27,18"];
+	b	[height=0.5,
+		pos="117,18",
+		width=0.75];
+	a -> b	[pos="e,93.537,8.9608 62.824,5.4525 69.783,4.0712 75.745,4.1923 82.879,5.8157"];
+}
+"#,
+        ),
     ] {
         let (out, err, ok) = run(&["-Tdot"], src);
         assert!(ok, "{err}");

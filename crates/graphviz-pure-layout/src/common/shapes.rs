@@ -605,8 +605,9 @@ impl NodeShape {
 }
 
 /// Per-clip state of C's `inside_t` (`s.last` speeds up polygon tests and can
-/// change results for non-convex shapes, so it is kept).
-#[derive(Debug, Clone, Copy, Default)]
+/// change results for non-convex shapes, so it is kept). Built by
+/// [`crate::common::splines::inside_ctx`], which reads the node's sizes from the layout.
+#[derive(Debug, Clone, Copy)]
 pub struct InsideCtx {
     pub last: usize,
     /// Port box (`inside_context->s.bp`), in node coordinates.
@@ -618,7 +619,7 @@ pub struct InsideCtx {
     pub scale: Option<Point>,
     /// `ND_lw`, `ND_rw` and `ND_ht` of the node when it is clipped (dot has them
     /// flipped under `rankdir=LR`/`RL`); `epsf_inside` tests against these.
-    pub extent: Option<(f64, f64, f64)>,
+    pub extent: (f64, f64, f64),
 }
 
 fn same_side(p0: Point, p1: Point, l0: Point, l1: Point) -> bool {
@@ -650,6 +651,9 @@ impl NodeShape {
                 math::hypot(pr.x, pr.y) <= radius
             }
             InsideFn::Record => {
+                // record_inside tests the rotated point against fld0->b, which record_init
+                // builds at the node's unflipped width and height (shapes.c:3700), so unlike
+                // epsf it does not read the layout's (flipped) ND_lw/ND_rw/ND_ht.
                 let mut b =
                     ctx.bp
                         .or(self.record_box)
@@ -667,9 +671,7 @@ impl NodeShape {
                 inside_box(pr, &b)
             }
             InsideFn::Epsf => {
-                let (lw, rw, ht) =
-                    ctx.extent
-                        .unwrap_or((self.width / 2.0, self.width / 2.0, self.height));
+                let (lw, rw, ht) = ctx.extent;
                 let x2 = ht / 2.0;
                 pr.y >= -x2 && pr.y <= x2 && pr.x >= -lw && pr.x <= rw
             }
