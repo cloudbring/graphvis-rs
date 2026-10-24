@@ -357,32 +357,14 @@ impl<'g> GraphJobs<'g> {
     pub fn render_as(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
         let graph = self.graph;
         graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
-            self.render_job(job, format, name, false)
+            self.render_job(job, format, name)
         })
     }
 
-    /// [`Self::render_as`] for the SVG a raster format (`png`, `jpg`) is drawn from. C draws
-    /// those with cairo or gd, whose render features have neither `GVRENDER_DOES_MAPS` nor
-    /// `GVRENDER_DOES_TOOLTIPS` (`render_features_cairo`, gvrender_pango.c): the job runs
-    /// without them, so it makes no anchors and no map shapes.
-    pub fn render_svg_for_raster(&mut self, job: usize) -> Result<String> {
-        let graph = self.graph;
-        graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
-            self.render_job(job, OutputFormat::Svg, "svg", true)
-        })
-    }
-
-    fn render_job(
-        &mut self,
-        job: usize,
-        format: OutputFormat,
-        name: &str,
-        raster: bool,
-    ) -> Result<String> {
+    fn render_job(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
         let opts = emit::RunJob {
             job: Some(job),
             output_file: self.output_file,
-            raster,
         };
         let graph = self.graph;
         let cgraph = self.cgraph.as_ref().unwrap_or(graph);

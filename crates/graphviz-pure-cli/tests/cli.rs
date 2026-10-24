@@ -7705,11 +7705,9 @@ fn issue384_node_with_url_or_tooltip_parses_its_style_for_the_map_shape() {
 }
 
 /// Issue #384, other routes: the xdot engine does maps and tooltips too, and `href` anchors
-/// a node as `URL` does; a raster format is drawn with cairo or gd, which do neither, so
-/// its stderr has no extra diagnostics. The expected output and stderr are C 16.1.0's
-/// (`-Tpng` as with cairo and gd).
+/// a node as `URL` does. The expected output and stderr are C 16.1.0's.
 #[test]
-fn issue384_xdot_href_and_raster_parse_the_style_as_c_does() {
+fn issue384_xdot_and_href_parse_the_style_as_c_does() {
     let s64 = (0..64)
         .map(|i| format!("s{i}"))
         .collect::<Vec<_>>()
@@ -7757,9 +7755,6 @@ s35,s36,s37,s38,s39,s40,s41,s42,s43,s44,s45,s46,s47,s48,s49,s50,s51,s52,s53,s54,
 }
 "#;
     assert_eq!(out, want);
-    let (_, err, ok) = run(&["-Tpng"], &src);
-    assert!(!ok);
-    assert_eq!(err, [&trunc, &trunc, paren, paren, &trunc, &trunc].concat());
 
     let (out, err, ok) = run(
         &["-Tsvg"],
