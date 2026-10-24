@@ -529,8 +529,8 @@ impl PackGraph for DotPack<'_, '_> {
 }
 
 /// `doDot(g)` with the root state `d` (after `graph_init`): plain `dotLayout`,
-/// or the pack branch. `maxphase` is the `phase` attribute.
-pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), String> {
+/// or the pack branch, which packs the components whatever their `phase`.
+pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
     let DoDot::Pack(mut pinfo) = d.do_dot_mode() else {
         return d.dot_layout();
     };
@@ -598,9 +598,6 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph, maxphase: i32) -> Result<(), Strin
         }
         any_splines |= c.splines_done;
         comps.push(comp);
-    }
-    if (1..=3).contains(&maxphase) {
-        return Ok(());
     }
     // attachPos
     let pos: Vec<Point> = d

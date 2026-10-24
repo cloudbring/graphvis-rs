@@ -15,6 +15,7 @@ pub struct Output {
     /// size, when `translate_drawing` did not reset them (`gv_nodesize` runs for
     /// rankdir != TB, unless the layout was abandoned and no postprocessing ran).
     node_size: Vec<Option<(f64, f64, f64)>>,
+    /// `attach_phase_attrs(g, n)`: write `rank` (and `order` from 2) for `phase=n`.
     phase_attrs: Option<i32>,
     bb: BoundingBox,
     cluster_bb: Vec<(usize, BoundingBox)>,
@@ -112,29 +113,9 @@ fn cc_subgraphs(d: &Dot<'_>, kept: &[G]) -> Vec<CcSub> {
 }
 
 impl Output {
-    pub fn phase(d: &Dot<'_>, maxphase: i32) -> Output {
-        let n = d.input.nodes.len();
-        Output {
-            node_pos: vec![Some(Point::new(0.0, 0.0)); n],
-            node_rank: (0..n)
-                .map(|i| (d.nodes[i].rank, d.nodes[i].order))
-                .collect(),
-            node_size: vec![None; n],
-            phase_attrs: Some(maxphase),
-            bb: BoundingBox::new(0.0, 0.0, 0.0, 0.0),
-            cluster_bb: Vec::new(),
-            edges: Vec::new(),
-            edge_layout: Vec::new(),
-            node_xlp: Vec::new(),
-            graph_lp: None,
-            cluster_lp: Vec::new(),
-            cluster_list: Vec::new(),
-            cc_subgraphs: Vec::new(),
-            membership: membership(d),
-        }
-    }
-
-    pub fn collect(d: &Dot<'_>) -> Output {
+    /// The layout's results, with `rank` and `order` attached when `phase_attrs` is
+    /// `attach_phase_attrs`'s level.
+    pub fn collect(d: &Dot<'_>, phase_attrs: Option<i32>) -> Output {
         let n = d.input.nodes.len();
         let node_pos = (0..n).map(|i| Some(d.nodes[i].coord)).collect();
         let node_rank = (0..n)
@@ -266,7 +247,7 @@ impl Output {
             node_pos,
             node_rank,
             node_size,
-            phase_attrs: None,
+            phase_attrs,
             bb,
             cluster_bb,
             edges,
