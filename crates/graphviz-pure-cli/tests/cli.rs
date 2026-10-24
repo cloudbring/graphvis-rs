@@ -8002,6 +8002,72 @@ fn issue324_json_writes_a_declared_edge_label_with_no_value() {
     }
 }
 
+// Issue #304: `bindattrs` declares a new graph attribute with `agattr(S->g, AGRAPH, name, "")`,
+// whose `agxset_` gives the subgraph a local symbol. The statement then updates that local
+// symbol, so `unviewsubgraphsattr` gives each child subgraph its own `""`, an anonymous one
+// too. Output is C 16.1.0's.
+#[test]
+fn issue304_a_new_graph_attribute_gives_child_subgraphs_their_empty_value() {
+    for (src, expected) in [
+        (
+            "graph { subgraph cluster_a { subgraph cluster_b { x } graph [xlabel=\"1\"] } }",
+            r#"graph {
+	graph [bb="0,0,102,84"];
+	node [label="\N"];
+	subgraph cluster_a {
+		graph [bb="8,8,94,76",
+			xlabel=1
+		];
+		subgraph cluster_b {
+			graph [bb="16,16,86,68",
+				xlabel=""
+			];
+			x	[height=0.5,
+				pos="51,42",
+				width=0.75];
+		}
+	}
+}
+"#,
+        ),
+        (
+            "digraph { subgraph cluster0 { a -> {c b}; label=\"cluster0\" } }",
+            r#"digraph {
+	graph [bb="0,0,158,164.8"];
+	node [label="\N"];
+	subgraph cluster0 {
+		graph [bb="8,8,150,156.8",
+			label=cluster0,
+			lheight=0.23,
+			lp="79,144.4",
+			lwidth=0.62
+		];
+		{
+			graph [label=""];
+			c	[height=0.5,
+				pos="43,34",
+				width=0.75];
+			b	[height=0.5,
+				pos="115,34",
+				width=0.75];
+		}
+		a	[height=0.5,
+			pos="79,106",
+			width=0.75];
+		a -> c	[pos="e,51.304,51.147 70.65,88.765 66.425,80.548 61.192,70.373 56.419,61.093"];
+		a -> b	[pos="e,106.7,51.147 87.35,88.765 91.575,80.548 96.808,70.373 101.58,61.093"];
+	}
+}
+"#,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tdot"], src);
+        assert!(ok);
+        assert_eq!(err, "");
+        assert_eq!(out, expected, "{src}");
+    }
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
