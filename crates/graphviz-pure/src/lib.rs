@@ -1,6 +1,8 @@
 //! High-level Graphviz orchestration engine (`graphviz-pure`).
+//!
+//! DOT text taken and returned here is in the port's decoded form ([`charset`]).
 
-pub use graphviz_pure_core::{Graph, GraphvizError, Result};
+pub use graphviz_pure_core::{Graph, GraphvizError, Result, charset};
 pub use graphviz_pure_layout::fdpgen::tlayout::FdpParms;
 pub use graphviz_pure_layout::{
     LayoutEngine, LayoutOptions, layout_graph, layout_graph_with_options,
@@ -13,10 +15,10 @@ pub use graphviz_pure_render::{
 /// End-to-end DOT rendering pipeline for any supported engine and output format. Renders the
 /// first graph in `dot_source`.
 ///
-/// `dot_source` and the output are in the port's decoded form
-/// ([`graphviz_pure_core::charset`]), as for every function here: for ordinary text that may
-/// hold U+10FF00..=U+10FFFF, pass `charset::from_text(text)` and read the output with
-/// `charset::to_text`.
+/// `dot_source` and the output are in the port's decoded form ([`charset`]), as for every
+/// function in this crate that takes or returns DOT text. For ordinary text that may hold
+/// U+10FF00..=U+10FFFF, pass [`charset::from_text`]`(text)` and read the output with
+/// [`charset::to_text`].
 pub fn render_dot(dot_source: &str, engine: &str, format: &str) -> Result<String> {
     let output_format = OutputFormat::parse(format)?;
     // Each call is one C process: per-process counters (gradient and anchor ids) restart.

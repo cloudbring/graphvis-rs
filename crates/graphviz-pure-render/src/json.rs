@@ -154,7 +154,9 @@ impl P<'_> {
 }
 
 fn parse_color(s: &str) -> Option<Grad> {
-    let b = s.as_bytes();
+    // As `parse_xdot`: C's bytes, whose strings `P::string` decodes again.
+    let bytes = graphviz_pure_core::charset::encode(s);
+    let b = &*bytes;
     let stops = |p: &mut P| -> Option<Vec<(f64, String)>> {
         let n = p.int()?;
         let mut v = Vec::new();

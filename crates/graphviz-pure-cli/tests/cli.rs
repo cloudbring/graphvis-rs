@@ -6774,6 +6774,19 @@ fn issue151_real_chars_of_the_raw_byte_range_keep_their_bytes() {
         "{out}"
     );
 
+    // HTML text: expat's character data is measured on its bytes too.
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        "digraph { b [label=<<table><tr><td>\u{10ffff}</td></tr></table>>] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: Warning: no value for width of non-ASCII character 244. Falling back to \
+         width of space character\n"
+    );
+    assert!(out.starts_with("graph 1 0.82496 0.72282\n"), "{out}");
+
     // expat gives the char back as its bytes: `sides` warns about each one.
     let (out, err, ok) = run(
         &["-Tplain"],
