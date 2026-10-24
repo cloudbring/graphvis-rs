@@ -295,16 +295,14 @@ impl<'a> LGraph<'a> {
         self.src.graph_attrs.get(key).map(String::as_str)
     }
 
-    /// Whether any edge declares `key` (`agattr(g, AGEDGE, key, 0) != NULL`).
+    /// Whether edges declare `key` (`agattr(g, AGEDGE, key, 0) != NULL`).
     pub fn edge_attr_declared(&self, key: &str) -> bool {
-        self.src.edge_defaults.contains_key(key)
-            || self.src.edges.iter().any(|e| e.attrs.contains_key(key))
+        self.src.edge_attr_declared(key)
     }
 
-    /// Whether any node declares `key`.
+    /// Whether nodes declare `key` (`agfindnodeattr`).
     pub fn node_attr_declared(&self, key: &str) -> bool {
-        self.src.node_defaults.contains_key(key)
-            || self.src.nodes.iter().any(|n| n.attrs.contains_key(key))
+        self.src.node_attr_declared(key)
     }
 
     pub fn is_directed(&self) -> bool {

@@ -198,8 +198,7 @@ pub(super) fn warn_start_self(init: i32) {
 /// `scan_graph`'s `setEdgeLen` under `neato -n` (`Nop`, where `len=0` is good): of its work
 /// only the `bad edge len` warnings show. Edges go by tail, as `agfstout` gives them.
 pub fn nop_check_edge_lens(graph: &graphviz_pure_core::Graph) {
-    let declared = graph.edge_defaults.contains_key("len")
-        || graph.edges.iter().any(|e| e.attrs.contains_key("len"));
+    let declared = graph.edge_attr_declared("len");
     if !declared {
         return;
     }

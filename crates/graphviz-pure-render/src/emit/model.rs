@@ -241,11 +241,7 @@ impl<'g> Model<'g> {
 
     /// `N_penwidth != NULL`: some node declares `penwidth`.
     pub fn node_penwidth_declared(&self) -> bool {
-        self.g
-            .nodes
-            .iter()
-            .any(|n| n.attrs.contains_key("penwidth"))
-            || self.g.node_defaults.contains_key("penwidth")
+        self.g.node_attr_declared("penwidth")
     }
 
     pub fn centered(&self) -> bool {

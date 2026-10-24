@@ -27,9 +27,14 @@ impl Dot<'_> {
     pub fn edge_attr_declared(&self, k: &str) -> bool {
         self.edge_decls
             .get_or_init(|| {
+                // [`graphviz_pure_core::Graph::edge_attr_declared`] for every key at once.
                 let g = self.root_input;
-                g.edge_defaults
-                    .keys()
+                g.dicts
+                    .first()
+                    .into_iter()
+                    .flat_map(|d| d.edge.keys())
+                    .chain(g.edge_defaults.keys())
+                    .chain(g.subgraphs.iter().flat_map(|s| s.edge_defaults.keys()))
                     .chain(g.edges.iter().flat_map(|e| e.attrs.keys()))
                     .cloned()
                     .collect()

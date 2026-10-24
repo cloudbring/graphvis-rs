@@ -599,4 +599,18 @@ mod tests {
             parse_dot("digraph { a -> b [key=\"%k\"]; a -> b [key=\"%k\", color=red] }").unwrap();
         assert_eq!(g.edges.len(), 1);
     }
+
+    // Issue #291: a subgraph's defaults declare their attributes on the root's dictionary
+    // (`agfindnodeattr` finds them from any graph), not only for the subgraph.
+    #[test]
+    fn subgraph_defaults_declare_attributes_for_the_whole_graph() {
+        let g = parse_dot("graph { subgraph s { node [z=1]; edge [len=2]; foo=1 } a; b -- c }")
+            .unwrap();
+        assert!(g.node_attr_declared("z"));
+        assert!(g.edge_attr_declared("len"));
+        assert!(g.graph_attr_declared("foo"));
+        assert!(g.node_attr_declared("label"));
+        assert!(!g.node_attr_declared("len") && !g.edge_attr_declared("z"));
+        assert!(!g.graph_attr_declared("z"));
+    }
 }

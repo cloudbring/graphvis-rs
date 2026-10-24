@@ -283,16 +283,8 @@ impl<'a> LGraph<'a> {
                 path: Vec::new(),
             });
         }
-        let has_labelangle = graph.edge_defaults.contains_key("labelangle")
-            || graph
-                .edges
-                .iter()
-                .any(|e| e.attrs.contains_key("labelangle"));
-        let has_labeldistance = graph.edge_defaults.contains_key("labeldistance")
-            || graph
-                .edges
-                .iter()
-                .any(|e| e.attrs.contains_key("labeldistance"));
+        let has_labelangle = graph.edge_attr_declared("labelangle");
+        let has_labeldistance = graph.edge_attr_declared("labeldistance");
 
         // cgraph orders a node's out-edges by head sequence, then edge
         // sequence (`agedgeseqcmpf`); in-edges by tail, then edge.
