@@ -8,7 +8,6 @@
 //! object). Attributes such as `xlp` or `lp` in the input are not layout results: only
 //! `neato -n` reads them, as its layout.
 
-use super::arrows::arrow_flags;
 use super::attrs::Attrs;
 use graphviz_pure_core::font::{PostscriptFontAlias, TextJustify, translate_postscript_fontname};
 use graphviz_pure_core::strtod::sscanf;
@@ -311,52 +310,17 @@ impl<'g> Model<'g> {
         for (ei, e) in g.edges.iter().enumerate() {
             out_edges[e.tail.0 as usize].push(ei);
             let a = Attrs(&e.attrs);
-            let (mut stype, mut etype) = arrow_flags(a, directed);
-            // concentrate=true merges the arrowheads of an opposing edge into
-            // this one (`ED_conc_opp_flag` in arrow_flags). Unless the layout
-            // passes its flags (below), only the presence of an arrow is known,
-            // so take its type from the first opposing edge.
-            let has_s = e.spline.segments.iter().any(|s| s.start_arrow.is_some());
-            let has_e = e.spline.segments.iter().any(|s| s.end_arrow.is_some());
-            if (has_s && stype == 0) || (has_e && etype == 0) {
-                let opp = g
-                    .edges
-                    .iter()
-                    .find(|o| o.tail == e.head && o.head == e.tail)
-                    .map(|o| arrow_flags(Attrs(&o.attrs), directed));
-                if let Some((os, oe)) = opp {
-                    stype |= oe;
-                    etype |= os;
-                }
-            }
-            // The layout's own flags, where cgraph's choice of opposing edge decides them.
-            let mut conc_flags = e.layout.conc_arrows.iter().flatten().copied();
+            // The layout's `bz.sflag`/`bz.eflag`, which `emit_edge_graphics` draws.
             let bz = e
                 .spline
                 .segments
                 .iter()
                 .map(|s| Bz {
                     list: s.points.clone(),
-                    // An end the layout swapped (`swapEnds`, e.g. flat edges
-                    // routed backwards) carries the other end's arrow type.
-                    sflag: match (s.start_arrow.is_some(), stype) {
-                        (false, _) => 0,
-                        (true, 0) => etype,
-                        (true, t) => t,
-                    },
-                    eflag: match (s.end_arrow.is_some(), etype) {
-                        (false, _) => 0,
-                        (true, 0) => stype,
-                        (true, t) => t,
-                    },
+                    sflag: s.sflag,
+                    eflag: s.eflag,
                     sp: s.start_arrow.unwrap_or_default(),
                     ep: s.end_arrow.unwrap_or_default(),
-                })
-                .map(|mut bz| {
-                    if let Some((s, e)) = conc_flags.next() {
-                        (bz.sflag, bz.eflag) = (s, e);
-                    }
-                    bz
                 })
                 .collect();
             let tname = &g.nodes[e.tail.0 as usize].name;

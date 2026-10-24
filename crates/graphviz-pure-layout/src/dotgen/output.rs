@@ -230,9 +230,6 @@ impl Output {
                 ed.tail_port.name.clone().unwrap_or_default(),
                 ed.head_port.name.clone().unwrap_or_default(),
             ));
-            if ed.conc_opp_flag {
-                el.conc_arrows = Some(bzs.iter().map(|bz| (bz.sflag, bz.eflag)).collect());
-            }
             edge_layout.push(el);
             let spline = Spline {
                 segments: bzs
@@ -241,6 +238,8 @@ impl Output {
                         points: bz.list.clone(),
                         start_arrow: (bz.sflag != 0).then_some(bz.sp),
                         end_arrow: (bz.eflag != 0).then_some(bz.ep),
+                        sflag: bz.sflag,
+                        eflag: bz.eflag,
                     })
                     .collect(),
             };

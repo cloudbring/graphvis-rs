@@ -368,6 +368,8 @@ impl<'a> LGraph<'a> {
                                 points: b.list.clone(),
                                 start_arrow: (b.sflag != 0).then_some(b.sp),
                                 end_arrow: (b.eflag != 0).then_some(b.ep),
+                                sflag: b.sflag,
+                                eflag: b.eflag,
                             })
                             .collect()
                     })
