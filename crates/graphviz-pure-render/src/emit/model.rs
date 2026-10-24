@@ -313,8 +313,8 @@ impl<'g> Model<'g> {
             let a = Attrs(&e.attrs);
             let (mut stype, mut etype) = arrow_flags(a, directed);
             // concentrate=true merges the arrowheads of an opposing edge into
-            // this one (`ED_conc_opp_flag` in arrow_flags). Unless the layout
-            // passes its flags (below), only the presence of an arrow is known,
+            // this one (`ED_conc_opp_flag` in arrow_flags). Where the layout
+            // passes no flags (below), only the presence of an arrow is known,
             // so take its type from the first opposing edge.
             let has_s = e.spline.segments.iter().any(|s| s.start_arrow.is_some());
             let has_e = e.spline.segments.iter().any(|s| s.end_arrow.is_some());
@@ -329,16 +329,18 @@ impl<'g> Model<'g> {
                     etype |= os;
                 }
             }
-            // The layout's own flags, where cgraph's choice of opposing edge decides them.
-            let mut conc_flags = e.layout.conc_arrows.iter().flatten().copied();
+            // dot's own flags (`bz.sflag`, `bz.eflag`), after `swap_ends` and the
+            // opposing edge's merge.
+            let mut layout_flags = e.layout.arrow_flags.iter().flatten().copied();
             let bz = e
                 .spline
                 .segments
                 .iter()
                 .map(|s| Bz {
                     list: s.points.clone(),
-                    // An end the layout swapped (`swapEnds`, e.g. flat edges
-                    // routed backwards) carries the other end's arrow type.
+                    // Without the layout's flags (splines read from `pos`), an
+                    // end dot swapped (`swapEnds`, e.g. flat edges routed
+                    // backwards) carries the other end's arrow type.
                     sflag: match (s.start_arrow.is_some(), stype) {
                         (false, _) => 0,
                         (true, 0) => etype,
@@ -353,7 +355,7 @@ impl<'g> Model<'g> {
                     ep: s.end_arrow.unwrap_or_default(),
                 })
                 .map(|mut bz| {
-                    if let Some((s, e)) = conc_flags.next() {
+                    if let Some((s, e)) = layout_flags.next() {
                         (bz.sflag, bz.eflag) = (s, e);
                     }
                     bz

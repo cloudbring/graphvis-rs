@@ -8325,6 +8325,92 @@ fn issue331_arrow_warnings_come_from_the_layouts_arrow_flags() {
     );
 }
 
+/// Issue #285: `arrow_clip` (splines.c:64) swaps a backwards-routed edge's arrow flags
+/// (`swap_ends`) and `emit_edge_graphics` draws the spline's `sflag`/`eflag`. The renderer
+/// rebuilt the types from the edge's attributes and, for `f -> g:n`, took its swapped start
+/// arrow from the opposing `g -> f`: a normal arrowhead where C draws a dot. The expected
+/// SVG is C 16.1.0's, after the generator comment.
+#[test]
+fn issue285_swapped_end_draws_the_layouts_arrow_type() {
+    let src = "digraph G { rankdir=LR; subgraph cluster1 { c; e; a subgraph cluster1_in { f } \
+               label=C1; } f -> g [minlen=0]; g -> f; f -> g [headport=n,arrowhead=dot]; e -> f; }";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    let want = r#"<!-- Title: G Pages: 1 -->
+<svg width="192pt" height="254pt"
+ viewBox="0.00 0.00 192.00 254.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 250.11)">
+<title>G</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-250.11 188,-250.11 188,4 -4,4"/>
+<g id="clust1" class="cluster">
+<title>cluster1</title>
+<polygon fill="none" stroke="black" points="8,-8 8,-193 176,-193 176,-8 8,-8"/>
+<text xml:space="preserve" text-anchor="middle" x="92" y="-176.4" font-family="Times,serif" font-size="14.00">C1</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster1_in</title>
+<polygon fill="none" stroke="black" points="98,-108 98,-160 168,-160 168,-108 98,-108"/>
+</g>
+<!-- c -->
+<g id="node1" class="node">
+<title>c</title>
+<ellipse fill="none" stroke="black" cx="43" cy="-34" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="43" y="-29.8" font-family="Times,serif" font-size="14.00">c</text>
+</g>
+<!-- e -->
+<g id="node2" class="node">
+<title>e</title>
+<ellipse fill="none" stroke="black" cx="43" cy="-88" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="43" y="-83.8" font-family="Times,serif" font-size="14.00">e</text>
+</g>
+<!-- f -->
+<g id="node4" class="node">
+<title>f</title>
+<ellipse fill="none" stroke="black" cx="133" cy="-134" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="133" y="-129.8" font-family="Times,serif" font-size="14.00">f</text>
+</g>
+<!-- e&#45;&gt;f -->
+<g id="edge4" class="edge">
+<title>e&#45;&gt;f</title>
+<path fill="none" stroke="black" d="M64.85,-98.9C75.63,-104.53 88.98,-111.51 100.94,-117.77"/>
+<polygon fill="black" stroke="black" points="99.16,-120.79 109.65,-122.32 102.41,-114.58 99.16,-120.79"/>
+</g>
+<!-- a -->
+<g id="node3" class="node">
+<title>a</title>
+<ellipse fill="none" stroke="black" cx="43" cy="-142" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="43" y="-137.8" font-family="Times,serif" font-size="14.00">a</text>
+</g>
+<!-- g -->
+<g id="node5" class="node">
+<title>g</title>
+<ellipse fill="none" stroke="black" cx="133" cy="-219" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="133" y="-214.8" font-family="Times,serif" font-size="14.00">g</text>
+</g>
+<!-- f&#45;&gt;g -->
+<g id="edge1" class="edge">
+<title>f&#45;&gt;g</title>
+<path fill="none" stroke="black" d="M133,-189.66C133,-177.32 133,-163.24 133,-152.46"/>
+<polygon fill="black" stroke="black" points="129.5,-189.29 133,-199.29 136.5,-189.29 129.5,-189.29"/>
+</g>
+<!-- f&#45;&gt;g -->
+<g id="edge3" class="edge">
+<title>f&#45;&gt;g:n</title>
+<path fill="none" stroke="black" d="M138.44,-245.39C144.61,-246.82 154.53,-243 160,-237.32 182.95,-213.51 160.28,-172.6 144.79,-150.4"/>
+<ellipse fill="black" stroke="black" cx="135.74" cy="-241.89" rx="4" ry="4"/>
+</g>
+<!-- g&#45;&gt;f -->
+<g id="edge2" class="edge">
+<title>g&#45;&gt;f</title>
+<path fill="none" stroke="black" d="M133,-200.75C133,-188.38 133,-176 133,-163.63"/>
+<polygon fill="black" stroke="black" points="136.5,-163.78 133,-153.78 129.5,-163.78 136.5,-163.78"/>
+</g>
+</g>
+</svg>
+"#;
+    assert_eq!(out.split_once(" -->\n").map(|(_, b)| b), Some(want));
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
