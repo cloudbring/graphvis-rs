@@ -470,13 +470,15 @@ mod tests {
     /// The port panicked on an `unwrap`; now the maze fails.
     #[test]
     fn touching_tiny_node_boxes_fail_the_maze() {
-        let nodes = [
-            (Point::new(0.72, 10.16), 0.72, 1.44),
-            (Point::new(10.72, 0.72), 0.72, 1.44),
-            (Point::new(22.72, 10.16), 0.72, 1.44),
-            (Point::new(20.72, 10.16), 0.72, 1.44),
-        ];
-        assert!(mk_maze(&nodes).is_err());
+        crate::cutil::in_fresh_run(|| {
+            let nodes = [
+                (Point::new(0.72, 10.16), 0.72, 1.44),
+                (Point::new(10.72, 0.72), 0.72, 1.44),
+                (Point::new(22.72, 10.16), 0.72, 1.44),
+                (Point::new(20.72, 10.16), 0.72, 1.44),
+            ];
+            assert!(mk_maze(&nodes).is_err());
+        });
     }
 
     /// Issue #202 review: walking down from a small node lands on a node cell
@@ -485,13 +487,15 @@ mod tests {
     /// the walk; C builds the maze and routes the edges. The port must too.
     #[test]
     fn three_sided_node_cell_ends_the_mark_small_walk() {
-        let nodes = [
-            (Point::new(3.0, 5.5), 4.0, 4.0),
-            (Point::new(9.5, 10.0), 1.0, 0.5),
-            (Point::new(1.0, 9.0), 6.0, 1.0),
-            (Point::new(10.5, 10.0), 0.5, 0.5),
-        ];
-        assert!(mk_maze(&nodes).is_ok());
+        crate::cutil::in_fresh_run(|| {
+            let nodes = [
+                (Point::new(3.0, 5.5), 4.0, 4.0),
+                (Point::new(9.5, 10.0), 1.0, 0.5),
+                (Point::new(1.0, 9.0), 6.0, 1.0),
+                (Point::new(10.5, 10.0), 0.5, 0.5),
+            ];
+            assert!(mk_maze(&nodes).is_ok());
+        });
     }
 
     #[test]
@@ -510,34 +514,36 @@ mod tests {
     /// fails the maze instead.
     #[test]
     fn non_finite_node_box_fails_the_maze() {
-        let nodes = [
-            (Point::new(58.0, 18.0), 54.0, 36.0),
-            (
-                Point::new(f64::INFINITY, 112.0),
-                77.864_504_732_387_15,
-                36.0,
-            ),
-            (
-                Point::new(181.447_833_640_676_58, 112.0),
-                122.895_667_281_353_17,
-                36.0,
-            ),
-            (Point::new(181.0, 18.0), 54.0, 36.0),
-            (Point::new(29.0, 100.0), 54.0, 36.0),
-            (Point::new(87.0, 100.0), 54.0, 36.0),
-            (
-                Point::new(292.896_757_820_101_7, 112.0),
-                91.793_515_640_203_44,
-                36.0,
-            ),
-            (Point::new(58.0, 58.0), 54.0, 36.0),
-            (Point::new(181.0, 58.0), 54.0, 36.0),
-            (Point::new(293.0, 58.0), 54.0, 36.0),
-        ];
-        let fail = mk_maze(&nodes).unwrap_err();
-        assert_eq!(fail, Fail::NoCell { node: 1, side: 1 });
-        // What C prints before its assertion fails (#127).
-        assert_eq!(fail.c_message().as_deref(), Some("failed at node 1[1]\n"));
+        crate::cutil::in_fresh_run(|| {
+            let nodes = [
+                (Point::new(58.0, 18.0), 54.0, 36.0),
+                (
+                    Point::new(f64::INFINITY, 112.0),
+                    77.864_504_732_387_15,
+                    36.0,
+                ),
+                (
+                    Point::new(181.447_833_640_676_58, 112.0),
+                    122.895_667_281_353_17,
+                    36.0,
+                ),
+                (Point::new(181.0, 18.0), 54.0, 36.0),
+                (Point::new(29.0, 100.0), 54.0, 36.0),
+                (Point::new(87.0, 100.0), 54.0, 36.0),
+                (
+                    Point::new(292.896_757_820_101_7, 112.0),
+                    91.793_515_640_203_44,
+                    36.0,
+                ),
+                (Point::new(58.0, 58.0), 54.0, 36.0),
+                (Point::new(181.0, 58.0), 54.0, 36.0),
+                (Point::new(293.0, 58.0), 54.0, 36.0),
+            ];
+            let fail = mk_maze(&nodes).unwrap_err();
+            assert_eq!(fail, Fail::NoCell { node: 1, side: 1 });
+            // What C prints before its assertion fails (#127).
+            assert_eq!(fail.c_message().as_deref(), Some("failed at node 1[1]\n"));
+        });
     }
 
     /// Issue #203: the tiny touching point nodes of a dot `splines=ortho` graph.
@@ -546,24 +552,26 @@ mod tests {
     /// panicked in `convert_sp_to_route`.
     #[test]
     fn partition_without_free_cells_fails_the_maze() {
-        let centres = [
-            (5.0, 57.36),
-            (7.0, 47.92),
-            (6.0, 38.48),
-            (2.0, 29.04),
-            (11.0, 29.04),
-            (11.0, 19.6),
-            (5.0, 10.16),
-            (0.0, 0.72),
-            (23.0, 10.16),
-            (-1.0, 19.6),
-            (-1.0, 10.16),
-            (-2.0, 0.72),
-        ];
-        let nodes: Vec<_> = centres
-            .iter()
-            .map(|&(x, y)| (Point::new(x, y), 1.44, 1.44))
-            .collect();
-        assert!(mk_maze(&nodes).is_err());
+        crate::cutil::in_fresh_run(|| {
+            let centres = [
+                (5.0, 57.36),
+                (7.0, 47.92),
+                (6.0, 38.48),
+                (2.0, 29.04),
+                (11.0, 29.04),
+                (11.0, 19.6),
+                (5.0, 10.16),
+                (0.0, 0.72),
+                (23.0, 10.16),
+                (-1.0, 19.6),
+                (-1.0, 10.16),
+                (-2.0, 0.72),
+            ];
+            let nodes: Vec<_> = centres
+                .iter()
+                .map(|&(x, y)| (Point::new(x, y), 1.44, 1.44))
+                .collect();
+            assert!(mk_maze(&nodes).is_err());
+        });
     }
 }

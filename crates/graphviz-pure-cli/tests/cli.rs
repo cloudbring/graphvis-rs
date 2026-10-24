@@ -6915,7 +6915,12 @@ fn issue290_later_graphs_continue_the_runs_random_state() {
     let zs: Vec<&str> = out
         .split("z=")
         .skip(1)
-        .map(|s| &s[..s.find(']').unwrap_or(0)])
+        .map(|s| {
+            let end = s
+                .find([',', ']'])
+                .unwrap_or_else(|| panic!("unterminated z in {out}"));
+            &s[..end]
+        })
         .collect();
     assert_eq!(
         zs,

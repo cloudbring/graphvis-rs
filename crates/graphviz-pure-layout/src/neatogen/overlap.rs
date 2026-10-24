@@ -7,7 +7,7 @@ use super::adjust::{AdjustData, DFLT_MARGIN, sep_factor};
 use super::delaunay::delaunay_tri;
 use crate::common::types::{LGraph, Sub};
 use crate::common::utils::map_bool;
-use crate::cutil::{CRand, qsort_by};
+use crate::cutil::qsort_by;
 use crate::sfdpgen::post_process::{RelativePositionConstraints, StressMajorizationSmoother};
 use crate::sparse::{Format, MACHINEACC, SparseMatrix, distance};
 use graphviz_pure_core::math;
@@ -339,7 +339,6 @@ pub fn remove_overlap(
     ntry: i32,
     initial_scaling: f64,
     do_shrinking: bool,
-    crand: &mut CRand,
 ) {
     remove_overlap_el(
         dim,
@@ -350,7 +349,6 @@ pub fn remove_overlap(
         initial_scaling,
         None,
         do_shrinking,
-        crand,
     );
 }
 
@@ -366,7 +364,6 @@ pub fn remove_overlap_el(
     initial_scaling: f64,
     constraints: Option<&RelativePositionConstraints>,
     do_shrinking: bool,
-    crand: &mut CRand,
 ) {
     let epsilon = 0.005;
     let large = 100_000.0;
@@ -432,11 +429,11 @@ pub fn remove_overlap_el(
             i += 1;
             continue;
         }
-        res = sm.smooth_with(dim, x, 1, constraints, crand);
+        res = sm.smooth_with(dim, x, 1, constraints);
         i += 1;
     }
     if has_penalty_terms {
-        remove_overlap_el(dim, a, x, label_sizes, ntry, 0.0, None, do_shrinking, crand);
+        remove_overlap_el(dim, a, x, label_sizes, ntry, 0.0, None, do_shrinking);
     }
 }
 
@@ -506,11 +503,7 @@ pub fn fdp_adjust(g: &mut LGraph<'_>, sub: &Sub, am: &AdjustData) {
         t
     };
     let shrink = map_bool(g.gattr("overlap_shrink"), true);
-    let mut crand = g.crand;
-    remove_overlap(
-        dim, &mut a, &mut pos, &sizes, am.value, am.scaling, shrink, &mut crand,
-    );
-    g.crand = crand;
+    remove_overlap(dim, &mut a, &mut pos, &sizes, am.value, am.scaling, shrink);
     for &v in &sub.nodes {
         let i = g.nodes[v].id;
         for k in 0..dim {

@@ -16,7 +16,7 @@ use super::quad_prog_vpsc::unpack_matrix;
 use super::stress::*;
 use super::{MODEL_CIRCUIT, MODEL_MDS, MODEL_SUBSET, SolverError};
 use crate::common::types::LGraph;
-use crate::cutil::{CRand, Drand48, qsort_by};
+use crate::cutil::qsort_by;
 use graphviz_pure_core::cnum::c_max;
 
 const LOCAL_CONSTR_MAJOR_ITERATIONS: i32 = 15;
@@ -26,9 +26,9 @@ const RANGE: i32 = 500;
 const SCALE_FACTOR: DistType = 256;
 
 /// `init_vec_orth1(n, vec)`: `rand() % 500`, centred.
-fn init_vec_orth1(crand: &mut CRand, n: usize, vec: &mut [f64]) {
+fn init_vec_orth1(n: usize, vec: &mut [f64]) {
     for v in vec.iter_mut().take(n) {
-        *v = (crand.rand() % RANGE) as f64;
+        *v = (crate::cutil::rand() % RANGE) as f64;
     }
     orthog1(&mut vec[..n]);
 }
@@ -52,7 +52,6 @@ fn construct_b(graph: &[VtxData], n: usize, b: &mut [f64]) {
 /// `compute_y_coords(graph, n, y_coords, max_iterations)`: solve `L y = b`
 /// with uniform edge weights.
 pub fn compute_y_coords(
-    crand: &mut CRand,
     graph: &[VtxData],
     n: usize,
     y_coords: &mut [f64],
@@ -60,7 +59,7 @@ pub fn compute_y_coords(
 ) -> Result<(), SolverError> {
     let mut b = vec![0.0f64; n];
     construct_b(graph, n, &mut b);
-    init_vec_orth1(crand, n, y_coords);
+    init_vec_orth1(n, y_coords);
     // replace original edge weights (lengths) with uniform weights
     let uniform: Vec<VtxData> = graph[..n]
         .iter()
@@ -82,7 +81,6 @@ pub fn compute_y_coords(
 /// `(ordering, levels, num_levels)`; `ordering[levels[i]]` is the first node
 /// of level `i + 1`.
 pub fn compute_hierarchy(
-    crand: &mut CRand,
     graph: &[VtxData],
     n: usize,
     abs_tol: f64,
@@ -94,7 +92,7 @@ pub fn compute_hierarchy(
         Some(y) => y,
         None => {
             let mut v = vec![0.0f64; n];
-            compute_y_coords(crand, graph, n, &mut v, n)?;
+            compute_y_coords(graph, n, &mut v, n)?;
             owned = v;
             &owned
         }
@@ -177,7 +175,6 @@ fn scalar_mult(v: &mut [f64], n: usize, alpha: f64) {
 /// `power_iteration_orthog`.
 #[allow(clippy::too_many_arguments)]
 fn power_iteration_orthog(
-    crand: &mut CRand,
     square_mat: &[Vec<f32>],
     n: usize,
     mut neigs: usize,
@@ -198,7 +195,7 @@ fn power_iteration_orthog(
         loop {
             // choose: guess the i-th eigen vector
             for j in 0..n {
-                eigs[i][j] = (crand.rand() % 100) as f64;
+                eigs[i][j] = (crate::cutil::rand() % 100) as f64;
             }
             let alpha = -vectors_inner_product(n, orthog, &eigs[i]);
             scadd(&mut eigs[i], n - 1, alpha, orthog);
@@ -242,7 +239,7 @@ fn power_iteration_orthog(
     let _ = exited;
     while i < neigs {
         for j in 0..n {
-            eigs[i][j] = (crand.rand() % 100) as f64;
+            eigs[i][j] = (crate::cutil::rand() % 100) as f64;
         }
         for j in 0..i {
             let (a, b) = eigs.split_at_mut(i);
@@ -301,7 +298,6 @@ fn compute_bij(dij: &[Vec<DistType>], n: usize) -> Vec<Vec<f32>> {
 }
 
 fn cmds_orthog(
-    crand: &mut CRand,
     n: usize,
     dim: usize,
     eigs: &mut [Vec<f64>],
@@ -313,7 +309,7 @@ fn cmds_orthog(
     let mut evals = vec![0.0f64; dim];
     let mut orthog_aux = orthog[..n].to_vec();
     standardize(&mut orthog_aux, n);
-    power_iteration_orthog(crand, &bij, n, dim, eigs, &mut evals, &orthog_aux, tol);
+    power_iteration_orthog(&bij, n, dim, eigs, &mut evals, &orthog_aux, tol);
     for i in 0..dim {
         let s = evals[i].abs().sqrt();
         for j in 0..n {
@@ -338,7 +334,6 @@ fn compute_apsp(graph: &[VtxData], n: usize) -> Vec<Vec<DistType>> {
 
 /// `IMDS_given_dim(graph, n, given_coords, new_coords, conj_tol)`.
 pub fn imds_given_dim(
-    crand: &mut CRand,
     graph: &[VtxData],
     n: usize,
     x: &mut [f64],
@@ -370,7 +365,7 @@ pub fn imds_given_dim(
     // smart ini:
     {
         let mut eigs = vec![y[..n].to_vec()];
-        cmds_orthog(crand, n, 1, &mut eigs, conj_tol, x, &dij);
+        cmds_orthog(n, 1, &mut eigs, conj_tol, x, &dij);
         y[..n].copy_from_slice(&eigs[0]);
     }
     // Laplacian
@@ -808,8 +803,6 @@ fn distance_kd(coords: &[Vec<f64>], dim: usize, i: usize, j: usize) -> f64 {
 pub fn stress_majorization_with_hierarchy(
     g: &LGraph<'_>,
     params: &NeatoParams,
-    rng: &mut Drand48,
-    crand: &mut CRand,
     graph: &[VtxData],
     n: usize,
     d_coords: &mut [Vec<f64>],
@@ -832,20 +825,17 @@ pub fn stress_majorization_with_hierarchy(
             }
         }
     }
-    let mkernel =
-        |rng: &mut Drand48, crand: &mut CRand, d: &mut [Vec<f64>], dim: usize, maxi: i64| {
-            stress_majorization_kd_mkernel(
-                g, params, rng, crand, graph, n, d, nodes, dim, opts, model, maxi,
-            )
-        };
+    let mkernel = |d: &mut [Vec<f64>], dim: usize, maxi: i64| {
+        stress_majorization_kd_mkernel(g, params, graph, n, d, nodes, dim, opts, model, maxi)
+    };
     if !directionality {
-        return mkernel(rng, crand, d_coords, dim, maxi);
+        return mkernel(d_coords, dim, maxi);
     }
 
     let (ordering, levels, num_levels);
     if smart_ini {
         if dim > 2 {
-            mkernel(rng, crand, &mut d_coords[1..], dim - 1, 15)?;
+            mkernel(&mut d_coords[1..], dim - 1, 15)?;
             for i in 0..n {
                 d_coords[dim - 1][i] = d_coords[1][i];
             }
@@ -853,10 +843,10 @@ pub fn stress_majorization_with_hierarchy(
         let (xs, rest) = d_coords.split_at_mut(1);
         let x = &mut xs[0];
         let y = &mut rest[0];
-        compute_y_coords(crand, graph, n, y, n)?;
-        let (o, l, nl) = compute_hierarchy(crand, graph, n, abs_tol, relative_tol, Some(y))?;
+        compute_y_coords(graph, n, y, n)?;
+        let (o, l, nl) = compute_hierarchy(graph, n, abs_tol, relative_tol, Some(y))?;
         if nl < 1 {
-            return mkernel(rng, crand, d_coords, dim, maxi);
+            return mkernel(d_coords, dim, maxi);
         }
         if levels_gap > 0.0 {
             let mut displacement = 0.0f64;
@@ -873,14 +863,14 @@ pub fn stress_majorization_with_hierarchy(
             }
         }
         if dim == 2 {
-            imds_given_dim(crand, graph, n, y, x, params.epsilon)?;
+            imds_given_dim(graph, n, y, x, params.epsilon)?;
         }
         ordering = o;
         levels = l;
         num_levels = nl;
     } else {
-        init_layout(g, rng, n, dim, d_coords, nodes);
-        let (o, l, nl) = compute_hierarchy(crand, graph, n, abs_tol, relative_tol, None)?;
+        init_layout(g, n, dim, d_coords, nodes);
+        let (o, l, nl) = compute_hierarchy(graph, n, abs_tol, relative_tol, None)?;
         ordering = o;
         levels = l;
         num_levels = nl;

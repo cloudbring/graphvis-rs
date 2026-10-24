@@ -10,17 +10,11 @@ use super::graphdata::VtxData;
 use super::matrix_ops::*;
 use super::stress::{TOLERANCE_CG, with_new_weights};
 use super::{NeatoParams, SolverError};
-use crate::cutil::{CRand, RAND_MAX, qsort_by};
+use crate::cutil::{RAND_MAX, qsort_by};
 
 /// `embed_graph(graph, n, dim, &coords, reweight_graph)`: distances to
 /// `dim` pivots chosen by max-min.
-fn embed_graph(
-    graph: &[VtxData],
-    n: usize,
-    dim: usize,
-    reweight: bool,
-    crand: &mut CRand,
-) -> Vec<Vec<DistType>> {
+fn embed_graph(graph: &[VtxData], n: usize, dim: usize, reweight: bool) -> Vec<Vec<DistType>> {
     let g2;
     let gr = if reweight {
         g2 = with_new_weights(graph, n);
@@ -30,7 +24,7 @@ fn embed_graph(
     };
     let mut coords = vec![vec![0 as DistType; n]; dim];
     let mut dist = vec![0 as DistType; n];
-    let mut node = (crand.rand() as usize) % n;
+    let mut node = (crate::cutil::rand() as usize) % n;
     if reweight {
         ngdijkstra(node, gr, n, &mut coords[0]);
     } else {
@@ -77,13 +71,7 @@ fn center_coordinate(coords: &mut [Vec<DistType>], n: usize) {
 }
 
 /// `power_iteration(square_mat, n, neigs, eigs)`; false if it did not converge.
-fn power_iteration(
-    m: &[Vec<f64>],
-    n: usize,
-    neigs: usize,
-    eigs: &mut [Vec<f64>],
-    crand: &mut CRand,
-) -> bool {
+fn power_iteration(m: &[Vec<f64>], n: usize, neigs: usize, eigs: &mut [Vec<f64>]) -> bool {
     let neigs = neigs.min(n);
     let mut tmp = vec![0.0f64; n];
     let mut last = vec![0.0f64; n];
@@ -95,7 +83,7 @@ fn power_iteration(
     'outer: while i < neigs {
         loop {
             for j in 0..n {
-                eigs[i][j] = f64::from(crand.rand() % 100);
+                eigs[i][j] = f64::from(crate::cutil::rand() % 100);
             }
             for j in 0..i {
                 let alpha = -vectors_inner_product(n, &eigs[j], &eigs[i]);
@@ -138,7 +126,7 @@ fn power_iteration(
     }
     while i < neigs {
         for j in 0..n {
-            eigs[i][j] = f64::from(crand.rand() % 100);
+            eigs[i][j] = f64::from(crate::cutil::rand() % 100);
         }
         for j in 0..i {
             let alpha = -vectors_inner_product(n, &eigs[j], &eigs[i]);
@@ -177,7 +165,6 @@ fn pca_alloc(
     n: usize,
     new_coords: &mut [Vec<f64>],
     new_dim: usize,
-    crand: &mut CRand,
 ) {
     let mut eigs = vec![vec![0.0f64; dim]; new_dim];
     let mut dd = vec![vec![0.0f64; dim]; dim];
@@ -191,7 +178,7 @@ fn pca_alloc(
             dd[j][i] = sum;
         }
     }
-    power_iteration(&dd, dim, new_dim, &mut eigs, crand);
+    power_iteration(&dd, dim, new_dim, &mut eigs);
     for j in 0..new_dim {
         for i in 0..n {
             let mut sum = 0.0f64;
@@ -216,20 +203,20 @@ struct PairHeap {
 }
 
 impl PairHeap {
-    fn greater(&self, i: usize, j: usize, crand: &mut CRand) -> bool {
+    fn greater(&self, i: usize, j: usize) -> bool {
         self.data[i].dist < self.data[j].dist
-            || (self.data[i].dist == self.data[j].dist && crand.rand() % 2 != 0)
+            || (self.data[i].dist == self.data[j].dist && crate::cutil::rand() % 2 != 0)
     }
 
-    fn heapify(&mut self, mut i: usize, crand: &mut CRand) {
+    fn heapify(&mut self, mut i: usize) {
         loop {
             let (l, r) = (2 * i, 2 * i + 1);
-            let mut largest = if l < self.size && self.greater(l, i, crand) {
+            let mut largest = if l < self.size && self.greater(l, i) {
                 l
             } else {
                 i
             };
-            if r < self.size && self.greater(r, largest, crand) {
+            if r < self.size && self.greater(r, largest) {
                 largest = r;
             }
             if largest == i {
@@ -240,18 +227,18 @@ impl PairHeap {
         }
     }
 
-    fn extract_max(&mut self, crand: &mut CRand) -> Option<Pair> {
+    fn extract_max(&mut self) -> Option<Pair> {
         if self.size == 0 {
             return None;
         }
         let m = self.data[0];
         self.data[0] = self.data[self.size - 1];
         self.size -= 1;
-        self.heapify(0, crand);
+        self.heapify(0);
         Some(m)
     }
 
-    fn insert(&mut self, e: Pair, crand: &mut CRand) {
+    fn insert(&mut self, e: Pair) {
         let mut i = self.size;
         if self.data.len() <= i {
             self.data.push(e);
@@ -259,7 +246,7 @@ impl PairHeap {
             self.data[i] = e;
         }
         self.size += 1;
-        while i > 0 && self.greater(i, i / 2, crand) {
+        while i > 0 && self.greater(i, i / 2) {
             self.data.swap(i, i / 2);
             i /= 2;
         }
@@ -267,12 +254,7 @@ impl PairHeap {
 }
 
 /// `closest_pairs2graph(place, n, num_pairs, &graph)`.
-fn closest_pairs2graph(
-    place: &[f64],
-    n: usize,
-    num_pairs: usize,
-    crand: &mut CRand,
-) -> Vec<VtxData> {
+fn closest_pairs2graph(place: &[f64], n: usize, num_pairs: usize) -> Vec<VtxData> {
     let mut ordering: Vec<usize> = (0..n).collect();
     qsort_by(&mut ordering, |a, b| {
         if place[*a] < place[*b] {
@@ -301,7 +283,7 @@ fn closest_pairs2graph(
     if n != 0 {
         let mut j = (n - 1) / 2;
         loop {
-            heap.heapify(j, crand);
+            heap.heapify(j);
             if j == 0 {
                 break;
             }
@@ -318,7 +300,7 @@ fn closest_pairs2graph(
     }
     let mut stack: Vec<Pair> = Vec::new();
     for _ in 0..num_pairs {
-        let Some(pair) = heap.extract_max(crand) else {
+        let Some(pair) = heap.extract_max() else {
             break;
         };
         stack.push(pair);
@@ -327,14 +309,11 @@ fn closest_pairs2graph(
         if li > 0 {
             let nb = ordering[li - 1];
             if inv[right[nb]] < ri {
-                heap.insert(
-                    Pair {
-                        left: nb,
-                        right: pair.right,
-                        dist: place[pair.right] - place[nb],
-                    },
-                    crand,
-                );
+                heap.insert(Pair {
+                    left: nb,
+                    right: pair.right,
+                    dist: place[pair.right] - place[nb],
+                });
                 right[nb] = pair.right;
                 left[pair.right] = nb;
             }
@@ -342,14 +321,11 @@ fn closest_pairs2graph(
         if ri < n - 1 {
             let nb = ordering[ri + 1];
             if inv[left[nb]] > li {
-                heap.insert(
-                    Pair {
-                        left: pair.left,
-                        right: nb,
-                        dist: place[nb] - place[pair.left],
-                    },
-                    crand,
-                );
+                heap.insert(Pair {
+                    left: pair.left,
+                    right: nb,
+                    dist: place[nb] - place[pair.left],
+                });
                 left[nb] = pair.left;
                 right[pair.left] = nb;
             }
@@ -385,9 +361,8 @@ fn iterative_pca_1d(
     dim: usize,
     n: usize,
     new_direction: &mut Vec<f64>,
-    crand: &mut CRand,
 ) -> bool {
-    let lap = closest_pairs2graph(&coords[0], n, 4 * n, crand);
+    let lap = closest_pairs2graph(&coords[0], n, 4 * n);
     // mult_sparse_dense_mat_transpose(lap, coords, n, dim) -> n x dim (float)
     let mut mat1 = vec![vec![0.0f32; dim]; n];
     for i in 0..n {
@@ -412,7 +387,7 @@ fn iterative_pca_1d(
         }
     }
     let mut eigs = vec![std::mem::take(new_direction)];
-    let r = power_iteration(&mat, dim, 1, &mut eigs, crand);
+    let r = power_iteration(&mat, dim, 1, &mut eigs);
     *new_direction = eigs.pop().unwrap();
     r
 }
@@ -454,7 +429,6 @@ fn compute_stress1(coords: &[Vec<f64>], d: &[DistData], dim: usize, n: usize, ex
 #[allow(clippy::too_many_arguments)]
 pub fn sparse_stress_subspace_majorization_kd(
     params: &NeatoParams,
-    crand: &mut CRand,
     graph: &[VtxData],
     n: usize,
     coords: &mut [Vec<f64>],
@@ -467,17 +441,10 @@ pub fn sparse_stress_subspace_majorization_kd(
 ) -> Result<(), SolverError> {
     let subspace_dim = 50.min(n);
     let num_centers_local = n.min((2 * subspace_dim).max(50));
-    let mut full = embed_graph(graph, n, num_centers_local, reweight_graph, crand);
+    let mut full = embed_graph(graph, n, num_centers_local, reweight_graph);
     center_coordinate(&mut full, n);
     let mut subspace = vec![vec![0.0f64; n]; subspace_dim];
-    pca_alloc(
-        &full,
-        num_centers_local,
-        n,
-        &mut subspace,
-        subspace_dim,
-        crand,
-    );
+    pca_alloc(&full, num_centers_local, n, &mut subspace, subspace_dim);
 
     let g2;
     let gr = if reweight_graph {
@@ -491,7 +458,7 @@ pub fn sparse_stress_subspace_majorization_kd(
     let mut dij = vec![vec![0 as DistType; n]; num_centers];
     let mut dist = vec![0 as DistType; n];
     if num_centers > 0 {
-        let mut node = (crand.rand() as usize) % n;
+        let mut node = (crate::cutil::rand() as usize) % n;
         center_index[node] = 0;
         inv_center[0] = node;
         if reweight_graph {
@@ -519,7 +486,8 @@ pub fn sparse_stress_subspace_majorization_kd(
             for j in 0..n {
                 dist[j] = dist[j].min(dij[i][j]);
                 if dist[j] > max_dist
-                    || (dist[j] == max_dist && (crand.rand() as usize).is_multiple_of(j + 1))
+                    || (dist[j] == max_dist
+                        && (crate::cutil::rand() as usize).is_multiple_of(j + 1))
                 {
                     node = j;
                     max_dist = dist[j];
@@ -581,7 +549,7 @@ pub fn sparse_stress_subspace_majorization_kd(
         } else {
             directions[0][0] = 1.0;
             let mut d1 = vec![0.0f64; subspace_dim];
-            if !iterative_pca_1d(&subspace, subspace_dim, n, &mut d1, crand) {
+            if !iterative_pca_1d(&subspace, subspace_dim, n, &mut d1) {
                 d1 = vec![0.0; subspace_dim];
                 d1[1] = 1.0;
             }
@@ -590,7 +558,7 @@ pub fn sparse_stress_subspace_majorization_kd(
     } else {
         for d in directions.iter_mut() {
             for v in d.iter_mut() {
-                *v = f64::from(crand.rand()) / f64::from(RAND_MAX);
+                *v = f64::from(crate::cutil::rand()) / f64::from(RAND_MAX);
             }
         }
     }

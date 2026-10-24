@@ -210,9 +210,7 @@ impl CMajEnvVpsc {
 
 /// `initCMajVPSC(n, packedMat, graph, opt, 0)`.
 pub fn init_cmaj_vpsc(n: usize, packed_mat: Option<&[f32]>, opt: &IpsepOptions) -> CMajEnvVpsc {
-    let mut crand = crate::cutil::CRand;
-    init_cmaj_vpsc_full(n, packed_mat, &[], opt, 0, &mut crand)
-        .expect("no hierarchy without diredges")
+    init_cmaj_vpsc_full(n, packed_mat, &[], opt, 0).expect("no hierarchy without diredges")
 }
 
 /// `initCMajVPSC(n, packedMat, graph, opt, diredges)`: variables, global
@@ -225,7 +223,6 @@ pub fn init_cmaj_vpsc_full(
     graph: &[super::graphdata::VtxData],
     opt: &IpsepOptions,
     diredges: i32,
-    crand: &mut crate::cutil::CRand,
 ) -> Option<CMajEnvVpsc> {
     let mut e = CMajEnvVpsc {
         nldv: 2 * opt.clusters.nclusters(),
@@ -250,7 +247,7 @@ pub fn init_cmaj_vpsc_full(
         }
     } else if diredges == 2 {
         let (ordering, ls, ndv) =
-            super::digcola::compute_hierarchy(crand, graph, e.nv, 1e-2, 1e-1, None).ok()?;
+            super::digcola::compute_hierarchy(graph, e.nv, 1e-2, 1e-1, None).ok()?;
         e.ndv = ndv;
         let levels = assign_digcola_levels(&ordering, e.nv, &ls, e.ndv);
         // create dummy vars (0 weight)

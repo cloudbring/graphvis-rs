@@ -13,7 +13,6 @@ use super::quad_prog_vpsc::{
 use super::stress::*;
 use super::{MODEL_CIRCUIT, MODEL_MDS, MODEL_SUBSET, SolverError};
 use crate::common::types::{LGraph, Sub};
-use crate::cutil::{CRand, Drand48};
 
 const LOCAL_CONSTR_MAJOR_ITERATIONS: i32 = 1000;
 
@@ -74,8 +73,6 @@ fn too_many_cycle_errors(hor: &CMajEnvVpsc, vrt: &CMajEnvVpsc) -> bool {
 pub fn stress_majorization_cola(
     g: &LGraph<'_>,
     params: &NeatoParams,
-    rng: &mut Drand48,
-    crand: &mut CRand,
     graph: &[VtxData],
     n0: usize,
     d_coords: &mut [Vec<f64>],
@@ -87,7 +84,7 @@ pub fn stress_majorization_cola(
 ) -> Result<i64, SolverError> {
     let orig_n = n0;
     let mut n = n0;
-    init_layout(g, rng, n, dim, d_coords, nodes);
+    init_layout(g, n, dim, d_coords, nodes);
     if n == 1 {
         return Ok(0);
     }
@@ -223,12 +220,12 @@ pub fn stress_majorization_cola(
             }
         }
     };
-    let Some(mut hor) = init_cmaj_vpsc_full(n, Some(&lap2), graph, opt, 0, crand) else {
+    let Some(mut hor) = init_cmaj_vpsc_full(n, Some(&lap2), graph, opt, 0) else {
         finish(&coords, d_coords);
         return Err(SolverError);
     };
     let diredges = opt.diredges;
-    let Some(mut vrt) = init_cmaj_vpsc_full(n, Some(&lap2), graph, opt, diredges, crand) else {
+    let Some(mut vrt) = init_cmaj_vpsc_full(n, Some(&lap2), graph, opt, diredges) else {
         finish(&coords, d_coords);
         return Err(SolverError);
     };

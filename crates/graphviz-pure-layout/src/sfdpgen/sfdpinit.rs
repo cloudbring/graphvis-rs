@@ -47,7 +47,6 @@ fn sfdp_layout_component(
     // getPos: sfdp always starts from a random layout, so this is all zeros.
     let mut pos = vec![0.0f64; ndim * sub.nodes.len()];
     let mut flag = 0;
-    let mut crand = g.crand;
     multilevel_spring_electrical_embedding(
         ndim,
         &mut a,
@@ -56,9 +55,7 @@ fn sfdp_layout_component(
         &mut pos,
         &edge_label_nodes,
         &mut flag,
-        &mut crand,
     );
-    g.crand = crand;
     for &v in &sub.nodes {
         let i = g.nodes[v].id;
         for k in 0..ndim {

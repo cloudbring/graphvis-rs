@@ -3,7 +3,7 @@
 //! DOT text taken and returned here is in the port's decoded form ([`charset`]).
 
 pub use graphviz_pure_core::{Graph, GraphvizError, Result, charset};
-pub use graphviz_pure_layout::cutil::{RandState, with_rand_state};
+pub use graphviz_pure_layout::cutil::{RandState, in_rand_run, with_rand_state};
 pub use graphviz_pure_layout::fdpgen::tlayout::FdpParms;
 pub use graphviz_pure_layout::{
     LayoutEngine, LayoutOptions, layout_graph, layout_graph_with_options,
@@ -61,8 +61,9 @@ pub fn render_dot_all_with_options(
     let output_format = OutputFormat::parse(format)?;
     graphviz_pure_render::reset_render_state();
     let graphs = parse_dot_all(dot_source, globals)?;
-    // One call is one C process: its graphs share the C library's generator states.
-    with_rand_state(&mut RandState::default(), || {
+    // One call is one C process: its graphs share the C library's generator states (the
+    // caller's, inside a `with_rand_state`).
+    in_rand_run(|| {
         graphs
             .into_iter()
             .map(|graph| render_parsed(graph, engine, output_format, format, options))
@@ -86,8 +87,9 @@ pub fn render_dot_all_partial(
     graphviz_pure_render::reset_render_state();
     let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
     let mut out = Vec::with_capacity(graphs.len());
-    // One call is one C process: its graphs share the C library's generator states.
-    let err = with_rand_state(&mut RandState::default(), || {
+    // One call is one C process: its graphs share the C library's generator states (the
+    // caller's, inside a `with_rand_state`).
+    let err = in_rand_run(|| {
         for graph in graphs {
             match render_parsed(graph, engine, output_format, format, options) {
                 Ok(s) => out.push(s),
@@ -115,30 +117,30 @@ pub fn render_svg_all_partial(
     graphviz_pure_render::reset_render_state();
     let (graphs, parse_err) = graphviz_pure_parser::parse_dot_all_partial(dot_source, globals);
     let mut out = Vec::with_capacity(graphs.len());
-    let mut rand = RandState::default();
-    for graph in graphs {
-        // GD_drawing(g)->dpi = late_double(dpi, late_double(resolution, 0, 0), 0) > 0.
-        let late_double = |k: &str, dflt: f64| match graph
-            .graph_attrs
-            .get(k)
-            .filter(|v| !v.is_empty())
-            .and_then(|v| graphviz_pure_core::strtod::strtod_rest(v))
-        {
-            Some((v, _)) if v < 0.0 => 0.0,
-            Some((v, _)) => v,
-            None => dflt,
-        };
-        let explicit_dpi = late_double("dpi", late_double("resolution", 0.0)) > 0.0;
-        // One call is one C process: its graphs share the C library's generator states.
-        let svg = with_rand_state(&mut rand, || {
-            render_parsed(graph, engine, OutputFormat::Svg, "svg", options)
-        });
-        match svg {
-            Ok(s) => out.push((s, explicit_dpi)),
-            Err(e) => return (out, Some(e)),
+    // One call is one C process: its graphs share the C library's generator states (the
+    // caller's, inside a `with_rand_state`).
+    let err = in_rand_run(|| {
+        for graph in graphs {
+            // GD_drawing(g)->dpi = late_double(dpi, late_double(resolution, 0, 0), 0) > 0.
+            let late_double = |k: &str, dflt: f64| match graph
+                .graph_attrs
+                .get(k)
+                .filter(|v| !v.is_empty())
+                .and_then(|v| graphviz_pure_core::strtod::strtod_rest(v))
+            {
+                Some((v, _)) if v < 0.0 => 0.0,
+                Some((v, _)) => v,
+                None => dflt,
+            };
+            let explicit_dpi = late_double("dpi", late_double("resolution", 0.0)) > 0.0;
+            match render_parsed(graph, engine, OutputFormat::Svg, "svg", options) {
+                Ok(s) => out.push((s, explicit_dpi)),
+                Err(e) => return Some(e),
+            }
         }
-    }
-    (out, parse_err)
+        None
+    });
+    (out, err.or(parse_err))
 }
 
 fn render_parsed(
@@ -282,7 +284,7 @@ impl LayoutJobs {
     }
 
     /// [`LayoutJobs::new`] whose layouts continue from the generator state `rand`.
-    pub fn with_rand_state(engine: LayoutEngine, options: LayoutOptions, rand: RandState) -> Self {
+    pub fn continuing(engine: LayoutEngine, options: LayoutOptions, rand: RandState) -> Self {
         LayoutJobs {
             rand,
             ..Self::new(engine, options)
@@ -365,12 +367,29 @@ mod tests {
         )
         .unwrap();
         assert_eq!(both, again);
+        // Inside a caller's run, every entry point continues the caller's state and leaves it
+        // advanced.
+        let mut state = RandState::default();
+        let outer = with_rand_state(&mut state, || {
+            render_dot_all_with_options(&g.repeat(2), "neato", "dot", &GlobalAttrs::default(), opts)
+        })
+        .unwrap();
+        assert_eq!(outer, both);
+        assert_ne!(state, RandState::default());
+        let (third, _) = with_rand_state(&mut state, || {
+            render_dot_all_partial(g, "neato", "dot", &GlobalAttrs::default(), opts)
+        });
+        assert!(!third[0].contains("z=57.090927") && !third[0].contains("z=121.029893"));
+        let (svgs, _) = with_rand_state(&mut RandState::default(), || {
+            render_svg_all_partial(&g.repeat(2), "neato", &GlobalAttrs::default(), opts)
+        });
+        assert_eq!(svgs.len(), 2);
 
         let mut jobs = LayoutJobs::new(LayoutEngine::Neato, opts);
         let mut first = parse_dot(g).unwrap();
         jobs.layout(&mut first).unwrap();
         let mut graph = parse_dot(g).unwrap();
-        let mut carried = LayoutJobs::with_rand_state(LayoutEngine::Neato, opts, jobs.rand_state());
+        let mut carried = LayoutJobs::continuing(LayoutEngine::Neato, opts, jobs.rand_state());
         carried.layout(&mut graph).unwrap();
         let z = |g: &Graph| g.nodes[1].attrs["z"].clone();
         assert_eq!(z(&graph), "121.029893");

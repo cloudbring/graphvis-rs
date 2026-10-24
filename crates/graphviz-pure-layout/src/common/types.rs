@@ -8,7 +8,6 @@
 //! as out-edges followed by non-loop in-edges.
 
 use super::shapes::NodeShape;
-use crate::cutil::{CRand, Drand48};
 use graphviz_pure_core::{BoundingBox, Graph, Point};
 
 /// `P_SET`, `P_FIX`, `P_PIN` (`ND_pinned`).
@@ -226,8 +225,6 @@ pub struct LGraph<'a> {
     pub root_clusters: Vec<usize>,
     pub edge_type: EdgeType,
     pub concentrate: bool,
-    pub drand: Drand48,
-    pub crand: CRand,
     /// Whether any edge sets `labelangle` / `labeldistance` (`E_labelangle`, `E_labeldistance`).
     pub has_labelangle: bool,
     pub has_labeldistance: bool,

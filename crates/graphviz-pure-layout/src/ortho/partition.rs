@@ -6,7 +6,6 @@ use super::fail::{At, Fail, OResult, idx};
 use super::trapezoid::{
     SegmentT, Trap, construct_trapezoids, equal_to, fp_equal, greater_than, is_valid_trap,
 };
-use crate::cutil::Drand48;
 use graphviz_pure_core::math;
 use graphviz_pure_core::{BoundingBox, Point};
 
@@ -95,12 +94,12 @@ fn gen_segments(cells: &[BoundingBox], bb: BoundingBox, seg: &mut [SegmentT], fl
 }
 
 /// `generateRandomOrdering(n, permute)`.
-fn generate_random_ordering(n: usize, permute: &mut [i32], rng: &mut Drand48) {
+fn generate_random_ordering(n: usize, permute: &mut [i32]) {
     for (i, p) in permute.iter_mut().enumerate().take(n) {
         *p = i as i32 + 1;
     }
     for i in 0..n {
-        let j = rng.drand48().mul_add((n - i) as f64, i as f64) as usize;
+        let j = crate::cutil::drand48().mul_add((n - i) as f64, i as f64) as usize;
         if j != i {
             permute.swap(i, j);
         }
@@ -533,8 +532,8 @@ pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> OResult<Vec<Bounding
     let mut segs = vec![SegmentT::default(); nsegs + 1];
     let mut permute = vec![0i32; nsegs];
     gen_segments(cells, bb, &mut segs, false);
-    let mut rng = Drand48::new(173);
-    generate_random_ordering(nsegs, &mut permute, &mut rng);
+    crate::cutil::srand48(173);
+    generate_random_ordering(nsegs, &mut permute);
     // A failed `add_segment` is C's "horizontal/vertical trapezoid
     // construction failed" exit: partition returns NULL.
     let failed = |vertical| {
@@ -546,7 +545,7 @@ pub fn partition(cells: &[BoundingBox], bb: BoundingBox) -> OResult<Vec<Bounding
     let hor_traps = construct_trapezoids(nsegs_i, &mut segs, &permute).map_err(failed(false))?;
     let hor_decomp = monotonate_trapezoids(nsegs_i, &segs, &hor_traps, false)?;
     gen_segments(cells, bb, &mut segs, true);
-    generate_random_ordering(nsegs, &mut permute, &mut rng);
+    generate_random_ordering(nsegs, &mut permute);
     let ver_traps = construct_trapezoids(nsegs_i, &mut segs, &permute).map_err(failed(true))?;
     let vert_decomp = monotonate_trapezoids(nsegs_i, &segs, &ver_traps, true)?;
     let mut rs = Vec::new();

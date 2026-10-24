@@ -14,7 +14,6 @@ use super::linalg::solve_circuit;
 use super::matrix_ops::*;
 use super::{MODEL_CIRCUIT, MODEL_MDS, MODEL_SUBSET, NeatoParams};
 use crate::common::types::{LGraph, P_FIX};
-use crate::cutil::Drand48;
 
 pub const TOLERANCE_CG: f64 = 1e-3;
 pub const DFLT_ITERATIONS: i64 = 200;
@@ -37,7 +36,6 @@ pub fn is_fixed(g: &LGraph<'_>, n: usize) -> bool {
 /// centre each axis. Returns true if some node is pinned.
 pub fn init_layout(
     g: &LGraph<'_>,
-    rng: &mut Drand48,
     n: usize,
     dim: usize,
     coords: &mut [Vec<f64>],
@@ -55,10 +53,10 @@ pub fn init_layout(
                 pinned = true;
             }
         } else {
-            coords[0][i] = rng.drand48();
-            coords[1][i] = rng.drand48();
+            coords[0][i] = crate::cutil::drand48();
+            coords[1][i] = crate::cutil::drand48();
             for c in coords.iter_mut().take(dim).skip(2) {
-                c[i] = rng.drand48();
+                c[i] = crate::cutil::drand48();
             }
         }
     }
@@ -231,8 +229,6 @@ pub fn compute_apsp_artificial_weights(graph: &[VtxData], n: usize) -> Vec<Vec<D
 pub fn stress_majorization_kd_mkernel(
     g: &LGraph<'_>,
     params: &NeatoParams,
-    rng: &mut Drand48,
-    crand: &mut crate::cutil::CRand,
     graph: &[VtxData],
     n: usize,
     d_coords: &mut [Vec<f64>],
@@ -279,7 +275,6 @@ pub fn stress_majorization_kd_mkernel(
         have_pinned = false;
         super::smart_ini::sparse_stress_subspace_majorization_kd(
             params,
-            crand,
             graph,
             n,
             d_coords,
@@ -301,12 +296,12 @@ pub fn stress_majorization_kd_mkernel(
                 *v /= max;
             }
             for v in c.iter_mut().take(n) {
-                *v = 1e-6f64.mul_add(rng.drand48() - 0.5, *v);
+                *v = 1e-6f64.mul_add(crate::cutil::drand48() - 0.5, *v);
             }
             orthog1(&mut c[..n]);
         }
     } else {
-        have_pinned = init_layout(g, rng, n, dim, d_coords, nodes);
+        have_pinned = init_layout(g, n, dim, d_coords, nodes);
     }
     if n == 1 || maxi == 0 {
         return Ok(0);

@@ -10,7 +10,6 @@
 use super::multilevel::{MultilevelControl, multilevel_new};
 use super::post_process::RelativePositionConstraints;
 use super::post_process::post_process_smoothing;
-use crate::cutil::CRand;
 use crate::neatogen::overlap::remove_overlap_el;
 use crate::sparse::quad_tree::{QuadTree, Supernodes};
 use crate::sparse::{
@@ -259,15 +258,14 @@ fn embedding_setup(
     dim: usize,
     ctrl: &mut SpringElectricalControl,
     x: &mut [f64],
-    crand: &mut CRand,
 ) -> (SparseMatrix, f64, f64) {
     let n = a0.n;
     let mut a = a0.clone();
     let a = a.symmetrize(true);
     if ctrl.random_start {
-        crand.srand(ctrl.random_seed as u32);
+        crate::cutil::srand(ctrl.random_seed as u32);
         for v in x.iter_mut().take(dim * n) {
-            *v = drand(crand);
+            *v = drand();
         }
     }
     let mut k = ctrl.k;
@@ -325,7 +323,6 @@ fn spring_electrical_embedding_fast(
     ctrl: &mut SpringElectricalControl,
     x: &mut [f64],
     flag: &mut i32,
-    crand: &mut CRand,
 ) {
     let maxiter = f64::from(ctrl.maxiter);
     let mut step = ctrl.step;
@@ -346,7 +343,7 @@ fn spring_electrical_embedding_fast(
         ctrl.max_qtree_level = max_qtree_level;
         return;
     }
-    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x, crand);
+    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x);
     let p = ctrl.p;
     let mut force = vec![0.0f64; dim * n];
     let mut fnorm = 0.0f64;
@@ -386,7 +383,6 @@ fn spring_electrical_embedding_slow(
     ctrl: &mut SpringElectricalControl,
     x: &mut [f64],
     flag: &mut i32,
-    crand: &mut CRand,
 ) {
     // C's own trace, with no newline, on every call.
     graphviz_pure_core::diag::fprintf_stderr("spring_electrical_embedding_slow");
@@ -406,7 +402,7 @@ fn spring_electrical_embedding_slow(
         *flag = ERROR_NOT_SQUARE_MATRIX;
         return;
     }
-    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x, crand);
+    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x);
     let p = ctrl.p;
     let mut force = vec![0.0f64; dim * n];
     let mut f = vec![0.0f64; dim];
@@ -492,7 +488,6 @@ fn spring_electrical_embedding(
     ctrl: &mut SpringElectricalControl,
     x: &mut [f64],
     flag: &mut i32,
-    crand: &mut CRand,
 ) {
     let maxiter = f64::from(ctrl.maxiter);
     let mut step = ctrl.step;
@@ -519,7 +514,7 @@ fn spring_electrical_embedding(
         }
         return;
     }
-    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x, crand);
+    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x);
     let p = ctrl.p;
     let mut f = vec![0.0f64; dim];
     let mut sn = Supernodes::default();
@@ -576,7 +571,6 @@ pub fn spring_electrical_spring_embedding(
     d: &SparseMatrix,
     ctrl: &mut SpringElectricalControl,
     x: &mut [f64],
-    crand: &mut CRand,
 ) {
     let maxiter = f64::from(ctrl.maxiter);
     let mut step = ctrl.step;
@@ -590,7 +584,7 @@ pub fn spring_electrical_spring_embedding(
         return;
     }
     let use_qt = n >= QUADTREE_SIZE;
-    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x, crand);
+    let (a, kp, crk) = embedding_setup(a0, dim, ctrl, x);
     let p = ctrl.p;
     let (id, jd) = (&d.ia, &d.ja);
     let dv = d.a.as_ref().expect("real matrix");
@@ -680,7 +674,6 @@ fn prolongate(
     x: &[f64],
     y: &mut [f64],
     delta: f64,
-    crand: &mut CRand,
 ) {
     p.multiply_dense(x, y, dim);
     interpolate_coord(dim, a, y);
@@ -688,7 +681,7 @@ fn prolongate(
         for j in (r.ia[i] + 1)..r.ia[i + 1] {
             let c = r.ja[j as usize] as usize;
             for k in 0..dim {
-                let d = drand(crand) - 0.5;
+                let d = drand() - 0.5;
                 y[c * dim + k] = delta.mul_add(d, y[c * dim + k]);
             }
         }
@@ -880,7 +873,6 @@ fn remove_overlap_ctrl(
     label_sizes: Option<&[f64]>,
     ctrl: &SpringElectricalControl,
     edge_label_nodes: &[usize],
-    crand: &mut CRand,
 ) {
     let Some(ls) = label_sizes else { return };
     let constraints = RelativePositionConstraints {
@@ -898,7 +890,6 @@ fn remove_overlap_ctrl(
         ctrl.initial_scaling,
         Some(&constraints),
         ctrl.do_shrinking,
-        crand,
     );
 }
 
@@ -911,7 +902,6 @@ pub fn multilevel_spring_electrical_embedding(
     x: &mut [f64],
     edge_label_nodes: &[usize],
     flag: &mut i32,
-    crand: &mut CRand,
 ) {
     let ctrl0 = *ctrl;
     *flag = 0;
@@ -933,16 +923,16 @@ pub fn multilevel_spring_electrical_embedding(
     {
         let mut x2 = vec![0.0f64; a.m * dim];
         let mut a2 = shorting_edge_label_nodes(&a, edge_label_nodes);
-        multilevel_spring_electrical_embedding(dim, &mut a2, ctrl, None, &mut x2, &[], flag, crand);
+        multilevel_spring_electrical_embedding(dim, &mut a2, ctrl, None, &mut x2, &[], flag);
         attach_edge_label_coordinates(dim, &a, edge_label_nodes, x, &x2);
-        remove_overlap_ctrl(dim, &mut a, x, label_sizes, ctrl, edge_label_nodes, crand);
+        remove_overlap_ctrl(dim, &mut a, x, label_sizes, ctrl, edge_label_nodes);
         return;
     }
 
     let mctrl = MultilevelControl {
         maxlevel: ctrl.multilevels,
     };
-    let grid = multilevel_new(&a, mctrl, crand);
+    let grid = multilevel_new(&a, mctrl);
     let mut lvl = grid.len() - 1;
     let mut xc: Vec<f64> = if lvl == 0 {
         x[..grid[0].n * dim].to_vec()
@@ -959,13 +949,13 @@ pub fn multilevel_spring_electrical_embedding(
     loop {
         let ga = &grid[lvl].a;
         if ctrl.tscheme == QUAD_TREE_NONE {
-            spring_electrical_embedding_slow(dim, ga, ctrl, &mut xc, flag, crand);
+            spring_electrical_embedding_slow(dim, ga, ctrl, &mut xc, flag);
         } else if ctrl.tscheme == QUAD_TREE_FAST
             || (ctrl.tscheme == QUAD_TREE_HYBRID && ga.m > QUAD_TREE_HYBRID_SIZE)
         {
-            spring_electrical_embedding_fast(dim, ga, ctrl, &mut xc, flag, crand);
+            spring_electrical_embedding_fast(dim, ga, ctrl, &mut xc, flag);
         } else {
-            spring_electrical_embedding(dim, ga, ctrl, &mut xc, flag, crand);
+            spring_electrical_embedding(dim, ga, ctrl, &mut xc, flag);
         }
         if lvl == 0 {
             break;
@@ -978,7 +968,7 @@ pub fn multilevel_spring_electrical_embedding(
         lvl -= 1;
         let mut xf = vec![0.0f64; grid[lvl].n * dim];
         let r = grid[lvl].r.as_ref().expect("restriction");
-        prolongate(dim, &grid[lvl].a, p, r, &xc, &mut xf, ctrl.k * 0.001, crand);
+        prolongate(dim, &grid[lvl].a, p, r, &xc, &mut xf, ctrl.k * 0.001);
         xc = xf;
         ctrl.random_start = false;
         ctrl.k *= 0.75;
@@ -987,7 +977,7 @@ pub fn multilevel_spring_electrical_embedding(
     }
     x[..xc.len()].copy_from_slice(&xc);
 
-    post_process_smoothing(dim, &mut a, ctrl, x, crand);
+    post_process_smoothing(dim, &mut a, ctrl, x);
 
     if dim == 2 {
         pcp_rotate(n, dim, x);
@@ -1003,6 +993,6 @@ pub fn multilevel_spring_electrical_embedding(
             ));
         }
     }
-    remove_overlap_ctrl(dim, &mut a, x, label_sizes, ctrl, edge_label_nodes, crand);
+    remove_overlap_ctrl(dim, &mut a, x, label_sizes, ctrl, edge_label_nodes);
     *ctrl = ctrl0;
 }
