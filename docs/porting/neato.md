@@ -57,8 +57,9 @@ number, sort and container order reproduces macOS libc/cgraph behaviour.
 
 | Rust | C |
 |---|---|
-| `Drand48` | POSIX `drand48`/`srand48` (48-bit LCG, exact) |
-| `CRand` | Apple libc `rand`/`srand` (Park–Miller, seed 1) |
+| `drand48`, `srand48` | POSIX `drand48`/`srand48` (48-bit LCG, exact), on the run's state |
+| `rand`, `srand` | Apple libc `rand`/`srand` (Park–Miller, seed 1), on the run's state |
+| `RandState`, `with_rand_state`, `in_rand_run` | C's process-wide generator states: one per run of `dot` (`LayoutJobs`) or per library call; `Drand48State`/`CRandState` are the generators as values |
 | `qsort_by` | Apple libc `qsort` (FreeBSD introsort: isort switch, heapsort fallback). `dotgen::qsort::qsort` delegates to it |
 | `RkState` | `lib/neatogen/randomkit.c` (Mersenne Twister, 64-bit `long`) |
 | `DtTree` | `lib/cdt` `dttree.c` ordered set/bag (splay insert, `dtflatten`) |
@@ -196,8 +197,10 @@ Key types and conventions:
 - Iteration: `g.outs(sub, n)` = `agfstout..agnxtout` (ordered by head
   sequence, then edge), `g.ins`, `g.all_edges` = `agfstedge..agnxtedge`,
   `g.find_edge` = `agfindedge`.
-- Randomness: `g.drand` (`drand48`, reseed with `srand48`), `g.crand`
-  (`rand()`), `cutil::RkState`; sorting with `cutil::qsort_by`.
+- Randomness: `cutil::drand48`/`srand48` and `cutil::rand`/`srand`, on one
+  state per run, as C's globals are process-wide: a graph's unseeded draws
+  continue from the earlier graphs' (#290). `cutil::RkState`; sorting with
+  `cutil::qsort_by`.
 - Clusters: `g.clusters` (`LCluster { subgraph, bb, label, label_pos, border, children }`)
   and `g.root_clusters` are the C `GD_clust` arrays; `write_back` copies their
   boxes, and unregistered clusters keep an input `bb` attribute.

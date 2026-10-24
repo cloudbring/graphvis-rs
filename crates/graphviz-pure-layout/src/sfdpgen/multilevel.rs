@@ -4,7 +4,7 @@
 //! The levels are a `Vec` (index 0 is the finest); C's `next`/`prev`
 //! pointers become index arithmetic.
 
-use crate::cutil::{CRand, gv_permutation};
+use crate::cutil::gv_permutation;
 use crate::sparse::SparseMatrix;
 
 const MINSIZE: usize = 4;
@@ -35,7 +35,6 @@ pub struct MultilevelControl {
 /// `maximal_independent_edge_set_heavest_edge_pernode_supernodes_first(A, ...)`.
 fn maximal_independent_edge_set_heavest_edge_pernode_supernodes_first(
     a: &SparseMatrix,
-    crand: &mut CRand,
 ) -> (Vec<i32>, Vec<i32>, usize) {
     const MATCHED: usize = usize::MAX;
     let (ia, ja) = (&a.ia, &a.ja);
@@ -70,7 +69,7 @@ fn maximal_independent_edge_set_heavest_edge_pernode_supernodes_first(
             clusterp[ncluster] = nz;
         }
     }
-    let p = gv_permutation(crand, m);
+    let p = gv_permutation(m);
     for &i in &p {
         if matched[i] == MATCHED {
             continue;
@@ -120,11 +119,10 @@ fn maximal_independent_edge_set_heavest_edge_pernode_supernodes_first(
 /// `Multilevel_coarsen_internal(A, &cA, &P, &R)`.
 fn multilevel_coarsen_internal(
     a: &SparseMatrix,
-    crand: &mut CRand,
 ) -> Option<(SparseMatrix, SparseMatrix, SparseMatrix)> {
     let n = a.m;
     let (cluster, clusterp, ncluster) =
-        maximal_independent_edge_set_heavest_edge_pernode_supernodes_first(a, crand);
+        maximal_independent_edge_set_heavest_edge_pernode_supernodes_first(a);
     let nc = ncluster;
     if nc == n || nc < MINSIZE {
         return None;
@@ -150,15 +148,12 @@ fn multilevel_coarsen_internal(
 }
 
 /// `Multilevel_coarsen(A, &cA, &P, &R)`.
-fn multilevel_coarsen(
-    a0: &SparseMatrix,
-    crand: &mut CRand,
-) -> Option<(SparseMatrix, SparseMatrix, SparseMatrix)> {
+fn multilevel_coarsen(a0: &SparseMatrix) -> Option<(SparseMatrix, SparseMatrix, SparseMatrix)> {
     let n = a0.n;
     let mut out: Option<(SparseMatrix, SparseMatrix, SparseMatrix)> = None;
     loop {
         let a = out.as_ref().map_or(a0, |o| &o.0);
-        let Some((ca0, p0, r0)) = multilevel_coarsen_internal(a, crand) else {
+        let Some((ca0, p0, r0)) = multilevel_coarsen_internal(a) else {
             return out;
         };
         let nc = ca0.n;
@@ -177,7 +172,7 @@ fn multilevel_coarsen(
 }
 
 /// `Multilevel_new(A0, ctrl)`: the hierarchy, finest level first.
-pub fn multilevel_new(a0: &SparseMatrix, ctrl: MultilevelControl, crand: &mut CRand) -> Vec<Level> {
+pub fn multilevel_new(a0: &SparseMatrix, ctrl: MultilevelControl) -> Vec<Level> {
     let mut a = a0.clone();
     if !a.is_symmetric(false) || !a.is_real() {
         a = a0.real_adjacency_symmetrized();
@@ -195,7 +190,7 @@ pub fn multilevel_new(a0: &SparseMatrix, ctrl: MultilevelControl, crand: &mut CR
         if grid[cur].level >= ctrl.maxlevel - 1 {
             break;
         }
-        let Some((ca, p, r)) = multilevel_coarsen(&grid[cur].a, crand) else {
+        let Some((ca, p, r)) = multilevel_coarsen(&grid[cur].a) else {
             break;
         };
         grid[cur].r = Some(r);

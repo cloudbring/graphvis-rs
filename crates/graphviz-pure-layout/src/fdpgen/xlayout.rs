@@ -84,8 +84,8 @@ impl X {
         x_nonov: f64,
     ) -> bool {
         while !(dist > 0.0) {
-            xdelta = f64::from(5 - st.crand.rand() % 10);
-            ydelta = f64::from(5 - st.crand.rand() % 10);
+            xdelta = f64::from(5 - crate::cutil::rand() % 10);
+            ydelta = f64::from(5 - crate::cutil::rand() % 10);
             dist = math::hypot(xdelta, ydelta);
         }
         let ov = self.overlap(dg, p, q);
@@ -292,11 +292,11 @@ pub fn fdp_x_layout(st: &mut TState, dg: &mut DG, comp: &Comp, xpms: &XParams) {
         _ => (0, ovlp.clone()),
     };
     let nodes = comp.nodes.clone();
-    let marg = with_lgraph(dg, &nodes, &mut st.crand, |lg, _, _| sep_factor(lg));
+    let marg = with_lgraph(dg, &nodes, |lg, _, _| sep_factor(lg));
     if tries > 0 && x_layout(st, dg, comp, xpms, tries, marg) == 0 {
         return;
     }
-    with_lgraph(dg, &nodes, &mut st.crand, |lg, sub, _| {
+    with_lgraph(dg, &nodes, |lg, sub, _| {
         remove_overlap_as(lg, sub, Some(&rest));
     });
 }

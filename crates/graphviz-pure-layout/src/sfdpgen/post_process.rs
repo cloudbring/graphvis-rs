@@ -2,7 +2,6 @@
 //! `SparseMatrix_solve` (`lib/sfdpgen/sparse_solve.c`).
 
 use super::spring_electrical::SpringElectricalControl;
-use crate::cutil::CRand;
 use crate::sparse::{SparseMatrix, distance, drand, vector_product};
 use graphviz_pure_core::cnum::is_exactly_equal;
 use graphviz_pure_core::math;
@@ -125,8 +124,8 @@ fn total_distance(m: usize, dim: usize, x: &[f64], y: &[f64]) -> f64 {
 
 impl StressMajorizationSmoother {
     /// `StressMajorizationSmoother_smooth(sm, dim, x, maxit_sm)`.
-    pub fn smooth(&mut self, dim: usize, x: &mut [f64], maxit_sm: i32, crand: &mut CRand) -> f64 {
-        self.smooth_with(dim, x, maxit_sm, None, crand)
+    pub fn smooth(&mut self, dim: usize, x: &mut [f64], maxit_sm: i32) -> f64 {
+        self.smooth_with(dim, x, maxit_sm, None)
     }
 
     /// `StressMajorizationSmoother_smooth` with `scheme == SM_SCHEME_NORMAL_ELABEL`
@@ -137,7 +136,6 @@ impl StressMajorizationSmoother {
         x: &mut [f64],
         maxit_sm: i32,
         constraints: Option<&RelativePositionConstraints>,
-        crand: &mut CRand,
     ) -> f64 {
         let mut lwdd = self.lwd.clone();
         let m = self.lw.m;
@@ -185,7 +183,7 @@ impl StressMajorizationSmoother {
                             if dist == 0.0 {
                                 let dij = d[j] / w[j];
                                 for k in 0..dim {
-                                    let r = drand(crand);
+                                    let r = drand();
                                     x[c * dim + k] =
                                         (0.0001 * (r + 0.0001)).mul_add(dij, x[c * dim + k]);
                                 }
@@ -502,12 +500,11 @@ pub fn sparse_stress_majorization_smoother_new(
     a: &SparseMatrix,
     dim: usize,
     x: &mut [f64],
-    crand: &mut CRand,
 ) -> Option<(StressMajorizationSmoother, f64)> {
     let m = a.m;
     if x[..m * dim].iter().all(|&v| is_exactly_equal(v, 0.0)) {
         for v in x[..m * dim].iter_mut() {
-            *v = 72.0 * drand(crand);
+            *v = 72.0 * drand();
         }
     }
     let (ia, ja) = (&a.ia, &a.ja);
@@ -682,14 +679,13 @@ pub fn spring_smoother_new(
 
 impl SpringSmoother {
     /// `SpringSmoother_smooth(sm, A, dim, x)`.
-    pub fn smooth(&mut self, a: &SparseMatrix, dim: usize, x: &mut [f64], crand: &mut CRand) {
+    pub fn smooth(&mut self, a: &SparseMatrix, dim: usize, x: &mut [f64]) {
         super::spring_electrical::spring_electrical_spring_embedding(
             dim,
             a,
             &self.d,
             &mut self.ctrl,
             x,
-            crand,
         );
     }
 }
@@ -700,14 +696,13 @@ pub fn post_process_smoothing(
     a: &mut SparseMatrix,
     ctrl: &SpringElectricalControl,
     x: &mut [f64],
-    crand: &mut CRand,
 ) {
     use super::spring_electrical::*;
     match ctrl.smoothing {
         SMOOTHING_RNG | SMOOTHING_TRIANGLE => {
             if a.m > 2 {
                 let mut sm = triangle_smoother_new(a, dim, x, ctrl.smoothing != SMOOTHING_RNG);
-                sm.smooth(dim, x, 50, crand);
+                sm.smooth(dim, x, 50);
             }
         }
         SMOOTHING_STRESS_MAJORIZATION_GRAPH_DIST
@@ -719,11 +714,11 @@ pub fn post_process_smoothing(
                 _ => IDEAL_POWER_DIST,
             };
             let (mut sm, _) = stress_majorization_smoother2_new(a, dim, 0.05, x, scheme);
-            sm.smooth(dim, x, 50, crand);
+            sm.smooth(dim, x, 50);
         }
         SMOOTHING_SPRING => {
             let mut sm = spring_smoother_new(a, dim, ctrl, x);
-            sm.smooth(a, dim, x, crand);
+            sm.smooth(a, dim, x);
         }
         _ => {}
     }

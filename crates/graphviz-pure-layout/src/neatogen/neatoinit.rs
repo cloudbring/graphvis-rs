@@ -13,7 +13,6 @@ use super::*;
 use crate::common::postproc::gv_postprocess;
 use crate::common::types::*;
 use crate::common::utils::{atoi, compute_bb, late_int, mapbool};
-use crate::cutil::Drand48;
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, pack_graphs, pccomps};
 use graphviz_pure_core::math;
 use graphviz_pure_core::strtod::{Scanned, scan_lf, sscanf};
@@ -42,7 +41,7 @@ fn user_pos(
     let ng = g.nodes.len();
     let name = &g.src.nodes[n].name;
     let node = &mut g.nodes[n];
-    match user_pos_values(p, z, pin, name, inputscale, ng, &mut g.drand, &mut node.pos) {
+    match user_pos_values(p, z, pin, name, inputscale, ng, &mut node.pos) {
         Some(pinned) => {
             node.pinned = pinned;
             true
@@ -61,7 +60,6 @@ pub(crate) fn user_pos_values(
     name: &str,
     inputscale: f64,
     ng: usize,
-    drand: &mut Drand48,
     pvec: &mut [f64],
 ) -> Option<u8> {
     if p.is_empty() {
@@ -89,7 +87,7 @@ pub(crate) fn user_pos_values(
         if r.count >= 3 {
             scale(pvec);
             if ndim > 3 {
-                jitter_d(pvec, ng, 3, drand);
+                jitter_d(pvec, ng, 3);
             }
             return Some(pinned(r.c));
         }
@@ -103,9 +101,9 @@ pub(crate) fn user_pos_values(
                 if let Some(p) = pvec.get_mut(2) {
                     *p = if inputscale > 0.0 { z / inputscale } else { z };
                 }
-                jitter_d(pvec, ng, 3, drand);
+                jitter_d(pvec, ng, 3);
             } else {
-                jitter_d(pvec, ng, 2, drand);
+                jitter_d(pvec, ng, 2);
             }
         }
         return Some(pinned(r.c));
@@ -118,9 +116,9 @@ pub(crate) fn user_pos_values(
 
 /// `jitter_d(np, nG, n)` (`jitter3d` is `jitter_d(np, nG, 2)`): random coordinates from
 /// dimension `from` on.
-fn jitter_d(pvec: &mut [f64], ng: usize, from: usize, drand: &mut Drand48) {
+fn jitter_d(pvec: &mut [f64], ng: usize, from: usize) {
     for v in pvec.iter_mut().skip(from) {
-        *v = ng as f64 * drand.drand48();
+        *v = ng as f64 * crate::cutil::drand48();
     }
 }
 
@@ -243,7 +241,7 @@ fn init_regular(g: &mut LGraph<'_>, sub: &Sub, ng: usize) {
         a += da;
         if g.ndim > 2 {
             for d in 2..g.ndim {
-                g.nodes[n].pos[d] = ng as f64 * g.drand.drand48();
+                g.nodes[n].pos[d] = ng as f64 * crate::cutil::drand48();
             }
         }
     }
@@ -260,7 +258,7 @@ pub fn check_start(g: &mut LGraph<'_>, sub: &Sub, ng: usize, dflt: i32, _p: &Nea
     if init == INIT_REGULAR {
         init_regular(g, sub, ng);
     }
-    g.drand.srand48(seed);
+    crate::cutil::srand48(seed);
     init
 }
 
@@ -305,8 +303,6 @@ fn majorization(
     }
     let mut coords = vec![vec![0.0f64; nv]; dim];
     let (gp, _ne, nodes) = make_graph_data(g, sub, mode, model);
-    let mut drand = g.drand;
-    let mut crand = g.crand;
     let lgap = crate::common::utils::late_double(&g.src.graph_attrs, "levelsgap", 0.0, -f64::MAX);
     let rv = if mode == MODE_IPSEP {
         let mut opt = super::quad_prog_vpsc::IpsepOptions {
@@ -346,8 +342,6 @@ fn majorization(
         super::cola::stress_majorization_cola(
             g,
             p,
-            &mut drand,
-            &mut crand,
             &gp,
             nv,
             &mut coords,
@@ -361,8 +355,6 @@ fn majorization(
         super::digcola::stress_majorization_with_hierarchy(
             g,
             p,
-            &mut drand,
-            &mut crand,
             &gp,
             nv,
             &mut coords,
@@ -377,8 +369,6 @@ fn majorization(
         stress_majorization_kd_mkernel(
             g,
             p,
-            &mut drand,
-            &mut crand,
             &gp,
             nv,
             &mut coords,
@@ -389,8 +379,6 @@ fn majorization(
             p.max_iter,
         )
     };
-    g.drand = drand;
-    g.crand = crand;
     if rv.is_ok() {
         for &v in &sub.nodes {
             let idx = g.nodes[v].id;
@@ -951,7 +939,6 @@ fn neato_layout_nop(graph: &mut Graph, nop: u8) {
                 node.pos.clone_from(&old.pos);
                 node.pinned = old.pinned;
             }
-            g.drand = g0.drand;
             g
         }
     };
@@ -1049,7 +1036,7 @@ pub fn neato_layout(graph: &mut Graph, nop: u8) -> Result<()> {
             .map(|(n, _)| (n.pos.clone(), n.pinned))
             .collect();
         graph.delete_nodes(&deleted);
-        (comps, pin, kept_pos, g0.drand)
+        (comps, pin, kept_pos)
     });
     let src = graph.clone();
     let quiet = reduced.is_some();
@@ -1061,12 +1048,11 @@ pub fn neato_layout(graph: &mut Graph, nop: u8) -> Result<()> {
     let pos_declared = g.node_attr_declared("pos");
     let z_declared = g.node_attr_declared("z");
     match &reduced {
-        Some((_, _, kept_pos, drand)) => {
+        Some((_, _, kept_pos)) => {
             for (node, (pos, pinned)) in g.nodes.iter_mut().zip(kept_pos) {
                 node.pos.clone_from(pos);
                 node.pinned = *pinned;
             }
-            g.drand = *drand;
         }
         None => {
             for n in 0..g.nodes.len() {
@@ -1091,7 +1077,7 @@ pub fn neato_layout(graph: &mut Graph, nop: u8) -> Result<()> {
 
     if pack >= 0 {
         let (mut ccs, pin) = match reduced {
-            Some((comps, pin, _, _)) => {
+            Some((comps, pin, _)) => {
                 let n = g.nodes.len();
                 (comps.into_iter().map(|c| Sub::new(n, c)).collect(), pin)
             }
@@ -1179,31 +1165,35 @@ fn layout_and_route(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cutil::{Drand48State, RandState, with_rand_state};
 
-    fn user_pos_of(p: &str, z: Option<&str>, ndim: usize) -> (Option<u8>, Vec<f64>, Drand48) {
-        let mut drand = Drand48::default();
+    /// `user_pos` in a fresh process; with the generator state it leaves.
+    fn user_pos_of(p: &str, z: Option<&str>, ndim: usize) -> (Option<u8>, Vec<f64>, RandState) {
+        let mut state = RandState::default();
         let mut pvec = vec![0.0; ndim];
-        let pinned = graphviz_pure_core::diag::quietly(|| {
-            user_pos_values(p, z, false, "n", -1.0, 4, &mut drand, &mut pvec)
+        let pinned = with_rand_state(&mut state, || {
+            graphviz_pure_core::diag::quietly(|| {
+                user_pos_values(p, z, false, "n", -1.0, 4, &mut pvec)
+            })
         });
-        (pinned, pvec, drand)
+        (pinned, pvec, state)
     }
 
     // Issue #245: neatoinit.c's user_pos with Ndim > 2 and two values in `pos`.
     #[test]
     fn user_pos_takes_z_or_a_random_third_coordinate() {
-        let mut fresh = Drand48::default();
+        let mut fresh = Drand48State::default();
         // `z` is read and no random number is drawn.
-        let (pinned, pvec, drand) = user_pos_of("1,2", Some("3"), 3);
+        let (pinned, pvec, state) = user_pos_of("1,2", Some("3"), 3);
         assert_eq!(
-            (pinned, pvec, drand),
-            (Some(P_SET), vec![1.0, 2.0, 3.0], fresh)
+            (pinned, pvec, state),
+            (Some(P_SET), vec![1.0, 2.0, 3.0], RandState::default())
         );
         // No usable `z`: jitter3d, nG * drand48().
         let (_, pvec, _) = user_pos_of("1,2!", Some("x"), 3);
         assert_eq!(pvec, vec![1.0, 2.0, 4.0 * fresh.drand48()]);
         // Three values in `pos`: `z` is not read; with Ndim 4, jitter_d from the fourth on.
-        let mut fresh = Drand48::default();
+        let mut fresh = Drand48State::default();
         let (pinned, pvec, _) = user_pos_of("0x1p3,1e1,nan(1)!", Some("3"), 4);
         assert_eq!(pinned, Some(P_PIN));
         assert_eq!(pvec[..2], [8.0, 10.0]);
@@ -1479,21 +1469,23 @@ mod tests {
     // has 7 points, from 0.375,0.50474in up and across.
     #[test]
     fn nop_routes_ortho_edges() {
-        let g = nop_graph(
-            false,
-            &[("splines", "ortho")],
-            &[
-                ("a", &[("pos", "0,0")]),
-                ("b", &[("pos", "100,0")]),
-                ("c", &[("pos", "200,100")]),
-            ],
-            &[(0, 2, &[]), (1, 2, &[])],
-        );
-        let g = nop_layout(g, 1);
-        let pts = &g.edges[0].spline.segments[0].points;
-        assert_eq!(pts.len(), 7, "{pts:?}");
-        assert!(near(pts[0], 27.0, 0.50474 * 72.0), "{pts:?}");
-        assert!(near(pts[6], 2.7724 * 72.0, 1.6389 * 72.0), "{pts:?}");
+        crate::cutil::in_fresh_run(|| {
+            let g = nop_graph(
+                false,
+                &[("splines", "ortho")],
+                &[
+                    ("a", &[("pos", "0,0")]),
+                    ("b", &[("pos", "100,0")]),
+                    ("c", &[("pos", "200,100")]),
+                ],
+                &[(0, 2, &[]), (1, 2, &[])],
+            );
+            let g = nop_layout(g, 1);
+            let pts = &g.edges[0].spline.segments[0].points;
+            assert_eq!(pts.len(), 7, "{pts:?}");
+            assert!(near(pts[0], 27.0, 0.50474 * 72.0), "{pts:?}");
+            assert!(near(pts[6], 2.7724 * 72.0, 1.6389 * 72.0), "{pts:?}");
+        });
     }
 
     // Issue #195: `splines=curved` goes through makeStraightEdges' curved branch: C's a--c

@@ -8,7 +8,6 @@ use super::layout::{Comp, DG};
 use super::xlayout::XParams;
 use crate::common::types::{P_FIX, P_SET};
 use crate::common::utils::{late_double, late_int, parse_leading_int};
-use crate::cutil::{CRand, Drand48};
 use graphviz_pure_core::cnum::{c_max, c_min};
 use graphviz_pure_core::math;
 use graphviz_pure_core::{AttrMap, Point};
@@ -90,19 +89,12 @@ pub struct TParms {
 pub struct TState {
     pub d: FdpParms,
     pub t: TParms,
-    pub drand: Drand48,
-    pub crand: CRand,
 }
 
 impl TState {
     /// `cool(t)`; the `int` difference wraps as in C.
     fn cool(&self, t: i32) -> f64 {
         self.t.t0 * f64::from(self.t.max_iters.wrapping_sub(t)) / f64::from(self.t.max_iters)
-    }
-
-    /// `rand()`.
-    fn rand(&mut self) -> i32 {
-        self.crand.rand()
     }
 }
 
@@ -170,12 +162,7 @@ pub fn fdp_init_params(attrs: &AttrMap) -> TState {
     if t.use_grid && t.cell <= 0.0 {
         t.cell = 3.0 * t.k;
     }
-    TState {
-        d,
-        t,
-        drand: Drand48::default(),
-        crand: CRand::default(),
-    }
+    TState { d, t }
 }
 
 /// `init_params(g, xpms)`; returns whether `T0` must be reset afterwards.
@@ -215,8 +202,8 @@ fn do_rep(
     mut dist: f64,
 ) {
     while !(dist > 0.0) {
-        xdelta = f64::from(5 - st.rand() % 10);
-        ydelta = f64::from(5 - st.rand() % 10);
+        xdelta = f64::from(5 - crate::cutil::rand() % 10);
+        ydelta = f64::from(5 - crate::cutil::rand() % 10);
         dist = math::hypot(xdelta, ydelta);
     }
     let k = st.t.k;
@@ -302,8 +289,8 @@ fn apply_attr(st: &mut TState, dg: &mut DG, p: usize, q: usize, e: usize) {
     let mut ydelta = dg.nodes[q].pos[1] - dg.nodes[p].pos[1];
     let mut dist2 = xdelta.mul_add(xdelta, ydelta * ydelta);
     while dist2 == 0.0 {
-        xdelta = f64::from(5 - st.rand() % 10);
-        ydelta = f64::from(5 - st.rand() % 10);
+        xdelta = f64::from(5 - crate::cutil::rand() % 10);
+        ydelta = f64::from(5 - crate::cutil::rand() % 10);
         dist2 = xdelta.mul_add(xdelta, ydelta * ydelta);
     }
     let dist = dist2.sqrt();
@@ -484,7 +471,7 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
     } else {
         DFLT_SEED
     };
-    st.drand.srand48(local_seed);
+    crate::cutil::srand48(local_seed);
 
     let (wd, ht) = (st.t.wd, st.t.ht);
     if has_ports {
@@ -537,8 +524,8 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
                         0.9f64.mul_add(py, 0.1 * ctr.y),
                     ];
                 } else {
-                    let angle = PI * 2.0 * st.drand.drand48();
-                    let radius = 0.9 * st.drand.drand48();
+                    let angle = PI * 2.0 * crate::cutil::drand48();
+                    let radius = 0.9 * crate::cutil::drand48();
                     dg.nodes[np].pos = [
                         radius * wd * math::cos(angle),
                         radius * ht * math::sin(angle),
@@ -553,15 +540,15 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
                 dg.nodes[np].pos[0] -= ctr.x;
                 dg.nodes[np].pos[1] -= ctr.y;
             } else {
-                let x = wd * rnd(st);
-                let y = ht * rnd(st);
+                let x = wd * rnd();
+                let y = ht * rnd();
                 dg.nodes[np].pos = [x, y];
             }
         }
     } else {
         for &np in &comp.nodes {
-            let x = wd * rnd(st);
-            let y = ht * rnd(st);
+            let x = wd * rnd();
+            let y = ht * rnd();
             dg.nodes[np].pos = [x, y];
         }
     }
@@ -569,8 +556,8 @@ fn init_positions(st: &mut TState, dg: &mut DG, comp: &Comp, has_ports: bool) ->
 }
 
 /// `2.0 * drand48() - 1.0` (fused).
-fn rnd(st: &mut TState) -> f64 {
-    2.0f64.mul_add(st.drand.drand48(), -1.0)
+fn rnd() -> f64 {
+    2.0f64.mul_add(crate::cutil::drand48(), -1.0)
 }
 
 /// `fdp_tLayout(g, xpms)`.

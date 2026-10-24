@@ -5,7 +5,6 @@
 use super::shapes::NodeShape;
 use super::types::*;
 use super::utils::{late_double, map_bool, mapbool};
-use crate::cutil::{CRand, Drand48};
 use graphviz_pure_core::font::{LabelSubstContext, measure_multiline_label_with_context};
 use graphviz_pure_core::strtod::{atof, sscanf};
 use graphviz_pure_core::{AttrMap, BoundingBox, Graph, GraphKind, Point};
@@ -310,8 +309,6 @@ impl<'a> LGraph<'a> {
             root_clusters: Vec::new(),
             edge_type,
             concentrate,
-            drand: Drand48::default(),
-            crand: CRand::default(),
             has_labelangle,
             has_labeldistance,
         }

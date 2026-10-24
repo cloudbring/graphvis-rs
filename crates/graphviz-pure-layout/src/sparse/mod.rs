@@ -413,6 +413,6 @@ pub fn vector_product(n: usize, x: &[f64], y: &[f64]) -> f64 {
 }
 
 /// `drand()`: `rand() / RAND_MAX`.
-pub fn drand(r: &mut crate::cutil::CRand) -> f64 {
-    f64::from(r.rand()) / f64::from(crate::cutil::RAND_MAX)
+pub fn drand() -> f64 {
+    f64::from(crate::cutil::rand()) / f64::from(crate::cutil::RAND_MAX)
 }

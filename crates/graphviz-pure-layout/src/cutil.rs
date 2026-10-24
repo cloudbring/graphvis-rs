@@ -5,18 +5,39 @@
 //! sequences (random initial placements, pivot selection) and on the order
 //! `qsort` leaves equal elements in, so this module ports them:
 //!
-//! - [`Drand48`]: the POSIX 48-bit linear congruential generator.
-//! - [`CRand`]: Apple libc `rand()` (Park–Miller "minimal standard", seed 1).
+//! - [`drand48`]/[`srand48`]: the POSIX 48-bit linear congruential generator.
+//! - [`rand`]/[`srand`]: Apple libc `rand()` (Park–Miller "minimal standard", seed 1).
 //! - [`qsort_by`]: Apple libc `qsort` (BSD Bentley–McIlroy quicksort with an
 //!   insertion-sort shortcut and heapsort fallback); not stable, so ties end
 //!   up in the same order as in C.
 //!
-//! State is held in values rather than process globals; a layout creates fresh
-//! generators, which corresponds to C running a single layout per process.
+//! # One generator state per run
+//!
+//! C has one process-wide state for each generator. Every `srand48` (neato's `setSeed`,
+//! fdp, ortho's `partition`) and `srand` (sfdp) reseeds it, and every draw advances it, so
+//! a graph's unseeded draws (neato's `user_pos` jitter, `-n`, the `rand()` of stress
+//! pivots and vpsc) continue from the state the run's earlier layouts left. The functions
+//! [`drand48`], [`srand48`], [`rand`] and [`srand`] work on such a state, a [`RandState`],
+//! as C's do on its globals: the caller that stands for
+//! the C process owns it and installs it with [`with_rand_state`] while it lays graphs out.
+//! `dot`'s job pipeline keeps one for the whole run. A layout that runs outside any
+//! [`with_rand_state`] gets a fresh state ([`in_rand_run`]), so the library's top-level
+//! calls are deterministic: each starts like a new process unless its caller passes a state
+//! in. [`Drand48State`] and [`CRandState`] are the generators as plain values.
+//!
+//! The installed state is per thread. Every draw must happen inside a run (checked in debug
+//! builds): engine internals called directly, outside the layout entry points, need their
+//! own [`with_rand_state`].
+//!
+//! The two states are separate, as in Apple's (and every POSIX) libc. Under `_WIN32` C
+//! builds `drand48` on `rand()` (`lib/common/utils.c`) and `srand48` is `srand`, so there
+//! the two would share one state; the port doesn't model that.
 
-/// POSIX `drand48` / `srand48` / `erand48` generator state.
+use std::cell::Cell;
+
+/// POSIX `drand48` / `srand48` / `erand48` generator state, as a value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Drand48 {
+pub struct Drand48State {
     x: u64,
 }
 
@@ -24,23 +45,23 @@ const DRAND48_A: u64 = 0x5_DEEC_E66D;
 const DRAND48_C: u64 = 0xB;
 const DRAND48_MASK: u64 = (1 << 48) - 1;
 
-impl Default for Drand48 {
+impl Default for Drand48State {
     /// The state before any `srand48` call (`x = 0x1234ABCD330E`).
     fn default() -> Self {
+        Self::new_unseeded()
+    }
+}
+
+impl Drand48State {
+    /// The state before any `srand48` call, usable in a `const`.
+    #[must_use]
+    pub const fn new_unseeded() -> Self {
         Self {
             x: 0x1234_ABCD_330E,
         }
     }
-}
 
-impl Drand48 {
     /// `srand48(seed)`: the high 32 bits of the state are the low 32 bits of `seed`.
-    pub fn new(seed: i64) -> Self {
-        let mut r = Self::default();
-        r.srand48(seed);
-        r
-    }
-
     pub fn srand48(&mut self, seed: i64) {
         self.x = (((seed as u64) & 0xFFFF_FFFF) << 16) | 0x330E;
     }
@@ -54,22 +75,22 @@ impl Drand48 {
     }
 }
 
-/// Apple libc `rand()` / `srand()`; `RAND_MAX` is `0x7fffffff`.
+/// Apple libc `rand()` / `srand()` state, as a value; `RAND_MAX` is `0x7fffffff`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CRand {
+pub struct CRandState {
     next: u64,
 }
 
 pub const RAND_MAX: i32 = 0x7fff_ffff;
 
-impl Default for CRand {
+impl Default for CRandState {
     /// A process that never called `srand` starts with seed 1.
     fn default() -> Self {
-        Self { next: 1 }
+        Self::new_unseeded()
     }
 }
 
-impl CRand {
+impl CRandState {
     /// The state of a process that never called `srand` (seed 1), usable in a `static`.
     #[must_use]
     pub const fn new_unseeded() -> Self {
@@ -96,6 +117,121 @@ impl CRand {
         self.next = x as u64;
         (x % (i64::from(RAND_MAX) + 1)) as i32
     }
+}
+
+/// The C process's generator states (see the module docs): `drand48`'s and `rand`'s.
+/// [`Default`] is a process that has drawn nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct RandState {
+    pub drand48: Drand48State,
+    pub rand: CRandState,
+}
+
+thread_local! {
+    /// `drand48`'s state, `rand`'s state, and whether a [`with_rand_state`] installed them.
+    static DRAND48: Cell<Drand48State> = const { Cell::new(Drand48State::new_unseeded()) };
+    static RAND: Cell<CRandState> = const { Cell::new(CRandState::new_unseeded()) };
+    static IN_RUN: Cell<bool> = const { Cell::new(false) };
+}
+
+fn installed() -> RandState {
+    RandState {
+        drand48: DRAND48.with(Cell::get),
+        rand: RAND.with(Cell::get),
+    }
+}
+
+fn install(state: RandState, in_run: bool) {
+    DRAND48.with(|c| c.set(state.drand48));
+    RAND.with(|c| c.set(state.rand));
+    IN_RUN.with(|c| c.set(in_run));
+}
+
+/// Runs `f` with `state` as the process's generator state, and leaves in `state` what
+/// `f`'s draws and seedings made of it, also when `f` panics.
+pub fn with_rand_state<R>(state: &mut RandState, f: impl FnOnce() -> R) -> R {
+    struct Run<'s> {
+        state: &'s mut RandState,
+        outer: (RandState, bool),
+    }
+    impl Drop for Run<'_> {
+        fn drop(&mut self) {
+            *self.state = installed();
+            install(self.outer.0, self.outer.1);
+        }
+    }
+    let outer = (installed(), IN_RUN.with(Cell::get));
+    install(*state, true);
+    let _run = Run { state, outer };
+    f()
+}
+
+/// Runs `f` in the current [`with_rand_state`], or, outside any, with a fresh state: a
+/// layout called on its own starts like a new process.
+pub fn in_rand_run<R>(f: impl FnOnce() -> R) -> R {
+    if IN_RUN.with(Cell::get) {
+        f()
+    } else {
+        with_rand_state(&mut RandState::default(), f)
+    }
+}
+
+/// Every draw belongs to a run: the layout entry points start one ([`in_rand_run`]), and
+/// a test that calls an engine's internals directly must too ([`with_rand_state`]), so that
+/// its results don't depend on what ran before it on the thread.
+fn debug_assert_in_run() {
+    debug_assert!(
+        IN_RUN.with(Cell::get),
+        "drand48/rand outside a with_rand_state run"
+    );
+}
+
+/// Runs a test of an engine's internals in a fresh run, as if in a new process.
+#[cfg(test)]
+pub(crate) fn in_fresh_run<R>(f: impl FnOnce() -> R) -> R {
+    with_rand_state(&mut RandState::default(), f)
+}
+
+/// C's `srand48(seed)`, on the process's state.
+pub fn srand48(seed: i64) {
+    debug_assert_in_run();
+    DRAND48.with(|c| {
+        let mut s = c.get();
+        s.srand48(seed);
+        c.set(s);
+    });
+}
+
+/// C's `drand48()`, on the process's state.
+pub fn drand48() -> f64 {
+    debug_assert_in_run();
+    DRAND48.with(|c| {
+        let mut s = c.get();
+        let v = s.drand48();
+        c.set(s);
+        v
+    })
+}
+
+/// C's `srand(seed)`, on the process's state.
+pub fn srand(seed: u32) {
+    debug_assert_in_run();
+    RAND.with(|c| {
+        let mut s = c.get();
+        s.srand(seed);
+        c.set(s);
+    });
+}
+
+/// C's `rand()`, on the process's state.
+pub fn rand() -> i32 {
+    debug_assert_in_run();
+    RAND.with(|c| {
+        let mut s = c.get();
+        let v = s.rand();
+        c.set(s);
+        v
+    })
 }
 
 /// Apple libc `qsort` (FreeBSD-derived introsort) over a slice with a C-style
@@ -313,11 +449,11 @@ fn qsort_impl<T: Clone, F: FnMut(&T, &T) -> i32>(
 }
 
 /// `random_small(bound)` (`lib/util/random.c`): uniform in `[0, bound)` from `rand()`.
-fn random_small(r: &mut CRand, bound: i32) -> i32 {
+fn random_small(bound: i32) -> i32 {
     debug_assert!(bound > 0);
     let discard_threshold = RAND_MAX - ((RAND_MAX as u32 + 1) % bound as u32) as i32;
     loop {
-        let v = r.rand();
+        let v = rand();
         if v <= discard_threshold {
             return v % bound;
         }
@@ -325,12 +461,12 @@ fn random_small(r: &mut CRand, bound: i32) -> i32 {
 }
 
 /// `gv_random_u64(bound)` (`lib/util/random.c`).
-fn gv_random_u64(r: &mut CRand, bound: u64) -> u64 {
+fn gv_random_u64(bound: u64) -> u64 {
     let discard_threshold = u64::MAX - (u64::MAX - bound + 1) % bound;
     loop {
         let mut bytes = [0u8; 8];
         for b in &mut bytes {
-            *b = random_small(r, 256) as u8;
+            *b = random_small(256) as u8;
         }
         let v = u64::from_le_bytes(bytes);
         if v <= discard_threshold {
@@ -340,21 +476,21 @@ fn gv_random_u64(r: &mut CRand, bound: u64) -> u64 {
 }
 
 /// `gv_random(bound)` (`lib/util/random.c`): uniform in `[0, bound)` from `rand()`.
-pub fn gv_random(r: &mut CRand, bound: usize) -> usize {
+pub fn gv_random(bound: usize) -> usize {
     if bound > RAND_MAX as usize {
-        return gv_random_u64(r, bound as u64) as usize;
+        return gv_random_u64(bound as u64) as usize;
     }
-    random_small(r, bound as i32) as usize
+    random_small(bound as i32) as usize
 }
 
 /// `gv_permutation(bound)` (`lib/util/random.c`): Fisher–Yates shuffle of `0..bound`.
-pub fn gv_permutation(r: &mut CRand, bound: usize) -> Vec<usize> {
+pub fn gv_permutation(bound: usize) -> Vec<usize> {
     let mut p: Vec<usize> = (0..bound).collect();
     if bound == 0 {
         return p;
     }
     for i in (1..bound).rev() {
-        let j = gv_random(r, i + 1);
+        let j = gv_random(i + 1);
         p.swap(i, j);
     }
     p
@@ -1210,15 +1346,58 @@ mod tests {
 
     #[test]
     fn drand48_matches_libc() {
-        let mut r = Drand48::new(1);
+        let mut r = Drand48State::default();
+        r.srand48(1);
         assert_eq!(r.drand48(), 0.041_630_344_771_878_214);
         assert_eq!(r.drand48(), 0.454_492_444_728_629_15);
         assert_eq!(r.drand48(), 0.834_817_218_166_914_9);
     }
 
+    // Issue #290: handles share the installed process state, which carries over between the
+    // layouts of one run; outside a run each layout starts fresh.
+    #[test]
+    fn generators_share_one_state_per_run() {
+        let mut expected = Drand48State::default();
+        let mut state = RandState::default();
+        let first = with_rand_state(&mut state, || {
+            let a = drand48();
+            in_rand_run(|| (a, drand48(), rand()))
+        });
+        assert_eq!(first, (expected.drand48(), expected.drand48(), 16807));
+        assert_eq!(state.drand48, expected);
+        // The next layout of the run continues where the last one stopped.
+        let next = with_rand_state(&mut state, drand48);
+        assert_eq!(next, expected.drand48());
+        // srand48 reseeds the shared state.
+        with_rand_state(&mut state, || {
+            srand48(173);
+            drand48()
+        });
+        let mut seeded = Drand48State::default();
+        seeded.srand48(173);
+        seeded.drand48();
+        assert_eq!(state.drand48, seeded);
+        // Outside a run, a layout starts like a new process, and leaves nothing behind.
+        let fresh = in_rand_run(drand48);
+        assert_eq!(fresh, Drand48State::default().drand48());
+        assert_eq!(in_rand_run(drand48), fresh);
+        // A panic inside a run still leaves its draws in the run's state.
+        let before = state;
+        let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            with_rand_state(&mut state, || {
+                drand48();
+                panic!("layout failed");
+            })
+        }));
+        assert!(caught.is_err());
+        let mut after = before.drand48;
+        after.drand48();
+        assert_eq!(state.drand48, after);
+    }
+
     #[test]
     fn rand_matches_libc() {
-        let mut r = CRand::default();
+        let mut r = CRandState::default();
         let got: Vec<i32> = (0..5).map(|_| r.rand()).collect();
         assert_eq!(
             got,

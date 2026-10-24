@@ -1323,29 +1323,33 @@ mod tests {
     /// and `orthoEdges` leaves the edge unrouted.
     #[test]
     fn huge_cells_fail_the_short_path() {
-        let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (7.2e13, 18.0)])).unwrap();
-        let gstart = mp.sg.nnodes;
-        let mut pq = Pq::new(gstart + 2);
-        let (sn, dn) = (gstart, gstart + 1);
-        let (c0, c1) = (mp.cells[0].clone(), mp.cells[1].clone());
-        add_node_edges(&mut mp.sg, &c1, 1, dn).unwrap();
-        add_node_edges(&mut mp.sg, &c0, 0, sn).unwrap();
-        let fail = mp.sg.short_path(&mut pq, dn, sn).unwrap_err();
-        assert!(broken_in(fail, "sgraph.rs"), "{fail:?}");
+        crate::cutil::in_fresh_run(|| {
+            let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (7.2e13, 18.0)])).unwrap();
+            let gstart = mp.sg.nnodes;
+            let mut pq = Pq::new(gstart + 2);
+            let (sn, dn) = (gstart, gstart + 1);
+            let (c0, c1) = (mp.cells[0].clone(), mp.cells[1].clone());
+            add_node_edges(&mut mp.sg, &c1, 1, dn).unwrap();
+            add_node_edges(&mut mp.sg, &c0, 0, sn).unwrap();
+            let fail = mp.sg.short_path(&mut pq, dn, sn).unwrap_err();
+            assert!(broken_in(fail, "sgraph.rs"), "{fail:?}");
+        });
     }
 
     /// The same edge 7.2e8 points long routes: its distances fit an `int`.
     #[test]
     fn long_cells_within_int_range_route() {
-        let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (7.2e8, 18.0)])).unwrap();
-        let gstart = mp.sg.nnodes;
-        let mut pq = Pq::new(gstart + 2);
-        let (sn, dn) = (gstart, gstart + 1);
-        let (c0, c1) = (mp.cells[0].clone(), mp.cells[1].clone());
-        add_node_edges(&mut mp.sg, &c1, 1, dn).unwrap();
-        add_node_edges(&mut mp.sg, &c0, 0, sn).unwrap();
-        mp.sg.short_path(&mut pq, dn, sn).unwrap();
-        assert!(!convert_sp_to_route(&mut mp, sn, dn).unwrap().is_empty());
+        crate::cutil::in_fresh_run(|| {
+            let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (7.2e8, 18.0)])).unwrap();
+            let gstart = mp.sg.nnodes;
+            let mut pq = Pq::new(gstart + 2);
+            let (sn, dn) = (gstart, gstart + 1);
+            let (c0, c1) = (mp.cells[0].clone(), mp.cells[1].clone());
+            add_node_edges(&mut mp.sg, &c1, 1, dn).unwrap();
+            add_node_edges(&mut mp.sg, &c0, 0, sn).unwrap();
+            mp.sg.short_path(&mut pq, dn, sn).unwrap();
+            assert!(!convert_sp_to_route(&mut mp, sn, dn).unwrap().is_empty());
+        });
     }
 
     /// Issue #228: neato's NaN pin makes both node positions NaN. No
@@ -1355,36 +1359,42 @@ mod tests {
     /// fails there.
     #[test]
     fn nan_node_boxes_fail_the_maze_in_partition() {
-        let fail = mk_maze(&boxes(&[(f64::NAN, 18.0), (f64::NAN, 18.0)])).unwrap_err();
-        assert!(broken_in(fail, "partition.rs"), "{fail:?}");
+        crate::cutil::in_fresh_run(|| {
+            let fail = mk_maze(&boxes(&[(f64::NAN, 18.0), (f64::NAN, 18.0)])).unwrap_err();
+            assert!(broken_in(fail, "partition.rs"), "{fail:?}");
+        });
     }
 
     /// One non-finite box among finite ones takes one of C's own `mkMaze`
     /// failure exits.
     #[test]
     fn one_non_finite_box_fails_the_maze_like_c() {
-        for c in [
-            (f64::NAN, 18.0),
-            (f64::INFINITY, 18.0),
-            (18.0, f64::NEG_INFINITY),
-        ] {
-            let fail = mk_maze(&boxes(&[c, (81.0, 18.0)])).unwrap_err();
-            assert!(
-                matches!(fail, Fail::Trapezoidation { .. } | Fail::NoFreeCell),
-                "{c:?}: {fail:?}"
-            );
-        }
+        crate::cutil::in_fresh_run(|| {
+            for c in [
+                (f64::NAN, 18.0),
+                (f64::INFINITY, 18.0),
+                (18.0, f64::NEG_INFINITY),
+            ] {
+                let fail = mk_maze(&boxes(&[c, (81.0, 18.0)])).unwrap_err();
+                assert!(
+                    matches!(fail, Fail::Trapezoidation { .. } | Fail::NoFreeCell),
+                    "{c:?}: {fail:?}"
+                );
+            }
+        });
     }
 
     /// Issue #186's state, built directly: `shortPath` never reaches `sn`, so
     /// `N_DAD(sn)` is NULL, where C's `convertSPtoRoute` segfaults.
     #[test]
     fn an_unreached_start_is_no_path() {
-        let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (200.0, 18.0)])).unwrap();
-        let sn = mp.sg.nnodes;
-        assert_eq!(
-            convert_sp_to_route(&mut mp, sn, sn + 1).unwrap_err(),
-            Fail::NoPath
-        );
+        crate::cutil::in_fresh_run(|| {
+            let mut mp = mk_maze(&boxes(&[(27.0, 18.0), (200.0, 18.0)])).unwrap();
+            let sn = mp.sg.nnodes;
+            assert_eq!(
+                convert_sp_to_route(&mut mp, sn, sn + 1).unwrap_err(),
+                Fail::NoPath
+            );
+        });
     }
 }

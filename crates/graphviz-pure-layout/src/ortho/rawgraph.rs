@@ -126,12 +126,18 @@ mod tests {
 
     #[test]
     fn top_sort_visits_in_cs_recursive_order() {
-        let mut rng = crate::cutil::Drand48::new(7);
+        crate::cutil::with_rand_state(&mut crate::cutil::RandState::default(), || {
+            crate::cutil::srand48(7);
+            top_sort_cases();
+        });
+    }
+
+    fn top_sort_cases() {
         for n in 2..40 {
             let mut g = RawGraph::new(n);
             for _ in 0..2 * n {
-                let a = (rng.drand48() * n as f64) as usize;
-                let b = (rng.drand48() * n as f64) as usize;
+                let a = (crate::cutil::drand48() * n as f64) as usize;
+                let b = (crate::cutil::drand48() * n as f64) as usize;
                 g.insert_edge(a, b).unwrap();
             }
             let mut want = g.clone();

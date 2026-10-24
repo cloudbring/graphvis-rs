@@ -70,11 +70,17 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
     layout_graph_with_options(graph, engine, LayoutOptions::default())
 }
 
+/// Lays `graph` out with `engine`. Outside a [`cutil::with_rand_state`], the C library's
+/// generators start fresh, as in a new process ([`cutil::in_rand_run`]).
 pub fn layout_graph_with_options(
     graph: &mut Graph,
     engine: LayoutEngine,
     options: LayoutOptions,
 ) -> Result<()> {
+    cutil::in_rand_run(|| layout_in_run(graph, engine, options))
+}
+
+fn layout_in_run(graph: &mut Graph, engine: LayoutEngine, options: LayoutOptions) -> Result<()> {
     common::splines::reset_bz_split_budget();
     graphviz_pure_core::font::textfont_layout_begin();
     common::utils::set_ps_inputscale(options.inputscale);

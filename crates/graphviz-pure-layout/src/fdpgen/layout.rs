@@ -22,7 +22,7 @@ use crate::common::postproc::gv_postprocess;
 use crate::common::shapes::NodeShape;
 use crate::common::types::*;
 use crate::common::utils::{compute_bb, late_int};
-use crate::cutil::{CRand, qsort_by};
+use crate::cutil::qsort_by;
 use crate::neatogen::neatosplines::{
     neato_set_aspect, spline_edges_by, spline_edges_main, spline_edges_route,
 };
@@ -270,7 +270,6 @@ impl DG {
 pub fn with_lgraph<R>(
     dg: &mut DG,
     keep: &[usize],
-    crand: &mut CRand,
     f: impl FnOnce(&mut LGraph<'_>, &mut Sub, &[usize]) -> R,
 ) -> R {
     let mut src = Graph::new("derived", GraphKind::Directed, true);
@@ -375,8 +374,6 @@ pub fn with_lgraph<R>(
         root_clusters: Vec::new(),
         edge_type: EdgeType::Line,
         concentrate: false,
-        drand: Default::default(),
-        crand: *crand,
         has_labelangle: false,
         has_labeldistance: false,
     };
@@ -385,7 +382,6 @@ pub fn with_lgraph<R>(
     for (i, &n) in keep.iter().enumerate() {
         dg.nodes[n].pos = [lg.nodes[i].pos[0], lg.nodes[i].pos[1]];
     }
-    *crand = lg.crand;
     r
 }
 
@@ -957,7 +953,7 @@ impl Fdp<'_, '_> {
             .filter(|&n| cc.iter().any(|c| c.member[n]))
             .collect();
         let mut pinfo = self.pack.clone();
-        let (bbs, pts) = with_lgraph(&mut dg, &keep, &mut self.st.crand, |lg, _, map| {
+        let (bbs, pts) = with_lgraph(&mut dg, &keep, |lg, _, map| {
             let mut subs: Vec<Sub> = cc
                 .iter()
                 .map(|c| {

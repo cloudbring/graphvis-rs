@@ -227,12 +227,12 @@ fn initial_positions(g: &mut LGraph<'_>, sub: &Sub, ng: usize, p: &NeatoParams) 
         if has_pos(g, np) {
             continue;
         }
-        let x = g.drand.drand48();
-        let y = g.drand.drand48();
+        let x = crate::cutil::drand48();
+        let y = crate::cutil::drand48();
         g.nodes[np].pos[0] = x;
         g.nodes[np].pos[1] = y;
         for d in 2..g.ndim {
-            g.nodes[np].pos[d] = g.drand.drand48();
+            g.nodes[np].pos[d] = crate::cutil::drand48();
         }
     }
 }
@@ -390,7 +390,7 @@ fn move_node(g: &mut LGraph<'_>, kk: &mut KkState, ng: usize, m: usize, p: &Neat
     solve(&mut a, &mut b, &mut c, ndim);
     let np = kk.nlist[m];
     for i in 0..ndim {
-        let r = g.drand.drand48();
+        let r = crate::cutil::drand48();
         b[i] *= (2.0 * (1.0 - p.damping)).mul_add(r, p.damping);
         g.nodes[np].pos[i] += b[i];
     }
