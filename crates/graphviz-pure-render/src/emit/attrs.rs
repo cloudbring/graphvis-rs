@@ -58,8 +58,12 @@ impl<'a> Attrs<'a> {
     }
 }
 
+/// `FUNLIMIT` in `lib/common/emit.c`: the size of `parse_style`'s array, its terminator included.
+const FUNLIMIT: usize = 64;
+
 /// `parse_style` in `lib/common/emit.c`: splits `style` into entries, each a name followed by
-/// its parenthesised arguments.
+/// its parenthesised arguments. A style of more than `FUNLIMIT - 1` entries gives an empty
+/// list after `truncating style`, as a parse error does after its message.
 pub(crate) fn parse_style(s: &str) -> Vec<StyleItem> {
     let mut out: Vec<StyleItem> = Vec::new();
     let b = s.as_bytes();
@@ -103,16 +107,8 @@ pub(crate) fn parse_style(s: &str) -> Vec<StyleItem> {
                         last.args.push(tok);
                     }
                 } else {
-                    if out.len() == 63 {
-                        // C returns its static `parse` array here before the loop that fills
-                        // it in, so it holds the previous call's pointers: all NULL on the
-                        // first call, no items. After an earlier call they point at that
-                        // call's offsets in `ps_xb`, which this call has overwritten: C draws
-                        // whatever bytes are left there, or reads freed or reused memory if
-                        // the buffer moved. That depends on C's buffer growth and on the
-                        // order of every `parse_style` call in the run, which the port does
-                        // not model. The port returns no items, what C does when this is
-                        // its first style.
+                    if out.len() == FUNLIMIT - 1 {
+                        // C returns its static array unfilled here (#268, docs/porting/crashes.md).
                         graphviz_pure_core::diag::agwarningf(&format!("truncating style '{s}'\n"));
                         return Vec::new();
                     }

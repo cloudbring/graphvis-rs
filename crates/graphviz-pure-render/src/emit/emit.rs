@@ -1436,6 +1436,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             Null,
         }
         let toks: Vec<&str> = color.split(':').filter(|c| !c.is_empty()).collect();
+        // (`Null` is never named: `cur` is set to a colour before each use.)
         let name = |c: Col| match c {
             Col::Orig | Col::Null => color,
             Col::Tok(i) => toks[i],

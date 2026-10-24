@@ -649,3 +649,16 @@ thread, so the CLI runs on a 64 MB thread (`DOT_STACK`). Measured on the referen
 subgraphs take C 0.05 s and 34 MB, and the port 0.03 s and 14 MB, in every engine.
 2498 nested clusters, each with a node, take C 0.3 to 13 s and up to 400 MB; the port
 takes up to 35 s, and fdp needs 11.5 GB. That cost is the engines' (#323), not the parser's.
+
+## Truncated styles: parse_style's static array
+
+`parse_style` (`lib/common/emit.c`) keeps its result in a static array and a static buffer.
+At the 64th item (`FUNLIMIT - 1`) it warns `truncating style` and returns the array before
+filling it in (#268). On the run's first style that array is all NULL, so C draws no style
+item. After an earlier style, the array still holds that call's pointers into the buffer,
+which this call has overwritten from the start, or moved when it grew past its inline
+storage: C draws whatever is left at those offsets, often printing
+`unsupported style <garbage>`, or reads freed memory. The port does not model this. What C
+reads depends on the buffer's growth and on the order of every `parse_style` call in the run,
+which the port's renderers don't reproduce call for call. So a truncated style always gives no
+items, which is what C does when it is the first style parsed.

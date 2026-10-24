@@ -7462,6 +7462,87 @@ fn fdp_cluster_node_is_in_every_ancestor_cluster_once() {
     );
 }
 
+// #268 on an edge and a cluster: with no items, the edge is neither `tapered` nor `invis` and
+// gets no `bold`, and the cluster is not filled, radial, striped or rounded. Output is C 16.1.0's.
+#[test]
+fn issue268_a_truncated_edge_or_cluster_style_draws_no_style_items() {
+    let items = |first: &[&str], n: usize| {
+        let mut v: Vec<String> = first.iter().map(|s| s.to_string()).collect();
+        v.extend((0..n).map(|i| format!("s{i}")));
+        v.join(",")
+    };
+    let edge = items(&["tapered", "invis", "bold"], 61);
+    let cluster = items(&["filled", "radial", "striped", "rounded"], 60);
+    for (src, style, warnings, expected) in [
+        (
+            format!("digraph {{ a -> b [style=\"{edge}\" penwidth=3] }}"),
+            &edge,
+            1,
+            r#"digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 108 54 108 54 0 ",
+		bb="0,0,54,108",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	a	[_draw_="c 7 -#000000 e 27 90 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 27 85.8 0 6.21 1 -a ",
+		height=0.5,
+		pos="27,90",
+		width=0.75];
+	b	[_draw_="c 7 -#000000 e 27 18 27 18 ",
+		_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 27 13.8 0 7 1 -b ",
+		height=0.5,
+		pos="27,18",
+		width=0.75];
+	a -> b	[_draw_="S 15 -setlinewidth(3) c 7 -#000000 B 4 27 71.7 27 65.25 27 57.73 27 50.41 ",
+		_hdraw_="S 15 -setlinewidth(3) S 5 -solid c 7 -#000000 C 7 -#000000 P 3 30.5 50.64 27 40.64 23.5 50.64 ",
+		penwidth=3,
+		pos="e,27,36.104 27,71.697 27,65.254 27,57.726 27,50.41",
+		style="tapered,invis,bold,s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23,s24,s25,s26,s27,s28,s29,\
+s30,s31,s32,s33,s34,s35,s36,s37,s38,s39,s40,s41,s42,s43,s44,s45,s46,s47,s48,s49,s50,s51,s52,s53,s54,s55,s56,s57,s58,s59,s60"];
+}
+"#,
+        ),
+        (
+            format!(
+                "digraph {{ subgraph cluster_x {{ style=\"{cluster}\"; fillcolor=\"red:blue\"; a }} }}"
+            ),
+            &cluster,
+            1,
+            r#"digraph {
+	graph [_draw_="c 9 -#fffffe00 C 7 -#ffffff P 4 0 0 0 68 86 68 86 0 ",
+		bb="0,0,86,68",
+		xdotversion=1.7
+	];
+	node [label="\N"];
+	subgraph cluster_x {
+		graph [_draw_="c 7 -#000000 p 4 8 8 8 60 78 60 78 8 ",
+			bb="8,8,78,60",
+			fillcolor="red:blue",
+			style="filled,radial,striped,rounded,s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15,s16,s17,s18,s19,s20,s21,s22,s23,s24,s25,s26,\
+s27,s28,s29,s30,s31,s32,s33,s34,s35,s36,s37,s38,s39,s40,s41,s42,s43,s44,s45,s46,s47,s48,s49,s50,s51,s52,s53,s54,s55,s56,s57,s58,\
+s59"
+		];
+		a	[_draw_="c 7 -#000000 e 43 34 27 18 ",
+			_ldraw_="F 14 11 -Times-Roman c 7 -#000000 T 43 29.8 0 6.21 1 -a ",
+			height=0.5,
+			pos="43,34",
+			width=0.75];
+	}
+}
+"#,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Txdot"], &src);
+        assert!(ok);
+        assert_eq!(
+            err,
+            format!("Warning: truncating style '{style}'\n").repeat(warnings)
+        );
+        assert_eq!(out, expected, "{src}");
+    }
+}
+
 // Issue #283: when `multicolor` fails, C draws the edge in `black` but keeps the original
 // string's `:` count, and sets the pen for every `strtok` token because it compares the
 // colours by pointer. With no token at all (`color=":"`), the arrows get the whole string,
@@ -7537,18 +7618,18 @@ fn issue283_failed_multicolor_draws_black_with_the_original_color_count() {
 // is the two delimiters 0xC3 and 0xA9, so `aèb` (0xC3 0xA8) splits too. The second layer's id
 // starts with the lone byte 0xA8. Output is C 16.1.0's.
 #[test]
+#[cfg(unix)]
 fn issue283_layers_split_on_the_bytes_of_layersep() {
-    let (out, err, ok) = run(
-        &["-Tsvg"],
+    let (out, err, ok) = run_bytes(
+        &[b"-Tsvg"],
         "digraph { layers=\"a\u{e8}b:c\"; layersep=\"\u{e9}\"; \
          a [layer=\"a\u{e8}b\"]; b [layer=\"c\"] }",
     );
     assert!(ok);
-    assert_eq!(err, "");
-    let (_, body) = out.split_once("-->\n").unwrap();
-    assert_eq!(
-        body,
-        "\
+    assert!(err.is_empty(), "{}", String::from_utf8_lossy(&err));
+    let start = out.windows(4).position(|w| w == b"-->\n").unwrap() + 4;
+    // `@` stands for the lone byte 0xA8.
+    let expected: Vec<u8> = "\
              <!-- Pages: 1 -->\n\
              <svg width=\"134pt\" height=\"44pt\"\n\
               \x20viewBox=\"0.00 0.00 134.00 44.00\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n\
@@ -7563,14 +7644,21 @@ fn issue283_layers_split_on_the_bytes_of_layersep() {
              </g>\n\
              </g>\n\
              </g>\n\
-             <g id=\"\u{fffd}b:c\" class=\"layer\">\n\
-             <g id=\"\u{fffd}b:c_graph0\" class=\"graph\" transform=\"scale(1 1) rotate(0) translate(4 40)\">\n\
+             <g id=\"@b:c\" class=\"layer\">\n\
+             <g id=\"@b:c_graph0\" class=\"graph\" transform=\"scale(1 1) rotate(0) translate(4 40)\">\n\
              <polygon fill=\"white\" stroke=\"none\" points=\"-4,4 -4,-40 130,-40 130,4 -4,4\"/>\n\
              </g>\n\
              </g>\n\
              </svg>\n\
          "
+    .bytes()
+    .map(|b| if b == b'@' { 0xA8 } else { b })
+    .collect();
+    assert_eq!(
+        String::from_utf8_lossy(&out[start..]),
+        String::from_utf8_lossy(&expected)
     );
+    assert_eq!(out[start..], expected[..]);
 }
 
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
