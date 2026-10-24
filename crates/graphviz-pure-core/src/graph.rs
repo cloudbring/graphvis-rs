@@ -387,8 +387,6 @@ pub struct NodeLayout {
     pub higher_dims: Vec<f64>,
 }
 
-/// What a layout leaves on an edge for the renderers and writers, beyond the spline and the
-/// main label ([`EdgeData::spline`], [`EdgeData::label_pos`]).
 /// Where an edge's final port names come from ([`EdgeLayout::port_names`]).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PortNames {
@@ -402,6 +400,8 @@ pub enum PortNames {
     Layout { tail: String, head: String },
 }
 
+/// What a layout leaves on an edge for the renderers and writers, beyond the spline and the
+/// main label ([`EdgeData::spline`], [`EdgeData::label_pos`]).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct EdgeLayout {
     /// `AGSEQ(e)`, as [`NodeLayout::seq`].
