@@ -104,21 +104,48 @@ impl<'a> Dot<'a> {
                 .copied()
                 .filter(|&e| set.contains(&self.edges[e].tail) && set.contains(&self.edges[e].head))
                 .collect();
-            let g = self.graphs.len();
-            self.graphs.push(GraphInfo {
-                name: format!("_cc_{i}"),
-                root: 0,
-                cg_parent: Some(0),
-                nodes: set,
-                edges,
-                attrs: defaults.clone(),
-                ..GraphInfo::default()
+            // `agsubg(g, "_cc_<i>", 1)` returns the input's own subgraph of that name
+            // (#335), which gains the component's nodes and edges and keeps its values.
+            let user = cc.user.and_then(|u| {
+                self.graphs
+                    .iter()
+                    .enumerate()
+                    .skip(1)
+                    .find(|(_, gi)| gi.sub_index == Some(u))
+                    .map(|(k, _)| k)
             });
-            self.graphs[0].subgs.push(g);
+            let g = match user {
+                Some(g) => {
+                    if let Some(gi) = self.graphs.get_mut(g) {
+                        gi.nodes.extend(set);
+                        gi.edges.extend(edges);
+                    }
+                    g
+                }
+                None => {
+                    let g = self.graphs.len();
+                    self.graphs.push(GraphInfo {
+                        name: format!("_cc_{i}"),
+                        root: 0,
+                        cg_parent: Some(0),
+                        nodes: set,
+                        edges,
+                        attrs: defaults.clone(),
+                        ..GraphInfo::default()
+                    });
+                    self.graphs[0].subgs.push(g);
+                    g
+                }
+            };
             // Projected subgraphs, preorder (parents first).
             let mut ids: Vec<G> = Vec::with_capacity(cc.subgraphs.len());
             let laid_out = laid_out.get(i);
             for (k, p) in cc.subgraphs.iter().enumerate() {
+                // The input's own `_cc_<i>` already holds its subgraphs.
+                if user.is_some() && k < cc.user_subgraphs {
+                    ids.push(G::MAX);
+                    continue;
+                }
                 let parent = p.parent.map_or(g, |k| ids[k]);
                 let s = self.graphs.len();
                 let (nodes, edges) = match laid_out.and_then(|l| l.get(k)).and_then(Option::as_ref)
@@ -544,8 +571,23 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
         let ccsubs = d.attach_cc_subgraphs(graph, &ccs, &[]);
         d.dot_layout()?;
         if d.aborted {
-            d.cc_kept = ccsubs;
+            // The input's own `_cc_<i>` stays an input subgraph; only the ones cccomps
+            // made are added to the output.
+            let user: Vec<G> = ccs
+                .iter()
+                .filter_map(|c| c.user)
+                .filter_map(|u| {
+                    d.graphs
+                        .iter()
+                        .enumerate()
+                        .skip(1)
+                        .find(|(_, gi)| gi.sub_index == Some(u))
+                        .map(|(k, _)| k)
+                })
+                .collect();
+            d.cc_kept = ccsubs.into_iter().filter(|g| !user.contains(g)).collect();
         } else {
+            d.cc_deleted = ccs.iter().filter_map(|c| c.user).collect();
             let ccsubs: std::collections::BTreeSet<G> = ccsubs.into_iter().collect();
             d.graphs[0].subgs.retain(|s| !ccsubs.contains(s));
         }
@@ -582,6 +624,17 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
         c.cg_in_id_packed = true;
         c.cg_root_node = Some(cg.nodes.clone());
         c.dot_layout()?;
+        // dotLayout(sg) stops at the component's own `phase` with attach_phase_attrs
+        // (`phase=3` attaches as 2).
+        let phase = super::utils::late_int(c.agget(0, "phase"), -1, 1);
+        if (1..=3).contains(&phase) {
+            d.node_phase.resize(d.nodes.len(), None);
+            for &n in &cg.nodes {
+                if let Some(p) = d.node_phase.get_mut(n) {
+                    *p = Some(phase.min(2));
+                }
+            }
+        }
         // `clip_and_install` grew the root's box.
         d.graphs[0].bb = c.root_bb;
         // The component's nodes and edges are the root's objects in C, so what
@@ -599,6 +652,8 @@ pub fn do_dot(d: &mut Dot<'_>, graph: &Graph) -> Result<(), String> {
         any_splines |= c.splines_done;
         comps.push(comp);
     }
+    // agdelete(g, ccs[i]) once the components are laid out and packed.
+    d.cc_deleted = ccs.iter().filter_map(|c| c.user).collect();
     // attachPos
     let pos: Vec<Point> = d
         .nodes

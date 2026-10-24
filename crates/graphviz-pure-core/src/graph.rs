@@ -853,6 +853,69 @@ impl Graph {
             .collect();
     }
 
+    /// `agdelete(g, subg)` for each of `del` (subgraph indices): the subgraphs and the ones
+    /// nested in them are gone, with their local dictionaries; their nodes and edges stay in
+    /// the graph. The other subgraphs are renumbered in order, and every subgraph index the
+    /// graph holds follows.
+    pub fn agdelete_subgraphs(&mut self, del: &[usize]) {
+        let n = self.subgraphs.len();
+        let mut gone = vec![false; n];
+        let mut stack: Vec<usize> = del.iter().copied().filter(|&s| s < n).collect();
+        while let Some(s) = stack.pop() {
+            if !std::mem::replace(&mut gone[s], true) {
+                stack.extend(self.subgraphs[s].subgraphs.iter().map(|c| c.0 as usize));
+            }
+        }
+        if !gone.contains(&true) {
+            return;
+        }
+        let mut new_index = vec![None; n];
+        let mut next = 0u32;
+        for (s, g) in gone.iter().enumerate() {
+            if !g {
+                new_index[s] = Some(next);
+                next += 1;
+            }
+        }
+        let map = |s: usize| new_index.get(s).copied().flatten();
+        let dicts = self.dicts.len() == n + 1;
+        let old = std::mem::take(&mut self.subgraphs);
+        for (s, mut sg) in old.into_iter().enumerate() {
+            let Some(id) = map(s) else { continue };
+            sg.id = SubgraphId(id);
+            sg.subgraphs = sg
+                .subgraphs
+                .iter()
+                .filter_map(|c| map(c.0 as usize).map(SubgraphId))
+                .collect();
+            if let Some(list) = sg.layout.clusters.as_mut() {
+                *list = list
+                    .iter()
+                    .filter_map(|&c| map(c))
+                    .map(|c| c as usize)
+                    .collect();
+            }
+            self.subgraphs.push(sg);
+        }
+        if let Some(list) = self.layout.clusters.as_mut() {
+            *list = list
+                .iter()
+                .filter_map(|&c| map(c))
+                .map(|c| c as usize)
+                .collect();
+        }
+        self.anon_subgraph_ids = std::mem::take(&mut self.anon_subgraph_ids)
+            .into_iter()
+            .filter_map(|(s, id)| map(s as usize).map(|s| (s, id)))
+            .collect();
+        if dicts {
+            let mut it = std::mem::take(&mut self.dicts).into_iter();
+            self.dicts.extend(it.next());
+            self.dicts
+                .extend(it.zip(&gone).filter(|(_, g)| !**g).map(|(d, _)| d));
+        }
+    }
+
     pub fn add_edge(&mut self, tail: NodeId, head: NodeId, attrs: AttrMap) -> EdgeId {
         if self.strict
             && let Some(existing) = self.edges.iter_mut().find(|e| {
@@ -1117,5 +1180,61 @@ mod attr_map_tests {
         );
         let err = serde_json::from_str::<AttrMap>(r#"{"values":{},"html":["a"]}"#).unwrap_err();
         assert!(err.to_string().contains("`a`, which has no value"), "{err}");
+    }
+}
+
+#[cfg(test)]
+mod agdelete_tests {
+    use super::*;
+
+    fn sub(id: u32, name: &str, kids: &[u32]) -> SubgraphData {
+        SubgraphData {
+            id: SubgraphId(id),
+            name: name.into(),
+            is_cluster: name.starts_with("cluster"),
+            graph_attrs: AttrMap::new(),
+            node_defaults: AttrMap::new(),
+            edge_defaults: AttrMap::new(),
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            subgraphs: kids.iter().map(|&k| SubgraphId(k)).collect(),
+            bb: BoundingBox::default(),
+            html_name: false,
+            empty_name: false,
+            layout: GraphLayout::default(),
+        }
+    }
+
+    // #335: deleting a subgraph drops its nested ones and renumbers every subgraph index.
+    #[test]
+    fn deleting_a_subgraph_renumbers_the_rest() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        g.subgraphs = vec![
+            sub(0, "cluster_a", &[]),
+            sub(1, "_cc_0", &[2]),
+            sub(2, "inner", &[]),
+            sub(3, "cluster_b", &[4]),
+            sub(4, "%5", &[]),
+        ];
+        g.dicts = (0..6).map(|_| AttrDicts::default()).collect();
+        g.dicts[4].graph.insert("color".into(), AttrSym::default());
+        g.anon_subgraph_ids.insert(4, 5);
+        g.layout.clusters = Some(vec![0, 3]);
+        g.subgraphs[3].layout.clusters = Some(vec![4]);
+        g.agdelete_subgraphs(&[1]);
+        let names: Vec<_> = g.subgraphs.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, ["cluster_a", "cluster_b", "%5"]);
+        assert!(
+            g.subgraphs
+                .iter()
+                .enumerate()
+                .all(|(i, s)| s.id.0 as usize == i)
+        );
+        assert_eq!(g.subgraphs[1].subgraphs, [SubgraphId(2)]);
+        assert_eq!(g.layout.clusters, Some(vec![0, 1]));
+        assert_eq!(g.subgraphs[1].layout.clusters, Some(vec![2]));
+        assert_eq!(g.anon_subgraph_ids.get(&2), Some(&5));
+        assert_eq!(g.dicts.len(), 4);
+        assert!(g.dicts[2].graph.contains_key("color"));
     }
 }

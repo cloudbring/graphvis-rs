@@ -4108,6 +4108,109 @@ fn pack_ratio_several_components_lays_out_with_cc_subgraphs() {
     }
 }
 
+// Issue #335: cccomps makes component i with agsubg(g, "_cc_<i>", 1) (lib/pack/ccomps.c),
+// which returns the input's own top-level subgraph of that name. The component is that
+// subgraph: dotLayout(sg) reads its `splines`, `rank` and `phase` (agget(sg)), and doDot
+// deletes it after packing (lib/dotgen/dotinit.c:503), so it is not in the output. The
+// port kept it apart and laid the component out with the root's values. With one component
+// (the second graph), dotLayout(g) sees the subgraph as a rank set. Expected output, stderr
+// and exit status are C 16.1.0's.
+#[test]
+fn issue335_input_cc_subgraph_is_the_pack_component() {
+    for (src, want, want_err, want_status) in [
+        (
+            "digraph { pack=true; a -> b; c -> d; c -> e; subgraph _cc_1 { splines=line; rank=same; d; e; color=red } }",
+            concat!(
+                "digraph {\n",
+                "\tgraph [bb=\"0,0,222,144\",\n",
+                "\t\tpack=true\n",
+                "\t];\n",
+                "\tnode [label=\"\\N\"];\n",
+                "\ta\t[height=0.5,\n",
+                "\t\tpos=\"195,90\",\n",
+                "\t\twidth=0.75];\n",
+                "\tb\t[height=0.5,\n",
+                "\t\tpos=\"195,18\",\n",
+                "\t\twidth=0.75];\n",
+                "\ta -> b;\n",
+                "\tc\t[height=0.5,\n",
+                "\t\tpos=\"63,126\",\n",
+                "\t\twidth=0.75];\n",
+                "\td\t[height=0.5,\n",
+                "\t\tpos=\"27,54\",\n",
+                "\t\twidth=0.75];\n",
+                "\tc -> d\t[pos=\"e,35.304,71.147 54.65,108.76 50.425,100.55 45.192,90.373 40.419,81.093\"];\n",
+                "\te\t[height=0.5,\n",
+                "\t\tpos=\"99,54\",\n",
+                "\t\twidth=0.75];\n",
+                "\tc -> e\t[pos=\"e,90.696,71.147 71.35,108.76 75.575,100.55 80.808,90.373 85.581,81.093\"];\n",
+                "}\n",
+            ),
+            "Error: lost a b edge\n",
+            1,
+        ),
+        (
+            "digraph { pack=true; a -> b; b -> c; subgraph _cc_0 { rank=same; a; b; c } }",
+            concat!(
+                "digraph {\n",
+                "\tgraph [bb=\"0,0,198,36\",\n",
+                "\t\tpack=true\n",
+                "\t];\n",
+                "\tnode [label=\"\\N\"];\n",
+                "\ta\t[height=0.5,\n",
+                "\t\tpos=\"27,18\",\n",
+                "\t\twidth=0.75];\n",
+                "\tb\t[height=0.5,\n",
+                "\t\tpos=\"99,18\",\n",
+                "\t\twidth=0.75];\n",
+                "\ta -> b\t[pos=\"e,71.75,18 54.281,18 56.283,18 58.284,18 60.286,18\"];\n",
+                "\tc\t[height=0.5,\n",
+                "\t\tpos=\"171,18\",\n",
+                "\t\twidth=0.75];\n",
+                "\tb -> c\t[pos=\"e,143.75,18 126.28,18 128.28,18 130.28,18 132.29,18\"];\n",
+                "}\n",
+            ),
+            "",
+            0,
+        ),
+        (
+            "digraph { pack=true; a -> b; c -> d; subgraph _cc_1 { phase=2; c; d } }",
+            concat!(
+                "digraph {\n",
+                "\tgraph [bb=\"0,0,142,108\",\n",
+                "\t\tpack=true\n",
+                "\t];\n",
+                "\tnode [label=\"\\N\"];\n",
+                "\ta\t[height=0.5,\n",
+                "\t\tpos=\"27,90\",\n",
+                "\t\twidth=0.75];\n",
+                "\tb\t[height=0.5,\n",
+                "\t\tpos=\"27,18\",\n",
+                "\t\twidth=0.75];\n",
+                "\ta -> b\t[pos=\"e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536\"];\n",
+                "\tc\t[height=0.5,\n",
+                "\t\torder=0,\n",
+                "\t\tpos=\"115,26\",\n",
+                "\t\trank=0,\n",
+                "\t\twidth=0.75];\n",
+                "\td\t[height=0.5,\n",
+                "\t\torder=0,\n",
+                "\t\tpos=\"115,26\",\n",
+                "\t\trank=1,\n",
+                "\t\twidth=0.75];\n",
+                "\tc -> d;\n",
+                "}\n",
+            ),
+            "Error: lost c d edge\n",
+            1,
+        ),
+    ] {
+        let (out, err, status) = run_in(&tmp(""), &["-Tdot"], src);
+        assert_eq!((err.as_str(), status), (want_err, want_status), "{src}");
+        assert_eq!(out, want, "{src}");
+    }
+}
+
 /// The `<title>`s of the cluster groups of an SVG, in drawing order.
 fn svg_cluster_titles(svg: &str) -> Vec<&str> {
     svg.split("class=\"cluster\">\n<title>")

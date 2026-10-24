@@ -405,7 +405,7 @@ case because `makeLineEdge` never reads the head; the redirect changes nothing t
 
 ## dot's pack components
 
-Closed: #100, #226, #312; #101 is not matched (below).
+Closed: #100, #226, #312, #335; #101 and #352 are not matched (below).
 
 With `pack` or `packmode`, `doDot` (`lib/dotgen/dotinit.c`) splits the graph with `cccomps`
 into subgraphs `_cc_<i>` of the root, each with clones of the root's clusters (`projectG`),
@@ -418,6 +418,17 @@ subgraphs, the port now does too:
 - **Cluster edges.** dot's `node_induce` adds the edges between a cluster's nodes to the
   component's clone, which `agdelete` removes after packing. The root's clusters keep the
   edges they were declared with, so `-Tdot` writes the others at the root (#312).
+- **A subgraph the input names `_cc_<i>`** (#335). `cccomps` makes component `i` with
+  `agsubg(g, "_cc_<i>", 1)`, which returns a top-level subgraph of that name if the input has
+  one. The component is then that subgraph: its subgraphs come first, before `subGInduce`'s
+  projections, its own values are what the component's `dotLayout` reads with `agget(sg)`
+  (`splines`, `phase`, `rank`, `ordering`, ...; `initSubg` copies `nodesep`, `ranksep` and
+  `rankdir` from the root), and `doDot` deletes it after packing, so it is missing from
+  the output (in every branch: several components, one, or a `ratio`). The port does the
+  same. A node of that subgraph outside the component is in two components, which share
+  its C record, as with #101 below, and is not matched. A cluster in it makes C fail an
+  assertion in `mapClust` (`ccomps.c:366`); the port lays it out as a cluster of the
+  component.
 - **A failed component.** When `dotLayout(sg)` fails (ortho cannot build its maze), `doDot`
   returns before `attachPos` and `agdelete`. The earlier components keep their positions, the
   `_cc_<i>` subgraphs and their clones stay in the output, and the root's box is what each
@@ -425,8 +436,10 @@ subgraphs, the port now does too:
   `bezier_bb`'s assertion (`emit.c:4082`) while drawing, for example with the failing
   component first; the port draws the nodes and exits 0.
 
-**#101 is not matched.** A node in two non-nested clusters is in two components. In C both
-components share its one `Agnodeinfo_t`, and the edges between two shared nodes their
+**#101 is not matched**, nor #352, the same case: of 400 generated `pack` graphs with
+clusters, the 135 where no node is in two non-nested clusters all match C, and every one that
+differs shares C records between components. A node in two non-nested clusters is in two
+components. In C both components share its one `Agnodeinfo_t`, and the edges between two shared nodes their
 `Agedgeinfo_t`: the second layout starts from what the first left in those records, and
 `new_spline` appends a second bezier to a shared edge. The port lays every component out on
 fresh records, and the later component's results win. Matching C would mean laying the

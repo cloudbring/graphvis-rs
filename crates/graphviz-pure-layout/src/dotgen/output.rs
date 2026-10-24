@@ -17,6 +17,8 @@ pub struct Output {
     node_size: Vec<Option<(f64, f64, f64)>>,
     /// `attach_phase_attrs(g, n)`: write `rank` (and `order` from 2) for `phase=n`.
     phase_attrs: Option<i32>,
+    /// `attach_phase_attrs` of each node's pack component (`Dot::node_phase`).
+    node_phase: Vec<Option<i32>>,
     bb: BoundingBox,
     cluster_bb: Vec<(usize, BoundingBox)>,
     /// Spline, `lp`, and whether the label is unplaced (`!ED_label(e)->set`).
@@ -37,6 +39,8 @@ pub struct Output {
     /// see what `node_induce` (`agsubedge`, `agdelete`) and `mark_clusters` (`agdelete`)
     /// changed.
     membership: Vec<(usize, Vec<usize>, Vec<usize>)>,
+    /// Input subgraphs doDot deleted (`Dot::cc_deleted`).
+    deleted: Vec<usize>,
 }
 
 /// A subgraph `cccomps` added to the root.
@@ -248,6 +252,7 @@ impl Output {
             node_rank,
             node_size,
             phase_attrs,
+            node_phase: d.node_phase.clone(),
             bb,
             cluster_bb,
             edges,
@@ -258,6 +263,7 @@ impl Output {
             cluster_list,
             cc_subgraphs: cc_subgraphs(d, &d.cc_kept),
             membership: membership(d),
+            deleted: d.cc_deleted.clone(),
         }
     }
 
@@ -282,7 +288,10 @@ impl Output {
             let (r, o) = self.node_rank[i];
             graph.nodes[i].rank = r;
             graph.nodes[i].order = o.max(0) as usize;
-            if let Some(ph) = self.phase_attrs {
+            if let Some(ph) = self
+                .phase_attrs
+                .or_else(|| self.node_phase.get(i).copied().flatten())
+            {
                 let a = &mut graph.nodes[i].attrs;
                 a.set("rank", r.to_string(), false);
                 if ph >= 2 {
@@ -432,6 +441,8 @@ impl Output {
             if dicts {
                 graph.dicts.push(dict);
             }
-        }
+        } // doDot's agdelete of the input's own `_cc_<i>` subgraphs, after everything above
+        // has used the input's subgraph indices.
+        graph.agdelete_subgraphs(&self.deleted);
     }
 }

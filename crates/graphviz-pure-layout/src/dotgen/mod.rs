@@ -98,6 +98,13 @@ pub struct Dot<'a> {
     /// The `_cc_<i>` subgraphs a failed layout leaves in the root (doDot returns
     /// before `agdelete`), with the projected subgraphs under them.
     pub cc_kept: Vec<G>,
+    /// The input's own `_cc_<i>` subgraphs that cccomps took as components, which doDot
+    /// deletes after packing (`agdelete(g, ccs[i])`, #335).
+    pub cc_deleted: Vec<usize>,
+    /// The `phase` each node's pack component stopped at, where it is 1 to 3: that
+    /// component's dotLayout ran `attach_phase_attrs` on its nodes (a component reads
+    /// `phase` from its own subgraph, #335).
+    pub node_phase: Vec<Option<i32>>,
     /// The `tend`/`hend` ends dot's edge routers last left (#360).
     pub stale_ends: dotsplines::StaleEnds,
 }
@@ -111,6 +118,8 @@ impl<'a> Dot<'a> {
             comp_index: 0,
             root_bb: BoxF::default(),
             cc_kept: Vec::new(),
+            cc_deleted: Vec::new(),
+            node_phase: Vec::new(),
             cg_in_id: std::cell::RefCell::new(Vec::new()),
             cg_in_id_hits: std::cell::RefCell::new(Vec::new()),
             cg_in_id_packed: false,
