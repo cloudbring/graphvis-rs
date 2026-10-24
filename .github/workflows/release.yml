@@ -486,7 +486,8 @@ jobs:
   # asks for one approval per environment for the jobs waiting on it at that moment, so jobs that
   # waited on github-release would wait for a second approval. The trade-off: the registries no
   # longer wait for the GitHub release to exist, and a failed github-release job no longer holds
-  # them back (each job is re-runnable on its own, see docs/releasing.md).
+  # them back (each job is re-runnable on its own, see docs/releasing.md). Keep the five `needs:`
+  # lists identical, or the approval splits in two again.
   crates-io:
     name: Publish to crates.io
     if: github.event_name == 'push'
@@ -673,7 +674,8 @@ jobs:
         run: docker logout ghcr.io
 
   # Checks what the publishing jobs published: the GitHub release's assets and their attestations,
-  # the crates on crates.io, JSR, and the image's tags and attestation. npm goes live only when a
+  # the crates on crates.io, JSR, and the image's tags and attestation. A channel whose publishing
+  # job did not succeed is reported as failing at once, not polled. npm goes live only when a
   # maintainer approves the staged version, and the tap and bucket update afterwards, so those are
   # checked later by `scripts/release-verify.sh VERSION` without --ci (docs/releasing.md). No
   # environment and a read-only token: this job publishes nothing. It runs once any channel
@@ -694,9 +696,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The registry checks share one 10-minute deadline, well inside the job's timeout, and the
+      # script writes each channel's line as it goes, so the summary always shows what was found.
       - name: Verify every channel but npm and the tap and bucket
         shell: bash # -eo pipefail: a failed check must fail the step
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.check.outputs.version }}
-        run: scripts/release-verify.sh "$VERSION" --ci --wait 600 | tee -a "$GITHUB_STEP_SUMMARY"
+          RESULTS: >-
+            github=${{ needs.github-release.result }} crates=${{ needs.crates-io.result }}
+            npm=${{ needs.npm.result }} jsr=${{ needs.jsr.result }} ghcr=${{ needs.ghcr.result }}
+        run: |
+          ok="" failed=""
+          for kv in $RESULTS; do
+            if [ "${kv#*=}" = success ]; then ok="$ok,${kv%%=*}"; else failed="$failed,${kv%%=*}"; fi
+          done
+          scripts/release-verify.sh "$VERSION" --ci --wait 600 --channels "${ok#,}" --failed "${failed#,}" |
+            tee -a "$GITHUB_STEP_SUMMARY"

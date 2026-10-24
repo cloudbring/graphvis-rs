@@ -57,25 +57,43 @@ xp=$(gh issue list --repo "$REPO" --state open --search 'in:title "Cross-platfor
   -q 'map(select(.title == "Cross-platform fails on master") | "#\(.number)") | join(", ")')
 item "$([ -z "$xp" ] && echo 1)" "No open \"Cross-platform fails on master\" issue" "$xp"
 
-# Workflows on the commit (or its twin): the newest run must have succeeded.
+# Workflows on the commit: its newest run must have succeeded. ci.yml and cross-platform.yml run
+# on every master push, so their run on the commit decides. fuzz.yml and the dry run are started
+# by hand on the release branch, so for a merge commit with no run of its own, the run on the pull
+# request's head counts when the trees are the same.
 for wf in ci.yml cross-platform.yml fuzz.yml release.yml; do
-  event="" label="\`$wf\` succeeded"
-  [ "$wf" = release.yml ] && event=workflow_dispatch label="The release dry run (\`release.yml\`, workflow_dispatch) succeeded"
-  best="" detail="no run on ${target:0:12}"
-  for sha in "${shas[@]}"; do
+  event="" label="\`$wf\` succeeded" where=("$target")
+  case "$wf" in
+    release.yml) event=workflow_dispatch label="The release dry run (\`release.yml\`, workflow_dispatch) succeeded" where=("${shas[@]}") ;;
+    fuzz.yml) where=("${shas[@]}") ;;
+  esac
+  run=""
+  for sha in "${where[@]}"; do
     run=$(latest_run "$wf" "$sha" "$event")
-    [ -n "$run" ] || continue
-    read -r status conclusion url <<< "$run"
-    if [ "$status" = completed ] && [ "$conclusion" = success ]; then best=$url; break; fi
-    detail="$status/$conclusion: $url"
+    [ -z "$run" ] || break
   done
-  if [ -n "$best" ]; then item 1 "$label: $best"; else item 0 "$label" "$detail"; fi
+  if [ -z "$run" ]; then
+    item 0 "$label" "no run on ${target:0:12}"
+  else
+    read -r status conclusion url <<< "$run"
+    if [ "$status" = completed ] && [ "$conclusion" = success ]; then item 1 "$label: $url"
+    else item 0 "$label" "$status/$conclusion: $url"; fi
+  fi
 done
+
+# Nothing merged to master after the release branch's base, or its changelog misses it.
+if [ -n "$pr" ]; then
+  base=$(git merge-base "refs/remotes/origin/pr/$pr" origin/master)
+  if [ "$state" = MERGED ]; then upto="$target^1"; else upto=origin/master; fi
+  later=$(git log --first-parent --format=%s "$base..$upto" | sed -nE 's/.*\(#([0-9]+)\)[[:space:]]*$/#\1/p' | paste -sd ' ' -)
+  item "$([ -z "$later" ] && echo 1)" "No pull request merged to master after the release branch's base (${base:0:12})" \
+    "$later merged since: run release-prep.sh again"
+fi
 
 # Changelog entries since the last release, and the version they ask for.
 exclude=()
 [ -n "$pr" ] && exclude=(--exclude "$pr")
-python3 scripts/release-changelog.py collect "$prev" "$target" "${exclude[@]}" > "$work/entries.json"
+python3 scripts/release-changelog.py collect "$prev" "$target" ${exclude[@]+"${exclude[@]}"} > "$work/entries.json"
 missing=$(jq -r '.missing | map("#\(.pr)") | join(", ")' "$work/entries.json")
 count=$(jq '[.entries[].pr] + [.none[].pr] | unique | length' "$work/entries.json")
 item "$([ -z "$missing" ] && echo 1)" "Every pull request since $prev has a changelog entry ($count with one)" "missing: $missing"
@@ -104,11 +122,14 @@ item "$([ "$cargo_v" = "$version" ] && [ "$npm_v" = "$version" ] && [ "$jsr_v" =
 tagged=$(git rev-parse -q --verify "refs/tags/v$version" || true)
 item "$([ -z "$tagged" ] && echo 1)" "v$version is not tagged yet" "it is, at ${tagged:0:12}"
 
-# Fidelity: the number of e2e inputs byte-identical to C (same math) must not drop.
+# Fidelity: every e2e input byte-identical to C (same math) at the last release still is, so the
+# count can only go up.
 e2e=tests/golden/e2e-baseline.libm-matched.portable.json
-now=$(git show "$target:$e2e" | jq '.identical | length')
-then=$(git show "$prev:$e2e" 2> /dev/null | jq '.identical | length' || echo 0)
-item "$([ "$now" -ge "$then" ] && echo 1)" "e2e fidelity: $now inputs identical to C ($then at $prev)" "it dropped"
+git show "$target:$e2e" | jq -r '.identical[]' | sort > "$work/now"
+git show "$prev:$e2e" 2> /dev/null | jq -r '.identical[]' | sort > "$work/then" || : > "$work/then"
+lost=$(comm -13 "$work/now" "$work/then" | head -n 5 | paste -sd ' ' -)
+item "$([ -z "$lost" ] && echo 1)" "e2e fidelity: $(wc -l < "$work/now" | tr -d ' ') inputs identical to C, every one of the $(wc -l < "$work/then" | tr -d ' ') at $prev included" \
+  "no longer identical: $lost"
 
 echo
 if [ "$fails" = 0 ]; then

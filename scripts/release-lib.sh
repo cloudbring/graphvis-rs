@@ -13,6 +13,12 @@ read -ra GH_CMD <<< "${GH:-gh}"
 
 die() { echo "error: $*" >&2; exit 1; }
 
+# Refuses to write as the owner: the owner approves what these scripts open.
+require_bot() {
+  [ "$("${GH_CMD[@]}" api user -q .login)" != "$OWNER" ] ||
+    die "GH runs gh as $OWNER, who approves the release: set GH to the bot account's gh"
+}
+
 check_version() {
   [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die "not a SemVer version: $1"
 }
@@ -41,8 +47,9 @@ latest_run() {
       | select(. != null) | "\(.status) \(if (.conclusion // "") == "" then "-" else .conclusion end) \(.url)"'
 }
 
-# The commits whose CI counts for commit $1: $1 itself and, for a squash merge of pull request $2,
-# its head if the two have the same tree (nothing landed in between).
+# The commits whose runs count for commit $1: $1 itself and, for a squash merge of pull request
+# $2, its head if the two have the same tree (nothing landed in between). Callers use the head
+# only for a workflow with no run at all on $1.
 candidates() {
   echo "$1"
   if [ -n "${2:-}" ]; then

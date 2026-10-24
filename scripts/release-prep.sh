@@ -41,14 +41,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
 label=$(gh label list --repo "$REPO" --search breaking --json name -q '.[] | select(.name == "breaking") | .name')
-if [ -z "$label" ]; then
-  if [ "$dry" = 1 ]; then
-    echo "note: the \`breaking\` label does not exist yet; a real run creates it" >&2
-  else
-    "${GH_CMD[@]}" label create breaking --repo "$REPO" --color B60205 \
-      --description "Breaking change to an API, the command line or a format: bumps the minor version while 0.x"
-  fi
-fi
+[ -n "$label" ] || echo "note: the \`breaking\` label does not exist yet; a real run creates it" >&2
 
 python3 scripts/release-changelog.py collect "$prev" "$head" > "$work/entries.json"
 computed=$(python3 scripts/release-changelog.py next-version "$work/entries.json" "${prev#v}")
@@ -62,13 +55,16 @@ report() {
   jq -r --arg prev "$prev" --arg head "${head:0:12}" '
     "Range: \($prev)..\($head), \(.entries | map(.pr) | unique | length) pull requests with entries, \(.none | length) declared not user-visible.",
     "Pull requests labelled breaking: \(if .breaking == [] then "none" else (.breaking | map("#\(.)") | join(", ")) end)",
+    "Declared not user-visible: \(if .none == [] then "none" else (.none | map("#\(.pr)") | join(", ")) end)",
     (if .missing != [] then "\nNo changelog entry (add `## Changelog entry` to the pull request body):",
       (.missing[] | "- #\(.pr) \(.title)") else empty end),
     (if .unlabelled_breaking != [] then "\nEntries marked breaking without the `breaking` label (label them, or unmark the entry):",
       (.unlabelled_breaking[] | "- #\(.pr) \(.title)") else empty end),
+    (if .breaking_without_entry != [] then "\nLabelled breaking with no Breaking bullet (check the entry says what breaks):",
+      (.breaking_without_entry[] | "- #\(.pr) \(.title)") else empty end),
     (if .notes != [] then "\nProse beside the bullets, not copied (check it):",
       (.notes[] | "- #\(.pr): \(.notes | join(" / "))") else empty end),
-    (if .without_pr != [] then "\nCommits without a pull request number:", (.without_pr[] | "- \(.sha[:12]) \(.subject)") else empty end)
+    (if .without_pr != [] then "\nCommits without a pull request:", (.without_pr[] | "- \(.sha[:12]) \(.subject) (\(.reason))") else empty end)
   ' "$work/entries.json"
 }
 report
@@ -88,10 +84,15 @@ if [ "$dry" = 1 ]; then
 fi
 [ "$problems" = 0 ] || die "fix the problems above, then run again"
 [ -z "$(git status --porcelain)" ] || die "the working tree has uncommitted changes"
+require_bot
 # The checkout switches to master below, and bash reads a script as it runs it: the release
 # scripts must already be master's.
 git diff --quiet "$head" -- scripts/ || die "scripts/ differs from origin/master: run this from master's scripts"
 
+if [ -z "$label" ]; then
+  "${GH_CMD[@]}" label create breaking --repo "$REPO" --color B60205 \
+    --description "Breaking change to an API, the command line or a format: bumps the minor version while 0.x"
+fi
 git switch --quiet --detach "$head"
 python3 - "$work/section.md" <<'PY'
 import re, sys
@@ -113,5 +114,5 @@ branch=release/v$version
 pr=$(gh pr view "$branch" --repo "$REPO" --json number -q .number)
 echo
 echo "Opened #$pr; started the release dry run and fuzzing on $branch."
-grep -qF -- "<!-- release-prep:" CHANGELOG.md && echo "Next: write the intro in CHANGELOG.md (the release-prep placeholder), push once."
+grep -qF -- "<!-- release-prep:" CHANGELOG.md && echo "Next: write the intro in CHANGELOG.md (the release-prep placeholder) and push once; a push does not restart the dry run or fuzzing: start release.yml and fuzz.yml on $branch again."
 echo "Then: scripts/release-ready.sh $version $pr"

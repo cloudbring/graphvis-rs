@@ -8,11 +8,11 @@ staged npm version. Everything the owner runs arrives in one issue, "Release X.Y
 
 1. **Approve the release pull request** (`gh pr review N --approve`). The agent adds it to the
    merge queue.
-2. **Sign and push the tag** on the merge commit, which the agent comments in the issue. Only
-   maintainers can create `v*` tags (tag ruleset), and the workflow refuses a tag that is not on
-   `master` or not signed with a key in [`.github/allowed_signers`](../.github/allowed_signers)
-   (read from `master`, not from the tagged commit). Plain git does the same as the helper the
-   issue names: `git tag -s vX.Y.Z -m vX.Y.Z SHA && git push origin vX.Y.Z`. To sign with SSH:
+2. **Sign and push the tag** on the merge commit, which the agent comments in the issue:
+   `git tag -s vX.Y.Z -m vX.Y.Z SHA && git push origin vX.Y.Z`. Only maintainers can create
+   `v*` tags (tag ruleset), and the workflow refuses a tag that is not on `master` or not signed
+   with a key in [`.github/allowed_signers`](../.github/allowed_signers) (read from `master`, not
+   from the tagged commit). To sign with SSH:
    `git config gpg.format ssh`, `git config user.signingkey ~/.ssh/id_ed25519.pub`; add the key to
    GitHub as a signing key and, in a reviewed pull request, to `.github/allowed_signers`.
 3. **Approve the `release` deployment** of the release run, once: every publishing job waits for
@@ -44,20 +44,26 @@ every command below.
    `web/package.json` and `web/jsr.json`, dates the section, pushes `release/vX.Y.Z`, opens the
    pull request with `$GH`), and starts the release workflow's dry run and the fuzzing workflow on
    the branch. Write the release's intro paragraph where the script left its placeholder and fix
-   superseded entries, in one push (a push restarts CI and the dry run: start both again).
+   superseded entries, in one push. A push restarts CI but not the dry run or fuzzing: start
+   `release.yml` and `fuzz.yml` on the branch again (`$GH workflow run release.yml --ref
+   release/vX.Y.Z`, the same for `fuzz.yml`). `release-prep.sh` and `release-ping.sh` refuse to write as the
+   owner.
 3. **Check readiness:** `scripts/release-ready.sh X.Y.Z PR` prints a Markdown checklist and exits
    0 only when it all passes: no open `priority:p1`/`priority:p2` issue and no open
-   "Cross-platform fails on master" issue; `ci.yml`, `cross-platform.yml`, `fuzz.yml` and the
-   release dry run passed on the pull request's head; every pull request since the last tag has
-   an entry and the labels ask for X.Y.Z; CHANGELOG.md has the section and its intro; the three
-   manifests say X.Y.Z; the e2e fidelity count is at least the last release's.
+   "Cross-platform fails on master" issue; the newest runs of `ci.yml`, `cross-platform.yml`,
+   `fuzz.yml` and the release dry run on the pull request's head succeeded; nothing merged to
+   master after the branch's base (else run `release-prep.sh` again); every pull request since
+   the last tag has an entry and the labels ask for X.Y.Z; CHANGELOG.md has the section and its
+   intro; the three manifests say X.Y.Z; every e2e input identical to C at the last release
+   still is.
 4. **Ping the owner:** `GH=... scripts/release-ping.sh X.Y.Z PR` opens "Release X.Y.Z ready",
    assigned to the owner and mentioning them, with the pull request, the dry run, the checklist and
    the four steps.
 5. **Drive it through**, adding each next command to the issue as the owner gets to it:
    - after the approval, add the pull request to the merge queue; once it merged,
-     `scripts/release-ready.sh X.Y.Z PR` again (it now checks the merge commit; CI of the pull
-     request's head counts when the trees are the same), then
+     `scripts/release-ready.sh X.Y.Z PR` again (it now checks the merge commit: master's own
+     `ci.yml` and `cross-platform.yml` runs on it decide; for fuzzing and the dry run, the pull
+     request head's runs count when the trees are the same), then
      `GH=... scripts/release-ping.sh X.Y.Z tag` comments the tag command with the merge commit;
    - when the release run waits for the environment, `GH=... scripts/release-ping.sh X.Y.Z deploy`;
    - when the npm job has staged the package, `GH=... scripts/release-ping.sh X.Y.Z npm`;
@@ -70,10 +76,14 @@ every command below.
 `scripts/release-verify.sh X.Y.Z` checks, and prints pass or fail for, each channel: the GitHub
 release's assets against their attestations and `SHA256SUMS`; the eight publishable crates on
 crates.io (`graphviz-pure-wasm`, `-diff` and `-portable-libm` have `publish = false`); JSR's
-`meta.json`; the image's `X.Y.Z`, `X.Y` and `latest` digests and its attestation; npm's
+`meta.json`; the image's attestation, and `X.Y` and `latest` pointing at it where this version
+should hold them (not for a backport to an older minor line, nor `latest` for anything but the
+newest version); npm's
 `latest` dist-tag and `npm audit signatures`; the tap's formula, the bucket's manifest and
-their newest `update.yml` run. The release workflow's `verify` job runs it with `--ci` (all but
-npm and the tap and bucket) once the publishing jobs finish.
+their newest `update.yml` run. Attestations must come from `release.yml` run for the tag, not a
+dry run. The release workflow's `verify` job runs it with `--ci` (all but npm and the tap and
+bucket) once the publishing jobs finish, and reports a channel whose publishing job failed
+without polling it.
 
 ### The `breaking` label
 

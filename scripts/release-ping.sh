@@ -23,8 +23,7 @@ title="Release $version ready"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-[ "$("${GH_CMD[@]}" api user -q .login)" != "$OWNER" ] ||
-  die "GH runs gh as $OWNER, who is the one to ping: set GH to the bot account's gh"
+require_bot
 issue=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number,title \
   -q "map(select(.title == \"$title\")) | first | .number // empty")
 comment() { "${GH_CMD[@]}" issue comment "$issue" --repo "$REPO" --body-file "$work/comment.md"; }
@@ -44,7 +43,7 @@ case "$step" in
       die "not ready (--force opens the issue anyway)"
     fi
     url=$(gh pr view "$pr" --repo "$REPO" --json url -q .url)
-    dry=$(grep -o 'https://github.com/[^ ]*/actions/runs/[0-9]*' "$work/ready.md" | tail -n 1 || true)
+    dry=$(grep -F 'release dry run' "$work/ready.md" | grep -o 'https://github.com/[^ ]*/actions/runs/[0-9]*' || true)
     cat > "$work/body.md" <<EOF
 @$OWNER, graphviz-pure $version is ready to release.
 
@@ -59,7 +58,7 @@ case "$step" in
    \`\`\`
 2. **Sign and push the tag** on the merge commit, which the agent comments here once #$pr merges:
    \`\`\`sh
-   gvp-release-unlock && gvp-release-tag $version <merge sha>
+   git fetch origin master && git tag -s v$version -m v$version <merge sha> && git push origin v$version
    \`\`\`
 3. **Approve the \`release\` deployment** of the release run: one approval starts every publishing job (GitHub release, crates.io, npm, JSR, ghcr). The agent comments the run and the command here when it waits.
 4. **Approve the staged npm version** with 2FA: the agent comments \`npm stage approve <id>\` here once the npm job has staged it.
@@ -79,7 +78,7 @@ EOF
 @$OWNER: the release pull request merged as \`$merge\`. Step 2, sign and push the tag:
 
 \`\`\`sh
-gvp-release-unlock && gvp-release-tag $version $merge
+git fetch origin master && git tag -s v$version -m v$version $merge && git push origin v$version
 \`\`\`
 EOF
     comment
@@ -103,7 +102,9 @@ EOF
     run=$(release_run)
     [ -n "$run" ] || die "no release run for v$version yet"
     job=$(gh run view "$run" --repo "$REPO" --json jobs -q '.jobs[] | select(.name == "Publish to npm") | .databaseId')
-    id=$(gh run view "$run" --repo "$REPO" --log --job "$job" | grep -oE 'staged with id [0-9a-f-]+' | awk '{print $4}' | tail -n 1)
+    # Through the API: `gh run view --log` refuses while the run (its verify job) is still going.
+    id=$(gh api --allow-escape-sequences "repos/$REPO/actions/jobs/$job/logs" |
+      grep -oE 'staged with id [0-9a-f-]+' | awk '{print $4}' | tail -n 1 || true)
     [ -n "$id" ] || die "the npm job's log has no stage id"
     cat > "$work/comment.md" <<EOF
 @$OWNER: @graphviz-pure/wasm $version is staged on npm. Step 4, approve it with 2FA, then log out:

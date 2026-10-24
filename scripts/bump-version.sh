@@ -55,16 +55,25 @@ if [ "$pr" = --pr ]; then
   git push -u origin "release/v$version"
   body=$(mktemp)
   trap 'rm -f "$body"' EXIT
-  {
-    echo "Sets the version to $version and dates the changelog. The owner's steps, once \`scripts/release-ready.sh $version\` passes, are in docs/releasing.md and in the \"Release $version ready\" issue."
-    echo
-    echo "## Changelog"
-    echo
-    awk -v v="## [$version]" 'index($0, v) == 1 {p=1; next} p && /^## \[/ {exit} p' CHANGELOG.md
-    echo
-    echo "## Changelog entry"
-    echo
-    echo "Not user-visible (the release itself)."
-  } > "$body"
-  "${gh[@]}" pr create --base master --title "Release $version" --body-file "$body"
+  write_body() { # write_body PR-NUMBER
+    {
+      echo "Sets the version to $version and dates the changelog. The owner's steps are in docs/releasing.md and in the \"Release $version ready\" issue, opened once this passes:"
+      echo
+      echo "    scripts/release-ready.sh $version $1"
+      echo
+      echo "## Changelog"
+      echo
+      awk -v v="## [$version]" 'index($0, v) == 1 {p=1; next} p && /^## \[/ {exit} p' CHANGELOG.md
+      echo
+      echo "## Changelog entry"
+      echo
+      echo "Not user-visible (the release itself)."
+    } > "$body"
+  }
+  # The body names the pull request's own number, known once it exists.
+  write_body "<this PR>"
+  url=$("${gh[@]}" pr create --base master --title "Release $version" --body-file "$body")
+  echo "$url"
+  write_body "${url##*/}"
+  "${gh[@]}" pr edit "${url##*/}" --body-file "$body" > /dev/null
 fi
