@@ -511,31 +511,27 @@ fn add_cluster(g: &mut LGraph<'_>) {
     }
 }
 
-/// Nodes of a subgraph including nested subgraphs, in sequence order.
+/// Nodes of a subgraph including nested subgraphs, in sequence order
+/// (`agfstnode(subg)`..`agnxtnode`). The subgraph's list already holds its descendants'.
 pub fn subgraph_nodes(graph: &Graph, si: usize) -> Vec<usize> {
-    let mut v: Vec<usize> = Vec::new();
-    let mut stack = vec![si];
-    while let Some(s) = stack.pop() {
-        let sg = &graph.subgraphs[s];
-        v.extend(sg.nodes.iter().map(|n| n.0 as usize));
-        stack.extend(sg.subgraphs.iter().map(|c| c.0 as usize));
-    }
+    let mut v: Vec<usize> = graph.subgraphs[si]
+        .nodes
+        .iter()
+        .map(|n| n.0 as usize)
+        .collect();
     v.sort_unstable();
-    v.dedup();
     v
 }
 
-/// Edges of a subgraph including nested subgraphs, in sequence order.
+/// Edges of a subgraph including nested subgraphs, in sequence order. The subgraph's list
+/// already holds its descendants'.
 pub fn subgraph_edges(graph: &Graph, si: usize) -> Vec<usize> {
-    let mut v: Vec<usize> = Vec::new();
-    let mut stack = vec![si];
-    while let Some(s) = stack.pop() {
-        let sg = &graph.subgraphs[s];
-        v.extend(sg.edges.iter().map(|e| e.0 as usize));
-        stack.extend(sg.subgraphs.iter().map(|c| c.0 as usize));
-    }
+    let mut v: Vec<usize> = graph.subgraphs[si]
+        .edges
+        .iter()
+        .map(|e| e.0 as usize)
+        .collect();
     v.sort_unstable();
-    v.dedup();
     v
 }
 

@@ -298,10 +298,15 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
             s
         })
         .collect();
+    // `agsubnode(cg, cn, 1)` installs the cluster node in `cg` and each of its ancestors.
     for &(n, c) in &clust_nodes {
-        work.subgraphs[tree.subgraph[c]]
-            .nodes
-            .push(NodeId(n as u32));
+        let mut s = Some(tree.subgraph[c]);
+        while let Some(si) = s {
+            if let Some(sg) = work.subgraphs.get_mut(si) {
+                sg.nodes.push(NodeId(n as u32));
+            }
+            s = sub_parent.get(si).copied().flatten();
+        }
     }
     Some(ClusterEdges {
         work,
@@ -530,5 +535,59 @@ fn renumber_undone(ce: &ClusterEdges, work: &Graph, graph: &mut Graph, new_id: &
             .collect();
         v.sort();
         sg.edges = v;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use graphviz_pure_core::{GraphKind, SubgraphData, SubgraphId};
+
+    fn subgraph(
+        id: u32,
+        name: &str,
+        nodes: Vec<NodeId>,
+        subgraphs: Vec<SubgraphId>,
+    ) -> SubgraphData {
+        SubgraphData {
+            id: SubgraphId(id),
+            name: name.to_string(),
+            is_cluster: true,
+            graph_attrs: AttrMap::new(),
+            node_defaults: AttrMap::new(),
+            edge_defaults: AttrMap::new(),
+            nodes,
+            edges: Vec::new(),
+            subgraphs,
+            bb: Default::default(),
+            html_name: false,
+            empty_name: false,
+            layout: Default::default(),
+        }
+    }
+
+    /// Issue #323: `clustNode`'s `agsubnode(cg, cn, 1)` installs the cluster node in `cg`
+    /// and each of its ancestors, whose node lists hold their descendants' nodes.
+    /// `digraph { subgraph cluster_a { subgraph cluster_b { x } } y -> cluster_b }`.
+    #[test]
+    fn cluster_node_is_in_every_ancestor_of_its_cluster() {
+        let mut g = Graph::new("", GraphKind::Directed, false);
+        let x = g.ensure_node("x");
+        let y = g.ensure_node("y");
+        let cb = g.ensure_node("cluster_b");
+        g.add_edge(y, cb, AttrMap::new());
+        g.subgraphs
+            .push(subgraph(0, "cluster_a", vec![x], vec![SubgraphId(1)]));
+        g.subgraphs
+            .push(subgraph(1, "cluster_b", vec![x], Vec::new()));
+        let tree = crate::fdpgen::mk_clusters(&g);
+        let ce = process_cluster_edges(&g, &tree).expect("an edge to a cluster");
+        let cn = ce
+            .work
+            .agfindnode("__0:cluster_b", false)
+            .expect("cluster node");
+        for s in &ce.work.subgraphs {
+            assert!(s.nodes.contains(&cn), "{}: {:?}", s.name, s.nodes);
+        }
     }
 }

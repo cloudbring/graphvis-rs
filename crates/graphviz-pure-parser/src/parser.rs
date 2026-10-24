@@ -810,15 +810,9 @@ impl<'a> Parser<'a> {
         match item {
             EdgeItem::Nodes(nodes) => nodes.clone(),
             EdgeItem::Subgraph(subg) => {
-                let mut ids: Vec<NodeId> = Vec::new();
-                let mut stack = vec![*subg];
-                while let Some(s) = stack.pop() {
-                    let sg = &self.graph.subgraphs[s.0 as usize];
-                    ids.extend(sg.nodes.iter().copied());
-                    stack.extend(sg.subgraphs.iter().copied());
-                }
+                // The subgraph's list holds its nested subgraphs' nodes too.
+                let mut ids = self.graph.subgraphs[subg.0 as usize].nodes.clone();
                 ids.sort_by_key(|n| n.0);
-                ids.dedup();
                 ids.into_iter().map(|nid| (nid, None)).collect()
             }
         }

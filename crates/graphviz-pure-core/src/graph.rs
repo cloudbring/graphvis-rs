@@ -135,7 +135,11 @@ pub struct SubgraphData {
     pub graph_attrs: AttrMap,
     pub node_defaults: AttrMap,
     pub edge_defaults: AttrMap,
+    /// Every node of the subgraph, its nested subgraphs' included, each once: cgraph's
+    /// `agsubnode` installs a node in the subgraph and in each of its ancestors.
     pub nodes: Vec<NodeId>,
+    /// Every edge of the subgraph, its nested subgraphs' included, each once
+    /// (`installedge`).
     pub edges: Vec<EdgeId>,
     pub subgraphs: Vec<SubgraphId>,
     pub bb: BoundingBox,

@@ -7403,6 +7403,57 @@ n4 -> n2 [sametail=t0];
     );
 }
 
+/// Issue #323: each subgraph's node and edge lists already hold its nested subgraphs'
+/// (cgraph's `agsubnode`), so no engine walks the descendants again per level. Collecting
+/// them per cluster cost fdp memory cubic in the depth (11.5 GB at C's limit of 2498
+/// levels) and dot, osage and patchwork 12-35 s; C takes under 2 s for each.
+#[test]
+fn deep_nesting_at_cs_limit_lays_out_in_seconds() {
+    let nest = |prefix: &str| {
+        let n = 2498;
+        let mut src = String::from("digraph G {\n");
+        for i in 0..n {
+            src.push_str(&format!("subgraph {prefix}{i} {{ x{i}\n"));
+        }
+        src.push_str(&"}\n".repeat(n));
+        src.push('}');
+        src
+    };
+    let dir = std::env::temp_dir().join(format!("gvp-issue323-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    for (prefix, engines) in [
+        ("cluster", &["dot", "fdp", "osage", "patchwork"][..]),
+        ("s", &["dot"][..]),
+    ] {
+        let file = dir.join(format!("{prefix}.gv"));
+        std::fs::write(&file, nest(prefix)).unwrap();
+        for engine in engines {
+            let mut child = Command::new(env!("CARGO_BIN_EXE_graphviz-pure"))
+                .arg(format!("-K{engine}"))
+                .arg("-Tsvg")
+                .arg(&file)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap();
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(8);
+            let status = loop {
+                if let Some(status) = child.try_wait().unwrap() {
+                    break status;
+                }
+                if std::time::Instant::now() > deadline {
+                    child.kill().unwrap();
+                    child.wait().unwrap();
+                    panic!("{engine} on 2498 nested {prefix} subgraphs took over 8 s");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            };
+            assert!(status.success(), "{engine} {prefix}: {status}");
+        }
+    }
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]
