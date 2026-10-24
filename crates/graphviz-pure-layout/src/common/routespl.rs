@@ -375,7 +375,7 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Optio
     Some(ps)
 }
 
-/// `is_horizontal`/`is_vertical` of `routesplines_` (routespl.c:516-534): true unless some
+/// `is_horizontal`/`is_vertical` of `routesplines_` (routespl.c:508-545): true unless some
 /// point's coordinate is more than FUDGE from the first's. `fabs(...) > FUDGE` is false for
 /// NaN, so a spline whose coordinate is NaN counts as straight, its boxes are bounded at once
 /// and C prints no warning (#396). `sameport`'s 0/0 direction gives such splines; see

@@ -585,6 +585,51 @@ mod tests {
         fs::write(path, png).unwrap();
     }
 
+    /// #355: the raster job is C's cairo job. With no maps there is no object id, so no `id`
+    /// on the groups, and cairo draws an aligned edge label as plain text at its point: no
+    /// `textPath` along a `<path id="_p">`, which every edge would share. The device has no
+    /// layers, so the whole graph is drawn once, and colour names resolve through X11
+    /// (`green` is #00ff00, SVG's is #008000). The SVG job keeps C's SVG.
+    #[test]
+    fn raster_svg_is_drawn_as_cairo_draws() {
+        let svg_and_raster = |src: &str| {
+            let mut g = parse_dot(src).unwrap();
+            layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+            let svg = GraphJobs::new(&g).render(OutputFormat::Svg, "svg").unwrap();
+            let raster = GraphJobs::new(&g).render_raster_svg_as(0, "png").unwrap();
+            (svg, raster)
+        };
+        let (svg, raster) = svg_and_raster(
+            "digraph { a -> b [label=x labelaligned=true]; c -> d [label=y labelaligned=true] }",
+        );
+        assert!(svg.contains("<textPath xlink:href=\"#edge1_p\""), "{svg}");
+        assert!(svg.contains("<g id=\"node1\" class=\"node\">"), "{svg}");
+        assert!(
+            !raster.contains("textPath") && !raster.contains("_p\""),
+            "{raster}"
+        );
+        assert!(
+            !raster.contains("<a ") && !raster.contains(" id=\""),
+            "{raster}"
+        );
+        assert!(raster.contains("<g class=\"node\">"), "{raster}");
+
+        let (svg, raster) = svg_and_raster(
+            "digraph { layers=\"a:b\"; x [layer=a]; y [layer=b style=filled fillcolor=green]; x -> y }",
+        );
+        assert!(svg.contains("class=\"layer\""), "{svg}");
+        assert!(svg.contains("fill=\"green\""), "{svg}");
+        assert!(!raster.contains("class=\"layer\""), "{raster}");
+        for node in [
+            "<title>x</title>",
+            "<title>y</title>",
+            "<title>x&#45;&gt;y</title>",
+        ] {
+            assert_eq!(raster.matches(node).count(), 1, "{node}: {raster}");
+        }
+        assert!(raster.contains("fill=\"#00ff00\""), "{raster}");
+    }
+
     /// `-Tdot` of the epsf graph `src` as the CLI writes it, with C's PostScript call, in a
     /// run of its own.
     fn epsf_run(src: &str) -> String {

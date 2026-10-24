@@ -361,13 +361,31 @@ impl<'g> GraphJobs<'g> {
     /// place in the run's job list, whose state it keeps from graph to graph. The images
     /// and epsf shapes are those the layout found (`GraphLayout::usershapes`).
     pub fn render_as(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
+        self.run(job, format, name, false)
+    }
+
+    /// Runs the job of raster format `name` (`png`, `jpg:cairo`, ...), which C draws with its
+    /// cairo renderer, as SVG for the caller to rasterize. The SVG writer runs as C's cairo
+    /// job (`svg_engine::CairoJob`), so the emit runs only what C's runs for that format
+    /// (#355).
+    pub fn render_raster_svg_as(&mut self, job: usize, name: &str) -> Result<String> {
+        self.run(job, OutputFormat::Svg, name, true)
+    }
+
+    fn run(&mut self, job: usize, format: OutputFormat, name: &str, cairo: bool) -> Result<String> {
         let graph = self.graph;
         graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
-            self.render_job(job, format, name)
+            self.render_job(job, format, name, cairo)
         })
     }
 
-    fn render_job(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
+    fn render_job(
+        &mut self,
+        job: usize,
+        format: OutputFormat,
+        name: &str,
+        cairo: bool,
+    ) -> Result<String> {
         let opts = emit::RunJob {
             job: Some(job),
             output_file: self.output_file,
@@ -422,9 +440,12 @@ impl<'g> GraphJobs<'g> {
         let mut pre = String::new();
         let text = match format {
             OutputFormat::Svg => {
-                emit::run_job(&m, svg_engine::SvgEngine::default(), opts)
-                    .0
-                    .out
+                let eng = if cairo {
+                    svg_engine::SvgEngine::cairo(name)
+                } else {
+                    svg_engine::SvgEngine::default()
+                };
+                emit::run_job(&m, eng, opts).0.out
             }
             OutputFormat::Json | OutputFormat::Json0 => {
                 // `json_begin_graph`: json renders the graph as xdot first (a job of its own,
