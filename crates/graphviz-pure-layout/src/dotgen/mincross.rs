@@ -977,10 +977,12 @@ impl Dot<'_> {
             }
         };
         if an <= 0 {
+            // mincross.c:1157-1158: both names share agnameof's static buffer when
+            // anonymous, so C prints the node's name twice.
+            let [graph, node] =
+                graphviz_pure_core::agnameof_buffer([self.graph_name(g), name(self, n)]);
             graphviz_pure_core::diag::agerrorf(&format!(
-                "install_in_rank, line 1158: {} {} rank {r} i = {i} an = 0\n",
-                self.graph_name(g),
-                name(self, n)
+                "install_in_rank, line 1158: {graph} {node} rank {r} i = {i} an = 0\n"
             ));
             return Err(ABORT_LAYOUT.to_string());
         }

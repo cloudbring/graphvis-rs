@@ -110,8 +110,8 @@ impl Osage<'_, '_> {
             if !cattr && !vattr {
                 // osageinit.c:104-105, without a newline.
                 let name = match c {
-                    None => self.g.src.name.as_str(),
-                    Some(c) => self.g.src.subgraphs[self.tree.subgraph[c]].name.as_str(),
+                    None => self.g.src.root_name().to_string(),
+                    Some(c) => self.g.src.subgraph_name(self.tree.subgraph[c]),
                 };
                 graphviz_pure_core::diag::agwarningf(&format!(
                     "Graph {name} has array packing with user values but no \"sortv\" attributes \
@@ -245,7 +245,8 @@ impl Osage<'_, '_> {
 pub fn register_clusters(g: &mut LGraph<'_>, tree: &ClusterTree) {
     for c in 0..tree.len() {
         let sg = &g.src.subgraphs[tree.subgraph[c]];
-        let (label, label_pos) = graph_label(&sg.graph_attrs, &sg.name, sg.html_name, false);
+        let name = g.src.subgraph_name(tree.subgraph[c]);
+        let (label, label_pos) = graph_label(&sg.graph_attrs, &name, sg.html_name, false);
         let mut border = [Point::default(); 4];
         if let Some(l) = &label {
             border[if label_pos & LABEL_AT_TOP != 0 { 2 } else { 0 }] = pad(l.dimen);

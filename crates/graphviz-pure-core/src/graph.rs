@@ -250,6 +250,37 @@ pub struct GraphLayout {
     pub odim: usize,
 }
 
+/// A cgraph object, as [`Graph::agnameof`] takes it: the root graph, a subgraph (by index),
+/// a node or an edge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Obj {
+    Root,
+    Subgraph(usize),
+    Node(NodeId),
+    Edge(EdgeId),
+}
+
+/// The names `N` calls of `agnameof` give as the arguments of one C call (`agerr`,
+/// `fprintf`, the substitutions of `strdup_and_subst_obj0`), in the order C evaluates them.
+///
+/// `agnameof` formats the name of an anonymous object into one `static char buf[32]`
+/// (lib/cgraph/id.c:162) and returns the buffer, so every such argument points at the same
+/// bytes and shows the anonymous name formatted last: `node '%3', graph '%1'` prints as
+/// `node '%1', graph '%1'`. Named objects return their own string and are left as they are.
+/// Anonymous names are the ones starting with `%` (see [`Graph::agnameof`]). C evaluates the
+/// arguments left to right (clang), which is the order of `names`.
+pub fn agnameof_buffer<S: AsRef<str>, const N: usize>(names: [S; N]) -> [String; N] {
+    let last = names
+        .iter()
+        .rev()
+        .find(|n| n.as_ref().starts_with('%'))
+        .map(|n| n.as_ref().to_string());
+    names.map(|n| match &last {
+        Some(buf) if n.as_ref().starts_with('%') => buf.clone(),
+        _ => n.as_ref().to_string(),
+    })
+}
+
 /// Arena-backed Graph representation (Fixes GV-BUG-008 and GV-BUG-010).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Graph {
@@ -348,20 +379,55 @@ impl Graph {
         (self.name.is_empty() && !self.empty_name) || self.name.starts_with('%')
     }
 
-    /// `agnameof` of subgraph `s`: an anonymous subgraph is named by its cgraph id, `%<id>`.
-    pub fn subgraph_name(&self, s: usize) -> String {
-        let sg = &self.subgraphs[s];
-        if sg.is_anonymous() {
-            format!(
-                "%{}",
-                self.anon_subgraph_ids
-                    .get(&(s as u32))
-                    .copied()
-                    .unwrap_or(0)
-            )
-        } else {
-            sg.name.clone()
+    /// `agnameof` (lib/cgraph/id.c): the name of a graph, subgraph, node or edge as C's
+    /// messages and writers print it.
+    ///
+    /// cgraph names an anonymous object (no name, or a local `%` name, which `endgraph`
+    /// forgets) by its id, `%<id>`. The root, anonymous subgraphs, local names and keyless
+    /// edges draw odd ids from one counter per root, in creation order: an anonymous root is
+    /// `%1`, an anonymous subgraph has its id in [`Graph::anon_subgraph_ids`], and the parser
+    /// already names a local node `%<id>`. An edge is named by its key, and by nothing when it
+    /// has none (`agnameof` returns NULL for an anonymous edge).
+    ///
+    /// Every name of an anonymous object starts with `%`, and no other name does: cgraph takes
+    /// any name starting with `%` for a local one. C formats these names into one static buffer
+    /// (see [`agnameof_buffer`]).
+    pub fn agnameof(&self, obj: Obj) -> Option<std::borrow::Cow<'_, str>> {
+        use std::borrow::Cow;
+        match obj {
+            Obj::Root => Some(Cow::Borrowed(self.root_name())),
+            Obj::Subgraph(s) => {
+                let sg = &self.subgraphs[s];
+                Some(if sg.is_anonymous() {
+                    let id = self.anon_subgraph_ids.get(&(s as u32)).copied();
+                    Cow::Owned(format!("%{}", id.unwrap_or(0)))
+                } else {
+                    Cow::Borrowed(&sg.name)
+                })
+            }
+            Obj::Node(n) => Some(Cow::Borrowed(&self.nodes[n.0 as usize].name)),
+            Obj::Edge(e) => self.edges[e.0 as usize]
+                .key
+                .as_deref()
+                .filter(|k| !k.starts_with('%'))
+                .map(Cow::Borrowed),
         }
+    }
+
+    /// `agnameof(g)` of the root graph: its name, or `%1` when it is anonymous.
+    pub fn root_name(&self) -> &str {
+        if self.is_anonymous() {
+            "%1"
+        } else {
+            &self.name
+        }
+    }
+
+    /// `agnameof` of subgraph `s`.
+    pub fn subgraph_name(&self, s: usize) -> String {
+        self.agnameof(Obj::Subgraph(s))
+            .map(std::borrow::Cow::into_owned)
+            .unwrap_or_default()
     }
 
     pub fn ensure_node(&mut self, name: &str) -> NodeId {
@@ -503,5 +569,37 @@ mod cluster_prefix_tests {
         assert!(!has_cluster_prefix("aaaaaaé"));
         assert!(!has_cluster_prefix("clusé_x"));
         assert!(!has_cluster_prefix(""));
+    }
+}
+
+#[cfg(test)]
+mod agnameof_tests {
+    use super::*;
+
+    #[test]
+    fn anonymous_objects_are_named_by_their_id() {
+        let mut g = Graph::new("", GraphKind::Directed, false);
+        assert_eq!(g.agnameof(Obj::Root).as_deref(), Some("%1"));
+        g.name = "%r".to_string();
+        assert_eq!(g.root_name(), "%1");
+        g.name = String::new();
+        g.empty_name = true;
+        assert_eq!(g.root_name(), "");
+        let a = g.ensure_node("a");
+        let b = g.ensure_node("b");
+        assert_eq!(g.agnameof(Obj::Node(a)).as_deref(), Some("a"));
+        let keyless = g.new_edge(a, b, AttrMap::new());
+        assert_eq!(g.agnameof(Obj::Edge(keyless)), None);
+        let keyed = g.new_edge(a, b, AttrMap::new());
+        g.edges[keyed.0 as usize].key = Some("k".to_string());
+        assert_eq!(g.agnameof(Obj::Edge(keyed)).as_deref(), Some("k"));
+    }
+
+    #[test]
+    fn anonymous_names_share_one_buffer() {
+        assert_eq!(agnameof_buffer(["%3", "%1"]), ["%1", "%1"]);
+        assert_eq!(agnameof_buffer(["%3", "G"]), ["%3", "G"]);
+        assert_eq!(agnameof_buffer(["%1", "%3", "b"]), ["%3", "%3", "b"]);
+        assert_eq!(agnameof_buffer(["a", "b"]), ["a", "b"]);
     }
 }

@@ -2189,12 +2189,12 @@ fn pos_html_tbl(tbl: &mut HtmlTbl, mut pos: BoundingBox, sides: u8, parent_pen: 
 fn html_label_owner(obj: &LabelSubstContext<'_>) -> String {
     if obj.is_edge {
         let op = if obj.is_directed { "->" } else { "--" };
-        format!("edge {} {op} {}", obj.tail_name, obj.head_name)
+        // labels.c:157-158: one agerr of both names, which share agnameof's static buffer
+        // when anonymous.
+        let [t, h] = graphviz_pure_core::agnameof_buffer([obj.tail_name, obj.head_name]);
+        format!("edge {t} {op} {h}")
     } else if !obj.node_name.is_empty() {
         format!("node {}", obj.node_name)
-    } else if obj.graph_name.is_empty() {
-        // agnameof of the anonymous root graph (cgraph's first anonymous ID)
-        "graph %1".to_string()
     } else {
         format!("graph {}", obj.graph_name)
     }

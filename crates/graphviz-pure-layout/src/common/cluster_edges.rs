@@ -116,16 +116,21 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
             if tg.is_none() && hg.is_none() {
                 continue;
             }
-            let nname = |n: usize| graph.nodes[n].name.as_str();
-            let cname = |c: usize| graph.subgraphs[tree.subgraph[c]].name.as_str();
-            let warn = |m: String| graphviz_pure_core::diag::agwarningf(&m);
+            let nname = |n: usize| graph.nodes[n].name.clone();
+            let cname = |c: usize| graph.subgraph_name(tree.subgraph[c]);
+            // Each warning prints two agnameof names, which share its static buffer when
+            // anonymous (utils.c:860-900).
+            let warn = |fmt: fn(&str, &str) -> String, a: String, b: String| {
+                let [a, b] = graphviz_pure_core::agnameof_buffer([a, b]);
+                graphviz_pure_core::diag::agwarningf(&fmt(&a, &b));
+            };
             if tg == hg {
                 // utils.c:860-863 names the tail twice.
-                warn(format!(
-                    "cluster cycle {} -- {} not supported\n",
+                warn(
+                    |a, b| format!("cluster cycle {a} -- {b} not supported\n"),
                     nname(t),
-                    nname(t)
-                ));
+                    nname(t),
+                );
                 continue;
             }
             if let Some(&(ct, ch)) = map.get(&(t, h)) {
@@ -136,19 +141,19 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
             let (ct, ch) = match (tg, hg) {
                 (Some(tc), Some(hc)) => {
                     if contains_subg(hc, tc) {
-                        warn(format!(
-                            "tail cluster {} inside head cluster {}\n",
+                        warn(
+                            |a, b| format!("tail cluster {a} inside head cluster {b}\n"),
                             cname(tc),
-                            cname(hc)
-                        ));
+                            cname(hc),
+                        );
                         continue;
                     }
                     if contains_subg(tc, hc) {
-                        warn(format!(
-                            "head cluster {} inside tail cluster {}\n",
+                        warn(
+                            |a, b| format!("head cluster {a} inside tail cluster {b}\n"),
                             cname(hc),
-                            cname(tc)
-                        ));
+                            cname(tc),
+                        );
                         continue;
                     }
                     let cn = clust_node(tc, &mut clust_order);
@@ -159,11 +164,11 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
                 }
                 (None, Some(hc)) => {
                     if members[hc][t] {
-                        warn(format!(
-                            "tail node {} inside head cluster {}\n",
+                        warn(
+                            |a, b| format!("tail node {a} inside head cluster {b}\n"),
                             nname(t),
-                            cname(hc)
-                        ));
+                            cname(hc),
+                        );
                         continue;
                     }
                     let cn = clust_node(hc, &mut clust_order);
@@ -172,11 +177,11 @@ pub fn process_cluster_edges(graph: &Graph, tree: &ClusterTree) -> Option<Cluste
                 }
                 (Some(tc), None) => {
                     if members[tc][h] {
-                        warn(format!(
-                            "head node {} inside tail cluster {}\n",
+                        warn(
+                            |a, b| format!("head node {a} inside tail cluster {b}\n"),
                             nname(h),
-                            cname(tc)
-                        ));
+                            cname(tc),
+                        );
                         continue;
                     }
                     let cn = clust_node(tc, &mut clust_order);

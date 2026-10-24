@@ -290,33 +290,18 @@ impl Dot<'_> {
         Ok(())
     }
 
-    /// `agnameof(g)`: a pack component is `_cc_<i>`; an anonymous graph is
-    /// named by its cgraph id (`%<id>`; an anonymous root is `%1`).
+    /// `agnameof(g)`: a pack component is `_cc_<i>`; the root and the input's subgraphs are
+    /// named by [`Graph::agnameof`](graphviz_pure_core::Graph::agnameof).
     pub(super) fn graph_name(&self, g: G) -> String {
         if g == 0 && self.comp {
             return format!("_cc_{}", self.comp_index);
         }
         let graph = &self.graphs[g];
-        // `subgraph "" {` is named, by "" (`agnameof`).
-        let anonymous = match (g, graph.sub_index) {
-            (0, _) => self.input.is_anonymous(),
-            (_, Some(si)) => self
-                .input
-                .subgraphs
-                .get(si)
-                .is_none_or(|s| s.is_anonymous()),
-            _ => graph.name.is_empty(),
-        };
-        if !anonymous {
-            return graph.name.clone();
-        }
         match (g, graph.sub_index) {
-            (0, _) => "%1".to_string(),
-            (_, Some(si)) => match self.input.anon_subgraph_ids.get(&(si as u32)) {
-                Some(id) => format!("%{id}"),
-                None => String::new(),
-            },
-            _ => String::new(),
+            (0, _) => self.input.root_name().to_string(),
+            (_, Some(si)) if si < self.input.subgraphs.len() => self.input.subgraph_name(si),
+            (_, Some(_)) => String::new(),
+            _ => graph.name.clone(),
         }
     }
 
@@ -331,10 +316,14 @@ impl Dot<'_> {
         for clust in self.graphs[g].clust.clone() {
             for n in self.nodes_of(clust) {
                 if self.nodes[n].ranktype != NORMAL {
+                    // cluster.c:318-320: both names share agnameof's static buffer when
+                    // anonymous.
+                    let [node, graph] = graphviz_pure_core::agnameof_buffer([
+                        self.nodes[n].name.clone(),
+                        self.graph_name(g),
+                    ]);
                     graphviz_pure_core::diag::agwarningf(&format!(
-                        "{} was already in a rankset, deleted from cluster {}\n",
-                        self.nodes[n].name,
-                        self.graph_name(g)
+                        "{node} was already in a rankset, deleted from cluster {graph}\n"
                     ));
                     self.agdelnode(clust, n);
                     continue;

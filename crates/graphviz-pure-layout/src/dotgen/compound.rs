@@ -156,19 +156,17 @@ impl Dot<'_> {
         let (head, tail) = (self.edges[e].head, self.edges[e].tail);
         // `agnameof(agtail(e)), agnameof(aghead(e))`, then `agget(e, ...)`.
         let name = |n: N| self.nodes.get(n).map_or("", |d| d.name.as_str());
+        // Both names share agnameof's static buffer when anonymous (compound.c:282-382).
+        let [tname, hname] = graphviz_pure_core::agnameof_buffer([name(tail), name(head)]);
         let warn = |what: &str, key: &str| {
             graphviz_pure_core::diag::agwarningf(&format!(
-                "{} -> {}: {what} {}\n",
-                name(tail),
-                name(head),
+                "{tname} -> {hname}: {what} {}\n",
                 self.edge_attr(e, key).unwrap_or("")
             ));
         };
         if spl.len() > 1 {
             graphviz_pure_core::diag::agwarningf(&format!(
-                "{} -> {}: spline size > 1 not supported\n",
-                name(tail),
-                name(head)
+                "{tname} -> {hname}: spline size > 1 not supported\n"
             ));
             return;
         }

@@ -6734,6 +6734,107 @@ fn clip_and_install_crossed_walks_keep_one_segment() {
         let (_, err, ok) = run(&args, src);
         assert!(ok && !err.contains("panicked"), "{src}: {err}");
     }
+
+// Issues #267, #344, #346. cgraph's `agnameof` (lib/cgraph/id.c) names an anonymous graph or
+// subgraph, or one with a local `%` name, by its id: the root is `%1`. The port printed the
+// stored name, empty for an anonymous object. Expected values are C 16.1.0's.
+#[test]
+fn anonymous_graphs_are_named_by_their_id() {
+    // #267: the charset warnings name the root.
+    for (i, head) in ["digraph", "digraph \"%g\""].iter().enumerate() {
+        let path = tmp(&format!("agnameof_utf8_{i}.gv"));
+        let mut src = format!("{head} {{ a [label=\"").into_bytes();
+        src.extend_from_slice(b"\xc3x\"] }");
+        std::fs::write(&path, src).unwrap();
+        let (_, err, ok) = run(&["-Tsvg", path.to_str().unwrap()], "");
+        assert!(ok, "{err}");
+        assert!(
+            err.starts_with("Warning: Invalid 2-byte UTF8 found in input of graph %1 - "),
+            "{head}: {err}"
+        );
+    }
+    // #267: `\G` is the root's agnameof.
+    let (out, err, ok) = run(&["-Tplain"], r#"digraph { a [label="\G"] }"#);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(r#"node a 0.375 0.25 0.75 0.5 "%1" solid"#),
+        "{out}"
+    );
+    // #346: an anonymous cluster's SVG title.
+    let (out, err, ok) = run(
+        &["-Tsvg"],
+        "digraph{subgraph {cluster=true; a} subgraph {cluster=true; b}}",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("<title>%3</title>") && out.contains("<title>%5</title>"),
+        "{out}"
+    );
+    // #344: fdp's non-comparable clusters error.
+    let (_, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        "graph { subgraph cluster_x { a } subgraph { cluster=true; a } }",
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: node \"a\" is contained in two non-comparable clusters \"%3\" and \"cluster_x\"\n"
+    );
+}
+
+// Issues #325, #344, #354. `agnameof` formats an anonymous object's name into one static
+// buffer (lib/cgraph/id.c:162), so when one C call takes two such names, both show the one
+// formatted last. Expected values are C 16.1.0's.
+#[test]
+fn anonymous_names_in_one_call_share_agnameofs_buffer() {
+    // #325: the edge title of `%3 -> %7` (strdup_and_subst_obj's `\E`).
+    let (out, err, ok) = run(&["-Tsvg"], r#"digraph { "%l" -> b; "%l" -> "%3" }"#);
+    assert!(ok, "{err}");
+    assert!(out.contains("<title>%3&#45;&gt;b</title>"), "{out}");
+    assert!(out.contains("<title>%7&#45;&gt;%7</title>"), "{out}");
+    // `\G \N` of an anonymous node in an anonymous root.
+    let (out, err, ok) = run(
+        &["-Tplain"],
+        r#"digraph { "%x" [label="\G \N"]; b [label="\G \N"] }"#,
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(r#"node "%3" "#) && out.contains(r#" "%3 %3" solid"#),
+        "{out}"
+    );
+    assert!(out.contains(r#" "%1 b" solid"#), "{out}");
+    // #344: two anonymous clusters.
+    let (_, err, ok) = run(
+        &["-Kfdp", "-Tsvg"],
+        "graph { subgraph { cluster=true; a } subgraph { cluster=true; a b } }",
+    );
+    assert!(!ok);
+    assert!(
+        err.ends_with(
+            "Error: node \"a\" is contained in two non-comparable clusters \"%3\" and \"%3\"\n"
+        ),
+        "{err}"
+    );
+    // #354: install_in_rank names the graph and a virtual node (`%0`).
+    let (_, err, ok) = run(
+        &["-Tcanon"],
+        r#"digraph G {
+pack=true; compound=true;
+subgraph { cluster=true;
+node[color=red]; edge[color=blue];
+n2; n1; n0;
+subgraph cluster_37 { n3; n4; n0; }
+}
+{ rank=min; n0; n3; n4; }
+subgraph s27 { n4; n3; n0; n2; }
+n3 -> n1; n0 -> n4; n3 -> n0 [ltail="%3"]; n1 -> n3; n2 -> n0 [ltail="%3"]; n3 -> n0; n4 -> n2;
+}"#,
+    );
+    assert!(!ok);
+    assert!(
+        err.ends_with("Error: install_in_rank, line 1158: %0 %0 rank 1 i = 0 an = 0\n"),
+        "{err}"
+    );
 }
 
 // Issue #151: a real U+10FF00..=U+10FFFF char in UTF-8 input is not one of the port's raw

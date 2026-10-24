@@ -198,7 +198,12 @@ impl<'a> Dot<'a> {
     /// `do_graph_label`
     pub fn do_graph_label(&mut self, sg: G) {
         let flip = self.graphs[0].flip();
-        let name = self.graphs[sg].name.clone();
+        // `agnameof(sg)`, which `\G` substitutes; the root label is the input root's.
+        let name = if sg == 0 {
+            self.input.root_name().to_string()
+        } else {
+            self.graph_name(sg)
+        };
         let html_name = self.graphs[sg]
             .sub_index
             .is_some_and(|i| self.input.subgraphs[i].html_name);

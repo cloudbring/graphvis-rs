@@ -464,8 +464,7 @@ impl W<'_> {
         indent(&mut self.out, self.level);
         self.out.push_str("\"name\": ");
         let name = match sub {
-            None if g.is_anonymous() => "%1".to_string(),
-            None => g.name.clone(),
+            None => g.root_name().to_string(),
             Some(s) => g.subgraph_name(s),
         };
         stoj(&name, &mut self.out);

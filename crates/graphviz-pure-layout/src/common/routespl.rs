@@ -356,10 +356,11 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Optio
         loopcnt += 1;
     }
     if unbounded {
+        // routespl.c:578: both names share agnameof's static buffer when anonymous.
+        let [t, h] = graphviz_pure_core::agnameof_buffer([real.tail, real.head]);
         graphviz_pure_core::diag::agwarningf(&format!(
-            "Unable to reclaim box space in spline routing for edge \"{}\" -> \"{}\". \
-             Something is probably seriously wrong.\n",
-            real.tail, real.head
+            "Unable to reclaim box space in spline routing for edge \"{t}\" -> \"{h}\". \
+             Something is probably seriously wrong.\n"
         ));
         let polyspl = make_polyline(&pl);
         limit_boxes(boxes, &polyspl, INIT_DELTA);

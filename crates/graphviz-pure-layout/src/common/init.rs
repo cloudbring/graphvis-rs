@@ -131,8 +131,10 @@ impl<'a> LGraph<'a> {
     fn common_init_edges(&mut self) {
         let graph = self.src;
         let directed = graph.kind == GraphKind::Directed;
-        let env =
-            graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(&graph.name, &graph.graph_attrs);
+        let env = graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(
+            graph.root_name(),
+            &graph.graph_attrs,
+        );
         let order: Vec<usize> = self.out.iter().flatten().copied().collect();
         for ei in order {
             let ed = &graph.edges[ei];
@@ -203,7 +205,7 @@ impl<'a> LGraph<'a> {
             mapbool(gattrs.get("landscape").map(String::as_str))
         };
         let concentrate = mapbool(gattrs.get("concentrate").map(String::as_str));
-        let (label, label_pos) = graph_label(gattrs, &graph.name, false, true);
+        let (label, label_pos) = graph_label(gattrs, graph.root_name(), false, true);
 
         let edge_type = match gattrs.get("splines") {
             None => default_edge_type,
@@ -211,7 +213,7 @@ impl<'a> LGraph<'a> {
             Some(s) => edge_type_of(s, default_edge_type),
         };
 
-        let env = graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(&graph.name, gattrs);
+        let env = graphviz_pure_geom::NodeSizeEnv::from_graph_attrs(graph.root_name(), gattrs);
         let mut nodes = Vec::with_capacity(graph.nodes.len());
         for nd in &graph.nodes {
             let geom = graphviz_pure_geom::node_geometry(nd, &env);

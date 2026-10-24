@@ -525,8 +525,8 @@ impl Fdp<'_, '_> {
             // do_graph_label(subg): the label's diagnostics print here, a graph's clusters
             // before their own; register_clusters made the labels quietly.
             let sg = &src.subgraphs[self.tree.subgraph[c]];
-            let _ =
-                crate::common::init::graph_label(&sg.graph_attrs, &sg.name, sg.html_name, false);
+            let name = src.subgraph_name(self.tree.subgraph[c]);
+            let _ = crate::common::init::graph_label(&sg.graph_attrs, &name, sg.html_name, false);
             let m = f64::MAX;
             let mut fix_bb = BoundingBox::new(m, m, -m, -m);
             let mut dn = DNode::new(DKind::Clust(c));
@@ -555,14 +555,18 @@ impl Fdp<'_, '_> {
             }
             if self.parent[n].is_some() && self.parent[n] != self.gparent(g) {
                 let gname = |g: Option<usize>| match g {
-                    None => self.rg.src.name.as_str(),
-                    Some(c) => self.rg.src.subgraphs[self.tree.subgraph[c]].name.as_str(),
+                    None => self.rg.src.root_name().to_string(),
+                    Some(c) => self.rg.src.subgraph_name(self.tree.subgraph[c]),
                 };
-                graphviz_pure_core::diag::agerrorf(&format!(
-                    "node \"{}\" is contained in two non-comparable clusters \"{}\" and \"{}\"\n",
-                    self.rg.src.nodes[n].name,
+                // layout.c:432: the three names share agnameof's static buffer when
+                // anonymous, so they all show the last anonymous one.
+                let [node, g, parent] = graphviz_pure_core::agnameof_buffer([
+                    self.rg.src.nodes[n].name.clone(),
                     gname(g),
-                    gname(self.parent[n].unwrap())
+                    gname(self.parent[n].unwrap()),
+                ]);
+                graphviz_pure_core::diag::agerrorf(&format!(
+                    "node \"{node}\" is contained in two non-comparable clusters \"{g}\" and \"{parent}\"\n"
                 ));
                 return None;
             }
@@ -659,8 +663,8 @@ impl Fdp<'_, '_> {
         }
         dg.sort_adjacency();
         if super::trace(3) {
-            let gname = g.map_or(src.name.as_str(), |c| {
-                src.subgraphs[self.tree.subgraph[c]].name.as_str()
+            let gname = g.map_or(src.root_name().to_string(), |c| {
+                src.subgraph_name(self.tree.subgraph[c])
             });
             graphviz_pure_core::diag::dump(&format!("DG {gname} nodes={}", dg.nodes.len()));
             for d in &dg.nodes {
@@ -1011,8 +1015,8 @@ impl Fdp<'_, '_> {
             return;
         }
         let src = self.rg.src;
-        let gname = g.map_or(src.name.as_str(), |c| {
-            src.subgraphs[self.tree.subgraph[c]].name.as_str()
+        let gname = g.map_or(src.root_name().to_string(), |c| {
+            src.subgraph_name(self.tree.subgraph[c])
         });
         graphviz_pure_core::diag::dump(&format!("{tag} {gname}"));
         for &n in &comp.nodes {

@@ -155,7 +155,8 @@ pub(crate) struct REdge<'g> {
 }
 
 pub(crate) struct RCluster<'g> {
-    pub name: &'g str,
+    /// `agnameof` of the cluster.
+    pub name: String,
     pub attrs: Attrs<'g>,
     pub sub: usize,
     pub bb: BoundingBox,
@@ -473,7 +474,14 @@ impl<'g> Model<'g> {
                 let label = if s.layout.no_label {
                     None
                 } else {
-                    graph_label_geometry_in(&s.name, s.html_name, &s.graph_attrs, false, flip, env)
+                    graph_label_geometry_in(
+                        &g.subgraph_name(sid),
+                        s.html_name,
+                        &s.graph_attrs,
+                        false,
+                        flip,
+                        env,
+                    )
                 };
                 let label = label.map(|gl| {
                     *has_labels |= GRAPH_LABEL;
@@ -504,7 +512,7 @@ impl<'g> Model<'g> {
                 });
                 let idx = clusters.len();
                 clusters.push(RCluster {
-                    name: &s.name,
+                    name: g.subgraph_name(sid),
                     attrs: a,
                     sub: sid,
                     bb: s.bb,
@@ -589,7 +597,8 @@ impl<'g> Model<'g> {
         }
 
         let bb = g.bb;
-        let root_label = graph_label_geometry_in(&g.name, false, &g.graph_attrs, true, flip, &env);
+        let root_label =
+            graph_label_geometry_in(g.root_name(), false, &g.graph_attrs, true, flip, &env);
         let label = root_label.map(|gl| {
             has_labels |= GRAPH_LABEL;
             let mut l = TextLabel::from_geometry(

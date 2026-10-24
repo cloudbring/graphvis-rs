@@ -203,11 +203,7 @@ pub fn nop_check_edge_lens(graph: &graphviz_pure_core::Graph) {
     if !declared {
         return;
     }
-    let name = if graph.name.is_empty() {
-        "%1"
-    } else {
-        graph.name.as_str()
-    };
+    let name = graph.root_name();
     let mut by_tail: Vec<&graphviz_pure_core::EdgeData> = graph.edges.iter().collect();
     by_tail.sort_by_key(|e| e.tail.0);
     for e in by_tail {

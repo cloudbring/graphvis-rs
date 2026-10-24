@@ -81,7 +81,7 @@ pub fn layout_graph_with_options(
     fdpgen::tlayout::set_fdp_parms(options.fdp);
     neatogen::stuff::set_reduce(options.reduce);
     graphviz_pure_core::charset::begin_layout(
-        &graph.name,
+        graph.root_name(),
         graph.graph_attrs.get("charset").map(String::as_str),
     );
     graphviz_pure_core::usershape::begin_layout(
@@ -103,7 +103,7 @@ pub fn layout_graph_with_options(
     // any engine's node and edge init, so its diagnostics come first; the engines' own
     // calls do not repeat them.
     let _ = graphviz_pure_geom::graph_label_geometry_in(
-        &graph.name,
+        graph.root_name(),
         false,
         &graph.graph_attrs,
         true,

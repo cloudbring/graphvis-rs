@@ -144,9 +144,14 @@ impl<'a> Tree<'a> {
                             .find(|(_, d)| **d == old)
                             .map_or("", |(k, _)| k.as_str());
                         // fprintf(stderr, ...): not agerr, so not filtered, counted or escaped.
+                        // ccomps.c:275-277: the node's and the cluster's names share agnameof's
+                        // static buffer when anonymous. The derived node keeps the name it was
+                        // made with in `dg`'s internal map, which agnameof returns as it is.
+                        let [node, sub] =
+                            graphviz_pure_core::agnameof_buffer([&*self.g.nodes[n].name, &*name]);
+                        let old = old_name;
                         graphviz_pure_core::diag::fprintf_stderr(&format!(
-                            "Error: node \"{}\" belongs to two non-nested clusters \"{}\" and \"{}\"\n",
-                            self.g.nodes[n].name, name, old_name
+                            "Error: node \"{node}\" belongs to two non-nested clusters \"{sub}\" and \"{old}\"\n"
                         ));
                     }
                     dn_of[n] = Some(dn);

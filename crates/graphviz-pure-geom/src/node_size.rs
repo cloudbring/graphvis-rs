@@ -234,7 +234,7 @@ impl<'a> NodeSizeEnv<'a> {
     /// Reads `rankdir`, `quantum` and `charset` from the root graph attributes
     /// (`graph_init` / `init_ugraph` in `lib/common/input.c`).
     pub fn from_graph(graph: &'a Graph) -> Self {
-        Self::from_graph_attrs(&graph.name, &graph.graph_attrs)
+        Self::from_graph_attrs(graph.root_name(), &graph.graph_attrs)
     }
 
     /// Like [`Self::from_graph`] but from a name and an attribute map.
@@ -761,7 +761,7 @@ pub fn edge_label_geometry(
 /// reading `rankdir`, `quantum` and `charset` from the root graph.
 pub fn size_graph_nodes(graph: &mut Graph) {
     let env_attrs = graph.graph_attrs.clone();
-    let name = graph.name.clone();
+    let name = graph.root_name().to_string();
     let env = NodeSizeEnv::from_graph_attrs(&name, &env_attrs);
     for node in &mut graph.nodes {
         let geom = node_geometry(node, &env);
@@ -1034,15 +1034,11 @@ fn poly_init(
         if (width < label_dimen.x || height < label_dimen.y)
             && graphviz_pure_core::diag::reporting()
         {
-            // shapes.c:2115-2118; agraphof(n) is the root graph
-            let g = if env.graph_name.is_empty() {
-                "%1"
-            } else {
-                env.graph_name
-            };
+            // shapes.c:2115-2118; agraphof(n) is the root graph. Both names are agnameof's,
+            // which keeps anonymous ones in one static buffer.
+            let [n, g] = graphviz_pure_core::agnameof_buffer([&*node.name, env.graph_name]);
             graphviz_pure_core::diag::agwarningf(&format!(
-                "node '{}', graph '{g}' size too small for label\n",
-                node.name
+                "node '{n}', graph '{g}' size too small for label\n"
             ));
         }
         bb = Point::new(width, height);

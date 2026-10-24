@@ -311,7 +311,7 @@ impl<'g> GraphJobs<'g> {
         let graph = self.graph;
         let cgraph = self.cgraph.as_ref().unwrap_or(graph);
         graphviz_pure_core::charset::begin_render(
-            &graph.name,
+            graph.root_name(),
             graph.graph_attrs.get("charset").map(String::as_str),
         );
         let lname = name.to_ascii_lowercase();

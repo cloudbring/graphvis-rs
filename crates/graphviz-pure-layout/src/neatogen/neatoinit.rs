@@ -144,13 +144,9 @@ fn c_lf(v: f64) -> String {
     graphviz_pure_core::cnum::fmt_f(v, 6)
 }
 
-/// `agnameof(g)` of the root graph: an anonymous root is `%1`.
+/// `agnameof(g)` of the root graph.
 fn root_name(g: &LGraph<'_>) -> String {
-    if g.src.name.is_empty() {
-        "%1".to_string()
-    } else {
-        g.src.name.clone()
-    }
+    g.src.root_name().to_string()
 }
 
 /// `neatoMode(g)`.
@@ -466,8 +462,12 @@ fn add_cluster(g: &mut LGraph<'_>) {
         if !is_a_cluster(sg) {
             continue;
         }
-        let (label, label_pos) =
-            crate::common::init::graph_label(&sg.graph_attrs, &sg.name, sg.html_name, false);
+        let (label, label_pos) = crate::common::init::graph_label(
+            &sg.graph_attrs,
+            &src.subgraph_name(si),
+            sg.html_name,
+            false,
+        );
         let mut border = [Point::default(); 4];
         if let Some(l) = &label {
             let d = crate::common::init::pad(l.dimen);
@@ -705,6 +705,9 @@ fn user_spline(g: &mut LGraph<'_>, e: usize) -> bool {
                     .edges
                     .get(e)
                     .map_or(("", ""), |ed| (name(ed.tail), name(ed.head)));
+                // neatoinit.c:298, :307: both names share agnameof's static buffer when
+                // anonymous.
+                let [t, h] = graphviz_pure_core::agnameof_buffer([t, h]);
                 graphviz_pure_core::diag::agwarningf(&match err {
                     SplineError::Count => {
                         format!("pos attribute for edge ({t},{h}) doesn't have 3n+1 points\n")
@@ -812,8 +815,12 @@ fn nop_dfs(g: &mut LGraph<'_>, si: usize, parent: Option<usize>) {
         }
         return;
     };
-    let (mut label, label_pos) =
-        crate::common::init::graph_label(&sg.graph_attrs, &sg.name, sg.html_name, false);
+    let (mut label, label_pos) = crate::common::init::graph_label(
+        &sg.graph_attrs,
+        &src.subgraph_name(si),
+        sg.html_name,
+        false,
+    );
     let mut border = [Point::default(); 4];
     let [bottom, _, top, _] = &mut border;
     if let Some(l) = &label {
@@ -861,10 +868,10 @@ fn init_nop(g: &mut LGraph<'_>, nop: u8) -> std::result::Result<bool, ()> {
     let src = g.src;
     for (node, sn) in g.nodes.iter_mut().zip(&src.nodes) {
         if node.pinned == 0 && !sn.name.starts_with("cluster") {
-            let gname = if src.name.is_empty() { "%1" } else { &src.name };
+            // neatoinit.c:529-530: both names share agnameof's static buffer when anonymous.
+            let [n, gname] = graphviz_pure_core::agnameof_buffer([&*sn.name, src.root_name()]);
             graphviz_pure_core::diag::agerrorf(&format!(
-                "node {} in graph {gname} has no position\n",
-                sn.name
+                "node {n} in graph {gname} has no position\n"
             ));
             return Err(());
         }

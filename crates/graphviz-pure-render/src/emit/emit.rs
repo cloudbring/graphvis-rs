@@ -235,19 +235,19 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let m = self.job.m;
         match kind {
             ObjKind::Root => LabelSubstContext {
-                graph_name: &m.g.name,
+                graph_name: m.g.root_name(),
                 label_text: m.label.as_ref().map_or("", |l| l.text.as_str()),
                 has_label: m.label.is_some(),
                 ..Default::default()
             },
             ObjKind::Cluster(c) => LabelSubstContext {
-                graph_name: m.clusters[c].name,
+                graph_name: &m.clusters[c].name,
                 label_text: m.clusters[c].label.as_ref().map_or("", |l| l.text.as_str()),
                 has_label: m.clusters[c].label.is_some(),
                 ..Default::default()
             },
             ObjKind::Node(n) => LabelSubstContext {
-                graph_name: &m.g.name,
+                graph_name: m.g.root_name(),
                 node_name: m.nodes[n].name,
                 is_node: true,
                 label_text: &m.nodes[n].label.text,
@@ -257,7 +257,7 @@ impl<'a, E: Engine> Emitter<'a, E> {
             ObjKind::Edge(e) => {
                 let ed = &m.edges[e];
                 LabelSubstContext {
-                    graph_name: &m.g.name,
+                    graph_name: m.g.root_name(),
                     tail_name: m.nodes[ed.tail].name,
                     head_name: m.nodes[ed.head].name,
                     is_edge: true,
@@ -1482,10 +1482,11 @@ impl<'a, E: Engine> Emitter<'a, E> {
         let ed = &m.edges[e];
         let in_edge = || {
             let arrow = if m.directed { " -> " } else { " -- " };
-            agerr_prev(&format!(
-                "in edge {}{arrow}{}\n",
-                m.nodes[ed.tail].name, m.nodes[ed.head].name
-            ));
+            // emit.c:1988: one agerr of both names, which share agnameof's static buffer
+            // when anonymous.
+            let [t, h] =
+                graphviz_pure_core::agnameof_buffer([m.nodes[ed.tail].name, m.nodes[ed.head].name]);
+            agerr_prev(&format!("in edge {t}{arrow}{h}\n"));
         };
         let segs = match parse_segs(colors) {
             Ok((s, rv)) => {

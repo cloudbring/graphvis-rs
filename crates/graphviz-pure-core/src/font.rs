@@ -810,17 +810,26 @@ fn strdup_and_subst_obj0(s: &str, ctx: &LabelSubstContext<'_>, esc_backslash: bo
         return s.to_string();
     }
     let kind = ctx.obj_kind();
-    let g_str = ctx.graph_name;
-    let n_str = if kind == SubstObjKind::Node {
-        ctx.node_name
-    } else {
-        "\\N"
+    // The names are `agnameof`'s, taken before any is used: anonymous ones share its static
+    // buffer and all show the last one taken (labels.c:297-318).
+    let (g_str, n_str, t_str, h_str) = match kind {
+        SubstObjKind::Graph => (
+            ctx.graph_name.to_string(),
+            "\\N".into(),
+            "\\T".into(),
+            "\\H".into(),
+        ),
+        SubstObjKind::Node => {
+            let [g, n] = crate::graph::agnameof_buffer([ctx.graph_name, ctx.node_name]);
+            (g, n, "\\T".into(), "\\H".into())
+        }
+        SubstObjKind::Edge => {
+            let [g, t, h] =
+                crate::graph::agnameof_buffer([ctx.graph_name, ctx.tail_name, ctx.head_name]);
+            (g, "\\N".into(), t, h)
+        }
     };
-    let (t_str, h_str) = if kind == SubstObjKind::Edge {
-        (ctx.tail_name, ctx.head_name)
-    } else {
-        ("\\T", "\\H")
-    };
+    let (g_str, n_str, t_str, h_str) = (&*g_str, &*n_str, &*t_str, &*h_str);
     let l_str = if !ctx.has_label && ctx.label_text.is_empty() {
         "\\L"
     } else {
@@ -1123,6 +1132,36 @@ mod tests {
         assert!((layout.line_widths[2] - 5.0 * char_w).abs() < 1e-9);
         assert!((layout.width - 8.0 * char_w).abs() < 1e-9);
         assert!((layout.height - 3.0 * 10.0 * LINESPACING).abs() < 1e-9);
+    }
+
+    // labels.c:297-318 takes every agnameof before substituting: anonymous names share
+    // its static buffer, so they all show the last one taken (issues #267, #325).
+    #[test]
+    fn substituted_anonymous_names_share_agnameofs_buffer() {
+        let node = LabelSubstContext {
+            graph_name: "%1",
+            node_name: "%3",
+            is_node: true,
+            ..Default::default()
+        };
+        assert_eq!(strdup_and_subst_obj("\\G \\N", &node), "%3 %3");
+        let named = LabelSubstContext {
+            node_name: "b",
+            ..node.clone()
+        };
+        assert_eq!(strdup_and_subst_obj("\\G \\N", &named), "%1 b");
+        let edge = LabelSubstContext {
+            graph_name: "G",
+            tail_name: "%3",
+            head_name: "%7",
+            is_edge: true,
+            is_directed: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            strdup_and_subst_obj("\\E \\T \\H \\G", &edge),
+            "%7->%7 %7 %7 G"
+        );
     }
 
     #[test]
