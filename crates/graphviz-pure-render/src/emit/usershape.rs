@@ -145,8 +145,10 @@ impl<E: Engine> Emitter<'_, E> {
             Some(li) => {
                 // `gvplugin_load(gvc, API_loadimage, "TYPE:RENDER")`, after its renderer.
                 if graphviz_pure_core::diag::verbose() >= 1 {
+                    // The renderer and the loader come from the same package here.
+                    let package = li.package();
                     graphviz_pure_core::diag::fprintf_stderr(&format!(
-                        "Using render: {render_type}:core\nUsing loadimage: {}:{render_type}:core\n",
+                        "Using render: {render_type}:{package}\nUsing loadimage: {}:{render_type}:{package}\n",
                         us.stringtype()
                     ));
                 }

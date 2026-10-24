@@ -1135,6 +1135,50 @@ fn raster_output_runs_only_what_cairo_runs_like_c() {
             format!("Warning: layers not supported in {name} output\n")
         );
     }
+
+    // The job's render type is cairo's, which picks the image loaders: C's `pango` package
+    // has `png:cairo` and no PostScript loader. `-v` names cairo's, as C's does.
+    let dir = tmp("issue355_images");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("x.ps"),
+        "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 20 20\n",
+    )
+    .unwrap();
+    let (_, err, code) = run_in(&dir, &["-Tpng", "-o", "img.png"], "digraph { a }");
+    assert_eq!((err.as_str(), code), ("", 0));
+    let (_, err, code) = run_in(
+        &dir,
+        &["-Tpng", "-o", "o.png"],
+        "digraph { a [image=\"x.ps\"] }",
+    );
+    assert_eq!(
+        (err.as_str(), code),
+        ("Warning: No loadimage plugin for \"ps:cairo\"\n", 0)
+    );
+    let (_, err, code) = run_in(
+        &dir,
+        &["-v", "-Tpng", "-o", "o.png"],
+        "digraph { a [image=\"img.png\"] }",
+    );
+    assert_eq!(code, 0, "{err}");
+    assert!(
+        err.contains("Using render: cairo:cairo\nUsing loadimage: png:cairo:cairo\n"),
+        "{err}"
+    );
+    // Cairo's gradients have no ids: a png job before an svg job leaves C's SVG ids.
+    let (_, err, code) = run_in(
+        &dir,
+        &["-Tpng", "-o", "g.png", "-Tsvg", "-o", "g.svg"],
+        "digraph { a [style=filled fillcolor=\"red:blue\"]; b [style=radial fillcolor=\"red:blue\"] }",
+    );
+    assert_eq!((err.as_str(), code), ("", 0));
+    let svg = std::fs::read_to_string(dir.join("g.svg")).unwrap();
+    assert!(
+        svg.contains("<linearGradient id=\"node1_l_0\"")
+            && svg.contains("<radialGradient id=\"node2_r_0\""),
+        "{svg}"
+    );
 }
 
 // Issue #166: getAdjustMode (lib/neatogen/adjust.c) matches the "prism" prefix with

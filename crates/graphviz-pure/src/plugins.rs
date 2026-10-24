@@ -39,7 +39,7 @@ pub const RENDER_PLUGINS: [(&str, &str); 8] = [
 
 /// The loadimage plugins (`gvloadimage_core_types` for the port's renderers): `type:render`
 /// and package, in `gvc->apis[API_loadimage]` order: by type, the plugin installed last first.
-pub const LOADIMAGE_PLUGINS: [(&str, &str); 22] = [
+pub const LOADIMAGE_PLUGINS: [(&str, &str); 23] = [
     ("eps:xdot", "core"),
     ("eps:dot", "core"),
     ("gif:xdot", "core"),
@@ -57,6 +57,8 @@ pub const LOADIMAGE_PLUGINS: [(&str, &str); 22] = [
     ("png:xdot", "core"),
     ("png:dot", "core"),
     ("png:svg", "core"),
+    // `pango`'s, recorded before `core`'s: of equal quality, it ends up after them.
+    ("png:cairo", "cairo"),
     ("ps:xdot", "core"),
     ("ps:dot", "core"),
     ("svg:svg", "core"),
@@ -615,7 +617,8 @@ mod tests {
             .chain(["fig", "map", "ps"]);
         for render in renders {
             for t in types {
-                let listed = LOADIMAGE_PLUGINS.contains(&(&format!("{t}:{render}"), "core"));
+                let pair = format!("{t}:{render}");
+                let listed = LOADIMAGE_PLUGINS.iter().any(|&(ts, _)| ts == pair);
                 assert_eq!(
                     listed,
                     crate::loadimage_installed(t, render),

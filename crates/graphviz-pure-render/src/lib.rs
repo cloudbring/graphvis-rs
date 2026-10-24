@@ -361,22 +361,21 @@ impl<'g> GraphJobs<'g> {
     /// place in the run's job list, whose state it keeps from graph to graph. The images
     /// and epsf shapes are those the layout found (`GraphLayout::usershapes`).
     pub fn render_as(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
-        let graph = self.graph;
-        graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
-            self.render_job(job, format, name, false)
-        })
+        self.run(job, format, name, false)
     }
 
-    /// Runs the job of raster format `name` (`png`, `jpg:cairo`, ...), which C draws with its cairo
-    /// renderer, as SVG for the caller to rasterize: [`Self::render_as`] with the features
-    /// and name of C's cairo job, so the emit runs only what C's runs for that format. It
-    /// converts no tooltips and builds no maps (`GVRENDER_DOES_TOOLTIPS`, `_MAPS`; #355),
-    /// has no layers (the whole graph, or the first layer `layerselect` names), and resolves
-    /// every colour name.
+    /// Runs the job of raster format `name` (`png`, `jpg:cairo`, ...), which C draws with its
+    /// cairo renderer, as SVG for the caller to rasterize. The SVG writer runs as C's cairo
+    /// job (`svg_engine::CairoJob`), so the emit runs only what C's runs for that format
+    /// (#355).
     pub fn render_raster_svg_as(&mut self, job: usize, name: &str) -> Result<String> {
+        self.run(job, OutputFormat::Svg, name, true)
+    }
+
+    fn run(&mut self, job: usize, format: OutputFormat, name: &str, cairo: bool) -> Result<String> {
         let graph = self.graph;
         graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
-            self.render_job(job, OutputFormat::Svg, name, true)
+            self.render_job(job, format, name, cairo)
         })
     }
 
@@ -385,7 +384,7 @@ impl<'g> GraphJobs<'g> {
         job: usize,
         format: OutputFormat,
         name: &str,
-        raster: bool,
+        cairo: bool,
     ) -> Result<String> {
         let opts = emit::RunJob {
             job: Some(job),
@@ -441,9 +440,10 @@ impl<'g> GraphJobs<'g> {
         let mut pre = String::new();
         let text = match format {
             OutputFormat::Svg => {
-                let eng = svg_engine::SvgEngine {
-                    raster: raster.then(|| name.to_string()),
-                    ..Default::default()
+                let eng = if cairo {
+                    svg_engine::SvgEngine::cairo(name)
+                } else {
+                    svg_engine::SvgEngine::default()
                 };
                 emit::run_job(&m, eng, opts).0.out
             }

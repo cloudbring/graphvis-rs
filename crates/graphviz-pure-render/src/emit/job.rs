@@ -246,6 +246,9 @@ pub(crate) enum LoadImage {
     Xdot,
     /// `core_loadimage_null`, which only keeps the warning away.
     Null,
+    /// `gvloadimage_pango.c`'s `png:cairo`. The raster formats draw no images (see
+    /// `graphviz-pure-raster`), so it draws nothing; it keeps C's plugin choice and messages.
+    Cairo,
 }
 
 impl LoadImage {
@@ -258,7 +261,18 @@ impl LoadImage {
             "svg" if image || stringtype == "svg" => Some(LoadImage::Svg),
             "xdot" if image || vector => Some(LoadImage::Xdot),
             "dot" if image || vector => Some(LoadImage::Null),
+            // The `cairo` package (`plugin/pango`) loads png only; gd, gdk and rsvg, which
+            // load the other types for cairo in some C builds, are not among the port's.
+            "cairo" if stringtype == "png" => Some(LoadImage::Cairo),
             _ => None,
+        }
+    }
+
+    /// The package of the plugin: `Using loadimage: TYPE:RENDER:PACKAGE`.
+    pub(crate) fn package(self) -> &'static str {
+        match self {
+            LoadImage::Cairo => "cairo",
+            _ => "core",
         }
     }
 }

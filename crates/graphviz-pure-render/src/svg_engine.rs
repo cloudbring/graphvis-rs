@@ -250,18 +250,72 @@ pub(crate) fn reset_gradient_ids() {
 #[derive(Default)]
 pub(crate) struct SvgEngine {
     pub out: String,
-    /// The raster format (`png`, `jpg`, ...) this SVG is drawn for, by C's cairo renderer:
-    /// the job then has that renderer's and device's features and name, not the SVG
-    /// plugin's (#355).
-    pub raster: Option<String>,
+    /// Set when this SVG is drawn for a raster format, which C draws with its cairo
+    /// renderer: the job is then C's cairo job, not the SVG plugin's (#355).
+    cairo: Option<CairoJob>,
 }
 
+/// What C's cairo job for a raster format is, where it differs from the SVG plugin's: its
+/// features (`CAIRO_FEATURES`), render type (`cairo`, which picks the image loaders), `-T`
+/// name, and gradients that use no id, so none of the SVG plugin's per-process numbers.
+struct CairoJob {
+    langname: String,
+    /// The SVG still needs unique gradient ids: these count for this job alone.
+    grad_ids: (i32, i32),
+}
+
+/// `render_features_cairo` with the flags of the png and jpeg devices
+/// (`plugin/pango/gvrender_pango.c`, `plugin/gdk/gvdevice_gdk.c`): no maps, tooltips,
+/// targets or labels for the renderer, no layers for the device, no known colour names.
+const CAIRO_FEATURES: Features = Features {
+    flags: GVRENDER_Y_GOES_DOWN | GVRENDER_DOES_TRANSFORM | GVDEVICE_DOES_TRUECOLOR,
+    default_pad: 4.0,
+    knowncolors: &[],
+    rgba: true,
+};
+
 impl SvgEngine {
+    /// The writer for raster format `langname` (the `-T` value), run as C's cairo job.
+    pub(crate) fn cairo(langname: &str) -> Self {
+        SvgEngine {
+            out: String::new(),
+            cairo: Some(CairoJob {
+                langname: langname.to_string(),
+                grad_ids: (0, 0),
+            }),
+        }
+    }
+
+    /// The next linear (`radial` false) or radial gradient number: the SVG plugin's
+    /// `static int gradId`/`rgradId`, or the cairo job's own count.
+    fn next_grad_id(&mut self, radial: bool) -> i32 {
+        let bump = |(l, r): (i32, i32)| {
+            if radial {
+                (r, (l, r + 1))
+            } else {
+                (l, (l + 1, r))
+            }
+        };
+        match &mut self.cairo {
+            Some(c) => {
+                let (id, next) = bump(c.grad_ids);
+                c.grad_ids = next;
+                id
+            }
+            None => GRAD_IDS.with(|c| {
+                let (id, next) = bump(c.get());
+                c.set(next);
+                id
+            }),
+        }
+    }
+
     /// Whether the edge label follows its spline (`obj->labeledgealigned`): a `textPath`
-    /// along the spline's `<path id=…_p>`. C's cairo renderer has no such text and draws the
-    /// span at its point (`cairogen_textspan`), so the raster job does too (#355).
-    fn aligned(&self, j: &Job) -> bool {
-        j.obj().labeledgealigned && self.raster.is_none()
+    /// along the spline's `<path id=…_p>`. That needs the object's id, which only a job
+    /// with maps has (`initMapData`); C's cairo renderer, which has none, draws the span at
+    /// its point (`cairogen_textspan`), and so does the writer without an id (#355).
+    fn aligned(j: &Job) -> bool {
+        j.obj().labeledgealigned && j.obj().id.is_some()
     }
 
     fn put(&mut self, s: &str) {
@@ -273,9 +327,14 @@ impl SvgEngine {
     }
 
     fn print_id_class(&mut self, id: &str, kind: &str, class: Option<&str>) {
-        self.put("<g id=\"");
-        self.put(&xml(id));
-        self.put("\" class=\"");
+        // A job without maps has no ids (the cairo job): no `id` attribute then.
+        self.put("<g");
+        if !id.is_empty() {
+            self.put(" id=\"");
+            self.put(&xml(id));
+            self.put("\"");
+        }
+        self.put(" class=\"");
         self.put(kind);
         if let Some(c) = class.filter(|c| !c.is_empty()) {
             self.put(" ");
@@ -383,11 +442,7 @@ impl SvgEngine {
     }
 
     fn gradstyle(&mut self, j: &Job, a: &[Point]) -> i32 {
-        let id = GRAD_IDS.with(|c| {
-            let (l, r) = c.get();
-            c.set((l + 1, r));
-            l
-        });
+        let id = self.next_grad_id(false);
         let o = j.obj();
         let angle = o.gradient_angle as f64 * std::f64::consts::PI / 180.0;
         let g = crate::emit::geom::gradient_points(a, angle, 0);
@@ -415,11 +470,7 @@ impl SvgEngine {
     }
 
     fn rgradstyle(&mut self, j: &Job) -> i32 {
-        let id = GRAD_IDS.with(|c| {
-            let (l, r) = c.get();
-            c.set((l, r + 1));
-            r
-        });
+        let id = self.next_grad_id(true);
         let o = j.obj();
         let (ifx, ify) = if o.gradient_angle == 0 {
             (50.0, 50.0)
@@ -468,19 +519,9 @@ impl SvgEngine {
     }
 }
 
-/// `render_features_cairo` with the flags of the png and jpeg devices
-/// (`plugin/pango/gvrender_pango.c`, `plugin/gdk/gvdevice_gdk.c`): no maps, tooltips,
-/// targets or labels for the renderer, no layers for the device, no known colour names.
-const CAIRO_FEATURES: Features = Features {
-    flags: GVRENDER_Y_GOES_DOWN | GVRENDER_DOES_TRANSFORM | GVDEVICE_DOES_TRUECOLOR,
-    default_pad: 4.0,
-    knowncolors: &[],
-    rgba: true,
-};
-
 impl Engine for SvgEngine {
     fn features(&self) -> Features {
-        if self.raster.is_some() {
+        if self.cairo.is_some() {
             return CAIRO_FEATURES;
         }
         Features {
@@ -690,7 +731,7 @@ impl Engine for SvgEngine {
 
     fn textspan(&mut self, j: &Job, mut p: Point, span: &TextSpan) {
         let o = j.obj();
-        let aligned = self.aligned(j);
+        let aligned = Self::aligned(j);
         self.put("<text xml:space=\"preserve\"");
         match span.just {
             'l' => self.put(" text-anchor=\"start\""),
@@ -839,7 +880,7 @@ impl Engine for SvgEngine {
     fn bezier(&mut self, j: &Job, a: &[Point], filled: i32) {
         let gid = self.grad(j, filled, a);
         self.put("<path");
-        if self.aligned(j) {
+        if Self::aligned(j) {
             self.put(" id=\"");
             self.put(&xml(j.obj().id.as_deref().unwrap_or("")));
             self.put("_p\" ");
@@ -899,11 +940,11 @@ impl Engine for SvgEngine {
     }
 
     fn output_langname(&self) -> &str {
-        self.raster.as_deref().unwrap_or("svg")
+        self.cairo.as_ref().map_or("svg", |c| &c.langname)
     }
 
     fn render_type(&self) -> &str {
-        "svg"
+        if self.cairo.is_some() { "cairo" } else { "svg" }
     }
 
     /// `core_loadimage_svg` (`plugin/core/gvloadimage_core.c`): an `<image>` element for
