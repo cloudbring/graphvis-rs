@@ -2,10 +2,18 @@
 # Prepares a release: sets VERSION in Cargo.toml (the workspace version and the version
 # requirements of the workspace's own crates), web/package.json, web/jsr.json and Cargo.lock, and
 # moves the "Unreleased" entries of CHANGELOG.md under "## [VERSION] - today". With --pr it commits that
-# on a release/vVERSION branch and opens the pull request. See docs/versioning.md.
+# on a release/vVERSION branch, pushes it and opens the pull request. scripts/release-prep.sh writes
+# the entries and runs this; see docs/releasing.md.
 #
 # Usage: scripts/bump-version.sh VERSION [--pr]
+#   GH     the gh command that opens the pull request (default gh). The owner approves the release
+#          pull request, and GitHub does not let anyone approve their own, so an agent sets GH to
+#          run gh as the bot account.
+#   CARGO  the cargo command for `cargo update` (default cargo), for example a wrapper that queues
+#          builds on a shared machine.
 set -euo pipefail
+read -ra gh <<< "${GH:-gh}"
+read -ra cargo <<< "${CARGO:-cargo}"
 version="${1:?usage: scripts/bump-version.sh VERSION [--pr]}"
 pr="${2:-}"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "not a SemVer version: $version" >&2; exit 1; }
@@ -37,7 +45,7 @@ log = links.sub(
     log, count=1)
 open("CHANGELOG.md", "w").write(log)
 PY
-cargo update --workspace --quiet
+"${cargo[@]}" update --workspace --quiet
 echo "version $old -> $version"
 git --no-pager diff --stat
 
@@ -45,6 +53,18 @@ if [ "$pr" = --pr ]; then
   git switch -c "release/v$version"
   git commit -am "Release $version"
   git push -u origin "release/v$version"
-  gh pr create --base master --title "Release $version" \
-    --body "Sets the version to $version and dates the changelog. After merging, tag the merge commit: \`git tag -s v$version -m v$version && git push origin v$version\` (docs/releasing.md)."
+  body=$(mktemp)
+  trap 'rm -f "$body"' EXIT
+  {
+    echo "Sets the version to $version and dates the changelog. The owner's steps, once \`scripts/release-ready.sh $version\` passes, are in docs/releasing.md and in the \"Release $version ready\" issue."
+    echo
+    echo "## Changelog"
+    echo
+    awk -v v="## [$version]" 'index($0, v) == 1 {p=1; next} p && /^## \[/ {exit} p' CHANGELOG.md
+    echo
+    echo "## Changelog entry"
+    echo
+    echo "Not user-visible (the release itself)."
+  } > "$body"
+  "${gh[@]}" pr create --base master --title "Release $version" --body-file "$body"
 fi

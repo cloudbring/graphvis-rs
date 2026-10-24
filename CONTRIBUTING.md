@@ -64,8 +64,11 @@ fails if the layout or geom crates gain an `unwrap`, `expect`, index or integer-
   `LICENSES/MIT-CORE-MATH.txt` in `crates/graphviz-pure-core/LICENSES/` and for
   `LICENSES/MIT-EXPAT.txt` in `crates/graphviz-pure-geom/LICENSES/`); CI
   (`scripts/check-crate-notices.sh`) fails when one differs.
-- **Changelog:** add a line under "Unreleased" in [CHANGELOG.md](CHANGELOG.md) for anything a
-  user would notice, including changes to output bytes.
+- **Changelog:** write the entry in the pull request's body, under `## Changelog entry`, for
+  anything a user would notice, including changes to output bytes: one Keep a Changelog bullet
+  per change, under `### Fixed`, `### Changed` and so on if it has more than one kind, or
+  `Not user-visible.` Don't edit CHANGELOG.md: the release collects the entries from the bodies.
+  A breaking change gets the `breaking` label.
 - **Pull requests** need the required CI checks to pass (tests on Linux, Windows and macOS
   arm64, the supply-chain check, and the cross-platform check that those platforms and WASM
   write the same bytes) and all review threads resolved. macOS x86-64 is checked after the
