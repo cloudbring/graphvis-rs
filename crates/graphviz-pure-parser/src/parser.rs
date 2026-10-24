@@ -71,9 +71,12 @@ pub struct Parser<'a> {
     globals: GlobalAttrs,
     /// Line of the root graph's closing `}`.
     rbrace_line: usize,
-    /// Keys of the last attribute list in source order: cgraph declares them in this
-    /// order, which fixes their `sym->id`.
+    /// Keys of a node or edge statement's attribute list in source order: cgraph declares
+    /// them in this order, which fixes their `sym->id`.
     attr_order: Vec<String>,
+    /// Every item of the last attribute list, repeats included, with its value and HTML
+    /// flag: `attrstmt` sets each one (`S->attrlist`).
+    attr_items: Vec<(String, String, bool)>,
     /// The keys in [`Parser::attr_order`] whose first occurrence was an HTML string: the
     /// first declaration names the attribute symbol, flag included (`bindattrs`).
     html_keys: std::collections::BTreeSet<String>,
@@ -112,6 +115,7 @@ impl<'a> Parser<'a> {
             globals: globals.clone(),
             rbrace_line: 0,
             attr_order: Vec::new(),
+            attr_items: Vec::new(),
             html_keys: std::collections::BTreeSet::new(),
             anon_ctr: 1,
             sub_parent: Vec::new(),
@@ -553,16 +557,17 @@ impl<'a> Parser<'a> {
         };
         // attrlist : optattr '[' optattrdefs ']', at least one
         self.attr_order.clear();
+        self.attr_items.clear();
         self.html_keys.clear();
         let mut attrs = AttrMap::new();
         self.reduce(0)?;
         if self.peek().kind != TokenKind::LBracket {
             return Err(syntax_error(self.peek()));
         }
-        self.attr_brackets(&mut attrs)?;
+        self.attr_brackets(&mut attrs, true)?;
         while self.peek().kind == TokenKind::LBracket {
             self.reduce(1)?;
-            self.attr_brackets(&mut attrs)?;
+            self.attr_brackets(&mut attrs, true)?;
         }
         self.reduce(3)?;
 
@@ -570,27 +575,30 @@ impl<'a> Parser<'a> {
         if macro_name {
             graphviz_pure_core::diag::agwarningf("attribute macros not implemented");
         }
-        // `-G`/`-N`/`-E` symbols are `fixed`: root attribute statements keep them.
-        let mut kept = AttrMap::new();
-        for (k, v) in &attrs {
-            // `bindattrs` skips an edge `key`, and `attrstmt` then skips the unbound item:
-            // `edge [key=k]` sets nothing.
-            if kind == DictKind::Edge && k == "key" {
-                continue;
+        // The items `attrstmt` sets. `bindattrs` skips an edge `key`, and `attrstmt` then
+        // skips the unbound item: `edge [key=k]` sets nothing. `-G`/`-N`/`-E` symbols are
+        // `fixed`: a root attribute statement only marks them to be written.
+        let mut items = std::mem::take(&mut self.attr_items);
+        items.retain(|(k, _, _)| !(kind == DictKind::Edge && k == "key"));
+        items.retain(|(k, _, _)| {
+            if !self.fixed_at_root(kind, k) {
+                return true;
             }
-            if self.fixed_at_root(kind, k) {
-                if let Some(sym) = self.dict_mut(0, kind).get_mut(k) {
-                    sym.print = true;
-                }
-            } else {
-                kept.set(k, v.clone(), attrs.is_html(k));
+            if let Some(sym) = self.dict_mut(0, kind).get_mut(k) {
+                sym.print = true;
             }
+            false
+        });
+        // `bindattrs` declares every item's attribute first, then `attrstmt` runs `agattr`
+        // once per item, a repeated name included, each with its own value: the last one
+        // wins, and each call gives `setattr`'s diagnostics.
+        for (k, _, _) in &items {
+            self.bind_attr(kind, k);
         }
-        let attrs = kept;
-        for k in std::mem::take(&mut self.attr_order) {
-            if let Some(v) = attrs.get(&k) {
-                self.attr_stmt(kind, &k, v, attrs.is_html(&k));
-            }
+        let mut attrs = AttrMap::new();
+        for (k, v, html) in items {
+            self.attr_stmt(kind, &k, &v, html);
+            attrs.set(&k, v, html);
         }
         let target = match kind {
             DictKind::Graph => self.current_graph_attrs_mut(),
@@ -608,7 +616,7 @@ impl<'a> Parser<'a> {
         let mut attrs = AttrMap::new();
         self.reduce(0)?;
         while self.peek().kind == TokenKind::LBracket {
-            self.attr_brackets(&mut attrs)?;
+            self.attr_brackets(&mut attrs, false)?;
             self.reduce(1)?;
         }
         Ok(attrs)
@@ -617,7 +625,10 @@ impl<'a> Parser<'a> {
     /// `'[' optattrdefs ']'` of `attrlist`, reduced to `attrlist`: `optattrdefs : optattrdefs
     /// attrdefs | /* empty */`, `attrdefs : attrassignment optseparator`,
     /// `attrassignment : atom '=' atom` (`appendattr`) and `optseparator : ';' | ',' | /* empty */`.
-    fn attr_brackets(&mut self, attrs: &mut AttrMap) -> Result<()> {
+    ///
+    /// `items`: keep every item in [`Parser::attr_items`], for an attribute statement; else
+    /// the first occurrence of each key in [`Parser::attr_order`], for `endnode`/`endedge`.
+    fn attr_brackets(&mut self, attrs: &mut AttrMap, items: bool) -> Result<()> {
         self.expect(&TokenKind::LBracket)?;
         self.reduce(0)?;
         while Self::is_atom_token(&self.peek().kind) {
@@ -626,10 +637,13 @@ impl<'a> Parser<'a> {
             let val = self.atom()?;
             self.reduce(3)?;
             let (key, html) = (key.text, key.html);
-            if !attrs.contains_key(&key) {
-                if html {
-                    self.html_keys.insert(key.clone());
-                }
+            if !attrs.contains_key(&key) && html {
+                self.html_keys.insert(key.clone());
+            }
+            if items {
+                self.attr_items
+                    .push((key.clone(), val.text.clone(), val.html));
+            } else if !attrs.contains_key(&key) {
                 self.attr_order.push(key.clone());
             }
             attrs.set(&key, val.text, val.html);

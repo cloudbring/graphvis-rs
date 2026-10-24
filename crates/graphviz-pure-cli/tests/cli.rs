@@ -9208,6 +9208,98 @@ fn issue304_a_new_graph_attribute_gives_child_subgraphs_their_empty_value() {
     }
 }
 
+/// Issue #393: `attrstmt` (`lib/cgraph/grammar.y:377`) runs `agattr` once per item of the
+/// list, a repeated name included, so `setattr` warns about a subgraph's `layout` for each
+/// occurrence, and a repeat reaches its update branch. Output is C 16.1.0's.
+#[test]
+fn issue393_a_repeated_graph_attribute_is_set_once_per_occurrence() {
+    let warn = "Warning: layout attribute is invalid except on the root graph\n";
+    let tail = "Error: Layout type: \"\" not recognized. Use one of: circo dot fdp neato nop nop1 \
+                nop2 osage patchwork sfdp twopi\n\
+                Error: Layout was not done.  Missing layout plugins? \n";
+    for (src, warnings) in [
+        (
+            "graph { subgraph s { graph [layout=dot, layout=dot] x } }",
+            2,
+        ),
+        (
+            "graph { subgraph s { graph [layout=neato] [layout=dot] x } }",
+            2,
+        ),
+        (
+            "graph { subgraph s { layout=dot; graph [layout=a, foo=1, layout=b] x } }",
+            3,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tdot"], src);
+        assert!(!ok, "{src}");
+        assert_eq!(out, "", "{src}");
+        assert_eq!(err, format!("{}{tail}", warn.repeat(warnings)), "{src}");
+    }
+    // The second `label` updates the local symbol the first made, so `unviewsubgraphsattr`
+    // gives the child `c` the root's `r`, which it prints.
+    let (out, err, ok) = run(
+        &["-Tdot"],
+        "graph { label=r; subgraph s { subgraph c {} graph [label=a, label=b]; \
+         subgraph c { subgraph d {x} } } }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        r#"graph {
+	graph [bb="0,0,54,60.8",
+		label=r,
+		lheight=0.23,
+		lp="27,12.4",
+		lwidth=0.06
+	];
+	node [label="\N"];
+	subgraph s {
+		graph [label=b];
+		subgraph c {
+			graph [label=r];
+			subgraph d {
+				x	[height=0.5,
+					pos="27,42.8",
+					width=0.75];
+			}
+		}
+	}
+}
+"#
+    );
+    // The last item wins with its own HTML flag, at the root and in a subgraph; a repeated
+    // `-G`-fixed key leaves the root's value; a repeated edge `key` sets nothing.
+    for (args, src, want) in [
+        (
+            &["-Tcanon"][..],
+            "digraph { graph [label=<b>, label=\"t\"]; subgraph s { graph [label=\"u\", label=<v>] x } }",
+            "digraph {\n\tgraph [label=t];\n\tnode [label=\"\\N\"];\n\tsubgraph s {\n\t\tgraph [label=<v>];\n\t\tx;\n\t}\n}\n",
+        ),
+        (
+            &["-Tcanon", "-Gfoo=1"],
+            "digraph { graph [foo=2, foo=3]; a }",
+            "digraph {\n\tgraph [foo=1];\n\tnode [label=\"\\N\"];\n\ta;\n}\n",
+        ),
+        (
+            &["-Tcanon"],
+            "digraph { edge [key=a, key=b, color=red]; a -> b }",
+            "digraph {\n\tnode [label=\"\\N\"];\n\tedge [color=red];\n\ta -> b;\n}\n",
+        ),
+        (
+            &["-Tcanon"],
+            "digraph { node [shape=box, shape=<circle>]; a }",
+            "digraph {\n\tnode [label=\"\\N\",\n\t\tshape=<circle>\n\t];\n\ta;\n}\n",
+        ),
+    ] {
+        let (out, err, ok) = run(args, src);
+        assert!(ok, "{err}");
+        assert_eq!(err, "", "{src}");
+        assert_eq!(out, want, "{src}");
+    }
+}
+
 /// Issue #332: `Nop` is a global of the C process. `nop1_layout`/`nop2_layout`
 /// (`gvlayout_neato_layout.c:48-57`) and `fdpSplines` with splines (`fdpgen/layout.c:1057`)
 /// set it to 0 after their layout, so `-n2` no longer applies to the graphs after them;
