@@ -7259,7 +7259,11 @@ fn epsf_files_are_found_again_as_c_finds_them() {
     );
     assert_eq!(shape_calls(&dot), ["72 3 translate newpath user_shape_0"]);
     // keys compare by text: an absolute name finds the file the buffer read, and the
-    // buffer's lookup finds the file last read under its text
+    // buffer's lookup finds the file last read under its text (paths follow C's Unix rules,
+    // so the scratch directory is an absolute name only on Unix)
+    if !cfg!(unix) {
+        return;
+    }
     let d = dir.display();
     let src = format!(
         "digraph {{ imagepath=\"{d}\"; a [shape=epsf shapefile=\"box.eps\"]; \
