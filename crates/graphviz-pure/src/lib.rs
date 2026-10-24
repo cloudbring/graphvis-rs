@@ -415,7 +415,13 @@ mod tests {
                 render_dot_all_partial(&src, "neato", "plain", &GlobalAttrs::default(), opts);
             assert!(all[1].contains(laid_out), "{}", all[1]);
             let (svgs, _) = render_svg_all_partial(&src, "neato", &GlobalAttrs::default(), opts);
-            assert_eq!(svgs.len(), 2);
+            let (alone, _) = render_svg_all_partial(
+                b,
+                "neato",
+                &GlobalAttrs::default(),
+                LayoutOptions::default(),
+            );
+            assert_eq!(svgs[1], alone[0]);
 
             let mut jobs = LayoutJobs::new(LayoutEngine::Neato, opts);
             jobs.layout(&mut parse_dot(a).unwrap()).unwrap();
