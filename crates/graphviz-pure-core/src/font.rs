@@ -607,6 +607,15 @@ fn html_entity(s: &[u8]) -> (u32, usize) {
     }
 }
 
+/// The value of the HTML entity `name` (without `&` and `;`) in `entities.h`, as
+/// `scanEntity`'s `bsearch` finds it.
+pub fn html_entity_value(name: &[u8]) -> Option<u32> {
+    font_tables::HTML_ENTITIES
+        .binary_search_by(|(n, _)| n.as_bytes().cmp(name))
+        .ok()
+        .map(|i| font_tables::HTML_ENTITIES[i].1)
+}
+
 /// Appends the C encoding of entity value `v` (`htmlEntityUTF8`/`latin1ToUTF8`: 1, 2 or 3
 /// bytes, never 4).
 fn push_entity_bytes(out: &mut Vec<u8>, v: u32) {

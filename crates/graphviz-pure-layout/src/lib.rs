@@ -110,6 +110,7 @@ pub fn layout_graph_with_options(
     // calls do not repeat them.
     let _ = graphviz_pure_geom::graph_label_geometry_in(
         &graph.name,
+        false,
         &graph.graph_attrs,
         true,
         false,

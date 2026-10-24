@@ -53,7 +53,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
       AND [
         epl20 # the port
         ofl # the Tinos, Arimo and Cousine fonts compiled into the binary
-        mit # the CORE-MATH pow port (see NOTICE)
+        mit # the CORE-MATH pow port and the expat port (see NOTICE)
       ];
     # TODO(submission): add the maintainer entry (maintainers/maintainer-list.nix) in the same PR.
     maintainers = with lib.maintainers; [ ];

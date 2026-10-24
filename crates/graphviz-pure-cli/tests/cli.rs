@@ -686,6 +686,141 @@ fn html_values_are_their_inner_text_to_other_readers() {
     assert!(out.contains("translate(23 176)"), "{out}");
 }
 
+// Issue #320: `-Tplain` writes a label with `canon` (output.c), which interns the text in the
+// root graph and frees it again. A text that needs no quotes comes back as the interned string,
+// so unless the graph held it as a plain string already, C prints freed memory: a byte that
+// changes from run to run, or nothing. The port writes the empty field.
+#[test]
+fn plain_label_field_is_empty_where_c_reads_freed_memory() {
+    let edge = |src: &str| {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(ok, "{src}: {err}");
+        out.lines()
+            .find(|l| l.starts_with("edge "))
+            .map(str::to_string)
+            .unwrap_or_default()
+    };
+    // an HTML edge label: its text is no plain string of the graph
+    assert!(
+        edge("digraph { c -> e [label=<L>] }")
+            .ends_with(" 0.375 0.66136  0.43439 0.86667 solid black"),
+        "{}",
+        edge("digraph { c -> e [label=<L>] }")
+    );
+    // the node `L` keeps the plain string alive
+    assert!(
+        edge("digraph { L; c -> e [label=<L>] }")
+            .ends_with(" 0.66136 L 1.4344 0.86667 solid black")
+    );
+    // not only HTML labels: `\H\T` makes the text `ec`
+    assert!(edge(r#"digraph { c -> e [label="\H\T"] }"#).contains(" 0.66136  0.4613 "));
+    // an attribute name is in the dictionary too
+    assert!(edge("digraph { c -> e [label=<label>] }").contains(" label "));
+    // `-Tdot` before `-Tplain` stores the layout's values (`lp="0.5,..."`, `height=0.5`)
+    let (out, _, ok) = run(&["-Tdot", "-Tplain"], "digraph { c -> e [label=<0.5>] }");
+    assert!(ok);
+    assert!(
+        out.contains(" 0.66136 0.5 0.49653 0.86667 solid black"),
+        "{out}"
+    );
+    // fdp's cluster nodes are gone by then: an edge end at `<cluster_x>` is freed memory too
+    let (out, _, ok) = run(
+        &["-Kfdp", "-Tplain"],
+        "graph { subgraph <cluster_x> { a } cluster_x -- b [label=<cluster_x>] }",
+    );
+    assert!(ok);
+    assert!(out.contains("\nedge  b 4 "), "{out}");
+    // a node named `<b>` has the plain text `b` as its default label
+    let (out, _, ok) = run(&["-Tplain"], "digraph { <b> }");
+    assert!(ok);
+    assert!(
+        out.contains("\nnode <b> 0.375 0.25 0.75 0.5  solid ellipse black lightgrey\n"),
+        "{out}"
+    );
+}
+
+// Issue #305: circo names its derived nodes in a root graph of its own (`makeDerivedNode`),
+// whose dictionary has no HTML strings, so `<G>` and `G` are one derived node there. The last of
+// them gets the position; `G` keeps its initial one, and its out-edge `G -- a` is not in the
+// component, so `a` is laid out alone, as in C 16.1.0.
+#[test]
+fn circo_merges_html_and_plain_names_in_its_derived_graph() {
+    let (out, err, ok) = run(&["-Kcirco", "-Tplain"], "graph { G -- a; <G> -- b }");
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "graph 1 2.5 0.5\n\
+         node G 1.25 0.25 0.75 0.5 G solid ellipse black lightgrey\n\
+         node a 1.25 0.25 0.75 0.5 a solid ellipse black lightgrey\n\
+         node <G> 0.375 0.25 0.75 0.5 G solid ellipse black lightgrey\n\
+         node b 2.125 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         edge G a 4 1.25 0.25 1.25 0.25 1.25 0.25 1.25 0.25 solid black\n\
+         edge <G> b 4 0.75472 0.25 1.0483 0.25 1.4527 0.25 1.746 0.25 solid black\n\
+         stop\n"
+    );
+    // with a second component, the merged node is packed with its ORIGN's size
+    let (out, _, ok) = run(
+        &["-Kcirco", "-Tplain"],
+        "graph { G -- a; <G> -- b; c -- d }",
+    );
+    assert!(ok);
+    assert!(
+        out.starts_with("graph 1 4.6389 1.5694\nnode G 1.375 0.30556 "),
+        "{out}"
+    );
+    assert!(out.contains("\nnode <G> 0.375 0.25 ") && out.contains("\nnode d 4.2639 1.3194 "));
+}
+
+// Issue #305: fdp's derived graph merges nodes of one name too (`mkDeriveNode`), and C then fails
+// `bitarray_get`'s assertion in findCComp. The port lays the nodes out apart.
+#[test]
+fn fdp_derived_name_collisions_do_not_panic() {
+    for src in [
+        "graph { G -- a; <G> -- b }",
+        "digraph G { subgraph cluster_a { x } subgraph s { subgraph cluster_a { y } } x -> y; }",
+        "graph { subgraph cluster_x { a } cluster_x }",
+    ] {
+        let (out, err, ok) = run(&["-Kfdp", "-Tdot"], src);
+        assert!(ok, "{src}: {err}");
+        assert!(out.contains("pos="), "{src}: {out}");
+    }
+}
+
+// fdp's cluster map compares names as text (`mkClustMap`), so a node `<cluster_x>` is an edge
+// end at the cluster `cluster_x`; `mapN` then makes the plain node `cluster_x` for it.
+#[test]
+fn fdp_html_named_cluster_node_comes_back_plain() {
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tdot"],
+        "graph { subgraph cluster_x { a } G -- <cluster_x> }",
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("\tG -- cluster_x\t[pos="), "{out}");
+}
+
+// Nodes `G` and `<G>` are two objects for the fonts their labels interned: `<G>` does not get
+// the sizes `G` recorded. The same holds for graphs.
+#[test]
+fn html_and_plain_named_nodes_keep_their_own_label_fonts() {
+    let (out, err, ok) = run(&["-Tsvg"], "graph { a; G [fontsize=9]; <G> }");
+    assert!(ok, "{err}");
+    assert!(out.contains("x=\"99\" y=\"-15.3\" font-family=\"Times,serif\" font-size=\"9.00\">G<"));
+    assert!(
+        out.contains("x=\"171\" y=\"-13.8\" font-family=\"Times,serif\" font-size=\"14.00\">G<")
+    );
+    // likewise a cluster `<cluster_x>` and a cluster `cluster_x`
+    let (out, err, ok) = run(
+        &["-Tsvg"],
+        "digraph { subgraph cluster_x { label=X; fontsize=9; a } \
+         subgraph <cluster_x> { label=Y; b } }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("y=\"-68.2\" font-family=\"Times,serif\" font-size=\"14.00\">Y<"),
+        "{out}"
+    );
+}
+
 // Issue #166, same root cause: neato's ipsep mode matches diredgeconstraints="hier..." with
 // strncasecmp(str, "hier", 4) (lib/neatogen/neatoinit.c, majorization).
 #[test]

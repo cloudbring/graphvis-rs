@@ -71,12 +71,14 @@ about:
     port, not affiliated with or endorsed by the Graphviz project, and does not conflict with
     the `graphviz` package.
   # EPL-2.0 for the port; OFL-1.1 for the Tinos, Arimo and Cousine fonts compiled into the
-  # binary (PNG/JPEG text); MIT for the CORE-MATH pow port. Crate dependencies: THIRDPARTY.yml.
+  # binary (PNG/JPEG text); MIT for the CORE-MATH pow port and the expat port. Crate
+  # dependencies: THIRDPARTY.yml.
   license: EPL-2.0 AND OFL-1.1 AND MIT
   license_file:
     - LICENSE
     - NOTICE
     - LICENSES/MIT-CORE-MATH.txt
+    - LICENSES/MIT-EXPAT.txt
     - crates/graphviz-pure-raster/fonts/OFL-Arimo.txt
     - crates/graphviz-pure-raster/fonts/OFL-Cousine.txt
     - crates/graphviz-pure-raster/fonts/OFL-Tinos.txt

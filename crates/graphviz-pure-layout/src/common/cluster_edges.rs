@@ -357,7 +357,17 @@ pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
                 a.entry("label".to_string())
                     .or_insert_with(|| "\\N".to_string());
                 a.insert(CLUST_NODE_KEY.to_string(), String::new());
-                graph.nodes[i].attrs = a;
+                let node = &mut graph.nodes[i];
+                node.attrs = a;
+                // mapN: `agnode(g, name, 1)` with the text after `__0:`, a plain string,
+                // even for a node that was named `<cluster_x>`
+                if std::mem::take(&mut node.html_name) {
+                    let name = node.name.clone();
+                    graph
+                        .node_lookup
+                        .remove(Graph::node_key(&name, true).as_ref());
+                    graph.node_lookup.entry(name).or_insert(NodeId(i as u32));
+                }
             }
         }
     }

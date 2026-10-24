@@ -23,6 +23,13 @@ crates/graphviz-pure-core/src/math/portable/pow/
     in LICENSES/MIT-CORE-MATH.txt (and in the release archives' LICENSES/
     directory).
 
+crates/graphviz-pure-geom/src/expat.rs
+    A Rust port of the parts of the expat XML parser 2.7.4 that HTML-like labels
+    use: its tokenizer, name tables and parsing (Copyright (c) 1998-2000 Thai
+    Open Source Software Center Ltd and Clark Cooper; Copyright (c) 2001-2025
+    Expat maintainers), MIT licence. The licence text is in
+    LICENSES/MIT-EXPAT.txt (and in the release archives' LICENSES/ directory).
+
 The libm crate (dependency)
     rust-lang/compiler-builtins' ports of musl/fdlibm and CORE-MATH, MIT
     licence.

@@ -241,9 +241,67 @@ pub(crate) fn propagate_inherited(g: &mut Graph, orig: &Graph, explicit: &[BTree
     }
 }
 
+/// Whether the root graph's string dictionary holds `s` as a plain string (not an HTML one):
+/// a name, an attribute name or a plain attribute value.
+fn root_holds_plain(g: &Graph, s: &str) -> bool {
+    let in_map = |m: &graphviz_pure_core::AttrMap| {
+        m.iter()
+            .any(|(k, v)| !k.starts_with('\u{1}') && (k == s || (v == s && !attr_is_html(m, k))))
+    };
+    (!g.empty_name && g.name == s)
+        || in_map(&g.graph_attrs)
+        || in_map(&g.node_defaults)
+        || in_map(&g.edge_defaults)
+        || g.subgraphs.iter().any(|sg| {
+            (!sg.html_name && sg.name == s)
+                || in_map(&sg.graph_attrs)
+                || in_map(&sg.node_defaults)
+                || in_map(&sg.edge_defaults)
+        })
+        // fdp's cluster nodes (`__0:cluster_x`) are gone again after undoClusterEdges
+        || g.nodes.iter().any(|n| {
+            !n.attrs.contains_key(super::model::CLUST_NODE_KEY)
+                && ((!n.html_name && n.name == s) || in_map(&n.attrs))
+        })
+        || g.edges
+            .iter()
+            .any(|e| (!e.key_html && e.key.as_deref() == Some(s)) || in_map(&e.attrs))
+        || g.dicts.iter().any(|d| {
+            [&d.graph, &d.node, &d.edge]
+                .iter()
+                .any(|m| m.iter().any(|(k, sym)| k == s || sym.defval == s))
+        })
+}
+
+/// `canon` in `output.c`, for the text of an edge label, of a node's non-HTML label, or of the
+/// cluster an fdp cluster edge ends at. It interns the text in the root graph (`agstrdup`),
+/// canonicalizes it, and frees it again (`agstrfree`): when `agstrcanon` needs no quotes it
+/// returns the interned string itself, which that free releases unless the dictionary held the
+/// plain string already. C then prints freed memory, a byte that differs
+/// from run to run or nothing; the port writes the empty field. An HTML edge label whose text
+/// is not also a name or a plain value takes that path, and so does the default label of a
+/// node with an HTML name.
+fn plain_label_canon(g: &Graph, earlier: Option<&Graph>, text: &str) -> String {
+    let c = graphviz_pure_parser::canon_str(text);
+    if c == text
+        && !root_holds_plain(g, text)
+        && !earlier.is_some_and(|e| root_holds_plain(e, text))
+    {
+        return String::new();
+    }
+    c
+}
+
 /// `write_plain` (`-Tplain`, `-Tplain-ext`).
-pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
-    use graphviz_pure_parser::{canon_str, canon_value};
+/// `earlier`: what the jobs before this one attached (`-Tdot -Tplain`), whose values are in
+/// the root graph's dictionary too.
+pub(crate) fn write_plain(
+    m: &Model<'_>,
+    zoom: f64,
+    extend: bool,
+    earlier: Option<&Graph>,
+) -> String {
+    use graphviz_pure_parser::canon_value;
     let g = m.g;
     let mut out = String::new();
     let y_off = y_offset(m.bb);
@@ -262,7 +320,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
         let lbl = if n.label.is_html {
             canon_value(a.get("label").unwrap_or(""), true)
         } else {
-            canon_str(&n.label.text)
+            plain_label_canon(g, earlier, &n.label.text)
         };
         let fill = a
             .nonempty("fillcolor")
@@ -317,7 +375,13 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
                 ];
                 for (node, port, html) in ports {
                     out.push(' ');
-                    out.push_str(&canon_value(m.nodes[node].name, g.nodes[node].html_name));
+                    let gn = &g.nodes[node];
+                    if gn.attrs.contains_key(super::model::CLUST_NODE_KEY) {
+                        // writenodeandport: `canon` of the cluster's name
+                        out.push_str(&plain_label_canon(g, earlier, m.nodes[node].name));
+                    } else {
+                        out.push_str(&canon_value(m.nodes[node].name, gn.html_name));
+                    }
                     if let Some(p) = port.as_deref().filter(|p| !p.is_empty()) {
                         out.push(':');
                         out.push_str(&canon_value(p, html));
@@ -335,7 +399,7 @@ pub(crate) fn write_plain(m: &Model<'_>, zoom: f64, extend: bool) -> String {
                 let _ = write!(
                     out,
                     " {} {} {}",
-                    canon_str(&l.text),
+                    plain_label_canon(g, earlier, &l.text),
                     g5(l.pos.x / 72.0),
                     g5(y_dir(l.pos.y, y_off) / 72.0)
                 );

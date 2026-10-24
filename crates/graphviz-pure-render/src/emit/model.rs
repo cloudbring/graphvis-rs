@@ -533,7 +533,7 @@ impl<'g> Model<'g> {
                 {
                     None
                 } else {
-                    graph_label_geometry_in(&s.name, &s.graph_attrs, false, flip, env)
+                    graph_label_geometry_in(&s.name, s.html_name, &s.graph_attrs, false, flip, env)
                 };
                 let label = label.map(|gl| {
                     *has_labels |= GRAPH_LABEL;
@@ -649,7 +649,8 @@ impl<'g> Model<'g> {
         }
 
         let bb = g.bb;
-        let label = graph_label_geometry_in(&g.name, &g.graph_attrs, true, flip, &env).map(|gl| {
+        let root_label = graph_label_geometry_in(&g.name, false, &g.graph_attrs, true, flip, &env);
+        let label = root_label.map(|gl| {
             has_labels |= GRAPH_LABEL;
             let mut l = TextLabel::from_geometry(
                 &gl.label,

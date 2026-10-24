@@ -7572,8 +7572,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_Latin1_cd0c3d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_NaN_1dc220": {
         "identical": true,
@@ -7708,8 +7708,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b60_bf5b3a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
         "identical": true,
@@ -9882,8 +9882,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_Latin1_cd0c3d": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_NaN_1dc220": {
         "identical": true,
@@ -10018,8 +10018,8 @@
         "diff_lines": 0
       },
       "gv16_graphs_b60_bf5b3a": {
-        "identical": false,
-        "diff_lines": 2
+        "identical": true,
+        "diff_lines": 0
       },
       "gv16_graphs_b62_a87251": {
         "identical": true,

@@ -51,6 +51,7 @@ package() {
   cd "$pkgname-$pkgver"
   install -Dm755 target/release/graphviz-pure "$pkgdir/usr/bin/graphviz-pure"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE NOTICE \
-    THIRD-PARTY-LICENSES.md LICENSES/MIT-CORE-MATH.txt crates/graphviz-pure-raster/fonts/OFL-*.txt
+    THIRD-PARTY-LICENSES.md LICENSES/MIT-CORE-MATH.txt LICENSES/MIT-EXPAT.txt \
+    crates/graphviz-pure-raster/fonts/OFL-*.txt
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }

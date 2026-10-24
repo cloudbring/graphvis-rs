@@ -29,13 +29,15 @@ BINARY = {
     **BASE,
     "THIRD-PARTY-LICENSES.md": "THIRD-PARTY-LICENSES.md",
     "LICENSES/MIT-CORE-MATH.txt": "LICENSES/MIT-CORE-MATH.txt",
+    "LICENSES/MIT-EXPAT.txt": "LICENSES/MIT-EXPAT.txt",
 }
 ARCHIVE = {**BINARY, **{"LICENSES/" + os.path.basename(f): f for f in fonts}}
 # Crates beyond LICENSE and NOTICE (copies of the root files, kept in each crate's directory):
-# the one holding the CORE-MATH port and the one bundling the fonts. A crate ships sources, not
+# the ones holding the CORE-MATH and expat ports and the one bundling the fonts. A crate ships sources, not
 # its dependencies, so THIRD-PARTY-LICENSES.md is not in any.
 CRATES = {
     "graphviz-pure-core": {"LICENSES/MIT-CORE-MATH.txt": "LICENSES/MIT-CORE-MATH.txt"},
+    "graphviz-pure-geom": {"LICENSES/MIT-EXPAT.txt": "LICENSES/MIT-EXPAT.txt"},
     "graphviz-pure-raster": {"fonts/" + os.path.basename(f): f for f in fonts},
 }
 
