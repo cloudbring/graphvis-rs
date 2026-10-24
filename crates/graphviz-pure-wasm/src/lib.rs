@@ -5,9 +5,41 @@ use graphviz_pure_core::charset;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-/// An error for JS, as text ([`charset::to_text`]).
+/// An error's message as text for JS ([`charset::to_text`]).
+fn error_text(e: impl std::fmt::Display) -> String {
+    charset::to_text(&e.to_string()).into_owned()
+}
+
+/// An error for JS ([`error_text`]).
 fn js_error(e: impl std::fmt::Display) -> JsValue {
-    JsValue::from_str(&charset::to_text(&e.to_string()))
+    JsValue::from_str(&error_text(e))
+}
+
+/// [`render`] with the JS text boundary but no `JsValue`: the source, engine and format are
+/// read with [`charset::from_text`], and the output and error message go back through
+/// [`charset::to_text`].
+fn render_text(dot_source: &str, engine: &str, format: &str) -> Result<String, String> {
+    let (engine, format) = (charset::from_text(engine), charset::from_text(format));
+    graphviz_pure::render_dot(&charset::from_text(dot_source), &engine, &format)
+        .map(|out| charset::to_text(&out).into_owned())
+        .map_err(error_text)
+}
+
+/// [`render_all`] as [`render_text`] is [`render`].
+fn render_all_text(dot_source: &str, engine: &str, format: &str) -> Result<Vec<String>, String> {
+    let (engine, format) = (charset::from_text(engine), charset::from_text(format));
+    graphviz_pure::render_dot_all(
+        &charset::from_text(dot_source),
+        &engine,
+        &format,
+        &graphviz_pure::GlobalAttrs::default(),
+    )
+    .map(|outs| {
+        outs.iter()
+            .map(|out| charset::to_text(out).into_owned())
+            .collect()
+    })
+    .map_err(error_text)
 }
 
 #[derive(Serialize)]
@@ -30,9 +62,7 @@ pub fn render(
     engine: &str,
     format: &str,
 ) -> std::result::Result<String, JsValue> {
-    graphviz_pure::render_dot(&charset::from_text(dot_source), engine, format)
-        .map(|out| charset::to_text(&out).into_owned())
-        .map_err(js_error)
+    render_text(dot_source, engine, format).map_err(|e| JsValue::from_str(&e))
 }
 
 /// Renders every graph in a DOT string (a file may hold several), one output string per graph,
@@ -43,18 +73,7 @@ pub fn render_all(
     engine: &str,
     format: &str,
 ) -> std::result::Result<Vec<String>, JsValue> {
-    graphviz_pure::render_dot_all(
-        &charset::from_text(dot_source),
-        engine,
-        format,
-        &graphviz_pure::GlobalAttrs::default(),
-    )
-    .map(|outs| {
-        outs.iter()
-            .map(|out| charset::to_text(out).into_owned())
-            .collect()
-    })
-    .map_err(js_error)
+    render_all_text(dot_source, engine, format).map_err(|e| JsValue::from_str(&e))
 }
 
 /// [`render_all`] for a file's raw bytes, as the `dot` command line reads them: bytes that are
@@ -71,10 +90,11 @@ pub fn render_all_bytes(
     format: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let src = charset::decode_slice(dot_source);
+    let (engine, format) = (charset::from_text(engine), charset::from_text(format));
     let (parts, err) = graphviz_pure::render_dot_all_partial(
         &src,
-        engine,
-        format,
+        &engine,
+        &format,
         &graphviz_pure::GlobalAttrs::default(),
         graphviz_pure::LayoutOptions::default(),
     );
@@ -87,23 +107,20 @@ pub fn render_all_bytes(
 /// Convenience helper to render a DOT graph directly to an SVG string using the specified layout engine.
 #[wasm_bindgen(js_name = renderSvg)]
 pub fn render_svg(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    graphviz_pure::render_dot(&charset::from_text(dot_source), engine, "svg")
-        .map(|out| charset::to_text(&out).into_owned())
-        .map_err(js_error)
+    render_text(dot_source, engine, "svg").map_err(|e| JsValue::from_str(&e))
 }
 
 /// Convenience helper to render a DOT graph to Graphviz `json` format.
 #[wasm_bindgen(js_name = renderJson)]
 pub fn render_json(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    graphviz_pure::render_dot(&charset::from_text(dot_source), engine, "json")
-        .map(|out| charset::to_text(&out).into_owned())
-        .map_err(js_error)
+    render_text(dot_source, engine, "json").map_err(|e| JsValue::from_str(&e))
 }
 
 /// Parses and lays out a DOT graph and returns JSON statistics (`nodes`, `edges`, `subgraphs`, `width_pt`, `height_pt`).
 #[wasm_bindgen(js_name = inspectGraph)]
 pub fn inspect_graph(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    let layout_engine = graphviz_pure::LayoutEngine::parse(engine).map_err(js_error)?;
+    let layout_engine =
+        graphviz_pure::LayoutEngine::parse(&charset::from_text(engine)).map_err(js_error)?;
     let mut graph = graphviz_pure::parse_dot(&charset::from_text(dot_source)).map_err(js_error)?;
     graphviz_pure::layout_graph(&mut graph, layout_engine).map_err(js_error)?;
     let stats = GraphStats {
@@ -135,4 +152,36 @@ pub fn supported_formats() -> String {
 #[wasm_bindgen]
 pub fn version() -> String {
     "graphviz-pure 0.1.0 (Rust port of Graphviz 16.1.0)".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Issue #151: a JS string is text, so a real U+10FF41 in it is not one of the port's raw
+    // bytes: it goes in and comes back out as itself, in output and in error messages.
+    #[test]
+    fn real_chars_of_the_raw_byte_range_cross_the_js_boundary() {
+        let src = "digraph { \"x\u{10ff41}y\" -> b }";
+        let out = render_text(src, "dot", "plain").unwrap();
+        assert!(out.contains("node x\u{10ff41}y "), "{out}");
+        assert!(!out.contains("xAy"), "{out}");
+        let outs = render_all_text(&format!("{src}\n{src}"), "dot", "canon").unwrap();
+        assert_eq!(outs.len(), 2);
+        assert!(
+            outs.iter().all(|o| o.contains("\tx\u{10ff41}y -> b;")),
+            "{outs:?}"
+        );
+
+        // Engine and format names are text too, and error messages name them.
+        let err = render_text(src, "x\u{10ff41}", "plain").unwrap_err();
+        assert!(err.contains("x\u{10ff41}") && !err.contains("xA"), "{err}");
+        let err = render_all_text(src, "dot", "x\u{10ff41}").unwrap_err();
+        assert!(err.contains("x\u{10ff41}") && !err.contains("xA"), "{err}");
+        // A message that holds a raw byte is still text: the byte becomes U+FFFD.
+        assert_eq!(
+            error_text(charset::decode(b"caf\xe9".to_vec())),
+            "caf\u{fffd}"
+        );
+    }
 }

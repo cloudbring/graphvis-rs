@@ -6767,11 +6767,14 @@ fn issue151_real_chars_of_the_raw_byte_range_keep_their_bytes() {
         "Warning: Warning: no value for width of non-ASCII character 143. Falling back to \
          width of space character\nWarning: node a, port p\u{10ff41} unrecognized\n"
     );
-    assert!(
-        out.starts_with(
-            "graph 1 0.75 1.5139\nnode a 0.375 1.2569 0.75 0.51389 \"<p\u{10ff41}>f\u{10ff41}|g\" "
-        ),
-        "{out}"
+    assert_eq!(
+        out,
+        "graph 1 0.75 1.5139\n\
+         node a 0.375 1.2569 0.75 0.51389 \"<p\u{10ff41}>f\u{10ff41}|g\" solid record black \
+         lightgrey\n\
+         node b 0.375 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         edge a b 4 0.375 1.0012 0.375 0.89773 0.375 0.77584 0.375 0.66129 solid black\n\
+         stop\n"
     );
 
     // HTML text: expat's character data is measured on its bytes too.
@@ -6785,7 +6788,13 @@ fn issue151_real_chars_of_the_raw_byte_range_keep_their_bytes() {
         "Warning: Warning: no value for width of non-ASCII character 244. Falling back to \
          width of space character\n"
     );
-    assert!(out.starts_with("graph 1 0.82496 0.72282\n"), "{out}");
+    assert_eq!(
+        out,
+        "graph 1 0.82496 0.72282\n\
+         node b 0.41248 0.36141 0.82496 0.72282 <<table><tr><td>\u{10ffff}</td></tr></table>> \
+         solid ellipse black lightgrey\n\
+         stop\n"
+    );
 
     // expat gives the char back as its bytes: `sides` warns about each one.
     let (out, err, ok) = run(
@@ -6800,9 +6809,14 @@ fn issue151_real_chars_of_the_raw_byte_range_keep_their_bytes() {
          Warning: Unrecognized character '\u{fffd}' (-67) in sides attribute\n\
          Warning: Unrecognized character '\u{fffd}' (-127) in sides attribute\n"
     );
-    assert!(out.contains(
-        "<<table sides=\"l\u{10ff41}\"><tr><td title=\"\u{10ff41}\">x</td></tr></table>>"
-    ));
+    assert_eq!(
+        out,
+        "graph 1 0.75 0.72282\n\
+         node a 0.375 0.36141 0.75 0.72282 \
+         <<table sides=\"l\u{10ff41}\"><tr><td title=\"\u{10ff41}\">x</td></tr></table>> \
+         solid ellipse black lightgrey\n\
+         stop\n"
+    );
 }
 
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling

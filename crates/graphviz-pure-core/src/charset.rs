@@ -30,31 +30,59 @@ const RAW_BASE: u32 = 0x10_FF00;
 pub fn decode(bytes: Vec<u8>) -> String {
     match String::from_utf8(bytes) {
         Ok(s) if !has_raw(&s) => s,
-        Ok(s) => decode_slice(s.as_bytes()),
-        Err(e) => decode_slice(e.as_bytes()),
+        Ok(s) => escaped(&s, &[]),
+        Err(e) => {
+            let bytes = e.as_bytes();
+            let valid = e.utf8_error().valid_up_to();
+            escaped(
+                std::str::from_utf8(&bytes[..valid]).unwrap_or_default(),
+                &bytes[valid..],
+            )
+        }
     }
 }
 
 /// [`decode`] for a borrowed slice.
 pub fn decode_slice(bytes: &[u8]) -> String {
-    if let Ok(s) = std::str::from_utf8(bytes)
-        && !has_raw(s)
-    {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(bytes.len() + 8);
-    let mut buf = [0u8; 4];
-    for chunk in bytes.utf8_chunks() {
-        for c in chunk.valid().chars() {
-            if u32::from(c) >= RAW_BASE {
-                out.extend(c.encode_utf8(&mut buf).bytes().map(raw_char));
-            } else {
-                out.push(c);
-            }
+    match std::str::from_utf8(bytes) {
+        Ok(s) if !has_raw(s) => s.to_string(),
+        Ok(s) => escaped(s, &[]),
+        Err(e) => {
+            let valid = e.valid_up_to();
+            escaped(
+                std::str::from_utf8(&bytes[..valid]).unwrap_or_default(),
+                &bytes[valid..],
+            )
         }
+    }
+}
+
+/// The decoded form of `valid` (already-checked UTF-8) followed by `rest`, which starts with
+/// a byte that isn't part of valid UTF-8 (or is empty).
+fn escaped(valid: &str, rest: &[u8]) -> String {
+    let mut out = String::with_capacity(valid.len() + rest.len() + 8);
+    push_escaped(&mut out, valid);
+    for chunk in rest.utf8_chunks() {
+        push_escaped(&mut out, chunk.valid());
         out.extend(chunk.invalid().iter().map(|&b| raw_char(b)));
     }
     out
+}
+
+/// Appends valid text, each char of the raw-byte range as its four raw bytes.
+fn push_escaped(out: &mut String, s: &str) {
+    if !has_raw(s) {
+        out.push_str(s);
+        return;
+    }
+    let mut buf = [0u8; 4];
+    for c in s.chars() {
+        if u32::from(c) >= RAW_BASE {
+            out.extend(c.encode_utf8(&mut buf).bytes().map(raw_char));
+        } else {
+            out.push(c);
+        }
+    }
 }
 
 /// The char that stands for the raw (non-UTF-8) byte `b`; [`encode`] turns it back.

@@ -2,6 +2,7 @@ use graphviz_pure::{
     DEVICE_PLUGINS, FdpParms, GlobalAttrs, GraphJobs, GraphStream, LAYOUT_PLUGINS, LayoutEngine,
     LayoutJobs, LayoutOptions, OutputFormat,
 };
+use graphviz_pure_core::charset::decode_slice;
 use graphviz_pure_core::diag::{AgErrLevel, agerrorf, agseterr, agwarningf, fprintf_stderr};
 use std::borrow::Cow;
 use std::env;
@@ -123,12 +124,7 @@ fn usage(argv0: &str, exval: u8) -> ExitCode {
 /// not valid UTF-8 are kept as raw-byte chars (`graphviz_pure_core::charset`): an attribute
 /// set with `-G` carries them into the output, and an error message names them as C does.
 fn arg_text(arg: &OsStr) -> String {
-    bytes_text(&arg_bytes(arg))
-}
-
-/// [`arg_text`] of some of an argument's bytes.
-fn bytes_text(bytes: &[u8]) -> String {
-    graphviz_pure_core::charset::decode_slice(bytes)
+    decode_slice(&arg_bytes(arg))
 }
 
 /// `strerror(errno)` for an I/O error: its text without Rust's ` (os error N)`.
@@ -195,7 +191,7 @@ fn os_tail(arg: &OsStr) -> OsString {
 fn flag_value(args: &[OsString], i: &mut usize) -> Option<String> {
     let arg = arg_bytes(&args[*i]);
     if arg.len() > 2 {
-        return Some(bytes_text(&arg[2..]));
+        return Some(decode_slice(&arg[2..]));
     }
     let next = arg_text(args.get(*i + 1)?);
     if !next.is_empty() && !next.starts_with('-') {
@@ -302,7 +298,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
             layout.reduce = true;
             continue;
         }
-        let rest = bytes_text(&bytes[2..]);
+        let rest = decode_slice(&bytes[2..]);
         if rest.is_empty() {
             layout.nop = 1;
             continue;
@@ -324,7 +320,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
             kept.push(os_arg.clone());
             continue;
         }
-        if set_fdp_attr(&mut layout.fdp, &bytes_text(&bytes[2..])).is_err() {
+        if set_fdp_attr(&mut layout.fdp, &decode_slice(&bytes[2..])).is_err() {
             return Parsed::Exit(usage(argv0, 1));
         }
     }
@@ -395,7 +391,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
                 Some(&b) if b.is_ascii() => b as char,
                 Some(&b) => graphviz_pure_core::charset::raw_char(b),
             };
-            let rest = bytes_text(bytes.get(2..).unwrap_or_default());
+            let rest = decode_slice(bytes.get(2..).unwrap_or_default());
             let rest = rest.as_str();
             match flag {
                 'G' | 'N' | 'E' | 'A' => {
