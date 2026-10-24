@@ -137,7 +137,7 @@ pub(crate) fn run_c(dot: &str, path: &Path) -> Option<String> {
 }
 
 pub(crate) fn run_port(src: &str) -> Option<String> {
-    let src = src.to_string();
+    let src = graphviz_pure::decoded::Decoded::from_decoded(src.to_string());
     // As dot does, the graphs read before a syntax error are rendered, and the input is read
     // as `dot` reads the file.
     let out = std::panic::catch_unwind(move || {

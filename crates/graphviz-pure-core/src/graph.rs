@@ -66,6 +66,15 @@ impl AttrMap {
         self.values.remove(key)
     }
 
+    /// The map with `f` applied to every key and value, keeping the HTML flags.
+    pub fn map(&self, f: impl Fn(&str) -> Cow<'_, str>) -> AttrMap {
+        let mut out = AttrMap::new();
+        for (k, v) in &self.values {
+            out.set(&f(k), f(v).into_owned(), self.is_html(k));
+        }
+        out
+    }
+
     /// Keeps the attributes `keep` accepts, with their flags.
     pub fn retain(&mut self, mut keep: impl FnMut(&String, &String) -> bool) {
         let html = &mut self.html;

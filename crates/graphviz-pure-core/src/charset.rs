@@ -136,6 +136,43 @@ pub fn to_text(s: &str) -> Cow<'_, str> {
     }
 }
 
+/// A string in the decoded form, for the entry points that take it (`graphviz_pure::decoded`).
+/// It is made by decoding bytes or converting text, so text and decoded strings can't be
+/// passed for each other by mistake.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Decoded(String);
+
+impl Decoded {
+    /// [`decode`] of input bytes.
+    pub fn decode(bytes: Vec<u8>) -> Self {
+        Decoded(decode(bytes))
+    }
+
+    /// [`decode_slice`] of input bytes.
+    pub fn decode_slice(bytes: &[u8]) -> Self {
+        Decoded(decode_slice(bytes))
+    }
+
+    /// [`from_text`] of ordinary text.
+    pub fn from_text(text: &str) -> Self {
+        Decoded(from_text(text).into_owned())
+    }
+
+    /// A string that is already in decoded form: a [`decode`] result, or a value a parsed
+    /// graph holds.
+    pub fn from_decoded(s: String) -> Self {
+        Decoded(s)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn into_string(self) -> String {
+        self.0
+    }
+}
+
 /// `GD_charset(g)`: the input character set of a graph (`CHAR_UTF8`, `CHAR_LATIN1`,
 /// `CHAR_BIG5` in `lib/common/const.h`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

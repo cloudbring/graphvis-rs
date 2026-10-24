@@ -1,7 +1,7 @@
-use graphviz_pure::decoded::{GraphJobs, GraphStream};
+use graphviz_pure::decoded::{GraphJobs, GraphStream, LayoutJobs};
 use graphviz_pure::plugins;
 use graphviz_pure::{
-    DEVICE_PLUGINS, FdpParms, GlobalAttrs, LAYOUT_PLUGINS, LayoutEngine, LayoutJobs, LayoutOptions,
+    DEVICE_PLUGINS, FdpParms, GlobalAttrs, LAYOUT_PLUGINS, LayoutEngine, LayoutOptions,
     OutputFormat,
 };
 use graphviz_pure_core::charset::decode_slice;
@@ -753,7 +753,8 @@ impl Run<'_> {
     /// instead of the inputs, which are not read.
     fn plugin_graph(&mut self, globals: &GlobalAttrs) -> io::Result<bool> {
         // The port's tables are fixed and all quotable (`plugin_graph`'s test).
-        let Some(mut graph) = plugins::plugin_graph(&plugins::PORT_PLUGINS, globals) else {
+        let Some(mut graph) = graphviz_pure::decoded::plugin_graph(&plugins::PORT_PLUGINS, globals)
+        else {
             agerrorf("the plugin graph could not be made\n");
             return Ok(true);
         };

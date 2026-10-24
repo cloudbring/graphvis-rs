@@ -5,41 +5,30 @@ use graphviz_pure_core::charset;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-/// An error's message as text for JS ([`charset::to_text`]).
+/// A decoded error's message as text for JS ([`charset::to_text`]).
 fn error_text(e: impl std::fmt::Display) -> String {
     charset::to_text(&e.to_string()).into_owned()
 }
 
-/// An error for JS ([`error_text`]).
+/// A decoded error for JS ([`error_text`]).
 fn js_error(e: impl std::fmt::Display) -> JsValue {
     JsValue::from_str(&error_text(e))
 }
 
-/// [`render`] with the JS text boundary but no `JsValue`: the source, engine and format are
-/// read with [`charset::from_text`], and the output and error message go back through
-/// [`charset::to_text`].
+/// An error from the root `graphviz_pure` functions, whose messages are text already.
+fn text_error(e: graphviz_pure::GraphvizError) -> JsValue {
+    JsValue::from_str(&e.to_string())
+}
+
+/// [`render`] without the `JsValue`: the root `graphviz_pure` functions take and return text.
 fn render_text(dot_source: &str, engine: &str, format: &str) -> Result<String, String> {
-    let (engine, format) = (charset::from_text(engine), charset::from_text(format));
-    graphviz_pure::decoded::render_dot(&charset::from_text(dot_source), &engine, &format)
-        .map(|out| charset::to_text(&out).into_owned())
-        .map_err(error_text)
+    graphviz_pure::render_dot(dot_source, engine, format).map_err(|e| e.to_string())
 }
 
 /// [`render_all`] as [`render_text`] is [`render`].
 fn render_all_text(dot_source: &str, engine: &str, format: &str) -> Result<Vec<String>, String> {
-    let (engine, format) = (charset::from_text(engine), charset::from_text(format));
-    graphviz_pure::decoded::render_dot_all(
-        &charset::from_text(dot_source),
-        &engine,
-        &format,
-        &graphviz_pure::GlobalAttrs::default(),
-    )
-    .map(|outs| {
-        outs.iter()
-            .map(|out| charset::to_text(out).into_owned())
-            .collect()
-    })
-    .map_err(error_text)
+    let globals = graphviz_pure::GlobalAttrs::default();
+    graphviz_pure::render_dot_all(dot_source, engine, format, &globals).map_err(|e| e.to_string())
 }
 
 #[derive(Serialize)]
@@ -89,7 +78,7 @@ pub fn render_all_bytes(
     engine: &str,
     format: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let src = charset::decode_slice(dot_source);
+    let src = charset::Decoded::decode_slice(dot_source);
     let (engine, format) = (charset::from_text(engine), charset::from_text(format));
     let (parts, err) = graphviz_pure::decoded::render_dot_all_partial(
         &src,
@@ -119,11 +108,9 @@ pub fn render_json(dot_source: &str, engine: &str) -> std::result::Result<String
 /// Parses and lays out a DOT graph and returns JSON statistics (`nodes`, `edges`, `subgraphs`, `width_pt`, `height_pt`).
 #[wasm_bindgen(js_name = inspectGraph)]
 pub fn inspect_graph(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    let layout_engine =
-        graphviz_pure::LayoutEngine::parse(&charset::from_text(engine)).map_err(js_error)?;
-    let mut graph =
-        graphviz_pure::decoded::parse_dot(&charset::from_text(dot_source)).map_err(js_error)?;
-    graphviz_pure::layout_graph(&mut graph, layout_engine).map_err(js_error)?;
+    let layout_engine = graphviz_pure::LayoutEngine::parse(engine).map_err(text_error)?;
+    let mut graph = graphviz_pure::parse_dot(dot_source).map_err(text_error)?;
+    graphviz_pure::layout_graph(&mut graph, layout_engine).map_err(text_error)?;
     let stats = GraphStats {
         name: charset::to_text(&graph.name).into_owned(),
         directed: graph.kind == graphviz_pure_core::GraphKind::Directed,

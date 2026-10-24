@@ -565,7 +565,7 @@ mod tests {
 
     fn port_svg() -> String {
         let (parts, _) = graphviz_pure::decoded::render_dot_all_partial(
-            GRAPH,
+            &graphviz_pure::decoded::Decoded::from_text(GRAPH),
             "dot",
             "svg",
             &graphviz_pure_parser::GlobalAttrs::default(),
