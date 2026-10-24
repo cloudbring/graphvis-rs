@@ -1447,6 +1447,59 @@ fn circo_merges_html_and_plain_names_in_its_derived_graph() {
     assert!(out.contains("\nnode <G> 0.375 0.25 ") && out.contains("\nnode d 4.2639 1.3194 "));
 }
 
+// Issue #398: with several components circo runs adjustNodes on each component of its derived
+// graph (circoLayout), a root of its own that copies cgraph's ProtoGraph: it sees `-G`
+// attributes but not the input's, and its nodes have `lw`, `rw` and `ht` but no width or height
+// (makeDerivedNode). So `-Goverlap=false` overlaps the nodes, as in C 16.1.0, and in-file
+// `overlap=false` does nothing there. With `voronoi` C dereferences the derived node's missing
+// shape; the port leaves the overlaps.
+#[test]
+fn circo_components_adjust_with_the_command_line_attributes_only() {
+    let src = "digraph { a -> b; c }";
+    let (out, err, ok) = run(&["-Kcirco", "-Goverlap=false", "-Tplain"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "graph 1 1.921 1.375\n\
+         node a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 0.77252 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         node c 1.546 1.125 0.75 0.5 c solid ellipse black lightgrey\n\
+         edge a b 4 0.75544 0.25 0.75816 0.25 0.76059 0.25 0.7627 0.25 solid black\n\
+         stop\n"
+    );
+    let (out, err, ok) = run(&["-Kcirco", "-Goverlap=compress", "-Tplain"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.starts_with("graph 1 1.75 1.3333\nnode a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey\nnode b 0.48611 0.25 "),
+        "{out}"
+    );
+    let unadjusted = "graph 1 2.75 1.5\n\
+         node a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 2.125 0.25 0.75 0.5 b solid ellipse black lightgrey\n\
+         node c 2.375 1.25 0.75 0.5 c solid ellipse black lightgrey\n\
+         edge a b 4 0.75472 0.25 0.99895 0.25 1.3199 0.25 1.5898 0.25 solid black\n\
+         stop\n";
+    let (out, err, ok) = run(
+        &["-Kcirco", "-Tplain"],
+        "digraph { overlap=false; a -> b; c }",
+    );
+    assert!(ok, "{err}");
+    assert_eq!(out, unadjusted);
+    let (out, err, ok) = run(&["-Kcirco", "-Goverlap=voronoi", "-Tplain"], src);
+    assert!(ok, "{err}");
+    assert_eq!(out, unadjusted);
+    // the issue's larger case: the overlapping nodes make spline routing fall back
+    let (_, err, ok) = run(
+        &["-Kcirco", "-Goverlap=false", "-Gsplines=true", "-Tplain"],
+        "digraph G { a -> b; c -> d; e -> e; f; g -> h; h -> g; d -> c [label=lab] }",
+    );
+    assert!(ok);
+    assert_eq!(
+        err,
+        "Warning: some nodes with margin (3.20,3.20) touch - falling back to straight line edges\n"
+    );
+}
+
 // Issue #305: fdp's derived graph merges nodes of one name too (`mkDeriveNode`), and C then fails
 // `bitarray_get`'s assertion in findCComp. The port lays the nodes out apart.
 #[test]
@@ -1460,6 +1513,42 @@ fn fdp_derived_name_collisions_do_not_panic() {
         assert!(ok, "{src}: {err}");
         assert!(out.contains("pos="), "{src}: {out}");
     }
+}
+
+// Issue #398: fdp's derived graph is a root of its own too (deriveGraph), which has the `-G`
+// attributes besides the `overlap`, `sep` and `K` it copies: `-Gnormalize` rotates each
+// top-level component (normalize(cg)), where in-file `normalize` does not.
+#[test]
+fn fdp_derived_graph_has_the_command_line_attributes() {
+    let src = "graph { a -- b -- c; c -- a; d -- e }";
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Gnormalize=90", "-Goverlap=false", "-Tplain"],
+        src,
+    );
+    assert!(ok, "{err}");
+    assert_eq!(
+        out,
+        "graph 1 2.25 2.6112\n\
+         node a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey\n\
+         node b 0.375 1.4723 0.75 0.5 b solid ellipse black lightgrey\n\
+         node c 1.4335 0.86113 0.75 0.5 c solid ellipse black lightgrey\n\
+         node d 1.875 1.75 0.75 0.5 d solid ellipse black lightgrey\n\
+         node e 1.875 2.3612 0.75 0.5 e solid ellipse black lightgrey\n\
+         edge a b 4 0.375 0.50325 0.375 0.71303 0.375 1.0097 0.375 1.2193 solid black\n\
+         edge b c 4 0.66424 1.3053 0.8136 1.219 0.99531 1.1141 1.1446 1.0279 solid black\n\
+         edge c a 4 1.1443 0.69414 0.99491 0.60791 0.8132 0.503 0.66389 0.41679 solid black\n\
+         edge d e 4 1.875 2.0057 1.875 2.0384 1.875 2.0719 1.875 2.1046 solid black\n\
+         stop\n"
+    );
+    let (out, err, ok) = run(
+        &["-Kfdp", "-Tplain"],
+        "graph { normalize=90; overlap=false; a -- b -- c; c -- a; d -- e }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.starts_with("graph 1 5.1248 3.3821\nnode a 0.375 3.1321 "),
+        "{out}"
+    );
 }
 
 // fdp's cluster map compares names as text (`mkClustMap`), so a node `<cluster_x>` is an edge

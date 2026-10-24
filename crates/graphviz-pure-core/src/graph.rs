@@ -646,6 +646,18 @@ impl Graph {
         }
     }
 
+    /// The graph attributes of a graph a layout opens itself (`agopen`, like circo's and fdp's
+    /// derived graphs): a new root copies cgraph's ProtoGraph, so it declares only the
+    /// command-line attributes (`-G`), with their values as its defaults.
+    pub fn protograph_attrs(&self) -> AttrMap {
+        AttrMap::from_plain(self.dicts.first().into_iter().flat_map(|d| {
+            d.graph
+                .iter()
+                .filter(|(_, s)| s.proto)
+                .map(|(k, s)| (k.clone(), s.defval.clone()))
+        }))
+    }
+
     /// Whether nodes declare `key`: `agattr(g, AGNODE, key, NULL) != NULL`
     /// (`agfindnodeattr`). cgraph declares an attribute on the root's dictionary wherever it is
     /// first set, so one set only by a subgraph's `node [...]` is declared for the whole graph.

@@ -5,7 +5,7 @@ use super::graph::{CGraph, EdgeArena};
 use crate::common::postproc::gv_postprocess;
 use crate::common::types::{EdgeType, LGraph, Sub};
 use crate::common::utils::mapbool;
-use crate::neatogen::adjust::adjust_nodes;
+use crate::neatogen::adjust::{AdjustMode, adjust_nodes, get_adjust_mode, remove_overlap_with};
 use crate::neatogen::neatoinit::CL_OFFSET;
 use crate::neatogen::neatosplines::spline_edges;
 use crate::pack::{PackInfo, PackMode, ccomps, get_pack_info, pack_graphs};
@@ -125,16 +125,14 @@ fn copy_posns(c: &Circ, g: &mut LGraph<'_>, nodes: &[usize], orign: &[usize]) {
     }
 }
 
-/// `packSubgraphs(ncc, ccs, dg, &pinfo)`: C packs the components of the
-/// derived graph, whose edges are the original ones without loops and with
-/// one edge per node pair; pack them over the original nodes with the
-/// adjacency temporarily reduced to those edges.
-fn pack_derived(
+/// Runs `f` with `g`'s adjacency reduced to the derived edges `outs` gives for each node, each
+/// standing for the original edge that created it, with the derived edge's ends.
+fn with_derived_edges(
     g: &mut LGraph<'_>,
     d: &Derived,
     arena: &EdgeArena,
-    ccs: &mut [Sub],
-    pinfo: &PackInfo,
+    outs: impl Fn(usize) -> Vec<usize>,
+    f: impl FnOnce(&mut LGraph<'_>),
 ) {
     let n = g.nodes.len();
     let mut out = vec![Vec::new(); n];
@@ -142,7 +140,7 @@ fn pack_derived(
     // the derived edge joins derived nodes, which the original edge's ends name
     let mut ends = Vec::new();
     for v in 0..n {
-        for de in d.dg.outs(v) {
+        for de in outs(v) {
             let e = d.orig_edge[de];
             out[v].push(e);
             inn[arena.head[de]].push(e);
@@ -156,7 +154,7 @@ fn pack_derived(
     }
     let saved_out = std::mem::replace(&mut g.out, out);
     let saved_inn = std::mem::replace(&mut g.inn, inn);
-    pack_graphs(g, ccs, pinfo);
+    f(g);
     g.out = saved_out;
     g.inn = saved_inn;
     for (e, t, h) in ends {
@@ -165,8 +163,87 @@ fn pack_derived(
     }
 }
 
+/// `packSubgraphs(ncc, ccs, dg, &pinfo)`: C packs the components of the
+/// derived graph, whose edges are the original ones without loops and with
+/// one edge per node pair; pack them over the original nodes with the
+/// adjacency temporarily reduced to those edges.
+fn pack_derived(
+    g: &mut LGraph<'_>,
+    d: &Derived,
+    arena: &EdgeArena,
+    ccs: &mut [Sub],
+    pinfo: &PackInfo,
+) {
+    with_derived_edges(
+        g,
+        d,
+        arena,
+        |v| d.dg.outs(v),
+        |g| {
+            pack_graphs(g, ccs, pinfo);
+        },
+    );
+}
+
+/// The root `agopen("derived", ...)` makes in `circomps`, as `adjustNodes` reads it: only the
+/// command-line graph attributes, whatever the input graph sets.
+fn derived_root(src: &Graph) -> Graph {
+    let mut d = src.clone();
+    d.graph_attrs = src.protograph_attrs();
+    d
+}
+
+/// `adjustNodes(sg)` on component `cc` of the derived graph, whose edges `sg` holds. It reads
+/// the derived root's attributes (`derived_root`), and the derived nodes' sizes:
+/// `makeDerivedNode` copies `ND_lw`, `ND_rw` and `ND_ht`, so `ND_width` and `ND_height`, which
+/// the overlap removers read, are 0.
+fn adjust_derived<'a>(
+    g: &mut LGraph<'a>,
+    derived: &'a Graph,
+    d: &Derived,
+    arena: &EdgeArena,
+    sg: &CGraph,
+    cc: &Sub,
+) {
+    // removeOverlapAs
+    if cc.nodes.len() < 2 {
+        return;
+    }
+    let src = std::mem::replace(&mut g.src, derived);
+    // every node: only the component's are read
+    let sizes: Vec<(f64, f64)> = g
+        .nodes
+        .iter_mut()
+        .map(|nd| {
+            (
+                std::mem::take(&mut nd.width),
+                std::mem::take(&mut nd.height),
+            )
+        })
+        .collect();
+    let mut am = get_adjust_mode(g, g.gattr("overlap").unwrap_or(""));
+    if matches!(am.mode, AdjustMode::Vor | AdjustMode::Scale) {
+        // C crashes: makeInfo's makePoly reads `ND_shape(n)->name` of a derived node, which
+        // has no shape. The port leaves the overlaps, as in-file `overlap` values do here.
+        am.mode = AdjustMode::None;
+    }
+    with_derived_edges(
+        g,
+        d,
+        arena,
+        |v| sg.outs(v),
+        |g| {
+            remove_overlap_with(g, cc, &am);
+        },
+    );
+    for (nd, (w, h)) in g.nodes.iter_mut().zip(sizes) {
+        (nd.width, nd.height) = (w, h);
+    }
+    g.src = src;
+}
+
 /// `circoLayout(g)`.
-fn circo_layout_main(g: &mut LGraph<'_>) {
+fn circo_layout_main<'a>(g: &mut LGraph<'a>, derived: &'a Graph) {
     if g.nodes.is_empty() {
         return;
     }
@@ -228,9 +305,8 @@ fn circo_layout_main(g: &mut LGraph<'_>) {
         for cc in &ccs {
             let sg = component(g, &d.dg, &c.arena, &cc.nodes, &dnode, &orign);
             circular_layout(&mut c, &sg, g);
-            // adjustNodes(sg) reads `overlap` from the derived graph, which
-            // declares no attributes: a no-op.
             copy_posns(&c, g, &cc.nodes, &identity);
+            adjust_derived(g, derived, &d, &c.arena, &sg, cc);
         }
         pack_derived(g, &d, &c.arena, &mut ccs, &pinfo);
         for (f, pos, [lw, rw, ht]) in kept {
@@ -248,9 +324,10 @@ pub fn circo_layout(graph: &mut Graph) -> Result<()> {
         return Ok(());
     }
     let src = graph.clone();
+    let derived = derived_root(&src);
     // circo_init_graph: EDGETYPE_LINE by default, 2 dimensions.
     let mut g = LGraph::new(&src, 2, EdgeType::Line);
-    circo_layout_main(&mut g);
+    circo_layout_main(&mut g, &derived);
     let mut root = g.root_sub();
     spline_edges(&mut g, &mut root, true);
     gv_postprocess(&mut g, true);
