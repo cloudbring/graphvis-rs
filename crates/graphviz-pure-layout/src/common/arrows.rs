@@ -84,9 +84,17 @@ fn match_name(name: &str) -> u32 {
     let mut rest = name;
     let mut i = 0;
     while !rest.is_empty() && i < NUMB_OF_ARROW_HEADS {
-        let (mut f, r) = match_shape(rest);
+        let next = rest;
+        let (mut f, r) = match_shape(next);
         rest = r;
         if f == ARR_TYPE_NONE {
+            // C warns on every arrow_flags call, all of them in the layout: arrow_clip,
+            // user_spline and the opposing edge of a concentrated one.
+            if graphviz_pure_core::diag::reporting_ports() {
+                graphviz_pure_core::diag::agwarningf(&format!(
+                    "Arrow type \"{next}\" unknown - ignoring\n"
+                ));
+            }
             return flag;
         }
         if f == ARR_TYPE_GAP && i == NUMB_OF_ARROW_HEADS - 1 {

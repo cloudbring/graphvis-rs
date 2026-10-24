@@ -16,38 +16,59 @@ use crate::common::utils::{atoi, compute_bb, late_int, mapbool};
 use crate::pack::{PackInfo, PackMode, get_pack, get_pack_mode_info, pack_graphs, pccomps};
 use graphviz_pure_core::math;
 use graphviz_pure_core::strtod::{Scanned, scan_lf, sscanf};
-use graphviz_pure_core::{Graph, Point, Result};
+use graphviz_pure_core::{Graph, NodeData, Point, Result};
 
 /// `CL_OFFSET`: default margin around packed components, in points.
 pub const CL_OFFSET: i64 = 8;
 
 /// `user_pos(posptr, pinptr, np, nG)`: parse a node's `pos`/`pin` (and, with `dim > 2`, its
-/// `z`).
-fn user_pos(
-    g: &mut LGraph<'_>,
-    n: usize,
-    inputscale: f64,
-    pos_declared: bool,
-    z_declared: bool,
-) -> bool {
-    if !pos_declared {
+/// `z`). `ng` is the graph's node count.
+fn user_pos(nd: &NodeData, node: &mut LNode, ng: usize, inputscale: f64, decl: PosDecl) -> bool {
+    if !decl.pos {
         return false;
     }
-    let Some(p) = g.nattr(n, "pos") else {
+    let Some(p) = nd.attrs.get("pos").map(String::as_str) else {
         return false;
     };
-    let z = if z_declared { g.nattr(n, "z") } else { None };
-    let pin = mapbool(g.nattr(n, "pin"));
-    let ng = g.nodes.len();
-    let name = &g.src.nodes[n].name;
-    let node = &mut g.nodes[n];
-    match user_pos_values(p, z, pin, name, inputscale, ng, &mut node.pos) {
+    let z = if decl.z {
+        nd.attrs.get("z").map(String::as_str)
+    } else {
+        None
+    };
+    let pin = mapbool(nd.attrs.get("pin").map(String::as_str));
+    match user_pos_values(p, z, pin, &nd.name, inputscale, ng, &mut node.pos) {
         Some(pinned) => {
             node.pinned = pinned;
             true
         }
         None => false,
     }
+}
+
+/// Whether the graph declares the node attributes `pos` and `z`, as `user_pos` reads them.
+#[derive(Clone, Copy)]
+struct PosDecl {
+    pos: bool,
+    z: bool,
+}
+
+impl PosDecl {
+    fn of(g: &Graph) -> Self {
+        PosDecl {
+            pos: g.node_attr_declared("pos"),
+            z: g.node_attr_declared("z"),
+        }
+    }
+}
+
+/// `neato_init_node_edge(g)`: each node's `neato_init_node` then its `user_pos`, so a
+/// node's `pos` error follows its own init diagnostics, then every edge's init.
+fn neato_init_node_edge<'a>(src: &'a Graph, ndim: usize, inputscale: f64) -> LGraph<'a> {
+    let decl = PosDecl::of(src);
+    let ng = src.nodes.len();
+    LGraph::new_with(src, ndim, EdgeType::Line, |nd, node| {
+        user_pos(nd, node, ng, inputscale, decl);
+    })
 }
 
 /// The body of `user_pos` on a node's `pos`, `z` (`None` when `z` is not declared) and
@@ -678,6 +699,10 @@ fn user_spline(g: &mut LGraph<'_>, e: usize) -> bool {
     // A `static atomic_flag`: one warning per process.
     static WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
     let pos = g.eattr(e, "pos").unwrap_or("");
+    if pos.is_empty() {
+        return false;
+    }
+    // neatoinit.c:278: after the empty `pos` test, so only an edge with one warns.
     let (stype, etype) = g.arrow_flags(e);
     let spl = match parse_user_spline(pos, stype, etype) {
         Ok(spl) => spl,
@@ -916,13 +941,8 @@ fn neato_layout_nop(graph: &mut Graph) {
     // neato_init_graph: user_pos on every node, then addZ, before init_nop's scan_graph
     // applies `Reduce`.
     let full = graph.clone();
-    let mut g0 = LGraph::new(&full, ndim, EdgeType::Line);
-    let pos_declared = g0.node_attr_declared("pos");
-    let z_declared = g0.node_attr_declared("z");
-    for n in 0..g0.nodes.len() {
-        user_pos(&mut g0, n, inputscale, pos_declared, z_declared);
-    }
-    add_z(&g0, z_declared, graph);
+    let g0 = neato_init_node_edge(&full, ndim, inputscale);
+    add_z(&g0, PosDecl::of(&full).z, graph);
     let reduced;
     let mut g = match super::stuff::reduce_set(graph) {
         None => g0,
@@ -1005,12 +1025,7 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
     // is still packed.
     let reduced = super::stuff::reduce_set(graph).map(|deleted| {
         let full = graph.clone();
-        let mut g0 = LGraph::new(&full, ndim, EdgeType::Line);
-        let pos_declared = g0.node_attr_declared("pos");
-        let z_declared = g0.node_attr_declared("z");
-        for n in 0..g0.nodes.len() {
-            user_pos(&mut g0, n, inputscale, pos_declared, z_declared);
-        }
+        let g0 = neato_init_node_edge(&full, ndim, inputscale);
         let (ccs, pin) = pccomps(&g0);
         let mut new_index = vec![None; deleted.len()];
         let kept = deleted.iter().enumerate().filter(|(_, d)| !**d);
@@ -1041,27 +1056,20 @@ pub fn neato_layout(graph: &mut Graph) -> Result<()> {
         (comps, pin, kept_pos)
     });
     let src = graph.clone();
-    let quiet = reduced.is_some();
-    let mut g = if quiet {
-        graphviz_pure_core::diag::silently(|| LGraph::new(&src, ndim, EdgeType::Line))
-    } else {
-        LGraph::new(&src, ndim, EdgeType::Line)
-    };
-    let pos_declared = g.node_attr_declared("pos");
-    let z_declared = g.node_attr_declared("z");
-    match &reduced {
+    let mut g = match &reduced {
+        // `user_pos` ran on the whole graph, before `scan_graph_mode` deleted nodes.
         Some((_, _, kept_pos)) => {
+            let mut g =
+                graphviz_pure_core::diag::silently(|| LGraph::new(&src, ndim, EdgeType::Line));
             for (node, (pos, pinned)) in g.nodes.iter_mut().zip(kept_pos) {
                 node.pos.clone_from(pos);
                 node.pinned = *pinned;
             }
+            g
         }
-        None => {
-            for n in 0..g.nodes.len() {
-                user_pos(&mut g, n, inputscale, pos_declared, z_declared);
-            }
-        }
-    }
+        None => neato_init_node_edge(&src, ndim, inputscale),
+    };
+    let z_declared = PosDecl::of(&src).z;
     let layout_mode = neato_mode(&g);
     let am = graph_adjust_mode(&g, None);
     let model = neato_model(&g);
