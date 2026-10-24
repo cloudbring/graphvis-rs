@@ -311,8 +311,8 @@ impl<'a> LGraph<'a> {
             root_clusters: Vec::new(),
             edge_type,
             concentrate,
-            drand: Drand48::default(),
-            crand: CRand::default(),
+            drand: Drand48,
+            crand: CRand,
             has_labelangle,
             has_labeldistance,
         }

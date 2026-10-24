@@ -1165,31 +1165,35 @@ fn layout_and_route(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cutil::{Drand48State, RandState, with_rand_state};
 
-    fn user_pos_of(p: &str, z: Option<&str>, ndim: usize) -> (Option<u8>, Vec<f64>, Drand48) {
-        let mut drand = Drand48::default();
+    /// `user_pos` in a fresh process; with the generator state it leaves.
+    fn user_pos_of(p: &str, z: Option<&str>, ndim: usize) -> (Option<u8>, Vec<f64>, RandState) {
+        let mut state = RandState::default();
         let mut pvec = vec![0.0; ndim];
-        let pinned = graphviz_pure_core::diag::quietly(|| {
-            user_pos_values(p, z, false, "n", -1.0, 4, &mut drand, &mut pvec)
+        let pinned = with_rand_state(&mut state, || {
+            graphviz_pure_core::diag::quietly(|| {
+                user_pos_values(p, z, false, "n", -1.0, 4, &mut Drand48, &mut pvec)
+            })
         });
-        (pinned, pvec, drand)
+        (pinned, pvec, state)
     }
 
     // Issue #245: neatoinit.c's user_pos with Ndim > 2 and two values in `pos`.
     #[test]
     fn user_pos_takes_z_or_a_random_third_coordinate() {
-        let mut fresh = Drand48::default();
+        let mut fresh = Drand48State::default();
         // `z` is read and no random number is drawn.
-        let (pinned, pvec, drand) = user_pos_of("1,2", Some("3"), 3);
+        let (pinned, pvec, state) = user_pos_of("1,2", Some("3"), 3);
         assert_eq!(
-            (pinned, pvec, drand),
-            (Some(P_SET), vec![1.0, 2.0, 3.0], fresh)
+            (pinned, pvec, state),
+            (Some(P_SET), vec![1.0, 2.0, 3.0], RandState::default())
         );
         // No usable `z`: jitter3d, nG * drand48().
         let (_, pvec, _) = user_pos_of("1,2!", Some("x"), 3);
         assert_eq!(pvec, vec![1.0, 2.0, 4.0 * fresh.drand48()]);
         // Three values in `pos`: `z` is not read; with Ndim 4, jitter_d from the fourth on.
-        let mut fresh = Drand48::default();
+        let mut fresh = Drand48State::default();
         let (pinned, pvec, _) = user_pos_of("0x1p3,1e1,nan(1)!", Some("3"), 4);
         assert_eq!(pinned, Some(P_PIN));
         assert_eq!(pvec[..2], [8.0, 10.0]);

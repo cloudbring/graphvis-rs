@@ -1,11 +1,11 @@
 //! `qsort`, `rand` and `srand` with Apple libc's behaviour, exported for `LD_PRELOAD` on Linux.
 
-use graphviz_pure_layout::cutil::{CRand, qsort_by};
+use graphviz_pure_layout::cutil::{CRandState, qsort_by};
 use std::ffi::{c_int, c_uint, c_void};
 use std::sync::Mutex;
 
 /// C's process-wide `rand` state.
-static RAND: Mutex<CRand> = Mutex::new(CRand::new_unseeded());
+static RAND: Mutex<CRandState> = Mutex::new(CRandState::new_unseeded());
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rand() -> c_int {

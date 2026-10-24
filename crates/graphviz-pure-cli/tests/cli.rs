@@ -6892,6 +6892,38 @@ fn issue291_attributes_declared_by_a_subgraph_are_declared_for_the_graph() {
     );
 }
 
+// Issue #290: C's `drand48` state is process-wide, so the second graph of a run draws its
+// unseeded `user_pos` jitter (and `-n`'s, which never seeds) from where the first left it.
+// Values are C 16.1.0's.
+#[test]
+fn issue290_later_graphs_continue_the_runs_random_state() {
+    let (out, _, ok) = run(
+        &["-Kneato", "-Tdot"],
+        "graph { a -- b }\ngraph { dim=3; a [pos=\"1,2\" z=\"5\"]; b [pos=\"3,4\"]; a -- b }",
+    );
+    assert!(ok);
+    let second = out.split("graph {\n").nth(2).unwrap_or_default();
+    assert!(second.contains("bb=\"0,0,84.046,66.046\""), "{out}");
+    assert!(
+        second.contains("z=29.062271") && second.contains("z=-29.062271"),
+        "{out}"
+    );
+
+    let g = "graph { dim=3; a [pos=\"10,20,5\" z=\"3\"]; b [pos=\"30,40\"]; a -- b }\n";
+    let (out, _, ok) = run(&["-Kneato", "-n", "-Tdot"], &g.repeat(2));
+    assert!(ok);
+    let zs: Vec<&str> = out
+        .split("z=")
+        .skip(1)
+        .map(|s| &s[..s.find(']').unwrap_or(0)])
+        .collect();
+    assert_eq!(
+        zs,
+        ["5.000000", "57.090927", "5.000000", "121.029893"],
+        "{out}"
+    );
+}
+
 /// neato ortho obstacles (`makeObstacle` with `isOrtho`) keep `margin = {0}`: a scaling
 /// `sep`/`esep` shrinks each box to its node's centre, so touching boxes are not reported.
 #[test]

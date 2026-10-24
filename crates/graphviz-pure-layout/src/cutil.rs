@@ -11,12 +11,24 @@
 //!   insertion-sort shortcut and heapsort fallback); not stable, so ties end
 //!   up in the same order as in C.
 //!
-//! State is held in values rather than process globals; a layout creates fresh
-//! generators, which corresponds to C running a single layout per process.
+//! # One generator state per run
+//!
+//! C has one process-wide state for each generator. Every `srand48` (neato's `setSeed`,
+//! fdp, ortho's `partition`) and `srand` (sfdp) reseeds it, and every draw advances it, so
+//! a graph's unseeded draws (neato's `user_pos` jitter, `-n`, the `rand()` of stress
+//! pivots and vpsc) continue from the state the run's earlier layouts left. [`Drand48`]
+//! and [`CRand`] are handles on such a state, a [`RandState`]: the caller that stands for
+//! the C process owns it and installs it with [`with_rand_state`] while it lays graphs out.
+//! `dot`'s job pipeline keeps one for the whole run. A layout that runs outside any
+//! [`with_rand_state`] gets a fresh state ([`in_rand_run`]), so the library's top-level
+//! calls are deterministic: each starts like a new process unless its caller passes a state
+//! in. [`Drand48State`] and [`CRandState`] are the generators as plain values.
 
-/// POSIX `drand48` / `srand48` / `erand48` generator state.
+use std::cell::Cell;
+
+/// POSIX `drand48` / `srand48` / `erand48` generator state, as a value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Drand48 {
+pub struct Drand48State {
     x: u64,
 }
 
@@ -24,23 +36,23 @@ const DRAND48_A: u64 = 0x5_DEEC_E66D;
 const DRAND48_C: u64 = 0xB;
 const DRAND48_MASK: u64 = (1 << 48) - 1;
 
-impl Default for Drand48 {
+impl Default for Drand48State {
     /// The state before any `srand48` call (`x = 0x1234ABCD330E`).
     fn default() -> Self {
+        Self::new_unseeded()
+    }
+}
+
+impl Drand48State {
+    /// The state before any `srand48` call, usable in a `const`.
+    #[must_use]
+    pub const fn new_unseeded() -> Self {
         Self {
             x: 0x1234_ABCD_330E,
         }
     }
-}
 
-impl Drand48 {
     /// `srand48(seed)`: the high 32 bits of the state are the low 32 bits of `seed`.
-    pub fn new(seed: i64) -> Self {
-        let mut r = Self::default();
-        r.srand48(seed);
-        r
-    }
-
     pub fn srand48(&mut self, seed: i64) {
         self.x = (((seed as u64) & 0xFFFF_FFFF) << 16) | 0x330E;
     }
@@ -54,22 +66,22 @@ impl Drand48 {
     }
 }
 
-/// Apple libc `rand()` / `srand()`; `RAND_MAX` is `0x7fffffff`.
+/// Apple libc `rand()` / `srand()` state, as a value; `RAND_MAX` is `0x7fffffff`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CRand {
+pub struct CRandState {
     next: u64,
 }
 
 pub const RAND_MAX: i32 = 0x7fff_ffff;
 
-impl Default for CRand {
+impl Default for CRandState {
     /// A process that never called `srand` starts with seed 1.
     fn default() -> Self {
-        Self { next: 1 }
+        Self::new_unseeded()
     }
 }
 
-impl CRand {
+impl CRandState {
     /// The state of a process that never called `srand` (seed 1), usable in a `static`.
     #[must_use]
     pub const fn new_unseeded() -> Self {
@@ -95,6 +107,97 @@ impl CRand {
         }
         self.next = x as u64;
         (x % (i64::from(RAND_MAX) + 1)) as i32
+    }
+}
+
+/// The C process's generator states (see the module docs): `drand48`'s and `rand`'s.
+/// [`Default`] is a process that has drawn nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct RandState {
+    pub drand48: Drand48State,
+    pub rand: CRandState,
+}
+
+thread_local! {
+    /// The state [`Drand48`] and [`CRand`] use, and whether a [`with_rand_state`] installed it.
+    static PROCESS: Cell<(RandState, bool)> =
+        const { Cell::new((RandState { drand48: Drand48State::new_unseeded(), rand: CRandState::new_unseeded() }, false)) };
+}
+
+/// Runs `f` with `state` as the process's generator state, and leaves in `state` what
+/// `f`'s draws and seedings made of it.
+pub fn with_rand_state<R>(state: &mut RandState, f: impl FnOnce() -> R) -> R {
+    struct Restore((RandState, bool));
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            PROCESS.with(|p| p.set(self.0));
+        }
+    }
+    let _restore = Restore(PROCESS.with(|p| p.replace((*state, true))));
+    let out = f();
+    *state = PROCESS.with(|p| p.get().0);
+    out
+}
+
+/// Runs `f` in the current [`with_rand_state`], or, outside any, with a fresh state: a
+/// layout called on its own starts like a new process.
+pub fn in_rand_run<R>(f: impl FnOnce() -> R) -> R {
+    if PROCESS.with(|p| p.get().1) {
+        f()
+    } else {
+        with_rand_state(&mut RandState::default(), f)
+    }
+}
+
+/// The process's generator state now.
+#[must_use]
+pub fn rand_state() -> RandState {
+    PROCESS.with(|p| p.get().0)
+}
+
+fn with_process<R>(f: impl FnOnce(&mut RandState) -> R) -> R {
+    PROCESS.with(|p| {
+        let (mut state, scoped) = p.get();
+        let out = f(&mut state);
+        p.set((state, scoped));
+        out
+    })
+}
+
+/// C's `drand48`/`srand48`: a handle on the process's state ([`RandState`]), not a state
+/// of its own. Every handle draws from and seeds the same state, as every C call does.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Drand48;
+
+impl Drand48 {
+    /// `srand48(seed)` on the process's state.
+    pub fn new(seed: i64) -> Self {
+        Self.srand48(seed);
+        Self
+    }
+
+    pub fn srand48(&mut self, seed: i64) {
+        with_process(|s| s.drand48.srand48(seed));
+    }
+
+    /// `drand48()`.
+    pub fn drand48(&mut self) -> f64 {
+        with_process(|s| s.drand48.drand48())
+    }
+}
+
+/// C's `rand`/`srand`: a handle on the process's state, as [`Drand48`] is.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CRand;
+
+impl CRand {
+    pub fn srand(&mut self, seed: u32) {
+        with_process(|s| s.rand.srand(seed));
+    }
+
+    /// `rand()`.
+    pub fn rand(&mut self) -> i32 {
+        with_process(|s| s.rand.rand())
     }
 }
 
@@ -1210,15 +1313,46 @@ mod tests {
 
     #[test]
     fn drand48_matches_libc() {
-        let mut r = Drand48::new(1);
+        let mut r = Drand48State::default();
+        r.srand48(1);
         assert_eq!(r.drand48(), 0.041_630_344_771_878_214);
         assert_eq!(r.drand48(), 0.454_492_444_728_629_15);
         assert_eq!(r.drand48(), 0.834_817_218_166_914_9);
     }
 
+    // Issue #290: handles share the installed process state, which carries over between the
+    // layouts of one run; outside a run each layout starts fresh.
+    #[test]
+    fn generators_share_one_state_per_run() {
+        let mut expected = Drand48State::default();
+        let mut state = RandState::default();
+        let first = with_rand_state(&mut state, || {
+            let a = Drand48.drand48();
+            in_rand_run(|| (a, Drand48.drand48(), CRand.rand()))
+        });
+        assert_eq!(first, (expected.drand48(), expected.drand48(), 16807));
+        assert_eq!(state.drand48, expected);
+        // The next layout of the run continues where the last one stopped.
+        let next = with_rand_state(&mut state, || Drand48.drand48());
+        assert_eq!(next, expected.drand48());
+        // srand48 reseeds the shared state, whichever handle calls it.
+        with_rand_state(&mut state, || {
+            Drand48::new(173);
+            Drand48.drand48()
+        });
+        let mut seeded = Drand48State::default();
+        seeded.srand48(173);
+        seeded.drand48();
+        assert_eq!(state.drand48, seeded);
+        // Outside a run, a layout starts like a new process, and leaves nothing behind.
+        let fresh = in_rand_run(|| Drand48.drand48());
+        assert_eq!(fresh, Drand48State::default().drand48());
+        assert_eq!(in_rand_run(|| Drand48.drand48()), fresh);
+    }
+
     #[test]
     fn rand_matches_libc() {
-        let mut r = CRand::default();
+        let mut r = CRandState::default();
         let got: Vec<i32> = (0..5).map(|_| r.rand()).collect();
         assert_eq!(
             got,

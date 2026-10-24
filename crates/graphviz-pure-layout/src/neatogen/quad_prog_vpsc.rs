@@ -210,7 +210,7 @@ impl CMajEnvVpsc {
 
 /// `initCMajVPSC(n, packedMat, graph, opt, 0)`.
 pub fn init_cmaj_vpsc(n: usize, packed_mat: Option<&[f32]>, opt: &IpsepOptions) -> CMajEnvVpsc {
-    let mut crand = crate::cutil::CRand::default();
+    let mut crand = crate::cutil::CRand;
     init_cmaj_vpsc_full(n, packed_mat, &[], opt, 0, &mut crand)
         .expect("no hierarchy without diredges")
 }

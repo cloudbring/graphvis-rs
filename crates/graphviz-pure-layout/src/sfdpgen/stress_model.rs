@@ -51,7 +51,7 @@ mod tests {
         let val = [1.0, 2.0];
         let b = from_coordinate_arrays(2, 3, 3, &irn, &jcn, Some(&val), true);
         let mut x = vec![0.0, 0.0, 1.0, 0.1, 2.0, -0.1];
-        let mut r = CRand::default();
+        let mut r = CRand;
         stress_model(&b, &mut x, 100, &mut r).unwrap();
         let d = |i: usize, j: usize| {
             let (dx, dy) = (x[2 * i] - x[2 * j], x[2 * i + 1] - x[2 * j + 1]);

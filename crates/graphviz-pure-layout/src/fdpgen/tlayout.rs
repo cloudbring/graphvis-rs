@@ -173,8 +173,8 @@ pub fn fdp_init_params(attrs: &AttrMap) -> TState {
     TState {
         d,
         t,
-        drand: Drand48::default(),
-        crand: CRand::default(),
+        drand: Drand48,
+        crand: CRand,
     }
 }
 
