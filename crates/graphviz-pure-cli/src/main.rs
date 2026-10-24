@@ -1,4 +1,4 @@
-use graphviz_pure::decoded::{GraphJobs, GraphStream, LayoutJobs};
+use graphviz_pure::decoded::{Decoded, GraphJobs, LayoutJobs, graph_stream};
 use graphviz_pure::plugins;
 use graphviz_pure::{
     DEVICE_PLUGINS, FdpParms, GlobalAttrs, LAYOUT_PLUGINS, LayoutEngine, LayoutOptions,
@@ -562,7 +562,7 @@ fn parse_args(argv0: &str, os_args: &[OsString]) -> Parsed {
 /// Reads a DOT file. C reads bytes; bytes that are not part of valid UTF-8 are
 /// kept as raw-byte chars (`graphviz_pure_core::charset`), so labels are converted once,
 /// where C converts them, and the output carries C's bytes.
-fn read_input(path: Option<&OsStr>) -> io::Result<String> {
+fn read_input(path: Option<&OsStr>) -> io::Result<Decoded> {
     let bytes = match path {
         Some(p) => fs::read(p)?,
         None => {
@@ -571,7 +571,7 @@ fn read_input(path: Option<&OsStr>) -> io::Result<String> {
             buf
         }
     };
-    Ok(graphviz_pure_core::charset::decode(bytes))
+    Ok(Decoded::decode(bytes))
 }
 
 /// `agerrorf` of an input's error, as C's bytes. A syntax error names the file `aagerror`
@@ -782,7 +782,7 @@ impl Run<'_> {
         // `agread` on the file: read through `fgets`, named as `agconcat`'s `filename`.
         graphviz_pure_parser::reading_file(&name, || {
             let globals = self.opts.globals.clone();
-            let mut stream = GraphStream::new(&source, &globals);
+            let mut stream = graph_stream(&source, &globals);
             let mut graph_index = 0;
             while let Some(read) = stream.next_graph(|e| report_error(&name, e)) {
                 let Ok(mut graph) = read else { break };

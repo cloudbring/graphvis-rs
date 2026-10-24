@@ -19,7 +19,7 @@ use graphviz_pure_core::GraphvizError;
 
 pub use graphviz_pure_core::charset::Decoded;
 pub use graphviz_pure_layout::{layout_graph, layout_graph_in_run, layout_graph_with_options};
-/// [`GraphStream::new`] takes decoded text, as a [`Decoded`] holds it.
+/// The graphs of a decoded input one at a time ([`graph_stream`]).
 pub use graphviz_pure_parser::GraphStream;
 pub use graphviz_pure_render::{GraphJobs, render_graph, render_graph_named};
 
@@ -131,6 +131,11 @@ fn render_partial<T>(
         None
     });
     (out, err.or(parse_err))
+}
+
+/// A [`GraphStream`] over `dot_source`, applying `globals` before each graph body.
+pub fn graph_stream<'a>(dot_source: &'a Decoded, globals: &GlobalAttrs) -> GraphStream<'a> {
+    GraphStream::new(dot_source.as_str(), globals)
 }
 
 /// [`crate::parse_dot`] on decoded text.

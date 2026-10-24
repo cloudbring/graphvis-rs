@@ -15,11 +15,6 @@ fn js_error(e: impl std::fmt::Display) -> JsValue {
     JsValue::from_str(&error_text(e))
 }
 
-/// An error from the root `graphviz_pure` functions, whose messages are text already.
-fn text_error(e: graphviz_pure::GraphvizError) -> JsValue {
-    JsValue::from_str(&e.to_string())
-}
-
 /// [`render`] without the `JsValue`: the root `graphviz_pure` functions take and return text.
 fn render_text(dot_source: &str, engine: &str, format: &str) -> Result<String, String> {
     graphviz_pure::render_dot(dot_source, engine, format).map_err(|e| e.to_string())
@@ -108,10 +103,16 @@ pub fn render_json(dot_source: &str, engine: &str) -> std::result::Result<String
 /// Parses and lays out a DOT graph and returns JSON statistics (`nodes`, `edges`, `subgraphs`, `width_pt`, `height_pt`).
 #[wasm_bindgen(js_name = inspectGraph)]
 pub fn inspect_graph(dot_source: &str, engine: &str) -> std::result::Result<String, JsValue> {
-    let layout_engine = graphviz_pure::LayoutEngine::parse(engine).map_err(text_error)?;
-    let mut graph = graphviz_pure::parse_dot(dot_source).map_err(text_error)?;
-    graphviz_pure::layout_graph(&mut graph, layout_engine).map_err(text_error)?;
+    inspect_text(dot_source, engine).map_err(|e| JsValue::from_str(&e))
+}
+
+/// [`inspect_graph`] without the `JsValue`.
+fn inspect_text(dot_source: &str, engine: &str) -> Result<String, String> {
+    let layout_engine = graphviz_pure::LayoutEngine::parse(engine).map_err(|e| e.to_string())?;
+    let mut graph = graphviz_pure::parse_dot(dot_source).map_err(|e| e.to_string())?;
+    graphviz_pure::layout_graph(&mut graph, layout_engine).map_err(|e| e.to_string())?;
     let stats = GraphStats {
+        // the parsed graph holds the decoded form
         name: charset::to_text(&graph.name).into_owned(),
         directed: graph.kind == graphviz_pure_core::GraphKind::Directed,
         strict: graph.strict,
@@ -121,7 +122,7 @@ pub fn inspect_graph(dot_source: &str, engine: &str) -> std::result::Result<Stri
         width_pt: graph.bb.width(),
         height_pt: graph.bb.height(),
     };
-    serde_json::to_string(&stats).map_err(js_error)
+    serde_json::to_string(&stats).map_err(|e| e.to_string())
 }
 
 /// Returns the list of supported layout engines as a JSON array.
@@ -166,6 +167,11 @@ mod tests {
         assert!(err.contains("x\u{10ff41}") && !err.contains("xA"), "{err}");
         let err = render_all_text(src, "dot", "x\u{10ff41}").unwrap_err();
         assert!(err.contains("x\u{10ff41}") && !err.contains("xA"), "{err}");
+        // inspectGraph: the graph's name and an error that quotes the engine are text.
+        let stats = inspect_text("digraph \"x\u{10ff41}\" { a }", "dot").unwrap();
+        assert!(stats.starts_with("{\"name\":\"x\u{10ff41}\","), "{stats}");
+        let err = inspect_text(src, "x\u{10ff41}").unwrap_err();
+        assert_eq!(err, "Unsupported layout engine: 'x\u{10ff41}'");
         // A message that holds a raw byte is still text: the byte becomes U+FFFD.
         assert_eq!(
             error_text(charset::decode(b"caf\xe9".to_vec())),

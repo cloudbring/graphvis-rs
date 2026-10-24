@@ -483,6 +483,10 @@ mod tests {
         globals.node.insert("label".into(), "\u{10FF41}".into());
         let out = render_dot_all("digraph { a }", "dot", "plain", &globals).unwrap();
         assert!(out[0].contains(" 0.5 \u{10FF41} solid "), "{}", out[0]);
+        let (out, _) = render_dot_all_partial("digraph { a }", "dot", "plain", &globals, opts);
+        assert!(out[0].contains(" 0.5 \u{10FF41} solid "), "{}", out[0]);
+        let (svgs, _) = render_svg_all_partial("digraph { a }", "dot", &globals, opts);
+        assert!(svgs[0].0.contains(">\u{10FF41}</text>"), "{}", svgs[0].0);
         let g = &parse_dot_all("digraph { a }", &globals).unwrap()[0];
         let canon = render_graph(g, OutputFormat::Canon).unwrap();
         assert!(canon.contains("\tnode [label=\u{10FF41}];\n"), "{canon}");

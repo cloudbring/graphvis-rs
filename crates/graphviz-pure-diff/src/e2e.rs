@@ -136,8 +136,8 @@ pub(crate) fn run_c(dot: &str, path: &Path) -> Option<String> {
     (!bytes.is_empty()).then(|| normalize(&graphviz_pure_core::charset::decode(bytes)))
 }
 
-pub(crate) fn run_port(src: &str) -> Option<String> {
-    let src = graphviz_pure::decoded::Decoded::from_decoded(src.to_string());
+pub(crate) fn run_port(src: &graphviz_pure::decoded::Decoded) -> Option<String> {
+    let src = src.clone();
     // As dot does, the graphs read before a syntax error are rendered, and the input is read
     // as `dot` reads the file.
     let out = std::panic::catch_unwind(move || {
@@ -303,7 +303,7 @@ pub fn main(args: Vec<String>) -> ExitCode {
     let results = parallel(&items, |p| {
         std::fs::read(p)
             .ok()
-            .and_then(|b| run_port(&graphviz_pure_core::charset::decode(b)))
+            .and_then(|b| run_port(&graphviz_pure::decoded::Decoded::decode(b)))
             .map(|o| hash(&o))
     });
     let _ = std::panic::take_hook();

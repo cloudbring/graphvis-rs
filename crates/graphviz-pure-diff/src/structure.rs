@@ -496,7 +496,7 @@ pub fn main(args: Vec<String>) -> ExitCode {
     let outs = e2e::parallel(&items, |p| {
         std::fs::read(p)
             .ok()
-            .and_then(|b| e2e::run_port(&graphviz_pure_core::charset::decode(b)))
+            .and_then(|b| e2e::run_port(&graphviz_pure::decoded::Decoded::decode(b)))
             .map(|s| summarize(&s))
     });
     let _ = std::panic::take_hook();
