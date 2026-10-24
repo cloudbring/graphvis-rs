@@ -328,7 +328,7 @@ fn root_holds_plain(g: &Graph, s: &str) -> bool {
         })
         // fdp's cluster nodes (`__0:cluster_x`) are gone again after undoClusterEdges
         || g.nodes.iter().any(|n| {
-            !n.attrs.contains_key(super::model::CLUST_NODE_KEY)
+            !n.layout.clust_node
                 && ((!n.html_name && n.name == s) || in_map(&n.attrs))
         })
         || g.edges
@@ -444,7 +444,7 @@ pub(crate) fn write_plain(
                 for (node, port, html) in ports {
                     out.push(' ');
                     let gn = &g.nodes[node];
-                    if gn.attrs.contains_key(super::model::CLUST_NODE_KEY) {
+                    if gn.layout.clust_node {
                         // writenodeandport: `canon` of the cluster's name
                         out.push_str(&plain_label_canon(g, earlier, m.nodes[node].name));
                     } else {
