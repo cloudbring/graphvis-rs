@@ -66,9 +66,11 @@ fails if the layout or geom crates gain an `unwrap`, `expect`, index or integer-
   (`scripts/check-crate-notices.sh`) fails when one differs.
 - **Changelog:** add a line under "Unreleased" in [CHANGELOG.md](CHANGELOG.md) for anything a
   user would notice, including changes to output bytes.
-- **Pull requests** need the CI checks to pass (tests on every platform, the supply-chain
-  check, and the cross-platform check that every platform writes the same bytes) and all review
-  threads resolved. The "PR risk report" job lists what a maintainer will read most closely:
+- **Pull requests** need the required CI checks to pass (tests on every platform, the
+  supply-chain check, and the cross-platform check that every platform writes the same bytes)
+  and all review threads resolved. macOS x86-64 and fuzzing run after the merge, on master, and
+  open an issue when they fail. Rebase only when the pull request conflicts with `master`: the
+  merge queue tests each pull request merged onto `master` and the ones ahead of it. The "PR risk report" job lists what a maintainer will read most closely:
   changes to workflows, scripts, build scripts and dependencies
   ([how pull requests are reviewed](docs/pull-requests.md)).
 
