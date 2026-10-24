@@ -141,7 +141,7 @@ anything but a NULL pointer:
 
 - **A root rank with no node** (#358). A rank that the stale range keeps in the root, with
   no node and no edge through it, has a NULL `v[0]`. `set_ycoords` reads `v[0]` of the
-  bottom rank, and of each rank below a rank with nodes, without checking (`position.c:776`,
+  bottom rank, and of each rank below a rank with nodes, without checking (`position.c:777`,
   `:783`, and `:802` and `:816` when the ranks are equally spaced), and C crashes. The port
   read 0 there and went on, so it drew a layout C never draws or panicked later (a self-loop
   reading the rank above, `dotsplines.rs`). It now fails the layout where C reads the NULL
@@ -152,14 +152,16 @@ anything but a NULL pointer:
   order on the side the walk is going (`mincross.c:880`). It fails on a freed saved leader
   (below) whose stale order no longer matches the slot it was read from. Without the check,
   the port's `furthestnode` came back to a node it had visited and never ended (#358). The
-  port fails the layout where the assertion fails. C crashes or asserts there.
+  port fails the layout where the assertion fails. C asserts there, or, reading the freed
+  node, crashes first.
 - **`flat_reorder`'s assertions.** A cycle of constraining flat edges can be left on a rank:
   every node of it has a flat in-edge, so the topological sort in `temprank` never reaches
   it and holds fewer nodes than the rank. C's `LIST_GET` asserts (`mincross.c:1376`). The
   port used to stop copying there and leave the rank half rewritten, with some nodes in two
   slots, and `transpose` never ended (#358). It now fails the layout there, and at the
   function's two other assertions: `postorder`'s rank, and that an edge it reverses is not
-  constraining.
+  constraining (`mincross.c:1387`). That last one is reached without any membership change
+  too, with newrank and `ordering=in` (C aborts there on every run).
 
 Two later points look like better places to stop but are not, because C gets past them
 on some inputs with output that is the same on every run:
@@ -313,8 +315,8 @@ which `bezier_bb` accepts, and draws it; the port does the same. Further apart, 
 the bezier is read (`map_edge`, `polylineMidpoint`), or, through `makeCompoundEdge`'s
 `size - 1`, has `gv_calloc` refuse the size. The port installed an empty bezier and panicked
 in emit, xlabels, the edge midpoint and compound, or drew an edge `pos` with no points. It
-now keeps the one segment where the walks would meet (`start = end`), as on the nearest
-input C draws, in every engine that uses `clip_and_install`. Over 40,000 `fuzz-gen-endpoints.py`
+now keeps the one segment where the walks meet (`start = end`), the last state in which C
+installs a whole segment, in every engine that uses `clip_and_install`. Over 40,000 `fuzz-gen-endpoints.py`
 and 50,000 `fuzz-gen-ranks.py` inputs, plus hand-written ones in neato, fdp, circo and
 osage, every input this changes is one C crashes on, except one: there `makeCompoundEdge`
 gives `gv_calloc` the wrapped size and C exits 1 with no output, and the port draws.

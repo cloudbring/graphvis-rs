@@ -649,7 +649,7 @@ impl Dot<'_> {
             if (dir < 0 && uo >= o) || (dir > 0 && uo <= o) {
                 return Err(format!(
                     "neighbor: on rank {r}, the node next to order {o} has order {uo} \
-                     (C's assertion fails)"
+                     (C asserts or crashes here)"
                 ));
             }
         }
@@ -788,12 +788,14 @@ impl Dot<'_> {
     fn init_mincross(&mut self, g: G) -> Result<(), String> {
         // Network simplex normalises each component's ranks to start at 0, but returns
         // before that when `nslimit1` allows no iteration (`maxiter <= 0`, ns.c:984), and
-        // newrank's `readout_levels` only shifts ranks above 0 down. The root's ranks can
-        // then start below 0. C indexes its rank arrays with them from here on: `fill_ranks`
-        // and `allocate_ranks` write before the arrays, `make_chain` takes rank -1 for the
-        // label rank of an edge with no label and `label_vnode` reads its NULL label, and
-        // `build_skeleton` reads before a cluster's rank leaders. C crashed on every such
-        // input measured (#357). Ranks that start above 0 are kept: C draws most of those.
+        // newrank's `readout_levels` only shifts a single component's ranks down from above
+        // 0. The root's ranks can then start below 0. C indexes its arrays with them from
+        // here on: `fill_ranks`' bitarray asserts on the bound, `make_chain` takes rank -1 for
+        // the label rank of an edge with no label and `label_vnode` reads its NULL label,
+        // `allocate_ranks` writes before its arrays, and `build_skeleton` reads before a
+        // cluster's rank leaders. C crashes there, or exits 1 where what it reads out of
+        // bounds trips one of its own checks (#357). Ranks that start above 0 are kept: C
+        // draws most of those.
         let minrank = self.graphs[g].minrank;
         if minrank < 0 {
             return Err(format!(
@@ -1152,10 +1154,12 @@ impl Dot<'_> {
     }
 
     /// `flat_reorder(g)`, with C's assertions as layout errors: `LIST_GET`'s bound when the
-    /// topological sort holds fewer nodes than the rank (#358: a cycle of constraining flat
-    /// edges is left on the rank, and no node of it has no flat in-edge to start from), `postorder`'s rank, and that an edge it reverses is
-    /// not constraining. Without the first the rank was left half rewritten and `transpose`
-    /// never ended.
+    /// topological sort holds fewer nodes than the rank, `postorder`'s rank, and that an edge
+    /// it reverses is not constraining. After a cluster lost nodes to a rank set (#358), a
+    /// cycle of constraining flat edges can be left on a rank: no node of it is without a
+    /// flat in-edge, so the sort never reaches it. Without the bound, the rank was left half
+    /// rewritten and `transpose` never ended. The last assertion fails on other routes too
+    /// (newrank with `ordering=in`).
     pub fn flat_reorder(&mut self, g: G) -> Result<(), String> {
         if !self.graphs[g].has_flat_edges {
             return Ok(());

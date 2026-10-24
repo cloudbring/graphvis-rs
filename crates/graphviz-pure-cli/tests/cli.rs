@@ -6467,6 +6467,36 @@ fn flat_reorder_with_a_short_order_does_not_hang() {
     assert!(err.contains("flat_reorder: rank"), "{err}");
 }
 
+/// `flat_reorder` reverses a non-constraining flat edge that points against the new order;
+/// C asserts that it is not constraining (`mincross.c:1387`). Newrank with `ordering=in`
+/// reaches it with no membership change (fuzz-gen-endpoints seed 42519): C aborts, the port
+/// fails the layout there.
+#[test]
+fn flat_reorder_reversing_a_constraining_edge_fails_the_layout() {
+    let src = "digraph G { ranksep=0.02; newrank=true; ordering=in;\n\
+               n0 [shape=square, width=0, height=0, fixedsize=shape];\n\
+               n1 [shape=underline, label=\"x\", width=0.3, height=0.001];\n\
+               n2 [shape=Mrecord, label=\"{<p0>  |<p1>  |<p2>  }\", peripheries=0];\n\
+               subgraph cluster_0 { n2; n0; n1; }\n\
+               n1:w -> n0:e [headclip=true];\n\
+               n1:e -> n1:n [headclip=false, tailclip=true, dir=none, arrowhead=dot, \
+               headport=ne, tailport=se];\n\
+               n1:nw -> n2:p0 [label=\"\", headlabel=\"h\", arrowhead=normal, tailport=n];\n\
+               n1:e -> n2 [headclip=true, tailclip=true];\nn0:w -> n2:nw;\n\
+               n2:p0 -> n1 [headclip=false, samehead=h0, ltail=cluster_0];\n\
+               n0:c -> n2 [tailclip=false, headport=e];\n\
+               n1 -> n2:nw [samehead=h1, sametail=t0, headlabel=\"\", ltail=cluster_0, \
+               arrowsize=3];\n\
+               n2:p1:n -> n1:_ [samehead=h1, sametail=t0, lhead=cluster_0];\n}\n";
+    let (_, err, ok) = run(&["-Tsvg"], src);
+    assert!(!ok);
+    assert!(!err.contains("panicked"), "{err}");
+    assert!(
+        err.contains("flat_reorder: a constraining flat edge"),
+        "{err}"
+    );
+}
+
 /// #359: when every point tests inside the end nodes, `clip_and_install`'s walks cross.
 /// C's `size_t` size wraps and it asserts in `bezier_bb`; the port keeps the one segment
 /// where the walks would meet, so every reader gets a bezier with points.
@@ -6485,6 +6515,17 @@ fn clip_and_install_crossed_walks_keep_one_segment() {
     assert_eq!(
         pos.trim_end_matches(['"', ']', ';']).split(' ').count(),
         5,
+        "{out}"
+    );
+    // One segment apart, C installs a one-point bezier and draws it; that is kept.
+    let (out, err, ok) = run(
+        &["-Tdot"],
+        "digraph { a [shape=plain, fixedsize=true]; b [shape=plain, fixedsize=true]; \
+         {rank=same; a b} a -> a }\n",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("pos=\"e,0.28551,0.092285 0.14171,0.046509\""),
         "{out}"
     );
     for (args, src) in [

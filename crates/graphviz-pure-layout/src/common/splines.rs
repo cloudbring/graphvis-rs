@@ -390,10 +390,11 @@ pub fn clip_and_install_info<S: SplineGraph + ?Sized>(
     }
     // When every point tests inside the end nodes (zero-size shapes, coincident ends), the
     // tail-side walks pass the head-side ones. One segment apart (`start == end + 3`), C
-    // installs a one-point bezier and draws it. Further apart, C's `size_t`
-    // `end - start + 4` wraps, and C asserts in `bezier_bb` (`size % 3 == 1`) or crashes
-    // wherever the bezier is read (#359). The port keeps the one segment where the walks
-    // would meet, as C does on the nearest input it handles.
+    // installs a one-point bezier and draws it, and so does the port. Further apart, C's
+    // `size_t` `end - start + 4` wraps, and C asserts in `bezier_bb` (`size % 3 == 1`) or
+    // crashes wherever the bezier is read (#359). The port keeps the one segment where the
+    // walks meet (`start == end`), the last state in which C installs a whole segment:
+    // every reader handles it, where a single point is a corner case for some.
     if start.saturating_sub(end) > 3 {
         start = end;
     }
