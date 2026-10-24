@@ -6,9 +6,9 @@
 //! its own nodes as rectangles with `putRects` (array packing by default),
 //! then `reposition` turns the cluster-relative coordinates into absolute ones.
 
-use crate::common::init::{graph_label, pad};
+use crate::common::init::do_graph_label;
 use crate::common::postproc::gv_postprocess;
-use crate::common::types::{EdgeType, LABEL_AT_TOP, LCluster, LGraph, RatioKind, Sub};
+use crate::common::types::{EdgeType, LCluster, LGraph, RatioKind, Sub};
 use crate::common::utils::late_int;
 use crate::fdpgen::{ClusterTree, mk_clusters, subgraph_member_nodes};
 use crate::neatogen::adjust::DFLT_MARGIN;
@@ -240,23 +240,17 @@ impl Osage<'_, '_> {
     }
 }
 
-/// `mkClusters` with `do_graph_label`: register every cluster with its label
-/// and border in `g.clusters` (indexed like the [`ClusterTree`]).
+/// `mkClusters`: register every cluster in `g.clusters` (indexed like the [`ClusterTree`]),
+/// without a label: osage gives them all theirs up front, fdp one level at a time in
+/// `deriveGraph` ([`do_graph_label`]).
 pub fn register_clusters(g: &mut LGraph<'_>, tree: &ClusterTree) {
     for c in 0..tree.len() {
-        let sg = &g.src.subgraphs[tree.subgraph[c]];
-        let name = g.src.subgraph_name(tree.subgraph[c]);
-        let (label, label_pos) = graph_label(&sg.graph_attrs, &name, sg.html_name, false);
-        let mut border = [Point::default(); 4];
-        if let Some(l) = &label {
-            border[if label_pos & LABEL_AT_TOP != 0 { 2 } else { 0 }] = pad(l.dimen);
-        }
         g.clusters.push(LCluster {
             subgraph: tree.subgraph[c],
             bb: BoundingBox::default(),
-            label,
-            label_pos,
-            border,
+            label: None,
+            label_pos: 0,
+            border: [Point::default(); 4],
             children: tree.children[c].clone(),
         });
     }
@@ -269,6 +263,10 @@ pub fn osage_layout(graph: &mut Graph) -> Result<()> {
     let mut g = LGraph::new(&src, 2, EdgeType::Line);
     let tree = mk_clusters(&src);
     register_clusters(&mut g, &tree);
+    // osage's mkClusters makes each cluster's label as it registers it, in tree order.
+    for c in 0..g.clusters.len() {
+        do_graph_label(&mut g, c);
+    }
     let sortv_graph = src.graph_attr_declared("sortv");
     let sortv_node = g.node_attr_declared("sortv");
     let n = g.nodes.len();

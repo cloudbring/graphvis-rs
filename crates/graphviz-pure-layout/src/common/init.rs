@@ -115,6 +115,21 @@ pub fn pad(d: Point) -> Point {
     Point::new(d.x + 16.0, d.y + 8.0)
 }
 
+/// `do_graph_label(subg)` for the cluster `c` of `g.clusters`: its label, `GD_label_pos`
+/// and `GD_border`, with the label's diagnostics.
+pub fn do_graph_label(g: &mut LGraph<'_>, c: usize) {
+    let si = g.clusters[c].subgraph;
+    let sg = &g.src.subgraphs[si];
+    let name = g.src.subgraph_name(si);
+    let (label, label_pos) = graph_label(&sg.graph_attrs, &name, sg.html_name, false);
+    let cl = &mut g.clusters[c];
+    if let Some(l) = &label {
+        cl.border[if label_pos & LABEL_AT_TOP != 0 { 2 } else { 0 }] = pad(l.dimen);
+    }
+    cl.label = label;
+    cl.label_pos = label_pos;
+}
+
 impl<'a> LGraph<'a> {
     /// `graph_init` + `common_init_node` + `common_init_edge` for `graph`,
     /// with `ndim` layout dimensions and `default_edge_type` for `setEdgeType`.
