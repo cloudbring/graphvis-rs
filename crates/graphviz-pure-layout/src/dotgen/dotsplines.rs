@@ -92,6 +92,20 @@ pub fn swap_spline(s: &mut [Bezier]) {
     }
 }
 
+/// `pathend_t tend, hend` of `make_regular_edge`, `make_flat_edge`,
+/// `make_flat_labeled_edge` and `make_flat_bottom_edges`, as the last call of each
+/// left them. C declares them as uninitialised locals, and where `record_path`
+/// writes no box (#360) the route uses what they hold: in practice, the same
+/// function's previous ends, on every run and on two builds measured (the
+/// Homebrew build and one from source). See `apply_pboxfn` in `common::splines`.
+#[derive(Debug, Default)]
+pub struct StaleEnds {
+    regular: (PathEnd, PathEnd),
+    flat: (PathEnd, PathEnd),
+    flat_labeled: (PathEnd, PathEnd),
+    flat_bottom: (PathEnd, PathEnd),
+}
+
 /// `makeregularend(b, side, y)`.
 fn makeregularend(b: BoxF, side: u8, y: f64) -> BoxF {
     if side == BOTTOM {
@@ -1367,10 +1381,10 @@ impl Dot<'_> {
             ydelta /= 6.0;
             lb.ll.y = lb.ur.y - c_max(5.0, ydelta);
             let mut p = Path::default();
-            let mut tend = PathEnd::default();
-            let mut hend = PathEnd::default();
+            let (mut tend, mut hend) = std::mem::take(&mut self.stale_ends.flat_labeled);
             self.make_flat_end(sp, &mut p, tn, e, &mut tend, true);
             self.make_flat_end(sp, &mut p, hn, e, &mut hend, false);
+            self.stale_ends.flat_labeled = (tend.clone(), hend.clone());
             let tl = *tend.boxes.last().unwrap();
             let hl = *hend.boxes.last().unwrap();
             let boxes = [
@@ -1412,10 +1426,10 @@ impl Dot<'_> {
         let stepx = sp.multisep / (cnt + 1) as f64;
         let stepy = vspace / (cnt + 1) as f64;
         let mut p = Path::default();
-        let mut tend = PathEnd::default();
-        let mut hend = PathEnd::default();
+        let (mut tend, mut hend) = std::mem::take(&mut self.stale_ends.flat_bottom);
         self.make_bottom_flat_end(sp, &mut p, tn, e, &mut tend, true);
         self.make_bottom_flat_end(sp, &mut p, hn, e, &mut hend, false);
+        self.stale_ends.flat_bottom = (tend.clone(), hend.clone());
         for (i, &e) in edges.iter().enumerate() {
             let fi = (i + 1) as f64;
             let b = *tend.boxes.last().unwrap();
@@ -1505,10 +1519,10 @@ impl Dot<'_> {
         let stepx = sp.multisep / (cnt + 1) as f64;
         let stepy = vspace / (cnt + 1) as f64;
         let mut p = Path::default();
-        let mut tend = PathEnd::default();
-        let mut hend = PathEnd::default();
+        let (mut tend, mut hend) = std::mem::take(&mut self.stale_ends.flat);
         self.make_flat_end(sp, &mut p, tn, e, &mut tend, true);
         self.make_flat_end(sp, &mut p, hn, e, &mut hend, false);
+        self.stale_ends.flat = (tend.clone(), hend.clone());
         for (i, &e) in edges.iter().enumerate() {
             let fi = (i + 1) as f64;
             let b = *tend.boxes.last().unwrap();
@@ -1667,8 +1681,8 @@ impl Dot<'_> {
             let mut segfirst = e;
             let mut tn = self.edges[e].tail;
             hn = self.edges[e].head;
-            let mut tend = PathEnd::default();
-            let mut hend = PathEnd::default();
+            // `pathend_t tend, hend;` (uninitialised): the previous call's ends (#360).
+            let (mut tend, mut hend) = std::mem::take(&mut self.stale_ends.regular);
             let mut b = self.maximal_bbox(sp, tn, None, Some(e));
             tend.nb = b;
             let m = self.spline_merge_p(tn);
@@ -1735,6 +1749,7 @@ impl Dot<'_> {
                     })
                 };
                 let Some(ps) = ps.filter(|v| !v.is_empty()) else {
+                    self.stale_ends.regular = (tend, hend);
                     return Ok(());
                 };
                 pointfs.extend_from_slice(&ps);
@@ -1804,6 +1819,7 @@ impl Dot<'_> {
                 }
                 ps
             });
+            self.stale_ends.regular = (tend, hend);
             let Some(ps) = ps.filter(|v| !v.is_empty()) else {
                 return Ok(());
             };

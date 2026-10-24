@@ -187,9 +187,9 @@ impl SplineGraph for Dot<'_> {
                 return Some((side, vec![b]));
             }
         }
-        // No field contains the port: C returns `side` with the end's previous
-        // boxes; fall back to the node box.
-        None
+        // No field contains the port: C returns `side` and writes no box, so the
+        // end keeps the boxes it held (#360, `apply_pboxfn`).
+        Some((side, Vec::new()))
     }
 }
 

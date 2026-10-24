@@ -185,7 +185,9 @@ pub trait SplineGraph {
         old.clone()
     }
     /// `ND_shape(n)->fns->pboxfn(n, port, side, rv, &k)`: the boxes from a
-    /// port to the node border and the side mask, if the shape has one.
+    /// port to the node border and the side mask, if the shape has one. A nonzero
+    /// mask with no boxes is C's `record_path` finding no field for the port: it
+    /// returns the mask and writes neither `rv` nor `k` (see `apply_pboxfn`).
     fn pboxfn(&self, _n: usize, _port: &PortInfo, _side: u8) -> Option<(u8, Vec<BoundingBox>)> {
         None
     }
@@ -498,6 +500,38 @@ fn clear_orig_clip<S: SplineGraph + ?Sized>(g: &mut S, e: usize, n: usize, at_ta
     }
 }
 
+/// The size of `pathend_t.boxes` in C.
+pub const PATHEND_MAX_BOXES: usize = 20;
+
+/// `if (pboxfn && (mask = pboxfn(n, port, side, &endp->boxes[0], &endp->boxn)))
+/// endp->sidemask = mask;` in `beginpath` and `endpath`: whether the shape's
+/// boxes were taken (`false`: the caller uses the node box).
+///
+/// When `record_path` finds no field containing the port point (issue #360,
+/// `shapes.c:3793`), it returns the side without writing a box, so `endp` keeps
+/// the boxes it held. dot's callers declare `endp` as an uninitialised local
+/// (`dotsplines.c:1326`, `:1432`, `:1515`, `:1713`), and in practice it holds
+/// what the previous call of the same function left in it; dot keeps those
+/// ends across calls (`Dot::stale_ends`) and the port reuses them here. With no
+/// previous call C reads unrelated stack memory (its output differs between
+/// builds, and it often crashes): the port uses the node box. The node box is
+/// used too when the ends already fill C's 20 boxes, where the caller's next
+/// `boxes[boxn++]` would write past the array.
+fn apply_pboxfn(endp: &mut PathEnd, r: Option<(u8, Vec<BoundingBox>)>) -> bool {
+    let Some((mask, boxes)) = r.filter(|(m, _)| *m != 0) else {
+        return false;
+    };
+    if boxes.is_empty() {
+        if endp.boxes.is_empty() || endp.boxes.len() >= PATHEND_MAX_BOXES {
+            return false;
+        }
+    } else {
+        endp.boxes = boxes;
+    }
+    endp.sidemask = mask;
+    true
+}
+
 /// `beginpath(P, e, et, endp, merge)`: set up the boxes near the tail node.
 pub fn beginpath<S: SplineGraph + ?Sized>(
     g: &mut S,
@@ -636,10 +670,7 @@ pub fn beginpath<S: SplineGraph + ?Sized>(
     } else {
         endp.sidemask
     };
-    if let Some((mask, boxes)) = g.pboxfn(n, &tport, side).filter(|(m, _)| *m != 0) {
-        endp.boxes = boxes;
-        endp.sidemask = mask;
-    } else {
+    if !apply_pboxfn(endp, g.pboxfn(n, &tport, side)) {
         endp.boxes = vec![endp.nb];
         match et {
             SELFEDGE => unreachable!("beginpath is not used for self edges"),
@@ -797,10 +828,7 @@ pub fn endpath<S: SplineGraph + ?Sized>(
     } else {
         endp.sidemask
     };
-    if let Some((mask, boxes)) = g.pboxfn(n, &hport, side).filter(|(m, _)| *m != 0) {
-        endp.boxes = boxes;
-        endp.sidemask = mask;
-    } else {
+    if !apply_pboxfn(endp, g.pboxfn(n, &hport, side)) {
         endp.boxes = vec![endp.nb];
         match et {
             SELFEDGE => unreachable!("endpath is not used for self edges"),
@@ -1504,6 +1532,32 @@ pub fn edge_midpoint(et: EdgeType, spl: &[Bezier]) -> Point {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// #360: where `record_path` writes no box, the end keeps the boxes it holds, and
+    /// the node box is used only where C would read unrelated memory or write past
+    /// its 20 boxes.
+    #[test]
+    fn a_record_port_in_no_field_keeps_the_ends_boxes() {
+        let b = |x: f64| BoundingBox::new(x, 0.0, x + 1.0, 1.0);
+        let missed = || Some((TOP, Vec::new()));
+
+        let mut endp = PathEnd::default();
+        assert!(!apply_pboxfn(&mut endp, missed()), "no previous call");
+
+        endp.boxes = vec![b(1.0), b(2.0)];
+        endp.sidemask = BOTTOM;
+        assert!(apply_pboxfn(&mut endp, missed()));
+        assert_eq!(endp.boxes, [b(1.0), b(2.0)]);
+        assert_eq!(endp.sidemask, TOP);
+
+        assert!(apply_pboxfn(&mut endp, Some((BOTTOM, vec![b(3.0)]))));
+        assert_eq!(endp.boxes, [b(3.0)]);
+
+        endp.boxes = vec![b(0.0); PATHEND_MAX_BOXES];
+        assert!(!apply_pboxfn(&mut endp, missed()), "C's boxes are full");
+        assert!(!apply_pboxfn(&mut endp, Some((0, Vec::new()))), "no mask");
+        assert!(!apply_pboxfn(&mut endp, None), "no pboxfn");
+    }
 
     /// #173: C splits a segment with a non-finite control point until it stops on a half
     /// inside `bb` (leaving `bb` as it was) or overflows its stack; the port returns.

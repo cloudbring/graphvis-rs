@@ -98,6 +98,8 @@ pub struct Dot<'a> {
     /// The `_cc_<i>` subgraphs a failed layout leaves in the root (doDot returns
     /// before `agdelete`), with the projected subgraphs under them.
     pub cc_kept: Vec<G>,
+    /// The `tend`/`hend` ends dot's edge routers last left (#360).
+    pub stale_ends: dotsplines::StaleEnds,
 }
 
 impl<'a> Dot<'a> {
@@ -134,6 +136,7 @@ impl<'a> Dot<'a> {
             et: crate::common::types::EdgeType::Spline,
             splines_done: false,
             aborted: false,
+            stale_ends: Default::default(),
         }
     }
 

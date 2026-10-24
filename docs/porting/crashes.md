@@ -321,6 +321,42 @@ and 50,000 `fuzz-gen-ranks.py` inputs, plus hand-written ones in neato, fdp, cir
 osage, every input this changes is one C crashes on, except one: there `makeCompoundEdge`
 gives `gv_calloc` the wrapped size and C exits 1 with no output, and the port draws.
 
+## Record ports in no field: dot's uninitialised path ends
+
+Closed: #360.
+
+At the record end of a `samehead`/`sametail` edge, the port point can lie in no field of
+the record. `record_path` (`shapes.c:3793`) then returns the side mask without writing a
+box, so `beginpath` and `endpath` keep whatever `endp->boxes` and `endp->boxn` held. In
+`make_regular_edge`, `make_flat_edge`, `make_flat_labeled_edge` and
+`make_flat_bottom_edges` (`dotsplines.c:1713`, `:1515`, `:1326`, `:1432`) that is
+`pathend_t tend, hend`, declared without an initialiser. In practice it holds what the
+previous call of the same function left there, on every run, and on both C builds measured
+(the Homebrew build and one built from source). The port keeps each function's last
+`tend`/`hend` (`StaleEnds` in `dotsplines.rs`) and reuses them there (`apply_pboxfn` in
+`common/splines.rs`).
+
+Where there is no previous call, C reads unrelated stack memory. Its output then differs
+between the two builds, and C often crashes or gives different results from run to run. The
+port uses the node box there, as `beginpath` does when the shape has no port boxes. It does
+the same when the ends already hold 20 boxes, where C's next `boxes[boxn++]` writes past the
+array.
+
+Measured on 40,000 `fuzz-gen-endpoints.py` inputs (seeds 1–40000), where the port reaches
+this case on 213. On 5 of them C's output varies between runs. Of the other 208:
+
+| C | Inputs | Port's output equals C's before | after |
+|---|--:|--:|--:|
+| draws | 74 | 5 | 70 |
+| exits 1 | 98 | 13 | 94 |
+| crashes | 36 | n/a | n/a |
+
+The 4 drawings that still differ all reach the case in a function's first call. On 4,000
+generated samehead/sametail × record × `rankdir` inputs, C draws 2,816 the same way on two
+runs. The port matched C on 2,771 of them before and matches on 2,806 now. The 10 that
+still differ also reach the case in the first call. No input that matched C before differs
+now. The port draws or exits 1 on every input where C crashes, as before.
+
 ## Concentrated cluster edges
 
 Closed: #234.
