@@ -1047,11 +1047,7 @@ impl Dot<'_> {
                     "flat edge between adjacent nodes one of which has a record shape - replace \
                      records with HTML-like labels\n",
                 );
-                let op = if self.input.kind == graphviz_pure_core::GraphKind::Directed {
-                    "->"
-                } else {
-                    "--"
-                };
+                let op = self.edge_op();
                 // dotsplines.c:1147: both names share agnameof's static buffer when
                 // anonymous.
                 let [t, h] = graphviz_pure_core::agnameof_buffer([
@@ -1081,6 +1077,15 @@ impl Dot<'_> {
             return Ok(());
         }
         self.make_flat_adj_edges_aux(edges, tn, hn, et)
+    }
+
+    /// `agisdirected(g) ? "->" : "--"`.
+    fn edge_op(&self) -> &'static str {
+        if self.input.kind == graphviz_pure_core::GraphKind::Directed {
+            "->"
+        } else {
+            "--"
+        }
     }
 
     /// The recursive-dot part of `make_flat_adj_edges` (edges with ports):
@@ -1289,7 +1294,23 @@ impl Dot<'_> {
             if auxe == hvye && !hvye_alg {
                 continue;
             }
-            let Some(auxbz) = d.edges[auxe].spl.as_ref().and_then(|s| s.first()) else {
+            // dotsplines.c:1260: `auxbz = ED_spl(auxe)->list`, unchecked. The aux layout leaves
+            // an edge no spline where its routing failed (it reports `lost t h edge`) or
+            // concentrate merged it, and C dereferences the NULL and crashes. The layout stops
+            // there, after the aux graph's messages, which are C's last output (#341).
+            let Some(spl) = d.edges[auxe].spl.as_ref() else {
+                let ed = &self.edges[e];
+                return Err(format!(
+                    "make_flat_adj_edges: the layout of the adjacent flat edges gave edge \
+                     {} {} {} no spline (C dereferences its NULL spline)",
+                    self.node_agnameof(ed.tail).name,
+                    self.edge_op(),
+                    self.node_agnameof(ed.head).name
+                ));
+            };
+            // `new_spline` always appends a bezier, so a spline C reads has one: `list` is
+            // never empty here.
+            let Some(auxbz) = spl.first() else {
                 continue;
             };
             let mut bz = Bezier {
