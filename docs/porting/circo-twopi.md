@@ -58,6 +58,7 @@ Remaining differences, all in shared code:
 | `circularinit::circo_layout_main` | `circoLayout` |
 | `circularinit::{derived_graph, component}` | `circomps`, `makeDerivedNode` |
 | `circularinit::copy_posns`, `pack_derived` | `copyPosns`, `packSubgraphs` on the derived graph |
+| `circularinit::{derived_src, derived_lgraph, adjust_derived}` | `adjustNodes(sg)` on the derived graph's components |
 | `circular::circular_layout` | `circularLayout` |
 | `circular::{init_graph_attrs, create_one_block}` | `initGraphAttrs`, `createOneBlock` |
 | `circular::{CData, Circ}` | `cdata` (`ND_alg`), `circ_state`, derived `ND_pos` |
@@ -95,8 +96,14 @@ Remaining differences, all in shared code:
 - **Packing.** C packs the derived graph's components. The port packs the
   original nodes with the adjacency temporarily reduced to the derived edges
   (first-seen orientation, no loops or duplicates), which gives the same
-  polyomino cells. `adjustNodes(sg)` on derived components is a no-op in C
-  (the derived graph declares no `overlap`), and so in the port.
+  polyomino cells.
+- **Derived graph attributes.** With several components, C runs `adjustNodes(sg)` on each
+  component of the derived graph. `agopen("derived")` copies cgraph's ProtoGraph, so that graph
+  declares only the command-line attributes (`-Goverlap`, `-Gnormalize`, `-Gscale`, `-Gsep`, …),
+  not the input's, and its nodes have the `lw`, `rw` and `ht` that `makeDerivedNode` copies but
+  width and height 0. So `-Goverlap=false` overlaps the nodes, while in-file `overlap` does
+  nothing there (#398). The port builds that graph (`derived_src`, `derived_lgraph`, from
+  `Graph::protograph_root`) only when it has `overlap`, `normalize` or `scale`.
 - **twopi `root`.** `root=""` or an unknown name sets `root` to the chosen
   centre in the output (also in the root attribute dictionary, as `agset`
   does); a declared node `root` attribute is set to `1` on chosen centres.

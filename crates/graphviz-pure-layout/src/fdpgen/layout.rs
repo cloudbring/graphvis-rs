@@ -24,6 +24,7 @@ use crate::common::shapes::NodeShape;
 use crate::common::types::*;
 use crate::common::utils::{compute_bb, late_int};
 use crate::cutil::qsort_by;
+use crate::neatogen::adjust::normalize;
 use crate::neatogen::neatosplines::{
     neato_set_aspect, spline_edges_by, spline_edges_main, spline_edges_route,
 };
@@ -170,7 +171,8 @@ pub struct DG {
     /// `PORTS(dg) != NULL`: the graph had ports, even if none hooks to a
     /// derived node.
     pub has_ports: bool,
-    /// `overlap`, `sep` and `K` copied from the original graph (`copyAttr`).
+    /// The command-line graph attributes, and `overlap`, `sep` and `K` copied from the
+    /// original graph (`copyAttr`).
     pub attrs: AttrMap,
     emap: HashMap<(usize, usize), usize>,
 }
@@ -505,6 +507,9 @@ impl Fdp<'_, '_> {
         self.next_uid += 1;
         let uid = dg.uid;
         let src = self.rg.src;
+        // agopen("derived") declares the command-line graph attributes; copyAttr then sets
+        // `overlap`, `sep` and `K` from g.
+        dg.attrs = src.protograph_attrs();
         for key in ["overlap", "sep", "K"] {
             let declared = src.graph_attr_declared(key);
             if declared {
@@ -942,10 +947,15 @@ impl Fdp<'_, '_> {
                     DKind::Real(_) => {}
                 }
             }
-            if cc[ci].nodes.len() >= 2 {
-                // normalize(cg) reads `normalize` on the derived graph, which
-                // never declares it.
-                fdp_x_layout(&mut self.st, &mut dg, &cc[ci], &xpms);
+            let comp = &cc[ci];
+            if comp.nodes.len() >= 2 {
+                if g.is_none() && dg.attrs.contains_key("normalize") {
+                    // normalize(cg) reads `normalize` on the derived graph: a command-line one.
+                    with_lgraph(&mut dg, &comp.nodes, |lg, sub, _| {
+                        normalize(lg, sub);
+                    });
+                }
+                fdp_x_layout(&mut self.st, &mut dg, comp, &xpms);
             }
             self.dbg("XL", g, &dg, &cc[ci], true);
         }

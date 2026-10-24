@@ -72,9 +72,12 @@ Each graph (root or cluster) is laid out through a derived graph `DG` with one
 node per own node, child cluster and inherited boundary port. Shared code that
 works on an `LGraph` (packing, `removeOverlapAs`, `compute_bb`) runs on an
 `LGraph` built from the derived nodes by `layout::with_lgraph`, which copies the
-positions back. Only `overlap`, `sep` and `K` are copied into a derived graph,
-so `normalize`, `scale` and `esep` have no effect inside fdp's overlap removal,
-as in C.
+positions back. A derived graph is a root of its own (`agopen`), so it has the
+command-line graph attributes (`Graph::protograph_attrs`); `copyAttr` then copies
+`overlap`, `sep` and `K` from the input graph. So in-file `normalize`, `scale` and
+`esep` have no effect inside fdp's overlap removal, while `-Gnormalize`, `-Gscale` and
+`-Gesep` do, and the root level runs `normalize(cg)` before `fdp_xLayout`, as in C
+(#398).
 
 cgraph orients derived edges (`hd > tl`), orders multi-edge ports
 (`n < other`) and port edges (`dn > m`) by `Agnode_t` address. `NodeHeap`
