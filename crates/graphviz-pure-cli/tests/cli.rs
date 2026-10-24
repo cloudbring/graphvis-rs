@@ -6819,6 +6819,46 @@ fn emit_pagedir_sfdp_slow_and_routespl_messages_like_c() {
     }
 }
 
+// Issue #396: where samehead or sametail edges come from opposite sides, `sameport`'s
+// direction is 0/0 and the edges' path ends are NaN, in C too. `routesplines_` counts a NaN
+// spline as horizontal (its `fabs(...) > FUDGE` is false), so it bounds the boxes at once and
+// does not warn. The port negated that test, so it warned, and on the second input its
+// fallback left boxes unbounded and moved every node to x = 2.5e306. Both outputs are C's.
+#[test]
+fn routespl_nan_spline_is_bounded_without_a_warning_like_c() {
+    for (src, want) in [
+        (
+            "digraph G { a:n -> b:s; b -> a [samehead=h1]; c -> a [samehead=h1] }",
+            "graph 1 1.099 2.6206\n\
+             node a 0.375 1.3706 0.75 0.5 a solid ellipse black lightgrey\n\
+             node b 0.375 0.37063 0.75 0.5 b solid ellipse black lightgrey\n\
+             node c 0.375 2.3706 0.75 0.5 c solid ellipse black lightgrey\n\
+             edge a b 10 0.375 1.639 0.375 1.8058 0.63427 1.7452 0.75 1.6251 1.2153 1.1422 1.2153 0.59908 0.75 0.11618 0.68671 0.050501 0.58049 0.002625 0.49723 0 solid black\n\
+             edge b a 4 nan nan nan nan nan nan nan nan solid black\n\
+             edge c a 4 nan nan nan nan nan nan nan nan solid black\n\
+             stop\n",
+        ),
+        (
+            "digraph G { u -> x; x -> d; x:w -> x [samehead=g1]; \
+             d -> x [samehead=g0, label=l]; u -> x [samehead=g0] }",
+            "graph 1 1 2.7472\n\
+             node u 0.625 2.4972 0.75 0.5 u solid ellipse black lightgrey\n\
+             node x 0.625 1.4833 0.75 0.5 x solid ellipse black lightgrey\n\
+             node d 0.625 0.25 0.75 0.5 d solid ellipse black lightgrey\n\
+             edge u x 4 nan nan nan nan nan nan nan nan solid black\n\
+             edge u x 4 nan nan nan nan nan nan nan nan solid black\n\
+             edge x x 7 0.24649 1.4833 0.16667 1.6101 0 1.6101 0 1.4833 0 1.4411 0.046274 1.4129 0.11569 1.3989 solid black\n\
+             edge x d 10 0.60843 1.2272 0.60384 1.1494 0.59949 1.0628 0.59722 0.98333 0.59426 0.87967 0.59426 0.85366 0.59722 0.75 0.59804 0.72146 0.59912 0.69198 0.60039 0.66232 solid black\n\
+             edge d x 4 nan nan nan nan nan nan nan nan l nan 0.86667 solid black\n\
+             stop\n",
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Tplain"], src);
+        assert!(ok, "{src}");
+        assert_eq!((out.as_str(), err.as_str()), (want, ""), "{src}");
+    }
+}
+
 // Cause C22 siblings: `compound.c`'s lhead/ltail warnings, `utils.c`'s duplicate cluster and
 // unknown `splines` warnings (again per neato and sfdp component, as `setEdgeType` runs there),
 // and cgraph's `attribute macros not implemented` (no newline).

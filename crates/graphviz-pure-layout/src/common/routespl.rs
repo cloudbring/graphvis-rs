@@ -328,8 +328,11 @@ pub fn routesplines_(pp: &mut Path, polyline: bool, real: RealEdge<'_>) -> Optio
     let boxes = &mut pp.boxes;
     let mut unbounded = true;
     {
-        let is_horizontal = !ps.is_empty() && ps.iter().all(|p| (ps[0].y - p.y).abs() <= 0.0001);
-        let is_vertical = !ps.is_empty() && ps.iter().all(|p| (ps[0].x - p.x).abs() <= 0.0001);
+        // routespl.c:516-534 clears the flag on `fabs(...) > FUDGE`, which is false for a NaN
+        // point (a stale path end, #382), so a NaN spline counts as horizontal and its boxes
+        // are bounded at once, with no warning (#396).
+        let is_horizontal = !ps.is_empty() && !ps.iter().any(|p| (ps[0].y - p.y).abs() > 0.0001);
+        let is_vertical = !ps.is_empty() && !ps.iter().any(|p| (ps[0].x - p.x).abs() > 0.0001);
         if is_horizontal || is_vertical {
             for b in boxes.iter_mut() {
                 b.ll.x = ps[0].x;
