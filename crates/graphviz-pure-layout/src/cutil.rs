@@ -23,6 +23,13 @@
 //! [`with_rand_state`] gets a fresh state ([`in_rand_run`]), so the library's top-level
 //! calls are deterministic: each starts like a new process unless its caller passes a state
 //! in. [`Drand48State`] and [`CRandState`] are the generators as plain values.
+//!
+//! The installed state is per thread. Engine internals called directly, outside any layout
+//! entry point, draw from that thread's state, which nothing resets.
+//!
+//! The two states are separate, as in Apple's (and every POSIX) libc. Under `_WIN32` C
+//! builds `drand48` on `rand()` (`lib/common/utils.c`) and `srand48` is `srand`, so there
+//! the two would share one state; the port doesn't model that.
 
 use std::cell::Cell;
 
@@ -170,7 +177,7 @@ fn with_process<R>(f: impl FnOnce(&mut RandState) -> R) -> R {
 pub struct Drand48;
 
 impl Drand48 {
-    /// `srand48(seed)` on the process's state.
+    /// `srand48(seed)` on the process's state: this reseeds the state every handle shares.
     pub fn new(seed: i64) -> Self {
         Self.srand48(seed);
         Self
@@ -1337,7 +1344,7 @@ mod tests {
         assert_eq!(next, expected.drand48());
         // srand48 reseeds the shared state, whichever handle calls it.
         with_rand_state(&mut state, || {
-            Drand48::new(173);
+            Drand48.srand48(173);
             Drand48.drand48()
         });
         let mut seeded = Drand48State::default();
