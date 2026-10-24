@@ -33,7 +33,8 @@ struct P<'a> {
 
 impl P<'_> {
     fn ws(&mut self) {
-        while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
+        // `gv_isspace`: C's white space, `\v` included.
+        while self.i < self.s.len() && crate::cnum::is_c_space(self.s[self.i]) {
             self.i += 1;
         }
     }

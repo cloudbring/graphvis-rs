@@ -6920,6 +6920,112 @@ fn issue377_xdot_json_warns_and_writes_no_value_for_an_unparsable_xdot() {
     );
 }
 
+// #377 review: the warning fires where C's `parseOp` fails: `parseXDotColor`'s first byte
+// (`!`), `gv_isspace` (`\v` is white space), `parseUInt`'s stop count (`-1` fails); and the
+// fontchar is the `unsigned` it read, printed with `%d` (#402). Output is C 16.1.0's.
+#[test]
+fn issue377_xdot_json_parses_ops_as_c_does() {
+    for (src, err_want, expected) in [
+        (
+            "digraph { a [_ldraw_=\"c 1 -!\"] }",
+            "Warning: Could not parse xdot \"c 1 -!\"\n",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": ,
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            "digraph { a [_ldraw_=\"\u{b}E 1 2 3 4\"] }",
+            "",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": 
+      [
+        {
+          "op": "E",
+          "rect": [1.000,2.000,3.000,4.000]
+        }
+      ],
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            "digraph { a [_ldraw_=\"c 13 -[0 0 1 1 -1 \"] }",
+            "Warning: Could not parse xdot \"c 13 -[0 0 1 1 -1 \"\n",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": ,
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+        (
+            "digraph { a [_ldraw_=\"t -1 t 5000000000\"] }",
+            "",
+            r##"{
+  "name": "%1",
+  "directed": true,
+  "strict": false,
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "a",
+      "_ldraw_": 
+      [
+        {
+          "op": "t",
+          "fontchar": -1
+        },
+        {
+          "op": "t",
+          "fontchar": 705032704
+        }
+      ],
+      "label": "\\N"
+    }
+  ]
+}
+"##,
+        ),
+    ] {
+        let (out, err, ok) = run(&["-Txdot_json"], src);
+        assert!(ok);
+        assert_eq!(err, err_want, "{src}");
+        assert_eq!(out, expected, "{src}");
+    }
+}
+
 /// #194: `job->width` is `ROUND` converted through 64 bits, keeping the low 32 bits, so an
 /// infinite page width is -1.
 #[test]

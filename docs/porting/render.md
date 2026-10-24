@@ -39,6 +39,13 @@ the model's node geometry.
 | `agwrite.rs` | `lib/cgraph/write.c` (`-Tdot`, `-Txdot`, `-Tcanon`) over the cgraph dictionaries recorded by the parser (`Graph::dicts`: `bindattrs`, `attrstmt`/`setattr`, `unviewsubgraphsattr`, `sym->print`, ProtoGraph `label`) |
 | `lib.rs` | format dispatch, `safe_dcl`/`agxset` bookkeeping (`sync_dicts`), dot's `mark_lowclusters` edge membership |
 
+**Invalid JSON where C writes it.** For an xdot attribute none of whose ops parses, C's
+`write_xdots` warns `Could not parse xdot "…"` and writes nothing after the key, so
+`-Tjson` and `-Txdot_json` print `"_tldraw_": ,`, which is not JSON (#377). The CLI writes
+those bytes, as it writes `epsf_gencode`'s text (`GraphJobs::write_output_file_text`). The
+library (`render_dot`, WASM's `render`) writes `""` there instead, so its result is always
+one JSON document. The warning is the same in both.
+
 `-n`, `-n1`, `-n2`, `-n3` and `-Knop`/`nop1`/`nop2` run `neato_layout`'s `Nop`
 branch (`graphviz-pure-layout/src/neatogen/neatoinit.rs`: `init_nop`, `user_pos`,
 `user_spline`, `nop_init_graphs`, `nop_init_edges`, `chkBB`), then neato's own
