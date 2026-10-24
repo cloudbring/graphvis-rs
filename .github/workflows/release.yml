@@ -1,7 +1,10 @@
 name: Release
 
 # Builds and publishes a release when a version tag (v0.1.0, ...) is pushed. Run it by hand
-# (workflow_dispatch) to build and attest everything without publishing anything.
+# (workflow_dispatch) to build, smoke-test and attest everything without publishing anything:
+# every publishing job runs only on a tag push, and the `release` environment accepts only v*
+# tags, so a dispatched run cannot reach it. scripts/release-ready.sh requires such a dry run to
+# have passed on the commit before it is tagged.
 #
 # Security model:
 # - A release starts only from a tag on master signed with a key in .github/allowed_signers.
@@ -13,12 +16,16 @@ name: Release
 # - Every artifact gets a signed build-provenance attestation (Sigstore), verifiable with
 #   `gh attestation verify FILE --repo graphviz-pure/graphviz-pure`.
 # - Publishing happens only in jobs bound to the `release` environment, which needs a
-#   maintainer's approval and accepts only v* tags. crates.io, npm and JSR are published with
+#   maintainer's approval and accepts only v* tags. The five publishing jobs wait on the same
+#   jobs, so they wait for the environment together and one approval starts them all (see the
+#   crates-io job). The trusted publishers of crates.io and npm are bound to this environment. crates.io, npm and JSR are published with
 #   tokenless OIDC (trusted publishing; JSR's GitHub Actions publishing): no registry token
 #   exists anywhere. The container image goes to ghcr.io with the job's own GITHUB_TOKEN
 #   (packages: write in that job only). Every token these jobs hold lives for one job.
 # - The Homebrew tap, the Scoop bucket and the website pull new releases themselves and verify
 #   the attestations before updating; this repository holds no credential for them.
+# - The verify job, with no environment and a read-only token, checks what the publishing jobs
+#   published (scripts/release-verify.sh --ci).
 
 on:
   push:
@@ -475,10 +482,16 @@ jobs:
           gh release create "$TAG" --repo "$REPO" --verify-tag --draft --title "graphviz-pure $VERSION" --notes-file notes.md dist/*
           gh release edit "$TAG" --repo "$REPO" --draft=false
 
+  # The publishing jobs need the same jobs as github-release, not github-release itself: GitHub
+  # asks for one approval per environment for the jobs waiting on it at that moment, so jobs that
+  # waited on github-release would wait for a second approval. The trade-off: the registries no
+  # longer wait for the GitHub release to exist, and a failed github-release job no longer holds
+  # them back (each job is re-runnable on its own, see docs/releasing.md). Keep the five `needs:`
+  # lists identical, or the approval splits in two again.
   crates-io:
     name: Publish to crates.io
     if: github.event_name == 'push'
-    needs: [check, github-release]
+    needs: [check, attest, image-smoke, scoop-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: release
@@ -520,7 +533,7 @@ jobs:
   npm:
     name: Publish to npm
     if: github.event_name == 'push'
-    needs: github-release
+    needs: [check, attest, image-smoke, scoop-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: release
@@ -548,7 +561,7 @@ jobs:
   jsr:
     name: Publish to JSR
     if: github.event_name == 'push'
-    needs: github-release
+    needs: [check, attest, image-smoke, scoop-smoke]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: release
@@ -582,7 +595,7 @@ jobs:
   ghcr:
     name: Publish the container image
     if: github.event_name == 'push'
-    needs: [check, github-release]
+    needs: [check, attest, image-smoke, scoop-smoke]
     runs-on: ubuntu-24.04 # has skopeo
     timeout-minutes: 20
     environment: release
@@ -659,3 +672,44 @@ jobs:
       - name: Log out
         if: always()
         run: docker logout ghcr.io
+
+  # Checks what the publishing jobs published: the GitHub release's assets and their attestations,
+  # the crates on crates.io, JSR, and the image's tags and attestation. A channel whose publishing
+  # job did not succeed is reported as failing at once, not polled. npm goes live only when a
+  # maintainer approves the staged version, and the tap and bucket update afterwards, so those are
+  # checked later by `scripts/release-verify.sh VERSION` without --ci (docs/releasing.md). No
+  # environment and a read-only token: this job publishes nothing. It runs once any channel
+  # published, so a failure in one job still shows the state of the others.
+  verify:
+    name: Verify the published release
+    if: >-
+      !cancelled() && github.event_name == 'push' && (needs.github-release.result == 'success'
+      || needs.crates-io.result == 'success' || needs.npm.result == 'success'
+      || needs.jsr.result == 'success' || needs.ghcr.result == 'success')
+    needs: [check, github-release, crates-io, npm, jsr, ghcr]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read # download the release assets
+      attestations: read # gh attestation verify
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The registry checks share one 10-minute deadline, well inside the job's timeout, and the
+      # script writes each channel's line as it goes, so the summary always shows what was found.
+      - name: Verify every channel but npm and the tap and bucket
+        shell: bash # -eo pipefail: a failed check must fail the step
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+          RESULTS: >-
+            github=${{ needs.github-release.result }} crates=${{ needs.crates-io.result }}
+            npm=${{ needs.npm.result }} jsr=${{ needs.jsr.result }} ghcr=${{ needs.ghcr.result }}
+        run: |
+          ok="" failed=""
+          for kv in $RESULTS; do
+            if [ "${kv#*=}" = success ]; then ok="$ok,${kv%%=*}"; else failed="$failed,${kv%%=*}"; fi
+          done
+          scripts/release-verify.sh "$VERSION" --ci --wait 600 --channels "${ok#,}" --failed "${failed#,}" |
+            tee -a "$GITHUB_STEP_SUMMARY"

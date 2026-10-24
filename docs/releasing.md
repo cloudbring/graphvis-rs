@@ -1,82 +1,187 @@
 # Releasing graphviz-pure
 
-## How a release works
+A release is prepared, checked and announced by an agent. The owner does four things: approve the
+release pull request, sign and push the tag, approve one `release` deployment, and approve the
+staged npm version. Everything the owner runs arrives in one issue, "Release X.Y.Z ready".
 
-1. Run `scripts/bump-version.sh X.Y.Z --pr`: it sets the version in `Cargo.toml`,
-   `Cargo.lock`, `web/package.json` and `web/jsr.json`, dates the changelog's "Unreleased" entries,
-   and opens the release pull request. Merge it. The version follows
-   [the versioning policy](versioning.md).
-2. A maintainer pushes a signed tag: `git tag -s v0.1.0 -m v0.1.0 && git push origin v0.1.0`.
-   Only maintainers can create `v*` tags (tag ruleset), and the workflow refuses a tag that is
-   not on `master` or not signed with a key in [`.github/allowed_signers`](../.github/allowed_signers)
-   (read from `master`, not from the tagged commit). To sign with SSH: `git config gpg.format ssh`,
-   `git config user.signingkey ~/.ssh/id_ed25519.pub`; add the key to GitHub as a signing key
-   and, in a reviewed pull request, to `.github/allowed_signers`.
-   **First release only:** npm drops a trusted-publisher configuration that has not published
-   within 48 hours of its creation. If it is older than that, delete and recreate it (same
-   fields, see [npm](#npm-organization-graphviz-pure)) just before pushing the tag.
-3. `.github/workflows/release.yml` runs on GitHub-hosted runners, with no caches, the pinned
-   Rust toolchain and `cargo build --locked`:
-   - builds `graphviz-pure` for six targets (Linux x86-64 and arm64 as static musl binaries,
-     macOS arm64 and x86-64, Windows x86-64 and arm64) and the npm package;
-   - requires every binary and the npm package to reproduce the gallery samples byte for byte
-     (`scripts/release-smoke.py`, `scripts/release-smoke-wasm.mjs`);
-   - packages deterministic archives (`scripts/release-package.py`), writes `SHA256SUMS` and
-     attests the build provenance of every file (Sigstore, stored on GitHub);
-   - checks that every archive and the npm tarball (and so the JSR package) carry LICENSE,
-     NOTICE, THIRD-PARTY-LICENSES.md and LICENSES/, and every crate LICENSE and NOTICE
-     (`scripts/check-package-notices.py`, `scripts/check-crate-notices.sh`; CI runs the same
-     checks on every change; the crates' directories hold copies that must match the root files);
-   - builds the container image for linux/amd64 and linux/arm64 from the two musl archives
-     (`scripts/release-image.sh`, no second compile; with the same BuildKit, commit time and
-     revision, the same archives give the same digest) and runs the version check and the
-     gallery smoke test through it on both platforms;
-   - installs the Windows zips with Scoop on x86-64 and on arm64, from a manifest written like
-     the bucket's, checks that each got its own architecture's exe, and runs the same checks
-     through Scoop's shim;
-   - dry-runs the JSR publish of the npm tarball.
-4. The publishing jobs wait for every smoke test and for a maintainer to approve the `release`
-   environment, then:
-   - create the GitHub release with all files;
-   - publish the eight crates to crates.io (trusted publishing, `cargo publish --workspace`,
-     leaving out any crate whose version is already there);
-   - stage `@graphviz-pure/wasm` on npm (trusted publishing, with npm provenance). The trusted
-     publisher may only stage, so the version goes live only when a maintainer approves it with
-     2FA: the package's **Staged Packages** tab on npmjs.com, or `npm stage approve <stage-id>`;
-   - publish the files of the npm tarball (which carries `web/jsr.json`) to JSR with a pinned
-     Deno (`deno publish`, OIDC). JSR has no staging: the version is live as soon as the job
-     finishes, so the `release` approval is its only gate;
-   - push the smoke-tested image to `ghcr.io/graphviz-pure/graphviz-pure` as `0.1.0`, attest its
-     digest (the attestation is stored next to the image in the registry), then point `0.1`
-     and `latest` at it if it is the newest stable `0.1.*` and the newest stable version among
-     the image's tags. A pre-release gets only its own tag.
-5. Within hours, `graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the
-   release, verify each asset's attestation and checksum, and commit the new formula and
-   manifest. `graphviz-pure/graphviz-pure.github.io` deploys the site from `master` builds the
-   same way. No repository holds a credential for another.
+## The owner's four steps
 
-Run the workflow by hand (Actions → Release → Run workflow) to build, smoke-test and attest
-everything, the container image included, without publishing anything.
+1. **Approve the release pull request** (`gh pr review N --approve`). The agent adds it to the
+   merge queue.
+2. **Sign and push the tag** on the merge commit, which the agent comments in the issue:
+   `git tag -s vX.Y.Z -m vX.Y.Z SHA && git push origin vX.Y.Z`. Only maintainers can create
+   `v*` tags (tag ruleset), and the workflow refuses a tag that is not on `master` or not signed
+   with a key in [`.github/allowed_signers`](../.github/allowed_signers) (read from `master`, not
+   from the tagged commit). To sign with SSH:
+   `git config gpg.format ssh`, `git config user.signingkey ~/.ssh/id_ed25519.pub`; add the key to
+   GitHub as a signing key and, in a reviewed pull request, to `.github/allowed_signers`.
+3. **Approve the `release` deployment** of the release run, once: every publishing job waits for
+   it together. The agent comments the run's link and a `gh api` command that approves it.
+4. **Approve the staged npm version** with 2FA: `npm stage approve <id>` (the agent comments the
+   id from the npm job's log), then `npm logout`.
+
+## What the agent does
+
+The agent pushes and opens pull requests and issues as a bot account, never as the owner
+(GitHub does not let anyone approve their own pull request): `GH` names that account's gh in
+every command below.
+
+1. **When the release's gates are met** (no open `priority:p1` or `priority:p2` issue, master's
+   CI green), preview the release: `scripts/release-prep.sh --dry-run`. It reads the
+   `## Changelog entry` of every pull request merged since the last tag and prints the version,
+   the CHANGELOG section and what is missing:
+   - a pull request with no entry: add one to its body (`Not user-visible.` when there is
+     nothing to say), with `$GH pr edit N --body-file ...`;
+   - an entry marked breaking (under a `### Breaking` heading, or a bullet starting
+     `**Breaking:**` or `**Changed (breaking):**`) from a pull request without the `breaking`
+     label: label it, or unmark the entry. The labels decide the version;
+   - prose beside an entry's bullets, which is not copied: check that nothing is lost.
+
+   Entries that a later pull request superseded are fixed in the CHANGELOG on the release branch.
+2. **Open the release pull request:** `GH=... scripts/release-prep.sh` (or with the version, which
+   must be the one the labels ask for). It writes the entries under "Unreleased", runs
+   `scripts/bump-version.sh X.Y.Z --pr` (sets the version in `Cargo.toml`, `Cargo.lock`,
+   `web/package.json` and `web/jsr.json`, dates the section, pushes `release/vX.Y.Z`, opens the
+   pull request with `$GH`), and starts the release workflow's dry run and the fuzzing workflow on
+   the branch. Write the release's intro paragraph where the script left its placeholder and fix
+   superseded entries, in one push. A push restarts CI but not the dry run or fuzzing: start
+   `release.yml` and `fuzz.yml` on the branch again (`$GH workflow run release.yml --ref
+   release/vX.Y.Z`, the same for `fuzz.yml`). `release-prep.sh` and `release-ping.sh` refuse to write as the
+   owner.
+3. **Check readiness:** `scripts/release-ready.sh X.Y.Z PR` prints a Markdown checklist and exits
+   0 only when it all passes: no open `priority:p1`/`priority:p2` issue and no open
+   "Cross-platform fails on master" issue; the newest runs of `ci.yml`, `cross-platform.yml`,
+   `fuzz.yml` and the release dry run on the pull request's head succeeded; nothing merged to
+   master after the branch's base (else run `release-prep.sh` again); every pull request since
+   the last tag has an entry and the labels ask for X.Y.Z; CHANGELOG.md has the section and its
+   intro; the three manifests say X.Y.Z; every e2e input identical to C at the last release
+   still is.
+4. **Ping the owner:** `GH=... scripts/release-ping.sh X.Y.Z PR` opens "Release X.Y.Z ready",
+   assigned to the owner and mentioning them, with the pull request, the dry run, the checklist and
+   the four steps.
+5. **Drive it through**, adding each next command to the issue as the owner gets to it:
+   - after the approval, add the pull request to the merge queue; once it merged,
+     `scripts/release-ready.sh X.Y.Z PR` again (it now checks the merge commit: master's own
+     `ci.yml` and `cross-platform.yml` runs on it decide; for fuzzing and the dry run, the pull
+     request head's runs count when the trees are the same), then
+     `GH=... scripts/release-ping.sh X.Y.Z tag` comments the tag command with the merge commit;
+   - when the release run waits for the environment, `GH=... scripts/release-ping.sh X.Y.Z deploy`;
+   - when the npm job has staged the package, `GH=... scripts/release-ping.sh X.Y.Z npm`;
+   - after the owner's npm approval, start the tap and bucket updates rather than waiting for
+     their 6-hourly schedule: `$GH workflow run update.yml --repo graphviz-pure/homebrew-tap`, and
+     the same for `graphviz-pure/scoop-bucket`. When they finish,
+     `GH=... scripts/release-ping.sh X.Y.Z done` runs `scripts/release-verify.sh X.Y.Z`, comments
+     the result and closes the issue if every channel passes.
+
+`scripts/release-verify.sh X.Y.Z` checks, and prints pass or fail for, each channel: the GitHub
+release's assets against their attestations and `SHA256SUMS`; the eight publishable crates on
+crates.io (`graphviz-pure-wasm`, `-diff` and `-portable-libm` have `publish = false`); JSR's
+`meta.json`; the image's attestation, and `X.Y` and `latest` pointing at it where this version
+should hold them (not for a backport to an older minor line, nor `latest` for anything but the
+newest version); npm's
+`latest` dist-tag and `npm audit signatures`; the tap's formula, the bucket's manifest and
+their newest `update.yml` run. Attestations must come from `release.yml` run for the tag, not a
+dry run. The release workflow's `verify` job runs it with `--ci` (all but npm and the tap and
+bucket) once the publishing jobs finish, and reports a channel whose publishing job failed
+without polling it.
+
+### The `breaking` label
+
+A pull request that breaks the Rust or JavaScript API, the command line or a format gets the
+`breaking` label when it merges. While the version is `0.x`, a release with one or more such pull
+requests bumps the minor version and any other release the patch version
+([versioning policy](versioning.md)); `scripts/release-prep.sh` creates the label if it is
+missing.
+
+## What the release workflow does
+
+`.github/workflows/release.yml` runs on GitHub-hosted runners, with no caches, the pinned Rust
+toolchain and `cargo build --locked`:
+
+- it builds `graphviz-pure` for six targets (Linux x86-64 and arm64 as static musl binaries,
+  macOS arm64 and x86-64, Windows x86-64 and arm64) and the npm package;
+- it requires every binary and the npm package to reproduce the gallery samples byte for byte
+  (`scripts/release-smoke.py`, `scripts/release-smoke-wasm.mjs`);
+- it packages deterministic archives (`scripts/release-package.py`), writes `SHA256SUMS` and
+  attests the build provenance of every file (Sigstore, stored on GitHub);
+- it checks that every archive and the npm tarball (and so the JSR package) carry LICENSE,
+  NOTICE, THIRD-PARTY-LICENSES.md and LICENSES/, and every crate LICENSE and NOTICE
+  (`scripts/check-package-notices.py`, `scripts/check-crate-notices.sh`; CI runs the same
+  checks on every change; the crates' directories hold copies that must match the root files);
+- it builds the container image for linux/amd64 and linux/arm64 from the two musl archives
+  (`scripts/release-image.sh`, no second compile; with the same BuildKit, commit time and
+  revision, the same archives give the same digest) and runs the version check and the gallery
+  smoke test through it on both platforms;
+- it installs the Windows zips with Scoop on x86-64 and on arm64, from a manifest written like
+  the bucket's, checks that each got its own architecture's exe, and runs the same checks
+  through Scoop's shim;
+- it dry-runs the JSR and npm publishes.
+
+On a tag push, the five publishing jobs then wait together for one approval of the `release`
+environment, and each publishes on its own:
+
+- `github-release` creates the GitHub release with all files;
+- `crates-io` publishes the eight crates to crates.io (trusted publishing,
+  `cargo publish --workspace`, leaving out any crate whose version is already there);
+- `npm` stages `@graphviz-pure/wasm` on npm (trusted publishing, with npm provenance). The
+  trusted publisher may only stage, so the version goes live only when a maintainer approves it
+  with 2FA: the package's **Staged Packages** tab on npmjs.com, or `npm stage approve <stage-id>`;
+- `jsr` publishes the files of the npm tarball (which carries `web/jsr.json`) to JSR with a
+  pinned Deno (`deno publish`, OIDC). JSR has no staging: the version is live as soon as the job
+  finishes, so the `release` approval is its only gate;
+- `ghcr` pushes the smoke-tested image to `ghcr.io/graphviz-pure/graphviz-pure` as `X.Y.Z`,
+  attests its digest (the attestation is stored next to the image in the registry), then points
+  `X.Y` and `latest` at it if it is the newest stable `X.Y.*` and the newest stable version among
+  the image's tags (the registry's tags, not the GitHub release). A pre-release gets only its own
+  tag.
+
+Then `verify` checks what they published (`scripts/release-verify.sh --ci`). Within hours,
+`graphviz-pure/homebrew-tap` and `graphviz-pure/scoop-bucket` pull the release, verify each
+asset's attestation and checksum, and commit the new formula and manifest.
+`graphviz-pure/graphviz-pure.github.io` deploys the site from `master` builds the same way. No
+repository holds a credential for another.
+
+Run the workflow by hand (Actions → Release → Run workflow, or
+`$GH workflow run release.yml --ref BRANCH`) to build, smoke-test and attest everything, the
+container image included, without publishing anything: the publishing jobs run only on a tag
+push, and the `release` environment accepts only `v*` tags.
+
+### One approval: the trade-off
+
+Through 0.1.2, the registries' jobs waited for the GitHub release, so a release took two approvals:
+the GitHub release, then the publishing jobs. The owner could look at the published GitHub
+release before anything irreversible went to crates.io or JSR. Now one approval starts all five
+jobs at once, and the checks that the second look stood for run before the approval instead:
+every smoke test of the run, a dry run of the same workflow on the same commit, and the readiness
+checklist. npm still needs its own 2FA approval. What is given up: a registry can publish even if
+the GitHub release fails, and nothing is left to stop between the GitHub release and the
+registries. Keep `environment: release` on every publishing job (the crates.io and npm trusted
+publishers are bound to it) and keep its approval manual: JSR has no staging.
 
 ### If a publishing job fails
 
-The publishing jobs are independent once the GitHub release exists, so a failure leaves the
-other channels published. Fix the cause (an expired trusted-publisher configuration, a
-registry outage), then **Re-run failed jobs** on the same run: never push a new tag for the
-same version. A re-run runs `release.yml` as it was in the tagged commit, and the release's tag
-cannot move, so a bug in the workflow itself is fixed on `master` and ships with the next
-version.
+The publishing jobs are independent, so a failure leaves the other channels published. Fix the
+cause (an expired trusted-publisher configuration, a registry outage), then **Re-run failed
+jobs** on the same run: never push a new tag for the same version. A re-run runs `release.yml`
+as it was in the tagged commit, and the release's tag cannot move, so a bug in the workflow
+itself is fixed on `master` and ships with the next version. A re-run asks for the approval
+again.
 
 - `crates-io`: safe to re-run, also after a partial publish. The job asks crates.io which
   crates already have the version (`scripts/crates-to-publish.py`) and publishes only the
   others, in dependency order; if all are there, it publishes nothing.
 - `npm`, `jsr`: a re-run is safe if the job failed before publishing. If the version went up,
   there is nothing to re-run.
-- `ghcr`: safe to re-run. Pushing the same image again changes nothing, and `0.1`/`latest`
+- `ghcr`: safe to re-run. Pushing the same image again changes nothing, and `X.Y`/`latest`
   only ever move forward: they follow the highest stable version among the image's tags on
   ghcr.io, so a `v*` tag whose release was rejected never holds them.
 - `github-release`: the release is immutable once published. If the job failed before
   publishing, delete the draft release, then re-run.
+- `verify`: re-run it after fixing a channel, or run `scripts/release-verify.sh X.Y.Z` locally.
+
+**First release from a new trusted-publisher configuration:** npm drops a configuration that
+has not published within 48 hours of its creation. If it is older than that, delete and recreate
+it (same fields, see [npm](#npm-organization-graphviz-pure)) just before pushing the tag.
 
 ## Verifying a download
 

@@ -84,12 +84,15 @@ The bar is CONTRIBUTING's:
   `tests/golden/<engine>/` has C's output for it; an input C crashes on has none, so it is never
   rendered. Such fixes need a test that renders the input and checks it does not panic.
 - **No regressions.** No baseline weakened; refreshed baselines only where more files now match.
-- **Changelog** entry under "Unreleased" for anything a user would notice.
+- **Changelog** entry in the body, under `## Changelog entry`, for anything a user would notice
+  (`Not user-visible.` otherwise), and the `breaking` label on a breaking change. The release
+  collects the entries from the bodies; CHANGELOG.md is not edited in the pull request.
 - **Housekeeping.** A fix for a `tests/fuzz-open/NNN-*` case removes that directory, which also
   takes it off the What's left page.
 
 If the change is right but incomplete, either ask once or, when "maintainers can push" is true,
-push the missing test or changelog line to the contributor's branch yourself. That is often
+push the missing test to the contributor's branch yourself (a missing changelog entry goes in
+the body, which a maintainer can edit). That is often
 faster for small changes from automated agents. Then approve it and add it to the merge queue
 (`gh pr review N --approve && gh pr merge N`). The queue tests it on top of `master` and the pull
 requests ahead of it, and squashes it, so the history keeps one reviewed commit; nobody needs to

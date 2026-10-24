@@ -49,6 +49,9 @@ platform (`graphviz_pure_core::math`), and is compared with C running those same
 
 ## Making a release
 
-`scripts/bump-version.sh X.Y.Z` updates the version everywhere, moves the "Unreleased"
-changelog entries under the new version, and prepares the release pull request. After it is
-merged, a maintainer tags the merge commit; see [releasing.md](releasing.md).
+Every pull request carries its changelog entry in its body, under `## Changelog entry`, and one
+that makes a breaking change gets the `breaking` label. `scripts/release-prep.sh` collects the
+entries merged since the last release into CHANGELOG.md, picks the version from the labels (minor
+while `0.x` if any pull request is `breaking`, else patch), and opens the release pull request
+with `scripts/bump-version.sh`. After it is merged, a maintainer tags the merge commit; see
+[releasing.md](releasing.md).
