@@ -1084,6 +1084,59 @@ fn png_and_jpeg_output_are_images_at_graphviz_sizes() {
     assert_eq!(&std::fs::read(&jpg).unwrap()[..2], &[0xFF, 0xD8]);
 }
 
+// Issue #355: C draws png and jpg with its cairo renderer, which has none of the SVG
+// renderer's maps, tooltips, targets and labels, and whose devices have no layers. So C
+// converts no edge tooltip for them (`emit_begin_edge`'s `preprocessTooltip` runs only with
+// `GVRENDER_DOES_TOOLTIPS`), and warns that layers are not supported, naming the `-T` value.
+// The port draws these formats from an SVG emitted with cairo's features. Stderr is C 16.1.0's
+// (cairo) but for the port's font-table line, which C's reference build prints with `-Tsvg`.
+#[test]
+fn raster_output_runs_only_what_cairo_runs_like_c() {
+    let path = tmp("issue355_tooltip.gv");
+    std::fs::write(
+        &path,
+        b"digraph G { node [label=<x>]; {rank=same; a -> b [tailport=e label=\"\xe9\" \
+          labeltooltip=\"\xe9\"]} }\n",
+    )
+    .unwrap();
+    let utf8 = |g: &str| {
+        format!(
+            "Warning: Invalid 3-byte UTF8 found in input of graph {g} - treated as Latin-1. \
+             Perhaps \"-Gcharset=latin1\" is needed?\n"
+        )
+    };
+    let font = "Warning: Warning: no value for width of non-ASCII character 195. Falling back to \
+                width of space character\n";
+    for format in ["-Tpng", "-Tjpg"] {
+        let (_, err, ok) = run(&[format, path.to_str().unwrap()], "");
+        assert!(ok, "{err}");
+        assert_eq!(
+            err,
+            [utf8("G"), font.to_string(), utf8("auxg")].concat(),
+            "{format}"
+        );
+    }
+    // The SVG renderer converts the tooltip, for G again.
+    let (_, err, _) = run(&["-Tsvg", path.to_str().unwrap()], "");
+    assert_eq!(
+        err,
+        [utf8("G"), font.to_string(), utf8("auxg"), utf8("G")].concat()
+    );
+
+    let layers = "digraph { layers=\"a:b\"; x [layer=a]; y [layer=b]; x -> y }";
+    for (format, name) in [("-Tpng", "png"), ("-Tjpg:cairo", "jpg:cairo")] {
+        let (_, err, ok) = run(
+            &[format, "-o", tmp("issue355_layers").to_str().unwrap()],
+            layers,
+        );
+        assert!(ok, "{err}");
+        assert_eq!(
+            err,
+            format!("Warning: layers not supported in {name} output\n")
+        );
+    }
+}
+
 // Issue #166: getAdjustMode (lib/neatogen/adjust.c) matches the "prism" prefix with
 // strncasecmp, a byte comparison. The port sliced the `str` at byte 5 and panicked when that
 // byte fell inside a multi-byte character. C's stderr is Graphviz 16.1.0's.

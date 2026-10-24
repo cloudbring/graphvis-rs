@@ -363,11 +363,29 @@ impl<'g> GraphJobs<'g> {
     pub fn render_as(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
         let graph = self.graph;
         graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
-            self.render_job(job, format, name)
+            self.render_job(job, format, name, false)
         })
     }
 
-    fn render_job(&mut self, job: usize, format: OutputFormat, name: &str) -> Result<String> {
+    /// Runs the job of raster format `name` (`png`, `jpg:cairo`, ...), which C draws with its cairo
+    /// renderer, as SVG for the caller to rasterize: [`Self::render_as`] with the features
+    /// and name of C's cairo job, so the emit runs only what C's runs for that format. It
+    /// converts no tooltips and builds no maps (`GVRENDER_DOES_TOOLTIPS`, `_MAPS`; #355),
+    /// draws one layer, and resolves every colour name.
+    pub fn render_raster_svg_as(&mut self, job: usize, name: &str) -> Result<String> {
+        let graph = self.graph;
+        graphviz_pure_core::usershape::rendering(&graph.layout.usershapes, || {
+            self.render_job(job, OutputFormat::Svg, name, true)
+        })
+    }
+
+    fn render_job(
+        &mut self,
+        job: usize,
+        format: OutputFormat,
+        name: &str,
+        raster: bool,
+    ) -> Result<String> {
         let opts = emit::RunJob {
             job: Some(job),
             output_file: self.output_file,
@@ -422,9 +440,11 @@ impl<'g> GraphJobs<'g> {
         let mut pre = String::new();
         let text = match format {
             OutputFormat::Svg => {
-                emit::run_job(&m, svg_engine::SvgEngine::default(), opts)
-                    .0
-                    .out
+                let eng = svg_engine::SvgEngine {
+                    raster: raster.then(|| name.to_string()),
+                    ..Default::default()
+                };
+                emit::run_job(&m, eng, opts).0.out
             }
             OutputFormat::Json | OutputFormat::Json0 => {
                 // `json_begin_graph`: json renders the graph as xdot first (a job of its own,

@@ -250,6 +250,10 @@ pub(crate) fn reset_gradient_ids() {
 #[derive(Default)]
 pub(crate) struct SvgEngine {
     pub out: String,
+    /// The raster format (`png`, `jpg`, ...) this SVG is drawn for, by C's cairo renderer:
+    /// the job then has that renderer's and device's features and name, not the SVG
+    /// plugin's (#355).
+    pub raster: Option<String>,
 }
 
 impl SvgEngine {
@@ -457,8 +461,21 @@ impl SvgEngine {
     }
 }
 
+/// `render_features_cairo` with the flags of the png and jpeg devices
+/// (`plugin/pango/gvrender_pango.c`, `plugin/gdk/gvdevice_gdk.c`): no maps, tooltips,
+/// targets or labels for the renderer, no layers for the device, no known colour names.
+const CAIRO_FEATURES: Features = Features {
+    flags: GVRENDER_Y_GOES_DOWN | GVRENDER_DOES_TRANSFORM | GVDEVICE_DOES_TRUECOLOR,
+    default_pad: 4.0,
+    knowncolors: &[],
+    rgba: true,
+};
+
 impl Engine for SvgEngine {
     fn features(&self) -> Features {
+        if self.raster.is_some() {
+            return CAIRO_FEATURES;
+        }
         Features {
             flags: crate::emit::job::GVDEVICE_DOES_LAYERS
                 | GVRENDER_Y_GOES_DOWN
@@ -871,6 +888,10 @@ impl Engine for SvgEngine {
         self.put("<!-- ");
         self.put(&xml(s));
         self.put(" -->\n");
+    }
+
+    fn output_langname(&self) -> &str {
+        self.raster.as_deref().unwrap_or("svg")
     }
 
     fn render_type(&self) -> &str {

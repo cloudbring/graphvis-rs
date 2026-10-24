@@ -615,7 +615,7 @@ fn render_job(
         // Graphviz draws raster formats at 96 dpi unless the graph sets `dpi` (or
         // `resolution`), which then scales the drawing.
         let explicit_dpi = graphviz_pure_core::cnum::drawing_dpi(&graph.graph_attrs) > 0.0;
-        let svg = jobs.render_as(job, OutputFormat::Svg, "svg")?;
+        let svg = jobs.render_raster_svg_as(job, langname)?;
         return graphviz_pure_raster::rasterize(&svg, fmt, explicit_dpi)
             .map_err(graphviz_pure_core::GraphvizError::RenderError);
     }

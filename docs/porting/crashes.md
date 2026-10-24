@@ -794,7 +794,7 @@ not crash there. It writes the coordinates as `nan` (`-Tplain`, `-Tdot`'s `pos`)
 the edges out of the SVG, on every run, and the port writes what C writes.
 
 The only C test that reads these splines is `routesplines_`'s check for a spline that goes
-straight across or straight up and down (`routespl.c:516-534`). It clears each flag on
+straight across or straight up and down (`routespl.c:508-545`). It clears each flag on
 `fabs(ps[0].y - ps[i].y) > FUDGE`, which is false for NaN, so a NaN spline counts as
 straight: C bounds its boxes at the first point's x at once and prints no warning. The port
 tests the same way (`is_straight` in `common/routespl.rs`). It used to test the negation,
