@@ -6734,6 +6734,7 @@ fn clip_and_install_crossed_walks_keep_one_segment() {
         let (_, err, ok) = run(&args, src);
         assert!(ok && !err.contains("panicked"), "{src}: {err}");
     }
+}
 
 // Issues #267, #344, #346. cgraph's `agnameof` (lib/cgraph/id.c) names an anonymous graph or
 // subgraph, or one with a local `%` name, by its id: the root is `%1`. The port printed the
