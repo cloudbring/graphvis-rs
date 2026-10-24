@@ -198,8 +198,8 @@ impl Output {
                 xlabel: lp_of(ed.xlabel),
                 head_label: place_of(ed.head_label),
                 tail_label: place_of(ed.tail_label),
-                // `\E` reads `ED_tail_port(e).name` (labels.c:316) of every edge
-                // drawn, a labelled edge without a spline too.
+                // `\E` (in the title, `id`, `URL`, `tooltip`) reads `ED_tail_port(e).name`
+                // (labels.c:316) of every edge drawn, a labelled edge without a spline too.
                 port_names: Some((
                     ed.tail_port.name.clone().unwrap_or_default(),
                     ed.head_port.name.clone().unwrap_or_default(),

@@ -8516,6 +8516,8 @@ fn issue286_edge_without_a_spline_takes_the_layouts_port_names() {
                c -> b [sametail=t1]; c -> e [tailport=se,label=yy,sametail=t1]; e -> c; }";
     let (out, err, ok) = run(&["-Tsvg"], src);
     assert!(ok, "{err}");
+    // sametail cleared `c -> e`'s port name: its title has none.
+    assert!(out.contains("<title>c&#45;&gt;e</title>"), "{out}");
     let want = r#"<!-- Title: G Pages: 1 -->
 <svg width="166pt" height="222pt"
  viewBox="0.00 0.00 166.00 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
