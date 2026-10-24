@@ -387,6 +387,19 @@ pub struct NodeLayout {
     pub higher_dims: Vec<f64>,
 }
 
+/// Where an edge's final port names come from ([`EdgeLayout::port_names`]).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PortNames {
+    /// The layout keeps the input's ports, so renderers read the edge's own `tailport` and
+    /// `headport`: every engine but dot, and dot's `phase` outputs, which stop before
+    /// `dot_sameports`.
+    #[default]
+    Input,
+    /// dot's final names, which `sameport` may have cleared (empty). dot sets them for every
+    /// edge, drawn or not, so a renderer never rebuilds a dot edge's names from its input.
+    Layout { tail: String, head: String },
+}
+
 /// What a layout leaves on an edge for the renderers and writers, beyond the spline and the
 /// main label ([`EdgeData::spline`], [`EdgeData::label_pos`]).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -398,9 +411,9 @@ pub struct EdgeLayout {
     /// `ED_head_label(e)` and `ED_tail_label(e)`: drawn only when `set`.
     pub head_label: Option<LabelPlace>,
     pub tail_label: Option<LabelPlace>,
-    /// The final tail and head port names (`ED_tail_port(e).name`, `ED_head_port(e).name`),
-    /// which `\E` substitutes; empty where the layout dropped the name (dot's `sameport`).
-    pub port_names: Option<(String, String)>,
+    /// The tail and head port names `\E` substitutes (`ED_tail_port(e).name`,
+    /// `ED_head_port(e).name`).
+    pub port_names: PortNames,
     /// The edge was not given layout attributes although it may have a spline:
     /// `attach_attrs_and_arrows` skips an `IGNORED` edge (dot's `orthoEdges` under
     /// `concentrate` routes the first edge of each node pair whatever its type), and every

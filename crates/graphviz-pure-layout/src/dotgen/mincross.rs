@@ -275,7 +275,7 @@ impl Dot<'_> {
     }
 
     fn n_ordering_declared(&self) -> bool {
-        self.root_input.node_attr_declared("ordering")
+        self.node_attr_declared("ordering")
     }
 
     fn ordered_edges(&mut self, g: G) {

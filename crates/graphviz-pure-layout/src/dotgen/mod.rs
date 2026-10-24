@@ -76,6 +76,10 @@ pub struct Dot<'a> {
     // globals
     pub cl_type: i32,
     pub concentrate: bool,
+    /// The node and edge symbols `setState` NULLs on `make_flat_adj_edges`' auxg although
+    /// cloneGraph declared them: [`Dot::node_attr_declared`] and [`Dot::edge_attr_declared`]
+    /// read them as undeclared. Empty for every other graph.
+    pub null_syms: (&'static [&'static str], &'static [&'static str]),
     // decomp.c statics
     pub cmark: usize,
     pub decomp_last: Option<N>,
@@ -124,6 +128,7 @@ impl<'a> Dot<'a> {
             edge_seq: 0,
             cl_type: LOCAL,
             concentrate: false,
+            null_syms: (&[], &[]),
             cmark: 0,
             decomp_last: None,
             xg_last: None,

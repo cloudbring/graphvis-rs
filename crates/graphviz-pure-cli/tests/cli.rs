@@ -2546,6 +2546,74 @@ c -> d [fontcolor=blue, penwidth=3.99];
     );
 }
 
+/// Issue #376: cloneGraph declares every symbol of the main root on the aux graph of
+/// flat adjacent edges with ports, including those only a subgraph's defaults declared
+/// (`samehead`, `headlabel`, `labelangle`, the node `ordering`), and setState NULLs
+/// `E_headlabel`. The expected SVG is C 16.1.0's, after the generator comment.
+#[test]
+fn issue376_aux_graph_declares_subgraph_only_symbols() {
+    let src = "digraph G { subgraph s1 { edge [samehead=h1,headlabel=H,labelangle=30]; \
+               node [ordering=out]; z1 -> z2; } { rank=same; a; b } \
+               a -> b [tailport=n,label=x]; a -> b [headport=s,label=yy]; }";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    let want = r#"<!-- Title: G Pages: 1 -->
+<svg width="224pt" height="143pt"
+ viewBox="0.00 0.00 224.00 143.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 138.91)">
+<title>G</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-138.91 220,-138.91 220,4 -4,4"/>
+<!-- z1 -->
+<g id="node1" class="node">
+<title>z1</title>
+<ellipse fill="none" stroke="black" cx="27" cy="-91" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="27" y="-86.8" font-family="Times,serif" font-size="14.00">z1</text>
+</g>
+<!-- z2 -->
+<g id="node2" class="node">
+<title>z2</title>
+<ellipse fill="none" stroke="black" cx="27" cy="-18" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="27" y="-13.8" font-family="Times,serif" font-size="14.00">z2</text>
+</g>
+<!-- z1&#45;&gt;z2 -->
+<g id="edge1" class="edge">
+<title>z1&#45;&gt;z2</title>
+<path fill="none" stroke="black" d="M27,-72.81C27,-65.23 27,-56.1 27,-47.54"/>
+<polygon fill="black" stroke="black" points="30.5,-47.54 27,-37.54 23.5,-47.54 30.5,-47.54"/>
+<text xml:space="preserve" text-anchor="middle" x="22" y="-40.49" font-family="Times,serif" font-size="14.00">H</text>
+</g>
+<!-- a -->
+<g id="node3" class="node">
+<title>a</title>
+<ellipse fill="none" stroke="black" cx="99" cy="-91" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="99" y="-86.8" font-family="Times,serif" font-size="14.00">a</text>
+</g>
+<!-- b -->
+<g id="node4" class="node">
+<title>b</title>
+<ellipse fill="none" stroke="black" cx="189" cy="-91" rx="27" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="189" y="-86.8" font-family="Times,serif" font-size="14.00">b</text>
+</g>
+<!-- a&#45;&gt;b -->
+<g id="edge2" class="edge">
+<title>a:n&#45;&gt;b</title>
+<path fill="none" stroke="black" d="M99,-110.32C99,-135.17 132.53,-122.23 158.43,-108.53"/>
+<polygon fill="black" stroke="black" points="159.85,-111.75 166.92,-103.86 156.47,-105.62 159.85,-111.75"/>
+<text xml:space="preserve" text-anchor="middle" x="144" y="-122.31" font-family="Times,serif" font-size="14.00">x</text>
+</g>
+<!-- a&#45;&gt;b -->
+<g id="edge3" class="edge">
+<title>a&#45;&gt;b:s</title>
+<path fill="none" stroke="black" d="M113.6,-75.75C120.01,-69.68 128.2,-63.38 137,-60.2 154.91,-53.72 177.67,-49.78 185.87,-60.82"/>
+<polygon fill="black" stroke="black" points="182.45,-61.58 188.58,-70.22 189.18,-59.65 182.45,-61.58"/>
+<text xml:space="preserve" text-anchor="middle" x="144" y="-64.4" font-family="Times,serif" font-size="14.00">yy</text>
+</g>
+</g>
+</svg>
+"#;
+    assert_eq!(out.split_once(" -->\n").map(|(_, b)| b), Some(want));
+}
+
 /// Issue #138: with a rotated box (or `shape=none`) and a compass port, both
 /// endpoints get triangle edges but `triPath` never reaches the tail, so the
 /// `dad` walk in C's `mkPoly` (`lib/neatogen/multispline.c:968-971`) stops on a
@@ -9975,7 +10043,10 @@ fn issue286_edge_without_a_spline_takes_the_layouts_port_names() {
     let (out, err, ok) = run(&["-Tsvg"], src);
     assert!(ok, "{err}");
     // sametail cleared `c -> e`'s port name: its title has none.
-    assert!(out.contains("<title>c&#45;&gt;e</title>"), "{out}");
+    assert!(
+        out.contains("<title>c&#45;&gt;e</title>"),
+        "sametail cleared c -> e's tail port, so its title is c->e as in C, not c:se->e:\n{out}"
+    );
     let want = r#"<!-- Title: G Pages: 1 -->
 <svg width="166pt" height="222pt"
  viewBox="0.00 0.00 166.00 222.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">

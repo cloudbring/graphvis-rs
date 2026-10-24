@@ -12,7 +12,7 @@ use super::attrs::Attrs;
 use graphviz_pure_core::font::{PostscriptFontAlias, TextJustify, translate_postscript_fontname};
 use graphviz_pure_core::strtod::sscanf;
 use graphviz_pure_core::{
-    AttrMap, BoundingBox, ClusterReg, Graph, GraphKind, GraphLayout, LabelPlace, Point,
+    AttrMap, BoundingBox, ClusterReg, Graph, GraphKind, GraphLayout, LabelPlace, Point, PortNames,
 };
 use graphviz_pure_geom::html_label::HtmlLabel;
 use graphviz_pure_geom::node_size::{
@@ -385,16 +385,16 @@ impl<'g> Model<'g> {
                 head_label,
                 tail_label,
                 tail_port: match &e.layout.port_names {
-                    Some((t, _)) => Some(t.as_str()).filter(|s| !s.is_empty()),
-                    None => e
+                    PortNames::Layout { tail, .. } => Some(tail.as_str()).filter(|s| !s.is_empty()),
+                    PortNames::Input => e
                         .tail_port
                         .compass
                         .as_deref()
                         .or(e.tail_port.name.as_deref()),
                 },
                 head_port: match &e.layout.port_names {
-                    Some((_, h)) => Some(h.as_str()).filter(|s| !s.is_empty()),
-                    None => e
+                    PortNames::Layout { head, .. } => Some(head.as_str()).filter(|s| !s.is_empty()),
+                    PortNames::Input => e
                         .head_port
                         .compass
                         .as_deref()

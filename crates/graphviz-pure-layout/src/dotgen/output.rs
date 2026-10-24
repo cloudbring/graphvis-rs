@@ -175,17 +175,21 @@ impl Output {
         let pos_of = |l: Option<L>| l.map(|l| d.labels[l].pos);
         for ei in 0..d.input.edges.len() {
             let ed = &d.edges[ei];
+            // Every field spelled out, so a new one is decided here for dot.
             let mut el = graphviz_pure_core::EdgeLayout {
+                seq: None,
                 xlabel: lp_of(ed.xlabel),
                 head_label: place_of(ed.head_label),
                 tail_label: place_of(ed.tail_label),
+                // Both names, for every edge, drawn or not, before the branches below:
                 // `\E` (in the title, `id`, `URL`, `tooltip`) reads `ED_tail_port(e).name`
-                // (labels.c:316) of every edge drawn, a labelled edge without a spline too.
-                port_names: Some((
-                    ed.tail_port.name.clone().unwrap_or_default(),
-                    ed.head_port.name.clone().unwrap_or_default(),
-                )),
-                ..Default::default()
+                // and `ED_head_port(e).name` (labels.c:316) of every edge C emits, a
+                // labelled edge without a spline too (#286).
+                port_names: graphviz_pure_core::PortNames::Layout {
+                    tail: ed.tail_port.name.clone().unwrap_or_default(),
+                    head: ed.head_port.name.clone().unwrap_or_default(),
+                },
+                no_attrs: false,
             };
             let Some(bzs) = ed.spl.as_ref() else {
                 edge_layout.push(el);
