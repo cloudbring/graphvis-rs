@@ -365,6 +365,7 @@ pub fn with_lgraph<R>(
         out,
         inn,
         ndim: 2,
+        odim: 0,
         nodesep: 18,
         bb: BoundingBox::default(),
         label: None,
@@ -1264,28 +1265,16 @@ pub fn fdp_layout(graph: &mut Graph) -> Result<()> {
             .zip(f.labeled.iter().copied())
             .collect();
         finish(&g, graph);
-        let origin = "0.0,0.0".to_string();
+        let origin = Point::default();
         let mark = |gr: &mut Graph| {
-            gr.graph_attrs.insert(
-                crate::common::postproc::LABEL_POS_KEY.to_string(),
-                origin.clone(),
-            );
+            gr.layout.label_pos = Some(origin);
             for &(sg, has_label) in &labeled {
-                let a = &mut gr.subgraphs[sg].graph_attrs;
-                a.insert(
-                    graphviz_pure_core::REGISTERED_CLUSTER_KEY.to_string(),
-                    String::new(),
-                );
+                let l = &mut gr.subgraphs[sg].layout;
+                l.reg = graphviz_pure_core::ClusterReg::Registered;
                 if has_label {
-                    a.insert(
-                        crate::common::postproc::LABEL_POS_KEY.to_string(),
-                        origin.clone(),
-                    );
+                    l.label_pos = Some(origin);
                 } else {
-                    a.insert(
-                        graphviz_pure_core::NO_GRAPH_LABEL_KEY.to_string(),
-                        String::new(),
-                    );
+                    l.no_label = true;
                 }
             }
         };

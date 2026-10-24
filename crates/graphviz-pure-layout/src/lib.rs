@@ -70,8 +70,6 @@ pub fn layout_graph(graph: &mut Graph, engine: LayoutEngine) -> Result<()> {
     layout_graph_with_options(graph, engine, LayoutOptions::default())
 }
 
-use graphviz_pure_core::LAYOUT_LABEL_POS_KEYS;
-
 pub fn layout_graph_with_options(
     graph: &mut Graph,
     engine: LayoutEngine,
@@ -98,13 +96,9 @@ pub fn layout_graph_with_options(
                 .iter()
                 .any(|n| n.attrs.contains_key("shapefile")),
     );
-    // Only dot exports its `GD_clust` lists; to C the key is an ordinary attribute, so a
-    // value from the input must not reorder the clusters of another engine's drawing.
-    let key = graphviz_pure_core::CLUSTER_LIST_KEY;
-    graph.graph_attrs.remove(key);
-    for s in &mut graph.subgraphs {
-        s.graph_attrs.remove(key);
-    }
+    // A layout of the same graph starts from no result (the sequence numbers of nodes an
+    // earlier `Reduce` deleted stay: the objects are gone).
+    clear_layout_results(graph);
     // graph_init's do_graph_label(g) (lib/common/input.c:711) makes the root label before
     // any engine's node and edge init, so its diagnostics come first; the engines' own
     // calls do not repeat them.
@@ -124,13 +118,7 @@ pub fn layout_graph_with_options(
     } else {
         engine
     };
-    // A layout of the same graph must not keep an earlier dot layout's lw/rw split.
-    for n in &mut graph.nodes {
-        n.attrs.remove(graphviz_pure_core::NODE_LW_RW_KEY);
-    }
-
-    let input = label_pos_inputs(graph);
-    let result = match effective_engine {
+    match effective_engine {
         LayoutEngine::Dot => dotgen::layout_dot(graph),
         LayoutEngine::Neato => neatogen::neatoinit::neato_layout(graph, options.nop),
         // nop1_layout and nop2_layout: neato_layout with Nop set.
@@ -142,56 +130,31 @@ pub fn layout_graph_with_options(
         LayoutEngine::Circo => circogen::circularinit::circo_layout(graph),
         LayoutEngine::Osage => osage::osage_layout(graph),
         LayoutEngine::Patchwork => patchwork::patchwork_layout(graph),
-    };
-    keep_label_pos_inputs(graph, input);
-    result
-}
-
-/// Each node's and edge's input values of the [`LAYOUT_LABEL_POS_KEYS`].
-type LabelPosInputs = (Vec<[Option<String>; 3]>, Vec<[Option<String>; 3]>);
-
-fn label_pos_inputs(graph: &Graph) -> LabelPosInputs {
-    let of = |a: &graphviz_pure_core::AttrMap| LAYOUT_LABEL_POS_KEYS.map(|k| a.get(k).cloned());
-    (
-        graph.nodes.iter().map(|n| of(&n.attrs)).collect(),
-        graph.edges.iter().map(|e| of(&e.attrs)).collect(),
-    )
-}
-
-/// Records, on each object whose [`LAYOUT_LABEL_POS_KEYS`] the layout changed, the input
-/// value ([`graphviz_pure_core::LAYOUT_INPUT_PREFIX`]). Objects are matched by their cgraph
-/// sequence number, which survives the nodes `Reduce` deletes.
-fn keep_label_pos_inputs(graph: &mut Graph, (nodes, edges): LabelPosInputs) {
-    use graphviz_pure_core::{LAYOUT_INPUT_PREFIX, LAYOUT_NO_INPUT_PREFIX, SEQ_KEY};
-    let keep = |a: &mut graphviz_pure_core::AttrMap, input: &[Option<String>; 3]| {
-        for (k, before) in LAYOUT_LABEL_POS_KEYS.iter().zip(input) {
-            if a.get(*k) == before.as_ref()
-                || a.contains_key(&format!("{LAYOUT_INPUT_PREFIX}{k}"))
-                || a.contains_key(&format!("{LAYOUT_NO_INPUT_PREFIX}{k}"))
-            {
-                continue;
-            }
-            match before {
-                Some(v) => a.insert(format!("{LAYOUT_INPUT_PREFIX}{k}"), v.clone()),
-                None => a.insert(format!("{LAYOUT_NO_INPUT_PREFIX}{k}"), String::new()),
-            };
-        }
-    };
-    let seq = |a: &graphviz_pure_core::AttrMap, i: usize| {
-        a.get(SEQ_KEY)
-            .and_then(|s| s.parse::<usize>().ok())
-            .and_then(|s| s.checked_sub(1))
-            .unwrap_or(i)
-    };
-    for (i, n) in graph.nodes.iter_mut().enumerate() {
-        if let Some(input) = nodes.get(seq(&n.attrs, i)) {
-            keep(&mut n.attrs, input);
-        }
     }
-    for (i, e) in graph.edges.iter_mut().enumerate() {
-        if let Some(input) = edges.get(seq(&e.attrs, i)) {
-            keep(&mut e.attrs, input);
-        }
+}
+
+/// Resets every layout result of `graph` but the sequence numbers.
+fn clear_layout_results(graph: &mut Graph) {
+    use graphviz_pure_core::{EdgeLayout, GraphLayout, NodeLayout};
+    graph.layout = GraphLayout::default();
+    graph.render_view = None;
+    for s in &mut graph.subgraphs {
+        s.layout = GraphLayout::default();
+    }
+    for n in &mut graph.nodes {
+        n.layout = NodeLayout {
+            seq: n.layout.seq,
+            ..NodeLayout::default()
+        };
+    }
+    for e in &mut graph.edges {
+        e.spline = graphviz_pure_core::Spline::default();
+        e.label_pos = None;
+        e.label_unplaced = false;
+        e.layout = EdgeLayout {
+            seq: e.layout.seq,
+            ..EdgeLayout::default()
+        };
     }
 }
 
@@ -215,13 +178,27 @@ mod tests {
         let mut g = Graph::new("G", GraphKind::Directed, false);
         let a = g.ensure_node("a");
         g.add_edge(a, a, AttrMap::new());
-        let key = graphviz_pure_core::NODE_LW_RW_KEY;
         g.graph_attrs.insert("splines".into(), String::new());
         layout_graph(&mut g, LayoutEngine::Dot).unwrap();
-        assert!(g.nodes[a.0 as usize].attrs.contains_key(key));
+        assert!(g.nodes[a.0 as usize].layout.lw_rw.is_some());
         g.graph_attrs.insert("splines".into(), "true".into());
         layout_graph(&mut g, LayoutEngine::Dot).unwrap();
-        assert!(!g.nodes[a.0 as usize].attrs.contains_key(key));
+        assert!(g.nodes[a.0 as usize].layout.lw_rw.is_none());
+    }
+
+    // A layout of a graph starts from no result: fdp's render view and the splines of an
+    // earlier layout do not survive a dot layout that routes no edge.
+    #[test]
+    fn relayout_drops_the_previous_view_and_splines() {
+        let mut g = make_chain_graph();
+        g.edges[0].attrs.insert("label".into(), "l".into());
+        layout_graph(&mut g, LayoutEngine::Fdp).unwrap();
+        assert!(g.edges.iter().all(|e| !e.spline.segments.is_empty()));
+        g.render_view = Some(Box::new(g.clone()));
+        g.graph_attrs.insert("splines".into(), "none".into());
+        layout_graph(&mut g, LayoutEngine::Dot).unwrap();
+        assert!(g.render_view.is_none());
+        assert!(g.edges.iter().all(|e| e.spline.segments.is_empty()));
     }
 
     /// An edge as (tail, head, attributes).
@@ -388,6 +365,7 @@ mod tests {
             bb: Default::default(),
             html_name: false,
             empty_name: false,
+            layout: Default::default(),
         });
 
         layout_graph(&mut g, LayoutEngine::Dot).unwrap();
@@ -421,6 +399,7 @@ mod tests {
             bb: Default::default(),
             html_name: false,
             empty_name: false,
+            layout: Default::default(),
         });
         i
     }

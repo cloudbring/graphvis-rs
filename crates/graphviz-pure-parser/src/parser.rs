@@ -900,6 +900,7 @@ impl<'a> Parser<'a> {
             bb: BoundingBox::default(),
             html_name: html,
             empty_name,
+            layout: Default::default(),
         });
 
         id

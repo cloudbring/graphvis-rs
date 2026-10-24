@@ -213,6 +213,8 @@ pub struct LGraph<'a> {
     /// In-edges of each node ordered by (tail, edge) sequence.
     pub inn: Vec<Vec<usize>>,
     pub ndim: usize,
+    /// `GD_odim(root)`: the output dimension, which only neato and sfdp set (`dimen`).
+    pub odim: usize,
     /// `GD_nodesep(root)` in points.
     pub nodesep: i64,
     pub bb: BoundingBox,

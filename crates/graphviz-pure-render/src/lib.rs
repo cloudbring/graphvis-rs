@@ -46,7 +46,6 @@ pub fn render_svg(graph: &Graph) -> String {
 }
 
 use graphviz_pure_core::{Graph, GraphvizError, Result};
-use graphviz_pure_parser::write_canon;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -103,10 +102,7 @@ fn input_edge_order(g: &Graph) -> Vec<usize> {
 
 /// `IS_CLUST_NODE(n)` for each node.
 fn clust_nodes(g: &Graph) -> Vec<bool> {
-    g.nodes
-        .iter()
-        .map(|n| n.attrs.contains_key(graphviz_pure_core::CLUST_NODE_KEY))
-        .collect()
+    g.nodes.iter().map(|n| n.layout.clust_node).collect()
 }
 
 /// Edge iteration order of `agfstnode`/`agfstout` (numbering of `_gvid` in JSON).
@@ -152,15 +148,22 @@ fn attached(
 
 /// Records the attributes the layout and renderers set in cgraph's dictionaries:
 /// `safe_dcl` for node and edge attributes, and graph values as local symbols (`agxset`).
-fn sync_dicts(g: &mut Graph, orig: &Graph) {
+/// `set` holds, per subgraph, the graph attributes a writer set with `agxset`
+/// (`rec_attach_bb`, xdot's `_draw_`), which become local values even when they equal the
+/// inherited ones.
+fn sync_dicts(g: &mut Graph, orig: &Graph, set: &[std::collections::BTreeSet<String>]) {
     use graphviz_pure_core::{AttrSym, HTML_VALUE_PREFIX, attr_is_html};
     let mark = |k: &str| k.starts_with(HTML_VALUE_PREFIX);
+    let none = std::collections::BTreeSet::new();
     let set_graph = |d: &mut std::collections::BTreeMap<String, AttrSym>,
                      now: &graphviz_pure_core::AttrMap,
-                     before: &graphviz_pure_core::AttrMap| {
+                     before: &graphviz_pure_core::AttrMap,
+                     set: &std::collections::BTreeSet<String>| {
         for (k, v) in now {
             if !mark(k)
-                && (before.get(k) != Some(v) || attr_is_html(before, k) != attr_is_html(now, k))
+                && (before.get(k) != Some(v)
+                    || attr_is_html(before, k) != attr_is_html(now, k)
+                    || set.contains(k))
             {
                 let sym = d.entry(k.clone()).or_default();
                 sym.defval = v.clone();
@@ -175,7 +178,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
             g.dicts[0].graph.entry(k.clone()).or_default();
         }
     }
-    set_graph(&mut g.dicts[0].graph, &root_now, root_before);
+    set_graph(&mut g.dicts[0].graph, &root_now, root_before, &none);
     for i in 0..g.subgraphs.len() {
         let now = g.subgraphs[i].graph_attrs.clone();
         for k in now.keys().filter(|k| !mark(k)) {
@@ -187,6 +190,7 @@ fn sync_dicts(g: &mut Graph, orig: &Graph) {
             &mut g.dicts[i + 1].graph,
             &now,
             &orig.subgraphs[i].graph_attrs,
+            set.get(i).unwrap_or(&none),
         );
     }
     let mut node_keys = std::collections::BTreeSet::new();
@@ -305,37 +309,10 @@ fn with_earlier(g: &mut Graph, earlier: Option<&Graph>, over: bool) {
 }
 
 /// The graph as cgraph holds it for the writers that do not attach layout attributes
-/// (`canon`, `dot_json`, `xdot_json`): without the port's private layout keys.
+/// (`canon`, `dot_json`, `xdot_json`): fdp's render view is not part of it.
 fn cgraph_view(graph: &Graph) -> Graph {
     let mut g = graph.clone();
     g.render_view = None;
-    let private = |a: &mut graphviz_pure_core::AttrMap| {
-        // The input values of the label positions the layout wrote for the renderers.
-        for k in graphviz_pure_core::LAYOUT_LABEL_POS_KEYS {
-            if let Some(v) = a.get(&format!("{}{k}", graphviz_pure_core::LAYOUT_INPUT_PREFIX)) {
-                a.insert(k.to_string(), v.clone());
-            } else if a.contains_key(&format!(
-                "{}{k}",
-                graphviz_pure_core::LAYOUT_NO_INPUT_PREFIX
-            )) {
-                a.remove(k);
-            }
-        }
-        // (the writers read the HTML marks)
-        a.retain(|k, _| {
-            !k.starts_with('\u{1}') || k.starts_with(graphviz_pure_core::HTML_VALUE_PREFIX)
-        });
-    };
-    private(&mut g.graph_attrs);
-    for sg in &mut g.subgraphs {
-        private(&mut sg.graph_attrs);
-    }
-    for n in &mut g.nodes {
-        private(&mut n.attrs);
-    }
-    for e in &mut g.edges {
-        private(&mut e.attrs);
-    }
     g
 }
 
@@ -345,11 +322,28 @@ fn cgraph_view(graph: &Graph) -> Graph {
 pub struct GraphJobs<'g> {
     graph: &'g Graph,
     set: Option<Graph>,
+    /// Per subgraph, the graph attributes earlier jobs set with `agxset` (see
+    /// [`sync_dicts`]): they stay local values of the subgraph for every later writer.
+    forced: Vec<std::collections::BTreeSet<String>>,
 }
 
 impl<'g> GraphJobs<'g> {
     pub fn new(graph: &'g Graph) -> Self {
-        GraphJobs { graph, set: None }
+        GraphJobs {
+            graph,
+            set: None,
+            forced: Vec::new(),
+        }
+    }
+
+    /// Adds what a job's `attach_attrs` set to what earlier jobs set.
+    fn keep_forced(&mut self, forced: &[std::collections::BTreeSet<String>]) {
+        if self.forced.len() < forced.len() {
+            self.forced.resize(forced.len(), Default::default());
+        }
+        for (into, from) in self.forced.iter_mut().zip(forced) {
+            into.extend(from.iter().cloned());
+        }
     }
 
     /// Runs the job for `format`; `name` is the `-T` name (`job->output_langname`), which
@@ -377,10 +371,10 @@ impl<'g> GraphJobs<'g> {
             with_earlier(&mut g, self.set.as_ref(), true);
             if format == OutputFormat::Canon {
                 if g.dicts.len() == g.subgraphs.len() + 1 {
-                    sync_dicts(&mut g, graph);
+                    sync_dicts(&mut g, graph, &self.forced);
                     return Ok(agwrite::agwrite(&g));
                 }
-                return Ok(write_canon(&g));
+                return Ok(graphviz_pure_parser::write_canon_forced(&g, &self.forced));
             }
             return Ok(json::write_json(
                 &g,
@@ -400,8 +394,9 @@ impl<'g> GraphJobs<'g> {
             OutputFormat::Json | OutputFormat::Json0 => {
                 // `json_begin_graph`: json renders the graph as xdot first, json0 attaches
                 // the layout attributes; then `emit_graph` runs for the json job itself.
-                let (mut g, _) = attached(&m, format == OutputFormat::Json, None);
+                let (mut g, forced) = attached(&m, format == OutputFormat::Json, None);
                 keep_set(&mut self.set, &g);
+                self.keep_forced(&forced);
                 emit_null(&m, JSON_FEATURES, name);
                 with_earlier(&mut g, self.set.as_ref(), false);
                 json::write_json(
@@ -427,12 +422,13 @@ impl<'g> GraphJobs<'g> {
                 }
                 with_earlier(&mut g, self.set.as_ref(), false);
                 keep_set(&mut self.set, &g);
+                self.keep_forced(&forced);
                 if g.dicts.len() == g.subgraphs.len() + 1 {
-                    sync_dicts(&mut g, graph);
+                    sync_dicts(&mut g, graph, &self.forced);
                     agwrite::agwrite(&g)
                 } else {
-                    emit::output::propagate_inherited(&mut g, graph, &forced);
-                    graphviz_pure_parser::write_canon_forced(&g, &forced)
+                    emit::output::propagate_inherited(&mut g, graph, &self.forced);
+                    graphviz_pure_parser::write_canon_forced(&g, &self.forced)
                 }
             }
             OutputFormat::Plain => {
@@ -460,7 +456,7 @@ mod tests {
     // once each below the root: a bad list from a caller that skipped layout cannot
     // make the cluster tree cyclic or multiply it.
     #[test]
-    fn cluster_list_key_keeps_only_descendants() {
+    fn cluster_list_keeps_only_descendants() {
         let mut g = parse_dot(
             "digraph G { subgraph cluster_a { a subgraph cluster_c { c } } subgraph cluster_b { b } }",
         )
@@ -471,10 +467,7 @@ mod tests {
         for s in &mut g.subgraphs {
             s.bb = BoundingBox::new(10.0, 10.0, 50.0, 50.0);
         }
-        g.subgraphs[a].graph_attrs.insert(
-            graphviz_pure_core::CLUSTER_LIST_KEY.to_string(),
-            format!("{a} {c} {c} {b} 99"),
-        );
+        g.subgraphs[a].layout.clusters = Some(vec![a, c, c, b, 99]);
         let svg = render_graph(&g, OutputFormat::Svg).expect("render");
         let titles: Vec<&str> = svg
             .split("class=\"cluster\">\n<title>")

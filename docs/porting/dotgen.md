@@ -37,7 +37,7 @@ C file-scope statics live as fields on `Dot` (`cmark`, `min_quit`, `max_iter`,
 | `splinegraph.rs` | glue | `SplineGraph`/`PortGraph`/`XLabelGraph`/`OrthoGraph` for `Dot` (the `ND_*`/`ED_*` view the shared `lib/common` and `lib/ortho` code uses), `record_path` (`pboxfn`), `arrow_flags` with `ED_conc_opp_flag` |
 | `postproc.rs` | `common/postproc.c` (`gv_postprocess`, `place_graph_label`, `place_flip_graph_label`, `place_root_label`, `translate_drawing`, `map_edge`, `translate_bb`, `map_point`), `dotinit.c` (`removeFill`) | ported; `addXLabels` is the shared `common::xlabels::add_xlabels` |
 | `pack.rs` | `dotinit.c` (`doDot`'s pack branch, `initSubg`, `attachPos`, `resetCoord`, `copyCluster`, `copyClusterInfo`) | ported, see "Phase 3" |
-| `output.rs` | `common/output.c` (`attach_attrs_and_arrows`, the parts the IR needs) | write-back into `graphviz_pure_core::Graph`: positions, splines with `sflag`/`eflag`, `lp`/`head_lp`/`tail_lp`/`xlp` with C's emission rules, graph/cluster label positions (`common::postproc::LABEL_POS_KEY`) |
+| `output.rs` | `common/output.c` (`attach_attrs_and_arrows`, the parts the IR needs) | write-back into `graphviz_pure_core::Graph`: positions, splines with `sflag`/`eflag`, `lp`/`head_lp`/`tail_lp`/`xlp` with C's emission rules, graph/cluster label positions (`GraphLayout::label_pos`) |
 
 Shared code outside `dotgen/` that dot uses (one implementation per C function):
 
@@ -198,7 +198,7 @@ subgraphs) and `lib/pack` packs through the `PackGraph` trait (`DotPack`:
 `resetCoord` and `copyClusterInfo` (later components win) follow, and
 postprocessing runs with `EDGE_TYPE(root) = EDGETYPE_NONE` (the root never
 had `setEdgeType`), so edge labels and xlabels stay unplaced as in C: the
-output marks them (`label_unplaced`, `graphviz_pure_core::UNPLACED_PORT_LABELS_KEY`) and
+output marks them (`label_unplaced`, the `set` flag of `EdgeLayout::head_label`/`tail_label`) and
 the renderers do not draw them.
 
 Other fixes found on the way: command-line `-G/-N/-E` attributes are `fixed`

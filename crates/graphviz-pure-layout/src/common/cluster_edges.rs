@@ -10,7 +10,7 @@
 //! [`Graph`] (`work`) and maps the layout back with [`undo_cluster_edges`].
 
 use crate::fdpgen::ClusterTree;
-use graphviz_pure_core::{AttrMap, CLUST_NODE_KEY, EdgeId, Graph, NodeId};
+use graphviz_pure_core::{AttrMap, EdgeId, Graph, NodeId, NodeLayout};
 use std::collections::HashMap;
 
 /// The graph with cluster edges replaced, and how it maps to the input.
@@ -327,19 +327,17 @@ pub fn render_view(ce: &ClusterEdges, work: &Graph, input: &Graph) -> Graph {
         *s = input.edges.len() + k + 1;
     }
     for (e, s) in v.edges.iter_mut().zip(edge_seq) {
-        e.attrs
-            .insert(graphviz_pure_core::SEQ_KEY.to_string(), s.to_string());
+        e.layout.seq = Some(s);
     }
     for (n, s) in v.nodes.iter_mut().zip(node_seq) {
-        n.attrs
-            .insert(graphviz_pure_core::SEQ_KEY.to_string(), s.to_string());
+        n.layout.seq = Some(s);
     }
     v
 }
 
 /// `undoClusterEdges(g)`: copy the layout of `work` (after `write_back`)
 /// into the input graph. Deleted cluster-named nodes come back with default
-/// attributes and are marked with [`CLUST_NODE_KEY`]; their edges take the
+/// attributes and are marked as cluster nodes ([`NodeLayout::clust_node`]); their edges take the
 /// geometry of the clones. Edges C deleted without a clone are removed.
 pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
     for (i, m) in ce.node_map.iter().enumerate() {
@@ -351,14 +349,18 @@ pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
                 dst.width = src.width;
                 dst.height = src.height;
                 dst.attrs = src.attrs.clone();
+                dst.layout = src.layout.clone();
             }
             None => {
                 let mut a: AttrMap = graph.node_defaults.clone();
                 a.entry("label".to_string())
                     .or_insert_with(|| "\\N".to_string());
-                a.insert(CLUST_NODE_KEY.to_string(), String::new());
                 let node = &mut graph.nodes[i];
                 node.attrs = a;
+                node.layout = NodeLayout {
+                    clust_node: true,
+                    ..NodeLayout::default()
+                };
                 // mapN: `agnode(g, name, 1)` with the text after `__0:`, a plain string,
                 // even for a node that was named `<cluster_x>`
                 if std::mem::take(&mut node.html_name) {
@@ -379,14 +381,18 @@ pub fn undo_cluster_edges(ce: &ClusterEdges, work: &Graph, graph: &mut Graph) {
         let dst = &mut graph.edges[i];
         dst.spline = src.spline.clone();
         dst.label_pos = src.label_pos;
+        dst.label_unplaced = src.label_unplaced;
         dst.attrs = src.attrs.clone();
+        dst.layout = src.layout.clone();
     }
     graph.bb = work.bb;
     for (dst, src) in graph.subgraphs.iter_mut().zip(&work.subgraphs) {
         dst.bb = src.bb;
         dst.graph_attrs = src.graph_attrs.clone();
+        dst.layout = src.layout.clone();
     }
     graph.graph_attrs = work.graph_attrs.clone();
+    graph.layout = work.layout.clone();
     // Edges of deleted nodes that were not re-attached are gone, as in C.
     let mut new_id = vec![None; graph.edges.len()];
     let mut kept = Vec::with_capacity(graph.edges.len());

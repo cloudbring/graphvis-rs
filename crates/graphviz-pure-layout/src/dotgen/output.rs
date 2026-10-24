@@ -20,14 +20,14 @@ pub struct Output {
     cluster_bb: Vec<(usize, BoundingBox)>,
     /// Spline, `lp`, and whether the label is unplaced (`!ED_label(e)->set`).
     edges: Vec<Option<(Spline, Option<Point>, bool)>>,
-    /// Extra edge label attributes (`head_lp`, `tail_lp`, `xlp`).
-    edge_attrs: Vec<Vec<(&'static str, String)>>,
-    node_xlp: Vec<Option<String>>,
+    /// The rest of each edge's result (labels, ports, arrow flags).
+    edge_layout: Vec<graphviz_pure_core::EdgeLayout>,
+    node_xlp: Vec<Option<Point>>,
     /// `lp` of the root graph and of clusters (by subgraph index).
-    graph_lp: Option<String>,
-    cluster_lp: Vec<(usize, String)>,
+    graph_lp: Option<Point>,
+    cluster_lp: Vec<(usize, Point)>,
     /// `GD_clust` of the root (`None`) and of each cluster, as subgraph indices.
-    cluster_list: Vec<(Option<usize>, String)>,
+    cluster_list: Vec<(Option<usize>, Vec<usize>)>,
     /// The `_cc_<i>` subgraphs a failed pack layout leaves (`Dot::cc_kept`), and
     /// their projected subgraphs, parents first.
     cc_subgraphs: Vec<CcSub>,
@@ -124,7 +124,7 @@ impl Output {
             bb: BoundingBox::new(0.0, 0.0, 0.0, 0.0),
             cluster_bb: Vec::new(),
             edges: Vec::new(),
-            edge_attrs: Vec::new(),
+            edge_layout: Vec::new(),
             node_xlp: Vec::new(),
             graph_lp: None,
             cluster_lp: Vec::new(),
@@ -164,15 +164,15 @@ impl Output {
         rec(d, 0, &mut cluster_bb);
         // The order (and, after copyClusterInfo, the repeats) emit_clusters walks.
         let mut cluster_list = Vec::new();
-        fn rec_list(d: &Dot<'_>, g: G, out: &mut Vec<(Option<usize>, String)>) {
-            let list: Vec<String> = d.graphs[g]
+        fn rec_list(d: &Dot<'_>, g: G, out: &mut Vec<(Option<usize>, Vec<usize>)>) {
+            let list = d.graphs[g]
                 .clust
                 .iter()
-                .filter_map(|&c| d.graphs[c].sub_index.map(|si| si.to_string()))
+                .filter_map(|&c| d.graphs[c].sub_index)
                 .collect();
             // A graph with no subgraph of its own would otherwise land on the root.
             if g == 0 || d.graphs[g].sub_index.is_some() {
-                out.push((d.graphs[g].sub_index, list.join(" ")));
+                out.push((d.graphs[g].sub_index, list));
             }
             for &c in &d.graphs[g].clust {
                 rec_list(d, c, out);
@@ -180,22 +180,28 @@ impl Output {
         }
         rec_list(d, 0, &mut cluster_list);
         let mut edges = Vec::new();
-        let mut edge_attrs = Vec::new();
+        let mut edge_layout = Vec::new();
         let lp_of = |l: Option<L>| l.filter(|&l| d.labels[l].set).map(|l| d.labels[l].pos);
-        // Exact notation, as the renderers expect (`LGraph::write_back`).
-        let fmt = |p: Point| format!("{:?},{:?}", p.x, p.y);
-        // attach_attrs_and_arrows: edges without splines (or IGNORED) get no
-        // attributes; with splines, lp/head_lp/tail_lp are written whether
-        // set or not and xlp only when set. An IGNORED edge can still carry a
-        // spline (orthoEdges under concentrate routes the first edge of each
-        // node pair whatever its type), which emit_edge_graphics draws: the
-        // renderer gets it, marked so that attach_attrs writes no attributes.
+        let place_of = |l: Option<L>| {
+            l.map(|l| graphviz_pure_core::LabelPlace {
+                pos: d.labels[l].pos,
+                set: d.labels[l].set,
+            })
+        };
+        // An IGNORED edge can still carry a spline (orthoEdges under concentrate routes
+        // the first edge of each node pair whatever its type), which emit_edge_graphics
+        // draws: the renderer gets it, marked so that attach_attrs writes no attributes.
         let pos_of = |l: Option<L>| l.map(|l| d.labels[l].pos);
         for ei in 0..d.input.edges.len() {
             let ed = &d.edges[ei];
-            let mut extra = Vec::new();
+            let mut el = graphviz_pure_core::EdgeLayout {
+                xlabel: lp_of(ed.xlabel),
+                head_label: place_of(ed.head_label),
+                tail_label: place_of(ed.tail_label),
+                ..Default::default()
+            };
             let Some(bzs) = ed.spl.as_ref() else {
-                edge_attrs.push(extra);
+                edge_layout.push(el);
                 // A lost edge (no spline) still draws its placed label (emit_edge);
                 // the output writer skips edges without splines. `routed` is false
                 // when the root has no edge type: with `splines=none`, and in the pack
@@ -219,47 +225,15 @@ impl Output {
                 }
                 continue;
             };
-            let unplaced: String = [('h', ed.head_label), ('t', ed.tail_label)]
-                .into_iter()
-                .filter(|(_, l)| l.is_some_and(|l| !d.labels[l].set))
-                .map(|(c, _)| c)
-                .collect();
-            if !unplaced.is_empty() {
-                extra.push((graphviz_pure_core::UNPLACED_PORT_LABELS_KEY, unplaced));
-            }
-            if ed.edge_type == IGNORED {
-                // attach_attrs leaves every attribute of the edge as it was in
-                // the input, including those of labels the edge does not have.
-                extra.push((graphviz_pure_core::IGNORED_EDGE_KEY, String::new()));
-                for (k, ik) in graphviz_pure_core::IGNORED_EDGE_INPUT_KEYS {
-                    if let Some(v) = d.input.edges[ei].attrs.get(k) {
-                        extra.push((ik, v.clone()));
-                    }
-                }
-            }
-            for (k, p) in [
-                ("head_lp", pos_of(ed.head_label)),
-                ("tail_lp", pos_of(ed.tail_label)),
-                ("xlp", lp_of(ed.xlabel)),
-            ] {
-                if let Some(p) = p {
-                    extra.push((k, fmt(p)));
-                }
-            }
-            for (k, p) in [
-                (graphviz_pure_core::TAIL_PORT_NAME_KEY, &ed.tail_port),
-                (graphviz_pure_core::HEAD_PORT_NAME_KEY, &ed.head_port),
-            ] {
-                extra.push((k, p.name.clone().unwrap_or_default()));
-            }
+            el.no_attrs = ed.edge_type == IGNORED;
+            el.port_names = Some((
+                ed.tail_port.name.clone().unwrap_or_default(),
+                ed.head_port.name.clone().unwrap_or_default(),
+            ));
             if ed.conc_opp_flag {
-                let flags: Vec<String> = bzs
-                    .iter()
-                    .map(|bz| format!("{},{}", bz.sflag, bz.eflag))
-                    .collect();
-                extra.push((graphviz_pure_core::CONC_ARROW_FLAGS_KEY, flags.join(" ")));
+                el.conc_arrows = Some(bzs.iter().map(|bz| (bz.sflag, bz.eflag)).collect());
             }
-            edge_attrs.push(extra);
+            edge_layout.push(el);
             let spline = Spline {
                 segments: bzs
                     .iter()
@@ -273,8 +247,8 @@ impl Output {
             let unplaced = ed.label.is_some_and(|l| !d.labels[l].set);
             edges.push(Some((spline, pos_of(ed.label), unplaced)));
         }
-        let node_xlp = (0..n).map(|i| lp_of(d.nodes[i].xlabel).map(fmt)).collect();
-        let graph_lp = lp_of(d.graphs[0].label).map(fmt);
+        let node_xlp = (0..n).map(|i| lp_of(d.nodes[i].xlabel)).collect();
+        let graph_lp = lp_of(d.graphs[0].label);
         let mut cluster_lp = Vec::new();
         fn rec_lp(d: &Dot<'_>, g: G, out: &mut Vec<(usize, Point)>) {
             for &c in &d.graphs[g].clust {
@@ -286,11 +260,7 @@ impl Output {
                 rec_lp(d, c, out);
             }
         }
-        let mut cl = Vec::new();
-        rec_lp(d, 0, &mut cl);
-        for (si, p) in cl {
-            cluster_lp.push((si, fmt(p)));
-        }
+        rec_lp(d, 0, &mut cluster_lp);
         Output {
             node_pos,
             node_rank,
@@ -299,7 +269,7 @@ impl Output {
             bb,
             cluster_bb,
             edges,
-            edge_attrs,
+            edge_layout,
             node_xlp,
             graph_lp,
             cluster_lp,
@@ -324,10 +294,7 @@ impl Output {
                     nd.height = ht / 72.0;
                 }
                 if lw != rw {
-                    nd.attrs.insert(
-                        graphviz_pure_core::NODE_LW_RW_KEY.to_string(),
-                        format!("{lw:?},{rw:?}"),
-                    );
+                    nd.layout.lw_rw = Some((lw, rw));
                 }
             }
             let (r, o) = self.node_rank[i];
@@ -347,10 +314,7 @@ impl Output {
             // `is_a_cluster` also honours `cluster=true`.
             graph.subgraphs[si].is_cluster = true;
             // In GD_clust, so drawn even with an empty box (an abandoned layout).
-            graph.subgraphs[si].graph_attrs.insert(
-                graphviz_pure_core::REGISTERED_CLUSTER_KEY.to_string(),
-                String::new(),
-            );
+            graph.subgraphs[si].layout.reg = graphviz_pure_core::ClusterReg::Registered;
         }
         for (i, e) in self.edges.into_iter().enumerate() {
             if let Some((s, lp, unplaced)) = e {
@@ -359,31 +323,28 @@ impl Output {
                 graph.edges[i].label_unplaced = unplaced;
             }
         }
-        for (i, extra) in self.edge_attrs.into_iter().enumerate() {
-            for (k, v) in extra {
-                graph.edges[i].attrs.insert(k.to_string(), v);
-            }
+        for (e, el) in graph.edges.iter_mut().zip(self.edge_layout) {
+            e.layout = graphviz_pure_core::EdgeLayout {
+                seq: e.layout.seq,
+                ..el
+            };
         }
         if let Some(lp) = self.graph_lp {
-            graph
-                .graph_attrs
-                .insert(crate::common::postproc::LABEL_POS_KEY.to_string(), lp);
+            graph.layout.label_pos = Some(lp);
         }
         for (si, lp) in self.cluster_lp {
-            graph.subgraphs[si]
-                .graph_attrs
-                .insert(crate::common::postproc::LABEL_POS_KEY.to_string(), lp);
+            graph.subgraphs[si].layout.label_pos = Some(lp);
         }
         for (si, list) in self.cluster_list {
-            let attrs = match si {
-                Some(si) => &mut graph.subgraphs[si].graph_attrs,
-                None => &mut graph.graph_attrs,
+            let layout = match si {
+                Some(si) => &mut graph.subgraphs[si].layout,
+                None => &mut graph.layout,
             };
-            attrs.insert(graphviz_pure_core::CLUSTER_LIST_KEY.to_string(), list);
+            layout.clusters = Some(list);
         }
         for (i, xlp) in self.node_xlp.into_iter().enumerate() {
-            if let Some(v) = xlp {
-                graph.nodes[i].attrs.insert("xlp".to_string(), v);
+            if xlp.is_some() {
+                graph.nodes[i].layout.xlabel = xlp;
             }
         }
         for (si, nodes, edges) in self.membership {
@@ -484,6 +445,7 @@ impl Output {
                 bb: Default::default(),
                 html_name,
                 empty_name,
+                layout: Default::default(),
             });
             if dicts {
                 graph.dicts.push(dict);

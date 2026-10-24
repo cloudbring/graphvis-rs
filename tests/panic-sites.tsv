@@ -18,7 +18,7 @@ layout/circogen/graph.rs	0	0	6	1
 layout/circogen/nodelist.rs	0	0	0	1
 layout/common/arrows.rs	0	0	37	31
 layout/common/cluster_edges.rs	0	5	77	8
-layout/common/init.rs	0	0	21	0
+layout/common/init.rs	0	0	20	0
 layout/common/ns.rs	8	0	149	50
 layout/common/ports.rs	0	0	18	3
 layout/common/postproc.rs	0	0	2	0
@@ -44,7 +44,7 @@ layout/dotgen/init.rs	2	0	72	6
 layout/dotgen/mincross.rs	32	0	390	104
 layout/dotgen/mod.rs	0	0	18	9
 layout/dotgen/ns.rs	0	0	33	0
-layout/dotgen/output.rs	0	0	53	0
+layout/dotgen/output.rs	0	0	52	0
 layout/dotgen/pack.rs	0	2	74	1
 layout/dotgen/position.rs	33	0	300	31
 layout/dotgen/postproc.rs	1	0	58	6

@@ -296,7 +296,7 @@ exact and `hw3_ports_b15(_splines)` check the same ports through neato.
 - Unplaced edge labels (`ED_label(e)->set == false`) print `lp` but are not
   drawn (`EdgeData::label_unplaced`).
 - Clusters the layout did not register (`GD_clust`) keep their input `bb` but
-  are not drawn (`UNREGISTERED_CLUSTER_KEY`).
+  are not drawn (`ClusterReg::Unregistered`).
 - `RADIANS(d)` is `d/180*M_PI` (fused when added to `atan2`), not
   `to_radians()`.
 

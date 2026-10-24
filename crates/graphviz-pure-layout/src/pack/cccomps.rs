@@ -326,6 +326,7 @@ impl CComp {
                 bb: Default::default(),
                 html_name: s.html_name,
                 empty_name: s.empty_name,
+                layout: Default::default(),
             });
         }
         for (i, p) in self.subgraphs.iter().enumerate() {
@@ -370,6 +371,7 @@ mod tests {
                 bb: Default::default(),
                 html_name: false,
                 empty_name: false,
+                layout: Default::default(),
             });
             g.anon_subgraph_ids.insert(i as u32, 3 + 2 * i as u64);
         }

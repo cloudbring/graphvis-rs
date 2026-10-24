@@ -859,6 +859,139 @@ fn fdp_nodes_pinned_near_1e17_lay_out_like_c() {
     }
 }
 
+// Issue #110: attribute names the port once reserved for layout results (`\x01…`) are
+// ordinary attributes, as they are to C: they change no drawing and every writer prints them.
+#[test]
+fn control_character_attribute_names_are_ordinary_attributes() {
+    let src = "digraph G { \"\u{1}unregclust\"=\"1\"; subgraph cluster_0 { a b } a -> b }\n";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(svg_cluster_titles(&out), ["cluster_0"]);
+    let (out, err, ok) = run(&["-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("subgraph cluster_0 {\n\t\tgraph [bb=\"8,8,78,132\"];"),
+        "{out}"
+    );
+    let (out, err, ok) = run(&["-Tjson"], "digraph G { \"\u{1}seq\"=\"x\"; a }\n");
+    assert!(ok, "{err}");
+    assert!(out.contains("\"\u{1}seq\": \"x\","), "{out}");
+    let (out, err, ok) = run(&["-Tdot"], "digraph G { a [\"\u{1}lwrw\"=\"1,100\"] }\n");
+    assert!(ok, "{err}");
+    assert!(
+        out.contains(
+            "a\t[\"\u{1}lwrw\"=\"1,100\",\n\t\theight=0.5,\n\t\tpos=\"27,18\",\n\t\twidth=0.75];"
+        ),
+        "{out}"
+    );
+}
+
+// Issue #124: label positions in the input are not layout results. An edge with no spline,
+// no main label and an unplaced xlabel is not emitted (`edge_in_box`), and an xlabel
+// `placeLabels` left unplaced is not drawn (`emit_edge_label` tests `lp->set`).
+#[test]
+fn input_label_positions_are_not_placed_labels() {
+    let src =
+        "digraph { splines=none; a -> b [xlabel=X xlp=\"1,2\" headlabel=H head_lp=\"3,4\"]; }\n";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert!(!out.contains("class=\"edge\""), "{out}");
+    let src = "digraph G { forcelabels=false; splines=\"ortho\"; concentrate=\"true\"; \
+        nodesep=0.05; ranksep=0.05; \
+        node [xlabel=\"NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN\"]; \
+        \"8\" -> \"9\" [xlabel=\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\" xlp=\"11,11\"]; \
+        \"8\" -> \"13\"; \"9\" -> \"14\"; \"14\" -> \"13\"; \
+        \"13\" -> \"14\" [xlabel=\"EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\" xlp=\"3,4\"]; }\n";
+    let (out, err, ok) = run(&["-Tsvg"], src);
+    assert!(ok, "{err}");
+    assert_eq!(err, "Warning: 4 out of 6 exterior labels positioned.\n");
+    assert!(!out.contains("AAAA") && !out.contains("EEEE"), "{out}");
+}
+
+// Issue #129: `attach_attrs_and_arrows` writes the polygon of every `poly_init` node when the
+// graph declares `vertices`: its vertices in inches, or `samplepoints` points on an ellipse.
+#[test]
+fn declared_vertices_are_written_for_polygon_nodes() {
+    let src = "graph G { node [vertices=\"\"]; a [shape=box]; b [shape=hexagon]; \
+        c [shape=ellipse]; f [shape=point]; a -- b -- c -- f; }\n";
+    for engine in ["-Kneato", "-Kdot"] {
+        let (out, err, ok) = run(&[engine, "-Tdot"], src);
+        assert!(ok, "{err}");
+        for v in [
+            "vertices=\"0.375 0.25 -0.375 0.25 -0.375 -0.25 0.375 -0.25\"",
+            "vertices=\"0.375 -5.9805e-17 0.1875 0.25 -0.1875 0.25 -0.375 3.5353e-17 \
+             -0.1875 -0.25 0.1875 -0.25\"",
+        ] {
+            assert!(out.contains(v), "{engine}: {v} in {out}");
+        }
+        // the point keeps the declared default
+        assert_eq!(out.matches("vertices=").count(), 4, "{engine}: {out}");
+    }
+    // an ellipse: `samplepoints` (8) points on it
+    let (out, err, ok) = run(&["-Kneato", "-Tdot"], src);
+    assert!(ok, "{err}");
+    let ellipse = "vertices=\"0.375 0 0.26517 0.17678 2.2962e-17 0.25 -0.26517 0.17678 -0.375 \
+        3.0616e-17 -0.26517 -0.17678 -6.8886e-17 -0.25 0.26517 -0.17678\"";
+    assert!(out.contains(ellipse), "{out}");
+}
+
+// Issue #328: with `dimen=3` neato and sfdp write each node's `pos` as `x,y,z`
+// (`GD_odim(g) >= 3` in `attach_attrs_and_arrows`).
+#[test]
+fn dimen_3_writes_three_coordinates() {
+    let (out, err, ok) = run(
+        &["-Kneato", "-n", "-Tdot"],
+        "graph G { dimen=3; a [pos=\"1,2\"]; b [pos=\"50,60\" z=7]; a -- b }\n",
+    );
+    assert!(ok, "{err}");
+    assert!(out.contains("pos=\"27,18,57.091\""), "{out}");
+    assert!(out.contains("pos=\"76,76,7\""), "{out}");
+    // A node without a position stops `-n` after `neato_init_graph` set GD_odim: the nodes
+    // are drawn at the origin, each with the coordinates `user_pos` gave it after `y`.
+    let (out, err, ok) = run(
+        &["-Kneato", "-n", "-Tdot"],
+        "graph { dimen=3; a [pos=\"1,2,3\"]; b [pos=\"5,5\"]; c }\n",
+    );
+    assert!(!ok);
+    assert_eq!(
+        err,
+        "Error: node c in graph %1 has no position\nas required by the -n flag\n"
+    );
+    for want in ["pos=\"0,0,3\"", "pos=\"0,0,85.636\"", "pos=\"0,0,0\""] {
+        assert!(out.contains(want), "{want} in {out}");
+    }
+    for (engine, want) in [
+        ("-Kneato", "pos=\"27,18,33.679\""),
+        ("-Ksfdp", "pos=\"27,18,93.337\""),
+    ] {
+        let (out, err, ok) = run(&[engine, "-Tdot"], "graph G { dimen=3; a -- b }\n");
+        assert!(ok, "{err}");
+        assert!(out.contains(want), "{engine}: {out}");
+    }
+}
+
+// Issue #329: `rec_attach_bb` sets a registered cluster's `bb` with `agxset`, which makes it
+// the cluster's own value even where it equals the one it inherited, so `-Tdot` prints it.
+#[test]
+fn a_cluster_keeps_the_bb_attach_attrs_set_on_it() {
+    let src = "graph G { graph [bb=\"0,0,100,100\"]; subgraph clusterB { d [pos=\"40,40\"] } \
+        x [pos=\"90,90\"] }\n";
+    let (out, err, ok) = run(&["-Kneato", "-n", "-Tdot"], src);
+    assert!(ok, "{err}");
+    assert!(
+        out.contains("subgraph clusterB {\n\t\tgraph [bb=\"0,0,100,100\"];"),
+        "{out}"
+    );
+    // The value stays the cluster's own for the jobs after it.
+    let (out, err, ok) = run(&["-Kneato", "-n", "-Tdot", "-Tcanon"], src);
+    assert!(ok, "{err}");
+    assert_eq!(
+        out.matches("graph [bb=\"0,0,100,100\"];").count(),
+        2,
+        "{out}"
+    );
+}
+
 // Extreme coordinates (docs/porting/crashes.md): C's `sscanf("%lf")` reads `nan` and `inf` in
 // `pos`, and a finite `pos` can overflow once scaled to points. Where C produces output (often
 // a component at NaN) the port matches it; where C crashes or hangs, the port must not. These

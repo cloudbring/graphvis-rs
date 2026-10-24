@@ -23,17 +23,11 @@ pub fn patchwork_layout(graph: &mut Graph) -> Result<()> {
         graphviz_pure_core::set_attr(&mut n.attrs, "shape", "box".to_string(), false);
     }
     // patchwork_init_edge only binds the edge record: no common_init_edge, so no labels.
-    graph.graph_attrs.insert(
-        graphviz_pure_core::NO_EDGE_INIT_KEY.to_string(),
-        String::new(),
-    );
+    graph.layout.no_edge_init = true;
     let tree = mk_clusters(graph);
     // mkClusters(g, NULL, g) never calls do_graph_label: clusters get no label.
     for &sg in &tree.subgraph {
-        graph.subgraphs[sg].graph_attrs.insert(
-            graphviz_pure_core::NO_GRAPH_LABEL_KEY.to_string(),
-            String::new(),
-        );
+        graph.subgraphs[sg].layout.no_label = true;
     }
     if graph.nodes.is_empty() && tree.root.is_empty() {
         graph.bb = Default::default();
