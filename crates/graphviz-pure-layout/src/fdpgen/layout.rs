@@ -949,7 +949,7 @@ impl Fdp<'_, '_> {
             }
             let comp = &cc[ci];
             if comp.nodes.len() >= 2 {
-                if g.is_none() {
+                if g.is_none() && dg.attrs.contains_key("normalize") {
                     // normalize(cg) reads `normalize` on the derived graph: a command-line one.
                     with_lgraph(&mut dg, &comp.nodes, |lg, sub, _| {
                         normalize(lg, sub);

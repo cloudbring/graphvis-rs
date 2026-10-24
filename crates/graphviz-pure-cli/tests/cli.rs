@@ -1488,6 +1488,23 @@ fn circo_components_adjust_with_the_command_line_attributes_only() {
     let (out, err, ok) = run(&["-Kcirco", "-Goverlap=voronoi", "-Tplain"], src);
     assert!(ok, "{err}");
     assert_eq!(out, unadjusted);
+    // the derived edges have no `weight` (makeMatrix reads 1), whatever the input's say; prism on
+    // zero-size nodes gives C's output for any weight, so this guards the construction only
+    let (out, err, ok) = run(
+        &["-Kcirco", "-Goverlap=false", "-Tplain"],
+        "digraph { a -> b [weight=5]; b -> c; c -> a; d }",
+    );
+    assert!(ok, "{err}");
+    assert!(
+        out.starts_with(
+            "graph 1 1.9114 1.4722\n\
+             node a 0.375 0.25 0.75 0.5 a solid ellipse black lightgrey\n\
+             node b 0.375 0.47225 0.75 0.5 b solid ellipse black lightgrey\n\
+             node c 0.56748 0.36113 0.75 0.5 c solid ellipse black lightgrey\n\
+             node d 1.5364 1.2222 0.75 0.5 d solid ellipse black lightgrey\n"
+        ),
+        "{out}"
+    );
     // the issue's larger case: the overlapping nodes make spline routing fall back
     let (_, err, ok) = run(
         &["-Kcirco", "-Goverlap=false", "-Gsplines=true", "-Tplain"],

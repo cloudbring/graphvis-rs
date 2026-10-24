@@ -658,6 +658,34 @@ impl Graph {
         }))
     }
 
+    /// An empty root a layout opens itself (`agopen(name, ...)`) while it lays out `self`: it
+    /// declares only the ProtoGraph's (command-line) graph, node and edge attributes, whose
+    /// defaults are its values and its node and edge defaults.
+    pub fn protograph_root(&self, name: &str, kind: GraphKind, strict: bool) -> Graph {
+        let mut g = Graph::new(name, kind, strict);
+        g.graph_attrs = self.protograph_attrs();
+        if let Some(d) = self.dicts.first() {
+            let proto = |dict: &BTreeMap<String, AttrSym>| -> BTreeMap<String, AttrSym> {
+                dict.iter()
+                    .filter(|(_, s)| s.proto)
+                    .map(|(k, s)| (k.clone(), s.clone()))
+                    .collect()
+            };
+            let dicts = AttrDicts {
+                graph: proto(&d.graph),
+                node: proto(&d.node),
+                edge: proto(&d.edge),
+            };
+            let defaults = |dict: &BTreeMap<String, AttrSym>| {
+                AttrMap::from_plain(dict.iter().map(|(k, s)| (k.clone(), s.defval.clone())))
+            };
+            g.node_defaults = defaults(&dicts.node);
+            g.edge_defaults = defaults(&dicts.edge);
+            g.dicts = vec![dicts];
+        }
+        g
+    }
+
     /// Whether nodes declare `key`: `agattr(g, AGNODE, key, NULL) != NULL`
     /// (`agfindnodeattr`). cgraph declares an attribute on the root's dictionary wherever it is
     /// first set, so one set only by a subgraph's `node [...]` is declared for the whole graph.
@@ -1014,6 +1042,42 @@ mod cluster_prefix_tests {
         assert!(!has_cluster_prefix("aaaaaaé"));
         assert!(!has_cluster_prefix("clusé_x"));
         assert!(!has_cluster_prefix(""));
+    }
+}
+
+#[cfg(test)]
+mod protograph_tests {
+    use super::*;
+
+    // Issue #398: a root a layout opens keeps only the ProtoGraph's (command-line) symbols.
+    #[test]
+    fn a_new_root_declares_only_the_protograph_attributes() {
+        let mut g = Graph::new("G", GraphKind::Directed, false);
+        let sym = |defval: &str, proto: bool| AttrSym {
+            defval: defval.to_string(),
+            proto,
+            ..AttrSym::default()
+        };
+        let mut d = AttrDicts::default();
+        d.graph.insert("overlap".into(), sym("false", true));
+        d.graph.insert("splines".into(), sym("", false));
+        d.node.insert("label".into(), sym("\\N", true));
+        d.node.insert("shape".into(), sym("box", false));
+        d.edge.insert("weight".into(), sym("", false));
+        d.edge.insert("len".into(), sym("2", true));
+        g.dicts = vec![d];
+        g.graph_attrs.insert("splines".into(), "true".into());
+        g.graph_attrs.insert("overlap".into(), "false".into());
+        let r = g.protograph_root("derived", GraphKind::Undirected, true);
+        assert_eq!(
+            r.graph_attrs.get("overlap").map(String::as_str),
+            Some("false")
+        );
+        assert!(!r.graph_attrs.contains_key("splines"));
+        assert!(r.node_attr_declared("label") && !r.node_attr_declared("shape"));
+        assert!(r.edge_attr_declared("len") && !r.edge_attr_declared("weight"));
+        assert_eq!(r.edge_defaults.get("len").map(String::as_str), Some("2"));
+        assert!(r.nodes.is_empty() && r.edges.is_empty());
     }
 }
 

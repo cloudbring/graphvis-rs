@@ -882,3 +882,16 @@ such edge, and the polyline fallback could leave boxes unbounded, which moved ev
 to x = 2.5e306 on some inputs. Measured on 3,000 generated inputs with such groups (46 crash C
 for other reasons): the SVG equal to C on 2,938 before and 2,954 after, stderr on 2,869 before
 and 2,954 after, which is all of them.
+||||||| parent of b22b8cbb (#398 review: circo adjusts a minimal derived graph built once; docs and crashes.md)
+
+## circo's derived nodes have no shape
+
+With several components, circo runs `adjustNodes(sg)` on each component of its derived graph
+(`circoLayout`, `lib/circogen/circularinit.c`), which sees the command-line attributes (#398).
+`makeDerivedNode` gives a derived node sizes but no shape. With `-Goverlap=voronoi` or
+`-Goverlap=oscale`, `makeInfo` calls `makePoly` (`lib/neatogen/poly.c`) on such a node:
+`shapeOf` returns `SH_UNSET`, and the `default:` case dereferences `ND_shape(n)->name`, a NULL
+pointer, so C segfaults. The port takes C's behaviour on the nearest input it handles, an
+in-file `overlap` value, which never reaches the derived graph: it leaves the overlaps, but still
+applies `normalize` and `scale`, which `removeOverlapWith` runs before it picks the mode
+(`circularinit::adjust_derived`).
